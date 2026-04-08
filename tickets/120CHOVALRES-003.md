@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel choice option resolution
-**Deps**: `tickets/120CHOVALRES-002.md`
+**Deps**: `archive/tickets/120CHOVALRES-002.md`
 
 ## Problem
 

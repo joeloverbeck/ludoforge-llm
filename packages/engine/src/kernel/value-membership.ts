@@ -91,16 +91,16 @@ export function toChoiceComparableValue(value: unknown): MembershipScalar | null
   return comparable ?? null;
 }
 
-export function normalizeChoiceDomain(
+export function normalizeChoiceDomain<T = never>(
   domain: readonly unknown[],
-  onInvalid: (issue: ChoiceDomainNormalizationIssue) => never,
-): readonly MembershipScalar[] {
+  onInvalid: (issue: ChoiceDomainNormalizationIssue) => T,
+): readonly MembershipScalar[] | T {
   const normalized: MembershipScalar[] = [];
   for (let index = 0; index < domain.length; index += 1) {
     const value = domain[index];
     const comparable = toChoiceComparableValue(value);
     if (comparable === null) {
-      onInvalid({
+      return onInvalid({
         index,
         value,
         actualType: Array.isArray(value) ? 'array' : typeof value,

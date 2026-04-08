@@ -5,6 +5,13 @@ import { evalCondition, evalConditionRaw } from './eval-condition.js';
 import { evalValue } from './eval-value.js';
 import { advanceScope, type DecisionKey } from './decision-scope.js';
 import { createChooseNTemplate } from './choose-n-session.js';
+import {
+  CHOICE_VALIDATION_ERROR_CODE,
+  choiceValidationFailed,
+  choiceValidationSuccess,
+  type ChoiceValidationError,
+  type ChoiceValidationResult,
+} from './choice-validation-result.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
 import { effectRuntimeError } from './effect-error.js';
@@ -44,6 +51,38 @@ import type { ApplyEffectsWithBudget } from './effect-registry.js';
 
 const choiceOptionKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
+const isChoiceValidationFailure = <T>(
+  value: T | ChoiceValidationResult<never>,
+): value is ChoiceValidationResult<never> =>
+  typeof value === 'object'
+  && value !== null
+  && 'outcome' in value
+  && value.outcome === 'error';
+
+const choiceValidationFailureResult = (
+  cursor: Pick<EffectCursor, 'state' | 'rng'>,
+  error: ChoiceValidationError,
+): PartialEffectResult => ({
+  state: cursor.state,
+  rng: cursor.rng,
+  choiceValidationError: error,
+});
+
+const createChoiceValidationError = (
+  message: string,
+  context?: Readonly<Record<string, unknown>>,
+): ChoiceValidationError => ({
+  code: CHOICE_VALIDATION_ERROR_CODE,
+  message,
+  ...(context !== undefined ? { context } : {}),
+});
+
+const choiceValidationFailureResultFromMessage = (
+  cursor: Pick<EffectCursor, 'state' | 'rng'>,
+  message: string,
+  context?: Readonly<Record<string, unknown>>,
+): PartialEffectResult => choiceValidationFailureResult(cursor, createChoiceValidationError(message, context));
+
 const isTokenQueryResult = (value: unknown): value is Token =>
   typeof value === 'object'
   && value !== null
@@ -57,16 +96,17 @@ const resolvePrioritizedTierEntries = (
   evalCtx: ReadContext,
   bind: string,
   decisionKey: string,
-): readonly (readonly PrioritizedTierEntry[])[] | null => {
+): ChoiceValidationResult<readonly (readonly PrioritizedTierEntry[])[] | null> => {
   if (query.query !== 'prioritized') {
-    return null;
+    return choiceValidationSuccess(null);
   }
 
-  return query.tiers.map((tierQuery, tierIndex) => {
+  const tiers: (readonly PrioritizedTierEntry[])[] = [];
+  for (let tierIndex = 0; tierIndex < query.tiers.length; tierIndex += 1) {
+    const tierQuery = query.tiers[tierIndex]!;
     const tierResults = unwrapEvalQuery(evalQuery(tierQuery, evalCtx));
-    const normalizedTier = normalizeChoiceDomain(tierResults, (issue) => {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    const normalizedTier = normalizeChoiceDomain(tierResults, (issue) =>
+      choiceValidationFailed(
         `chooseN prioritized tier item is not move-param encodable: ${bind}`,
         {
           effectType: 'chooseN',
@@ -77,17 +117,21 @@ const resolvePrioritizedTierEntries = (
           actualType: issue.actualType,
           value: issue.value,
         },
-      );
-    });
+      ));
+    if (isChoiceValidationFailure(normalizedTier)) {
+      return normalizedTier;
+    }
 
-    return normalizedTier.map((value, itemIndex) => {
+    const tierEntries: PrioritizedTierEntry[] = [];
+    for (let itemIndex = 0; itemIndex < normalizedTier.length; itemIndex += 1) {
+      const value = normalizedTier[itemIndex]!;
       const tierResult = tierResults[itemIndex];
       if (query.qualifierKey === undefined) {
-        return { value };
+        tierEntries.push({ value });
+        continue;
       }
       if (!isTokenQueryResult(tierResult)) {
-        throw effectRuntimeError(
-          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        return choiceValidationFailed(
           `chooseN prioritized qualifierKey requires token results: ${bind}`,
           {
             effectType: 'chooseN',
@@ -107,8 +151,7 @@ const resolvePrioritizedTierEntries = (
         && typeof qualifier !== 'number'
         && typeof qualifier !== 'boolean'
       ) {
-        throw effectRuntimeError(
-          EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+        return choiceValidationFailed(
           `chooseN prioritized qualifier must resolve to a scalar: ${bind}`,
           {
             effectType: 'chooseN',
@@ -121,9 +164,12 @@ const resolvePrioritizedTierEntries = (
           },
         );
       }
-      return qualifier === undefined ? { value } : { value, qualifier };
-    });
-  });
+      tierEntries.push(qualifier === undefined ? { value } : { value, qualifier });
+    }
+    tiers.push(tierEntries);
+  }
+
+  return choiceValidationSuccess(tiers);
 };
 
 const buildPrioritizedAdmissibility = (
@@ -149,13 +195,13 @@ const normalizeChooseNSelectionValues = (
   selectedValue: readonly unknown[],
   bind: string,
   decisionKey: string,
-): readonly MoveParamScalar[] => {
+): ChoiceValidationResult<readonly MoveParamScalar[]> => {
   const normalizedSelected: MoveParamScalar[] = [];
 
   for (let index = 0; index < selectedValue.length; index += 1) {
     const comparable = toChoiceComparableValue(selectedValue[index]);
     if (comparable === null) {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection is not move-param encodable: ${bind}`, {
+      return choiceValidationFailed(`chooseN selection is not move-param encodable: ${bind}`, {
         effectType: 'chooseN',
         bind,
         decisionKey,
@@ -169,7 +215,7 @@ const normalizeChooseNSelectionValues = (
   for (let left = 0; left < normalizedSelected.length; left += 1) {
     for (let right = left + 1; right < normalizedSelected.length; right += 1) {
       if (Object.is(normalizedSelected[left], normalizedSelected[right])) {
-        throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selections must be unique: ${bind}`, {
+        return choiceValidationFailed(`chooseN selections must be unique: ${bind}`, {
           effectType: 'chooseN',
           bind,
           duplicateValue: normalizedSelected[left],
@@ -178,7 +224,7 @@ const normalizeChooseNSelectionValues = (
     }
   }
 
-  return normalizedSelected;
+  return choiceValidationSuccess(normalizedSelected);
 };
 
 const validateChooseNSelectionSequence = (
@@ -189,7 +235,7 @@ const validateChooseNSelectionSequence = (
   prioritizedQualifierMode: 'none' | 'byQualifier',
   bind: string,
   decisionKey: string,
-): void => {
+): ChoiceValidationResult<void> => {
   const failures = validateChooseNSelectedSequence({
     normalizedDomain: normalizedOptions,
     tiers: prioritizedTierEntries,
@@ -199,8 +245,7 @@ const validateChooseNSelectionSequence = (
 
   for (const failure of failures) {
     if (failure.reason === 'out-of-domain') {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `invalid selection for chooseN "${bind}" (${decisionKey}): outside options domain`,
         {
           effectType: 'chooseN',
@@ -211,8 +256,7 @@ const validateChooseNSelectionSequence = (
       );
     }
     if (failure.reason === 'duplicate') {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `chooseN selections must be unique: ${bind}`,
         {
           effectType: 'chooseN',
@@ -222,8 +266,7 @@ const validateChooseNSelectionSequence = (
       );
     }
     if (failure.reason === 'tier-blocked') {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `chooseN selection violates prioritized tier ordering: ${bind}`,
         {
           effectType: 'chooseN',
@@ -235,6 +278,8 @@ const validateChooseNSelectionSequence = (
       );
     }
   }
+
+  return choiceValidationSuccess(undefined);
 };
 
 interface BuildChooseNPendingChoiceInput {
@@ -332,7 +377,7 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
 
 const mergePendingChoiceRequests = (
   pendingChoices: readonly ChoicePendingRequest[],
-): readonly ChoicePendingRequest[] => {
+): ChoiceValidationResult<readonly ChoicePendingRequest[]> => {
   const [first, ...rest] = pendingChoices;
   if (first === undefined) {
     throw new Error('mergePendingChoiceRequests requires at least one pending choice');
@@ -340,8 +385,7 @@ const mergePendingChoiceRequests = (
 
   for (const pending of rest) {
     if (pending.type !== first.type) {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `rollRandom discovery found incompatible pending decision types for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
@@ -352,8 +396,7 @@ const mergePendingChoiceRequests = (
       );
     }
     if (pending.name !== first.name) {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `rollRandom discovery found incompatible pending decision names for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
@@ -364,8 +407,7 @@ const mergePendingChoiceRequests = (
       );
     }
     if (!Object.is(pending.decisionPlayer, first.decisionPlayer)) {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `rollRandom discovery found incompatible decision owners for ${first.decisionKey}`,
         {
           effectType: 'rollRandom',
@@ -390,15 +432,15 @@ const mergePendingChoiceRequests = (
   }
 
   if (distinctAlternatives.size === 1) {
-    return [normalizedFirst];
+    return choiceValidationSuccess([normalizedFirst]);
   }
 
-  return [...distinctAlternatives.values()];
+  return choiceValidationSuccess([...distinctAlternatives.values()]);
 };
 
 const toStochasticPendingChoice = (
   outcomes: readonly ChoiceStochasticOutcome[],
-): ChoiceStochasticPendingRequest => {
+): ChoiceValidationResult<ChoiceStochasticPendingRequest> => {
   const pendingByDecisionKey = new Map<string, ChoicePendingRequest[]>();
   for (const outcome of outcomes) {
     if (outcome.nextDecision === undefined) {
@@ -412,16 +454,21 @@ const toStochasticPendingChoice = (
       existing.push(outcome.nextDecision);
     }
   }
-  const alternatives = [...pendingByDecisionKey.entries()]
-    .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
-    .flatMap(([, requests]) => mergePendingChoiceRequests(requests));
-  return {
+  const alternatives: ChoicePendingRequest[] = [];
+  for (const [, requests] of [...pendingByDecisionKey.entries()].sort(([leftId], [rightId]) => leftId.localeCompare(rightId))) {
+    const mergedRequests = mergePendingChoiceRequests(requests);
+    if (mergedRequests.outcome === 'error') {
+      return mergedRequests;
+    }
+    alternatives.push(...mergedRequests.value);
+  }
+  return choiceValidationSuccess({
     kind: 'pendingStochastic',
     complete: false,
     source: 'rollRandom',
     alternatives,
     outcomes,
-  };
+  });
 };
 
 const resolveFixedRandomBinding = (
@@ -429,10 +476,9 @@ const resolveFixedRandomBinding = (
   value: unknown,
   minValue: number,
   maxValue: number,
-): number => {
+): ChoiceValidationResult<number> => {
   if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailed(
       `rollRandom binding ${bind} must resolve to a safe integer`,
       {
         effectType: 'rollRandom',
@@ -443,8 +489,7 @@ const resolveFixedRandomBinding = (
     );
   }
   if (value < minValue || value > maxValue) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailed(
       `rollRandom binding ${bind} must stay within [${minValue}, ${maxValue}]`,
       {
         effectType: 'rollRandom',
@@ -455,7 +500,7 @@ const resolveFixedRandomBinding = (
       },
     );
   }
-  return value;
+  return choiceValidationSuccess(value);
 };
 
 const collectNestedOutcomes = (
@@ -511,30 +556,34 @@ const updateChoiceScope = (
 const resolveChoiceTraceProvenance = (env: EffectEnv, cursor: EffectCursor): ReturnType<typeof resolveTraceProvenance> =>
   resolveTraceProvenance(toTraceProvenanceContext(env, cursor));
 
-const resolveMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['markerLattices']>[number] => {
+const resolveMarkerLattice = (
+  def: EffectContext['def'],
+  markerId: string,
+  effectType: string,
+): ChoiceValidationResult<NonNullable<EffectContext['def']['markerLattices']>[number]> => {
   const lattice = getLatticeMap(def)?.get(markerId);
   if (lattice === undefined) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown marker lattice: ${markerId}`, {
+    return choiceValidationFailed(`Unknown marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (def.markerLattices ?? []).map((l) => l.id).sort(),
     });
   }
 
-  return lattice;
+  return choiceValidationSuccess(lattice);
 };
 
-const resolveGlobalMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): NonNullable<EffectContext['def']['globalMarkerLattices']>[number] => {
+const resolveGlobalMarkerLattice = (def: EffectContext['def'], markerId: string, effectType: string): ChoiceValidationResult<NonNullable<EffectContext['def']['globalMarkerLattices']>[number]> => {
   const lattice = def.globalMarkerLattices?.find((l) => l.id === markerId);
   if (lattice === undefined) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Unknown global marker lattice: ${markerId}`, {
+    return choiceValidationFailed(`Unknown global marker lattice: ${markerId}`, {
       effectType,
       markerId,
       availableLattices: (def.globalMarkerLattices ?? []).map((l) => l.id).sort(),
     });
   }
 
-  return lattice;
+  return choiceValidationSuccess(lattice);
 };
 
 const resolveChoiceDecisionPlayer = (
@@ -543,11 +592,11 @@ const resolveChoiceDecisionPlayer = (
   evalCtx: ReadContext,
   bind: string,
   decisionId: string,
-): ReturnType<typeof resolveSinglePlayerSel> => {
+): ChoiceValidationResult<ReturnType<typeof resolveSinglePlayerSel>> => {
   try {
-    return resolveSinglePlayerSel(chooser, evalCtx);
+    return choiceValidationSuccess(resolveSinglePlayerSel(chooser, evalCtx));
   } catch (error) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `${effectType}.chooser must resolve to exactly one player`, {
+    return choiceValidationFailed(`${effectType}.chooser must resolve to exactly one player`, {
       effectType,
       chooser,
       bind,
@@ -563,14 +612,13 @@ const buildComparableDomainBindingMap = (
   decisionId: string,
   options: readonly unknown[],
   normalizedOptions: readonly MembershipScalar[],
-): ReadonlyMap<MembershipScalar, unknown> => {
+): ChoiceValidationResult<ReadonlyMap<MembershipScalar, unknown>> => {
   const bindingMap = new Map<MembershipScalar, unknown>();
   const firstIndexByComparable = new Map<MembershipScalar, number>();
   for (let index = 0; index < normalizedOptions.length; index += 1) {
     const comparable = normalizedOptions[index];
     if (comparable === undefined) {
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `${effectType} options domain normalization failed: ${bind}`,
         { effectType, bind, decisionId, index },
       );
@@ -584,8 +632,7 @@ const buildComparableDomainBindingMap = (
     const existing = bindingMap.get(comparable);
     if (!Object.is(existing, value)) {
       const firstIndex = firstIndexByComparable.get(comparable);
-      throw effectRuntimeError(
-        EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+      return choiceValidationFailed(
         `${effectType} options domain has ambiguous comparable values: ${bind}`,
         {
           effectType,
@@ -598,7 +645,7 @@ const buildComparableDomainBindingMap = (
       );
     }
   }
-  return bindingMap;
+  return choiceValidationSuccess(bindingMap);
 };
 
 export const applyChooseOne = (
@@ -618,11 +665,15 @@ export const applyChooseOne = (
   const decisionKey = scopeAdvance.key;
   const evalCtx = updateChoiceScope(scope, env, cursor);
   const chooser = effect.chooseOne.chooser ?? 'active';
-  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
+  const choiceDecisionPlayerResult = resolveChoiceDecisionPlayer('chooseOne', chooser, evalCtx, resolvedBind, decisionKey);
+  if (choiceDecisionPlayerResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, choiceDecisionPlayerResult.error);
+  }
+  const choiceDecisionPlayer = choiceDecisionPlayerResult.value;
   const providedDecisionPlayer = env.decisionAuthority.player;
   const options = unwrapEvalQuery(evalQuery(effect.chooseOne.options, evalCtx));
-  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
+  const normalizedOptionsResult = normalizeChoiceDomain(options, (issue) =>
+    choiceValidationFailed(`chooseOne options domain item is not move-param encodable: ${resolvedBind}`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       bindTemplate: effect.chooseOne.bind,
@@ -630,9 +681,19 @@ export const applyChooseOne = (
       index: issue.index,
       actualType: issue.actualType,
       value: issue.value,
-    });
-  });
-  const comparableBindingMap = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionKey, options, normalizedOptions);
+    }));
+  if (isChoiceValidationFailure(normalizedOptionsResult)) {
+    return choiceValidationFailureResult(
+      cursor,
+      (normalizedOptionsResult as Extract<ChoiceValidationResult<never>, { readonly outcome: 'error' }>).error,
+    );
+  }
+  const normalizedOptions = normalizedOptionsResult;
+  const comparableBindingMapResult = buildComparableDomainBindingMap('chooseOne', resolvedBind, decisionKey, options, normalizedOptions);
+  if (comparableBindingMapResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, comparableBindingMapResult.error);
+  }
+  const comparableBindingMap = comparableBindingMapResult.value;
   const selected = env.moveParams[decisionKey];
   if (selected === undefined) {
     if (env.mode === 'discovery') {
@@ -658,7 +719,7 @@ export const applyChooseOne = (
         },
       };
     }
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseOne missing move param binding: ${resolvedBind} (${decisionKey})`, {
+    return choiceValidationFailureResultFromMessage(cursor, `chooseOne missing move param binding: ${resolvedBind} (${decisionKey})`, {
       effectType: 'chooseOne',
       bind: resolvedBind,
       decisionKey,
@@ -686,8 +747,7 @@ export const applyChooseOne = (
 
   const selectedComparable = toChoiceComparableValue(selected);
   if (selectedComparable === null || !comparableBindingMap.has(selectedComparable)) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       `invalid selection for chooseOne "${resolvedBind}" (${decisionKey}): outside options domain`,
       {
         effectType: 'chooseOne',
@@ -737,11 +797,15 @@ export const applyChooseN = (
   const decisionKey = scopeAdvance.key;
   const evalCtx = updateChoiceScope(scope, env, cursor);
   const chooser = chooseN.chooser ?? 'active';
-  const choiceDecisionPlayer = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionKey);
+  const choiceDecisionPlayerResult = resolveChoiceDecisionPlayer('chooseN', chooser, evalCtx, bind, decisionKey);
+  if (choiceDecisionPlayerResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, choiceDecisionPlayerResult.error);
+  }
+  const choiceDecisionPlayer = choiceDecisionPlayerResult.value;
   const providedDecisionPlayer = env.decisionAuthority.player;
-  const { minCardinality, maxCardinality } = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
+  const cardinalityResult = resolveChooseNCardinality(chooseN, evalCtx, (issue) => {
     if (issue.code === 'CHOOSE_N_MODE_INVALID') {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN must use either exact n or range max/min cardinality', {
+      return choiceValidationFailed('chooseN must use either exact n or range max/min cardinality', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -749,7 +813,7 @@ export const applyChooseN = (
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_EVAL_INVALID') {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN minimum cardinality must evaluate to a non-negative integer', {
+      return choiceValidationFailed('chooseN minimum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -758,7 +822,7 @@ export const applyChooseN = (
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_EVAL_INVALID') {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN maximum cardinality must evaluate to a non-negative integer', {
+      return choiceValidationFailed('chooseN maximum cardinality must evaluate to a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -767,7 +831,7 @@ export const applyChooseN = (
       });
     }
     if (issue.code === 'CHOOSE_N_MIN_INVALID') {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN minimum cardinality must be a non-negative integer', {
+      return choiceValidationFailed('chooseN minimum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
@@ -775,14 +839,14 @@ export const applyChooseN = (
       });
     }
     if (issue.code === 'CHOOSE_N_MAX_INVALID') {
-      throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN maximum cardinality must be a non-negative integer', {
+      return choiceValidationFailed('chooseN maximum cardinality must be a non-negative integer', {
         effectType: 'chooseN',
         bind,
         bindTemplate,
         max: issue.value,
       });
     }
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'chooseN min cannot exceed max', {
+    return choiceValidationFailed('chooseN min cannot exceed max', {
       effectType: 'chooseN',
       bind,
       bindTemplate,
@@ -790,21 +854,42 @@ export const applyChooseN = (
       max: issue.max,
     });
   });
+  if (isChoiceValidationFailure(cardinalityResult)) {
+    return choiceValidationFailureResult(
+      cursor,
+      (cardinalityResult as Extract<ChoiceValidationResult<never>, { readonly outcome: 'error' }>).error,
+    );
+  }
+  const { minCardinality, maxCardinality } = cardinalityResult;
 
   const options = unwrapEvalQuery(evalQuery(chooseN.options, evalCtx));
-  const normalizedOptions = normalizeChoiceDomain(options, (issue) => {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN options domain item is not move-param encodable: ${bind}`, {
+  const normalizedOptionsResult = normalizeChoiceDomain(options, (issue) =>
+    choiceValidationFailed(`chooseN options domain item is not move-param encodable: ${bind}`, {
       effectType: 'chooseN',
       bind,
       decisionKey,
       index: issue.index,
       actualType: issue.actualType,
       value: issue.value,
-    });
-  });
-  const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionKey, options, normalizedOptions);
+    }));
+  if (isChoiceValidationFailure(normalizedOptionsResult)) {
+    return choiceValidationFailureResult(
+      cursor,
+      (normalizedOptionsResult as Extract<ChoiceValidationResult<never>, { readonly outcome: 'error' }>).error,
+    );
+  }
+  const normalizedOptions = normalizedOptionsResult;
+  const comparableBindingMapResult = buildComparableDomainBindingMap('chooseN', bind, decisionKey, options, normalizedOptions);
+  if (comparableBindingMapResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, comparableBindingMapResult.error);
+  }
+  const comparableBindingMap = comparableBindingMapResult.value;
   const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
-  const prioritizedTierEntries = resolvePrioritizedTierEntries(chooseN.options, evalCtx, bind, decisionKey);
+  const prioritizedTierEntriesResult = resolvePrioritizedTierEntries(chooseN.options, evalCtx, bind, decisionKey);
+  if (prioritizedTierEntriesResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, prioritizedTierEntriesResult.error);
+  }
+  const prioritizedTierEntries = prioritizedTierEntriesResult.value;
   const prioritizedQualifierMode = chooseN.options.query === 'prioritized' && chooseN.options.qualifierKey !== undefined
     ? 'byQualifier'
     : 'none';
@@ -813,7 +898,7 @@ export const applyChooseN = (
     if (env.mode === 'discovery') {
       const transientSelected = env.transientDecisionSelections?.[decisionKey] ?? [];
       if (transientSelected.length > clampedMax) {
-        throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection cardinality mismatch for: ${bind}`, {
+        return choiceValidationFailureResultFromMessage(cursor, `chooseN selection cardinality mismatch for: ${bind}`, {
           effectType: 'chooseN',
           bind,
           min: minCardinality,
@@ -822,8 +907,12 @@ export const applyChooseN = (
         });
       }
 
-      const selectedSequence = normalizeChooseNSelectionValues(transientSelected, bind, decisionKey);
-      validateChooseNSelectionSequence(
+      const selectedSequenceResult = normalizeChooseNSelectionValues(transientSelected, bind, decisionKey);
+      if (selectedSequenceResult.outcome === 'error') {
+        return choiceValidationFailureResult(cursor, selectedSequenceResult.error);
+      }
+      const selectedSequence = selectedSequenceResult.value;
+      const sequenceValidationResult = validateChooseNSelectionSequence(
         selectedSequence,
         comparableBindingMap,
         normalizedOptions,
@@ -832,6 +921,9 @@ export const applyChooseN = (
         bind,
         decisionKey,
       );
+      if (sequenceValidationResult.outcome === 'error') {
+        return choiceValidationFailureResult(cursor, sequenceValidationResult.error);
+      }
       const targetKinds = deriveChoiceTargetKinds(chooseN.options);
       const pendingChoice = buildChooseNPendingChoice({
         choiceDecisionPlayer,
@@ -884,7 +976,7 @@ export const applyChooseN = (
         pendingChoice,
       };
     }
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionKey})`, {
+    return choiceValidationFailureResultFromMessage(cursor, `chooseN missing move param binding: ${bind} (${decisionKey})`, {
       effectType: 'chooseN',
       bind,
       decisionKey,
@@ -909,7 +1001,7 @@ export const applyChooseN = (
     );
   }
   if (!Array.isArray(selectedValue)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN move param must be an array: ${bind}`, {
+    return choiceValidationFailureResultFromMessage(cursor, `chooseN move param must be an array: ${bind}`, {
       effectType: 'chooseN',
       bind,
       actualType: typeof selectedValue,
@@ -918,7 +1010,7 @@ export const applyChooseN = (
   }
 
   if (selectedValue.length < minCardinality || selectedValue.length > clampedMax) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN selection cardinality mismatch for: ${bind}`, {
+    return choiceValidationFailureResultFromMessage(cursor, `chooseN selection cardinality mismatch for: ${bind}`, {
       effectType: 'chooseN',
       bind,
       min: minCardinality,
@@ -927,8 +1019,12 @@ export const applyChooseN = (
     });
   }
 
-  const selectedSequence = normalizeChooseNSelectionValues(selectedValue, bind, decisionKey);
-  validateChooseNSelectionSequence(
+  const selectedSequenceResult = normalizeChooseNSelectionValues(selectedValue, bind, decisionKey);
+  if (selectedSequenceResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, selectedSequenceResult.error);
+  }
+  const selectedSequence = selectedSequenceResult.value;
+  const sequenceValidationResult = validateChooseNSelectionSequence(
     selectedSequence,
     comparableBindingMap,
     normalizedOptions,
@@ -937,6 +1033,9 @@ export const applyChooseN = (
     bind,
     decisionKey,
   );
+  if (sequenceValidationResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, sequenceValidationResult.error);
+  }
   const selectedBindings: unknown[] = [];
   for (const selected of selectedSequence) {
     selectedBindings.push(comparableBindingMap.get(selected));
@@ -979,7 +1078,7 @@ export const applyRollRandom = (
   const maxValue = evalValue(effect.rollRandom.max, evalCtx);
 
   if (typeof minValue !== 'number' || !Number.isSafeInteger(minValue)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'rollRandom.min must evaluate to a safe integer', {
+    return choiceValidationFailureResultFromMessage(cursor, 'rollRandom.min must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof minValue,
       value: minValue,
@@ -987,7 +1086,7 @@ export const applyRollRandom = (
   }
 
   if (typeof maxValue !== 'number' || !Number.isSafeInteger(maxValue)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'rollRandom.max must evaluate to a safe integer', {
+    return choiceValidationFailureResultFromMessage(cursor, 'rollRandom.max must evaluate to a safe integer', {
       effectType: 'rollRandom',
       actualType: typeof maxValue,
       value: maxValue,
@@ -995,7 +1094,7 @@ export const applyRollRandom = (
   }
 
   if (minValue > maxValue) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
+    return choiceValidationFailureResultFromMessage(cursor, `rollRandom requires min <= max, received min=${minValue}, max=${maxValue}`, {
       effectType: 'rollRandom',
       min: minValue,
       max: maxValue,
@@ -1009,7 +1108,11 @@ export const applyRollRandom = (
 
   const fixedBinding = resolvedBindings[effect.rollRandom.bind];
   if (fixedBinding !== undefined) {
-    const rolledValue = resolveFixedRandomBinding(effect.rollRandom.bind, fixedBinding, minValue, maxValue);
+    const rolledValueResult = resolveFixedRandomBinding(effect.rollRandom.bind, fixedBinding, minValue, maxValue);
+    if (rolledValueResult.outcome === 'error') {
+      return choiceValidationFailureResult(cursor, rolledValueResult.error);
+    }
+    const rolledValue = rolledValueResult.value;
     const nestedCursor: EffectCursor = {
       ...cursor,
       bindings: {
@@ -1047,11 +1150,15 @@ export const applyRollRandom = (
       return { state: cursor.state, rng: cursor.rng, bindings: cursor.bindings };
     }
     if (outcomes.every((outcome) => outcome.nextDecision === undefined)) {
+      const pendingChoiceResult = toStochasticPendingChoice(outcomes);
+      if (pendingChoiceResult.outcome === 'error') {
+        return choiceValidationFailureResult(cursor, pendingChoiceResult.error);
+      }
       return {
         state: cursor.state,
         rng: cursor.rng,
         bindings: cursor.bindings,
-        pendingChoice: toStochasticPendingChoice(outcomes),
+        pendingChoice: pendingChoiceResult.value,
       };
     }
 
@@ -1069,12 +1176,16 @@ export const applyRollRandom = (
       }
     }
 
-    const pendingChoice: ChoicePendingRequest | ChoiceStochasticPendingRequest =
+    const pendingChoice: ChoiceValidationResult<ChoicePendingRequest | ChoiceStochasticPendingRequest> =
       pendingByDecisionKey.size === 1 && outcomes.every((outcome) => outcome.nextDecision !== undefined)
         ? (() => {
           const selectedDecisionKey = pendingByDecisionKey.keys().next().value as string;
-          const mergedPendingChoices = mergePendingChoiceRequests(pendingByDecisionKey.get(selectedDecisionKey)!);
-          return mergedPendingChoices.length === 1
+          const mergedPendingChoicesResult = mergePendingChoiceRequests(pendingByDecisionKey.get(selectedDecisionKey)!);
+          if (mergedPendingChoicesResult.outcome === 'error') {
+            return mergedPendingChoicesResult;
+          }
+          const mergedPendingChoices = mergedPendingChoicesResult.value;
+          return choiceValidationSuccess(mergedPendingChoices.length === 1
             ? mergedPendingChoices[0]!
             : {
               kind: 'pendingStochastic',
@@ -1082,14 +1193,17 @@ export const applyRollRandom = (
               source: 'rollRandom',
               alternatives: mergedPendingChoices,
               outcomes,
-            };
+            });
         })()
         : toStochasticPendingChoice(outcomes);
+    if (pendingChoice.outcome === 'error') {
+      return choiceValidationFailureResult(cursor, pendingChoice.error);
+    }
     return {
       state: cursor.state,
       rng: cursor.rng,
       bindings: cursor.bindings,
-      pendingChoice,
+      pendingChoice: pendingChoice.value,
     };
   }
 
@@ -1134,16 +1248,20 @@ export const applySetMarker = (
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'setMarker.state must evaluate to a string', {
+    return choiceValidationFailureResultFromMessage(cursor, 'setMarker.state must evaluate to a string', {
       effectType: 'setMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
     });
   }
 
-  const lattice = resolveMarkerLattice(env.def, marker, 'setMarker');
+  const latticeResult = resolveMarkerLattice(env.def, marker, 'setMarker');
+  if (latticeResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, latticeResult.error);
+  }
+  const lattice = latticeResult.value;
   if (!lattice.states.includes(evaluatedState)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    return choiceValidationFailureResultFromMessage(cursor, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setMarker',
       marker,
       state: evaluatedState,
@@ -1153,8 +1271,7 @@ export const applySetMarker = (
 
   const setViolation = findSpaceMarkerConstraintViolation(lattice, String(spaceId), evaluatedState, evalCtx, evalConditionRaw);
   if (setViolation !== null) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       `Marker state "${evaluatedState}" is illegal for lattice "${marker}" in space "${String(spaceId)}"`,
       {
         effectType: 'setMarker',
@@ -1223,21 +1340,24 @@ export const applyShiftMarker = (
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'shiftMarker.delta must evaluate to a safe integer', {
+    return choiceValidationFailureResultFromMessage(cursor, 'shiftMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
     });
   }
 
-  const lattice = resolveMarkerLattice(env.def, marker, 'shiftMarker');
+  const latticeResult = resolveMarkerLattice(env.def, marker, 'shiftMarker');
+  if (latticeResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, latticeResult.error);
+  }
+  const lattice = latticeResult.value;
   const spaceMarkers = cursor.state.markers[String(spaceId)] ?? {};
   let resolution;
   try {
     resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, evalCtx, evalConditionRaw);
   } catch (error) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       error instanceof Error ? error.message : `Failed to resolve marker shift for lattice "${marker}"`,
       {
         effectType: 'shiftMarker',
@@ -1308,16 +1428,20 @@ export const applySetGlobalMarker = (
   const evaluatedState = evalValue(stateExpr, evalCtx);
 
   if (typeof evaluatedState !== 'string') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'setGlobalMarker.state must evaluate to a string', {
+    return choiceValidationFailureResultFromMessage(cursor, 'setGlobalMarker.state must evaluate to a string', {
       effectType: 'setGlobalMarker',
       actualType: typeof evaluatedState,
       value: evaluatedState,
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(env.def, marker, 'setGlobalMarker');
+  const latticeResult = resolveGlobalMarkerLattice(env.def, marker, 'setGlobalMarker');
+  if (latticeResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, latticeResult.error);
+  }
+  const lattice = latticeResult.value;
   if (!lattice.states.includes(evaluatedState)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
+    return choiceValidationFailureResultFromMessage(cursor, `Invalid marker state "${evaluatedState}" for lattice "${marker}"`, {
       effectType: 'setGlobalMarker',
       marker,
       state: evaluatedState,
@@ -1367,19 +1491,23 @@ export const applyShiftGlobalMarker = (
   const evaluatedDelta = evalValue(deltaExpr, evalCtx);
 
   if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'shiftGlobalMarker.delta must evaluate to a safe integer', {
+    return choiceValidationFailureResultFromMessage(cursor, 'shiftGlobalMarker.delta must evaluate to a safe integer', {
       effectType: 'shiftGlobalMarker',
       actualType: typeof evaluatedDelta,
       value: evaluatedDelta,
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(env.def, marker, 'shiftGlobalMarker');
+  const latticeResult = resolveGlobalMarkerLattice(env.def, marker, 'shiftGlobalMarker');
+  if (latticeResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, latticeResult.error);
+  }
+  const lattice = latticeResult.value;
   const currentState = cursor.state.globalMarkers?.[marker] ?? lattice.defaultState;
   const currentIndex = lattice.states.indexOf(currentState);
 
   if (currentIndex < 0) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `Current marker state "${currentState}" not found in lattice "${marker}"`, {
+    return choiceValidationFailureResultFromMessage(cursor, `Current marker state "${currentState}" not found in lattice "${marker}"`, {
       effectType: 'shiftGlobalMarker',
       marker,
       currentState,
@@ -1438,28 +1566,28 @@ export const applyFlipGlobalMarker = (
   const evaluatedStateB = evalValue(stateBExpr, evalCtx);
 
   if (typeof evaluatedMarker !== 'string') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.marker must evaluate to a string', {
+    return choiceValidationFailureResultFromMessage(cursor, 'flipGlobalMarker.marker must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedMarker,
       value: evaluatedMarker,
     });
   }
   if (typeof evaluatedStateA !== 'string') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.stateA must evaluate to a string', {
+    return choiceValidationFailureResultFromMessage(cursor, 'flipGlobalMarker.stateA must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateA,
       value: evaluatedStateA,
     });
   }
   if (typeof evaluatedStateB !== 'string') {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker.stateB must evaluate to a string', {
+    return choiceValidationFailureResultFromMessage(cursor, 'flipGlobalMarker.stateB must evaluate to a string', {
       effectType: 'flipGlobalMarker',
       actualType: typeof evaluatedStateB,
       value: evaluatedStateB,
     });
   }
   if (evaluatedStateA === evaluatedStateB) {
-    throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, 'flipGlobalMarker requires two distinct states', {
+    return choiceValidationFailureResultFromMessage(cursor, 'flipGlobalMarker requires two distinct states', {
       effectType: 'flipGlobalMarker',
       marker: evaluatedMarker,
       stateA: evaluatedStateA,
@@ -1467,10 +1595,13 @@ export const applyFlipGlobalMarker = (
     });
   }
 
-  const lattice = resolveGlobalMarkerLattice(env.def, evaluatedMarker, 'flipGlobalMarker');
+  const latticeResult = resolveGlobalMarkerLattice(env.def, evaluatedMarker, 'flipGlobalMarker');
+  if (latticeResult.outcome === 'error') {
+    return choiceValidationFailureResult(cursor, latticeResult.error);
+  }
+  const lattice = latticeResult.value;
   if (!lattice.states.includes(evaluatedStateA)) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       `Invalid stateA "${evaluatedStateA}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -1481,8 +1612,7 @@ export const applyFlipGlobalMarker = (
     );
   }
   if (!lattice.states.includes(evaluatedStateB)) {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       `Invalid stateB "${evaluatedStateB}" for lattice "${evaluatedMarker}" in flipGlobalMarker`,
       {
         effectType: 'flipGlobalMarker',
@@ -1500,8 +1630,7 @@ export const applyFlipGlobalMarker = (
   } else if (currentState === evaluatedStateB) {
     nextState = evaluatedStateA;
   } else {
-    throw effectRuntimeError(
-      EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED,
+    return choiceValidationFailureResultFromMessage(cursor,
       `flipGlobalMarker current state "${currentState}" is not flippable between "${evaluatedStateA}" and "${evaluatedStateB}"`,
       {
         effectType: 'flipGlobalMarker',

@@ -45,11 +45,11 @@ export function canConfirmChooseNSelection(selectedCount: number, minCardinality
   return selectedCount >= minCardinality && selectedCount <= maxCardinality;
 }
 
-export function resolveChooseNCardinality(
+export function resolveChooseNCardinality<T = never>(
   chooseN: ChooseNDef,
   evalCtx: ReadContext,
-  onIssue: (issue: ChooseNCardinalityIssue) => never,
-): ChooseNCardinality {
+  onIssue: (issue: ChooseNCardinalityIssue) => T,
+): ChooseNCardinality | T {
   const hasN = 'n' in chooseN && chooseN.n !== undefined;
   const hasMax = 'max' in chooseN && chooseN.max !== undefined;
   const hasMin = 'min' in chooseN && chooseN.min !== undefined;

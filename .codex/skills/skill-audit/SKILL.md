@@ -25,6 +25,10 @@ Use this skill to evaluate a target skill against the work done in the current C
    - steps not exercised in this session
    - if the target skill was modified earlier in the same session, whether each finding applies to the pre-edit version, the current version, or both
    - if the same target was already audited earlier in the same session, which findings are newly resolved, which remain, and which are new
+   - for same-session re-audits or self-audits, separate:
+     - what the earlier audit enabled
+     - what became obsolete after same-session edits
+     - what still remains weak in the current skill
 5. Cross-check each finding against:
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
@@ -50,6 +54,12 @@ Output the audit in the conversation, not in a file.
 **Skill path**: <path>
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentences on how the skill was used in this session>
+
+## Resolved Since Prior Audit
+
+[Optional. Use for same-session re-audits when earlier findings were addressed before this report.]
+
+- <resolved finding and what changed>
 
 ## Alignment Check
 
@@ -109,6 +119,7 @@ Output the audit in the conversation, not in a file.
 - Any suggestion that conflicts with `docs/FOUNDATIONS.md` must be rejected and called out explicitly.
 - Stay within the target skill's stated scope. Do not expand the audit into a redesign of a different skill.
 - Every `Issue` and `Improvement` must be grounded in actual session evidence. Pure hypotheticals belong in `Features` or should be omitted.
+- Evidence should usually identify the concrete session moment that supports the finding, such as a command run, workaround taken, file edited, or decision point.
 - If the target skill is part of a multi-skill workflow, report terminology or reference drift across sibling skills as issues when it affects correctness or usability.
 - When re-auditing the same target within one session, prefer delta-oriented findings: note what was fixed since the last audit before repeating older items that still remain.
 

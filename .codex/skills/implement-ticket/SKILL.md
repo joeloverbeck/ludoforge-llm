@@ -38,6 +38,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Path-only drift is not a scope discrepancy. Example: ticket names `src/kernel/foo.ts` but the artifact moved to `src/contracts/foo.ts` with the same purpose.
    - Stale test paths: prefer the live test surface that owns the behavior.
 6. Build a discrepancy list for anything the ticket states that does not match reality.
+   - If the ticket presents an implementation branch or design decision as still open, but live code has already resolved that branch in adjacent groundwork, treat the landed code as authoritative stale wording unless it changes the ticket boundary.
 
 **Architectural constraints**
 
@@ -78,6 +79,10 @@ Every stop condition below requires resolution before implementation proceeds.
 14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
 16. Before coding, restate the authoritative boundary in working notes (one sentence summarizing the corrected scope if any corrections were made) and confirm explicitly that there are no blocking discrepancies remaining. Skip the restatement if no corrections were made — the original ticket boundary is implicitly authoritative.
+    - Lightweight template:
+      - `Authoritative boundary`: <one sentence>
+      - `Blocking discrepancies`: none | <list>
+      - `Stale but non-blocking`: none | <list>
 
 **Confirmation semantics**:
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.
@@ -130,6 +135,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
 - If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
 - When a ticket names a test deliverable that would require disproportionate mocking or fixture setup relative to the code change, and the behavior is already exercised by existing integration/e2e tests, document the rationale for deferring the dedicated test and note it in the summary. The existing test coverage satisfies the behavioral invariant even without a dedicated unit test.
+- For staged internal migrations where public callers intentionally preserve the old external behavior (for example dispatcher rethrow preserved while handlers switch to result-returning), direct tests against the owned internal seam are acceptable. Prefer the narrowest owned seam that can observe the migrated intermediate state.
 
 ### Schema & Contract Migrations
 
@@ -218,8 +224,10 @@ When a ticket change affects other active tickets in the same series:
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
+   - Repo-specific example: if `AGENTS.md` says focused engine runs should execute a concrete built test file path after build, prefer that focused file-path command over a ticket's `--test-name-pattern` example unless the broader command is itself an explicit deliverable.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
+   - In this repo, `pnpm -F @ludoforge/engine test -- --test-name-pattern ...` may still traverse the full engine suite; when a focused validation step is needed first, use the concrete built test file path described in `AGENTS.md`, then return to the ticket-authoritative broader command later if still required.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
 
 ### Build Ordering & Output Contention

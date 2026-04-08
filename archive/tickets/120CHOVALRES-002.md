@@ -1,6 +1,6 @@
 # 120CHOVALRES-002: Convert 32 throw sites in effects-choice.ts and integrate with PartialEffectResult
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel choice effect handlers, effect dispatch
@@ -99,3 +99,20 @@ If strategy (a) is chosen, `effect-dispatch.ts` must handle the new `PartialEffe
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "effects-choice"`
 2. `pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-08
+- What changed:
+  - Converted the `effects-choice.ts` `CHOICE_RUNTIME_VALIDATION_FAILED` throw-for-control-flow sites to `ChoiceValidationResult`/`choiceValidationError` returns through `PartialEffectResult`.
+  - Updated shared helpers in `value-membership.ts` and `choose-n-cardinality.ts` so internal choice validation can return typed failures instead of throwing.
+  - Added direct handler regression coverage in `packages/engine/test/unit/effects-choice.test.ts` for representative validation failures.
+- Deviations from original plan:
+  - The `PartialEffectResult` integration path was already resolved in live code before this ticket landed: `effect-context.ts` already exposed `choiceValidationError`, and `effect-dispatch.ts` already rethrew it to preserve pre-existing caller behavior for the follow-up tickets. No additional edits were needed there.
+  - The named unit test path in the ticket had moved; the active coverage lives in `packages/engine/test/unit/effects-choice.test.ts`.
+  - The ticket's example focused test command ran the full engine package suite under the current Node test-runner setup instead of only the named slice.
+- Verification:
+  - `grep -rn "throw.*CHOICE_RUNTIME_VALIDATION_FAILED" packages/engine/src/kernel/effects-choice.ts`
+  - `pnpm -F @ludoforge/engine test -- --test-name-pattern "effects-choice"` (passed; exercised the full engine package suite, 733 passing tests)
+  - `pnpm turbo typecheck`
+  - `pnpm turbo test`

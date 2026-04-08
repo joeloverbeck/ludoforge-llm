@@ -26,6 +26,16 @@ import {
   createCollector,
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import {
+  createMutableReadScope,
+  toEffectCursor,
+  toEffectEnv,
+} from '../../src/kernel/effect-context.js';
+import { createEffectBudgetState } from '../../src/kernel/effect-dispatch.js';
+import {
+  applyChooseN,
+  applySetMarker,
+} from '../../src/kernel/effects-choice.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
 const makeDef = (): GameDef => ({
@@ -108,6 +118,27 @@ const makeDiscoveryProbeCtx = (overrides?: EffectContextTestOverrides): EffectCo
   collector: createCollector(),
   ...overrides,
 });
+
+const invokeChoiceHandler = (
+  handler: typeof applyChooseN | typeof applySetMarker,
+  effect: EffectAST,
+  ctx: EffectContext,
+) => {
+  const env = toEffectEnv(ctx);
+  const cursor = toEffectCursor(ctx);
+  const scope = createMutableReadScope(env, cursor);
+  const budget = createEffectBudgetState(ctx);
+  return handler(
+    effect as never,
+    env,
+    cursor,
+    scope,
+    budget,
+    () => {
+      throw new Error('unexpected nested applyBatch');
+    },
+  );
+};
 
 describe('effects choice assertions', () => {
   it('chooseOne succeeds when selected move param is in evaluated domain', () => {
@@ -482,6 +513,76 @@ describe('effects choice assertions', () => {
     const result = applyEffect(effect, ctx);
     assert.equal(result.state, ctx.state);
     assert.equal(result.rng, ctx.rng);
+  });
+
+  it('chooseN returns a validation result for non-encodable selections when invoked directly', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': [{ code: 'bad' }] as unknown as string[] } });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+        n: 1,
+      },
+    });
+
+    const result = invokeChoiceHandler(applyChooseN, effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /not move-param encodable/);
+  });
+
+  it('chooseN returns a validation result for cardinality mismatches when invoked directly', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'beta', 'gamma'] } });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta', 'gamma'] },
+        max: 2,
+      },
+    });
+
+    const result = invokeChoiceHandler(applyChooseN, effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /cardinality mismatch/);
+  });
+
+  it('chooseN returns a validation result for duplicate selections when invoked directly', () => {
+    const ctx = makeCtx({ moveParams: { '$picks': ['alpha', 'alpha'] } });
+    const effect: EffectAST = eff({
+      chooseN: {
+        internalDecisionId: 'decision:$picks',
+        bind: '$picks',
+        options: { query: 'enums', values: ['alpha', 'beta'] },
+        n: 2,
+      },
+    });
+
+    const result = invokeChoiceHandler(applyChooseN, effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /must be unique/);
+  });
+
+  it('setMarker returns a validation result for invalid lattice states when invoked directly', () => {
+    const ctx = makeCtx({
+      def: {
+        ...makeDef(),
+        markerLattices: [
+          { id: 'control', states: ['off', 'on'], defaultState: 'off' },
+        ],
+      },
+    });
+    const effect: EffectAST = eff({
+      setMarker: {
+        space: 'hand:0',
+        marker: 'control',
+        state: 'invalid',
+      },
+    });
+
+    const result = invokeChoiceHandler(applySetMarker, effect, ctx);
+    assert.equal(result.choiceValidationError?.code, 'CHOICE_RUNTIME_VALIDATION_FAILED');
+    assert.match(result.choiceValidationError?.message ?? '', /Invalid marker state/);
   });
 
   it('chooseN preserves token runtime bindings for downstream tokenProp usage', () => {

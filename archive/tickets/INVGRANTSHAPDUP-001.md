@@ -1,6 +1,6 @@
 # INVGRANTSHAPDUP-001: Investigate toPendingFreeOperationGrant triplication
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — investigation only (consolidation ticket as follow-up if confirmed)
@@ -75,3 +75,54 @@ Are any fields conditionally omitted in one site but not others? Does one site p
 ### Commands
 
 1. None — static analysis only
+
+## Verdict (2026-04-08)
+
+**Confirmed identical**. The pending-grant construction is duplicated across all three named sites:
+
+1. `packages/engine/src/kernel/turn-flow-eligibility.ts`
+2. `packages/engine/src/kernel/free-operation-viability.ts`
+3. `packages/engine/src/kernel/effects-turn-flow.ts`
+
+### Field-by-field comparison
+
+All three construct the same pending-grant field set:
+
+1. `grantId`
+2. `phase`
+3. `seat`
+4. Optional `executeAsSeat`
+5. `operationClass`
+6. Optional `actionIds`
+7. Optional `zoneFilter`
+8. Optional `tokenInterpretations`
+9. Optional `moveZoneBindings`
+10. Optional `moveZoneProbeBindings`
+11. Optional `sequenceContext`
+12. Optional `executionContext`
+13. Optional `allowDuringMonsoon`
+14. Optional `viabilityPolicy`
+15. Optional `completionPolicy`
+16. Optional `outcomePolicy`
+17. Optional `postResolutionTurnFlow`
+18. `remainingUses`
+19. Optional `sequenceBatchId`
+20. Optional `sequenceIndex`
+
+### Corrected architectural boundary
+
+The original ticket's suggested consolidation target, `packages/engine/src/kernel/grant-lifecycle.ts`, is stale against the live module graph. `grant-lifecycle.ts` already imports `free-operation-viability.ts`, and `free-operation-viability.ts` already imports `grant-lifecycle.ts`. Moving the shared factory directly into `grant-lifecycle.ts` would require extra dependency untangling and is not the narrowest `docs/FOUNDATIONS.md`-compliant follow-up.
+
+### Follow-up
+
+Created follow-up ticket `tickets/GRANTPENDBUILDER-001.md` to extract one authoritative pending-grant builder into a neutral helper module and migrate all three callers atomically.
+
+## Outcome
+
+Completed: 2026-04-08
+
+Investigation confirmed that pending free-operation grant construction is duplicated identically across `turn-flow-eligibility.ts`, `free-operation-viability.ts`, and `effects-turn-flow.ts`. The review also established that the original proposed consolidation target, `grant-lifecycle.ts`, is not the narrowest safe extraction point because the live module graph already couples it with `free-operation-viability.ts`.
+
+Deviation from original plan: instead of recommending a move into `grant-lifecycle.ts`, the investigation created follow-up ticket `tickets/GRANTPENDBUILDER-001.md` for a neutral shared helper module that can absorb all three callers atomically without adding a cycle-prone dependency.
+
+Verification results: static analysis only, per ticket scope. Confirmed the three construction sites and their field sets directly in source, created the follow-up ticket, and ran `pnpm run check:ticket-deps` successfully before archival.

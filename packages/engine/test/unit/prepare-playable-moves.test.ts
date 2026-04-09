@@ -1,5 +1,18 @@
 import * as assert from 'node:assert/strict';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
+/** Resolve a path relative to the engine package root, regardless of CWD. */
+const engineFixture = (...segments: string[]): string => {
+  const candidates = [
+    join(process.cwd(), 'test', ...segments),
+    join(process.cwd(), 'packages', 'engine', 'test', ...segments),
+  ];
+  const found = candidates.find((c) => existsSync(c));
+  if (!found) throw new Error(`Fixture not found: tried ${candidates.join(', ')}`);
+  return found;
+};
 
 import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
@@ -8,12 +21,12 @@ import { completeClassifiedMove, pendingClassifiedMove, stochasticClassifiedMove
 import { eff } from '../helpers/effect-tag-helper.js';
 import {
   type ActionPipelineDef,
-  applyMove,
   asActionId,
   asPhaseId,
   assertValidatedGameDef,
   createRng,
   createGameDefRuntime,
+  deserializeGameState,
   enumerateLegalMoves,
   illegalMoveError,
   initialState,
@@ -21,6 +34,7 @@ import {
   probeMoveViability,
   type ClassifiedMove,
   type Move,
+  type SerializedGameState,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/simulator.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -286,35 +300,23 @@ describe('preparePlayableMoves', () => {
      * selections.  preparePlayableMoves must fall through to the template
      * completion path instead of discarding the move.
      *
-     * Reproduces with FITL seed 12 after two agent turns. The rally template
-     * (empty params, freeOperation=true) must survive filtering and be
-     * completable.
+     * The test state is loaded from a snapshot fixture to decouple from
+     * agent profile evolution (Foundation 2: Evolution-First Design).
+     * The fixture captures the FITL game state at the exact point where
+     * the bug manifests: VC has a zone-filtered free-operation rally
+     * template that probeMoveViability cannot evaluate.
      */
     it('does not discard free-operation templates whose zone filter is unevaluable on incomplete moves', () => {
       const { compiled } = compileProductionSpec();
       const def = assertValidatedGameDef(compiled.gameDef);
       const runtime = createGameDefRuntime(def);
 
-      // Advance to the game state where the bug manifests (seed 12, turn 2).
-      let state = initialState(def, 12, 4, undefined, runtime).state;
-      const agent = new PolicyAgent();
-      const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
-      const agentRngs = Array.from(
-        { length: 4 },
-        (_, i) => createRng(BigInt(12) ^ (BigInt(i + 1) * AGENT_RNG_MIX)),
-      );
+      // Load the pre-bug game state from a snapshot fixture.
+      const fixturePath = engineFixture('fixtures', 'gamestate', 'fitl-seed12-turn2-freeop-template.json');
+      const serialized = JSON.parse(readFileSync(fixturePath, 'utf8')) as SerializedGameState;
+      const state = deserializeGameState(serialized);
 
-      for (let turn = 0; turn < 2; turn += 1) {
-        const legal = enumerateLegalMoves(def, state, undefined, runtime).moves;
-        const player = state.activePlayer;
-        const selected = agent.chooseMove({
-          def, state, playerId: player,
-          legalMoves: legal, rng: agentRngs[player]!, runtime,
-        });
-        state = applyMove(def, state, selected.move, undefined, runtime).state;
-      }
-
-      // Turn 2: VC should have a free-operation rally template.
+      // VC should have a free-operation rally template.
       const enumerated1 = enumerateLegalMoves(def, state, undefined, runtime);
       const classifiedFreeOpMove = enumerated1.moves.find(({ move }) => move.freeOperation === true);
       assert.ok(classifiedFreeOpMove, 'expected a classified free-operation move in enumerated legal moves');

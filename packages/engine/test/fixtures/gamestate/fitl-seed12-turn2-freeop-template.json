@@ -1,0 +1,3835 @@
+{
+  "globalVars": {
+    "coinResources": 10,
+    "usResources": 7,
+    "airLiftRemaining": 0,
+    "airStrikeRemaining": 0,
+    "trainCount": 0,
+    "patrolCount": 0,
+    "sweepCount": 0,
+    "assaultCount": 0,
+    "rallyCount": 0,
+    "marchCount": 0,
+    "attackCount": 0,
+    "adviseCount": 0,
+    "airLiftCount": 0,
+    "airStrikeCount": 0,
+    "governCount": 1,
+    "transportCount": 0,
+    "raidCount": 0,
+    "infiltrateCount": 0,
+    "bombardCount": 0,
+    "nvaAmbushCount": 0,
+    "taxCount": 0,
+    "subvertCount": 0,
+    "vcAmbushCount": 0,
+    "mom_wildWeasels": false,
+    "mom_adsid": false,
+    "mom_rollingThunder": false,
+    "mom_medevacUnshaded": false,
+    "mom_medevacShaded": false,
+    "mom_blowtorchKomer": false,
+    "mom_claymores": false,
+    "mom_daNang": false,
+    "mom_mcnamaraLine": false,
+    "mom_oriskany": false,
+    "mom_bombingPause": false,
+    "mom_559thTransportGrp": false,
+    "mom_bodyCount": false,
+    "mom_generalLansdale": false,
+    "mom_typhoonKate": false,
+    "fitl_airStrikeWindowMode": 0,
+    "fitl_operationAttleboroTunnelOverride": false,
+    "linebacker11Allowed": false,
+    "linebacker11SupportAvailable": 0,
+    "nvaResources": 10,
+    "vcResources": 5,
+    "arvnResources": 30,
+    "aid": 12,
+    "patronage": 18,
+    "trail": 1,
+    "totalEcon": 15,
+    "terrorSabotageMarkersPlaced": 0,
+    "leaderBoxCardCount": 0
+  },
+  "perPlayerVars": {
+    "0": {
+      "resources": 20
+    },
+    "1": {
+      "resources": 20
+    },
+    "2": {
+      "resources": 20
+    },
+    "3": {
+      "resources": 20
+    }
+  },
+  "zoneVars": {
+    "hue:none": {
+      "terrorCount": 0
+    },
+    "da-nang:none": {
+      "terrorCount": 0
+    },
+    "kontum:none": {
+      "terrorCount": 0
+    },
+    "qui-nhon:none": {
+      "terrorCount": 0
+    },
+    "cam-ranh:none": {
+      "terrorCount": 0
+    },
+    "an-loc:none": {
+      "terrorCount": 0
+    },
+    "saigon:none": {
+      "terrorCount": 0
+    },
+    "can-tho:none": {
+      "terrorCount": 0
+    },
+    "central-laos:none": {
+      "terrorCount": 0
+    },
+    "southern-laos:none": {
+      "terrorCount": 0
+    },
+    "northeast-cambodia:none": {
+      "terrorCount": 0
+    },
+    "the-fishhook:none": {
+      "terrorCount": 0
+    },
+    "the-parrots-beak:none": {
+      "terrorCount": 0
+    },
+    "sihanoukville:none": {
+      "terrorCount": 0
+    },
+    "north-vietnam:none": {
+      "terrorCount": 0
+    },
+    "quang-tri-thua-thien:none": {
+      "terrorCount": 0
+    },
+    "quang-nam:none": {
+      "terrorCount": 0
+    },
+    "quang-tin-quang-ngai:none": {
+      "terrorCount": 0
+    },
+    "binh-dinh:none": {
+      "terrorCount": 0
+    },
+    "pleiku-darlac:none": {
+      "terrorCount": 0
+    },
+    "phu-bon-phu-yen:none": {
+      "terrorCount": 0
+    },
+    "khanh-hoa:none": {
+      "terrorCount": 0
+    },
+    "phuoc-long:none": {
+      "terrorCount": 0
+    },
+    "quang-duc-long-khanh:none": {
+      "terrorCount": 0
+    },
+    "binh-tuy-binh-thuan:none": {
+      "terrorCount": 0
+    },
+    "tay-ninh:none": {
+      "terrorCount": 0
+    },
+    "kien-phong:none": {
+      "terrorCount": 0
+    },
+    "kien-hoa-vinh-binh:none": {
+      "terrorCount": 0
+    },
+    "ba-xuyen:none": {
+      "terrorCount": 0
+    },
+    "kien-giang-an-xuyen:none": {
+      "terrorCount": 0
+    },
+    "loc-hue-khe-sanh:none": {
+      "terrorCount": 0
+    },
+    "loc-hue-da-nang:none": {
+      "terrorCount": 0
+    },
+    "loc-da-nang-dak-to:none": {
+      "terrorCount": 0
+    },
+    "loc-da-nang-qui-nhon:none": {
+      "terrorCount": 0
+    },
+    "loc-kontum-dak-to:none": {
+      "terrorCount": 0
+    },
+    "loc-kontum-qui-nhon:none": {
+      "terrorCount": 0
+    },
+    "loc-kontum-ban-me-thuot:none": {
+      "terrorCount": 0
+    },
+    "loc-qui-nhon-cam-ranh:none": {
+      "terrorCount": 0
+    },
+    "loc-cam-ranh-da-lat:none": {
+      "terrorCount": 0
+    },
+    "loc-ban-me-thuot-da-lat:none": {
+      "terrorCount": 0
+    },
+    "loc-saigon-cam-ranh:none": {
+      "terrorCount": 0
+    },
+    "loc-saigon-da-lat:none": {
+      "terrorCount": 0
+    },
+    "loc-saigon-an-loc-ban-me-thuot:none": {
+      "terrorCount": 0
+    },
+    "loc-saigon-can-tho:none": {
+      "terrorCount": 0
+    },
+    "loc-can-tho-chau-doc:none": {
+      "terrorCount": 0
+    },
+    "loc-can-tho-bac-lieu:none": {
+      "terrorCount": 0
+    },
+    "loc-can-tho-long-phu:none": {
+      "terrorCount": 0
+    },
+    "deck:none": {
+      "terrorCount": 0
+    },
+    "available-US:none": {
+      "terrorCount": 0
+    },
+    "out-of-play-US:none": {
+      "terrorCount": 0
+    },
+    "available-ARVN:none": {
+      "terrorCount": 0
+    },
+    "out-of-play-ARVN:none": {
+      "terrorCount": 0
+    },
+    "available-NVA:none": {
+      "terrorCount": 0
+    },
+    "out-of-play-NVA:none": {
+      "terrorCount": 0
+    },
+    "trucks-base-staging:none": {
+      "terrorCount": 0
+    },
+    "available-VC:none": {
+      "terrorCount": 0
+    },
+    "out-of-play-VC:none": {
+      "terrorCount": 0
+    },
+    "casualties-US:none": {
+      "terrorCount": 0
+    },
+    "leader:none": {
+      "terrorCount": 0
+    },
+    "lookahead:none": {
+      "terrorCount": 0
+    },
+    "played:none": {
+      "terrorCount": 0
+    },
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_1:none": {
+      "terrorCount": 0
+    },
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_2:none": {
+      "terrorCount": 0
+    },
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_3:none": {
+      "terrorCount": 0
+    },
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_coups_pool:none": {
+      "terrorCount": 0
+    },
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_pile_work:none": {
+      "terrorCount": 0
+    }
+  },
+  "playerCount": 4,
+  "zones": {
+    "hue:none": [
+      {
+        "id": "tok_arvn-police_11",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_10",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_9",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_8",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "da-nang:none": [
+      {
+        "id": "tok_arvn-police_30",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_29",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_28",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "kontum:none": [
+      {
+        "id": "tok_arvn-police_33",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_32",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_31",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "qui-nhon:none": [
+      {
+        "id": "tok_arvn-police_15",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_14",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_13",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_12",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "cam-ranh:none": [
+      {
+        "id": "tok_arvn-police_19",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_18",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_17",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_16",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "an-loc:none": [
+      {
+        "id": "tok_arvn-police_23",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_22",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_21",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_20",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "saigon:none": [
+      {
+        "id": "tok_arvn-police_7",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_6",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_5",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_4",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_3",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_2",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_1",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-bases_0",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      }
+    ],
+    "can-tho:none": [
+      {
+        "id": "tok_arvn-police_27",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_26",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_25",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_24",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "central-laos:none": [
+      {
+        "id": "tok_nva-guerrillas_77",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_76",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_75",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-bases_74",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "southern-laos:none": [
+      {
+        "id": "tok_nva-guerrillas_81",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_80",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_79",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-bases_78",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "northeast-cambodia:none": [],
+    "the-fishhook:none": [],
+    "the-parrots-beak:none": [
+      {
+        "id": "tok_nva-guerrillas_85",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_84",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_83",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-bases_82",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "sihanoukville:none": [],
+    "north-vietnam:none": [
+      {
+        "id": "tok_nva-guerrillas_73",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_72",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_71",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-bases_70",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "quang-tri-thua-thien:none": [
+      {
+        "id": "tok_vc-guerrillas_38",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_37",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_36",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_us-troops_35",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-irregulars_34",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      }
+    ],
+    "quang-nam:none": [
+      {
+        "id": "tok_arvn-police_45",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-rangers_44",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      }
+    ],
+    "quang-tin-quang-ngai:none": [
+      {
+        "id": "tok_vc-guerrillas_54",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_53",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_52",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "binh-dinh:none": [
+      {
+        "id": "tok_vc-guerrillas_43",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_42",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_41",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_us-troops_40",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-irregulars_39",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      }
+    ],
+    "pleiku-darlac:none": [
+      {
+        "id": "tok_vc-guerrillas_51",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_50",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_49",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_us-troops_48",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-irregulars_47",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_us-bases_46",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      }
+    ],
+    "phu-bon-phu-yen:none": [
+      {
+        "id": "tok_arvn-police_64",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "khanh-hoa:none": [
+      {
+        "id": "tok_arvn-police_65",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "phuoc-long:none": [],
+    "quang-duc-long-khanh:none": [
+      {
+        "id": "tok_vc-guerrillas_57",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_56",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_55",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "binh-tuy-binh-thuan:none": [
+      {
+        "id": "tok_vc-guerrillas_60",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_59",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_58",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      }
+    ],
+    "tay-ninh:none": [
+      {
+        "id": "tok_vc-guerrillas_63",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_62",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-bases_61",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "tunneled"
+        }
+      }
+    ],
+    "kien-phong:none": [
+      {
+        "id": "tok_vc-guerrillas_68",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      }
+    ],
+    "kien-hoa-vinh-binh:none": [
+      {
+        "id": "tok_arvn-police_66",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "ba-xuyen:none": [
+      {
+        "id": "tok_arvn-police_67",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "kien-giang-an-xuyen:none": [
+      {
+        "id": "tok_vc-guerrillas_69",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      }
+    ],
+    "loc-hue-khe-sanh:none": [],
+    "loc-hue-da-nang:none": [],
+    "loc-da-nang-dak-to:none": [],
+    "loc-da-nang-qui-nhon:none": [],
+    "loc-kontum-dak-to:none": [],
+    "loc-kontum-qui-nhon:none": [],
+    "loc-kontum-ban-me-thuot:none": [],
+    "loc-qui-nhon-cam-ranh:none": [],
+    "loc-cam-ranh-da-lat:none": [],
+    "loc-ban-me-thuot-da-lat:none": [],
+    "loc-saigon-cam-ranh:none": [],
+    "loc-saigon-da-lat:none": [],
+    "loc-saigon-an-loc-ban-me-thuot:none": [],
+    "loc-saigon-can-tho:none": [],
+    "loc-can-tho-chau-doc:none": [],
+    "loc-can-tho-bac-lieu:none": [],
+    "loc-can-tho-long-phu:none": [],
+    "deck:none": [
+      {
+        "id": "tok___eventCard_234",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-31",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_242",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-68",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_237",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-50",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_247",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-101",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_233",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-29",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_240",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-63",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_232",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-26",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_245",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-93",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_229",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-1",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_244",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-79",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_354",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-130",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_253",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-5",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_285",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-85",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_295",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-104",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_260",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-22",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_270",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-47",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_290",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-95",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_297",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-106",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_284",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-83",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_280",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-76",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_269",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-46",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_286",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-86",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_282",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-81",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_352",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-128",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_296",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-105",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_258",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-14",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_267",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-39",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_277",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-70",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_281",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-78",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_351",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-127",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_268",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-44",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_255",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-7",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_292",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-99",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_293",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-100",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_261",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-23",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_266",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-38",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_279",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-73",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_310",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-20",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_341",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-96",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_323",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-49",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_347",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-119",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_349",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-125",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_330",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-62",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_311",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-21",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_343",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-111",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_327",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-58",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_339",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-92",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_331",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-65",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_329",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-61",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_325",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-54",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_321",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-42",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_333",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-74",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_319",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-40",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_317",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-36",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_346",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-117",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_309",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-19",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_328",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-60",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_314",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-32",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_337",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-88",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_353",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-129",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_316",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-35",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_324",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-52",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_342",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-103",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_350",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-126",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": true
+        }
+      },
+      {
+        "id": "tok___eventCard_348",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-120",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_301",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-2",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_322",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-45",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_338",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-91",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_307",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-13",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_312",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-27",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_306",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-12",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_332",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-71",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_340",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-94",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_335",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-80",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_320",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-41",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_318",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-37",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "available-US:none": [
+      {
+        "id": "tok_us-irregulars_138",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_us-irregulars_137",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_us-irregulars_136",
+        "type": "us-irregulars",
+        "props": {
+          "faction": "US",
+          "type": "irregular",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_us-bases_135",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      },
+      {
+        "id": "tok_us-bases_134",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      },
+      {
+        "id": "tok_us-troops_133",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_132",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_131",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_130",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_129",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_128",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_127",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_126",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_125",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_124",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_123",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_122",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_121",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_120",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_119",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_118",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_117",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_116",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_115",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_114",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_113",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "out-of-play-US:none": [
+      {
+        "id": "tok_us-troops_97",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_96",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_95",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_94",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_93",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_92",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_91",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_90",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_89",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-troops_88",
+        "type": "us-troops",
+        "props": {
+          "faction": "US",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_us-bases_87",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      },
+      {
+        "id": "tok_us-bases_86",
+        "type": "us-bases",
+        "props": {
+          "faction": "US",
+          "type": "base"
+        }
+      }
+    ],
+    "available-ARVN:none": [
+      {
+        "id": "tok_arvn-bases_159",
+        "type": "arvn-bases",
+        "props": {
+          "faction": "ARVN",
+          "type": "base"
+        }
+      },
+      {
+        "id": "tok_arvn-rangers_158",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_arvn-rangers_157",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_arvn-police_156",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_155",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_154",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_153",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_152",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_151",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_150",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_149",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_148",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-police_147",
+        "type": "arvn-police",
+        "props": {
+          "faction": "ARVN",
+          "type": "police",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_146",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_145",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_144",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_143",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_142",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_141",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_140",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_139",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      }
+    ],
+    "out-of-play-ARVN:none": [
+      {
+        "id": "tok_arvn-rangers_112",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_arvn-rangers_111",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_arvn-rangers_110",
+        "type": "arvn-rangers",
+        "props": {
+          "faction": "ARVN",
+          "type": "ranger",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_arvn-troops_109",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_108",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_107",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_106",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_105",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_104",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_103",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_102",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_101",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-troops_100",
+        "type": "arvn-troops",
+        "props": {
+          "faction": "ARVN",
+          "type": "troops",
+          "m48PatrolMoved": false
+        }
+      },
+      {
+        "id": "tok_arvn-bases_99",
+        "type": "arvn-bases",
+        "props": {
+          "faction": "ARVN",
+          "type": "base"
+        }
+      },
+      {
+        "id": "tok_arvn-bases_98",
+        "type": "arvn-bases",
+        "props": {
+          "faction": "ARVN",
+          "type": "base"
+        }
+      }
+    ],
+    "available-NVA:none": [
+      {
+        "id": "tok_nva-bases_212",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_nva-bases_211",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_nva-bases_210",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_nva-bases_209",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_nva-bases_208",
+        "type": "nva-bases",
+        "props": {
+          "faction": "NVA",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_207",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_206",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_205",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_204",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_203",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_202",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_201",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-guerrillas_200",
+        "type": "nva-guerrillas",
+        "props": {
+          "faction": "NVA",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_nva-troops_199",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_198",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_197",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_196",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_195",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_194",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_193",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_192",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_191",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_190",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_189",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_188",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_187",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_186",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_185",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_184",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_183",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_182",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_181",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_180",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_179",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_178",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_177",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_176",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_175",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_174",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_173",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_172",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_171",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_170",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_169",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_168",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_167",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_166",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_165",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_164",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_163",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_162",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_161",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      },
+      {
+        "id": "tok_nva-troops_160",
+        "type": "nva-troops",
+        "props": {
+          "faction": "NVA",
+          "type": "troops"
+        }
+      }
+    ],
+    "out-of-play-NVA:none": [],
+    "trucks-base-staging:none": [],
+    "available-VC:none": [
+      {
+        "id": "tok_vc-bases_228",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_vc-bases_227",
+        "type": "vc-bases",
+        "props": {
+          "faction": "VC",
+          "type": "base",
+          "tunnel": "untunneled"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_226",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_225",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_224",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_223",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_222",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_221",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_220",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_219",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_218",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_217",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_216",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_215",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_214",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      },
+      {
+        "id": "tok_vc-guerrillas_213",
+        "type": "vc-guerrillas",
+        "props": {
+          "faction": "VC",
+          "type": "guerrilla",
+          "activity": "underground"
+        }
+      }
+    ],
+    "out-of-play-VC:none": [],
+    "casualties-US:none": [],
+    "leader:none": [
+      {
+        "id": "tok___eventCard_358",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-124",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_357",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-123",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_356",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-122",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_355",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-121",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "lookahead:none": [
+      {
+        "id": "tok___eventCard_249",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-110",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "played:none": [
+      {
+        "id": "tok___eventCard_243",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-75",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_1:none": [
+      {
+        "id": "tok___eventCard_246",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-97",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_252",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-118",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_239",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-55",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_250",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-112",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_248",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-107",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_241",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-66",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_230",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-15",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_235",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-43",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_231",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-17",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_238",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-51",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_251",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-116",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_236",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-48",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_2:none": [
+      {
+        "id": "tok___eventCard_287",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-87",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_257",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-10",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_294",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-102",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_263",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-25",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_265",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-34",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_275",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-67",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_272",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-56",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_283",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-82",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_264",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-28",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_256",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-8",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_300",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-114",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_291",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-98",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_259",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-18",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_271",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-53",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_278",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-72",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_273",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-59",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_298",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-108",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_274",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-64",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_288",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-89",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_262",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-24",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_289",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-90",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_299",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-109",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_254",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-6",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_276",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-69",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_events_pool_3:none": [
+      {
+        "id": "tok___eventCard_326",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-57",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_302",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-3",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_308",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-16",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_345",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-115",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_315",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-33",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_344",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-113",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_313",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-30",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_305",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-11",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_336",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-84",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_334",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-77",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_304",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-9",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      },
+      {
+        "id": "tok___eventCard_303",
+        "type": "__eventCard",
+        "props": {
+          "cardId": "card-4",
+          "eventDeckId": "fitl-events-initial-card-pack",
+          "isCoup": false
+        }
+      }
+    ],
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_coups_pool:none": [],
+    "__scenario_deck_fitl_scenario_full_fitl_events_initial_card_pack_pile_work:none": []
+  },
+  "nextTokenOrdinal": 359,
+  "currentPhase": "main",
+  "activePlayer": 3,
+  "turnCount": 0,
+  "rng": {
+    "algorithm": "pcg-dxsm-128",
+    "version": 1,
+    "state": [
+      "0xc87fcf0f1a4eb69867555b1a66189623",
+      "0xda3e39cb94b95bc3"
+    ]
+  },
+  "stateHash": "0x33090109f65db77",
+  "actionUsage": {
+    "govern": {
+      "turnCount": 1,
+      "phaseCount": 1,
+      "gameCount": 1
+    },
+    "event": {
+      "turnCount": 1,
+      "phaseCount": 1,
+      "gameCount": 1
+    }
+  },
+  "markers": {
+    "saigon:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "qui-nhon:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "cam-ranh:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "an-loc:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "can-tho:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "phu-bon-phu-yen:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "khanh-hoa:none": {
+      "supportOpposition": "neutral"
+    },
+    "kien-hoa-vinh-binh:none": {
+      "supportOpposition": "neutral"
+    },
+    "ba-xuyen:none": {
+      "supportOpposition": "passiveSupport"
+    },
+    "quang-tin-quang-ngai:none": {
+      "supportOpposition": "activeOpposition"
+    },
+    "quang-duc-long-khanh:none": {
+      "supportOpposition": "activeOpposition"
+    },
+    "binh-tuy-binh-thuan:none": {
+      "supportOpposition": "activeOpposition"
+    },
+    "tay-ninh:none": {
+      "supportOpposition": "activeOpposition"
+    },
+    "kien-phong:none": {
+      "supportOpposition": "activeOpposition"
+    },
+    "kien-giang-an-xuyen:none": {
+      "supportOpposition": "activeOpposition"
+    }
+  },
+  "globalMarkers": {
+    "cap_topGun": "inactive",
+    "cap_arcLight": "inactive",
+    "cap_abrams": "inactive",
+    "cap_cobras": "inactive",
+    "cap_m48Patton": "inactive",
+    "cap_caps": "inactive",
+    "cap_cords": "inactive",
+    "cap_lgbs": "inactive",
+    "cap_searchAndDestroy": "inactive",
+    "cap_aaa": "inactive",
+    "cap_longRangeGuns": "inactive",
+    "cap_migs": "inactive",
+    "cap_sa2s": "inactive",
+    "cap_pt76": "inactive",
+    "cap_armoredCavalry": "inactive",
+    "cap_mandateOfHeaven": "inactive",
+    "cap_boobyTraps": "inactive",
+    "cap_mainForceBns": "inactive",
+    "cap_cadres": "inactive",
+    "activeLeader": "minh",
+    "leaderFlipped": "normal"
+  },
+  "turnOrderState": {
+    "type": "cardDriven",
+    "runtime": {
+      "seatOrder": [
+        "arvn",
+        "nva",
+        "us",
+        "vc"
+      ],
+      "eligibility": {
+        "arvn": true,
+        "nva": true,
+        "us": true,
+        "vc": true
+      },
+      "pendingEligibilityOverrides": [],
+      "currentCard": {
+        "firstEligible": "vc",
+        "secondEligible": null,
+        "actedSeats": [
+          "arvn",
+          "nva"
+        ],
+        "passedSeats": [],
+        "nonPassCount": 2,
+        "firstActionClass": "operationPlusSpecialActivity"
+      },
+      "consecutiveCoupRounds": 0,
+      "suspendedCardEnd": {
+        "reason": "twoNonPass"
+      },
+      "pendingFreeOperationGrants": [
+        {
+          "grantId": "freeOp:0:2:event:0",
+          "phase": "ready",
+          "seat": "vc",
+          "operationClass": "operation",
+          "actionIds": [
+            "rally"
+          ],
+          "zoneFilter": {
+            "op": "==",
+            "left": {
+              "ref": "zoneProp",
+              "zone": "$zone",
+              "prop": "country",
+              "_t": 2
+            },
+            "right": "cambodia"
+          },
+          "moveZoneBindings": [
+            "$targetSpaces"
+          ],
+          "sequenceContext": {
+            "captureMoveZoneCandidatesAs": "sihanouk-rally-spaces"
+          },
+          "viabilityPolicy": "requireUsableAtIssue",
+          "completionPolicy": "required",
+          "outcomePolicy": "mustChangeGameplayState",
+          "postResolutionTurnFlow": "resumeCardFlow",
+          "remainingUses": 1,
+          "sequenceBatchId": "freeOpBatch:0:2:event:sihanouk-shaded-vc",
+          "sequenceIndex": 0
+        },
+        {
+          "grantId": "freeOp:0:2:event:1",
+          "phase": "sequenceWaiting",
+          "seat": "vc",
+          "operationClass": "operation",
+          "actionIds": [
+            "march"
+          ],
+          "moveZoneBindings": [
+            "$targetSpaces",
+            "$chainSpaces"
+          ],
+          "moveZoneProbeBindings": [
+            "$targetSpaces",
+            "$chainSpaces"
+          ],
+          "executionContext": {
+            "originRestrictionKey": "sihanouk-rally-spaces"
+          },
+          "allowDuringMonsoon": true,
+          "completionPolicy": "skipIfNoLegalCompletion",
+          "outcomePolicy": "mustChangeGameplayState",
+          "postResolutionTurnFlow": "resumeCardFlow",
+          "remainingUses": 1,
+          "sequenceBatchId": "freeOpBatch:0:2:event:sihanouk-shaded-vc",
+          "sequenceIndex": 1
+        }
+      ],
+      "freeOperationSequenceContexts": {
+        "freeOpBatch:0:2:event:sihanouk-shaded-vc": {
+          "capturedMoveZonesByKey": {},
+          "progressionPolicy": "strictInOrder",
+          "skippedStepIndices": []
+        }
+      },
+      "pendingDeferredEventEffects": [
+        {
+          "effects": [
+            {
+              "_k": 22,
+              "grantFreeOperation": {
+                "seat": "nva",
+                "operationClass": "operation",
+                "actionIds": [
+                  "rally"
+                ],
+                "zoneFilter": {
+                  "op": "==",
+                  "left": {
+                    "ref": "zoneProp",
+                    "zone": "$zone",
+                    "prop": "country",
+                    "_t": 2
+                  },
+                  "right": "cambodia"
+                },
+                "moveZoneBindings": [
+                  "$targetSpaces"
+                ],
+                "viabilityPolicy": "requireUsableAtIssue",
+                "completionPolicy": "required",
+                "outcomePolicy": "mustChangeGameplayState",
+                "postResolutionTurnFlow": "resumeCardFlow",
+                "sequence": {
+                  "batch": "sihanouk-shaded-nva",
+                  "step": 0
+                },
+                "sequenceContext": {
+                  "captureMoveZoneCandidatesAs": "sihanouk-rally-spaces"
+                }
+              }
+            },
+            {
+              "_k": 22,
+              "grantFreeOperation": {
+                "seat": "nva",
+                "operationClass": "operation",
+                "actionIds": [
+                  "march"
+                ],
+                "moveZoneBindings": [
+                  "$targetSpaces",
+                  "$chainSpaces"
+                ],
+                "moveZoneProbeBindings": [
+                  "$targetSpaces",
+                  "$chainSpaces"
+                ],
+                "allowDuringMonsoon": true,
+                "completionPolicy": "skipIfNoLegalCompletion",
+                "outcomePolicy": "mustChangeGameplayState",
+                "postResolutionTurnFlow": "resumeCardFlow",
+                "sequence": {
+                  "batch": "sihanouk-shaded-nva",
+                  "step": 1
+                },
+                "executionContext": {
+                  "originRestrictionKey": "sihanouk-rally-spaces"
+                }
+              }
+            }
+          ],
+          "moveParams": {
+            "eventCardId": "card-75",
+            "eventDeckId": "fitl-events-initial-card-pack",
+            "side": "shaded"
+          },
+          "actorPlayer": 2,
+          "actionId": "event",
+          "deferredId": "deferred:0:nva:event",
+          "requiredGrantBatchIds": [
+            "freeOpBatch:0:2:event:sihanouk-shaded-vc"
+          ]
+        }
+      ]
+    }
+  }
+}

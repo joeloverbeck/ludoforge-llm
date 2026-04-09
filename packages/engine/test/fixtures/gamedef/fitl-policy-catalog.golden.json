@@ -604,6 +604,38 @@
       "min": 0,
       "max": 10,
       "default": 1
+    },
+    "governWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
+    },
+    "trainWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
+    },
+    "sweepWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
+    },
+    "assaultWeight": {
+      "type": "number",
+      "required": false,
+      "tunable": true,
+      "min": 0,
+      "max": 10,
+      "default": 1
     }
   },
   "candidateParamDefs": {
@@ -1645,6 +1677,134 @@
           "strategicConditions": []
         }
       },
+      "preferGovernWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "governWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "govern"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "governWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTrainWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "trainWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "train"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "trainWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferSweepWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "sweepWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "sweep"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "sweepWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferAssaultWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "weight": {
+          "kind": "param",
+          "id": "assaultWeight"
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "assault"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [
+            "assaultWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferSubvertAction": {
         "scopes": [
           "move"
@@ -2191,8 +2351,12 @@
       "observerName": "currentPlayer",
       "params": {
         "eventWeight": 1.5,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.02
+        "projectedMarginWeight": 3,
+        "resourceWeight": 0.02,
+        "governWeight": 3,
+        "trainWeight": 2,
+        "sweepWeight": 0.5,
+        "assaultWeight": 0.5
       },
       "use": {
         "pruningRules": [
@@ -2202,11 +2366,11 @@
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
-          "preferTrainAction",
+          "preferTrainWeighted",
           "preferPatrolAction",
-          "preferSweepAction",
-          "preferAssaultAction",
-          "preferGovernAction"
+          "preferSweepWeighted",
+          "preferAssaultWeighted",
+          "preferGovernWeighted"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2233,14 +2397,14 @@
           "preferProjectedSelfMargin",
           "preserveResources",
           "preferEvent",
-          "preferTrainAction",
+          "preferTrainWeighted",
           "preferPatrolAction",
-          "preferSweepAction",
-          "preferAssaultAction",
-          "preferGovernAction"
+          "preferSweepWeighted",
+          "preferAssaultWeighted",
+          "preferGovernWeighted"
         ]
       },
-      "fingerprint": "13a4d863b36067cfc6d61a2a01264d78918ab49630775d53c90c2b694bfbf775"
+      "fingerprint": "e670ec3e288622dc07148cbb6ce34bc3be4046b915548f57e00d105665b39c4c"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2355,5 +2519,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "e12811b96dfc12d67820dd070906e4e961927c733f9f9b9f45b0165052746325"
+  "catalogFingerprint": "ae3ce0eb2e5fc52e58bcb7503dfe2a3daab10c629d66d3e0f633f05abaea473c"
 }

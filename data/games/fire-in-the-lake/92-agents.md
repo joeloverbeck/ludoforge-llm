@@ -33,6 +33,30 @@ agents:
       min: 0
       max: 10
       tunable: true
+    governWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
+    trainWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
+    sweepWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
+    assaultWeight:
+      type: number
+      default: 1
+      min: 0
+      max: 10
+      tunable: true
 
   library:
     stateFeatures:
@@ -233,6 +257,34 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.tax
+      preferGovernWeighted:
+        scopes: [move]
+        weight:
+          param: governWeight
+        value:
+          boolToNumber:
+            ref: candidate.tag.govern
+      preferTrainWeighted:
+        scopes: [move]
+        weight:
+          param: trainWeight
+        value:
+          boolToNumber:
+            ref: candidate.tag.train
+      preferSweepWeighted:
+        scopes: [move]
+        weight:
+          param: sweepWeight
+        value:
+          boolToNumber:
+            ref: candidate.tag.sweep
+      preferAssaultWeighted:
+        scopes: [move]
+        weight:
+          param: assaultWeight
+        value:
+          boolToNumber:
+            ref: candidate.tag.assault
       preferSubvertAction:
         scopes: [move]
         weight: 1
@@ -362,8 +414,12 @@ agents:
       observer: currentPlayer
       params:
         eventWeight: 1.5
-        projectedMarginWeight: 1
+        projectedMarginWeight: 3
         resourceWeight: 0.02
+        governWeight: 3
+        trainWeight: 2
+        sweepWeight: 0.5
+        assaultWeight: 0.5
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -371,11 +427,11 @@ agents:
           - preferProjectedSelfMargin
           - preserveResources
           - preferEvent
-          - preferTrainAction
+          - preferTrainWeighted
           - preferPatrolAction
-          - preferSweepAction
-          - preferAssaultAction
-          - preferGovernAction
+          - preferSweepWeighted
+          - preferAssaultWeighted
+          - preferGovernWeighted
         tieBreakers:
           - stableMoveKey
 

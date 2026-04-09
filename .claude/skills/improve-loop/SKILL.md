@@ -5,7 +5,7 @@ description: Iterative improvement loop — autonomously optimizes a mutable sys
 
 # Improve Loop Skill
 
-Implements Karpathy's iterative improvement pattern as an autonomous optimization loop, enhanced with UCB1 category selection, MAD confidence scoring, Goodhart's Law defenses, lightweight backtracking, intermediate metrics, cross-run lesson store, self-improving research strategy, near-miss tracking, plateau detection, structured reflection, multi-run averaging, human steering, condition drift anchoring, correctness guards, scope enforcement, lesson curation gating, and structured lesson categories.
+Autonomous optimization loop implementing Karpathy's iterative improvement pattern. Key mechanisms: UCB1 category selection, MAD confidence scoring, Goodhart's Law defenses, backtracking, near-miss tracking, plateau detection, cross-campaign lesson store, self-improving research strategy, condition drift anchoring, and correctness guards.
 
 ## Invocation
 
@@ -214,13 +214,8 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
 - If the recent experiments are exploring tangential goals not aligned with the stated objective:
   - Append `**DRIFT WARNING**: Recent experiments drifted toward <tangent>. Refocusing on declared objective: <objective>.` to musings.md.
   - Force the next hypothesis to directly target the declared objective.
-- This step prevents the proven failure mode where overnight loops abandon the original objective (documented by Cerebras and AutoResearchClaw).
-
-### Step 0b: ITERATION CAP CHECK
-
-- If `MAX_ITERATIONS` is set (not `unlimited`) and `experiment_count >= MAX_ITERATIONS`:
-  - Append to musings: `**ITERATION CAP**: Reached MAX_ITERATIONS (${MAX_ITERATIONS}). Exiting loop gracefully.`
-  - Exit the loop and proceed to "After Campaign Completes" section.
+- Prevents condition drift in long-running loops.
+- **Iteration cap**: If `MAX_ITERATIONS` is set (not `unlimited`) and `experiment_count >= MAX_ITERATIONS`, append to musings: `**ITERATION CAP**: Reached MAX_ITERATIONS (${MAX_ITERATIONS}). Exiting loop gracefully.` Exit the loop and proceed to "After Campaign Completes."
 
 ### Step 1: OBSERVE
 

@@ -1494,6 +1494,7 @@ const PolicyCompletionStatisticsSchema = z
     templateCompletionSuccesses: NumberSchema,
     templateCompletionUnsatisfiable: NumberSchema,
     duplicatesRemoved: NumberSchema,
+    completionsByActionId: z.record(StringSchema, NumberSchema).optional(),
   })
   .strict();
 
@@ -1537,6 +1538,9 @@ const AgentDecisionTraceSchema = z.union([
       profileFingerprint: StringSchema.nullable(),
       initialCandidateCount: NumberSchema,
       selectedStableMoveKey: StringSchema.nullable(),
+      phase1Score: NumberSchema.nullable().optional(),
+      phase2Score: NumberSchema.nullable().optional(),
+      phase1ActionRanking: z.array(StringSchema).optional(),
       finalScore: NumberSchema.nullable(),
       pruningSteps: z.array(PolicyPruningStepTraceSchema),
       tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),

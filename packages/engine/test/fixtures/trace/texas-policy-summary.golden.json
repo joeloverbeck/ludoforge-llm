@@ -15,6 +15,13 @@
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
     "finalScore": 100,
+    "phase1Score": 100,
+    "phase2Score": 100,
+    "phase1ActionRanking": [
+      "fold",
+      "raise",
+      "call"
+    ],
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {
@@ -34,20 +41,11 @@
     "selection": {
       "mode": "softmaxSample",
       "temperature": 0.5,
-      "candidateCount": 12,
+      "candidateCount": 3,
       "samplingProbabilities": [
-        4.248353323605286e-18,
-        0.999999780694771,
-        1.1253515003970686e-7,
-        3.330976877709268e-9,
-        5.276513816597439e-9,
-        2.418785652263331e-9,
-        2.428480170983781e-9,
-        1.1327864978858758e-8,
-        2.6202392165746383e-9,
-        2.4319186766007295e-8,
-        2.8384712575300257e-9,
-        5.220955988297319e-8
+        4.248353777202354e-18,
+        0.9999998874648379,
+        1.12535162055095e-7
       ],
       "selectedIndex": 1
     },

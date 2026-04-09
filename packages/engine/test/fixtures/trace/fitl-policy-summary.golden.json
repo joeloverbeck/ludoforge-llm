@@ -1,20 +1,29 @@
 {
   "move": {
-    "actionId": "train",
+    "actionId": "event",
     "params": {
-      "decision:doc.actionPipelines.0.stages[0].effects.0.if.else.0.chooseN::$targetSpaces": [
-        "kontum:none",
-        "binh-dinh:none"
+      "eventCardId": "card-29",
+      "eventDeckId": "fitl-events-initial-card-pack",
+      "side": "shaded",
+      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.0.chooseN::$irregularsOnMap": [
+        "tok_us-irregulars_39",
+        "tok_us-irregulars_34",
+        "tok_us-irregulars_47"
       ],
-      "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]": "place-at-base",
-      "decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]": "place-at-base",
-      "decision:doc.actionPipelines.0.stages[3].effects.0.if.else.0.chooseN::$subActionSpaces": [
-        "binh-dinh:none"
+      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_39[0]": [
+        "tok_vc-guerrillas_220"
       ],
-      "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.0.chooseOne::$subAction[0]": "pacify",
-      "decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.1.if.then.0.let.in.1.if.else.0.chooseOne::$pacLevels[0]": 2
+      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_34[1]": [
+        "tok_vc-guerrillas_219"
+      ],
+      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_47[2]": [
+        "tok_vc-guerrillas_218"
+      ],
+      "decision:doc.eventDecks.0.cards.28.shaded.effects.1.let.in.0.if.then.0.chooseN::$neutralHighlandToShift[2][0]": [
+        "quang-tri-thua-thien:none"
+      ]
     },
-    "actionClass": "operation"
+    "actionClass": "event"
   },
   "agentDecision": {
     "kind": "policy",
@@ -25,37 +34,52 @@
     "requestedProfileId": null,
     "resolvedProfileId": "us-baseline",
     "profileFingerprint": "3e00cb8e49737f68940ad2e0c114f644d94460f14ee3441d24c78a3ba7ecbc30",
-    "initialCandidateCount": 19,
-    "selectedStableMoveKey": "train|{\"decision:doc.actionPipelines.0.stages[0].effects.0.if.else.0.chooseN::$targetSpaces\":[\"kontum:none\",\"binh-dinh:none\"],\"decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]\":\"place-at-base\",\"decision:doc.actionPipelines.0.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[1]\":\"place-at-base\",\"decision:doc.actionPipelines.0.stages[3].effects.0.if.else.0.chooseN::$subActionSpaces\":[\"binh-dinh:none\"],\"decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.0.chooseOne::$subAction[0]\":\"pacify\",\"decision:doc.actionPipelines.0.stages[3].effects.1.forEach.effects.1.if.then.0.let.in.1.if.else.0.chooseOne::$pacLevels[0]\":2}|false|operation",
-    "finalScore": -6.6,
+    "initialCandidateCount": 7,
+    "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\",\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.0.chooseN::$irregularsOnMap\":[\"tok_us-irregulars_39\",\"tok_us-irregulars_34\",\"tok_us-irregulars_47\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_39[0]\":[\"tok_vc-guerrillas_220\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_34[1]\":[\"tok_vc-guerrillas_219\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_47[2]\":[\"tok_vc-guerrillas_218\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.1.let.in.0.if.then.0.chooseN::$neutralHighlandToShift[2][0]\":[\"quang-tri-thua-thien:none\"]}|false|event",
+    "finalScore": -9.6,
+    "phase1Score": -9.6,
+    "phase2Score": -9.6,
+    "phase1ActionRanking": [
+      "pass",
+      "event",
+      "advise",
+      "assault",
+      "patrol",
+      "train"
+    ],
     "pruningSteps": [
       {
         "ruleId": "dropPassWhenOtherMovesExist",
-        "remainingCandidateCount": 18,
+        "remainingCandidateCount": 6,
         "skippedBecauseEmpty": false
       }
     ],
     "tieBreakChain": [],
     "previewUsage": {
       "mode": "exactWorld",
-      "evaluatedCandidateCount": 18,
+      "evaluatedCandidateCount": 6,
       "refIds": [
         "victoryCurrentMargin.currentMargin.self"
       ],
-      "unknownRefs": [],
+      "unknownRefs": [
+        {
+          "refId": "victoryCurrentMargin.currentMargin.self",
+          "reason": "unresolved"
+        }
+      ],
       "outcomeBreakdown": {
-        "ready": 18,
+        "ready": 0,
         "stochastic": 0,
         "unknownRandom": 0,
         "unknownHidden": 0,
-        "unknownUnresolved": 0,
+        "unknownUnresolved": 6,
         "unknownFailed": 0
       }
     },
     "selection": {
       "mode": "argmax",
-      "candidateCount": 18,
-      "selectedIndex": 15
+      "candidateCount": 5,
+      "selectedIndex": 2
     },
     "emergencyFallback": false,
     "failure": null,

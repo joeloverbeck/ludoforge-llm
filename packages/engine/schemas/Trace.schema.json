@@ -2788,6 +2788,32 @@
                       }
                     ]
                   },
+                  "phase1Score": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "phase2Score": {
+                    "anyOf": [
+                      {
+                        "type": "number"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "phase1ActionRanking": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
                   "finalScore": {
                     "anyOf": [
                       {
@@ -3046,6 +3072,15 @@
                       },
                       "duplicatesRemoved": {
                         "type": "number"
+                      },
+                      "completionsByActionId": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "number"
+                        }
                       }
                     },
                     "required": [

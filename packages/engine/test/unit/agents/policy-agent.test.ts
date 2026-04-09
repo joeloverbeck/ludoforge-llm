@@ -219,7 +219,11 @@ function createTemplateDef(): GameDef {
           prefersGamma: {
             type: 'boolean',
             costClass: 'candidate',
-            expr: opExpr('eq', refExpr({ kind: 'candidateParam', id: '$target' }), literal('gamma')),
+            expr: opExpr(
+              'eq',
+              opExpr('coalesce', refExpr({ kind: 'candidateParam', id: '$target' }), literal('')),
+              literal('gamma'),
+            ),
             dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
           },
         },
@@ -307,6 +311,74 @@ function createGuidedTemplateDef(
             candidateFeatures: [],
             candidateAggregates: [],
             considerations: ['preferGamma'],
+          },
+        },
+      },
+      candidateParamDefs: {
+        '$target': { type: 'id' },
+      },
+    },
+  });
+}
+
+function createTwoPhaseIsolationDef(
+  includeCompletionGuidance: boolean,
+): GameDef {
+  const governActionId = asActionId('govern');
+  const sweepActionId = asActionId('sweep');
+  const governProfile = createTemplateChooseOneProfile(governActionId);
+  const sweepProfile = createTemplateChooseOneProfile(sweepActionId);
+  const catalog = createCatalog();
+
+  return createDef({
+    metadata: { id: `policy-agent-two-phase-${includeCompletionGuidance ? 'guided' : 'unguided'}`, players: { min: 2, max: 2 } },
+    actions: [
+      createTemplateChooseOneAction(governActionId, phaseId),
+      createTemplateChooseOneAction(sweepActionId, phaseId),
+    ],
+    actionPipelines: [governProfile, sweepProfile] as readonly ActionPipelineDef[],
+    agents: {
+      ...catalog,
+      library: {
+        ...catalog.library,
+        considerations: {
+          ...moveConsiderations({
+            preferGovern: {
+              costClass: 'candidate',
+              weight: literal(10),
+              value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('govern'))),
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+          }),
+          ...(includeCompletionGuidance
+            ? completionConsiderations({
+              preferGamma: {
+                costClass: 'state',
+                when: literal(true),
+                weight: literal(10),
+                value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('gamma'))),
+                dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+              },
+            })
+            : {}),
+        },
+      },
+      profiles: {
+        passive: {
+          fingerprint: includeCompletionGuidance ? 'two-phase-guided' : 'two-phase-unguided',
+          params: {},
+          preview: { mode: 'exactWorld' },
+          selection: { mode: 'argmax' },
+          use: {
+            pruningRules: [],
+            considerations: includeCompletionGuidance ? ['preferGovern', 'preferGamma'] : ['preferGovern'],
+            tieBreakers: ['stableMoveKey'],
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: [],
+            candidateAggregates: [],
+            considerations: includeCompletionGuidance ? ['preferGovern', 'preferGamma'] : ['preferGovern'],
           },
         },
       },
@@ -405,6 +477,12 @@ function createTemplatePreviewDef(): GameDef {
         candidateAggregates: {},
         pruningRules: {},
         considerations: moveConsiderations({
+          preferChooseTargetPhase1: {
+            costClass: 'candidate',
+            weight: literal(100),
+            value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('chooseTarget'))),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
           preferProjectedMargin: {
             costClass: 'preview',
             weight: literal(1),
@@ -429,14 +507,14 @@ function createTemplatePreviewDef(): GameDef {
           selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
-            considerations: ['preferProjectedMargin'],
+            considerations: ['preferChooseTargetPhase1', 'preferProjectedMargin'],
             tieBreakers: ['stableMoveKey'],
           },
           plan: {
             stateFeatures: [],
             candidateFeatures: ['projectedMargin'],
             candidateAggregates: [],
-            considerations: ['preferProjectedMargin'],
+            considerations: ['preferChooseTargetPhase1', 'preferProjectedMargin'],
           },
         },
       },
@@ -677,7 +755,7 @@ describe('PolicyAgent', () => {
     assert.equal(first.move.move.params['$target'], 'gamma');
   });
 
-  it('evaluates preview surfaces for completed template moves in the production path', () => {
+  it('preserves phase-1 preview diagnostics alongside phase-2 completion stats for template moves', () => {
     const def = createTemplatePreviewDef();
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
@@ -702,30 +780,27 @@ describe('PolicyAgent', () => {
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
     assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
-      ready: 2,
+      ready: 1,
       stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
-      unknownUnresolved: 0,
+      unknownUnresolved: 1,
       unknownFailed: 0,
     });
     assert.deepEqual(result.agentDecision.completionStatistics, {
       totalClassifiedMoves: 2,
-      completedCount: 1,
+      completedCount: 0,
       stochasticCount: 0,
       rejectedNotViable: 0,
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
       templateCompletionUnsatisfiable: 0,
       duplicatesRemoved: 2,
+      completionsByActionId: {
+        chooseTarget: 3,
+      },
     });
-    assert.equal(result.agentDecision.movePreparations?.length, 2);
-    const directPreparation = result.agentDecision.movePreparations?.find((entry) => entry.actionId === 'pass');
-    assert.ok(directPreparation);
-    assert.equal(directPreparation?.initialClassification, 'complete');
-    assert.equal(directPreparation?.finalClassification, 'complete');
-    assert.equal(directPreparation?.enteredTrustedMoveIndex, true);
-    assert.match(directPreparation?.stableMoveKey ?? '', /^pass\|/);
+    assert.equal(result.agentDecision.movePreparations?.length, 1);
     const completedPreparation = result.agentDecision.movePreparations?.find((entry) => entry.actionId === 'chooseTarget');
     assert.ok(completedPreparation);
     assert.equal(completedPreparation?.initialClassification, 'pending');
@@ -742,8 +817,9 @@ describe('PolicyAgent', () => {
     );
     assert.ok(completedTemplateCandidate);
     assert.deepEqual(completedTemplateCandidate.previewRefIds, ['globalVar.usMargin']);
-    assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, []);
-    assert.equal(completedTemplateCandidate.previewOutcome, 'ready');
+    assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, [{ refId: 'globalVar.usMargin', reason: 'unresolved' }]);
+    assert.equal(completedTemplateCandidate.previewOutcome, 'unresolved');
+    assert.equal(completedTemplateCandidate.previewFailureReason, 'notDecisionComplete');
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
@@ -770,5 +846,63 @@ describe('PolicyAgent', () => {
         && error.legalMoveCount === 1
       ),
     );
+  });
+
+  it('keeps action selection isolated from completion guidance, preserves phase-1 ranking, and only completes the winning action type', () => {
+    const guidedDef = createTwoPhaseIsolationDef(true);
+    const unguidedDef = createTwoPhaseIsolationDef(false);
+    const guidedState = initialState(guidedDef, 7, 2).state;
+    const unguidedState = initialState(unguidedDef, 7, 2).state;
+    const legalMoves = [
+      pendingClassifiedMove({ actionId: asActionId('govern'), params: {} }),
+      pendingClassifiedMove({ actionId: asActionId('sweep'), params: {} }),
+    ];
+    const syntheticSinglePassUpperBound = legalMoves.length * 3;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+
+    const guided = agent.chooseMove({
+      def: guidedDef,
+      state: guidedState,
+      playerId: asPlayerId(0),
+      legalMoves,
+      rng: createRng(42n),
+    });
+    const unguided = agent.chooseMove({
+      def: unguidedDef,
+      state: unguidedState,
+      playerId: asPlayerId(0),
+      legalMoves,
+      rng: createRng(42n),
+    });
+
+    assert.equal(guided.move.actionId, asActionId('govern'));
+    assert.equal(unguided.move.actionId, asActionId('govern'));
+    assert.equal(guided.move.params['$target'], 'gamma');
+    assert.equal(guided.agentDecision?.kind, 'policy');
+    assert.equal(unguided.agentDecision?.kind, 'policy');
+    if (guided.agentDecision?.kind !== 'policy') {
+      assert.fail('expected guided policy decision trace');
+    }
+    if (unguided.agentDecision?.kind !== 'policy') {
+      assert.fail('expected unguided policy decision trace');
+    }
+    assert.deepEqual(guided.agentDecision.phase1ActionRanking, unguided.agentDecision.phase1ActionRanking);
+    assert.deepEqual(guided.agentDecision.phase1ActionRanking, ['govern', 'sweep']);
+    assert.deepEqual(guided.agentDecision.completionStatistics?.completionsByActionId, {
+      govern: 3,
+    });
+    assert.equal(guided.agentDecision.completionStatistics?.templateCompletionAttempts, 3);
+    assert.equal(
+      guided.agentDecision.completionStatistics?.templateCompletionAttempts !== undefined
+      && guided.agentDecision.completionStatistics.templateCompletionAttempts < syntheticSinglePassUpperBound,
+      true,
+    );
+    assert.equal(
+      unguided.agentDecision.completionStatistics?.templateCompletionAttempts !== undefined
+      && unguided.agentDecision.completionStatistics.templateCompletionAttempts < syntheticSinglePassUpperBound,
+      true,
+    );
+    assert.equal(guided.agentDecision.movePreparations?.length, 1);
+    assert.equal(guided.agentDecision.movePreparations?.[0]?.actionId, 'govern');
   });
 });

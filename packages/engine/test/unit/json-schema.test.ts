@@ -362,6 +362,9 @@ describe('json schema artifacts', () => {
               templateCompletionSuccesses: 1,
               templateCompletionUnsatisfiable: 1,
               duplicatesRemoved: 0,
+              completionsByActionId: {
+                advance: 1,
+              },
             },
             candidates: [
               {

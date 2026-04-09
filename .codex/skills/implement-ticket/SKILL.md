@@ -104,7 +104,7 @@ Every stop condition below requires resolution before implementation proceeds.
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
 - If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then open every directly affected sibling ticket before coding. Compare the active ticket's new owned files/deliverables against each sibling's stated ownership, then update affected siblings in the same turn unless you can explicitly justify why no sibling edit is required.
-- Re-extract owned deliverables, affected files, and proof obligations from the confirmed boundary rather than continuing from stale phrasing.
+- Re-extract owned deliverables, affected files, proof obligations, `Files to Touch`, acceptance criteria, test paths, and verification commands from the confirmed boundary rather than continuing from stale phrasing.
 - Record a short working-notes block naming the affected sibling ticket(s), what scope was absorbed into the active ticket, and what scope remains deferred.
 
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
@@ -189,6 +189,7 @@ When a change touches schemas or contracts, check updates across these layers:
 
 When a change alters compiled output, scoring, move selection, observability, or preview readiness:
 - Treat owned production goldens (catalogs, summaries, traces, fixed-seed outputs) as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- Before editing an owned golden, capture fresh authoritative output from the current built runtime or test harness so the update reflects live post-change behavior rather than manual reconstruction.
 - When earlier groundwork introduced a required placeholder and the current ticket populates it, expect goldens to drift from stubs to populated values — normal ticket-owned fallout.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - When a nearby golden looks like expected drift, probe it explicitly — "no ticket-owned diff" is a valid conclusion.
@@ -256,6 +257,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 ### Execution Order
 
 1. Run the most relevant tests for the touched area.
+   - If a focused check reads built `dist/` artifacts while a rebuild or clean is still in progress, treat any resulting failure as inconclusive, wait for the build to finish, and rerun before classifying it as a real regression.
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
@@ -295,6 +297,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 - **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
 - **Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
 - **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
+- **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level file failure without the nested assertion details, rerun the built module directly (for example `node dist/test/...`) or with a repo-approved verbose reporter path so the failing subtest output becomes visible before patching.
 - **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 - **Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.
 
@@ -330,7 +333,11 @@ pnpm turbo schema:artifacts
 
 ## Follow-Up
 
-1. Summarize what changed, what was verified, and any residual risk.
+1. If implementation completed and no blocking discrepancy remains, update the active ticket before final closeout:
+   - set the ticket status to its completed state when appropriate
+   - add or amend the ticket outcome with what actually landed, any boundary corrections, and the verification that ran
+   - if the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome rather than only in chat
+2. Summarize what changed, what was verified, and any residual risk.
    - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
    - State explicitly: any ticket premise that remained unverified, especially claimed repro seeds, counts, traces, or production observations.
    - Closeout checklist:
@@ -339,8 +346,8 @@ pnpm turbo schema:artifacts
      - whether schema/artifact surfaces were checked and whether they changed
      - what scope remains deferred to sibling tickets, if any
      - any unverified ticket premise or residual risk
-2. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
-3. If the user wants archival or follow-up review, hand off to `post-ticket-review`. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
+3. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
+4. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When implementation appears complete and the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest `post-ticket-review` as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
 
 ## Codex Adaptation Notes
 

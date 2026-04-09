@@ -153,12 +153,14 @@ The improvement loop commits and rolls back frequently. It MUST run inside a ded
    ```
 3. ALL subsequent file operations use the worktree root as the base path.
 
-Set `WT` = the worktree root path. Every file path in every tool call below is prefixed with `$WT/`.
+Set `WT` = the worktree root path. Every file path in every tool call below is prefixed with `$WT/`. For tool calls (Read, Edit, Glob, Grep), always use the full absolute worktree path — `$WT` is a conceptual prefix in this document, not a shell variable available to tools.
 
 4. If the project uses a package manager, install dependencies in the worktree:
    ```bash
    cd $WT && pnpm install   # or npm install / yarn install
    ```
+
+5. **Copy runtime files**: If the campaign has runtime files (`results.tsv`, `seed-tier.txt`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`) in the source campaign folder but not in the worktree, copy them. These files are gitignored and won't be created by `git worktree add`.
 
 ## Phase 0 — Setup
 
@@ -239,6 +241,8 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
 - After any ACCEPT, reset `strategy = "normal"` and `consecutive_rejects = 0`.
 - After any **tier/phase advance** (including unwinnable seed escape), reset `consecutive_rejects = 0` and `strategy = "normal"`. The new tier is a fresh optimization context.
 
+**Surface exhaustion trigger**: If the agent has documented evidence in musings that the mutable surface is exhausted at the current tier (all reasonable parameter/consideration changes produce identical or worse trajectories), this counts as an alternative ceiling trigger even if not all 5 strategies have been formally cycled. The evidence must include: (1) what changes were tried, (2) why they produce identical traces or worse outcomes, (3) what structural constraint prevents improvement. This prevents wasting iteration budget on provably futile strategy cycling.
+
 **Early structural diagnosis**: If trace analysis proves a seed is structurally unwinnable BEFORE hitting PLATEAU_THRESHOLD (e.g., the player gets fewer than 3 decisions before an opponent wins, with a deficit no single action can overcome), document the specific evidence in musings (number of decisions, margin gap, why no policy change bridges it) and advance the tier immediately. Do not require PLATEAU_THRESHOLD futile experiments — that wastes iteration budget on provably impossible targets.
 
 **Rapid tier advancement**: If a new tier's baseline wins ALL new seeds without any policy changes (wins == tier), skip the improvement loop for that tier and advance immediately. Repeat until a tier introduces a new non-winning seed. Log the rapid advancement batch in musings.
@@ -290,6 +294,7 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
      - **Option A**: Human provides a `next-idea.md` → resume the loop with that hypothesis.
      - **Option B**: Human says to stop → proceed to "After Campaign Completes."
      - **Option C**: **Program.md amendment** — if the ceiling is caused by program.md's accept/reject logic being structurally incompatible with the optimization trajectory (e.g., a flat AND rule that blocks clearly beneficial tradeoffs), propose a specific amendment with reasoning. Present as a 1-3-1 option: the problem, 3 alternative rule formulations, and a recommendation. Apply only with human approval.
+     - **Option D**: **Architectural spec creation** — if the ceiling is caused by engine/DSL/infrastructure limitations (not program.md tuning or mutable surface changes), document the specific gaps as formal specs. List the capabilities that would unblock further optimization and how they align with `docs/FOUNDATIONS.md`. Specs are committed to the main repo (not the worktree) since they are not experiment artifacts. This transitions the campaign from "optimize within constraints" to "identify which constraints to lift."
 
 ### Step 1g: META-REVIEW (Self-Improving program.md)
 
@@ -470,6 +475,7 @@ A flat AND rule (`wins >= best AND margin >= best - tolerance`) blocks clearly b
 
 **CRASH/FAIL:**
 - **Fixture sync crash**: If the error is a golden/snapshot test failure immediately after mutable file changes, this is a dependent fixture issue — follow the "Dependent Fixture Updates" protocol. This does NOT count toward the 3-retry limit.
+- **Profile-coupled test crash**: If the test failure is caused by the mutable profile change altering a game trajectory that an immutable test depends on (not a fixture mismatch, but a state-trajectory dependency — e.g., a test replays N turns with PolicyAgent and asserts specific game state), this is a **Tier 2 infrastructure issue**. Document the coupling in musings, commit the test fix as an infra commit (independent of the experiment), then re-attempt the experiment. This does NOT count toward the 3-retry limit. The test fix should decouple the test from profile evolution (e.g., replace agent-driven state setup with a serialized fixture).
 - If the error is trivial (typo, missing import, off-by-one), fix and retry (up to 3 times).
 - Otherwise, REJECT.
 
@@ -567,6 +573,7 @@ If ANY answer is NO, do not persist the lesson. Log in musings: `"Lesson suppres
 - `experiment`: a tried approach and its outcome pattern
 - `question`: an open problem identified during the experiment
 - `negative`: a pattern that consistently fails (replaces `polarity: negative`)
+- `architectural`: a discovery about the system's structural properties that transcends individual experiments or categories. Architectural lessons bypass the "Generalizable to this category?" curation gate question because they apply across all categories. Curation gate for architectural lessons: (1) Does this reveal a system property not obvious from the code alone? (2) Would a fresh agent benefit from knowing this before starting experiments?
 
 **On ACCEPT** (if curation gate passes): Extract a typed lesson:
 ```json
@@ -632,6 +639,17 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 4. Squash-merge into main: `git merge --squash improve/<campaign>`
 5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
 6. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
+
+## Human Investigation Interrupt
+
+If the human interrupts the loop for investigation (e.g., "stop, investigate this crash", "analyze why this keeps failing", "look into the root cause"):
+
+1. **Pause loop state**: Save current `consecutive_rejects`, `strategy`, `best_metric`, and `experiment_count` mentally. The loop is paused, not stopped.
+2. **Investigate**: Follow the human's direction. The investigation may produce Tier 2/3 infrastructure commits — commit these with `infra:` prefix and log in musings, but do NOT log in results.tsv.
+3. **Resume protocol**: After investigation completes:
+   - If the investigation **unlocked new capabilities** (fixed a fragile test, added infrastructure that enables previously-blocked features, etc.): reset `consecutive_rejects = 0` and `strategy = "normal"`. Note in musings: `**CAPABILITY UNLOCKED**: <description>. Resetting plateau counter.`
+   - If the investigation was **diagnostic only** (no new capabilities): resume from saved state with no reset.
+4. The human may redirect from investigation to campaign completion (Option B/D from ceiling report) — follow their direction.
 
 ## Important Rules
 

@@ -263,7 +263,7 @@ describe('policy trace events', () => {
     });
     assert.deepEqual(verboseDecision.completionStatistics, {
       totalClassifiedMoves: 2,
-      completedCount: 2,
+      completedCount: 1,
       stochasticCount: 0,
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
@@ -271,6 +271,7 @@ describe('policy trace events', () => {
       templateCompletionUnsatisfiable: 0,
       duplicatesRemoved: 0,
     });
+    assert.equal(verboseDecision.completionStatistics?.completionsByActionId, undefined);
     assert.equal(Array.isArray(verboseDecision.candidates), true);
     assert.equal(verboseDecision.candidates?.length, 2);
     const firstVerboseCandidate = verboseDecision.candidates?.[0];

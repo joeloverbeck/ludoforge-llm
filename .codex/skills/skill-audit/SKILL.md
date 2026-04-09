@@ -124,6 +124,7 @@ If the current audit targets a different skill than any earlier audit in this se
 1. Identify the earlier audit and whether the skill changed afterward.
 2. List the earlier findings briefly.
 3. Classify each earlier finding as `resolved`, `still open`, or `new context changed the assessment`.
+   - Report this mapping at the start of the audit, either as a short delta block immediately before `## Issues` or as the first lines inside `## Summary` when that is more concise.
 4. Report only the remaining open findings plus any genuinely new findings from the current session.
 5. Avoid repeating unchanged narrative when a short delta statement is sufficient.
 

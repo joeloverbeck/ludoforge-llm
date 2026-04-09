@@ -121,6 +121,9 @@ export interface PolicyEvaluationMetadata {
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
+  readonly phase1Score?: number | null;
+  readonly phase2Score?: number | null;
+  readonly phase1ActionRanking?: readonly string[];
   readonly usedFallback: boolean;
   readonly failure: PolicyEvaluationFailure | null;
 }
@@ -144,6 +147,7 @@ export interface EvaluatePolicyMoveInput {
   readonly fallbackOnError?: boolean;
   readonly profileIdOverride?: string;
   readonly previewDependencies?: PolicyPreviewDependencies;
+  readonly selectionGrouping?: 'none' | 'actionId';
 }
 
 export type PolicyEvaluationCoreResult =
@@ -502,12 +506,24 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       ), 0);
     }
     let rng = input.rng;
+    let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];
+    if (input.selectionGrouping === 'actionId') {
+      const groupedSelection = selectRepresentativeCandidatesByActionId(
+        evaluation,
+        catalog,
+        selectionCandidates,
+        profile.use.tieBreakers,
+        rng,
+      );
+      selectionCandidates = groupedSelection.candidates;
+      rng = groupedSelection.rng;
+    }
     let selected: CandidateEntry | undefined;
     let selectionTrace: PolicyEvaluationSelectionTrace | undefined;
     switch (profile.selection.mode) {
       case 'argmax': {
-        const bestScore = activeCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
-        let bestCandidates = activeCandidates.filter((candidate) => candidate.score === bestScore);
+        const bestScore = selectionCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
+        let bestCandidates = selectionCandidates.filter((candidate) => candidate.score === bestScore);
 
         for (const tieBreakerId of profile.use.tieBreakers) {
           if (bestCandidates.length <= 1) {
@@ -524,11 +540,11 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           });
         }
 
-        selected = bestCandidates[0] ?? activeCandidates[0];
+        selected = bestCandidates[0] ?? selectionCandidates[0];
         selectionTrace = {
           mode: 'argmax',
-          candidateCount: activeCandidates.length,
-          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          candidateCount: selectionCandidates.length,
+          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
         };
         break;
       }
@@ -541,33 +557,33 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             detail: { profileId },
           });
         }
-        const probabilities = computeSoftmaxProbabilities(activeCandidates, temperature);
+        const probabilities = computeSoftmaxProbabilities(selectionCandidates, temperature);
         selected = sampleCandidateByProbabilities(
-          activeCandidates,
+          selectionCandidates,
           probabilities,
-          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
         ).selected;
         selectionTrace = {
           mode: 'softmaxSample',
           temperature,
-          candidateCount: activeCandidates.length,
+          candidateCount: selectionCandidates.length,
           samplingProbabilities: probabilities,
-          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
         };
         break;
       }
       case 'weightedSample': {
-        const probabilities = computeWeightedSampleProbabilities(activeCandidates);
+        const probabilities = computeWeightedSampleProbabilities(selectionCandidates);
         selected = sampleCandidateByProbabilities(
-          activeCandidates,
+          selectionCandidates,
           probabilities,
-          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, activeCandidates),
+          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
         ).selected;
         selectionTrace = {
           mode: 'weightedSample',
-          candidateCount: activeCandidates.length,
+          candidateCount: selectionCandidates.length,
           samplingProbabilities: probabilities,
-          selectedIndex: Math.max(0, activeCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
         };
         break;
       }
@@ -730,6 +746,44 @@ function failureWithMetadata(
       usedFallback: false,
       failure,
     },
+  };
+}
+
+function selectRepresentativeCandidatesByActionId(
+  evaluation: PolicyEvaluationContext,
+  catalog: AgentPolicyCatalog,
+  candidates: readonly CandidateEntry[],
+  tieBreakerIds: readonly string[],
+  rng: Rng,
+): { readonly candidates: readonly CandidateEntry[]; readonly rng: Rng } {
+  const actionGroups = new Map<string, CandidateEntry[]>();
+  for (const candidate of candidates) {
+    const existing = actionGroups.get(candidate.actionId);
+    if (existing === undefined) {
+      actionGroups.set(candidate.actionId, [candidate]);
+      continue;
+    }
+    existing.push(candidate);
+  }
+
+  let nextRng = rng;
+  const representatives = [...actionGroups.values()].map((groupCandidates) => {
+    const bestScore = groupCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
+    let bestCandidates = groupCandidates.filter((candidate) => candidate.score === bestScore);
+    for (const tieBreakerId of tieBreakerIds) {
+      if (bestCandidates.length <= 1) {
+        break;
+      }
+      const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, nextRng);
+      bestCandidates = [...tieBreakResult.candidates];
+      nextRng = tieBreakResult.rng;
+    }
+    return bestCandidates[0] ?? groupCandidates[0]!;
+  });
+
+  return {
+    candidates: representatives.sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey)),
+    rng: nextRng,
   };
 }
 

@@ -9,7 +9,9 @@ import {
   buildAdjacencyGraph,
   createEnumerationSnapshot,
   evalCondition,
+  evalValue,
   isEvalErrorCode,
+  resolveRef,
   tryCompileCondition,
   tryCompileValueExpr,
   type ConditionAST,
@@ -91,6 +93,16 @@ const evaluateCompiled = (
     ? createEnumerationSnapshot(ctx.def, ctx.state)
     : undefined;
   return compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot);
+};
+
+const evaluateCompiledValue = (
+  expr: ValueExpr,
+  ctx: ReadContext,
+  options?: { readonly snapshot?: EnumerationStateSnapshot },
+): ReturnType<typeof evalValue> => {
+  const compiled = tryCompileValueExpr(expr);
+  assert.ok(compiled !== null);
+  return compiled(ctx.state, ctx.activePlayer, ctx.bindings, options?.snapshot);
 };
 
 describe('condition compiler', () => {
@@ -266,6 +278,124 @@ describe('condition compiler', () => {
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), true);
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
     assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), evalCondition(condition, ctx));
+  });
+
+  it('compiles scalar array literals and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 1, scalarArray: [1, 'north', true] };
+    const ctx = makeCtx();
+
+    assert.deepEqual(evaluateCompiledValue(expr, ctx), evalValue(expr, ctx));
+  });
+
+  it('compiles zoneCount references for static zones and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'zoneCount', zone: 'board:none' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: {} },
+            { id: asTokenId('t2'), type: 'piece', props: {} },
+          ],
+        },
+      },
+    });
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneCount', zone: 'board:none' }, ctx));
+  });
+
+  it('compiles zoneVar references for static zones and vars, including snapshot-backed reads', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'zoneVar', zone: 'board:none', var: 'threat' };
+    const state: GameState = {
+      ...makeState(),
+      zoneVars: {
+        'board:none': { threat: 2 },
+      },
+    };
+    const ctx = makeCtx({ state });
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: ctx.state.globalVars,
+      perPlayerVars: ctx.state.perPlayerVars,
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
+      zoneVars: { get: (zoneId: string, varName: string) => zoneId === 'board:none' && varName === 'threat' ? 5 : undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneVar', zone: 'board:none', var: 'threat' }, ctx));
+    assert.equal(evaluateCompiledValue(expr, ctx, { snapshot }), 5);
+  });
+
+  it('compiles tokenProp references for binding-resolvable tokens and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$card', prop: 'cost' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: { cost: 9, faction: 'US' } },
+          ],
+        },
+      },
+      bindings: { '$card': asTokenId('t1') },
+    });
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'tokenProp', token: '$card', prop: 'cost' }, ctx));
+  });
+
+  it('compiles pvar references for fixed player id selectors and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'pvar', player: { id: asPlayerId(0) }, var: 'resources' };
+    const ctx = makeCtx();
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: ctx.state.globalVars,
+      perPlayerVars: {
+        ...ctx.state.perPlayerVars,
+        0: { ...(ctx.state.perPlayerVars[0] ?? {}), resources: 7 },
+      },
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
+      zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'pvar', player: { id: asPlayerId(0) }, var: 'resources' }, ctx));
+    assert.equal(evaluateCompiledValue(expr, ctx, { snapshot }), 7);
+  });
+
+  it('preserves missing-zone and missing-zoneVar error behavior for compiled simple references', () => {
+    const missingZoneCountExpr: ValueExpr = { _t: 2, ref: 'zoneCount', zone: 'missing:none' };
+    const missingZoneVarExpr: ValueExpr = { _t: 2, ref: 'zoneVar', zone: 'board:none', var: 'threat' };
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evaluateCompiledValue(missingZoneCountExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(missingZoneVarExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('preserves missing token binding and tokenProp errors for compiled tokenProp references', () => {
+    const missingBindingExpr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$missing', prop: 'cost' };
+    const missingPropExpr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$card', prop: 'missingProp' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [{ id: asTokenId('t1'), type: 'piece', props: { cost: 9 } }],
+        },
+      },
+      bindings: { '$card': asTokenId('t1') },
+    });
+
+    assert.throws(
+      () => evaluateCompiledValue(missingBindingExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(missingPropExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
   });
 
   it('preserves missing-zone error behavior for compiled aggregate counts', () => {
@@ -462,7 +592,9 @@ describe('condition compiler', () => {
     assert.equal(tryCompileValueExpr(ifExpr), null);
     assert.equal(tryCompileValueExpr(arithmeticExpr), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'gvar', var: { ref: 'binding', name: '$var' } }), null);
+    assert.equal(tryCompileValueExpr({ _t: 2, ref: 'zoneVar', zone: 'board:none', var: { ref: 'binding', name: '$var' } }), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }), null);
+    assert.equal(tryCompileValueExpr({ _t: 2, ref: 'pvar', player: { relative: 'left' }, var: 'resources' }), null);
 
     const aggregateCondition: ConditionAST = { op: '==', left: aggregateExpr, right: 0 };
     const booleanCombination: ConditionAST = { op: 'and', args: [true, false] };

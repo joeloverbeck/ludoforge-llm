@@ -97,6 +97,8 @@ Output this structure to the conversation (do not write to a file):
 [If follow-up edits were made to the target skill this session, recommend a reaudit: "`/skill-audit <path>` to verify convergence."]
 ```
 
+If analysis during classification disproves an initial impression, withdraw the finding inline with a brief explanation rather than omitting it silently — this documents the reasoning for completeness.
+
 ## Guardrails
 
 - **Report only** — Never modify the target skill file. Output the report to the conversation only.

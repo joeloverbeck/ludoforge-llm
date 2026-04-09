@@ -33,6 +33,8 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 **Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows that slice is stale, internally inconsistent, or impossible to satisfy without broader owned fallout. Confirm which broader spec work is deferred to siblings before coding.
 
+**Draft artifact discipline**: If the active ticket or referenced series artifacts are untracked draft files, they can still define the session boundary. Call out the draft state explicitly in working notes, treat the active ticket as the authoritative contract for this session once reassessment is complete, and avoid broad sibling/spec edits unless the corrected boundary truly requires them.
+
 ### Phase 2: Reassess Assumptions
 
 **Artifact verification**
@@ -67,7 +69,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 **Migration & rewrite awareness**
 
 9. **Mid-migration**: If the codebase is already mid-migration, distinguish the ticket's intended end state from work already landed. Treat extra files needed for Foundation 14 atomicity as required scope. Call out partial-migration state before coding. When a referenced spec is already dirty but the current ticket does not own spec edits, treat it as read-only context.
-10. **Ticket rewrites**: If you materially correct the ticket scope, re-extract files, acceptance criteria, invariants, and verification commands from the corrected ticket. Treat the rewritten ticket as authoritative. If later verification disproves the rewrite premise, restore the original boundary and note why. When the rewrite disproves an active spec's stated root cause, fix point, or owned boundary, update that spec in the same turn unless another active ticket explicitly owns that correction.
+10. **Ticket rewrites**: If you materially correct the ticket scope, re-extract files, acceptance criteria, invariants, and verification commands from the corrected ticket. Treat the rewritten ticket as authoritative. If later verification disproves the rewrite premise, restore the original boundary and note why. If later typecheck/build evidence proves that a rewritten acceptance case is impossible under the live typed/runtime surface, amend the active ticket again before continuing so the authoritative boundary matches what the codebase can actually represent. When the rewrite disproves an active spec's stated root cause, fix point, or owned boundary, update that spec in the same turn unless another active ticket explicitly owns that correction.
     - If a rewritten verification-owned ticket later exposes a concrete live failure while running its authoritative acceptance commands, treat that failure as in-scope immediately when fixing it is necessary to satisfy the rewritten boundary. Refresh working notes to record the newly discovered failure surface before patching.
 
 **Sibling coherence**
@@ -215,6 +217,7 @@ When a ticket change affects other active tickets in the same series:
 - Run `pnpm run check:ticket-deps` when available.
 - If a downstream sibling already cleanly owns the remaining fallout after reassessment, leave that sibling unchanged and just validate that deps/status still reflect the corrected boundary.
 - If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
+- If sibling/spec artifacts are already dirty or exist only as untracked drafts, prefer editing only the active ticket unless the user asked for broader cleanup or the stale sibling/spec would directly invalidate the implemented boundary.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
 
@@ -257,6 +260,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
    - Focused proof commands may run before ticket-authoritative commands for fast feedback, but they do not satisfy the ticket on their own.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
+   - In this repo, engine tests use `node --test`; for example, replace Jest-style name filtering with `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/<file>.test.js` when you need a focused built-test proof.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
 
 ### Build Ordering & Output Contention

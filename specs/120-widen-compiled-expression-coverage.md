@@ -48,8 +48,7 @@ This is the highest-leverage change — both `tryCompileCondition` and `tryCompi
 | `zoneCount` | `{ _t: 2, ref: 'zoneCount', zone: <string> }` | Direct `state.zones[zoneId].length` lookup |
 | `zoneVar` | `{ _t: 2, ref: 'zoneVar', zone: <string>, var: <string> }` | Direct `state.zoneVars[zoneId][varName]` lookup |
 | `tokenProp` | `{ _t: 2, ref: 'tokenProp', token: <string>, prop: <string> }` | Resolve via binding + token state index |
-| `pvar` (non-active) | `{ _t: 2, ref: 'pvar', player: <PlayerSel>, var: <string> }` | Extend existing `pvar` accessor beyond `active` |
-| `coalesce` | `{ _t: 2, ref: 'coalesce', ... }` | Try primary, fall back to default |
+| `pvar` (non-active) | `{ _t: 2, ref: 'pvar', player: <PlayerSel>, var: <string> }` | Extend existing `pvar` accessor beyond `active`. Only literal seat names are compilable — complex `PlayerSel` variants (`relative`, `all`, `allOther`, `chosen`) require runtime seat resolution and return `null`. |
 | Scalar array literal | `{ _t: 1, scalarArray: [...] }` | Constant accessor |
 
 **Explicitly deferred (implementation tickets decide priority):**
@@ -85,9 +84,9 @@ This means a filter like `{ op: 'eq', prop: 'faction', value: { _t: 2, ref: 'bin
 
 Apply compiled predicates to all condition evaluation call sites:
 
-| Call site | File | Integration pattern |
-|-----------|------|-------------------|
-| Action `pre` conditions | `action-applicability-preflight.ts` or upstream | Look up compiled predicate before `evalCondition` |
+| Call site | File(s) | Integration pattern |
+|-----------|---------|-------------------|
+| Action `pre` conditions | `legal-moves.ts` (2 sites), `legal-choices.ts` (2 sites), `apply-move.ts` (2 sites), `free-operation-viability.ts` (1 site) | Look up compiled predicate before `evalCondition` |
 | Trigger `match` | `trigger-dispatch.ts` | Look up compiled predicate before `evalConditionTraced` |
 | Trigger `when` | `trigger-dispatch.ts` | Look up compiled predicate before `evalConditionTraced` |
 | Terminal `conditions[].when` | `terminal.ts` | Look up compiled predicate before `evalCondition` |
@@ -102,9 +101,15 @@ if (compiled !== null) {
 return evalCondition(conditionAst, ctx);
 ```
 
+**Scope note:** `evalCondition` has 32 occurrences across 17 kernel files. This spec targets the sites listed above — these are the highest-frequency call sites per V8 CPU profiling. Additional sites (e.g., `eval-query.ts`, `effects-token.ts`, `effects-control.ts`, `spatial.ts`) are lower-frequency and can be addressed in follow-up implementation tickets if profiling shows measurable benefit.
+
+**Tracing note (Foundation 9):** Trigger call sites (`trigger-dispatch.ts`) currently use `evalConditionTraced`, which emits a condition trace event via `emitConditionTrace`. When a compiled predicate bypasses `evalCondition`, the call site must still emit the trace event with the compiled result to preserve replay and auditability. The compiled path should call `emitConditionTrace` directly after evaluation.
+
 ### 5. Unified Compilation Cache
 
 Extend `compiled-condition-cache.ts` (or introduce a parallel cache module) to cache compiled predicates for all condition sites — not just pipeline predicates. Cache keyed on AST node reference (WeakMap), with null sentinel for non-compilable expressions.
+
+The existing `compiled-token-filter-cache.ts` already implements a per-expression WeakMap cache keyed on `TokenFilterExpr` — this is the model for the unified condition cache. The current pipeline cache (`compiled-condition-cache.ts`) uses a different strategy: a WeakMap keyed on the `ActionPipelineDef[]` array that returns a `Map` of all pipeline predicates. The unified cache should follow the per-expression pattern (direct AST-node-to-closure WeakMap) rather than the pipeline-array pattern, since action `pre`, trigger, and terminal conditions are not part of pipeline arrays.
 
 The cache is populated lazily on first evaluation attempt. No eager compilation pass.
 
@@ -178,6 +183,7 @@ The performance campaign established hard constraints on what changes are safe i
 | F1 Engine Agnosticism | Aligns | Compiles generic AST nodes — no game-specific logic |
 | F7 Specs Are Data | Aligns | GameDef remains pure data. Closures built programmatically at runtime, no `eval`/`Function` constructor |
 | F8 Determinism | Must prove | Parity tests + existing replay determinism tests |
+| F9 Replay/Auditability | Must preserve | Trigger call sites must emit condition trace even when using compiled path — see Deliverable 4 tracing note |
 | F10 Bounded Computation | Aligns | Compilation traverses finite AST once |
 | F11 Immutability | Neutral | Compiled predicates are pure functions — read state, never mutate |
 | F12 Compiler-Kernel Boundary | Aligns | Kernel-level runtime optimization. CNL compiler unchanged |

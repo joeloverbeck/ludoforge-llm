@@ -3,6 +3,9 @@ import { missingBindingError, missingVarError, typeMismatchError } from './eval-
 import { resolveBindingTemplate } from './binding-template.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
+import { getTokenStateIndexEntry } from './token-state-index.js';
+import { resolveRuntimeTokenBindingValue } from './token-binding.js';
+import { resolveTokenViewFieldValue } from './token-view.js';
 import type { ConditionAST, ScalarArrayValue, ScalarValue, ValueExpr, GameState } from './types.js';
 
 export type CompiledConditionPredicate = (
@@ -69,7 +72,11 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
     }
 
     case 'pvar': {
-      if (expr.player !== 'active') {
+      const fixedPlayerId =
+        typeof expr.player === 'object' && expr.player !== null && 'id' in expr.player
+          ? expr.player.id
+          : null;
+      if (expr.player !== 'active' && fixedPlayerId === null) {
         return null;
       }
       const variableName = tryStaticScopedVarNameExpr(expr.var);
@@ -77,11 +84,12 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         return null;
       }
       return (state, activePlayer, _bindings, snapshot) => {
-        const playerVars = snapshot?.perPlayerVars[activePlayer] ?? state.perPlayerVars[activePlayer];
+        const playerId = fixedPlayerId ?? activePlayer;
+        const playerVars = snapshot?.perPlayerVars[playerId] ?? state.perPlayerVars[playerId];
         if (playerVars === undefined) {
-          throw missingVarError(`Per-player vars missing for player ${activePlayer}`, {
+          throw missingVarError(`Per-player vars missing for player ${playerId}`, {
             reference: expr,
-            playerId: activePlayer,
+            playerId,
             availablePlayers: Object.keys(state.perPlayerVars).sort(),
           });
         }
@@ -90,7 +98,7 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         if (value === undefined) {
           throw missingVarError(`Per-player variable not found: ${variableName}`, {
             reference: expr,
-            playerId: activePlayer,
+            playerId,
             var: variableName,
             availablePlayerVars: Object.keys(playerVars).sort(),
           });
@@ -99,6 +107,93 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         return value;
       };
     }
+
+    case 'zoneVar': {
+      if (typeof expr.zone !== 'string') {
+        return null;
+      }
+      const variableName = tryStaticScopedVarNameExpr(expr.var);
+      if (variableName === null) {
+        return null;
+      }
+      return (state, _activePlayer, _bindings, snapshot) => {
+        const snapshotValue = snapshot?.zoneVars.get(expr.zone, variableName);
+        if (snapshotValue !== undefined) {
+          return snapshotValue;
+        }
+
+        const zoneVarMap = state.zoneVars[expr.zone];
+        if (zoneVarMap === undefined) {
+          throw missingVarError(`Zone variable state not found for zone: ${expr.zone}`, {
+            reference: expr,
+            zoneId: expr.zone,
+            availableZones: Object.keys(state.zoneVars).sort(),
+          });
+        }
+
+        const value = zoneVarMap[variableName];
+        if (value === undefined) {
+          throw missingVarError(`Zone variable not found: ${variableName} in zone ${expr.zone}`, {
+            reference: expr,
+            zoneId: expr.zone,
+            var: variableName,
+            availableZoneVars: Object.keys(zoneVarMap).sort(),
+          });
+        }
+
+        return value;
+      };
+    }
+
+    case 'zoneCount':
+      if (typeof expr.zone !== 'string') {
+        return null;
+      }
+      return compileZoneCountAccessor(expr.zone, expr);
+
+    case 'tokenProp':
+      return (state, _activePlayer, bindings) => {
+        const boundToken = bindings[expr.token];
+        if (boundToken === undefined) {
+          throw missingBindingError(`Token binding not found: ${expr.token}`, {
+            reference: expr,
+            binding: expr.token,
+            availableBindings: Object.keys(bindings).sort(),
+          });
+        }
+
+        const resolvedBinding = resolveRuntimeTokenBindingValue(boundToken);
+        if (resolvedBinding === null) {
+          throw typeMismatchError(`Token binding ${expr.token} must resolve to a Token or token-id string`, {
+            reference: expr,
+            binding: expr.token,
+            actualType: typeof boundToken,
+            value: boundToken,
+          });
+        }
+
+        const token = resolvedBinding.tokenFromBinding ?? getTokenStateIndexEntry(state, resolvedBinding.tokenId)?.token ?? null;
+        if (token === null) {
+          throw missingVarError(`Token ${String(resolvedBinding.tokenId)} not found in any zone`, {
+            reference: expr,
+            binding: expr.token,
+            tokenId: String(resolvedBinding.tokenId),
+            availableZoneIds: Object.keys(state.zones).sort(),
+          });
+        }
+
+        const propValue = resolveTokenViewFieldValue(token, expr.prop);
+        if (propValue === undefined) {
+          throw missingVarError(`Token property not found: ${expr.prop}`, {
+            reference: expr,
+            binding: expr.token,
+            availableBindings: Object.keys(bindings).sort(),
+            availableTokenProps: Object.keys(token.props).sort(),
+          });
+        }
+
+        return propValue;
+      };
 
     case 'binding':
       return (_state, _activePlayer, bindings) => {
@@ -197,6 +292,8 @@ export const tryCompileValueExpr = (
   }
 
   switch (expr._t) {
+    case 1:
+      return () => expr.scalarArray;
     case 2:
       return compileReferenceAccessor(expr as Extract<ValueExpr, { readonly _t: 2 }>);
     case 5:

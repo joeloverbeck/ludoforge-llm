@@ -119,6 +119,8 @@ Output the audit in the conversation, not in a file.
 
 Use this only when the same target skill was already audited earlier in the current session.
 
+If the current audit targets a different skill than any earlier audit in this session, treat it as a normal first-pass audit for that target; do not force prior-finding mapping across different skills.
+
 1. Identify the earlier audit and whether the skill changed afterward.
 2. List the earlier findings briefly.
 3. Classify each earlier finding as `resolved`, `still open`, or `new context changed the assessment`.

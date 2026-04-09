@@ -90,7 +90,7 @@ Review each section of the spec against `docs/FOUNDATIONS.md`:
 
 ### Step 4: Classify Findings
 
-Organize all findings from Steps 2 and 3 into three categories:
+Organize all findings from Steps 2 and 3 into the following categories:
 
 - **Issues**: Something in the spec is factually wrong, stale, or violates FOUNDATIONS.md. The spec cannot go to tickets without fixing this.
 - **Obsolescence**: The spec's core proposal is already implemented, superseded, or invalidated by codebase evolution. The entire premise needs rethinking, not just refinement.
@@ -147,7 +147,7 @@ Present all findings to the user in a structured report:
 - Approved, rejected, or modified each finding
 - Answered all questions
 
-**Plan mode**: Present the full findings report as text first (the structured report from Steps 2-4), then use a single `AskUserQuestion` call containing all questions that require user input (the tool supports up to 4 questions per invocation). This gives the user the full context before being asked to decide. Inline text questions won't block in plan mode — `AskUserQuestion` is required for blocking interaction. If there are no questions and all findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts), the findings report may be presented inline and the workflow may proceed directly to the plan file write and ExitPlanMode — the ExitPlanMode approval gate subsumes the Step 5 wait.
+**Plan mode**: Present the full findings report as text first (the structured report from Steps 2-4), then use a single `AskUserQuestion` call containing all questions that require user input (the tool supports up to 4 questions per invocation). This gives the user the full context before being asked to decide. Inline text questions won't block in plan mode — `AskUserQuestion` is required for blocking interaction. If there are no questions and all findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts), the findings report may be presented inline and the workflow may proceed directly to the plan file write and ExitPlanMode — the ExitPlanMode approval gate subsumes the Step 5 wait. When findings are mostly factual corrections but include 1-2 genuine questions, present the findings report inline, then use AskUserQuestion for only the blocking questions.
 
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 

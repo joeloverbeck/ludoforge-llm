@@ -1616,6 +1616,9 @@ export interface PolicyAgentDecisionTrace {
   readonly profileFingerprint: string | null;
   readonly initialCandidateCount: number;
   readonly selectedStableMoveKey: string | null;
+  readonly phase1Score?: number | null;
+  readonly phase2Score?: number | null;
+  readonly phase1ActionRanking?: readonly string[];
   readonly finalScore: number | null;
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];

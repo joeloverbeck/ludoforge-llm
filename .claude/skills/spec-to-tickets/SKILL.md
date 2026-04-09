@@ -118,7 +118,7 @@ Do NOT commit. Leave files for user review.
 
 ### Step 8: Spec Back-Link
 
-If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip.
+If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip. This may be combined with the Step 7 message for efficiency.
 
 ## Constraints
 

@@ -576,9 +576,9 @@ describe('pipeline viability predicate fast-path routing', () => {
   it('falls through to interpreter semantics for non-compilable conditions', () => {
     const action = makeAction();
     const legality: ConditionAST = {
-      op: 'in',
-      item: 'a',
-      set: { _t: 1, scalarArray: ['a', 'b'] },
+      op: 'adjacent',
+      left: 'board:none',
+      right: 'board:none',
     };
     const pipeline: ActionPipelineDef = {
       id: 'profile',
@@ -593,9 +593,7 @@ describe('pipeline viability predicate fast-path routing', () => {
     const def = makeDef(action, pipeline);
     const compiledPredicates = getCompiledPipelinePredicates(def);
 
-    assert.equal(compiledPredicates.get(legality), undefined);
-
-    (legality as { item: string }).item = 'z';
+    assert.equal(compiledPredicates.get(legality as Exclude<ConditionAST, boolean>), undefined);
 
     const status = evaluatePipelinePredicateStatus(action, pipeline, makeEvalCtx(def, makeState(3)));
 

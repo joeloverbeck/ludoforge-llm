@@ -92,7 +92,7 @@ const evaluateCompiled = (
   const snapshot = options?.useSnapshot === true
     ? createEnumerationSnapshot(ctx.def, ctx.state)
     : undefined;
-  return compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot);
+  return compiled(ctx, snapshot);
 };
 
 const evaluateCompiledValue = (
@@ -102,7 +102,7 @@ const evaluateCompiledValue = (
 ): ReturnType<typeof evalValue> => {
   const compiled = tryCompileValueExpr(expr);
   assert.ok(compiled !== null);
-  return compiled(ctx.state, ctx.activePlayer, ctx.bindings, options?.snapshot);
+  return compiled(ctx, options?.snapshot);
 };
 
 describe('condition compiler', () => {
@@ -170,10 +170,10 @@ describe('condition compiler', () => {
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };
 
-    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
-    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiledGvar(ctx), false);
+    assert.equal(compiledPvar(ctx), false);
+    assert.equal(compiledGvar(ctx, snapshot), true);
+    assert.equal(compiledPvar(ctx, snapshot), true);
   });
 
   it('supports all six comparison operators for Tier 1 value accessors', () => {
@@ -213,7 +213,7 @@ describe('condition compiler', () => {
     const ctx = makeCtx({ state: populatedState });
     const condition: ConditionAST = { op: '>', left: expr, right: 0 };
 
-    assert.equal(accessor(ctx.state, ctx.activePlayer, ctx.bindings), 2);
+    assert.equal(accessor(ctx), 2);
     assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
   });
 
@@ -248,8 +248,8 @@ describe('condition compiler', () => {
       return originalGet(zoneId, tokenType);
     };
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiled(ctx), false);
+    assert.equal(compiled(ctx, snapshot), true);
     assert.equal(calls, 1);
   });
 
@@ -375,9 +375,9 @@ describe('condition compiler', () => {
     });
     const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), true);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), evalCondition(condition, ctx));
+    assert.equal(compiled(ctx), true);
+    assert.equal(compiled(ctx, snapshot), true);
+    assert.equal(compiled(ctx, snapshot), evalCondition(condition, ctx));
   });
 
   it('compiles scalar array literals and matches interpreter behavior', () => {
@@ -509,7 +509,7 @@ describe('condition compiler', () => {
     const condition: ConditionAST = { op: '>', left: expr, right: 0 };
 
     assert.throws(
-      () => accessor(ctx.state, ctx.activePlayer, ctx.bindings),
+      () => accessor(ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
@@ -588,8 +588,8 @@ describe('condition compiler', () => {
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiled(ctx), false);
+    assert.equal(compiled(ctx, snapshot), true);
   });
 
   it('reuses one snapshot across different invocation active players', () => {
@@ -604,15 +604,18 @@ describe('condition compiler', () => {
     const ctx = makeCtx();
     const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
 
-    assert.equal(compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot), false);
-    assert.equal(compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot), true);
+    const playerZeroCtx = { ...ctx, activePlayer: asPlayerId(0) };
+    const playerOneCtx = { ...ctx, activePlayer: asPlayerId(1) };
+
+    assert.equal(compiled(playerZeroCtx, snapshot), false);
+    assert.equal(compiled(playerOneCtx, snapshot), true);
     assert.equal(
-      compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot),
-      compiled(ctx.state, asPlayerId(0), ctx.bindings),
+      compiled(playerZeroCtx, snapshot),
+      compiled(playerZeroCtx),
     );
     assert.equal(
-      compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot),
-      compiled(ctx.state, asPlayerId(1), ctx.bindings),
+      compiled(playerOneCtx, snapshot),
+      compiled(playerOneCtx),
     );
   });
 
@@ -635,12 +638,124 @@ describe('condition compiler', () => {
     });
     const snapshot = createEnumerationSnapshot(shiftedCtx.def, shiftedCtx.state);
 
-    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings), true);
-    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot), true);
+    assert.equal(compiled(shiftedCtx), true);
+    assert.equal(compiled(shiftedCtx, snapshot), true);
     assert.equal(
-      compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot),
+      compiled(shiftedCtx, snapshot),
       evalCondition(condition, shiftedCtx),
     );
+  });
+
+  it('compiles in, zonePropIncludes, and marker lattice conditions with interpreter parity', () => {
+    const def: GameDef = ({
+      ...makeDef(),
+      zones: [
+        {
+          id: asZoneId('board:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          attributes: { terrainTags: ['urban', 'coastal'], population: 2 },
+        },
+        {
+          id: asZoneId('saigon:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2 },
+        },
+        {
+          id: asZoneId('central-laos:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          attributes: { population: 0 },
+        },
+      ],
+      markerLattices: [
+        {
+          id: 'supportOpposition',
+          states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+          defaultState: 'neutral',
+          constraints: [
+            {
+              when: {
+                op: '==',
+                left: { _t: 2, ref: 'zoneProp', zone: '$space', prop: 'population' },
+                right: 0,
+              },
+              allowedStates: ['neutral'],
+            },
+          ],
+        },
+      ],
+    }) as unknown as GameDef;
+    const ctx = makeCtx({
+      def,
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [],
+          'saigon:none': [],
+          'central-laos:none': [],
+        },
+        markers: {
+          'saigon:none': { supportOpposition: 'activeSupport' },
+          'central-laos:none': { supportOpposition: 'neutral' },
+        },
+      },
+      bindings: {
+        '$faction': 'US',
+      },
+    });
+
+    const memberCondition: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'binding', name: '$faction' },
+      set: { _t: 1, scalarArray: ['US', 'ARVN'] },
+    };
+    const nonMemberCondition: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'binding', name: '$faction' },
+      set: { _t: 1, scalarArray: ['NVA', 'VC'] },
+    };
+    const zonePropCondition: ConditionAST = {
+      op: 'zonePropIncludes',
+      zone: 'board:none',
+      prop: 'terrainTags',
+      value: 'coastal',
+    };
+    const legalMarkerState: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'saigon:none',
+      marker: 'supportOpposition',
+      state: 'activeSupport',
+    };
+    const illegalMarkerState: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'central-laos:none',
+      marker: 'supportOpposition',
+      state: 'activeSupport',
+    };
+    const legalMarkerShift: ConditionAST = {
+      op: 'markerShiftAllowed',
+      space: 'saigon:none',
+      marker: 'supportOpposition',
+      delta: -1,
+    };
+
+    assert.equal(evaluateCompiled(memberCondition, ctx), evalCondition(memberCondition, ctx));
+    assert.equal(evaluateCompiled(nonMemberCondition, ctx), evalCondition(nonMemberCondition, ctx));
+    assert.equal(evaluateCompiled(zonePropCondition, ctx), evalCondition(zonePropCondition, ctx));
+    assert.equal(evaluateCompiled(legalMarkerState, ctx), evalCondition(legalMarkerState, ctx));
+    assert.equal(evaluateCompiled(illegalMarkerState, ctx), evalCondition(illegalMarkerState, ctx));
+    assert.equal(evaluateCompiled(legalMarkerShift, ctx), evalCondition(legalMarkerShift, ctx));
   });
 
   it('returns null for non-compilable expressions and selectors', () => {
@@ -700,6 +815,29 @@ describe('condition compiler', () => {
       left: 1,
       right: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
     };
+    const inWithDynamicOperand: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+      set: { _t: 1, scalarArray: [1] },
+    };
+    const zonePropWithDynamicValue: ConditionAST = {
+      op: 'zonePropIncludes',
+      zone: 'board:none',
+      prop: 'terrainTags',
+      value: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
+    const markerStateWithDynamicValue: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'board:none',
+      marker: 'supportOpposition',
+      state: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
+    const markerShiftWithDynamicValue: ConditionAST = {
+      op: 'markerShiftAllowed',
+      space: 'board:none',
+      marker: 'supportOpposition',
+      delta: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
 
     assert.equal(tryCompileValueExpr(aggregateExpr), null);
     assert.equal(tryCompileValueExpr(filteredAggregateExpr), null);
@@ -725,7 +863,11 @@ describe('condition compiler', () => {
     };
     assert.equal(tryCompileCondition(aggregateCondition), null);
     assert.ok(tryCompileCondition(booleanCombination) !== null);
-    assert.equal(tryCompileCondition(mixedBooleanCombination), null);
+    assert.ok(tryCompileCondition(mixedBooleanCombination) !== null);
+    assert.equal(tryCompileCondition(inWithDynamicOperand), null);
+    assert.equal(tryCompileCondition(zonePropWithDynamicValue), null);
+    assert.equal(tryCompileCondition(markerStateWithDynamicValue), null);
+    assert.equal(tryCompileCondition(markerShiftWithDynamicValue), null);
   });
 
   it('compiles nested boolean trees when every sub-condition is compilable', () => {

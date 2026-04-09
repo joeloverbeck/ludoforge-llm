@@ -20,7 +20,7 @@ Compiled condition predicates are currently applied only at pipeline legality/co
 2. Trigger `evalConditionTraced` calls confirmed at `trigger-dispatch.ts:116,120` — for `match` and `when`.
 3. Terminal `evalCondition` calls confirmed at `terminal.ts:149,177,217` — for checkpoint and end conditions.
 4. `evalConditionTraced` (line 230 in `eval-condition.ts`) wraps `evalCondition` and emits a trace event via `emitConditionTrace`. Compiled path must still emit traces (Foundation 9).
-5. Compiled predicate signature `(state, activePlayer, bindings, snapshot?)` matches the data available at all call sites — `ReadContext` provides all four values.
+5. If ticket 003 widens compiled predicates to consume `ReadContext` directly, all target call sites already have the needed `ReadContext` in hand. Snapshot-aware sites still pass the enumeration snapshot separately.
 
 ## Architecture Check
 
@@ -38,7 +38,7 @@ At each `evalCondition(action.pre, ctx)` call site in `legal-moves.ts`, `legal-c
 ```typescript
 const compiled = getCompiledCondition(action.pre);
 if (compiled !== null) {
-  const result = compiled(ctx.state, ctx.activePlayer, ctx.bindings, undefined);
+  const result = compiled(ctx, undefined);
   if (!result) { /* same branch as existing !evalCondition(...) */ }
 } else {
   // existing evalCondition path
@@ -55,7 +55,7 @@ At `trigger-dispatch.ts:116` (match) and `:120` (when):
 const compiled = getCompiledCondition(trigger.match);
 let matchResult: boolean;
 if (compiled !== null) {
-  matchResult = compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings, undefined);
+  matchResult = compiled(evalCtx, undefined);
   emitConditionTrace(evalCtx.collector, {
     kind: 'conditionEval',
     condition: trigger.match,
@@ -77,7 +77,7 @@ At `terminal.ts:149,177,217`:
 ```typescript
 const compiled = getCompiledCondition(checkpoint.when);
 const result = compiled !== null
-  ? compiled(baseCtx.state, baseCtx.activePlayer, baseCtx.bindings, undefined)
+  ? compiled(baseCtx, undefined)
   : evalCondition(checkpoint.when, baseCtx);
 ```
 

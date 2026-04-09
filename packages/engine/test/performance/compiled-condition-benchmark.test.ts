@@ -18,7 +18,7 @@ const BENCHMARK_ITERATIONS = 20;
 const assertParityDuringBenchmarkSetup = (): void => {
   for (const sample of SAMPLES) {
     try {
-      const compiled = sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings);
+      const compiled = sample.compiled(sample.ctx);
       const interpreted = evalCondition(sample.entry.condition, sample.ctx);
       assert.equal(compiled, interpreted);
     } catch (error) {
@@ -53,7 +53,7 @@ describe('compiled condition benchmark', () => {
       for (let iteration = 0; iteration < BENCHMARK_ITERATIONS; iteration += 1) {
         for (const sample of SAMPLES) {
           try {
-            sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings);
+            sample.compiled(sample.ctx);
           } catch {
             // Benchmark parity was already validated during setup.
           }

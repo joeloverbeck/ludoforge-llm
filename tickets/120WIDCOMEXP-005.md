@@ -15,8 +15,8 @@ Compiled condition predicates are currently cached only for pipeline legality/co
 1. `compiled-condition-cache.ts` exists at `packages/engine/src/kernel/compiled-condition-cache.ts` — confirmed. Uses `WeakMap<readonly ActionPipelineDef[], CompiledPipelinePredicateCache>` (line 10).
 2. `compiled-token-filter-cache.ts` exists as a parallel cache using `WeakMap<TokenFilterExpr, CompiledTokenFilterFn | null>` — confirmed. This is the per-expression pattern to follow.
 3. `getCompiledPipelinePredicates` is consumed only by `pipeline-viability-policy.ts` — confirmed. The existing pipeline cache continues to serve pipeline sites; the new cache serves all other sites.
-4. `CompiledConditionPredicate` type is already defined: `(state, activePlayer, bindings, snapshot?) => boolean` — confirmed.
-5. `tryCompileCondition` is the compilation entry point — returns `CompiledConditionPredicate | null`.
+4. `CompiledConditionPredicate` is a live shared compiler surface and may widen to a `ReadContext`-based signature as earlier widening tickets add `def`/marker-aware condition ops.
+5. `tryCompileCondition` remains the compilation entry point — the cache should delegate to whatever the current canonical compiled predicate signature is rather than reasserting the older primitive-argument form.
 
 ## Architecture Check
 
@@ -32,6 +32,7 @@ Compiled condition predicates are currently cached only for pipeline legality/co
 Create `packages/engine/src/kernel/compiled-condition-expr-cache.ts` (or a suitable name) containing:
 
 - A module-level `WeakMap<ConditionAST, CompiledConditionPredicate | null>`
+- An exported `getCompiledCondition(cond: ConditionAST): CompiledConditionPredicate | null` function that:
 - An exported `getCompiledCondition(cond: ConditionAST): CompiledConditionPredicate | null` function that:
   - Returns the cached value if the key exists (including `null` for non-compilable)
   - Otherwise calls `tryCompileCondition(cond)`, stores the result, and returns it
@@ -80,7 +81,7 @@ Add the new cache accessor to `packages/engine/src/kernel/index.ts` exports so a
 
 1. Cache uses WeakMap — no memory leaks when GameDef is garbage collected
 2. Cache never stores a stale result — AST nodes are immutable (Foundation 11)
-3. Cache does not affect correctness — compiled predicates are pure functions identical to interpreter results
+3. Cache does not affect correctness — compiled predicates are pure functions identical to interpreter results under the current canonical compiled predicate signature
 
 ## Test Plan
 

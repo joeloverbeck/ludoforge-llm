@@ -1,24 +1,26 @@
 import type { PlayerId } from './branded.js';
-import { divisionByZeroError, missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
+import { getLatticeMap, getZoneMap } from './def-lookup.js';
+import { divisionByZeroError, missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
+import type { ReadContext } from './eval-context.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
+import { matchesMembership } from './query-predicate.js';
+import { resolveMapSpaceId } from './resolve-selectors.js';
 import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
+import { isSpaceMarkerStateAllowed, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { getTokenStateIndexEntry } from './token-state-index.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTokenViewFieldValue } from './token-view.js';
-import type { ConditionAST, ScalarArrayValue, ScalarValue, ValueExpr, GameState } from './types.js';
+import { evalCondition } from './eval-condition.js';
+import type { ConditionAST, ScalarArrayValue, ScalarValue, ValueExpr } from './types.js';
 
 export type CompiledConditionPredicate = (
-  state: GameState,
-  activePlayer: PlayerId,
-  bindings: Readonly<Record<string, unknown>>,
+  ctx: ReadContext,
   snapshot?: EnumerationStateSnapshot,
 ) => boolean;
 
 export type CompiledConditionValueAccessor = (
-  state: GameState,
-  activePlayer: PlayerId,
-  bindings: Readonly<Record<string, unknown>>,
+  ctx: ReadContext,
   snapshot?: EnumerationStateSnapshot,
 ) => ScalarValue | ScalarArrayValue;
 
@@ -46,17 +48,17 @@ const expectSafeInteger = (value: unknown, message: string, context: Readonly<Re
 };
 
 const compileZoneCountAccessor = (zoneId: string, context: ValueExpr): CompiledConditionValueAccessor =>
-  (state, _activePlayer, _bindings, snapshot) => {
+  (ctx, snapshot) => {
     if (snapshot !== undefined) {
       return snapshot.zoneTotals.get(zoneId);
     }
 
-    const zoneTokens = state.zones[zoneId];
+    const zoneTokens = ctx.state.zones[zoneId];
     if (zoneTokens === undefined) {
       throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
         reference: context,
         zoneId,
-        availableZoneIds: Object.keys(state.zones).sort(),
+        availableZoneIds: Object.keys(ctx.state.zones).sort(),
       });
     }
 
@@ -70,15 +72,15 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       if (variableName === null) {
         return null;
       }
-      return (state, _activePlayer, _bindings, snapshot) => {
+      return (ctx, snapshot) => {
         const value = snapshot === undefined
-          ? state.globalVars[variableName]
+          ? ctx.state.globalVars[variableName]
           : snapshot.globalVars[variableName];
         if (value === undefined) {
           throw missingVarError(`Global variable not found: ${variableName}`, {
             reference: expr,
             var: variableName,
-            availableGlobalVars: Object.keys(state.globalVars).sort(),
+            availableGlobalVars: Object.keys(ctx.state.globalVars).sort(),
           });
         }
         return value;
@@ -97,14 +99,14 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       if (variableName === null) {
         return null;
       }
-      return (state, activePlayer, _bindings, snapshot) => {
-        const playerId = fixedPlayerId ?? activePlayer;
-        const playerVars = snapshot?.perPlayerVars[playerId] ?? state.perPlayerVars[playerId];
+      return (ctx, snapshot) => {
+        const playerId = fixedPlayerId ?? ctx.activePlayer;
+        const playerVars = snapshot?.perPlayerVars[playerId] ?? ctx.state.perPlayerVars[playerId];
         if (playerVars === undefined) {
           throw missingVarError(`Per-player vars missing for player ${playerId}`, {
             reference: expr,
             playerId,
-            availablePlayers: Object.keys(state.perPlayerVars).sort(),
+            availablePlayers: Object.keys(ctx.state.perPlayerVars).sort(),
           });
         }
 
@@ -130,18 +132,18 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       if (variableName === null) {
         return null;
       }
-      return (state, _activePlayer, _bindings, snapshot) => {
+      return (ctx, snapshot) => {
         const snapshotValue = snapshot?.zoneVars.get(expr.zone, variableName);
         if (snapshotValue !== undefined) {
           return snapshotValue;
         }
 
-        const zoneVarMap = state.zoneVars[expr.zone];
+        const zoneVarMap = ctx.state.zoneVars[expr.zone];
         if (zoneVarMap === undefined) {
           throw missingVarError(`Zone variable state not found for zone: ${expr.zone}`, {
             reference: expr,
             zoneId: expr.zone,
-            availableZones: Object.keys(state.zoneVars).sort(),
+            availableZones: Object.keys(ctx.state.zoneVars).sort(),
           });
         }
 
@@ -166,13 +168,13 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       return compileZoneCountAccessor(expr.zone, expr);
 
     case 'tokenProp':
-      return (state, _activePlayer, bindings) => {
-        const boundToken = bindings[expr.token];
+      return (ctx) => {
+        const boundToken = ctx.bindings[expr.token];
         if (boundToken === undefined) {
           throw missingBindingError(`Token binding not found: ${expr.token}`, {
             reference: expr,
             binding: expr.token,
-            availableBindings: Object.keys(bindings).sort(),
+            availableBindings: Object.keys(ctx.bindings).sort(),
           });
         }
 
@@ -186,13 +188,13 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
           });
         }
 
-        const token = resolvedBinding.tokenFromBinding ?? getTokenStateIndexEntry(state, resolvedBinding.tokenId)?.token ?? null;
+        const token = resolvedBinding.tokenFromBinding ?? getTokenStateIndexEntry(ctx.state, resolvedBinding.tokenId)?.token ?? null;
         if (token === null) {
           throw missingVarError(`Token ${String(resolvedBinding.tokenId)} not found in any zone`, {
             reference: expr,
             binding: expr.token,
             tokenId: String(resolvedBinding.tokenId),
-            availableZoneIds: Object.keys(state.zones).sort(),
+            availableZoneIds: Object.keys(ctx.state.zones).sort(),
           });
         }
 
@@ -201,7 +203,7 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
           throw missingVarError(`Token property not found: ${expr.prop}`, {
             reference: expr,
             binding: expr.token,
-            availableBindings: Object.keys(bindings).sort(),
+            availableBindings: Object.keys(ctx.bindings).sort(),
             availableTokenProps: Object.keys(token.props).sort(),
           });
         }
@@ -210,15 +212,15 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       };
 
     case 'binding':
-      return (_state, _activePlayer, bindings) => {
-        const resolvedName = resolveBindingTemplate(expr.name, bindings);
-        const value = bindings[resolvedName];
+      return (ctx) => {
+        const resolvedName = resolveBindingTemplate(expr.name, ctx.bindings);
+        const value = ctx.bindings[resolvedName];
         if (value === undefined) {
           throw missingBindingError(`Binding not found: ${resolvedName}`, {
             reference: expr,
             binding: resolvedName,
             bindingTemplate: expr.name,
-            availableBindings: Object.keys(bindings).sort(),
+            availableBindings: Object.keys(ctx.bindings).sort(),
           });
         }
 
@@ -257,14 +259,14 @@ const compileConcatAccessor = (expr: ConcatExpr): CompiledConditionValueAccessor
   }
 
   const accessors = childAccessors as readonly CompiledConditionValueAccessor[];
-  return (state, activePlayer, bindings, snapshot) => {
+  return (ctx, snapshot) => {
     const len = accessors.length;
     let allScalar = true;
     let allArray = true;
     const parts: (ScalarValue | ScalarArrayValue)[] = new Array(len);
 
     for (let i = 0; i < len; i++) {
-      const value = accessors[i]!(state, activePlayer, bindings, snapshot);
+      const value = accessors[i]!(ctx, snapshot);
       parts[i] = value;
       if (Array.isArray(value)) allScalar = false;
       else allArray = false;
@@ -297,10 +299,10 @@ const compileIfAccessor = (expr: IfValueExpr): CompiledConditionValueAccessor | 
     return null;
   }
 
-  return (state, activePlayer, bindings, snapshot) =>
-    condition(state, activePlayer, bindings, snapshot)
-      ? thenAccessor(state, activePlayer, bindings, snapshot)
-      : elseAccessor(state, activePlayer, bindings, snapshot);
+  return (ctx, snapshot) =>
+    condition(ctx, snapshot)
+      ? thenAccessor(ctx, snapshot)
+      : elseAccessor(ctx, snapshot);
 };
 
 const compileArithmeticAccessor = (expr: ArithmeticExpr): CompiledConditionValueAccessor | null => {
@@ -310,14 +312,14 @@ const compileArithmeticAccessor = (expr: ArithmeticExpr): CompiledConditionValue
     return null;
   }
 
-  return (state, activePlayer, bindings, snapshot) => {
+  return (ctx, snapshot) => {
     const left = expectSafeInteger(
-      leftAccessor(state, activePlayer, bindings, snapshot),
+      leftAccessor(ctx, snapshot),
       'Arithmetic operands must be finite safe integers',
       { expr, side: 'left' },
     );
     const right = expectSafeInteger(
-      rightAccessor(state, activePlayer, bindings, snapshot),
+      rightAccessor(ctx, snapshot),
       'Arithmetic operands must be finite safe integers',
       { expr, side: 'right' },
     );
@@ -385,27 +387,27 @@ const compileComparison = (
 ): CompiledConditionPredicate => {
   switch (op) {
     case '==':
-      return (state, activePlayer, bindings, snapshot) =>
-        leftAccessor(state, activePlayer, bindings, snapshot) === rightAccessor(state, activePlayer, bindings, snapshot);
+      return (ctx, snapshot) =>
+        leftAccessor(ctx, snapshot) === rightAccessor(ctx, snapshot);
     case '!=':
-      return (state, activePlayer, bindings, snapshot) =>
-        leftAccessor(state, activePlayer, bindings, snapshot) !== rightAccessor(state, activePlayer, bindings, snapshot);
+      return (ctx, snapshot) =>
+        leftAccessor(ctx, snapshot) !== rightAccessor(ctx, snapshot);
     case '<':
-      return (state, activePlayer, bindings, snapshot) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
-        < expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
+      return (ctx, snapshot) =>
+        expectOrderingNumber(leftAccessor(ctx, snapshot), 'left', cond)
+        < expectOrderingNumber(rightAccessor(ctx, snapshot), 'right', cond);
     case '<=':
-      return (state, activePlayer, bindings, snapshot) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
-        <= expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
+      return (ctx, snapshot) =>
+        expectOrderingNumber(leftAccessor(ctx, snapshot), 'left', cond)
+        <= expectOrderingNumber(rightAccessor(ctx, snapshot), 'right', cond);
     case '>':
-      return (state, activePlayer, bindings, snapshot) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
-        > expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
+      return (ctx, snapshot) =>
+        expectOrderingNumber(leftAccessor(ctx, snapshot), 'left', cond)
+        > expectOrderingNumber(rightAccessor(ctx, snapshot), 'right', cond);
     case '>=':
-      return (state, activePlayer, bindings, snapshot) =>
-        expectOrderingNumber(leftAccessor(state, activePlayer, bindings, snapshot), 'left', cond)
-        >= expectOrderingNumber(rightAccessor(state, activePlayer, bindings, snapshot), 'right', cond);
+      return (ctx, snapshot) =>
+        expectOrderingNumber(leftAccessor(ctx, snapshot), 'left', cond)
+        >= expectOrderingNumber(rightAccessor(ctx, snapshot), 'right', cond);
   }
 };
 
@@ -459,6 +461,136 @@ export const tryCompileCondition = (
       return compileComparison(cond.op, leftAccessor, rightAccessor, cond);
     }
 
+    case 'in': {
+      const itemAccessor = tryCompileValueExpr(cond.item);
+      const setAccessor = tryCompileValueExpr(cond.set);
+      if (itemAccessor === null || setAccessor === null) {
+        return null;
+      }
+      return (ctx, snapshot) =>
+        matchesMembership(itemAccessor(ctx, snapshot), setAccessor(ctx, snapshot), {
+          cond,
+          setExpr: cond.set,
+        });
+    }
+
+    case 'zonePropIncludes': {
+      const valueAccessor = tryCompileValueExpr(cond.value);
+      if (valueAccessor === null) {
+        return null;
+      }
+      return (ctx, snapshot) => {
+        const zoneId = resolveMapSpaceId(cond.zone, ctx);
+        const zoneDef = getZoneMap(ctx.def).get(String(zoneId));
+        if (zoneDef === undefined) {
+          throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
+            condition: cond,
+            zoneId,
+            availableZoneIds: ctx.def.zones.map((zone) => zone.id).sort(),
+          });
+        }
+
+        if (cond.prop === 'id' || cond.prop === 'category') {
+          throw typeMismatchError(
+            `Property "${cond.prop}" on zone ${String(zoneId)} is a scalar, not an array. Use zoneProp reference with a comparison condition instead.`,
+            {
+              condition: cond,
+              zoneId,
+              prop: cond.prop,
+              actualType: 'scalar',
+            },
+          );
+        }
+
+        const propValue = zoneDef.attributes?.[cond.prop];
+        if (propValue === undefined) {
+          throw zonePropNotFoundError(`Property "${cond.prop}" not found on zone ${String(zoneId)}`, {
+            condition: cond,
+            zoneId,
+            prop: cond.prop,
+            availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+          });
+        }
+
+        if (!Array.isArray(propValue)) {
+          throw typeMismatchError(
+            `Property "${cond.prop}" on zone ${String(zoneId)} is not an array. Use zoneProp reference with a comparison condition instead.`,
+            {
+              condition: cond,
+              zoneId,
+              prop: cond.prop,
+              actualType: typeof propValue,
+            },
+          );
+        }
+
+        return propValue.includes(valueAccessor(ctx, snapshot));
+      };
+    }
+
+    case 'markerStateAllowed': {
+      const stateAccessor = tryCompileValueExpr(cond.state);
+      if (stateAccessor === null) {
+        return null;
+      }
+      return (ctx, snapshot) => {
+        const spaceId = resolveMapSpaceId(cond.space, ctx);
+        const candidateState = stateAccessor(ctx, snapshot);
+        if (typeof candidateState !== 'string') {
+          throw typeMismatchError('markerStateAllowed.state must evaluate to a string', {
+            condition: cond,
+            actualType: typeof candidateState,
+            value: candidateState,
+          });
+        }
+
+        const lattice = getLatticeMap(ctx.def)?.get(cond.marker);
+        if (lattice === undefined) {
+          throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
+            condition: cond,
+            markerId: cond.marker,
+            availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+          });
+        }
+
+        if (!lattice.states.includes(candidateState)) {
+          return false;
+        }
+
+        return isSpaceMarkerStateAllowed(lattice, String(spaceId), candidateState, ctx, evalCondition);
+      };
+    }
+
+    case 'markerShiftAllowed': {
+      const deltaAccessor = tryCompileValueExpr(cond.delta);
+      if (deltaAccessor === null) {
+        return null;
+      }
+      return (ctx, snapshot) => {
+        const spaceId = resolveMapSpaceId(cond.space, ctx);
+        const evaluatedDelta = deltaAccessor(ctx, snapshot);
+        if (typeof evaluatedDelta !== 'number' || !Number.isSafeInteger(evaluatedDelta)) {
+          throw typeMismatchError('markerShiftAllowed.delta must evaluate to a safe integer', {
+            condition: cond,
+            actualType: typeof evaluatedDelta,
+            value: evaluatedDelta,
+          });
+        }
+
+        const lattice = getLatticeMap(ctx.def)?.get(cond.marker);
+        if (lattice === undefined) {
+          throw missingVarError(`Marker lattice not found: ${cond.marker}`, {
+            condition: cond,
+            markerId: cond.marker,
+            availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+          });
+        }
+
+        const resolution = resolveSpaceMarkerShift(lattice, String(spaceId), evaluatedDelta, ctx, evalCondition);
+        return resolution.changed && resolution.allowed;
+      };
+    }
+
     case 'and': {
       const compiledArgs: CompiledConditionPredicate[] = [];
       for (const arg of cond.args) {
@@ -468,8 +600,8 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (state, activePlayer, bindings, snapshot) =>
-        compiledArgs.every((arg) => arg(state, activePlayer, bindings, snapshot));
+      return (ctx, snapshot) =>
+        compiledArgs.every((arg) => arg(ctx, snapshot));
     }
 
     case 'or': {
@@ -481,8 +613,8 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (state, activePlayer, bindings, snapshot) =>
-        compiledArgs.some((arg) => arg(state, activePlayer, bindings, snapshot));
+      return (ctx, snapshot) =>
+        compiledArgs.some((arg) => arg(ctx, snapshot));
     }
 
     case 'not': {
@@ -490,7 +622,7 @@ export const tryCompileCondition = (
       if (compiledArg === null) {
         return null;
       }
-      return (state, activePlayer, bindings, snapshot) => !compiledArg(state, activePlayer, bindings, snapshot);
+      return (ctx, snapshot) => !compiledArg(ctx, snapshot);
     }
 
     default:

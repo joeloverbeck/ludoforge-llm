@@ -29,8 +29,7 @@ type ComparableErrorCode = 'MISSING_BINDING' | 'MISSING_VAR' | 'TYPE_MISMATCH';
 
 interface BenchmarkSample {
   readonly id: string;
-  readonly activePlayer: PlayerId;
-  readonly bindings: Readonly<Record<string, unknown>>;
+  readonly ctx: ReadContext;
   readonly compiled: CompiledConditionPredicate;
   readonly interpret: () => boolean;
 }
@@ -100,8 +99,7 @@ const buildProductionGroups = (): readonly BenchmarkGroup[] => {
     const existing = groups.get(sample.state);
     const benchmarkSample: BenchmarkSample = {
       id: `${sample.entry.scope}:${sample.entry.profileId}:${sample.entry.stageIndex ?? 'pipeline'}:${sample.entry.predicate}`,
-      activePlayer: sample.ctx.activePlayer,
-      bindings: sample.bindings,
+      ctx: sample.ctx,
       compiled: sample.compiled,
       interpret: () => evalCondition(sample.entry.condition, sample.ctx),
     };
@@ -213,15 +211,13 @@ const buildFocusedGroups = (): readonly BenchmarkGroup[] => {
       samples: [
         {
           id: `focused-pvar:r${resourceCount}:t${tokenCount}`,
-          activePlayer: ctx.activePlayer,
-          bindings: ctx.bindings,
+          ctx,
           compiled: compiledPvar,
           interpret: buildInterpreter(pvarCondition, ctx),
         },
         {
           id: `focused-aggregate:r${resourceCount}:t${tokenCount}`,
-          activePlayer: ctx.activePlayer,
-          bindings: ctx.bindings,
+          ctx,
           compiled: compiledAggregate,
           interpret: buildInterpreter(aggregateCondition, ctx),
         },
@@ -238,8 +234,8 @@ const assertParity = (groups: readonly BenchmarkGroup[]): void => {
   for (const group of groups) {
     const snapshot = createEnumerationSnapshot(group.def, group.state);
     for (const sample of group.samples) {
-      const raw = execute(() => sample.compiled(group.state, sample.activePlayer, sample.bindings));
-      const withSnapshot = execute(() => sample.compiled(group.state, sample.activePlayer, sample.bindings, snapshot));
+      const raw = execute(() => sample.compiled(sample.ctx));
+      const withSnapshot = execute(() => sample.compiled(sample.ctx, snapshot));
       const interpreted = execute(sample.interpret);
       assert.deepEqual(
         raw,
@@ -275,7 +271,7 @@ const measure = (
         ? createEnumerationSnapshot(group.def, group.state)
         : undefined;
       for (const sample of group.samples) {
-        const execution = execute(() => sample.compiled(group.state, sample.activePlayer, sample.bindings, snapshot));
+        const execution = execute(() => sample.compiled(sample.ctx, snapshot));
         if (execution.kind === 'ok') {
           if (execution.result) {
             okTrueCount += 1;

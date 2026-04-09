@@ -6,6 +6,9 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
+  buildAdjacencyGraph,
+  createEvalContext,
+  createEvalRuntimeResources,
   getCompiledPipelinePredicates,
   type ActionPipelineDef,
   type ConditionAST,
@@ -49,6 +52,17 @@ const makeDef = (
     terminal: { conditions: [] },
   }) as unknown as GameDef;
 
+const makeCtx = (state: GameState, bindings: Readonly<Record<string, unknown>> = {}) =>
+  createEvalContext({
+    def: makeDef(),
+    adjacencyGraph: buildAdjacencyGraph(makeDef().zones),
+    state,
+    activePlayer: state.activePlayer,
+    actorPlayer: state.activePlayer,
+    bindings,
+    resources: createEvalRuntimeResources(),
+  });
+
 describe('compiled condition cache', () => {
   it('returns an empty map when the definition has no action pipelines', () => {
     const cache = getCompiledPipelinePredicates(makeDef());
@@ -74,11 +88,7 @@ describe('compiled condition cache', () => {
         true,
       ],
     };
-    const nonCompilableStageCostValidation: ConditionAST = {
-      op: 'in',
-      item: 'a',
-      set: { _t: 1, scalarArray: ['a', 'b'] },
-    };
+    const nonCompilableStageCostValidation: ConditionAST = { op: 'adjacent', left: 'board:none', right: 'board:none' };
 
     const def = makeDef([
       {
@@ -116,9 +126,9 @@ describe('compiled condition cache', () => {
     assert.equal(cache.get(nonCompilableStageCostValidation), undefined);
 
     const state = makeState();
-    assert.equal(compiledPipelineLegality(state, state.activePlayer, {}), true);
-    assert.equal(compiledPipelineCostValidation(state, state.activePlayer, { '$cost': 2 }), true);
-    assert.equal(compiledStageLegality(state, state.activePlayer, { '$choice': 'a' }), true);
+    assert.equal(compiledPipelineLegality(makeCtx(state)), true);
+    assert.equal(compiledPipelineCostValidation(makeCtx(state, { '$cost': 2 })), true);
+    assert.equal(compiledStageLegality(makeCtx(state, { '$choice': 'a' })), true);
   });
 
   it('reuses the cached map for the same actionPipelines array reference', () => {

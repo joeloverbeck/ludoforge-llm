@@ -54,6 +54,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 7. Check constraints the ticket may have underspecified:
    - Shared type or schema ripple effects
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
+   - When changing a shared function, callback, or callable type contract, grep both runtime callsites and the tests that own those callsites before broad verification.
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.

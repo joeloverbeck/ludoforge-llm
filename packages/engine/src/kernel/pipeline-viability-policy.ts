@@ -69,7 +69,7 @@ const evaluateCompiledPredicate = (
   if (compiled === undefined) {
     return undefined;
   }
-  return compiled(evalCtx.state, evalCtx.activePlayer, evalCtx.bindings, snapshot);
+  return compiled(evalCtx, snapshot);
 };
 
 const evaluatePredicate = (

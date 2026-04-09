@@ -54,7 +54,7 @@ If the spec was reassessed in this same session (e.g., via `/reassess-spec`), th
 Analyze the spec and identify discrete work units. If the spec includes a Ticket Decomposition Guidance section (or equivalent), use it as the starting point for decomposition. Validate that the spec's suggested breakdown produces reviewable diffs and has correct dependency ordering, but do not ignore it in favor of a from-scratch decomposition.
 
 - Each ticket must represent a **reviewable diff** — small enough for comfortable manual review
-- Map **dependencies** between tickets (which must be done before which)
+- Map **dependencies** between tickets (which must be done before which). Distinguish hard dependencies (ticket B cannot be implemented without ticket A's code) from value dependencies (ticket A increases the benefit of ticket B but B is independently implementable). Only hard dependencies go in the `Deps` field. Note value dependencies in the Step 4 parallelism notes if relevant.
 - Determine **priority ordering** (what to implement first)
 - Ensure **every spec deliverable is covered** — no silent skipping. If a deliverable seems wrong or unnecessary, flag it to the user using the 1-3-1 rule instead of omitting it
 - Consider natural boundaries: type changes, new modules, test suites, integration points
@@ -74,7 +74,7 @@ Analyze the spec and identify discrete work units. If the spec includes a Ticket
 
 Include a 1-line scope description for each ticket as bullet text below the table. Deps in the summary table are abbreviated for readability (e.g., `001`, `None`). Ticket files use full backtick-quoted paths.
 
-If multiple tickets share the same dependency set and can be implemented in parallel, note this below the summary table (e.g., "003-007 are independent and can be implemented in parallel after 001").
+If multiple tickets can be implemented in parallel, list parallelism groups as numbered waves below the summary table: `**Wave N**: tickets X, Y, Z (after <deps>)`. This helps the user plan implementation sessions. Example: "**Wave 1**: 001, 002, 005 (all independent). **Wave 2**: 003, 004 (after 001); 006 (after 005). **Wave 3**: 007 (after all)."
 
 **Wait for user approval or adjustments.** Do not write files until the user confirms.
 

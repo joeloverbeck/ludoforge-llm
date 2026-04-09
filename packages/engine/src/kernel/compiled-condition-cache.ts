@@ -1,4 +1,5 @@
-import { tryCompileCondition, type CompiledConditionPredicate } from './condition-compiler.js';
+import type { CompiledConditionPredicate } from './condition-compiler.js';
+import { getCompiledCondition } from './compiled-condition-expr-cache.js';
 import type { ActionPipelineDef, ConditionAST, GameDef } from './types.js';
 
 type CompiledConditionAst = Exclude<ConditionAST, boolean>;
@@ -21,7 +22,7 @@ const addCompiledCondition = (
     return;
   }
 
-  const compiled = tryCompileCondition(condition);
+  const compiled = getCompiledCondition(condition);
   if (compiled !== null) {
     cache.set(condition, compiled);
   }

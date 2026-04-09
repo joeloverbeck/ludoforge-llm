@@ -9,7 +9,9 @@ import {
   buildAdjacencyGraph,
   createEnumerationSnapshot,
   evalCondition,
+  evalValue,
   isEvalErrorCode,
+  resolveRef,
   tryCompileCondition,
   tryCompileValueExpr,
   type ConditionAST,
@@ -90,7 +92,17 @@ const evaluateCompiled = (
   const snapshot = options?.useSnapshot === true
     ? createEnumerationSnapshot(ctx.def, ctx.state)
     : undefined;
-  return compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot);
+  return compiled(ctx, snapshot);
+};
+
+const evaluateCompiledValue = (
+  expr: ValueExpr,
+  ctx: ReadContext,
+  options?: { readonly snapshot?: EnumerationStateSnapshot },
+): ReturnType<typeof evalValue> => {
+  const compiled = tryCompileValueExpr(expr);
+  assert.ok(compiled !== null);
+  return compiled(ctx, options?.snapshot);
 };
 
 describe('condition compiler', () => {
@@ -158,10 +170,10 @@ describe('condition compiler', () => {
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };
 
-    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiledGvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
-    assert.equal(compiledPvar(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiledGvar(ctx), false);
+    assert.equal(compiledPvar(ctx), false);
+    assert.equal(compiledGvar(ctx, snapshot), true);
+    assert.equal(compiledPvar(ctx, snapshot), true);
   });
 
   it('supports all six comparison operators for Tier 1 value accessors', () => {
@@ -201,7 +213,7 @@ describe('condition compiler', () => {
     const ctx = makeCtx({ state: populatedState });
     const condition: ConditionAST = { op: '>', left: expr, right: 0 };
 
-    assert.equal(accessor(ctx.state, ctx.activePlayer, ctx.bindings), 2);
+    assert.equal(accessor(ctx), 2);
     assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
   });
 
@@ -236,9 +248,109 @@ describe('condition compiler', () => {
       return originalGet(zoneId, tokenType);
     };
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiled(ctx), false);
+    assert.equal(compiled(ctx, snapshot), true);
     assert.equal(calls, 1);
+  });
+
+  it('compiles arithmetic expressions across the full live operator family', () => {
+    const ctx = makeCtx({
+      bindings: {
+        '$left': 7,
+        '$right': 3,
+        '$negLeft': -7,
+        '$negRight': 3,
+      },
+    });
+    const cases: readonly ValueExpr[] = [
+      { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '-', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '*', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '/', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'binding', name: '$negLeft' }, right: { _t: 2, ref: 'binding', name: '$negRight' } },
+      { _t: 6, op: 'ceilDiv', left: { _t: 2, ref: 'binding', name: '$negLeft' }, right: { _t: 2, ref: 'binding', name: '$negRight' } },
+      { _t: 6, op: 'min', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: 'max', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+    ];
+
+    for (const expr of cases) {
+      assert.equal(evaluateCompiledValue(expr, ctx), evalValue(expr, ctx));
+    }
+  });
+
+  it('matches interpreter behavior for concat over scalars and scalar arrays', () => {
+    const ctx = makeCtx({
+      bindings: {
+        '$suffix': 'north',
+        '$letters': ['b', 'c'],
+      },
+    });
+    const scalarConcat: ValueExpr = {
+      _t: 3,
+      concat: ['a-', { _t: 2, ref: 'binding', name: '$suffix' }, '-', { _t: 2, ref: 'gvar', var: 'resources' }],
+    };
+    const arrayConcat: ValueExpr = {
+      _t: 3,
+      concat: [{ _t: 1, scalarArray: ['a'] }, { _t: 2, ref: 'binding', name: '$letters' }, { _t: 1, scalarArray: ['d'] }],
+    };
+
+    assert.deepEqual(evaluateCompiledValue(scalarConcat, ctx), evalValue(scalarConcat, ctx));
+    assert.deepEqual(evaluateCompiledValue(arrayConcat, ctx), evalValue(arrayConcat, ctx));
+  });
+
+  it('matches interpreter behavior for if expressions, including nested arithmetic composition', () => {
+    const truthyCtx = makeCtx({ bindings: { '$threshold': 3 } });
+    const falsyCtx = makeCtx({ bindings: { '$threshold': 9 } });
+    const expr: ValueExpr = {
+      _t: 4,
+      if: {
+        when: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: { _t: 2, ref: 'binding', name: '$threshold' } },
+        then: {
+          _t: 6,
+          op: '+',
+          left: { _t: 2, ref: 'gvar', var: 'resources' },
+          right: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' },
+        },
+        else: {
+          _t: 3,
+          concat: ['fallback-', { _t: 2, ref: 'binding', name: '$threshold' }],
+        },
+      },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, truthyCtx), evalValue(expr, truthyCtx));
+    assert.equal(evaluateCompiledValue(expr, falsyCtx), evalValue(expr, falsyCtx));
+  });
+
+  it('matches interpreter errors for arithmetic division by zero and mixed concat parts', () => {
+    const divisionExpr: ValueExpr = {
+      _t: 6,
+      op: '/',
+      left: 4,
+      right: 0,
+    };
+    const mixedConcatExpr: ValueExpr = {
+      _t: 3,
+      concat: ['x', { _t: 1, scalarArray: ['y'] }],
+    };
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evaluateCompiledValue(divisionExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evalValue(divisionExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(mixedConcatExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+    assert.throws(
+      () => evalValue(mixedConcatExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
   });
 
   it('keeps compiled aggregate zone totals equivalent with and without a real snapshot', () => {
@@ -263,9 +375,127 @@ describe('condition compiler', () => {
     });
     const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), true);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), evalCondition(condition, ctx));
+    assert.equal(compiled(ctx), true);
+    assert.equal(compiled(ctx, snapshot), true);
+    assert.equal(compiled(ctx, snapshot), evalCondition(condition, ctx));
+  });
+
+  it('compiles scalar array literals and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 1, scalarArray: [1, 'north', true] };
+    const ctx = makeCtx();
+
+    assert.deepEqual(evaluateCompiledValue(expr, ctx), evalValue(expr, ctx));
+  });
+
+  it('compiles zoneCount references for static zones and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'zoneCount', zone: 'board:none' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: {} },
+            { id: asTokenId('t2'), type: 'piece', props: {} },
+          ],
+        },
+      },
+    });
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneCount', zone: 'board:none' }, ctx));
+  });
+
+  it('compiles zoneVar references for static zones and vars, including snapshot-backed reads', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'zoneVar', zone: 'board:none', var: 'threat' };
+    const state: GameState = {
+      ...makeState(),
+      zoneVars: {
+        'board:none': { threat: 2 },
+      },
+    };
+    const ctx = makeCtx({ state });
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: ctx.state.globalVars,
+      perPlayerVars: ctx.state.perPlayerVars,
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
+      zoneVars: { get: (zoneId: string, varName: string) => zoneId === 'board:none' && varName === 'threat' ? 5 : undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneVar', zone: 'board:none', var: 'threat' }, ctx));
+    assert.equal(evaluateCompiledValue(expr, ctx, { snapshot }), 5);
+  });
+
+  it('compiles tokenProp references for binding-resolvable tokens and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$card', prop: 'cost' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [
+            { id: asTokenId('t1'), type: 'piece', props: { cost: 9, faction: 'US' } },
+          ],
+        },
+      },
+      bindings: { '$card': asTokenId('t1') },
+    });
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'tokenProp', token: '$card', prop: 'cost' }, ctx));
+  });
+
+  it('compiles pvar references for fixed player id selectors and matches interpreter behavior', () => {
+    const expr: ValueExpr = { _t: 2, ref: 'pvar', player: { id: asPlayerId(0) }, var: 'resources' };
+    const ctx = makeCtx();
+    const snapshot: EnumerationStateSnapshot = {
+      globalVars: ctx.state.globalVars,
+      perPlayerVars: {
+        ...ctx.state.perPlayerVars,
+        0: { ...(ctx.state.perPlayerVars[0] ?? {}), resources: 7 },
+      },
+      zoneTotals: { get: (_zoneId: string, _tokenType?: string) => 0 },
+      zoneVars: { get: (_zoneId: string, _varName: string) => undefined },
+      markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'pvar', player: { id: asPlayerId(0) }, var: 'resources' }, ctx));
+    assert.equal(evaluateCompiledValue(expr, ctx, { snapshot }), 7);
+  });
+
+  it('preserves missing-zone and missing-zoneVar error behavior for compiled simple references', () => {
+    const missingZoneCountExpr: ValueExpr = { _t: 2, ref: 'zoneCount', zone: 'missing:none' };
+    const missingZoneVarExpr: ValueExpr = { _t: 2, ref: 'zoneVar', zone: 'board:none', var: 'threat' };
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evaluateCompiledValue(missingZoneCountExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(missingZoneVarExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
+  });
+
+  it('preserves missing token binding and tokenProp errors for compiled tokenProp references', () => {
+    const missingBindingExpr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$missing', prop: 'cost' };
+    const missingPropExpr: ValueExpr = { _t: 2, ref: 'tokenProp', token: '$card', prop: 'missingProp' };
+    const ctx = makeCtx({
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [{ id: asTokenId('t1'), type: 'piece', props: { cost: 9 } }],
+        },
+      },
+      bindings: { '$card': asTokenId('t1') },
+    });
+
+    assert.throws(
+      () => evaluateCompiledValue(missingBindingExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(missingPropExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+    );
   });
 
   it('preserves missing-zone error behavior for compiled aggregate counts', () => {
@@ -279,7 +509,7 @@ describe('condition compiler', () => {
     const condition: ConditionAST = { op: '>', left: expr, right: 0 };
 
     assert.throws(
-      () => accessor(ctx.state, ctx.activePlayer, ctx.bindings),
+      () => accessor(ctx),
       (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
     );
     assert.throws(
@@ -358,8 +588,8 @@ describe('condition compiler', () => {
       markerStates: { get: (_spaceId: string, _markerName: string) => undefined },
     };
 
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings), false);
-    assert.equal(compiled(ctx.state, ctx.activePlayer, ctx.bindings, snapshot), true);
+    assert.equal(compiled(ctx), false);
+    assert.equal(compiled(ctx, snapshot), true);
   });
 
   it('reuses one snapshot across different invocation active players', () => {
@@ -374,15 +604,18 @@ describe('condition compiler', () => {
     const ctx = makeCtx();
     const snapshot = createEnumerationSnapshot(ctx.def, ctx.state);
 
-    assert.equal(compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot), false);
-    assert.equal(compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot), true);
+    const playerZeroCtx = { ...ctx, activePlayer: asPlayerId(0) };
+    const playerOneCtx = { ...ctx, activePlayer: asPlayerId(1) };
+
+    assert.equal(compiled(playerZeroCtx, snapshot), false);
+    assert.equal(compiled(playerOneCtx, snapshot), true);
     assert.equal(
-      compiled(ctx.state, asPlayerId(0), ctx.bindings, snapshot),
-      compiled(ctx.state, asPlayerId(0), ctx.bindings),
+      compiled(playerZeroCtx, snapshot),
+      compiled(playerZeroCtx),
     );
     assert.equal(
-      compiled(ctx.state, asPlayerId(1), ctx.bindings, snapshot),
-      compiled(ctx.state, asPlayerId(1), ctx.bindings),
+      compiled(playerOneCtx, snapshot),
+      compiled(playerOneCtx),
     );
   });
 
@@ -405,12 +638,124 @@ describe('condition compiler', () => {
     });
     const snapshot = createEnumerationSnapshot(shiftedCtx.def, shiftedCtx.state);
 
-    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings), true);
-    assert.equal(compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot), true);
+    assert.equal(compiled(shiftedCtx), true);
+    assert.equal(compiled(shiftedCtx, snapshot), true);
     assert.equal(
-      compiled(shiftedCtx.state, shiftedCtx.activePlayer, shiftedCtx.bindings, snapshot),
+      compiled(shiftedCtx, snapshot),
       evalCondition(condition, shiftedCtx),
     );
+  });
+
+  it('compiles in, zonePropIncludes, and marker lattice conditions with interpreter parity', () => {
+    const def: GameDef = ({
+      ...makeDef(),
+      zones: [
+        {
+          id: asZoneId('board:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          attributes: { terrainTags: ['urban', 'coastal'], population: 2 },
+        },
+        {
+          id: asZoneId('saigon:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2 },
+        },
+        {
+          id: asZoneId('central-laos:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+          attributes: { population: 0 },
+        },
+      ],
+      markerLattices: [
+        {
+          id: 'supportOpposition',
+          states: ['activeOpposition', 'passiveOpposition', 'neutral', 'passiveSupport', 'activeSupport'],
+          defaultState: 'neutral',
+          constraints: [
+            {
+              when: {
+                op: '==',
+                left: { _t: 2, ref: 'zoneProp', zone: '$space', prop: 'population' },
+                right: 0,
+              },
+              allowedStates: ['neutral'],
+            },
+          ],
+        },
+      ],
+    }) as unknown as GameDef;
+    const ctx = makeCtx({
+      def,
+      state: {
+        ...makeState(),
+        zones: {
+          'board:none': [],
+          'saigon:none': [],
+          'central-laos:none': [],
+        },
+        markers: {
+          'saigon:none': { supportOpposition: 'activeSupport' },
+          'central-laos:none': { supportOpposition: 'neutral' },
+        },
+      },
+      bindings: {
+        '$faction': 'US',
+      },
+    });
+
+    const memberCondition: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'binding', name: '$faction' },
+      set: { _t: 1, scalarArray: ['US', 'ARVN'] },
+    };
+    const nonMemberCondition: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'binding', name: '$faction' },
+      set: { _t: 1, scalarArray: ['NVA', 'VC'] },
+    };
+    const zonePropCondition: ConditionAST = {
+      op: 'zonePropIncludes',
+      zone: 'board:none',
+      prop: 'terrainTags',
+      value: 'coastal',
+    };
+    const legalMarkerState: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'saigon:none',
+      marker: 'supportOpposition',
+      state: 'activeSupport',
+    };
+    const illegalMarkerState: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'central-laos:none',
+      marker: 'supportOpposition',
+      state: 'activeSupport',
+    };
+    const legalMarkerShift: ConditionAST = {
+      op: 'markerShiftAllowed',
+      space: 'saigon:none',
+      marker: 'supportOpposition',
+      delta: -1,
+    };
+
+    assert.equal(evaluateCompiled(memberCondition, ctx), evalCondition(memberCondition, ctx));
+    assert.equal(evaluateCompiled(nonMemberCondition, ctx), evalCondition(nonMemberCondition, ctx));
+    assert.equal(evaluateCompiled(zonePropCondition, ctx), evalCondition(zonePropCondition, ctx));
+    assert.equal(evaluateCompiled(legalMarkerState, ctx), evalCondition(legalMarkerState, ctx));
+    assert.equal(evaluateCompiled(illegalMarkerState, ctx), evalCondition(illegalMarkerState, ctx));
+    assert.equal(evaluateCompiled(legalMarkerShift, ctx), evalCondition(legalMarkerShift, ctx));
   });
 
   it('returns null for non-compilable expressions and selectors', () => {
@@ -452,17 +797,63 @@ describe('condition compiler', () => {
     const concatExpr: ValueExpr = { _t: 3, concat: ['a', 'b'] };
     const ifExpr: ValueExpr = { _t: 4, if: { when: true, then: 1, else: 0 } };
     const arithmeticExpr: ValueExpr = { _t: 6, op: '+', left: 1, right: 2 };
+    const dynamicConcatExpr: ValueExpr = {
+      _t: 3,
+      concat: [{ _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }, 'b'],
+    };
+    const ifWithDynamicCondition: ValueExpr = {
+      _t: 4,
+      if: {
+        when: { op: '==', left: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }, right: 1 },
+        then: 1,
+        else: 0,
+      },
+    };
+    const arithmeticWithDynamicChild: ValueExpr = {
+      _t: 6,
+      op: '+',
+      left: 1,
+      right: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
+    const inWithDynamicOperand: ConditionAST = {
+      op: 'in',
+      item: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+      set: { _t: 1, scalarArray: [1] },
+    };
+    const zonePropWithDynamicValue: ConditionAST = {
+      op: 'zonePropIncludes',
+      zone: 'board:none',
+      prop: 'terrainTags',
+      value: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
+    const markerStateWithDynamicValue: ConditionAST = {
+      op: 'markerStateAllowed',
+      space: 'board:none',
+      marker: 'supportOpposition',
+      state: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
+    const markerShiftWithDynamicValue: ConditionAST = {
+      op: 'markerShiftAllowed',
+      space: 'board:none',
+      marker: 'supportOpposition',
+      delta: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
 
     assert.equal(tryCompileValueExpr(aggregateExpr), null);
     assert.equal(tryCompileValueExpr(filteredAggregateExpr), null);
     assert.equal(tryCompileValueExpr(dynamicZoneAggregateExpr), null);
     assert.equal(tryCompileValueExpr(mapSpacesAggregateExpr), null);
     assert.equal(tryCompileValueExpr(sumAggregateExpr), null);
-    assert.equal(tryCompileValueExpr(concatExpr), null);
-    assert.equal(tryCompileValueExpr(ifExpr), null);
-    assert.equal(tryCompileValueExpr(arithmeticExpr), null);
+    assert.ok(tryCompileValueExpr(concatExpr) !== null);
+    assert.ok(tryCompileValueExpr(ifExpr) !== null);
+    assert.ok(tryCompileValueExpr(arithmeticExpr) !== null);
+    assert.equal(tryCompileValueExpr(dynamicConcatExpr), null);
+    assert.equal(tryCompileValueExpr(ifWithDynamicCondition), null);
+    assert.equal(tryCompileValueExpr(arithmeticWithDynamicChild), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'gvar', var: { ref: 'binding', name: '$var' } }), null);
+    assert.equal(tryCompileValueExpr({ _t: 2, ref: 'zoneVar', zone: 'board:none', var: { ref: 'binding', name: '$var' } }), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }), null);
+    assert.equal(tryCompileValueExpr({ _t: 2, ref: 'pvar', player: { relative: 'left' }, var: 'resources' }), null);
 
     const aggregateCondition: ConditionAST = { op: '==', left: aggregateExpr, right: 0 };
     const booleanCombination: ConditionAST = { op: 'and', args: [true, false] };
@@ -472,7 +863,11 @@ describe('condition compiler', () => {
     };
     assert.equal(tryCompileCondition(aggregateCondition), null);
     assert.ok(tryCompileCondition(booleanCombination) !== null);
-    assert.equal(tryCompileCondition(mixedBooleanCombination), null);
+    assert.ok(tryCompileCondition(mixedBooleanCombination) !== null);
+    assert.equal(tryCompileCondition(inWithDynamicOperand), null);
+    assert.equal(tryCompileCondition(zonePropWithDynamicValue), null);
+    assert.equal(tryCompileCondition(markerStateWithDynamicValue), null);
+    assert.equal(tryCompileCondition(markerShiftWithDynamicValue), null);
   });
 
   it('compiles nested boolean trees when every sub-condition is compilable', () => {

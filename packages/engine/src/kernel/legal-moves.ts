@@ -1,5 +1,5 @@
 import { hasActionPipeline } from './action-pipeline-lookup.js';
-import { evalCondition } from './eval-condition.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
@@ -479,11 +479,11 @@ function enumerateParams(
     }
     const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
-      if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
+      if (!evaluateConditionWithCache(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
       }
     }
-    if (action.pre !== null && !evalCondition(action.pre, ctx)) {
+    if (action.pre !== null && !evaluateConditionWithCache(action.pre, ctx)) {
       return;
     }
 
@@ -642,10 +642,17 @@ function enumeratePendingFreeOperationMoves(
   }
 
   const seenGrantMoveKeys = new Set<string>();
+  const baseTemplateActionClassKeys = new Set<string>();
+  for (const move of enumeration.moves) {
+    if (move.freeOperation !== true) {
+      const cls = resolveTurnFlowActionClass(def, move) ?? 'operation';
+      baseTemplateActionClassKeys.add(`${String(move.actionId)}:${cls}`);
+    }
+  }
   const defaultActionDomain = resolveTurnFlowDefaultFreeOperationActionDomain(def);
-  const isCurrentReadyGrant = (grantId: string): boolean => readyGrants.some((grant) => grant.grantId === grantId);
+  const readyGrantIdSet = new Set(readyGrants.map((grant) => grant.grantId));
   const nonCurrentReadyGrants = pending.filter(
-    (pendingGrant) => !isCurrentReadyGrant(pendingGrant.grantId),
+    (pendingGrant) => !readyGrantIdSet.has(pendingGrant.grantId),
   );
   const createReadyGrantScopedGrants = (
     grantIds: readonly string[],
@@ -768,7 +775,9 @@ function enumeratePendingFreeOperationMoves(
       continue;
     }
 
-    for (const actionId of grantActionIds(def, grant).length > 0 ? grantActionIds(def, grant) : defaultActionDomain) {
+    const grantActions = grantActionIds(def, grant);
+    const actionDomain = grantActions.length > 0 ? grantActions : defaultActionDomain;
+    for (const actionId of actionDomain) {
       const action = def.actions.find((candidate) => String(candidate.id) === actionId);
       if (action === undefined) {
         continue;
@@ -785,21 +794,15 @@ function enumeratePendingFreeOperationMoves(
         freeOperation: true,
         ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
       };
-      const hasEnumeratedBaseTemplate = enumeration.moves.some(
-        (move) =>
-          move.freeOperation !== true
-          && String(move.actionId) === actionId
-          && (resolveTurnFlowActionClass(def, move) ?? 'operation') === targetActionClass,
-      );
+      const hasEnumeratedBaseTemplate = baseTemplateActionClassKeys.has(`${actionId}:${targetActionClass}`);
 
+      const grantCapturedZones = resolveCapturedSequenceZonesByKey(state, grant);
       const freeOperationPreflightOverlay = buildFreeOperationPreflightOverlay(
         {
           executionPlayer,
           ...(grant.zoneFilter === undefined ? {} : { zoneFilter: grant.zoneFilter }),
           ...(grant.executionContext === undefined ? {} : { executionContext: grant.executionContext }),
-          ...(resolveCapturedSequenceZonesByKey(state, grant) === undefined
-            ? {}
-            : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, grant) }),
+          ...(grantCapturedZones === undefined ? {} : { capturedSequenceZonesByKey: grantCapturedZones }),
           ...(grant.tokenInterpretations === undefined ? {} : { tokenInterpretations: grant.tokenInterpretations }),
         },
         { actionId: action.id, params: {} },
@@ -953,6 +956,7 @@ function enumeratePendingFreeOperationMoves(
         freeOperation: true,
         ...(needsGrantActionClassOverride ? { actionClass: targetActionClass } : {}),
       };
+      const baseMoveKey = toMoveIdentityKey(def, baseMove);
 
       const viableReadyGrantIds = readyGrants
         .filter((candidateGrant) => {
@@ -961,13 +965,12 @@ function enumeratePendingFreeOperationMoves(
             return false;
           }
 
+          const candidateCapturedZones = resolveCapturedSequenceZonesByKey(state, candidateGrant);
           const candidatePreflightOverlay = buildFreeOperationPreflightOverlay(
             {
               executionPlayer: candidateExecutionPlayer,
               ...(candidateGrant.zoneFilter === undefined ? {} : { zoneFilter: candidateGrant.zoneFilter }),
-              ...(resolveCapturedSequenceZonesByKey(state, candidateGrant) === undefined
-                ? {}
-                : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, candidateGrant) }),
+              ...(candidateCapturedZones === undefined ? {} : { capturedSequenceZonesByKey: candidateCapturedZones }),
               ...(candidateGrant.tokenInterpretations === undefined ? {} : { tokenInterpretations: candidateGrant.tokenInterpretations }),
             },
             { actionId: action.id, params: {} },
@@ -1053,7 +1056,7 @@ function enumeratePendingFreeOperationMoves(
               ? {}
               : { actionClass: candidateGrant.operationClass }),
           };
-          if (toMoveIdentityKey(def, candidateMove) !== toMoveIdentityKey(def, baseMove)) {
+          if (toMoveIdentityKey(def, candidateMove) !== baseMoveKey) {
             return false;
           }
           const candidateScopedState = createReadyGrantScopedState([candidateGrant.grantId]);
@@ -1082,11 +1085,10 @@ function enumeratePendingFreeOperationMoves(
         continue;
       }
 
-      const grantMoveKey = toMoveIdentityKey(def, baseMove);
-      if (seenGrantMoveKeys.has(grantMoveKey)) {
+      if (seenGrantMoveKeys.has(baseMoveKey)) {
         continue;
       }
-      seenGrantMoveKeys.add(grantMoveKey);
+      seenGrantMoveKeys.add(baseMoveKey);
 
       if (!tryPushTemplateMove(enumeration, baseMove, action.id)) {
         return;

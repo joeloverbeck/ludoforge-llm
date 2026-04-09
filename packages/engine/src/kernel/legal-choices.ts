@@ -10,6 +10,7 @@ import {
 } from './choose-n-option-resolution.js';
 import type { ChooseNTemplate } from './choose-n-session.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { applyEffects } from './effects.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
@@ -47,7 +48,6 @@ import {
 } from './free-operation-discovery-analysis.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { isCardEventActionId } from './action-capabilities.js';
-import { evalCondition } from './eval-condition.js';
 import { findPhaseDef } from './phase-lookup.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
@@ -894,7 +894,7 @@ const legalChoicesWithPreparedContextInternal = (
   // and validateMove (apply-move.ts:742).
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
-    if (!evalCondition(currentPhaseDef.actionDefaults.pre, evalCtx)) {
+    if (!evaluateConditionWithCache(currentPhaseDef.actionDefaults.pre, evalCtx)) {
       return finalizeRequest({
         kind: 'illegal',
         complete: false,
@@ -902,7 +902,7 @@ const legalChoicesWithPreparedContextInternal = (
       });
     }
   }
-  if (action.pre !== null && !evalCondition(action.pre, evalCtx)) {
+  if (action.pre !== null && !evaluateConditionWithCache(action.pre, evalCtx)) {
     return finalizeRequest({
       kind: 'illegal',
       complete: false,

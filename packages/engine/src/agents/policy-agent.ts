@@ -83,9 +83,8 @@ export class PolicyAgent implements Agent {
     });
     perfDynEnd(profiler, 'agent:evaluatePolicyMove', t0_eval);
 
-    const trustedMove = playableMoves.find(
-      (candidate) => toMoveIdentityKey(input.def, candidate.move) === toMoveIdentityKey(input.def, result.move),
-    );
+    const resultMoveKey = toMoveIdentityKey(input.def, result.move);
+    const trustedMove = trustedMoveIndex.get(resultMoveKey);
     if (trustedMove === undefined) {
       throw new Error('PolicyAgent selected a move that was not present in the trusted candidate set.');
     }

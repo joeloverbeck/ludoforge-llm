@@ -21,12 +21,14 @@ import {
   applyChooseOne,
   applyChooseN,
   applyRollRandom,
+} from './effects-choice.js';
+import {
   applySetMarker,
   applyShiftMarker,
   applySetGlobalMarker,
   applyFlipGlobalMarker,
   applyShiftGlobalMarker,
-} from './effects-choice.js';
+} from './effects-markers.js';
 import {
   applyGrantFreeOperation,
   applyGotoPhaseExact,

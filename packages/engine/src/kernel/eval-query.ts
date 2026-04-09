@@ -28,7 +28,7 @@ import { filterRowsByPredicates, type ResolvedRowPredicate } from './query-predi
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import { isDynamicScopedVarNameExpr, resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
-import { filterTokensByExpr } from './token-filter.js';
+import { filterTokensByExprInContext } from './token-filter.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
@@ -374,11 +374,10 @@ function resolveCapturedSequenceZonesQuery(
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   const tokenStateIndex = getTokenStateIndex(ctx.state);
   const zoneDefById = getZoneMap(ctx.def);
-  return filterTokensByExpr(
+  return filterTokensByExprInContext(
     tokens,
     filter,
-    (value) => resolvePredicateValue(value, ctx),
-    ctx.freeOperationOverlay,
+    ctx,
     (token, predicate) => {
       const zoneId = tokenStateIndex.get(token.id)?.zoneId;
       if (predicate.field?.kind === 'tokenZone') {

@@ -9,6 +9,7 @@ import {
   shouldDeferIncompleteDecisionValidationForMove,
 } from './event-execution.js';
 import { createCollector } from './execution-collector.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveActionPipelineDispatch, toExecutionPipeline } from './apply-move-pipeline.js';
 import { toApplyMoveIllegalReason } from './legality-outcome.js';
 import {
@@ -17,7 +18,6 @@ import {
   evaluateStagePredicateStatus,
 } from './pipeline-viability-policy.js';
 import { resolveActionExecutor } from './action-executor.js';
-import { evalCondition } from './eval-condition.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
 import {
@@ -880,7 +880,7 @@ const validateMove = (
   );
   const action = preflight.action;
   const allowIncomplete = shouldDeferIncompleteDecisionValidationForMove(def, state, move);
-  if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
+  if (action.pre !== null && !evaluateConditionWithCache(action.pre, preflight.evalCtx)) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
   }
   if (preflight.actionPipeline === undefined) {
@@ -1842,7 +1842,7 @@ export const probeMoveViability = (
       freeOperationAnalysis,
     );
 
-    if (preflight.action.pre !== null && !evalCondition(preflight.action.pre, preflight.evalCtx)) {
+    if (preflight.action.pre !== null && !evaluateConditionWithCache(preflight.action.pre, preflight.evalCtx)) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.ACTION_NOT_LEGAL_IN_CURRENT_STATE);
     }
     if (preflight.actionPipeline === undefined) {

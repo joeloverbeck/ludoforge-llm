@@ -1,18 +1,15 @@
 import type { TokenFilterExpr } from '../../src/kernel/types.js';
+import { isTokenFilterPredicateExpr } from '../../src/kernel/token-filter-expr-utils.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 const isTokenFilterExprNode = (value: unknown): value is TokenFilterExpr => {
+  if (isTokenFilterPredicateExpr(value)) {
+    return true;
+  }
   if (!isRecord(value)) {
     return false;
-  }
-  if (
-    'value' in value
-    && 'op' in value
-    && (typeof value.prop === 'string' || isRecord(value.field))
-  ) {
-    return true;
   }
   if ('op' in value && value.op === 'not' && 'arg' in value) {
     return isTokenFilterExprNode(value.arg);

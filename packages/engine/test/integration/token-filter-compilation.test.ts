@@ -2,8 +2,19 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { getCompiledTokenFilter, initialState, matchesTokenFilterExpr } from '../../src/kernel/index.js';
+import type { TokenFilterExpr } from '../../src/kernel/index.js';
 import { compileFitlValidatedGameDef } from '../helpers/compiled-condition-production-helpers.js';
 import { collectTokenFilterExprs } from '../helpers/token-filter-production-helpers.js';
+
+const requiresContext = (expr: TokenFilterExpr): boolean => {
+  if ('value' in expr) {
+    return !Array.isArray(expr.value) && (typeof expr.value !== 'string' && typeof expr.value !== 'number' && typeof expr.value !== 'boolean');
+  }
+  if (expr.op === 'not') {
+    return requiresContext(expr.arg);
+  }
+  return expr.args.some(requiresContext);
+};
 
 describe('token-filter compilation integration', () => {
   it('keeps the compiled fast path equivalent to the interpreter across FITL initial-state token filters', () => {
@@ -14,21 +25,14 @@ describe('token-filter compilation integration', () => {
 
     for (const expr of exprs) {
       const compiled = getCompiledTokenFilter(expr);
-      if (compiled === null) {
+      if (compiled === null || requiresContext(expr)) {
         continue;
       }
       compiledCount += 1;
       for (const token of tokens) {
         assert.equal(
+          compiled(token),
           matchesTokenFilterExpr(token, expr),
-          matchesTokenFilterExpr(token, expr, (value) => {
-            if (Array.isArray(value)) {
-              return value;
-            }
-            return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean'
-              ? value
-              : null;
-          }),
           `expected integrated compiled parity for token ${String(token.id)}`,
         );
       }

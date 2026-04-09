@@ -12,14 +12,15 @@ import {
 import { listKernelModulesByPrefix, readKernelSource } from '../../helpers/kernel-source-guard.js';
 
 const selectorNormalizedModules = {
-  'effects-choice.ts': ['resolveZoneWithNormalization'],
+  'effects-markers.ts': ['resolveZoneWithNormalization'],
   'effects-reveal.ts': ['resolveZoneWithNormalization', 'resolvePlayersWithNormalization'],
   'effects-token.ts': ['resolveZoneWithNormalization'],
   'effects-var.ts': ['resolveSinglePlayerWithNormalization'],
 } as const satisfies Readonly<Record<string, readonly string[]>>;
 
-const selectorFreeModules = [
+const normalizationFreeModules = [
   'effects-binding.ts',
+  'effects-choice.ts',
   'effects-control.ts',
   'effects-resource.ts',
   'effects-subset.ts',
@@ -64,7 +65,7 @@ const isCanonicalPolicyDerivationCall = (expression: ts.Expression): boolean => 
 describe('effect resolver normalization architecture guard', () => {
   it('keeps effect handler resolver usage aligned with normalization policy', () => {
     const actualEffectModules = listKernelModulesByPrefix('effects-');
-    const policyModules = [...Object.keys(selectorNormalizedModules), ...selectorFreeModules].sort();
+    const policyModules = [...Object.keys(selectorNormalizedModules), ...normalizationFreeModules].sort();
     assert.deepEqual(
       actualEffectModules,
       policyModules,
@@ -93,12 +94,12 @@ describe('effect resolver normalization architecture guard', () => {
       }
     }
 
-    for (const moduleName of selectorFreeModules) {
+    for (const moduleName of normalizationFreeModules) {
       const source = readKernelSource(`src/kernel/${moduleName}`);
       assert.doesNotMatch(
         source,
         /\bresolve(?:Zone|Players|SinglePlayer)WithNormalization\b/u,
-        `${moduleName} is expected to be selector-free and not depend on selector normalization helpers`,
+        `${moduleName} is expected to be normalization-free and not depend on selector normalization helpers`,
       );
     }
   });

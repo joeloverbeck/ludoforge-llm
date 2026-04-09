@@ -4,8 +4,8 @@ description: "Confidence-driven brainstorming skill. Interviews the user until 9
 user-invocable: true
 arguments:
   - name: request
-    description: "The brainstorming topic or question (string). Can be a simple sentence or a detailed description."
-    required: true
+    description: "The brainstorming topic or question. If omitted, inferred from the preceding conversation context."
+    required: false
   - name: reference_path
     description: "Optional path to a reference file (report, brainstorming doc, analysis) to read as context before starting the interview."
     required: false
@@ -25,33 +25,58 @@ Do NOT write any code, scaffold any project, invoke any implementation skill, or
 Read context (reference file + detect topic type)
          |
          v
-Confidence-driven interview loop (target: 95%)
+[If reference has verification criteria] Run counter-evidence checks
          |
          v
-Propose 2-3 approaches with tradeoffs
+Classify: design | decision/triage
          |
-         v
-Present design section by section, get approval per section
+         +--> DECISION MODE: short interview -> verify claims -> write specs/tickets directly
          |
-         v
-[If implementation topic] Validate against FOUNDATIONS.md
-         |
-         v
-Write design doc to docs/plans/
-         |
-         v
-Next-steps menu (user chooses)
+         +--> DESIGN MODE (default):
+              Confidence-driven interview loop (target: 95%)
+                       |
+                       v
+              Propose 2-3 approaches with tradeoffs
+                       |
+                       v
+              Present design section by section, get approval per section
+                       |
+                       v
+              [If implementation topic] Validate against FOUNDATIONS.md
+                       |
+                       v
+              Write design doc to docs/plans/
+                       |
+                       v
+              Next-steps menu (user chooses)
 ```
 
 ## Step 1: Read Context
 
 1. **Reference file**: If `reference_path` is provided, read the entire file. Extract key claims, proposals, and open questions from it. Summarize what it contains in 2-3 sentences before proceeding.
 
-2. **Topic classification**: Determine whether this brainstorm is **implementation-related** (code changes, architecture, engine modifications, new features, bug fixes) or **non-implementation** (process, tooling config, workflow, strategy, skill design).
+2. **Topic classification**: Determine the brainstorm mode:
+   - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc).
 
-3. **If implementation-related**: Read `docs/FOUNDATIONS.md`. You will need it in Steps 3 and 4 to validate proposed approaches against architectural principles.
+3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles.
 
-4. **Project context**: Briefly check relevant project state (recent files, existing specs/tickets in the area) only if the topic clearly relates to a specific part of the codebase. Do not do a broad exploration — keep it targeted.
+4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A well-analyzed report may start you at 60-70% — you mainly need to understand the user's intent and risk tolerance, not the problem domain.
+
+5. **Project context**: Briefly check relevant project state (recent files, existing specs/tickets in the area) only if the topic clearly relates to a specific part of the codebase. Do not do a broad exploration — keep it targeted.
+
+6. **Conversation context**: If the brainstorm follows extensive prior work in the same session (e.g., debugging, optimization campaigns, code exploration), treat the accumulated conversation context as equivalent to a rich reference file. Start confidence at 60-70% — you mainly need intent and scope clarification, not domain investigation.
+
+## Step 1.5: Counter-Evidence Verification (Optional)
+
+If the reference file contains hypotheses with explicit counter-evidence checks or verification criteria (e.g., "check whether X is true before proceeding"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
+
+- Present the checks to the user: "The report prescribes N verification checks. Should I run them now?"
+- If yes, run them (using Explore agents, grep, git log, file reads — whatever the checks require)
+- Report results before proceeding to the interview
+- Adjust confidence and approach based on what the checks reveal
+
+Skip this step if the reference file has no explicit verification criteria.
 
 ## Step 2: Confidence-Driven Interview
 
@@ -96,6 +121,16 @@ Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% c
 
 If the user says something like "just go" or "that's enough questions", respect it. Announce your current confidence, list remaining gaps as assumptions you'll make, and proceed to Step 3. Mark those assumptions explicitly in the design so the user can correct them.
 
+### Investigation Questions
+
+When a confidence gap can only be resolved by codebase investigation — not by asking the user — investigate directly rather than asking. This commonly happens for:
+
+- **Scope decisions**: "How much should this cover?" → trace dependency graphs, check module boundaries
+- **Feasibility**: "Can X and Y be separated?" → read call graphs, check circular dependencies
+- **Existing infrastructure**: "Does something like this already exist?" → search for prior art in the codebase
+
+Announce what you're investigating and why, present findings, then resume the interview with the new information incorporated into your confidence score. The user explicitly requesting investigation (e.g., "investigate the matter carefully") is a strong signal to use this path.
+
 ## Step 3: Propose Approaches
 
 Present **2-3 distinct approaches** with:
@@ -104,6 +139,8 @@ Present **2-3 distinct approaches** with:
 - **How it works**: 2-4 sentences
 - **Tradeoffs**: What you gain, what you give up
 - **Recommendation**: Lead with your recommended option and explain why
+
+**If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
 
 **If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`.
 
@@ -125,36 +162,44 @@ Sections to cover (skip irrelevant ones):
 
 **After each section**, ask: "Does this section look right?" Wait for confirmation before presenting the next section. If the user pushes back, revise that section before continuing.
 
-## Step 5: Write Design Doc
+## Step 5: Write Output Artifacts
 
-Once all sections are approved, write the complete design to:
+**Numbering convention (applies to both modes)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. Follow established formatting conventions from existing specs.
 
-```
-docs/plans/YYYY-MM-DD-<topic>-design.md
-```
+### Design mode (default)
 
-Where `<topic>` is a kebab-case short name derived from the brainstorm topic.
+Once all sections are approved, determine the output format:
 
-The design doc should consolidate all approved sections into a clean document. Include a "Brainstorm Context" header at the top noting:
-- The original request
-- Reference file (if any)
-- Key interview insights that shaped the design
-- Final confidence score and any assumptions made
+- **If the design needs further refinement** (sections had significant revision, open questions remain, approach is exploratory): write to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Include a "Brainstorm Context" header noting the original request, reference file (if any), key interview insights, and final confidence score with any assumptions.
+- **If all sections were approved without revision and the output is a well-scoped implementation spec** (ready for ticket decomposition): write directly to `specs/<number>-<name>.md`. The design doc is a staging area for designs that need further discussion — not a mandatory waypoint when the brainstorm produces a finished spec.
 
 Do NOT commit the file. Leave it for user review.
 
+### Decision/triage mode
+
+If the brainstorm's output is specs or tickets (not a design requiring further refinement), skip the design doc and write the artifacts directly:
+- **Specs** go to `specs/<number>-<name>.md` following existing spec conventions
+- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following the ticket template
+
 ## Step 6: Next Steps Menu
 
-Present the user with options for what to do next:
+Present the user with options for what to do next. Adapt the menu to the output format:
 
+**If output was a design doc** (`docs/plans/`):
 ```
-Design doc written to docs/plans/YYYY-MM-DD-<topic>-design.md
-
 What would you like to do next?
 1. Write an implementation plan (invoke writing-plans skill)
 2. Create a spec from this design (write to specs/)
 3. Start implementing directly
 4. Done for now — I'll review the design doc later
+```
+
+**If output was already a spec** (`specs/`):
+```
+What would you like to do next?
+1. Decompose into implementation tickets (invoke spec-to-tickets)
+2. Start implementing directly
+3. Done for now — I'll review the spec later
 ```
 
 Use AskUserQuestion to present this as a proper choice. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.

@@ -1,8 +1,9 @@
 import { applyEffects } from './effects.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { createExecutionEffectContext } from './effect-context.js';
-import { evalConditionTraced } from './eval-condition.js';
 import { createEvalRuntimeResources, type EvalRuntimeResources } from './eval-context.js';
 import { assertEvalRuntimeResourcesContract } from './eval-runtime-resources-contract.js';
+import { emitConditionTrace } from './execution-collector.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
@@ -113,12 +114,32 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
       effectPath: `${effectPathRoot}.trigger:${trigger.id}`,
     };
 
-    if (trigger.match !== undefined && !evalConditionTraced(trigger.match, evalCtx, 'triggerMatch', triggerProvenance)) {
-      continue;
+    if (trigger.match !== undefined) {
+      const matches = evaluateConditionWithCache(trigger.match, evalCtx);
+      emitConditionTrace(evalCtx.collector, {
+        kind: 'conditionEval',
+        condition: trigger.match,
+        result: matches,
+        context: 'triggerMatch',
+        provenance: triggerProvenance,
+      });
+      if (!matches) {
+        continue;
+      }
     }
 
-    if (trigger.when !== undefined && !evalConditionTraced(trigger.when, evalCtx, 'triggerWhen', triggerProvenance)) {
-      continue;
+    if (trigger.when !== undefined) {
+      const allowed = evaluateConditionWithCache(trigger.when, evalCtx);
+      emitConditionTrace(evalCtx.collector, {
+        kind: 'conditionEval',
+        condition: trigger.when,
+        result: allowed,
+        context: 'triggerWhen',
+        provenance: triggerProvenance,
+      });
+      if (!allowed) {
+        continue;
+      }
     }
 
     const effectResult = applyEffects(trigger.effects, createExecutionEffectContext({

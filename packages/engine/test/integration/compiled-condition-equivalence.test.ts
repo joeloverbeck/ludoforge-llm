@@ -64,7 +64,7 @@ describe('compiled FITL production predicate equivalence', () => {
       let compiledResult: boolean | undefined;
       let compiledError: unknown;
       try {
-        compiledResult = sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings);
+        compiledResult = sample.compiled(sample.ctx);
       } catch (error) {
         compiledError = error;
       }
@@ -72,7 +72,7 @@ describe('compiled FITL production predicate equivalence', () => {
       let snapshotCompiledResult: boolean | undefined;
       let snapshotCompiledError: unknown;
       try {
-        snapshotCompiledResult = sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings, snapshot);
+        snapshotCompiledResult = sample.compiled(sample.ctx, snapshot);
       } catch (error) {
         snapshotCompiledError = error;
       }
@@ -116,7 +116,7 @@ describe('compiled FITL production predicate equivalence', () => {
 
     for (const sample of SAMPLES) {
       try {
-        sample.compiled(sample.state, sample.ctx.activePlayer, sample.bindings);
+        sample.compiled(sample.ctx);
       } catch (compiledError) {
         if (!isEvalErrorCode(compiledError, 'MISSING_BINDING')) {
           continue;

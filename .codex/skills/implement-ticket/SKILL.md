@@ -189,6 +189,7 @@ When a change touches schemas or contracts, check updates across these layers:
 
 When a change alters compiled output, scoring, move selection, observability, or preview readiness:
 - Treat owned production goldens (catalogs, summaries, traces, fixed-seed outputs) as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
+- Before editing an owned golden, capture fresh authoritative output from the current built runtime or test harness so the update reflects live post-change behavior rather than manual reconstruction.
 - When earlier groundwork introduced a required placeholder and the current ticket populates it, expect goldens to drift from stubs to populated values — normal ticket-owned fallout.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
 - When a nearby golden looks like expected drift, probe it explicitly — "no ticket-owned diff" is a valid conclusion.
@@ -256,6 +257,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 ### Execution Order
 
 1. Run the most relevant tests for the touched area.
+   - If a focused check reads built `dist/` artifacts while a rebuild or clean is still in progress, treat any resulting failure as inconclusive, wait for the build to finish, and rerun before classifying it as a real regression.
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — test suites
-**Deps**: `tickets/121TWOPHAPOL-003.md`
+**Deps**: `archive/tickets/121TWOPHAPOL-003.md`
 
 ## Problem
 

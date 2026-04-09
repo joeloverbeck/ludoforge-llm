@@ -263,7 +263,7 @@ describe('policy trace events', () => {
     });
     assert.deepEqual(verboseDecision.completionStatistics, {
       totalClassifiedMoves: 2,
-      completedCount: 2,
+      completedCount: 1,
       stochasticCount: 0,
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agents/policy-diagnostics, test fixtures
-**Deps**: `archive/tickets/121TWOPHAPOL-001.md`, `tickets/121TWOPHAPOL-003.md`
+**Deps**: `archive/tickets/121TWOPHAPOL-001.md`, `archive/tickets/121TWOPHAPOL-003.md`
 
 ## Problem
 

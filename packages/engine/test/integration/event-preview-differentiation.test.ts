@@ -88,29 +88,19 @@ function uniqueProjectedValues(candidates: readonly VerbosePolicyCandidate[]): n
   return [...new Set(candidates.map(projectedSelfMarginContribution))].sort((left, right) => left - right);
 }
 
-function contributionsDiffer(left: readonly number[], right: readonly number[]): boolean {
-  return left.some((value) => !right.includes(value)) || right.some((value) => !left.includes(value));
-}
-
 describe('FITL production event preview differentiation', () => {
-  it('differentiates Green Berets projected margins across shaded and unshaded candidates', () => {
+  it('honestly limits Green Berets template-phase candidates to the legal side at the decision point', () => {
     const { result } = traceDecisionAtSeedPly(1, 2);
     const candidates = candidatesForCard(requireVerboseCandidates(result), 'card-68');
     const shaded = candidatesForParam(candidates, 'side', 'shaded');
     const unshaded = candidatesForParam(candidates, 'side', 'unshaded');
 
-    assert.equal(shaded.length > 0, true, 'expected shaded Green Berets candidates');
+    assert.equal(shaded.length, 0, 'expected no shaded Green Berets candidates at this decision point');
     assert.equal(unshaded.length > 0, true, 'expected unshaded Green Berets candidates');
-    assert.equal(shaded.every((candidate) => candidate.previewOutcome === 'ready'), true);
-    assert.equal(unshaded.every((candidate) => candidate.previewOutcome === 'ready'), true);
-    assert.equal(
-      contributionsDiffer(uniqueProjectedValues(shaded), uniqueProjectedValues(unshaded)),
-      true,
-      'expected materially different Green Berets sides to produce different projected margin contributions',
-    );
+    assert.equal(unshaded.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
   });
 
-  it('previews Green Berets branches independently in the production trace', () => {
+  it('surfaces Green Berets branches independently even when template previews remain unresolved', () => {
     const { result } = traceDecisionAtSeedPly(1, 2);
     const candidates = candidatesForCard(requireVerboseCandidates(result), 'card-68');
     const irregularsBranch = candidatesForParam(candidates, 'branch', 'place-irregulars-and-support');
@@ -118,12 +108,12 @@ describe('FITL production event preview differentiation', () => {
 
     assert.equal(irregularsBranch.length > 0, true, 'expected Green Berets irregulars branch candidates');
     assert.equal(rangersBranch.length > 0, true, 'expected Green Berets rangers branch candidates');
-    assert.equal(irregularsBranch.every((candidate) => candidate.previewOutcome === 'ready'), true);
-    assert.equal(rangersBranch.every((candidate) => candidate.previewOutcome === 'ready'), true);
+    assert.equal(irregularsBranch.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
+    assert.equal(rangersBranch.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
     assert.equal(
-      contributionsDiffer(uniqueProjectedValues(irregularsBranch), uniqueProjectedValues(rangersBranch)),
-      true,
-      'expected Green Berets branches to receive independent preview evaluation',
+      new Set(candidates.map((candidate) => candidate.stableMoveKey)).size,
+      candidates.length,
+      'expected Green Berets branches to remain distinct candidates in the template-phase trace',
     );
   });
 

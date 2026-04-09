@@ -126,8 +126,9 @@ Cross-subsystem fractures were found at moderate severity. The 846-line test sui
 - History check: six-month `git log` plus line history showed no semantic divergence in the fallback logic. `eval-query.ts` introduced the read path once in `3e0da724`; later `effects-choice.ts` edits changed typing/signatures and mutable cursor plumbing, not marker fallback semantics.
 
 **B. Decision Resolution Split Protocol**
-- Signal found: The test helper `decision-param-helpers.ts` reimplements a decision resolution loop using `completeMoveDecisionSequence`. This could indicate the kernel's public API is insufficient for common test patterns.
-- Second signal needed: Check if other test files use the same helper pattern, or if the helper has diverged from the kernel's resolution logic. If the helper is a thin wrapper with no behavioral drift, it's acceptable test ergonomics.
+- Resolution (2026-04-09): closed as acceptable test ergonomics via `ARCHINVEST-002`.
+- Evidence: `decision-param-helpers.ts` adds test-facing normalization and overrides around `completeMoveDecisionSequence`, but it still delegates authoritative decision discovery, stochastic classification, compound decision-path routing, and final legality to kernel APIs.
+- Usage/history check: the helper is referenced by 102 test files, which shows strong test-harness value. Git history shows it evolving with kernel protocol changes rather than diverging from them through independent bug fixes.
 
 **C. CNL Compile-Effects to Kernel AST Bridge**
 - Signal found: 25 git co-changes between `compile-effects.ts` and `schemas-ast.ts`. The compiler imports `chooseOneBuilder` and `chooseNBuilder` from `kernel/ast-builders.ts`.
@@ -139,4 +140,4 @@ Cross-subsystem fractures were found at moderate severity. The 846-line test sui
   - For Candidate 1: Count `EventSideEffectManifest` type modifications in last 6 months. If <3, defer.
   - For Candidate 2: Check whether `updateChoiceScope` references marker state. If not, proceed with spec.
 - **Acceptable**: Event card execution pipeline, decision resolution system, global marker state machine
-- **Needs investigation**: globalMarker defaultState projection drift (A), decision resolution test helper drift (B), CNL-kernel AST bridge coupling (C)
+- **Needs investigation**: CNL-kernel AST bridge coupling (C)

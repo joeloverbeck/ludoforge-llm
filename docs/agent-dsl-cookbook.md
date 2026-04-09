@@ -85,6 +85,10 @@ These are publicly visible (per observability config). Use in state features or 
 | `preview.victory.currentRank.self` | number | projected own ranking AFTER this move (1 = winning) |
 | `preview.victory.currentRank.<seatName>` | number | projected opponent ranking AFTER this move |
 | `preview.var.player.self.<id>` | number | projected variable after move |
+| `preview.var.global.<id>` | number | projected global variable after move |
+| `preview.var.seat.<seatName>.<id>` | number | projected seat variable after move |
+| `preview.globalMarker.<id>` | string | projected global marker state after move |
+| `preview.metric.<id>` | number | projected derived metric after move |
 | `preview.feature.<id>` | varies | authored state feature evaluated on the preview state |
 
 Preview refs require `preview.mode: tolerateStochastic` (or `exactWorld`) on the profile. They evaluate the game state after applying the candidate move. If preview can't evaluate (stochastic outcome, template move), falls back to `undefined` — always wrap in `coalesce`.
@@ -254,6 +258,8 @@ stateFeatures:
 - `category: <string>` — zone category (e.g., province, city, loc)
 - `attribute: { <name>: { <op>: <value> } }` — static zone attribute
 - `variable: { <name>: { <op>: <value> } }` — dynamic zone variable
+
+**Zone filter comparison operators (`<op>`):** `eq`, `gt`, `gte`, `lt`, `lte`.
 
 ### Per-Zone Token Counts with `zoneTokenAgg`
 
@@ -589,12 +595,12 @@ profiles:
 | `add` | `add: [a, b]` | number | a + b |
 | `sub` | `sub: [a, b]` | number | a - b |
 | `mul` | `mul: [a, b]` | number | a * b |
-| `div` | `div: [a, b]` | number | a / b (integer division) |
+| `div` | `div: [a, b]` | number | a / b (float division) |
 | `neg` | `neg: expr` | number | -expr |
 | `abs` | `abs: expr` | number | \|expr\| |
 | `min` | `min: [a, b]` | number | min(a, b) |
 | `max` | `max: [a, b]` | number | max(a, b) |
-| `clamp` | `clamp: { value, min, max }` | number | clamp to range |
+| `clamp` | `clamp: [value, min, max]` | number | clamp to range |
 | `eq` | `eq: [a, b]` | boolean | a === b |
 | `ne` | `ne: [a, b]` | boolean | a !== b |
 | `gt` | `gt: [a, b]` | boolean | a > b |
@@ -604,8 +610,8 @@ profiles:
 | `and` | `and: [a, b, ...]` | boolean | logical AND |
 | `or` | `or: [a, b, ...]` | boolean | logical OR |
 | `not` | `not: expr` | boolean | logical NOT |
-| `if` | `if: { cond, then, else }` | varies | conditional |
-| `in` | `in: { value, set: [...] }` | boolean | membership test |
+| `if` | `if: [cond, then, else]` | varies | conditional (3-element array) |
+| `in` | `in: [value, idList]` | boolean | membership test (id in idList) |
 | `coalesce` | `coalesce: [a, b, ...]` | varies | first non-undefined value |
 | `boolToNumber` | `boolToNumber: expr` | 0 or 1 | convert boolean to number |
 | `globalTokenAgg` | see above | number | count/aggregate tokens globally |
@@ -753,6 +759,29 @@ scoreTerm:
   weight: -2
   value:
     ref: feature.targetSpacePopulation
+```
+
+### "Check if action is in a set of IDs"
+```yaml
+scoreTerm:
+  scopes: [move]
+  weight: 5
+  value:
+    boolToNumber:
+      in:
+        - { ref: candidate.actionId }
+        - [rally, march, attack]
+```
+
+### "Clamp a value to a safe range"
+```yaml
+candidateFeature:
+  type: number
+  expr:
+    clamp:
+      - { ref: feature.projectedSelfMargin }
+      - -10
+      - 10
 ```
 
 ### "React to the active event card"
@@ -934,9 +963,9 @@ scoreTerm:
   scopes: [move, completion]
   weight:
     if:
-      cond: { eq: [{ ref: context.kind }, move] }
-      then: 5
-      else: 2
+      - { eq: [{ ref: context.kind }, move] }
+      - 5
+      - 2
   value:
     ref: feature.projectedSelfMargin
 ```

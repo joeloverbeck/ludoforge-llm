@@ -1,5 +1,5 @@
 import type { PlayerId } from './branded.js';
-import { missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
+import { divisionByZeroError, missingBindingError, missingVarError, typeMismatchError } from './eval-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
@@ -24,12 +24,26 @@ export type CompiledConditionValueAccessor = (
 
 type ComparisonCondition = Extract<ConditionAST, { readonly op: '==' | '!=' | '<' | '<=' | '>' | '>=' }>;
 type AggregateCountExpr = Extract<ValueExpr, { readonly _t: 5; readonly aggregate: { readonly op: 'count' } }>;
+type ConcatExpr = Extract<ValueExpr, { readonly _t: 3 }>;
+type IfValueExpr = Extract<ValueExpr, { readonly _t: 4 }>;
+type ArithmeticExpr = Extract<ValueExpr, { readonly _t: 6 }>;
 
 const isScalarValue = (value: unknown): value is ScalarValue =>
   typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string';
 
 const isScalarArrayValue = (value: unknown): value is ScalarArrayValue =>
   Array.isArray(value) && value.every((entry) => isScalarValue(entry));
+
+const isSafeIntegerNumber = (value: unknown): value is number =>
+  typeof value === 'number' && Number.isFinite(value) && Number.isSafeInteger(value);
+
+const expectSafeInteger = (value: unknown, message: string, context: Readonly<Record<string, unknown>>): number => {
+  if (!isSafeIntegerNumber(value)) {
+    throw typeMismatchError(message, context);
+  }
+
+  return value;
+};
 
 const compileZoneCountAccessor = (zoneId: string, context: ValueExpr): CompiledConditionValueAccessor =>
   (state, _activePlayer, _bindings, snapshot) => {
@@ -236,6 +250,117 @@ const compileAggregateCountAccessor = (
   return compileZoneCountAccessor(query.zone, expr);
 };
 
+const compileConcatAccessor = (expr: ConcatExpr): CompiledConditionValueAccessor | null => {
+  const childAccessors = expr.concat.map((child) => tryCompileValueExpr(child));
+  if (childAccessors.some((accessor) => accessor === null)) {
+    return null;
+  }
+
+  const accessors = childAccessors as readonly CompiledConditionValueAccessor[];
+  return (state, activePlayer, bindings, snapshot) => {
+    const len = accessors.length;
+    let allScalar = true;
+    let allArray = true;
+    const parts: (ScalarValue | ScalarArrayValue)[] = new Array(len);
+
+    for (let i = 0; i < len; i++) {
+      const value = accessors[i]!(state, activePlayer, bindings, snapshot);
+      parts[i] = value;
+      if (Array.isArray(value)) allScalar = false;
+      else allArray = false;
+    }
+
+    if (allScalar) {
+      let result = '';
+      for (let i = 0; i < len; i++) {
+        result += String(parts[i]);
+      }
+      return result;
+    }
+
+    if (allArray) {
+      return (parts as ScalarArrayValue[]).flatMap((part) => part);
+    }
+
+    throw typeMismatchError('concat expressions must not mix scalar and scalar-array parts', {
+      expr,
+      parts,
+    });
+  };
+};
+
+const compileIfAccessor = (expr: IfValueExpr): CompiledConditionValueAccessor | null => {
+  const condition = tryCompileCondition(expr.if.when);
+  const thenAccessor = tryCompileValueExpr(expr.if.then);
+  const elseAccessor = tryCompileValueExpr(expr.if.else);
+  if (condition === null || thenAccessor === null || elseAccessor === null) {
+    return null;
+  }
+
+  return (state, activePlayer, bindings, snapshot) =>
+    condition(state, activePlayer, bindings, snapshot)
+      ? thenAccessor(state, activePlayer, bindings, snapshot)
+      : elseAccessor(state, activePlayer, bindings, snapshot);
+};
+
+const compileArithmeticAccessor = (expr: ArithmeticExpr): CompiledConditionValueAccessor | null => {
+  const leftAccessor = tryCompileValueExpr(expr.left);
+  const rightAccessor = tryCompileValueExpr(expr.right);
+  if (leftAccessor === null || rightAccessor === null) {
+    return null;
+  }
+
+  return (state, activePlayer, bindings, snapshot) => {
+    const left = expectSafeInteger(
+      leftAccessor(state, activePlayer, bindings, snapshot),
+      'Arithmetic operands must be finite safe integers',
+      { expr, side: 'left' },
+    );
+    const right = expectSafeInteger(
+      rightAccessor(state, activePlayer, bindings, snapshot),
+      'Arithmetic operands must be finite safe integers',
+      { expr, side: 'right' },
+    );
+
+    if (expr.op === '/') {
+      if (right === 0) {
+        throw divisionByZeroError('Division by zero', { expr, left, right });
+      }
+      const result = Math.trunc(left / right);
+      return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+    }
+
+    if (expr.op === 'floorDiv') {
+      if (right === 0) {
+        throw divisionByZeroError('Division by zero', { expr, left, right });
+      }
+      const result = Math.floor(left / right);
+      return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+    }
+
+    if (expr.op === 'ceilDiv') {
+      if (right === 0) {
+        throw divisionByZeroError('Division by zero', { expr, left, right });
+      }
+      const result = Math.ceil(left / right);
+      return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+    }
+
+    if (expr.op === 'min') {
+      const result = Math.min(left, right);
+      return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+    }
+
+    if (expr.op === 'max') {
+      const result = Math.max(left, right);
+      return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+    }
+
+    const result = expr.op === '+' ? left + right : expr.op === '-' ? left - right : left * right;
+    return expectSafeInteger(result, 'Arithmetic result must be a finite safe integer', { expr, left, right, result });
+  };
+};
+
 const expectOrderingNumber = (
   value: ScalarValue | ScalarArrayValue,
   side: 'left' | 'right',
@@ -296,11 +421,17 @@ export const tryCompileValueExpr = (
       return () => expr.scalarArray;
     case 2:
       return compileReferenceAccessor(expr as Extract<ValueExpr, { readonly _t: 2 }>);
+    case 3:
+      return compileConcatAccessor(expr as ConcatExpr);
+    case 4:
+      return compileIfAccessor(expr as IfValueExpr);
     case 5:
       if (expr.aggregate.op !== 'count') {
         return null;
       }
       return compileAggregateCountAccessor(expr as AggregateCountExpr);
+    case 6:
+      return compileArithmeticAccessor(expr as ArithmeticExpr);
     default:
       return null;
   }

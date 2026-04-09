@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/test/kernel/` (test utilities)
-**Deps**: `archive/tickets/120WIDCOMEXP-001.md`, `tickets/120WIDCOMEXP-002.md`, `tickets/120WIDCOMEXP-003.md`, `tickets/120WIDCOMEXP-004.md`, `tickets/120WIDCOMEXP-006.md`
+**Deps**: `archive/tickets/120WIDCOMEXP-001.md`, `archive/tickets/120WIDCOMEXP-002.md`, `tickets/120WIDCOMEXP-003.md`, `tickets/120WIDCOMEXP-004.md`, `tickets/120WIDCOMEXP-006.md`
 
 ## Problem
 

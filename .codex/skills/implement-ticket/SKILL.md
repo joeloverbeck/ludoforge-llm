@@ -43,6 +43,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - File existence and path accuracy
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
+   - When a ticket widens compilation or optimization for an existing AST/expression family, compare the live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
    - Stale paths that uniquely identify their intended artifact are non-blocking — note the corrected path.
    - Path-only drift is not a scope discrepancy. Example: ticket names `src/kernel/foo.ts` but the artifact moved to `src/contracts/foo.ts` with the same purpose.
    - Stale test paths: prefer the live test surface that owns the behavior.

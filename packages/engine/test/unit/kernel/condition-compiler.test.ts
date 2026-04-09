@@ -253,6 +253,106 @@ describe('condition compiler', () => {
     assert.equal(calls, 1);
   });
 
+  it('compiles arithmetic expressions across the full live operator family', () => {
+    const ctx = makeCtx({
+      bindings: {
+        '$left': 7,
+        '$right': 3,
+        '$negLeft': -7,
+        '$negRight': 3,
+      },
+    });
+    const cases: readonly ValueExpr[] = [
+      { _t: 6, op: '+', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '-', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '*', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: '/', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'binding', name: '$negLeft' }, right: { _t: 2, ref: 'binding', name: '$negRight' } },
+      { _t: 6, op: 'ceilDiv', left: { _t: 2, ref: 'binding', name: '$negLeft' }, right: { _t: 2, ref: 'binding', name: '$negRight' } },
+      { _t: 6, op: 'min', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+      { _t: 6, op: 'max', left: { _t: 2, ref: 'binding', name: '$left' }, right: { _t: 2, ref: 'binding', name: '$right' } },
+    ];
+
+    for (const expr of cases) {
+      assert.equal(evaluateCompiledValue(expr, ctx), evalValue(expr, ctx));
+    }
+  });
+
+  it('matches interpreter behavior for concat over scalars and scalar arrays', () => {
+    const ctx = makeCtx({
+      bindings: {
+        '$suffix': 'north',
+        '$letters': ['b', 'c'],
+      },
+    });
+    const scalarConcat: ValueExpr = {
+      _t: 3,
+      concat: ['a-', { _t: 2, ref: 'binding', name: '$suffix' }, '-', { _t: 2, ref: 'gvar', var: 'resources' }],
+    };
+    const arrayConcat: ValueExpr = {
+      _t: 3,
+      concat: [{ _t: 1, scalarArray: ['a'] }, { _t: 2, ref: 'binding', name: '$letters' }, { _t: 1, scalarArray: ['d'] }],
+    };
+
+    assert.deepEqual(evaluateCompiledValue(scalarConcat, ctx), evalValue(scalarConcat, ctx));
+    assert.deepEqual(evaluateCompiledValue(arrayConcat, ctx), evalValue(arrayConcat, ctx));
+  });
+
+  it('matches interpreter behavior for if expressions, including nested arithmetic composition', () => {
+    const truthyCtx = makeCtx({ bindings: { '$threshold': 3 } });
+    const falsyCtx = makeCtx({ bindings: { '$threshold': 9 } });
+    const expr: ValueExpr = {
+      _t: 4,
+      if: {
+        when: { op: '>=', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: { _t: 2, ref: 'binding', name: '$threshold' } },
+        then: {
+          _t: 6,
+          op: '+',
+          left: { _t: 2, ref: 'gvar', var: 'resources' },
+          right: { _t: 2, ref: 'pvar', player: 'active', var: 'resources' },
+        },
+        else: {
+          _t: 3,
+          concat: ['fallback-', { _t: 2, ref: 'binding', name: '$threshold' }],
+        },
+      },
+    };
+
+    assert.equal(evaluateCompiledValue(expr, truthyCtx), evalValue(expr, truthyCtx));
+    assert.equal(evaluateCompiledValue(expr, falsyCtx), evalValue(expr, falsyCtx));
+  });
+
+  it('matches interpreter errors for arithmetic division by zero and mixed concat parts', () => {
+    const divisionExpr: ValueExpr = {
+      _t: 6,
+      op: '/',
+      left: 4,
+      right: 0,
+    };
+    const mixedConcatExpr: ValueExpr = {
+      _t: 3,
+      concat: ['x', { _t: 1, scalarArray: ['y'] }],
+    };
+    const ctx = makeCtx();
+
+    assert.throws(
+      () => evaluateCompiledValue(divisionExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evalValue(divisionExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'DIVISION_BY_ZERO'),
+    );
+    assert.throws(
+      () => evaluateCompiledValue(mixedConcatExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+    assert.throws(
+      () => evalValue(mixedConcatExpr, ctx),
+      (error: unknown) => isEvalErrorCode(error, 'TYPE_MISMATCH'),
+    );
+  });
+
   it('keeps compiled aggregate zone totals equivalent with and without a real snapshot', () => {
     const expr: ValueExpr = {
       _t: 5,
@@ -582,15 +682,36 @@ describe('condition compiler', () => {
     const concatExpr: ValueExpr = { _t: 3, concat: ['a', 'b'] };
     const ifExpr: ValueExpr = { _t: 4, if: { when: true, then: 1, else: 0 } };
     const arithmeticExpr: ValueExpr = { _t: 6, op: '+', left: 1, right: 2 };
+    const dynamicConcatExpr: ValueExpr = {
+      _t: 3,
+      concat: [{ _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }, 'b'],
+    };
+    const ifWithDynamicCondition: ValueExpr = {
+      _t: 4,
+      if: {
+        when: { op: '==', left: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }, right: 1 },
+        then: 1,
+        else: 0,
+      },
+    };
+    const arithmeticWithDynamicChild: ValueExpr = {
+      _t: 6,
+      op: '+',
+      left: 1,
+      right: { _t: 2, ref: 'pvar', player: 'actor', var: 'resources' },
+    };
 
     assert.equal(tryCompileValueExpr(aggregateExpr), null);
     assert.equal(tryCompileValueExpr(filteredAggregateExpr), null);
     assert.equal(tryCompileValueExpr(dynamicZoneAggregateExpr), null);
     assert.equal(tryCompileValueExpr(mapSpacesAggregateExpr), null);
     assert.equal(tryCompileValueExpr(sumAggregateExpr), null);
-    assert.equal(tryCompileValueExpr(concatExpr), null);
-    assert.equal(tryCompileValueExpr(ifExpr), null);
-    assert.equal(tryCompileValueExpr(arithmeticExpr), null);
+    assert.ok(tryCompileValueExpr(concatExpr) !== null);
+    assert.ok(tryCompileValueExpr(ifExpr) !== null);
+    assert.ok(tryCompileValueExpr(arithmeticExpr) !== null);
+    assert.equal(tryCompileValueExpr(dynamicConcatExpr), null);
+    assert.equal(tryCompileValueExpr(ifWithDynamicCondition), null);
+    assert.equal(tryCompileValueExpr(arithmeticWithDynamicChild), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'gvar', var: { ref: 'binding', name: '$var' } }), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'zoneVar', zone: 'board:none', var: { ref: 'binding', name: '$var' } }), null);
     assert.equal(tryCompileValueExpr({ _t: 2, ref: 'pvar', player: 'actor', var: 'resources' }), null);

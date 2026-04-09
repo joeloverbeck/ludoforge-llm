@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/policy-agent, agents/policy-eval
-**Deps**: `archive/tickets/121TWOPHAPOL-001.md`, `tickets/121TWOPHAPOL-002.md`
+**Deps**: `archive/tickets/121TWOPHAPOL-001.md`, `archive/tickets/121TWOPHAPOL-002.md`
 
 ## Problem
 

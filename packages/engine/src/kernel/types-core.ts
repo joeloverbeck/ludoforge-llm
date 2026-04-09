@@ -1597,6 +1597,7 @@ export interface PolicyCompletionStatistics {
   readonly templateCompletionSuccesses: number;
   readonly templateCompletionUnsatisfiable: number;
   readonly duplicatesRemoved: number;
+  readonly completionsByActionId?: Readonly<Record<string, number>>;
 }
 
 export interface BuiltinAgentDecisionTrace {

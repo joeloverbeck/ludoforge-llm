@@ -154,6 +154,9 @@ describe('preparePlayableMoves', () => {
       templateCompletionSuccesses: 1,
       templateCompletionUnsatisfiable: 1,
       duplicatesRemoved: 0,
+      completionsByActionId: {
+        chooseTarget: 1,
+      },
     });
   });
 
@@ -195,6 +198,9 @@ describe('preparePlayableMoves', () => {
       templateCompletionSuccesses: 3,
       templateCompletionUnsatisfiable: 0,
       duplicatesRemoved: 1,
+      completionsByActionId: {
+        chooseTarget: 3,
+      },
     });
   });
 
@@ -289,6 +295,87 @@ describe('preparePlayableMoves', () => {
       prepared.completedMoves.map((candidate) => candidate.move.params.$target),
       ['gamma'],
     );
+  });
+
+  it('filters outputs to the requested actionId', () => {
+    const chooseTarget = asActionId('chooseTarget');
+    const blockedTarget = asActionId('blockedTarget');
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-filtered-action-id', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [
+        createTemplateChooseOneAction(chooseTarget, asPhaseId('main')),
+        createTemplateChooseOneAction(blockedTarget, asPhaseId('main')),
+      ],
+      actionPipelines: [
+        createTemplateChooseOneProfile(chooseTarget),
+        createTemplateChooseOneProfile(blockedTarget),
+      ] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 11, 2).state;
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [
+        pendingClassifiedMove({ actionId: chooseTarget, params: {} }),
+        pendingClassifiedMove({ actionId: blockedTarget, params: {} }),
+      ],
+      rng: createRng(2n),
+    }, {
+      pendingTemplateCompletions: 2,
+      actionIdFilter: chooseTarget,
+    });
+
+    assert.deepEqual(
+      prepared.completedMoves.map((move) => move.move.actionId),
+      [chooseTarget, chooseTarget],
+    );
+    assert.deepEqual(prepared.stochasticMoves, []);
+    assert.deepEqual(prepared.statistics.completionsByActionId, {
+      chooseTarget: 2,
+    });
+  });
+
+  it('returns no playable outputs when actionIdFilter matches no moves', () => {
+    const chooseTarget = asActionId('chooseTarget');
+    const def = assertValidatedGameDef({
+      metadata: { id: 'prepare-playable-filter-miss', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: asPhaseId('main') }] },
+      actions: [createTemplateChooseOneAction(chooseTarget, asPhaseId('main'))],
+      actionPipelines: [createTemplateChooseOneProfile(chooseTarget)] as readonly ActionPipelineDef[],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+    const state = initialState(def, 13, 2).state;
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [pendingClassifiedMove({ actionId: chooseTarget, params: {} })],
+      rng: createRng(4n),
+    }, {
+      pendingTemplateCompletions: 2,
+      actionIdFilter: asActionId('otherAction'),
+    });
+
+    assert.equal(prepared.completedMoves.length, 0);
+    assert.equal(prepared.stochasticMoves.length, 0);
+    assert.equal(prepared.statistics.completionsByActionId, undefined);
   });
 
   describe('zone-filtered free-operation templates', () => {

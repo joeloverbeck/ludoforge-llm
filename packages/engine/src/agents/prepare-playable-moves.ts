@@ -45,6 +45,7 @@ const isZoneFilterMismatchOnFreeOpTemplate = (
 export interface PreparePlayableMovesOptions {
   readonly pendingTemplateCompletions?: number;
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
+  readonly actionIdFilter?: Move['actionId'];
 }
 
 export interface PreparedPlayableMoves {
@@ -78,6 +79,7 @@ export function preparePlayableMoves(
   let templateCompletionSuccesses = 0;
   let templateCompletionUnsatisfiable = 0;
   let duplicatesRemoved = 0;
+  const completionsByActionId = new Map<string, number>();
   const movePreparations: PolicyMovePreparationTrace[] = [];
   const seenMoveKeys = new Set<string>();
   const emittedPlayableMoveKeys = new Set<string>();
@@ -103,6 +105,9 @@ export function preparePlayableMoves(
 
   for (const classified of input.legalMoves) {
     const { move, viability } = classified;
+    if (options.actionIdFilter !== undefined && move.actionId !== options.actionIdFilter) {
+      continue;
+    }
     const stableMoveKey = toMoveIdentityKey(input.def, move);
     if (seenMoveKeys.has(stableMoveKey)) {
       duplicatesRemoved += 1;
@@ -131,6 +136,7 @@ export function preparePlayableMoves(
           options.choose,
           recordPlayableMove,
           profiler,
+          completionsByActionId,
         );
         rng = completion.rng;
         stochasticCount += completion.stochasticCount;
@@ -208,6 +214,7 @@ export function preparePlayableMoves(
       options.choose,
       recordPlayableMove,
       profiler,
+      completionsByActionId,
     );
     rng = completion.rng;
     stochasticCount += completion.stochasticCount;
@@ -241,6 +248,9 @@ export function preparePlayableMoves(
       templateCompletionSuccesses,
       templateCompletionUnsatisfiable,
       duplicatesRemoved,
+      ...(completionsByActionId.size === 0
+        ? {}
+        : { completionsByActionId: Object.fromEntries(completionsByActionId) }),
     },
   };
 }
@@ -258,6 +268,7 @@ function attemptTemplateCompletion(
   choose: ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined,
   recordPlayableMove: (trustedMove: TrustedExecutableMove, classification: 'complete' | 'stochastic') => boolean,
   profiler: PerfProfiler | undefined,
+  completionsByActionId: Map<string, number>,
 ): {
   readonly rng: Rng;
   readonly stochasticCount: number;
@@ -301,6 +312,10 @@ function attemptTemplateCompletion(
     currentRng = result.rng;
     if (result.kind === 'playableComplete') {
       templateCompletionSuccesses += 1;
+      completionsByActionId.set(
+        String(move.actionId),
+        (completionsByActionId.get(String(move.actionId)) ?? 0) + 1,
+      );
       if (recordPlayableMove(result.move, 'complete')) {
         sawCompletedMove = true;
       } else {

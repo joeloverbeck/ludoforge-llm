@@ -3072,6 +3072,15 @@
                       },
                       "duplicatesRemoved": {
                         "type": "number"
+                      },
+                      "completionsByActionId": {
+                        "type": "object",
+                        "propertyNames": {
+                          "type": "string"
+                        },
+                        "additionalProperties": {
+                          "type": "number"
+                        }
                       }
                     },
                     "required": [

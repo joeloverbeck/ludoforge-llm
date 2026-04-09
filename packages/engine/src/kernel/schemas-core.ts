@@ -1494,6 +1494,7 @@ const PolicyCompletionStatisticsSchema = z
     templateCompletionSuccesses: NumberSchema,
     templateCompletionUnsatisfiable: NumberSchema,
     duplicatesRemoved: NumberSchema,
+    completionsByActionId: z.record(StringSchema, NumberSchema).optional(),
   })
   .strict();
 

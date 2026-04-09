@@ -59,12 +59,14 @@ import { effectRuntimeError } from './effect-error.js';
 import {
   applyChooseN,
   applyChooseOne,
+} from './effects-choice.js';
+import {
   applyFlipGlobalMarker,
   applySetGlobalMarker,
   applySetMarker,
   applyShiftGlobalMarker,
   applyShiftMarker,
-} from './effects-choice.js';
+} from './effects-markers.js';
 import { applyConceal, applyReveal } from './effects-reveal.js';
 import { applyTransferVar } from './effects-resource.js';
 import {

@@ -98,8 +98,9 @@ Every stop condition below requires resolution before implementation proceeds.
 
 **Post-confirmation architecture reset**:
 - When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
-- If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then update affected siblings before coding.
+- If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then open every directly affected sibling ticket before coding. Compare the active ticket's new owned files/deliverables against each sibling's stated ownership, then update affected siblings in the same turn unless you can explicitly justify why no sibling edit is required.
 - Re-extract owned deliverables, affected files, and proof obligations from the confirmed boundary rather than continuing from stale phrasing.
+- Record a short working-notes block naming the affected sibling ticket(s), what scope was absorbed into the active ticket, and what scope remains deferred.
 
 **1-3-1 edge cases** (all resolve via 1-3-1 before coding):
 
@@ -135,6 +136,7 @@ Every stop condition below requires resolution before implementation proceeds.
 
 For tickets whose primary deliverable is a mechanical extraction, rename, deduplication, or import cleanup with no intended behavior change:
 - Prove the duplication or stale local surface exists before editing.
+- If the ticket listed imports, helpers, or adjacent touch points that prove unnecessary during reassessment, record those stale sub-claims explicitly in working notes before coding so the final closeout can distinguish required fallout from ticket drift.
 - In the named module, scan private helper functions as well as exported entry points for the same class of write, mutation, alias, or local rebuild the ticket is trying to eliminate. Same-file helper fallout is usually in-scope, not a separate boundary expansion.
 - Extract or consolidate the shared surface with the narrowest architecture-consistent module or helper.
 - If the ticket's named shared helper covers only part of the live write pattern, compose it with the smallest additional authority helper needed to eliminate the remaining caller-local transform instead of leaving a special case behind.
@@ -215,6 +217,13 @@ When a ticket change affects other active tickets in the same series:
 - If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
+
+**Series rewrite checklist**:
+- Open each directly affected sibling ticket before coding when a confirmed boundary rewrite absorbs or defers work across the series.
+- Compare the sibling's named files, deliverables, and deps against the active ticket's rewritten boundary.
+- Update sibling scope/deps/status text in the same turn when ownership changed, or record why no sibling edit was necessary.
+- Run `pnpm run check:ticket-deps` when available after those updates.
+- In working notes and final closeout, name which sibling scope was absorbed and which scope remains deferred.
 
 ### Groundwork Tickets
 

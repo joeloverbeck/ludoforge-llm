@@ -25,6 +25,7 @@ Use this skill to evaluate a target skill against the work done in the current C
    - steps not exercised in this session
    - if the target skill was modified earlier in the same session, whether each finding applies to the pre-edit version, the current version, or both
    - if the same target was already audited earlier in the same session, which findings are newly resolved, which remain, and which are new
+   - for same-session re-audits, explicitly map prior findings into `resolved`, `still open`, or `new` before drafting the report
 5. Cross-check each finding against:
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
@@ -56,6 +57,7 @@ Output the audit in the conversation, not in a file.
 - **FOUNDATIONS.md**: <aligned / N violations found>
 - **AGENTS.md**: <aligned / N deviations found>
 [If violations exist, list the specific foundation number or AGENTS.md rule and the conflict]
+[Optional when helpful] **What worked well**: <1 short line on where the skill guided the session effectively>
 
 ## Issues
 
@@ -111,6 +113,17 @@ Output the audit in the conversation, not in a file.
 - Every `Issue` and `Improvement` must be grounded in actual session evidence. Pure hypotheticals belong in `Features` or should be omitted.
 - If the target skill is part of a multi-skill workflow, report terminology or reference drift across sibling skills as issues when it affects correctness or usability.
 - When re-auditing the same target within one session, prefer delta-oriented findings: note what was fixed since the last audit before repeating older items that still remain.
+- Do not treat a re-audit as a blank-slate audit when prior findings exist in the same session; explicitly classify each prior finding as `resolved`, `still open`, or `new`.
+
+## Re-audit Checklist
+
+Use this only when the same target skill was already audited earlier in the current session.
+
+1. Identify the earlier audit and whether the skill changed afterward.
+2. List the earlier findings briefly.
+3. Classify each earlier finding as `resolved`, `still open`, or `new context changed the assessment`.
+4. Report only the remaining open findings plus any genuinely new findings from the current session.
+5. Avoid repeating unchanged narrative when a short delta statement is sufficient.
 
 ## Codex Adaptation Notes
 

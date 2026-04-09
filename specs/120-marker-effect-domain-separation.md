@@ -11,7 +11,7 @@
 
 Split `packages/engine/src/kernel/effects-choice.ts` (1542 lines) into two single-responsibility modules: one for decision effects (chooseOne, chooseN, rollRandom) and one for marker mutation effects (setMarker, shiftMarker, setGlobalMarker, shiftGlobalMarker, flipGlobalMarker). The current file carries two distinct lifecycle domains with separate dependency graphs, separate test scenario families, and no cross-domain coupling beyond generic scope/binding utilities.
 
-Counter-evidence check confirmed: `updateChoiceScope` is purely choice-scoped (never touches marker state), lattice resolution helpers are exclusively called from marker effects, and the two groups have cleanly separate dependency trees (~800 lines decision, ~740 lines marker).
+Counter-evidence check confirmed: `updateChoiceScope` is purely choice-scoped (never touches marker state), lattice resolution helpers are exclusively called from marker effects, and the two groups have cleanly separate dependency trees (~1114 lines decision, ~428 lines marker).
 
 ## Scope
 
@@ -20,7 +20,7 @@ Counter-evidence check confirmed: `updateChoiceScope` is purely choice-scoped (n
 - Extract marker mutation effects from `effects-choice.ts` into a new `effects-markers.ts`
 - Move `resolveMarkerLattice` and `resolveGlobalMarkerLattice` helpers into `effects-markers.ts`
 - Update imports in `effect-registry.ts` and `effect-compiler-codegen.ts` to import marker effects from the new module
-- Keep generic scope/binding utilities (`updateChoiceScope`, `resolveChoiceBindings`, `resolveChoiceTraceProvenance`, `advanceScope`) in `effects-choice.ts` — they are consumed by both modules but defined alongside the decision effects that use them most
+- Keep generic scope/binding utilities (`updateChoiceScope`, `resolveChoiceBindings`, `resolveChoiceTraceProvenance`) in `effects-choice.ts` — they are consumed by both modules but defined alongside the decision effects that use them most
 
 ### Out of Scope
 
@@ -36,7 +36,7 @@ Counter-evidence check confirmed: `updateChoiceScope` is purely choice-scoped (n
 
 ```
 effects-choice.ts (1542 lines)
-  ├── Generic utilities: updateChoiceScope, resolveChoiceBindings, resolveChoiceTraceProvenance, advanceScope, etc.
+  ├── Generic utilities: updateChoiceScope, resolveChoiceBindings, resolveChoiceTraceProvenance, etc.
   ├── Decision effects: applyChooseOne (~120 lines), applyChooseN (~240 lines), applyRollRandom (~145 lines)
   ├── Marker lattice resolution: resolveMarkerLattice, resolveGlobalMarkerLattice (~25 lines total)
   └── Marker mutation effects: applySetMarker (~85 lines), applyShiftMarker (~90 lines),
@@ -46,15 +46,15 @@ effects-choice.ts (1542 lines)
 ### Target Structure
 
 ```
-effects-choice.ts (~800 lines)
-  ├── Generic utilities: updateChoiceScope, resolveChoiceBindings, resolveChoiceTraceProvenance, advanceScope, etc.
+effects-choice.ts (~1114 lines)
+  ├── Generic utilities: updateChoiceScope, resolveChoiceBindings, resolveChoiceTraceProvenance, etc.
   ├── Decision-specific helpers: normalizeChooseNSelectionValues, validateChooseNSelectionSequence,
   │   buildChooseNPendingChoice, resolvePrioritizedTierEntries, resolveChoiceDecisionPlayer,
   │   buildComparableDomainBindingMap, resolveFixedRandomBinding, collectNestedOutcomes,
   │   toStochasticPendingChoice, mergePendingChoiceRequests, etc.
   └── Decision effects: applyChooseOne, applyChooseN, applyRollRandom
 
-effects-markers.ts (~400 lines)
+effects-markers.ts (~428 lines)
   ├── Marker lattice resolution: resolveMarkerLattice, resolveGlobalMarkerLattice
   └── Marker mutation effects: applySetMarker, applyShiftMarker, applySetGlobalMarker,
       applyShiftGlobalMarker, applyFlipGlobalMarker
@@ -65,8 +65,13 @@ effects-markers.ts (~400 lines)
 **`effects-markers.ts` imports from `effects-choice.ts`**:
 - `updateChoiceScope` (or its constituent parts: scope state assignment + binding resolution)
 - `resolveChoiceTraceProvenance`
-- `advanceScope`
-- `effectRuntimeError` (if defined locally; otherwise already imported from effect-error)
+
+**`effects-markers.ts` imports from other modules**:
+- `advanceScope` from `decision-scope.js`
+- `effectRuntimeError` from `effect-error.js`
+- `findSpaceMarkerConstraintViolation`, `resolveSpaceMarkerShift` from `space-marker-rules.js`
+- `ensureMarkerCloned`, `MutableGameState` from `state-draft.js`
+- `addToRunningHash`, `updateRunningHash` from `zobrist.js`
 
 **`effect-registry.ts`** — split import: decision effects from `effects-choice.js`, marker effects from `effects-markers.js`
 
@@ -74,7 +79,7 @@ effects-markers.ts (~400 lines)
 
 ### Why This Split Point
 
-The marker effects import from `space-marker-rules.ts`, `state-draft.ts` (for `ensureMarkerCloned`), and `zobrist.ts` (for hash updates). Decision effects import from the choice/decision subsystem (`choose-n-*.ts`, `choice-option-policy.ts`). These are entirely disjoint dependency trees that happen to share a file.
+The marker effects import from `space-marker-rules.ts`, `state-draft.ts` (for `ensureMarkerCloned`), and `zobrist.ts` (for hash updates). Decision effects import from the choice/decision subsystem (`choose-n-*.ts`, `prioritized-tier-legality.ts`, `choice-target-kinds.ts`). These are entirely disjoint dependency trees that happen to share a file.
 
 ## FOUNDATIONS Alignment
 

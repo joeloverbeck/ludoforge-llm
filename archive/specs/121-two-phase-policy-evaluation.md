@@ -1,6 +1,6 @@
 # Spec 121: Two-Phase Policy Evaluation
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: Spec 15 (GameSpec Authored Agent Policy IR)
@@ -179,3 +179,24 @@ No changes needed — the callback is already scoped to completion decisions.
 - **Foundation 10 (Bounded Computation)**: Phase 2 reduces computation by completing only winning templates.
 - **Foundation 15 (Architectural Completeness)**: Addresses the root cause (entangled decision levels) rather than working around symptoms.
 - **Foundation 16 (Testing as Proof)**: The isolation property (completion-scope cannot change action type) is proven by test #1.
+
+## Outcome
+
+- Completed: 2026-04-09
+- Changed:
+  - The full implementation landed across archived tickets [121TWOPHAPOL-001](/home/joeloverbeck/projects/ludoforge-llm/archive/tickets/121TWOPHAPOL-001.md), [121TWOPHAPOL-002](/home/joeloverbeck/projects/ludoforge-llm/archive/tickets/121TWOPHAPOL-002.md), [121TWOPHAPOL-003](/home/joeloverbeck/projects/ludoforge-llm/archive/tickets/121TWOPHAPOL-003.md), [121TWOPHAPOL-004](/home/joeloverbeck/projects/ludoforge-llm/archive/tickets/121TWOPHAPOL-004.md), and [121TWOPHAPOL-005](/home/joeloverbeck/projects/ludoforge-llm/archive/tickets/121TWOPHAPOL-005.md).
+  - `PolicyAgent.chooseMove` now runs the intended two-phase pipeline: phase 1 scores raw templates to choose `actionId`, phase 2 completes only the winning action type, and diagnostics/traces expose `phase1Score`, `phase2Score`, `phase1ActionRanking`, and per-action completion statistics.
+  - The proof surface now includes both synthetic invariants and a production-informed FITL overlay regression that verifies completion guidance does not change selected `actionId` or phase-1 ranking.
+- Deviations from original plan:
+  - The original backward-compatibility claim ("profiles without completion-scope considerations behave identically") was too strong to prove literally once the single-pass pipeline no longer existed in-repo. The delivered proof work was narrowed to live, mechanically testable invariants instead of reconstructing a historical compatibility harness.
+  - The original FITL regression framing relied on mutable production ARVN profile behavior. The implemented regression proof was corrected to use production-derived state plus a test-authored overlay profile so it remains stable under policy evolution.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm turbo typecheck`
+  - `pnpm -F @ludoforge/engine test`
+  - Focused proof commands across the ticket series, including:
+    - `node --test packages/engine/dist/test/unit/prepare-playable-moves.test.js`
+    - `node --test packages/engine/dist/test/unit/agents/policy-agent.test.js`
+    - `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js`
+    - `node --test packages/engine/dist/test/unit/policy-production-golden.test.js`
+    - `node --test packages/engine/dist/test/integration/fitl-policy-agent.test.js`

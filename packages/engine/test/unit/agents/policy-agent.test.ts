@@ -848,7 +848,7 @@ describe('PolicyAgent', () => {
     );
   });
 
-  it('keeps action selection isolated from completion guidance and only completes the winning action type', () => {
+  it('keeps action selection isolated from completion guidance, preserves phase-1 ranking, and only completes the winning action type', () => {
     const guidedDef = createTwoPhaseIsolationDef(true);
     const unguidedDef = createTwoPhaseIsolationDef(false);
     const guidedState = initialState(guidedDef, 7, 2).state;
@@ -857,6 +857,7 @@ describe('PolicyAgent', () => {
       pendingClassifiedMove({ actionId: asActionId('govern'), params: {} }),
       pendingClassifiedMove({ actionId: asActionId('sweep'), params: {} }),
     ];
+    const syntheticSinglePassUpperBound = legalMoves.length * 3;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
     const guided = agent.chooseMove({
@@ -878,13 +879,29 @@ describe('PolicyAgent', () => {
     assert.equal(unguided.move.actionId, asActionId('govern'));
     assert.equal(guided.move.params['$target'], 'gamma');
     assert.equal(guided.agentDecision?.kind, 'policy');
+    assert.equal(unguided.agentDecision?.kind, 'policy');
     if (guided.agentDecision?.kind !== 'policy') {
       assert.fail('expected guided policy decision trace');
     }
+    if (unguided.agentDecision?.kind !== 'policy') {
+      assert.fail('expected unguided policy decision trace');
+    }
+    assert.deepEqual(guided.agentDecision.phase1ActionRanking, unguided.agentDecision.phase1ActionRanking);
+    assert.deepEqual(guided.agentDecision.phase1ActionRanking, ['govern', 'sweep']);
     assert.deepEqual(guided.agentDecision.completionStatistics?.completionsByActionId, {
       govern: 3,
     });
     assert.equal(guided.agentDecision.completionStatistics?.templateCompletionAttempts, 3);
+    assert.equal(
+      guided.agentDecision.completionStatistics?.templateCompletionAttempts !== undefined
+      && guided.agentDecision.completionStatistics.templateCompletionAttempts < syntheticSinglePassUpperBound,
+      true,
+    );
+    assert.equal(
+      unguided.agentDecision.completionStatistics?.templateCompletionAttempts !== undefined
+      && unguided.agentDecision.completionStatistics.templateCompletionAttempts < syntheticSinglePassUpperBound,
+      true,
+    );
     assert.equal(guided.agentDecision.movePreparations?.length, 1);
     assert.equal(guided.agentDecision.movePreparations?.[0]?.actionId, 'govern');
   });

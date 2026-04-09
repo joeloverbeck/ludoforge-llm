@@ -283,6 +283,14 @@ function moveConsiderationDefs(
   );
 }
 
+function completionConsiderationDefs(
+  definitions: Readonly<Record<string, Omit<GameSpecConsiderationDef, 'scopes'>>>,
+): Readonly<Record<string, GameSpecConsiderationDef>> {
+  return Object.fromEntries(
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
+  );
+}
+
 function disableVcCompletionGuidance(def: ReturnType<typeof assertValidatedGameDef>) {
   const vcProfile = def.agents?.profiles['vc-baseline'];
   assert.ok(vcProfile, 'expected vc-baseline profile in FITL production catalog');
@@ -317,6 +325,7 @@ function compileFitlPolicyOverlay(
   overlay: {
     readonly stateFeatures?: Readonly<Record<string, GameSpecStateFeatureDef>>;
     readonly considerations?: Readonly<Record<string, Omit<GameSpecConsiderationDef, 'scopes'>>>;
+    readonly completionConsiderations?: Readonly<Record<string, Omit<GameSpecConsiderationDef, 'scopes'>>>;
     readonly profileId?: string;
   },
 ): GameDef {
@@ -344,7 +353,10 @@ function compileFitlPolicyOverlay(
   }
 
   const profileId = overlay.profileId ?? `${seat}-aggregation-test`;
-  const considerationIds = Object.keys(overlay.considerations ?? {});
+  const considerationIds = [
+    ...Object.keys(overlay.considerations ?? {}),
+    ...Object.keys(overlay.completionConsiderations ?? {}),
+  ];
   const overlaidDoc = {
     ...doc,
     agents: {
@@ -358,6 +370,7 @@ function compileFitlPolicyOverlay(
         considerations: {
           ...doc.agents.library.considerations,
           ...moveConsiderationDefs(overlay.considerations ?? {}),
+          ...completionConsiderationDefs(overlay.completionConsiderations ?? {}),
         },
       },
       profiles: {
@@ -1075,13 +1088,18 @@ describe('FITL policy agent integration', () => {
     assert.equal(result.agentDecision.emergencyFallback, false);
     assert.equal(result.agentDecision.previewUsage.mode, 'exactWorld');
     assert.deepEqual(result.agentDecision.previewUsage.refIds, ['victoryCurrentMargin.currentMargin.self']);
-    assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, []);
+    assert.deepEqual(result.agentDecision.previewUsage.unknownRefs, [
+      {
+        refId: 'victoryCurrentMargin.currentMargin.self',
+        reason: 'unresolved',
+      },
+    ]);
     assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
-      ready: 18,
+      ready: 0,
       stochastic: 0,
       unknownRandom: 0,
       unknownHidden: 0,
-      unknownUnresolved: 0,
+      unknownUnresolved: 6,
       unknownFailed: 0,
     });
     if (result.agentDecision.candidates === undefined) {
@@ -1091,8 +1109,13 @@ describe('FITL policy agent integration', () => {
     const evaluatedNonPassCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId !== 'pass');
 
     assert.ok(evaluatedNonPassCandidate, 'expected at least one evaluated non-pass candidate');
-    assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'ready');
-    assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, []);
+    assert.equal(evaluatedNonPassCandidate?.previewOutcome, 'unresolved');
+    assert.deepEqual(evaluatedNonPassCandidate?.unknownPreviewRefs, [
+      {
+        refId: 'victoryCurrentMargin.currentMargin.self',
+        reason: 'unresolved',
+      },
+    ]);
   });
 
   it('deduplicates post-template-completion playable outputs on the seed-6 VC decision reproducer', () => {
@@ -1131,20 +1154,20 @@ describe('FITL policy agent integration', () => {
         firstByAction.set(candidate.actionId, candidate);
       }
     }
-    const projected = [...firstByAction.values()].map(projectedSelfMarginContribution);
+    const scores = [...firstByAction.values()].map((candidate) => candidate.score);
 
     assert.equal(firstByAction.has('rally'), true, 'expected a rally candidate');
     assert.equal(firstByAction.has('terror'), true, 'expected a terror candidate');
     assert.equal(firstByAction.has('attack'), true, 'expected an attack candidate');
     assert.equal(
-      [...firstByAction.values()].every((candidate) => candidate.previewOutcome === 'ready'),
+      [...firstByAction.values()].every((candidate) => candidate.previewOutcome === 'unresolved'),
       true,
-      'expected non-event candidates to keep ready preview evaluation',
+      'expected non-event candidates to remain unresolved during phase-1 template preview evaluation',
     );
     assert.equal(
-      new Set(projected).size > 1,
+      new Set(scores).size > 1,
       true,
-      'expected non-event action types to retain differentiated projected margins',
+      'expected non-event action types to retain differentiated total scores',
     );
   });
 
@@ -1236,6 +1259,86 @@ describe('FITL policy agent integration', () => {
     assert.equal(unguidedMove.agentDecision?.kind, 'policy');
     assert.equal(guidedMove.agentDecision?.emergencyFallback, false);
     assert.equal(unguidedMove.agentDecision?.emergencyFallback, false);
+  });
+
+  it('keeps FITL overlay action selection and phase-1 ranking stable when completion guidance is added', () => {
+    const base = advanceSeed6ToVcDecision();
+    const guidedDef = compileFitlPolicyOverlay('vc', {
+      profileId: 'vc-two-phase-overlay-guided',
+      considerations: {
+        preferRally: {
+          weight: 5,
+          value: {
+            boolToNumber: { ref: 'candidate.tag.rally' },
+          },
+        },
+      },
+      completionConsiderations: {
+        preferHigherPopulation: {
+          when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+          weight: 1,
+          value: {
+            coalesce: [
+              {
+                zoneProp: {
+                  zone: { ref: 'option.value' },
+                  prop: 'population',
+                },
+              },
+              0,
+            ],
+          },
+        },
+      },
+    });
+    const unguidedDef = compileFitlPolicyOverlay('vc', {
+      profileId: 'vc-two-phase-overlay-unguided',
+      considerations: {
+        preferRally: {
+          weight: 5,
+          value: {
+            boolToNumber: { ref: 'candidate.tag.rally' },
+          },
+        },
+      },
+    });
+    const guidedRuntime = createGameDefRuntime(guidedDef);
+    const unguidedRuntime = createGameDefRuntime(unguidedDef);
+    const guidedMoves = enumerateLegalMoves(guidedDef, base.state, undefined, guidedRuntime).moves;
+    const unguidedMoves = enumerateLegalMoves(unguidedDef, base.state, undefined, unguidedRuntime).moves;
+    const agent = new PolicyAgent({ traceLevel: 'summary' });
+
+    const guidedResult = agent.chooseMove({
+      def: guidedDef,
+      state: base.state,
+      playerId: base.state.activePlayer,
+      legalMoves: guidedMoves,
+      rng: createRng(12n),
+      runtime: guidedRuntime,
+    });
+    const unguidedResult = agent.chooseMove({
+      def: unguidedDef,
+      state: base.state,
+      playerId: base.state.activePlayer,
+      legalMoves: unguidedMoves,
+      rng: createRng(12n),
+      runtime: unguidedRuntime,
+    });
+
+    assert.equal(guidedResult.agentDecision?.kind, 'policy');
+    assert.equal(unguidedResult.agentDecision?.kind, 'policy');
+    if (guidedResult.agentDecision?.kind !== 'policy' || unguidedResult.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy trace metadata');
+    }
+
+    assert.equal(String(guidedResult.move.actionId), 'rally');
+    assert.equal(String(unguidedResult.move.actionId), 'rally');
+    assert.deepEqual(guidedResult.agentDecision.phase1ActionRanking, unguidedResult.agentDecision.phase1ActionRanking);
+    assert.equal(guidedResult.agentDecision.phase1ActionRanking?.[0], 'rally');
+    assert.equal(guidedResult.agentDecision.emergencyFallback, false);
+    assert.equal(unguidedResult.agentDecision.emergencyFallback, false);
+    assert.doesNotThrow(() => applyMove(guidedDef, base.state, guidedResult.move, undefined, guidedRuntime));
+    assert.doesNotThrow(() => applyMove(unguidedDef, base.state, unguidedResult.move, undefined, unguidedRuntime));
   });
 
   it('exposes granted-operation trace metadata on a production Sihanouk VC decision state without perturbing non-event candidate scores', () => {

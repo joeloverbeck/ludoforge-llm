@@ -101,6 +101,9 @@ function createMetadata(): PolicyEvaluationMetadata {
     ],
     selectedStableMoveKey: 'alpha',
     finalScore: 7,
+    phase1Score: 5,
+    phase2Score: 7,
+    phase1ActionRanking: ['advance', 'pass', 'event'],
     usedFallback: false,
     failure: null,
   };
@@ -118,6 +121,9 @@ describe('policy-diagnostics', () => {
       unknownUnresolved: 0,
       unknownFailed: 0,
     });
+    assert.equal(trace.phase1Score, 5);
+    assert.equal(trace.phase2Score, 7);
+    assert.deepEqual(trace.phase1ActionRanking, ['advance', 'pass', 'event']);
     assert.equal(trace.completionStatistics, undefined);
     assert.equal(trace.movePreparations, undefined);
     assert.equal(trace.candidates, undefined);
@@ -155,6 +161,17 @@ describe('policy-diagnostics', () => {
     assert.equal(trace.candidates?.[0]?.previewFailureReason, undefined);
     assert.equal(trace.candidates?.[2]?.previewOutcome, 'unresolved');
     assert.equal(trace.candidates?.[2]?.previewFailureReason, 'completionUnsatisfiable');
+  });
+
+  it('omits phase fields when metadata does not provide them', () => {
+    const { phase1Score: _phase1Score, phase2Score: _phase2Score, phase1ActionRanking: _phase1ActionRanking, ...metadata } =
+      createMetadata();
+
+    const trace = buildPolicyAgentDecisionTrace(metadata, 'summary');
+
+    assert.equal(trace.phase1Score, undefined);
+    assert.equal(trace.phase2Score, undefined);
+    assert.equal(trace.phase1ActionRanking, undefined);
   });
 
   it('includes preview-state feature refs in snapshot preview surface reporting', () => {

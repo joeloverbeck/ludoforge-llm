@@ -1,6 +1,6 @@
 # 121TWOPHAPOL-004: Populate phase trace fields in diagnostics + golden tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agents/policy-diagnostics, test fixtures
@@ -77,3 +77,20 @@ The golden files must include the new phase fields with values matching the dete
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- Completed: 2026-04-09
+- Changed:
+  - Wired `phase1Score`, `phase2Score`, and `phase1ActionRanking` through `buildPolicyAgentDecisionTrace` in `packages/engine/src/agents/policy-diagnostics.ts` so summary and verbose policy traces now serialize the two-phase metadata produced by ticket 003.
+  - Extended `packages/engine/test/unit/agents/policy-diagnostics.test.ts` to assert both presence and omission behavior for the new optional phase fields.
+  - Refreshed `packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json` and `packages/engine/test/fixtures/trace/texas-policy-summary.golden.json` from the built runtime so the fixed-seed trace proofs include the new phase fields.
+- Deviations from original plan:
+  - The ticket’s fallback phrasing around `policy-diagnostics.test.ts` was stale. The unit test already existed, so this implementation used it directly instead of relying only on golden coverage.
+  - No schema or contract artifact regeneration was needed in this ticket because the type/schema surfaces were already migrated by tickets 001 and 003; this ticket only populated the existing optional fields in runtime traces.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js`
+  - `node --test packages/engine/dist/test/unit/policy-production-golden.test.js`
+  - `pnpm turbo typecheck`
+  - `pnpm -F @ludoforge/engine test`

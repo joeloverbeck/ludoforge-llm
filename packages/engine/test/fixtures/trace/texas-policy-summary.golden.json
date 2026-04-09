@@ -15,6 +15,13 @@
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
     "finalScore": 100,
+    "phase1Score": 100,
+    "phase2Score": 100,
+    "phase1ActionRanking": [
+      "fold",
+      "raise",
+      "call"
+    ],
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {

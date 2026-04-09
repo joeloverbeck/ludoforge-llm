@@ -1,0 +1,173 @@
+# Spec 121: Two-Phase Policy Evaluation
+
+**Status**: Draft
+**Priority**: P1
+**Complexity**: L
+**Dependencies**: Spec 15 (GameSpec Authored Agent Policy IR)
+**Source**: `fitl-arvn-agent-evolution` campaign (April 2026) — 17 experiments demonstrating completion-scope → move-scope entanglement
+
+## Overview
+
+Separate the PolicyAgent's evaluation pipeline into two distinct phases:
+
+1. **Move-scope phase**: Score template actions (pre-completion) using move-scope considerations only. Select the winning action type.
+2. **Completion-scope phase**: Complete only the winning action's inner decisions using completion-scope considerations.
+
+This eliminates the current entanglement where adding a completion-scope consideration can change which action TYPE is selected — a coupling that directly caused campaign failures and violates the principle of clean decision-level separation.
+
+## Problem Statement
+
+The current `PolicyAgent.chooseMove` pipeline operates in a single pass:
+
+```
+For EACH legal move template:
+  1. Complete inner decisions using completion-scope scoring (buildCompletionChooseCallback)
+  2. Produce a fully completed move with specific parameter values
+Then score ALL completed moves using move-scope considerations
+Select the highest-scoring completed move
+```
+
+This entangles two logically distinct decision levels:
+
+- **Strategic intent** (which action TYPE to take): "Should ARVN Govern, Train, or Sweep?"
+- **Tactical execution** (how to parameterize that action): "Which province should ARVN Govern in?"
+
+### Evidence from fitl-arvn-agent-evolution campaign
+
+**exp-009**: Adding `preferPopulousTargets` (a completion-scoped consideration that scores target zone selection by population) changed ARVN's first MOVE from `govern` to `sweep`.
+
+Root cause trace:
+1. Without `preferPopulousTargets`, template completion uses PRNG to pick target zones. `govern` targeting zone A gets projected margin -13 → move-scope score -35.6 (winning).
+2. With `preferPopulousTargets`, template completion picks zone B (higher population). `govern` targeting zone B gets projected margin -15 → move-scope score -39.6. Meanwhile `sweep` targeting a populous zone gets a better projected margin → score -38.1 → `sweep` now beats `govern`.
+3. ARVN sweeps instead of governs → completely different game trajectory → VC wins quickly (margin -7 vs margin 0 baseline).
+
+The completion-scope consideration was only intended to improve WITHIN-ACTION target selection. Instead, it disrupted the ACROSS-ACTION strategic decision. This is architecturally unsound — a target-selection heuristic should not override a strategic preference.
+
+### Why this matters for evolution
+
+The system exists for profile evolution (Foundation 2). Evolution campaigns need to add completion-scope considerations to improve target selection quality WITHOUT risking action-type regressions. The current entanglement makes it impossible to safely evolve one decision level independently.
+
+## Goals
+
+- Separate move-scope evaluation (action type selection) from completion-scope evaluation (parameter selection).
+- Ensure adding a completion-scope consideration CANNOT change which action type is selected.
+- Maintain determinism, bounded computation, and trace auditability.
+- Preserve backward compatibility: profiles without completion-scope considerations behave identically.
+- Improve performance: only complete templates for the winning action type, not all templates.
+
+## Non-Goals
+
+- Multi-step lookahead or planning.
+- Profile inheritance or conditional profile switching.
+- Changes to the DSL authoring surface (considerations, pruning rules, tie-breakers keep their current syntax).
+- Changes to how completion-scope scoring works internally (the `scoreCompletionOption` evaluator is unchanged).
+
+## Architectural Decisions
+
+### 1. Move-scope scoring uses pre-completion state
+
+In Phase 1, each template action is scored using move-scope considerations against the **pre-completion game state** — the state as-is, before any inner decisions are resolved. Preview evaluation still works: the preview system already handles incomplete templates by evaluating the action's "best-case" or "representative" projected state.
+
+For templates where preview cannot evaluate (because target zones are unresolved), the `coalesce` fallback in `projectedSelfMargin` provides the current margin. This is the same behavior as today when preview fails.
+
+### 2. Only the winning action type gets completion-scored
+
+After Phase 1 selects the best action type (or top-N for tie-breaking purposes), Phase 2 completes only those templates using the completion-scope callback. This is both architecturally cleaner and more performant — no wasted completion work for losing action types.
+
+### 3. Tie-breaking across action types uses the same move-scope scores
+
+If multiple action types tie on move-scope score, tie-breakers (including `stableMoveKey`) resolve the tie before Phase 2. Only the single winning template enters completion.
+
+### 4. Multiple templates of the same action type
+
+When multiple templates share an action type (e.g., `govern` with different valid target sets), all templates of the winning action type enter Phase 2. The final selection among them uses the move-scope score plus completion-scope quality.
+
+### 5. Backward compatibility: single-scope profiles are unchanged
+
+If a profile has no completion-scope considerations, Phase 2 uses PRNG for inner decisions (identical to current behavior without a `choose` callback). The move-scope evaluation in Phase 1 produces the same scores as today. Behavior is identical.
+
+## Proposed Pipeline
+
+```
+PolicyAgent.chooseMove(input):
+
+  Phase 1 — Move-scope evaluation (action type selection):
+    1. For each legal move template:
+       - Evaluate move-scope considerations against pre-completion state
+       - Compute move-scope score
+    2. Apply pruning rules (move-scope only)
+    3. Apply tie-breakers
+    4. Select winning action type (or top-K tied types)
+
+  Phase 2 — Completion-scope evaluation (parameter selection):
+    5. For each template of the winning action type:
+       - Complete inner decisions using completion-scope callback
+       - Produce fully completed move
+    6. Among completed variants, select by:
+       a. Completion-scope score (higher = better target selection)
+       b. Move-scope tie-breakers if still tied
+    7. Return the final completed move
+```
+
+## Changes Required
+
+### `packages/engine/src/agents/policy-agent.ts`
+
+Restructure `chooseMove`:
+- Phase 1: call `evaluatePolicyMove` with **template moves** (not completed moves). Move-scope considerations already handle undefined candidate params via `coalesce`.
+- Phase 2: call `preparePlayableMoves` with completion callback, but only for the winning template(s).
+
+### `packages/engine/src/agents/policy-eval.ts`
+
+- `evaluatePolicyMoveCore`: accept template moves (with unresolved inner decisions). Move-scope considerations that reference `candidate.param.*` already use `coalesce` for undefined params — no change needed.
+- Pruning rules: must work on template moves. Most pruning rules check `candidate.tag.*` which is available on templates. Rules that check `candidate.param.*` need the same `coalesce` treatment.
+
+### `packages/engine/src/agents/prepare-playable-moves.ts`
+
+- Add an option to filter which templates to complete (by action type or by a predicate).
+- Return completion statistics per action type.
+
+### `packages/engine/src/agents/completion-guidance-choice.ts`
+
+No changes needed — the callback is already scoped to completion decisions.
+
+### Trace output
+
+- Add `phase1Score` and `phase2Score` to the agent decision trace to show which phase drove the decision.
+- Add `phase1ActionRanking` to show the action-type ranking before completion.
+
+## Testing Strategy
+
+### Unit tests
+
+1. **Isolation test**: Profile with completion-scope considerations produces the same action type selection as the same profile without them. (This is the core property being enforced.)
+2. **Phase 1 determinism**: Same input → same action type ranking, regardless of completion-scope considerations.
+3. **Phase 2 quality**: Completion-scope considerations improve parameter selection within the winning action type.
+4. **Backward compatibility**: Profile with no completion-scope considerations produces identical results to current behavior.
+5. **Performance**: Phase 2 only completes templates for the winning type (measure template completion count reduction).
+
+### Integration tests
+
+6. **FITL regression**: Run the `fitl-arvn-agent-evolution` harness with the exp-001 profile + `preferPopulousTargets`. Verify that ARVN still selects `govern` as first action (not `sweep`).
+7. **VC profile**: Verify that `vc-baseline` (which uses `preferPopulousTargets`) produces the same or better results.
+
+### Golden tests
+
+8. Update `fitl-policy-summary.golden.json` and `texas-policy-summary.golden.json` to include phase-separated trace fields.
+
+## Risks and Mitigations
+
+| Risk | Mitigation |
+|------|-----------|
+| Preview on templates may be less accurate than on completed moves | `coalesce` fallback already handles this; Phase 1 uses the same signal quality as current "without preview" |
+| Templates with identical action types but different completions may score differently in Phase 1 | Group by action type and use the best Phase 1 score per group |
+| Performance regression from two evaluation passes | Phase 2 only evaluates winning templates — net performance should improve (fewer completions) |
+
+## FOUNDATIONS Alignment
+
+- **Foundation 1 (Engine Agnosticism)**: The two-phase pipeline is game-agnostic — no game-specific logic in the evaluation architecture.
+- **Foundation 2 (Evolution-First)**: Evolution campaigns can now independently evolve move-scope and completion-scope considerations without cross-level interference.
+- **Foundation 8 (Determinism)**: Both phases are deterministic (same input → same output).
+- **Foundation 10 (Bounded Computation)**: Phase 2 reduces computation by completing only winning templates.
+- **Foundation 15 (Architectural Completeness)**: Addresses the root cause (entangled decision levels) rather than working around symptoms.
+- **Foundation 16 (Testing as Proof)**: The isolation property (completion-scope cannot change action type) is proven by test #1.

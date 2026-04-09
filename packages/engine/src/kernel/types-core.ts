@@ -489,6 +489,12 @@ export type AgentPolicyExpr =
       readonly prop?: string;
     }
   | {
+      readonly kind: 'seatAgg';
+      readonly over: 'opponents' | 'all' | readonly string[];
+      readonly expr: AgentPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+    }
+  | {
       readonly kind: 'zoneProp';
       readonly zone: AgentPolicyZoneSource;
       readonly prop: string;

@@ -506,6 +506,9 @@ export class PolicyEvaluationContext {
         return this.evaluateGlobalZoneAggregate(expr);
       case 'adjacentTokenAgg':
         return this.evaluateAdjacentTokenAggregate(expr, candidate);
+      case 'seatAgg':
+        // Runtime seat aggregation is owned by a later ticket; fail closed until then.
+        return undefined;
     }
   }
 

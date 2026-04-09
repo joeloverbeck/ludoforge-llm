@@ -1,6 +1,6 @@
 # Spec 120: Widen Compiled Expression Coverage
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: None (extends existing infrastructure)
@@ -199,3 +199,29 @@ The performance campaign established hard constraints on what changes are safe i
 - **No spatial operations** (`adjacent`, `connected`). Deferred — low frequency, high complexity.
 - **No `sum`/`min`/`max` aggregate compilation.** Requires compiled query iteration — deferred.
 - **No coverage mandates.** The spec defines the framework extension. Implementation tickets determine priority based on profiling data.
+
+## Outcome
+
+Completed: 2026-04-09
+
+- Delivered the spec’s widening series through archived tickets `120WIDCOMEXP-001` through `120WIDCOMEXP-007`, including value-expression widening, condition widening, token-filter widening, application-site adoption, shared condition caching, coverage diagnostics, and a current-branch FITL perf rerun.
+- The final implementation stayed on the existing closure-chain `tryCompile*` architecture; no parallel compiler system, code generation path, or schema change was introduced.
+- Production FITL diagnostics now report `conditions=109/448 (24.3%)`, `values=396/711 (55.7%)`, and `tokenFilters=0/0` for action-parameter domains, with a focused deterministic fixture proving token-filter compilation at `2/2`.
+- The live FITL perf harness no longer supports trustworthy before/after per-function baseline claims for `evalCondition` / `resolveRef` / `matchesTokenFilterExpr`, so the series recorded current-run branch metrics instead of inventing historical comparisons.
+
+Deviations from original plan:
+
+- The spec’s delivered `pvar` boundary aligned to the live runtime AST contract `{ id: PlayerId }` rather than stale “literal seat string” wording.
+- FITL production does not currently author action-parameter token filters, so token-filter coverage proof shipped as a focused deterministic fixture in addition to the FITL diagnostic.
+- The live compiled predicate surface evolved to `ReadContext`-based call signatures where that was the cleaner architectural unit for shared callsites and cache consumers.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/condition-compiler.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/token-filter-compiler.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compiled-application-sites.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compilation-coverage-diagnostic.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo test`
+- `bash campaigns/fitl-perf-optimization/harness.sh`

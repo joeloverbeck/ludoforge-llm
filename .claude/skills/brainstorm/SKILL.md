@@ -25,33 +25,56 @@ Do NOT write any code, scaffold any project, invoke any implementation skill, or
 Read context (reference file + detect topic type)
          |
          v
-Confidence-driven interview loop (target: 95%)
+[If reference has verification criteria] Run counter-evidence checks
          |
          v
-Propose 2-3 approaches with tradeoffs
+Classify: design | decision/triage
          |
-         v
-Present design section by section, get approval per section
+         +--> DECISION MODE: short interview -> verify claims -> write specs/tickets directly
          |
-         v
-[If implementation topic] Validate against FOUNDATIONS.md
-         |
-         v
-Write design doc to docs/plans/
-         |
-         v
-Next-steps menu (user chooses)
+         +--> DESIGN MODE (default):
+              Confidence-driven interview loop (target: 95%)
+                       |
+                       v
+              Propose 2-3 approaches with tradeoffs
+                       |
+                       v
+              Present design section by section, get approval per section
+                       |
+                       v
+              [If implementation topic] Validate against FOUNDATIONS.md
+                       |
+                       v
+              Write design doc to docs/plans/
+                       |
+                       v
+              Next-steps menu (user chooses)
 ```
 
 ## Step 1: Read Context
 
 1. **Reference file**: If `reference_path` is provided, read the entire file. Extract key claims, proposals, and open questions from it. Summarize what it contains in 2-3 sentences before proceeding.
 
-2. **Topic classification**: Determine whether this brainstorm is **implementation-related** (code changes, architecture, engine modifications, new features, bug fixes) or **non-implementation** (process, tooling config, workflow, strategy, skill design).
+2. **Topic classification**: Determine the brainstorm mode:
+   - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc).
 
-3. **If implementation-related**: Read `docs/FOUNDATIONS.md`. You will need it in Steps 3 and 4 to validate proposed approaches against architectural principles.
+3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles.
 
-4. **Project context**: Briefly check relevant project state (recent files, existing specs/tickets in the area) only if the topic clearly relates to a specific part of the codebase. Do not do a broad exploration — keep it targeted.
+4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A well-analyzed report may start you at 60-70% — you mainly need to understand the user's intent and risk tolerance, not the problem domain.
+
+5. **Project context**: Briefly check relevant project state (recent files, existing specs/tickets in the area) only if the topic clearly relates to a specific part of the codebase. Do not do a broad exploration — keep it targeted.
+
+## Step 1.5: Counter-Evidence Verification (Optional)
+
+If the reference file contains hypotheses with explicit counter-evidence checks or verification criteria (e.g., "check whether X is true before proceeding"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
+
+- Present the checks to the user: "The report prescribes N verification checks. Should I run them now?"
+- If yes, run them (using Explore agents, grep, git log, file reads — whatever the checks require)
+- Report results before proceeding to the interview
+- Adjust confidence and approach based on what the checks reveal
+
+Skip this step if the reference file has no explicit verification criteria.
 
 ## Step 2: Confidence-Driven Interview
 
@@ -105,6 +128,8 @@ Present **2-3 distinct approaches** with:
 - **Tradeoffs**: What you gain, what you give up
 - **Recommendation**: Lead with your recommended option and explain why
 
+**If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
+
 **If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`.
 
 **Wait for user to choose or ask questions.** Do not proceed until the user picks an approach (or asks you to refine/combine).
@@ -125,7 +150,9 @@ Sections to cover (skip irrelevant ones):
 
 **After each section**, ask: "Does this section look right?" Wait for confirmation before presenting the next section. If the user pushes back, revise that section before continuing.
 
-## Step 5: Write Design Doc
+## Step 5: Write Output Artifacts
+
+### Design mode (default)
 
 Once all sections are approved, write the complete design to:
 
@@ -142,6 +169,14 @@ The design doc should consolidate all approved sections into a clean document. I
 - Final confidence score and any assumptions made
 
 Do NOT commit the file. Leave it for user review.
+
+### Decision/triage mode
+
+If the brainstorm's output is specs or tickets (not a design requiring further refinement), skip the design doc and write the artifacts directly:
+- **Specs** go to `specs/<number>-<name>.md` following existing spec conventions
+- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following the ticket template
+
+Check existing specs/tickets first to determine the next available number and follow established formatting conventions. The design doc is a staging area for ideas that need further discussion — not a mandatory intermediate format for every brainstorm.
 
 ## Step 6: Next Steps Menu
 

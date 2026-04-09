@@ -64,7 +64,7 @@ Then cluster tests into **scenario families** — named behavioral groups. Examp
 - "decision resolution and override"
 - "capability cost enforcement"
 
-Target 5-12 scenario families for a 50-100 test suite. Each family should map to a distinct domain protocol or lifecycle, not just a shared implementation detail. When in doubt, keep families separate — they can be merged in the report table.
+Scaling guide for scenario family count: for 10-30 tests, target 4-8 families; for 30-50 tests, target 5-10; for 50-100 tests, target 5-12. These are guidelines, not constraints — the test content determines the natural family count. Each family should map to a distinct domain protocol or lifecycle, not just a shared implementation detail. When in doubt, keep families separate — they can be merged in the report table.
 
 Every later architectural inference must be tied back to scenario families. A finding not grounded in test behavior is speculation.
 
@@ -89,6 +89,8 @@ The purpose of multi-strategy tracing is to catch hidden dependencies that impor
 
 If import analysis + temporal coupling from Phase 1 already achieve high confidence for all exercised modules, the additional strategies (static call graph, naming similarity) may be deferred. Note which strategies were used and which were skipped in the Traceability Summary.
 
+Phase 3 often collapses into Phase 1 when import analysis + temporal coupling achieve high confidence for all exercised modules. When this happens, note "Phase 3 satisfied by Phase 1 outputs" in the Traceability Summary rather than running redundant analysis. Only launch a dedicated Phase 3 agent when Phase 1 reveals registry/dispatch indirection or barrel-heavy import trees where static imports undercount actual dependencies.
+
 ### Phase 4: DETECT FRACTURES
 
 Scan the exercised code for these 8 fracture types:
@@ -105,6 +107,8 @@ Scan the exercised code for these 8 fracture types:
 | 8 | **Orphan compatibility layer** | A shim, fallback path, or "safety net" handler exists only to mask a deeper missing abstraction. |
 
 **Evidence rule**: A fracture is NOT reported unless supported by at least two independent signals (e.g., import analysis + temporal coupling, or naming similarity + assertion patterns). Single-signal fractures go in a "Needs investigation" bucket, not in the main findings.
+
+**Sub-agent input**: When delegating Phase 4 to a sub-agent, provide: (1) the scenario family table from Phase 2, (2) the top 5-10 temporal coupling clusters from Phase 1, (3) the list of key boundary modules (files at subsystem borders), and (4) specific questions about each potential fracture area derived from the test patterns.
 
 **Tool usage**: Grep for shared type names across modules, Grep for duplicate predicate patterns, Read key functions at boundary points, Bash for git log co-change analysis.
 
@@ -213,6 +217,7 @@ List them with the one signal found and what second signal to look for.>
 ## Recommendations
 
 - **Spec-worthy**: <candidate names that warrant a spec>
+- **Conditional**: <candidate names with specific verification checks that determine promotion to spec-worthy or deferral — include the exact checks to run>
 - **Acceptable**: <areas that are fine as-is>
 - **Needs investigation**: <areas where more context is needed>
 ```

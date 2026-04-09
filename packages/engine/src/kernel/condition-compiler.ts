@@ -1,4 +1,3 @@
-import type { PlayerId } from './branded.js';
 import { getLatticeMap, getZoneMap } from './def-lookup.js';
 import { divisionByZeroError, missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import type { ReadContext } from './eval-context.js';

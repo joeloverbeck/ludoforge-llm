@@ -14,7 +14,6 @@ import {
   type CompiledConditionPredicate,
   type GameDef,
   type GameState,
-  type PlayerId,
   type ReadContext,
 } from '../../src/kernel/index.js';
 import {

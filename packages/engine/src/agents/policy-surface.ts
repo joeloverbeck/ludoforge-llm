@@ -282,13 +282,17 @@ export function resolvePolicyRoleSelector(
   state: GameState,
   selector: Extract<SurfaceSelector, { readonly kind: 'role' }>,
   actingSeatId: string,
-): string {
+  seatContext?: string,
+): string | undefined {
   const { seatToken } = selector;
   if (seatToken === 'self') {
     return actingSeatId;
   }
   if (seatToken === 'active') {
     return def?.seats?.[state.activePlayer]?.id ?? actingSeatId;
+  }
+  if (seatToken === '$seat') {
+    return seatContext;
   }
   return seatToken;
 }

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — cnl/compile-agents
-**Deps**: `archive/tickets/122CROSEAVIC-001.md`, `tickets/122CROSEAVIC-002.md`
+**Deps**: `archive/tickets/122CROSEAVIC-001.md`, `archive/tickets/122CROSEAVIC-002.md`
 
 ## Problem
 

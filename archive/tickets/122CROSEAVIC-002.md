@@ -1,6 +1,6 @@
 # 122CROSEAVIC-002: Recognize `$seat` placeholder in policy surface reference resolution
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/policy-surface
@@ -79,6 +79,23 @@ Test cases:
 1. `packages/engine/test/unit/agents/policy-surface.test.ts` — add `$seat` parse and resolve test cases
 
 ### Commands
+
+1. `pnpm -F @ludoforge/engine test`
+2. `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-09
+
+Implemented the live resolver gap in `packages/engine/src/agents/policy-surface.ts` by adding optional `seatContext` support to `resolvePolicyRoleSelector()` and returning `undefined` for unbound `$seat`.
+
+Kept parse-time behavior unchanged because the current parser already accepts arbitrary role seat tokens, including `$seat`, for `victory.currentMargin.<seatToken>` and related role-token surfaces. Added unit coverage in `packages/engine/test/unit/agents/policy-surface.test.ts` to prove that existing behavior explicitly.
+
+Updated the direct runtime fallout in `packages/engine/src/agents/policy-preview.ts` and `packages/engine/src/agents/policy-runtime.ts` so unbound `$seat` resolves fail closed as unavailable/undefined instead of flowing into seat-map or player-index lookups.
+
+Deviation from original plan: the ticket claimed parse-time `$seat` recognition was missing, but reassessment showed the parser already accepted arbitrary role seat tokens. The implemented change therefore focused on resolver behavior and tests, while leaving parse logic unchanged.
+
+Verification completed with:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`

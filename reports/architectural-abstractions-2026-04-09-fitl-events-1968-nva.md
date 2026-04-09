@@ -131,8 +131,9 @@ Cross-subsystem fractures were found at moderate severity. The 846-line test sui
 - Usage/history check: the helper is referenced by 102 test files, which shows strong test-harness value. Git history shows it evolving with kernel protocol changes rather than diverging from them through independent bug fixes.
 
 **C. CNL Compile-Effects to Kernel AST Bridge**
-- Signal found: 25 git co-changes between `compile-effects.ts` and `schemas-ast.ts`. The compiler imports `chooseOneBuilder` and `chooseNBuilder` from `kernel/ast-builders.ts`.
-- Second signal needed: Determine if AST schema changes routinely break the compiler in ways that require non-trivial fixes. If changes are always mechanical (add field to schema, add field to compiler), this is expected coupling for a compiler targeting an AST, not a fracture.
+- Resolution (2026-04-09): closed as expected compiler-to-target coupling via `ARCHINVEST-003`.
+- Evidence: the named `compile-effects.ts` file is now only a re-export; live lowering is split across `compile-effects-core.ts` and specialized modules such as `compile-effects-choice.ts`. The builder dependency is thin typed convenience over `buildEffect(...)`, not a separate IR or protocol layer.
+- History check: recomputed overlap across the live lowering files plus `schemas-ast.ts` found 26 six-month compiler/schema co-changes, but the pattern was overwhelmingly mechanical AST/compiler synchronization (new query/effect shapes, stricter contracts, type-tag propagation, terminology rename). I did not find repeated non-trivial compiler breakage caused by AST schema changes.
 
 ## Recommendations
 
@@ -140,4 +141,4 @@ Cross-subsystem fractures were found at moderate severity. The 846-line test sui
   - For Candidate 1: Count `EventSideEffectManifest` type modifications in last 6 months. If <3, defer.
   - For Candidate 2: Check whether `updateChoiceScope` references marker state. If not, proceed with spec.
 - **Acceptable**: Event card execution pipeline, decision resolution system, global marker state machine
-- **Needs investigation**: CNL-kernel AST bridge coupling (C)
+- **Needs investigation**: None

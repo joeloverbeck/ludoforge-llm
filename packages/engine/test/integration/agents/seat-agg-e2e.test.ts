@@ -11,7 +11,6 @@ import type {
 import type { GameSpecSourceMap } from '../../../src/cnl/source-map.js';
 import {
   applyMove,
-  asPlayerId,
   assertValidatedGameDef,
   createRng,
   createGameDefRuntime,

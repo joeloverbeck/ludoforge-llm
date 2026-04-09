@@ -261,6 +261,26 @@ stateFeatures:
 
 **Zone filter comparison operators (`<op>`):** `eq`, `gt`, `gte`, `lt`, `lte`.
 
+### Zone Property Access with `zoneProp`
+
+Read a zone's attribute, variable, or built-in property.
+
+```yaml
+candidateFeatures:
+  targetSpacePopulation:
+    type: number
+    expr:
+      coalesce:
+        - zoneProp:
+            zone: { ref: candidate.param.targetSpace }
+            prop: population
+        - 0
+```
+
+**Fields**: `zone` (zone ID string or expression), `prop` (property name).
+
+**Built-in props**: `id` (returns the zone's ID string), `category` (returns the zone's category string, e.g., `province`, `city`, `loc`). All other prop names resolve against the zone's `attributes` map.
+
 ### Per-Zone Token Counts with `zoneTokenAgg`
 
 ```yaml
@@ -334,6 +354,48 @@ candidateFeatures:
 
 **Required**: `anchorZone` (zone ID or expression). **Optional**: `tokenFilter`, `prop` (required when aggOp != count).
 
+### Aggregation Across Seats with `seatAgg`
+
+Aggregate a numeric expression across game seats. Uses the `$seat` placeholder inside `expr` to reference each seat being iterated.
+
+```yaml
+stateFeatures:
+  # Maximum opponent margin (how close is the nearest opponent to winning?)
+  maxOpponentMargin:
+    type: number
+    expr:
+      seatAgg:
+        over: opponents
+        expr: { ref: victory.currentMargin.$seat }
+        aggOp: max
+
+  # Sum margins of specific seats
+  usNvaMarginSum:
+    type: number
+    expr:
+      seatAgg:
+        over: [us, nva]
+        expr: { ref: victory.currentMargin.$seat }
+        aggOp: sum
+
+  # Count of opponents (useful for normalization)
+  opponentCount:
+    type: number
+    expr:
+      seatAgg:
+        over: opponents
+        expr: 1
+        aggOp: count
+```
+
+**Required fields**: `over`, `expr`, `aggOp`.
+
+**`over` values**: `opponents` (all seats except self), `all` (every seat), or an explicit array of canonical seat IDs (e.g., `[us, nva]`).
+
+**`aggOp` values**: `sum`, `count`, `min`, `max` (same as zone token agg ops).
+
+**`$seat` placeholder**: Only valid inside `seatAgg.expr`. Resolves to each seat ID during iteration. Using `$seat` outside of `seatAgg` causes a compilation error.
+
 ### Strategic Conditions
 
 The `strategicConditions` library bucket defines boolean conditions with a proximity metric. Reference via `condition.<id>.satisfied` (boolean) and `condition.<id>.proximity` (0-1 number).
@@ -382,6 +444,8 @@ Aggregations across all candidates at a decision point. Used in pruning rules an
 
 **Aggregate ops**: `any` (boolean OR), `all` (boolean AND), `count`, `min`, `max`, `rankDense` (dense ranking), `rankOrdinal` (ordinal ranking).
 
+**Optional `where` clause**: A boolean predicate that filters which candidates are included in the aggregation. Only candidates where `where` evaluates to `true` are counted/ranked/aggregated.
+
 ```yaml
 candidateAggregates:
   hasNonPassAlternative:
@@ -396,6 +460,13 @@ candidateAggregates:
     of:
       boolToNumber:
         ref: candidate.tag.rally
+
+  # Best margin among non-pass candidates only
+  bestNonPassMargin:
+    op: max
+    of: { ref: feature.projectedSelfMargin }
+    where:
+      not: { ref: candidate.tag.pass }
 ```
 
 ## Pruning Rules
@@ -513,6 +584,25 @@ considerations:
 
 The `when` clause restricts which decision types this applies to. Without it, the term fires for ALL completion decisions.
 
+### Consideration-Level `unknownAs` and `clamp`
+
+**`unknownAs`** (number, default 0): Fallback contribution when `weight` or `value` evaluate to non-number (e.g., preview ref returns `undefined`). Prevents NaN cascades without requiring `coalesce` wrappers.
+
+**`clamp`** (`{ min?, max? }`): Bounds the `weight * value` contribution. Different from the `clamp` expression operator — this clamps the final contribution after multiplication.
+
+```yaml
+considerations:
+  preferProjectedMarginSafe:
+    scopes: [move]
+    weight: 5
+    value:
+      ref: feature.projectedSelfMargin
+    unknownAs: 0          # if preview fails, contribute 0 instead of NaN
+    clamp:
+      min: -10            # cap downside contribution
+      max: 10             # cap upside contribution
+```
+
 ## Tie Breakers
 
 Applied after scoring when candidates tie. Evaluated in order; first to break tie wins.
@@ -618,6 +708,7 @@ profiles:
 | `globalZoneAgg` | see above | number | count/aggregate zones |
 | `zoneTokenAgg` | see above | number | per-zone token aggregation |
 | `adjacentTokenAgg` | see above | number | tokens in adjacent zones |
+| `seatAgg` | see above | number | aggregate expression across seats |
 | `zoneProp` | see above | varies | zone attribute/property access |
 
 ## Signal Normalization
@@ -771,6 +862,17 @@ scoreTerm:
       in:
         - { ref: candidate.actionId }
         - [rally, march, attack]
+```
+
+### "Aggregate opponent state across seats"
+```yaml
+stateFeature:
+  type: number
+  expr:
+    seatAgg:
+      over: opponents
+      expr: { ref: victory.currentMargin.$seat }
+      aggOp: max
 ```
 
 ### "Clamp a value to a safe range"

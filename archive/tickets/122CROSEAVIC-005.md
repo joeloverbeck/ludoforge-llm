@@ -1,6 +1,6 @@
 # 122CROSEAVIC-005: Evaluate `seatAgg` at runtime with seat-context binding
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/policy-evaluation-core
@@ -111,3 +111,31 @@ Test cases:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-09
+
+Implemented runtime `seatAgg` evaluation in `packages/engine/src/agents/policy-evaluation-core.ts`. `PolicyEvaluationContext` now binds a scoped `currentSeatContext` while iterating seat sets, evaluates the inner expression against that bound seat, restores the prior context after each iteration, and applies the existing empty-set semantics (`0` for `count`/`sum`, `undefined` for `min`/`max`).
+
+Required completion fallout extended slightly beyond the original `Files to Touch`: `packages/engine/src/agents/policy-runtime.ts` and `packages/engine/src/agents/policy-preview.ts` now accept an optional per-call seat-context when resolving surface refs, so `victory.currentMargin.$seat` and `preview.victory.currentMargin.$seat` bind correctly during `seatAgg` evaluation without widening the broader runtime contract.
+
+Added runtime coverage in `packages/engine/test/unit/agents/policy-eval.test.ts` for:
+
+1. `opponents`, `all`, and explicit seat-list resolution
+2. `min`, `max`, `sum`, and `count` aggregation behavior
+3. nested numeric inner expressions
+4. preview-surface `seatAgg` evaluation with `$seat` binding
+5. single-seat empty-opponent defaults
+6. post-evaluation seat-context restoration (no leaked `$seat` binding)
+
+Schema/artifact ripple check: no schema or generated artifact surfaces changed in this ticket.
+
+Verification completed with:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node packages/engine/dist/test/unit/agents/policy-eval.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo typecheck`
+
+Ticket premise note: deterministic seat iteration is mechanism-verified by iterating `GameDef.seats` canonical order in the evaluator. A separate order-sensitive behavioral assertion was not added because the supported aggregation operators are commutative.

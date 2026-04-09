@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `tickets/122CROSEAVIC-005.md`
+**Deps**: `archive/tickets/122CROSEAVIC-005.md`
 
 ## Problem
 

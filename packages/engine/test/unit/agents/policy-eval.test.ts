@@ -5,7 +5,9 @@ import {
   matchesTokenFilter,
   matchesZoneFilter,
   matchesZoneScope,
+  PolicyEvaluationContext,
   resolveTokenFilter,
+  type PolicyEvaluationCandidate,
 } from '../../../src/agents/policy-evaluation-core.js';
 import { evaluatePolicyMove, evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import { createPolicyCompletionProvider, createPolicyRuntimeProviders } from '../../../src/agents/policy-runtime.js';
@@ -534,6 +536,162 @@ function createStateFeatureScoreCatalog(
       },
     },
   );
+}
+
+function createSeatAggCatalog(
+  seatIds: readonly string[] = ['us', 'arvn', 'nva', 'vc'],
+  previewVisibility: 'public' | 'hidden' = 'public',
+): AgentPolicyCatalog {
+  const catalog = createCatalog();
+  return {
+    ...catalog,
+    surfaceVisibility: {
+      ...catalog.surfaceVisibility,
+      victory: {
+        currentMargin: {
+          current: 'public',
+          preview: { visibility: previewVisibility, allowWhenHiddenSampling: false },
+        },
+        currentRank: {
+          current: 'public',
+          preview: { visibility: previewVisibility, allowWhenHiddenSampling: false },
+        },
+      },
+    },
+    bindingsBySeat: Object.fromEntries(seatIds.map((seatId) => [seatId, 'baseline'])),
+  };
+}
+
+function createSeatAggDef(
+  catalog: AgentPolicyCatalog,
+  seatIds: readonly string[] = ['us', 'arvn', 'nva', 'vc'],
+): GameDef {
+  const baseDef = createBaseDef(catalog);
+
+  return {
+    ...baseDef,
+    metadata: {
+      id: 'policy-seat-agg',
+      players: {
+        min: seatIds.length,
+        max: seatIds.length,
+      },
+    },
+    globalVars: seatIds.map((seatId) => ({
+      name: `${seatId}Margin`,
+      type: 'int' as const,
+      init: 0,
+      min: -20,
+      max: 20,
+    })),
+    zones: [
+      {
+        id: asZoneId('board:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'set',
+      },
+    ],
+    perPlayerVars: [],
+    derivedMetrics: [],
+    seats: seatIds.map((seatId) => ({ id: seatId })),
+    actions: [
+      {
+        id: asActionId('hold'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      ...seatIds.map((seatId) => ({
+        id: asActionId(`boost-${seatId}`),
+        actor: 'active' as const,
+        executor: 'actor' as const,
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [eff({ addVar: { scope: 'global', var: `${seatId}Margin`, delta: 5 } })],
+        limits: [],
+      })),
+    ],
+    actionTagIndex: {
+      byAction: {},
+      byTag: {},
+    },
+    terminal: {
+      conditions: [],
+      margins: seatIds.map((seatId) => ({
+        seat: seatId,
+        value: { _t: 2 as const, ref: 'gvar', var: `${seatId}Margin` },
+      })),
+      ranking: {
+        order: 'desc',
+        tieBreakOrder: [...seatIds],
+      },
+    },
+  };
+}
+
+function createSeatAggCandidate(actionId: string): PolicyEvaluationCandidate {
+  return {
+    move: { actionId: asActionId(actionId), params: {} },
+    stableMoveKey: `${actionId}|{}|false|unclassified`,
+    actionId,
+    previewRefIds: new Set<string>(),
+    unknownPreviewRefs: new Map(),
+  };
+}
+
+function createSeatAggContext(options: {
+  readonly seatIds?: readonly string[];
+  readonly actingSeatId?: string;
+  readonly margins?: Readonly<Record<string, number>>;
+  readonly previewVisibility?: 'public' | 'hidden';
+  readonly candidateActionId?: string;
+} = {}): {
+  readonly context: PolicyEvaluationContext;
+  readonly candidate: PolicyEvaluationCandidate | undefined;
+} {
+  const seatIds = options.seatIds ?? ['us', 'arvn', 'nva', 'vc'];
+  const actingSeatId = options.actingSeatId ?? seatIds[0]!;
+  const actingSeatIndex = seatIds.indexOf(actingSeatId);
+  assert.notEqual(actingSeatIndex, -1, `Unknown acting seat "${actingSeatId}"`);
+
+  const catalog = createSeatAggCatalog(seatIds, options.previewVisibility);
+  const def = createSeatAggDef(catalog, seatIds);
+  const baseState = initialState(def, 17, seatIds.length).state;
+  const state = {
+    ...baseState,
+    activePlayer: asPlayerId(actingSeatIndex),
+    globalVars: {
+      ...baseState.globalVars,
+      ...Object.fromEntries(seatIds.map((seatId) => [(`${seatId}Margin`), options.margins?.[seatId] ?? 0])),
+    },
+  };
+  const candidate = options.candidateActionId === undefined
+    ? undefined
+    : createSeatAggCandidate(options.candidateActionId);
+
+  return {
+    context: new PolicyEvaluationContext(
+      {
+        def,
+        state,
+        playerId: asPlayerId(actingSeatIndex),
+        seatId: actingSeatId,
+        catalog,
+        parameterValues: {},
+        trustedMoveIndex: new Map(),
+      },
+      candidate === undefined ? [] : [candidate],
+    ),
+    candidate,
+  };
 }
 
 describe('policy-eval', () => {
@@ -1428,6 +1586,203 @@ describe('policy-eval', () => {
       result.metadata.candidates.find((candidate) => candidate.actionId === 'beta')?.score,
       0,
     );
+  });
+
+  describe('seatAgg evaluation', () => {
+    it('evaluates opponents, all, and explicit seat-list aggregates across victory margins', () => {
+      const { context } = createSeatAggContext({
+        margins: {
+          us: 2,
+          arvn: 4,
+          nva: 7,
+          vc: 3,
+        },
+      });
+
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: 'opponents',
+            expr: refExpr({
+              kind: 'currentSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: '$seat' },
+            }),
+            aggOp: 'max',
+          },
+          undefined,
+        ),
+        7,
+      );
+
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: 'all',
+            expr: literal(1),
+            aggOp: 'count',
+          },
+          undefined,
+        ),
+        4,
+      );
+
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: ['arvn', 'vc'],
+            expr: refExpr({
+              kind: 'currentSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: '$seat' },
+            }),
+            aggOp: 'sum',
+          },
+          undefined,
+        ),
+        7,
+      );
+
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: 'opponents',
+            expr: refExpr({
+              kind: 'currentSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: '$seat' },
+            }),
+            aggOp: 'min',
+          },
+          undefined,
+        ),
+        3,
+      );
+    });
+
+    it('evaluates nested numeric expressions and restores seat context afterward', () => {
+      const { context } = createSeatAggContext({
+        margins: {
+          us: 5,
+          arvn: -2,
+          nva: 6,
+          vc: 1,
+        },
+      });
+
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: 'opponents',
+            expr: opExpr(
+              'boolToNumber',
+              opExpr(
+                'gt',
+                refExpr({
+                  kind: 'currentSurface',
+                  family: 'victoryCurrentMargin',
+                  id: 'currentMargin',
+                  selector: { kind: 'role', seatToken: '$seat' },
+                }),
+                literal(0),
+              ),
+            ),
+            aggOp: 'sum',
+          },
+          undefined,
+        ),
+        2,
+      );
+
+      assert.equal(
+        context.evaluateExpr(
+          refExpr({
+            kind: 'currentSurface',
+            family: 'victoryCurrentMargin',
+            id: 'currentMargin',
+            selector: { kind: 'role', seatToken: '$seat' },
+          }),
+          undefined,
+        ),
+        undefined,
+      );
+    });
+
+    it('evaluates preview-backed seatAgg expressions with the bound seat context', () => {
+      const { context, candidate } = createSeatAggContext({
+        margins: {
+          us: 2,
+          arvn: 4,
+          nva: 7,
+          vc: 3,
+        },
+        candidateActionId: 'boost-vc',
+      });
+
+      assert.equal(candidate?.actionId, 'boost-vc');
+      assert.equal(
+        context.evaluateExpr(
+          {
+            kind: 'seatAgg',
+            over: 'opponents',
+            expr: refExpr({
+              kind: 'previewSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: '$seat' },
+            }),
+            aggOp: 'max',
+          },
+          candidate,
+        ),
+        8,
+      );
+    });
+
+    it('returns empty-set defaults for single-seat opponent aggregates', () => {
+      const { context } = createSeatAggContext({
+        seatIds: ['solo'],
+        actingSeatId: 'solo',
+        margins: { solo: 9 },
+      });
+
+      assert.equal(
+        context.evaluateExpr(
+          { kind: 'seatAgg', over: 'opponents', expr: literal(1), aggOp: 'count' },
+          undefined,
+        ),
+        0,
+      );
+      assert.equal(
+        context.evaluateExpr(
+          { kind: 'seatAgg', over: 'opponents', expr: literal(1), aggOp: 'sum' },
+          undefined,
+        ),
+        0,
+      );
+      assert.equal(
+        context.evaluateExpr(
+          { kind: 'seatAgg', over: 'opponents', expr: literal(1), aggOp: 'min' },
+          undefined,
+        ),
+        undefined,
+      );
+      assert.equal(
+        context.evaluateExpr(
+          { kind: 'seatAgg', over: 'opponents', expr: literal(1), aggOp: 'max' },
+          undefined,
+        ),
+        undefined,
+      );
+    });
   });
 
   it('routes intrinsic, candidate, current, preview, and completion reads through explicit runtime providers', () => {

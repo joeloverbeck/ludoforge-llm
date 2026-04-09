@@ -215,6 +215,7 @@ export class PolicyEvaluationContext {
   private readonly zoneReadContextsByState = new Map<bigint, ReadContext>();
   private currentCandidates: PolicyEvaluationCandidate[];
   private activeState: GameState;
+  private currentSeatContext: string | undefined;
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
@@ -507,8 +508,7 @@ export class PolicyEvaluationContext {
       case 'adjacentTokenAgg':
         return this.evaluateAdjacentTokenAggregate(expr, candidate);
       case 'seatAgg':
-        // Runtime seat aggregation is owned by a later ticket; fail closed until then.
-        return undefined;
+        return this.evaluateSeatAggregate(expr, candidate);
     }
   }
 
@@ -657,6 +657,46 @@ export class PolicyEvaluationContext {
     return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
   }
 
+  private evaluateSeatAggregate(
+    expr: Extract<AgentPolicyExpr, { readonly kind: 'seatAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const seatIds = this.resolveSeatAggregateSeatIds(expr.over);
+    if (seatIds === undefined || seatIds.length === 0) {
+      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
+    }
+
+    const values: number[] = [];
+    for (const seatId of seatIds) {
+      const previousSeatContext = this.currentSeatContext;
+      this.currentSeatContext = seatId;
+      try {
+        const value = this.evaluateExpr(expr.expr, candidate);
+        if (typeof value === 'number') {
+          values.push(value);
+        }
+      } finally {
+        this.currentSeatContext = previousSeatContext;
+      }
+    }
+
+    if (expr.aggOp === 'count') {
+      return values.length;
+    }
+    if (values.length === 0) {
+      return expr.aggOp === 'sum' ? 0 : undefined;
+    }
+
+    switch (expr.aggOp) {
+      case 'sum':
+        return values.reduce((acc, value) => acc + value, 0);
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
+    }
+  }
+
   private evaluateExprList(
     expressions: readonly AgentPolicyExpr[],
     candidate: PolicyEvaluationCandidate | undefined,
@@ -669,6 +709,22 @@ export class PolicyEvaluationContext {
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     return expr.args.length === 0 ? undefined : this.evaluateExpr(expr.args[0]!, candidate);
+  }
+
+  private resolveSeatAggregateSeatIds(
+    over: Extract<AgentPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+  ): readonly string[] | undefined {
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    if (seatIds === undefined) {
+      return undefined;
+    }
+    if (over === 'all') {
+      return seatIds;
+    }
+    if (over === 'opponents') {
+      return seatIds.filter((seatId) => seatId !== this.input.seatId);
+    }
+    return over;
   }
 
   private resolveRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
@@ -826,7 +882,7 @@ export class PolicyEvaluationContext {
       }
       const refId = previewRefKey(ref);
       candidate.previewRefIds.add(refId);
-      const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref);
+      const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref, this.currentSeatContext);
       if (resolution.kind === 'unknown') {
         candidate.previewOutcome = resolution.reason;
         if (resolution.failureReason !== undefined) {
@@ -852,7 +908,7 @@ export class PolicyEvaluationContext {
       }
       return resolution.kind === 'value' ? resolution.value : undefined;
     }
-    return this.runtimeProviders.currentSurface.resolveSurface(ref, this.activeState);
+    return this.runtimeProviders.currentSurface.resolveSurface(ref, this.activeState, this.currentSeatContext);
   }
 
   private getZoneReadContext(): ReadContext {

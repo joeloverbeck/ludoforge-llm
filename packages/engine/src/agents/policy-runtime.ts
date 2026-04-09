@@ -61,13 +61,14 @@ export interface PolicyCandidateProvider {
 }
 
 export interface PolicyCurrentSurfaceProvider {
-  resolveSurface(ref: CompiledCurrentSurfaceRef, stateOverride?: GameState): PolicyValue;
+  resolveSurface(ref: CompiledCurrentSurfaceRef, stateOverride?: GameState, seatContext?: string): PolicyValue;
 }
 
 export interface PolicyPreviewSurfaceProvider {
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
     ref: CompiledPreviewSurfaceRef,
+    seatContext?: string,
   ): PolicyPreviewSurfaceResolution;
   getPreviewState(candidate: PolicyRuntimeCandidate): GameState | undefined;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
@@ -214,7 +215,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
     },
     currentSurface: {
-      resolveSurface(ref, stateOverride) {
+      resolveSurface(ref, stateOverride, seatContext) {
         const state = stateOverride ?? input.state;
         const visibility = getPolicySurfaceVisibility(input.catalog.surfaceVisibility, ref);
         if (visibility === null) {
@@ -229,7 +230,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           : undefined;
         const resolvedSeatId = ref.selector?.kind !== 'role'
           ? undefined
-          : resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId);
+          : resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId, seatContext);
         if (!isSurfaceVisibilityAccessible(
           visibility.current,
           input.seatId,
@@ -300,7 +301,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (ref.selector?.kind !== 'role') {
           return undefined;
         }
-        const seatId = resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId);
+        const seatId = resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId, seatContext);
         if (seatId === undefined) {
           return undefined;
         }
@@ -310,8 +311,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
     },
     previewSurface: {
-      resolveSurface(candidate, ref) {
-        return previewRuntime.resolveSurface(candidate, ref);
+      resolveSurface(candidate, ref, seatContext) {
+        return previewRuntime.resolveSurface(candidate, ref, seatContext);
       },
       getPreviewState(candidate) {
         return previewRuntime.getPreviewState(candidate);

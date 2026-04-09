@@ -69,6 +69,7 @@ export interface PolicyPreviewRuntime {
   resolveSurface(
     candidate: PolicyPreviewCandidate,
     ref: CompiledPreviewSurfaceRef,
+    seatContext?: string,
   ): PolicyPreviewSurfaceResolution;
   getPreviewState(candidate: PolicyPreviewCandidate): GameState | undefined;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
@@ -140,7 +141,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
 
   return {
-    resolveSurface(candidate, ref) {
+    resolveSurface(candidate, ref, seatContext) {
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready' && preview.kind !== 'stochastic') {
         return preview;
@@ -154,7 +155,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         : undefined;
       const resolvedSeatId = ref.selector?.kind !== 'role'
         ? undefined
-        : resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId);
+        : resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
       if (!isSurfaceVisibilityAccessible(
         visibility.preview.visibility,
         input.seatId,
@@ -188,7 +189,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         if (ref.selector?.kind !== 'role') {
           return { kind: 'unavailable' };
         }
-        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId);
+        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
         if (targetSeatId === undefined) {
           return { kind: 'unavailable' };
         }
@@ -199,7 +200,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         if (ref.selector?.kind !== 'role') {
           return { kind: 'unavailable' };
         }
-        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId);
+        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
         if (targetSeatId === undefined) {
           return { kind: 'unavailable' };
         }

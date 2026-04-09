@@ -1,5 +1,5 @@
 import { hasActionPipeline } from './action-pipeline-lookup.js';
-import { evalCondition } from './eval-condition.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveActionExecutor } from './action-executor.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { resolveDeclaredActionParamDomainOptions } from './declared-action-param-domain.js';
@@ -479,11 +479,11 @@ function enumerateParams(
     }
     const ctx = updateMutableEnumerationReadContext(readScope, state, executionPlayer, bindings);
     if (currentPhaseDef?.actionDefaults?.pre !== undefined) {
-      if (!evalCondition(currentPhaseDef.actionDefaults.pre, ctx)) {
+      if (!evaluateConditionWithCache(currentPhaseDef.actionDefaults.pre, ctx)) {
         return;
       }
     }
-    if (action.pre !== null && !evalCondition(action.pre, ctx)) {
+    if (action.pre !== null && !evaluateConditionWithCache(action.pre, ctx)) {
       return;
     }
 

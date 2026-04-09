@@ -3,8 +3,8 @@ import { resolveActionApplicabilityPreflight } from './action-applicability-pref
 import { toExecutionPipeline } from './apply-move-pipeline.js';
 import { asActionId, asPlayerId } from './branded.js';
 import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from './choice-option-policy.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
-import { evalCondition } from './eval-condition.js';
 import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
 import { createExecutionEffectContext } from './effect-context.js';
 import { applyEffects } from './effects.js';
@@ -420,7 +420,7 @@ const isCompletedProbeMoveCurrentlyLegal = (
     return false;
   }
 
-  if (action.pre !== null && !evalCondition(action.pre, preflight.evalCtx)) {
+  if (action.pre !== null && !evaluateConditionWithCache(action.pre, preflight.evalCtx)) {
     return false;
   }
 

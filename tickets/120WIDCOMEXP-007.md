@@ -3,8 +3,8 @@
 **Status**: PENDING
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — `packages/engine/test/kernel/` (test utilities)
-**Deps**: `archive/tickets/120WIDCOMEXP-001.md`, `archive/tickets/120WIDCOMEXP-002.md`, `archive/tickets/120WIDCOMEXP-003.md`, `archive/tickets/120WIDCOMEXP-004.md`, `tickets/120WIDCOMEXP-006.md`
+**Engine Changes**: Yes — `packages/engine/test/unit/kernel/` (test utilities)
+**Deps**: `archive/tickets/120WIDCOMEXP-001.md`, `archive/tickets/120WIDCOMEXP-002.md`, `archive/tickets/120WIDCOMEXP-003.md`, `archive/tickets/120WIDCOMEXP-004.md`, `archive/tickets/120WIDCOMEXP-006.md`
 
 ## Problem
 
@@ -51,8 +51,8 @@ Report results in the ticket outcome. This is a gate — if no measurable improv
 
 ## Files to Touch
 
-- `packages/engine/test/kernel/compilation-coverage-diagnostic.test.ts` (new)
-- `packages/engine/test/kernel/compilation-coverage-diagnostic.ts` (new — utility)
+- `packages/engine/test/unit/kernel/compilation-coverage-diagnostic.test.ts` (new)
+- `packages/engine/test/unit/kernel/compilation-coverage-diagnostic.ts` (new — utility)
 
 ## Out of Scope
 
@@ -79,9 +79,11 @@ Report results in the ticket outcome. This is a gate — if no measurable improv
 
 ### New/Modified Tests
 
-1. `packages/engine/test/kernel/compilation-coverage-diagnostic.test.ts` — diagnostic test that loads FITL GameDef and reports compilation coverage
+1. `packages/engine/test/unit/kernel/compilation-coverage-diagnostic.test.ts` — diagnostic test that loads FITL GameDef and reports compilation coverage
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="compilation-coverage"`
-2. `pnpm turbo test`
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compilation-coverage-diagnostic.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo test`

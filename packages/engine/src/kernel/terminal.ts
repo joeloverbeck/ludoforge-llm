@@ -1,5 +1,5 @@
 import { asPlayerId } from './branded.js';
-import { evalCondition } from './eval-condition.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { resolveSinglePlayerSel } from './resolve-selectors.js';
 import { evalValue } from './eval-value.js';
 import { kernelRuntimeError } from './runtime-error.js';
@@ -146,7 +146,7 @@ function evaluateVictory(
 
   const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources);
   const duringCheckpoint = checkpoints.find(
-    (checkpoint) => checkpoint.timing === 'duringCoup' && evalCondition(checkpoint.when, baseCtx),
+    (checkpoint) => checkpoint.timing === 'duringCoup' && evaluateConditionWithCache(checkpoint.when, baseCtx),
   );
   if (duringCheckpoint !== undefined) {
     const hasMargins = (def.terminal.margins?.length ?? 0) > 0;
@@ -174,7 +174,7 @@ function evaluateVictory(
   }
 
   const finalCheckpoint = checkpoints.find(
-    (checkpoint) => checkpoint.timing === 'finalCoup' && evalCondition(checkpoint.when, baseCtx),
+    (checkpoint) => checkpoint.timing === 'finalCoup' && evaluateConditionWithCache(checkpoint.when, baseCtx),
   );
   if (finalCheckpoint === undefined) {
     return null;
@@ -214,7 +214,7 @@ export const terminalResult = (def: GameDef, state: GameState, runtime?: GameDef
   }
 
   for (const endCondition of def.terminal.conditions) {
-    if (!evalCondition(endCondition.when, baseCtx)) {
+    if (!evaluateConditionWithCache(endCondition.when, baseCtx)) {
       continue;
     }
 

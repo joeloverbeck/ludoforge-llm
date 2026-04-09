@@ -1,6 +1,6 @@
 # 120WIDCOMEXP-006: Widen application sites — action pre, triggers, terminal
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/` (multiple files)
@@ -20,11 +20,12 @@ Compiled condition predicates are currently applied only at pipeline legality/co
 2. Trigger `evalConditionTraced` calls confirmed at `trigger-dispatch.ts:116,120` — for `match` and `when`.
 3. Terminal `evalCondition` calls confirmed at `terminal.ts:149,177,217` — for checkpoint and end conditions.
 4. `evalConditionTraced` (line 230 in `eval-condition.ts`) wraps `evalCondition` and emits a trace event via `emitConditionTrace`. Compiled path must still emit traces (Foundation 9).
-5. If ticket 003 widens compiled predicates to consume `ReadContext` directly, all target call sites already have the needed `ReadContext` in hand. Snapshot-aware sites still pass the enumeration snapshot separately.
+5. Ticket 003 already widened compiled predicates to consume `ReadContext` directly, so all target call sites have the needed context in hand.
+6. Snapshot-aware discovery predicate evaluation is already routed through `evaluateDiscoveryPipelinePredicateStatus(...)` in `pipeline-viability-policy.ts`; there is no separate non-pipeline `evalCondition` snapshot site left to migrate in `legal-moves.ts`.
 
 ## Architecture Check
 
-1. Each call site follows the same integration pattern: look up compiled predicate from the per-expression cache (ticket 005), if non-null call it directly, otherwise fall back to `evalCondition`/`evalConditionTraced`. No new abstractions needed.
+1. The action-pre and terminal sites share the same cached-evaluation pattern, so a small helper in `compiled-condition-expr-cache.ts` is cleaner than duplicating the same lookup/fallback logic across six files.
 2. For trigger sites using `evalConditionTraced`, the compiled path must call `emitConditionTrace` directly after evaluation to preserve replay/auditability (Foundation 9). The trace event should include the same `context` and `provenance` as the interpreter path.
 3. No game-specific logic — the integration is purely mechanical: cache lookup + fallback at each call site.
 4. V8 JIT safety: no fields added to `ReadContext`, `EffectCursor`, `GameDefRuntime`, or `MoveEnumerationState`. Cache access uses module-level WeakMap via the imported accessor function.
@@ -33,39 +34,27 @@ Compiled condition predicates are currently applied only at pipeline legality/co
 
 ### 1. Integrate at action `pre` sites (4 files, 7 call sites)
 
-At each `evalCondition(action.pre, ctx)` call site in `legal-moves.ts`, `legal-choices.ts`, `apply-move.ts`, and `free-operation-viability.ts`:
+At each action-pre call site in `legal-moves.ts`, `legal-choices.ts`, `apply-move.ts`, and `free-operation-viability.ts`, route evaluation through the shared cached helper:
 
 ```typescript
-const compiled = getCompiledCondition(action.pre);
-if (compiled !== null) {
-  const result = compiled(ctx, undefined);
-  if (!result) { /* same branch as existing !evalCondition(...) */ }
-} else {
-  // existing evalCondition path
+if (!evaluateConditionWithCache(action.pre, ctx)) {
+  /* same branch as existing !evalCondition(...) */
 }
 ```
-
-Extract a shared helper if the pattern is repeated >3 times to avoid DRY violations.
 
 ### 2. Integrate at trigger sites (2 call sites)
 
 At `trigger-dispatch.ts:116` (match) and `:120` (when):
 
 ```typescript
-const compiled = getCompiledCondition(trigger.match);
-let matchResult: boolean;
-if (compiled !== null) {
-  matchResult = compiled(evalCtx, undefined);
-  emitConditionTrace(evalCtx.collector, {
-    kind: 'conditionEval',
-    condition: trigger.match,
-    result: matchResult,
-    context: 'triggerMatch',
-    provenance: triggerProvenance,
-  });
-} else {
-  matchResult = evalConditionTraced(trigger.match, evalCtx, 'triggerMatch', triggerProvenance);
-}
+const matchResult = evaluateConditionWithCache(trigger.match, evalCtx);
+emitConditionTrace(evalCtx.collector, {
+  kind: 'conditionEval',
+  condition: trigger.match,
+  result: matchResult,
+  context: 'triggerMatch',
+  provenance: triggerProvenance,
+});
 ```
 
 Same pattern for `trigger.when`. The key requirement is that `emitConditionTrace` is always called regardless of path (Foundation 9).
@@ -75,21 +64,18 @@ Same pattern for `trigger.when`. The key requirement is that `emitConditionTrace
 At `terminal.ts:149,177,217`:
 
 ```typescript
-const compiled = getCompiledCondition(checkpoint.when);
-const result = compiled !== null
-  ? compiled(baseCtx, undefined)
-  : evalCondition(checkpoint.when, baseCtx);
+const result = evaluateConditionWithCache(checkpoint.when, baseCtx);
 ```
 
 Terminal conditions are evaluated infrequently (only at potential terminal states), so this is lower priority but completes coverage.
 
 ### 4. Integrate at enumeration snapshot sites
 
-In the `legal-moves.ts` enumeration discovery path, where snapshot conditions are evaluated, apply the same lookup pattern passing the enumeration snapshot as the 4th argument.
+No additional code change is required here. Snapshot-aware condition evaluation already flows through `evaluateDiscoveryPipelinePredicateStatus(...)` and the compiled pipeline predicate path established by earlier tickets. This ticket should verify that no separate interpreter-only snapshot condition site remains outside that pipeline policy surface.
 
 ### 5. Import and wiring
 
-Add `import { getCompiledCondition } from './compiled-condition-expr-cache.js'` to each modified file. Add `import { emitConditionTrace } from './eval-condition.js'` to `trigger-dispatch.ts` if not already imported.
+Add the cached condition-evaluation helper from `compiled-condition-expr-cache.ts` to each modified file. Add `import { emitConditionTrace } from './execution-collector.js'` to `trigger-dispatch.ts` if not already imported.
 
 ## Files to Touch
 
@@ -99,7 +85,8 @@ Add `import { getCompiledCondition } from './compiled-condition-expr-cache.js'` 
 - `packages/engine/src/kernel/free-operation-viability.ts` (modify)
 - `packages/engine/src/kernel/trigger-dispatch.ts` (modify)
 - `packages/engine/src/kernel/terminal.ts` (modify)
-- `packages/engine/test/kernel/compiled-application-sites.test.ts` (new — integration tests)
+- `packages/engine/src/kernel/compiled-condition-expr-cache.ts` (modify — add shared cached-evaluation helper)
+- `packages/engine/test/unit/kernel/compiled-application-sites.test.ts` (new — integration and source-guard tests)
 
 ## Out of Scope
 
@@ -131,9 +118,25 @@ Add `import { getCompiledCondition } from './compiled-condition-expr-cache.js'` 
 
 ### New/Modified Tests
 
-1. `packages/engine/test/kernel/compiled-application-sites.test.ts` — integration tests for each call site category (action pre, trigger, terminal) with both compiled and fallback paths
+1. `packages/engine/test/unit/kernel/compiled-application-sites.test.ts` — integration tests for each call site category (action pre, trigger, terminal) with both compiled and fallback paths, plus source guards for the remaining owned callsites
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="compiled-application-sites"`
-2. `pnpm turbo test`
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compiled-application-sites.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-09
+- Added `evaluateConditionWithCache(...)` to `compiled-condition-expr-cache.ts` and routed the remaining explicit action-pre, trigger, and terminal condition application sites through that shared cached-evaluation helper.
+- Updated `trigger-dispatch.ts` so compiled trigger `match` and `when` checks still emit `conditionTrace` entries with the same context/provenance as the interpreter path.
+- Added `compiled-application-sites.test.ts` to prove compiled action-pre, trigger, and terminal behavior, interpreter fallback for non-compilable conditions, and the continued use of the cached helper at the owned callsites.
+- Deviation from original plan: no separate enumeration-snapshot callsite edit was needed. Reassessment showed snapshot-aware discovery predicates were already routed through `evaluateDiscoveryPipelinePredicateStatus(...)` and the compiled pipeline predicate path landed by earlier tickets.
+- Schema/artifact surfaces: checked via `pnpm -F @ludoforge/engine test` (`schema:artifacts:check`); no generated artifact changes were needed.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compiled-application-sites.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`

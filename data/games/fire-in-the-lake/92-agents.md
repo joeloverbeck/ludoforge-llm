@@ -103,6 +103,15 @@ agents:
                     eq:
                       - { ref: globalMarker.cap_cadres }
                       - { const: "shaded" }
+      arvnTroopCount:
+        type: number
+        expr:
+          globalTokenAgg:
+            aggOp: count
+            tokenFilter:
+              props:
+                faction: { eq: self }
+                type: { eq: troops }
       turnRound:
         type: number
         expr:
@@ -303,6 +312,16 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.bombard
+      trainWhenFewTroops:
+        scopes: [move]
+        when:
+          lt:
+            - { ref: feature.arvnTroopCount }
+            - 10
+        weight: 4
+        value:
+          boolToNumber:
+            ref: candidate.tag.train
       preferPopulousTargets:
         scopes: [completion]
         when:
@@ -432,6 +451,8 @@ agents:
           - preferSweepWeighted
           - preferAssaultWeighted
           - preferGovernWeighted
+          - trainWhenFewTroops
+          - preferPopulousTargets
         tieBreakers:
           - stableMoveKey
 

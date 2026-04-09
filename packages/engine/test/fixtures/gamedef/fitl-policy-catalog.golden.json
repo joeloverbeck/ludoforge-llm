@@ -648,6 +648,9 @@
     "sourceSpace": {
       "type": "id"
     },
+    "$destination": {
+      "type": "id"
+    },
     "$__macro_coup_process_commitment_actions_15__effects_0__commitTroopDestFromAvailable": {
       "type": "id"
     },
@@ -925,6 +928,32 @@
               ]
             }
           ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "arvnTroopCount": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "globalTokenAgg",
+          "tokenFilter": {
+            "props": {
+              "faction": {
+                "eq": "self"
+              },
+              "type": {
+                "eq": "troops"
+              }
+            }
+          },
+          "aggOp": "count",
+          "zoneScope": "board"
         },
         "dependencies": {
           "parameters": [],
@@ -1895,6 +1924,56 @@
           "strategicConditions": []
         }
       },
+      "trainWhenFewTroops": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "lt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "arvnTroopCount"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 10
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 4
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "train"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "arvnTroopCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferPopulousTargets": {
         "scopes": [
           "completion"
@@ -2370,7 +2449,9 @@
           "preferPatrolAction",
           "preferSweepWeighted",
           "preferAssaultWeighted",
-          "preferGovernWeighted"
+          "preferGovernWeighted",
+          "trainWhenFewTroops",
+          "preferPopulousTargets"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2385,7 +2466,8 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "selfResources"
+          "selfResources",
+          "arvnTroopCount"
         ],
         "candidateFeatures": [
           "projectedSelfMargin"
@@ -2401,10 +2483,12 @@
           "preferPatrolAction",
           "preferSweepWeighted",
           "preferAssaultWeighted",
-          "preferGovernWeighted"
+          "preferGovernWeighted",
+          "trainWhenFewTroops",
+          "preferPopulousTargets"
         ]
       },
-      "fingerprint": "e670ec3e288622dc07148cbb6ce34bc3be4046b915548f57e00d105665b39c4c"
+      "fingerprint": "33f58d2e0ca1b54ccc8dd21b263226dfd07e9a5e4f2c8c9041ec58ccf152c2d5"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2519,5 +2603,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "ae3ce0eb2e5fc52e58bcb7503dfe2a3daab10c629d66d3e0f633f05abaea473c"
+  "catalogFingerprint": "206996bc9081be6cd95424ac0717945cae0c95cae2235f79668990e5eedfa14c"
 }

@@ -596,14 +596,15 @@ actions:
                 effects:
                   - moveToken: { token: $cadresAgG, from: { zoneExpr: { ref: binding, name: targetSpace } }, to: { zoneExpr: 'available-VC:none' } }
     limits: []
+  # Batch redeploy: sourceSpace param for enumeration, but targetSpace removed
+  # (becomes chooseOne completion). No limit:1 — moves ALL matching tokens per invocation.
+  # Converts 75+ individual moves into ~10 (one per source zone).
   - id: coupArvnRedeployMandatory
     actor: active
     executor: 'actor'
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
-        domain: { query: mapSpaces }
-      - name: targetSpace
         domain: { query: mapSpaces }
     pre:
       op: and
@@ -661,50 +662,6 @@ actions:
                     - { prop: faction, op: in, value: ['US', 'ARVN'] }
                     - { prop: type, op: eq, value: base }
           right: 0
-        - op: or
-          args:
-            - op: and
-              args:
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                            - conditionMacro: fitl-space-without-nva-control
-                              args:
-                                spaceExpr: $zone
-                  right: 0
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: tokensInZone
-                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                    filter:
-                      op: and
-                      args:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, op: eq, value: base }
-              right: 0
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-              right: 0
     cost: []
     effects:
       - forEach:
@@ -717,12 +674,39 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: troops }
-          limit: 1
           effects:
+            - chooseOne:
+                bind: $destination
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - op: and
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  - { prop: type, op: eq, value: base }
+                        right: 0
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
-                to: { zoneExpr: { ref: binding, name: targetSpace } }
+                to: { zoneExpr: $destination }
     limits: []
   - id: coupArvnRedeployOptionalTroops
     actor: active
@@ -730,8 +714,6 @@ actions:
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
-        domain: { query: mapSpaces }
-      - name: targetSpace
         domain: { query: mapSpaces }
     pre:
       op: and
@@ -790,50 +772,6 @@ actions:
                     - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: eq, value: troops }
           right: 0
-        - op: or
-          args:
-            - op: and
-              args:
-                - op: '>'
-                  left:
-                    aggregate:
-                      op: count
-                      query:
-                        query: mapSpaces
-                        filter:
-                          op: and
-                          args:
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                            - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
-                            - conditionMacro: fitl-space-without-nva-control
-                              args:
-                                spaceExpr: $zone
-                  right: 0
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: tokensInZone
-                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                    filter:
-                      op: and
-                      args:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-                        - { prop: type, op: eq, value: base }
-              right: 0
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-              right: 0
     cost: []
     effects:
       - forEach:
@@ -846,12 +784,39 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: troops }
-          limit: 1
           effects:
+            - chooseOne:
+                bind: $destination
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - op: and
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: city }
+                          - conditionMacro: fitl-space-without-nva-control
+                            args:
+                              spaceExpr: $zone
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                  - { prop: type, op: eq, value: base }
+                        right: 0
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
-                to: { zoneExpr: { ref: binding, name: targetSpace } }
+                to: { zoneExpr: $destination }
     limits: []
   - id: coupArvnRedeployPolice
     actor: active
@@ -859,8 +824,6 @@ actions:
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
-        domain: { query: mapSpaces }
-      - name: targetSpace
         domain: { query: mapSpaces }
     pre:
       op: and
@@ -879,53 +842,6 @@ actions:
                     - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: eq, value: police }
           right: 0
-        - op: '>'
-          left:
-            aggregate:
-              op: count
-              query:
-                query: mapSpaces
-                filter:
-                  op: and
-                  args:
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
-          right: 0
-        - op: or
-          args:
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: mapSpaces
-                    filter:
-                      op: and
-                      args:
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: targetSpace } }
-                        - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
-              right: 0
-            - op: '>'
-              left:
-                aggregate:
-                  op: count
-                  query:
-                    query: tokensInZone
-                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                    filter:
-                      op: and
-                      args:
-                        - { prop: faction, op: in, value: ['US', 'ARVN'] }
-              right:
-                aggregate:
-                  op: count
-                  query:
-                    query: tokensInZone
-                    zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                    filter:
-                      op: and
-                      args:
-                        - { prop: faction, op: in, value: ['NVA', 'VC'] }
     cost: []
     effects:
       - forEach:
@@ -938,12 +854,40 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: police }
-          limit: 1
           effects:
+            - chooseOne:
+                bind: $destination
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - op: and
+                        args:
+                          - { op: '==', left: { ref: zoneProp, zone: $zone, prop: country }, right: southVietnam }
+                          - op: or
+                            args:
+                              - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: loc }
+                              - op: '>'
+                                left:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter: { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                right:
+                                  aggregate:
+                                    op: count
+                                    query:
+                                      query: tokensInZone
+                                      zone: $zone
+                                      filter: { prop: faction, op: in, value: ['NVA', 'VC'] }
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedPolice
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
-                to: { zoneExpr: { ref: binding, name: targetSpace } }
+                to: { zoneExpr: $destination }
     limits: []
   - id: coupNvaRedeployTroops
     actor: active
@@ -951,8 +895,6 @@ actions:
     phase: [coupRedeploy]
     params:
       - name: sourceSpace
-        domain: { query: mapSpaces }
-      - name: targetSpace
         domain: { query: mapSpaces }
     pre:
       op: and
@@ -971,19 +913,6 @@ actions:
                     - { prop: faction, op: eq, value: NVA }
                     - { prop: type, op: eq, value: troops }
           right: 0
-        - op: '>'
-          left:
-            aggregate:
-              op: count
-              query:
-                query: tokensInZone
-                zone: { zoneExpr: { ref: binding, name: targetSpace } }
-                filter:
-                  op: and
-                  args:
-                    - { prop: faction, op: eq, value: NVA }
-                    - { prop: type, op: eq, value: base }
-          right: 0
     cost: []
     effects:
       - forEach:
@@ -996,12 +925,32 @@ actions:
               args:
                 - { prop: faction, op: eq, value: NVA }
                 - { prop: type, op: eq, value: troops }
-          limit: 1
           effects:
+            - chooseOne:
+                bind: $destination
+                options:
+                  query: mapSpaces
+                  filter:
+                    op: or
+                    args:
+                      - op: '>'
+                        left:
+                          aggregate:
+                            op: count
+                            query:
+                              query: tokensInZone
+                              zone: $zone
+                              filter:
+                                op: and
+                                args:
+                                  - { prop: faction, op: eq, value: NVA }
+                                  - { prop: type, op: eq, value: base }
+                        right: 0
+                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
-                to: { zoneExpr: { ref: binding, name: targetSpace } }
+                to: { zoneExpr: $destination }
     limits: []
   - id: coupRedeployPass
     tags: [pass]

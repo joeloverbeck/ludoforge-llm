@@ -35,6 +35,12 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 **Draft artifact discipline**: If the active ticket or referenced series artifacts are untracked draft files, they can still define the session boundary. Call out the draft state explicitly in working notes, treat the active ticket as the authoritative contract for this session once reassessment is complete, and avoid broad sibling/spec edits unless the corrected boundary truly requires them.
 
+**Draft ticket quick path**:
+- Confirm explicitly when the active ticket or referenced spec is untracked/a draft.
+- Treat the active draft ticket as the session contract once reassessment is complete.
+- Distinguish stale draft wording from true boundary changes in working notes and final closeout.
+- Prefer correcting the active draft ticket outcome over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
+
 ### Phase 2: Reassess Assumptions
 
 **Artifact verification**
@@ -55,6 +61,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 7. Check constraints the ticket may have underspecified:
    - Shared type or schema ripple effects
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
+   - Same-package fallout for widened shared unions or contract families: grep local `switch` statements, discriminated-union helpers, and exhaustiveness guards before broad verification
    - When changing a shared function, callback, or callable type contract, grep both runtime callsites and the tests that own those callsites before broad verification.
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
@@ -130,6 +137,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Prefer minimal, architecture-consistent changes over local patches.
 - If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
 - When consolidating logic into a shared authority module, inspect the current import direction first and prefer helper placement that preserves an acyclic dependency graph.
+- When a ticket's named implementation file delegates the owned behavior through a deeper shared authority module, the minimum authority-module work required to make the named deliverable real is in-scope. Treat that as required completion fallout, then update any sibling ticket that previously claimed that absorbed slice so the active series boundary stays accurate.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
@@ -269,6 +277,7 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
    - In this repo, engine tests use `node --test`; for example, replace Jest-style name filtering with `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/<file>.test.js` when you need a focused built-test proof.
 7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
+8. **Post-clean reruns**: If a later authoritative command cleans shared build output (for example `dist`), a rerun of an earlier authoritative test lane may require rebuilding first. Treat the first post-clean module-resolution failure as an ordering issue unless the rebuilt rerun still fails.
 
 ### Build Ordering & Output Contention
 
@@ -295,6 +304,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 - **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
 - **Mechanical-refactor fallout**: After removing local aliases or helpers, scan the touched files for remaining references in type annotations, return types, overloads, test seams, and import lists before assuming a later `typecheck` failure is broader fallout.
 - **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
+- **Compiled-IR fixture drift**: For positive schema or contract tests covering compiled nodes, copy the shape from nearby live compiled examples, existing goldens, or current compiled fixtures rather than reconstructing it from authored syntax or spec pseudocode.
 - **Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
 - **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
 - **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level file failure without the nested assertion details, rerun the built module directly (for example `node dist/test/...`) or with a repo-approved verbose reporter path so the failing subtest output becomes visible before patching.

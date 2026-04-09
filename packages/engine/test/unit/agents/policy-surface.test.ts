@@ -4,10 +4,13 @@ import { describe, it } from 'node:test';
 import {
   parseAuthoredPolicySurfaceRef,
   getPolicySurfaceVisibility,
+  resolvePolicyRoleSelector,
 } from '../../../src/agents/policy-surface.js';
 import type {
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
+  GameDef,
+  GameState,
 } from '../../../src/kernel/index.js';
 
 const hiddenVis: CompiledSurfaceVisibility = {
@@ -176,6 +179,57 @@ describe('parseAuthoredPolicySurfaceRef', () => {
       assert.equal(result?.family, 'derivedMetric');
       assert.equal(result?.id, 'aggro');
     });
+
+    it('parses victory.currentMargin.$seat', () => {
+      const catalog = createCatalog();
+      const result = parseAuthoredPolicySurfaceRef(catalog, 'victory.currentMargin.$seat', 'current');
+      assert.deepStrictEqual(result, {
+        kind: 'currentSurface',
+        family: 'victoryCurrentMargin',
+        id: 'currentMargin',
+        selector: {
+          kind: 'role',
+          seatToken: '$seat',
+        },
+        visibility: hiddenVis,
+      });
+    });
+  });
+});
+
+describe('resolvePolicyRoleSelector', () => {
+  const def = {
+    seats: [
+      { id: 'us' },
+      { id: 'arvn' },
+      { id: 'nva' },
+    ],
+  } as unknown as GameDef;
+  const state = { activePlayer: 1 } as unknown as GameState;
+
+  it('returns the bound seat context for $seat', () => {
+    assert.equal(
+      resolvePolicyRoleSelector(def, state, { kind: 'role', seatToken: '$seat' }, 'us', 'nva'),
+      'nva',
+    );
+  });
+
+  it('returns undefined for $seat when no seat context is bound', () => {
+    assert.equal(
+      resolvePolicyRoleSelector(def, state, { kind: 'role', seatToken: '$seat' }, 'us'),
+      undefined,
+    );
+  });
+
+  it('still resolves self and active seat selectors', () => {
+    assert.equal(
+      resolvePolicyRoleSelector(def, state, { kind: 'role', seatToken: 'self' }, 'us'),
+      'us',
+    );
+    assert.equal(
+      resolvePolicyRoleSelector(def, state, { kind: 'role', seatToken: 'active' }, 'us'),
+      'arvn',
+    );
   });
 });
 

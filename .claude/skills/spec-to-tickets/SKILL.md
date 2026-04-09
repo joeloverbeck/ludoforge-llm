@@ -58,6 +58,7 @@ Analyze the spec and identify discrete work units. If the spec includes a Ticket
 - Determine **priority ordering** (what to implement first)
 - Ensure **every spec deliverable is covered** — no silent skipping. If a deliverable seems wrong or unnecessary, flag it to the user using the 1-3-1 rule instead of omitting it
 - Consider natural boundaries: type changes, new modules, test suites, integration points
+- **Spec-level dependencies**: Dependencies from the spec's Dependencies field go in the Deps field of the earliest ticket(s) that directly implement the dependency's deliverables. Downstream tickets depend transitively through the ticket chain — do not duplicate spec dependencies in every ticket
 - **Gate tickets**: For specs with profiling gates or conditional phases, create explicit gate tickets. Downstream tickets that depend on the gate's outcome use a plain backtick-quoted path in their Deps field (e.g., `` `tickets/FOO-003.md` ``) — do NOT append annotations like `(gate — close if profiling fails)` inside Deps, as `check:ticket-deps` only accepts pure file paths. Instead, note the gate condition in the downstream ticket's Problem or What to Change section: "**Gate condition**: Close this ticket if `tickets/FOO-003.md` profiling shows no measurable improvement." In the Step 7 dependency graph, annotate gate edges to distinguish them from hard dependencies (e.g., `003 (gate) → 004`)
 
 ### Step 4: Present Summary for Approval

@@ -787,6 +787,58 @@ describe('top-level runtime schemas', () => {
     assert.equal(dynamicAdjacentTokenAggResult.success, true);
   });
 
+  it('accepts compiled seatAgg expressions in agent policy catalogs', () => {
+    const keywordResult = GameDefSchema.safeParse(buildGameDefWithAgentExpr('maxOpponentMargin', {
+      kind: 'seatAgg',
+      over: 'opponents',
+      expr: {
+        kind: 'ref',
+        ref: {
+          kind: 'currentSurface',
+          family: 'victoryCurrentMargin',
+          id: 'currentMargin',
+          selector: { kind: 'role', seatToken: '$seat' },
+        },
+      },
+      aggOp: 'max',
+    }));
+    const explicitListResult = GameDefSchema.safeParse(buildGameDefWithAgentExpr('trackedMargins', {
+      kind: 'seatAgg',
+      over: ['us', 'arvn'],
+      expr: {
+        kind: 'literal',
+        value: 1,
+      },
+      aggOp: 'sum',
+    }));
+
+    assert.equal(keywordResult.success, true);
+    assert.equal(explicitListResult.success, true);
+  });
+
+  it('rejects malformed compiled seatAgg expressions in agent policy catalogs', () => {
+    const missingAggOp = GameDefSchema.safeParse(buildGameDefWithAgentExpr('missingAggOp', {
+      kind: 'seatAgg',
+      over: 'all',
+      expr: {
+        kind: 'literal',
+        value: 1,
+      },
+    }));
+    const invalidOver = GameDefSchema.safeParse(buildGameDefWithAgentExpr('invalidOver', {
+      kind: 'seatAgg',
+      over: 7,
+      expr: {
+        kind: 'literal',
+        value: 1,
+      },
+      aggOp: 'count',
+    }));
+
+    assert.equal(missingAggOp.success, false);
+    assert.equal(invalidOver.success, false);
+  });
+
   it('rejects compiled aggregation expressions with non-canonical scope, source, or filter operators', () => {
     const invalidScope = GameDefSchema.safeParse(buildGameDefWithAgentExpr('invalidScope', {
       kind: 'globalTokenAgg',

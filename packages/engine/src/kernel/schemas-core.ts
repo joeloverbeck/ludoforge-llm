@@ -818,6 +818,16 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
       prop: StringSchema.optional(),
     }).strict(),
     z.object({
+      kind: z.literal('seatAgg'),
+      over: z.union([
+        z.literal('opponents'),
+        z.literal('all'),
+        z.array(StringSchema).readonly(),
+      ]),
+      expr: AgentPolicyExprSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
       kind: z.literal('zoneProp'),
       zone: z.union([StringSchema, AgentPolicyExprSchema]),
       prop: StringSchema,

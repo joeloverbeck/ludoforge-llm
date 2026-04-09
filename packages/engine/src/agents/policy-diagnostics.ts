@@ -331,6 +331,10 @@ function walkExpr(expr: AgentPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef)
     visitRef(expr.ref);
     return;
   }
+  if (expr.kind === 'seatAgg') {
+    walkExpr(expr.expr, visitRef);
+    return;
+  }
   if (expr.kind === 'op') {
     for (const arg of expr.args) {
       walkExpr(arg, visitRef);

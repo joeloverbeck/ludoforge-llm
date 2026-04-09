@@ -40,6 +40,8 @@ export interface ResolvedPolicyRef {
 
 export interface AnalyzePolicyExprContext {
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
+  readonly referenceSeatIds?: readonly string[];
+  readonly withinSeatAggExpr?: boolean;
   resolveRef(refPath: string, path: string): ResolvedPolicyRef | null;
 }
 
@@ -80,6 +82,7 @@ type KnownOperator =
   | 'globalTokenAgg'
   | 'globalZoneAgg'
   | 'adjacentTokenAgg'
+  | 'seatAgg'
   | 'zoneProp'
   | 'zoneTokenAgg';
 
@@ -112,6 +115,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'globalTokenAgg',
   'globalZoneAgg',
   'adjacentTokenAgg',
+  'seatAgg',
   'zoneProp',
   'zoneTokenAgg',
 ]);
@@ -231,6 +235,8 @@ export function analyzePolicyExpr(
       return analyzeGlobalZoneAggOperator(value, diagnostics, path);
     case 'adjacentTokenAgg':
       return analyzeAdjacentTokenAggOperator(value, context, diagnostics, path);
+    case 'seatAgg':
+      return analyzeSeatAggOperator(value, context, diagnostics, path);
     case 'zoneTokenAgg':
       return analyzeZoneTokenAggOperator(value, context, diagnostics, path);
   }
@@ -297,6 +303,16 @@ function analyzeRefExpr(
       severity: 'error',
       message: `Nested preview refs are not allowed in policy expressions ("${expr}").`,
       suggestion: 'Use at most one preview prefix and derive any extra value through named features.',
+    });
+    return null;
+  }
+  if (containsSeatPlaceholder(expr) && context.withinSeatAggExpr !== true) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: '$seat placeholder can only be used within seatAgg.expr.',
+      suggestion: 'Move the ref into a seatAgg inner expression or replace $seat with a concrete seat token.',
     });
     return null;
   }
@@ -1249,6 +1265,164 @@ function analyzeAdjacentTokenAggOperator(
     dependencies: zoneSource.zoneAnalysis?.dependencies ?? emptyDependencies(),
     isStaticallyZero: false,
   };
+}
+
+function analyzeSeatAggOperator(
+  expr: GameSpecPolicyExpr,
+  context: AnalyzePolicyExprContext,
+  diagnostics: Diagnostic[],
+  path: string,
+): PolicyExprAnalysis | null {
+  if (typeof expr !== 'object' || expr === null || Array.isArray(expr)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'seatAgg requires an object with over, expr, and aggOp fields.',
+      suggestion: 'Use { seatAgg: { over: "opponents", expr: { ref: "victory.currentMargin.$seat" }, aggOp: "max" } }.',
+    });
+    return null;
+  }
+
+  const obj = expr as Readonly<Record<string, unknown>>;
+  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp'], diagnostics, `${path}.seatAgg`)) {
+    return null;
+  }
+  const over = analyzeSeatAggOver(obj['over'], context.referenceSeatIds, diagnostics, `${path}.seatAgg.over`);
+  const aggOp = obj['aggOp'];
+  const innerExpr = analyzePolicyExpr(
+    obj['expr'] as GameSpecPolicyExpr,
+    { ...context, withinSeatAggExpr: true },
+    diagnostics,
+    `${path}.seatAgg.expr`,
+  );
+
+  if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.seatAgg.aggOp`,
+      severity: 'error',
+      message: `seatAgg.aggOp must be one of: ${AGENT_POLICY_ZONE_TOKEN_AGG_OPS.join(', ')}.`,
+      suggestion: 'Use "sum", "count", "min", or "max".',
+    });
+    return null;
+  }
+
+  if (over === null || innerExpr === null) {
+    return null;
+  }
+
+  if (!matchesType(innerExpr.valueType, 'number')) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
+      path,
+      severity: 'error',
+      message: 'seatAgg requires a numeric inner expression.',
+      suggestion: 'Use a number-valued expression inside seatAgg.expr.',
+    });
+    return null;
+  }
+
+  return {
+    expr: {
+      kind: 'seatAgg',
+      over,
+      expr: innerExpr.expr,
+      aggOp,
+    },
+    valueType: 'number',
+    costClass: innerExpr.costClass,
+    dependencies: innerExpr.dependencies,
+    isStaticallyZero: aggOp === 'sum' && innerExpr.isStaticallyZero,
+  };
+}
+
+function analyzeSeatAggOver(
+  over: unknown,
+  referenceSeatIds: readonly string[] | undefined,
+  diagnostics: Diagnostic[],
+  path: string,
+): 'opponents' | 'all' | readonly string[] | null {
+  if (referenceSeatIds === undefined || referenceSeatIds.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'seatAgg requires GameDef.seats to be defined.',
+      suggestion: 'Add or select a seatCatalog data asset so canonical seat ids resolve before compiling seatAgg.',
+    });
+    return null;
+  }
+
+  if (over === 'opponents' || over === 'all') {
+    return over;
+  }
+
+  if (!Array.isArray(over) || over.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'seatAgg.over must be "opponents", "all", or a non-empty array of canonical seat ids.',
+      suggestion: `Use "opponents", "all", or one of the resolved canonical seat ids: ${referenceSeatIds.join(', ')}.`,
+    });
+    return null;
+  }
+
+  const knownSeatIds = new Set(referenceSeatIds);
+  const normalized: string[] = [];
+  for (const [index, seatId] of over.entries()) {
+    if (typeof seatId !== 'string' || seatId.length === 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: 'seatAgg.over entries must be non-empty canonical seat id strings.',
+        suggestion: `Use one of the resolved canonical seat ids: ${referenceSeatIds.join(', ')}.`,
+      });
+      return null;
+    }
+    if (!knownSeatIds.has(seatId)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: `seatAgg.over references unknown seat "${seatId}".`,
+        suggestion: `Use one of the resolved canonical seat ids: ${referenceSeatIds.join(', ')}.`,
+      });
+      return null;
+    }
+    normalized.push(seatId);
+  }
+
+  return normalized;
+}
+
+function containsSeatPlaceholder(refPath: string): boolean {
+  return refPath.split('.').includes('$seat');
+}
+
+function validateAllowedObjectKeys(
+  obj: Readonly<Record<string, unknown>>,
+  allowedKeys: readonly string[],
+  diagnostics: Diagnostic[],
+  path: string,
+): boolean {
+  const allowed = new Set(allowedKeys);
+  let valid = true;
+  for (const key of Object.keys(obj)) {
+    if (!allowed.has(key)) {
+      valid = false;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${key}`,
+        severity: 'error',
+        message: `Unsupported key "${key}" in ${path.split('.').at(-1)} expression.`,
+        suggestion: `Use only: ${allowedKeys.join(', ')}.`,
+      });
+    }
+  }
+  return valid;
 }
 
 function analyzeGlobalTokenAggTokenFilter(

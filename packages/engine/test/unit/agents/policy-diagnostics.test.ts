@@ -277,4 +277,112 @@ describe('policy-diagnostics', () => {
 
     assert.deepEqual(snapshot.surfaceRefs.preview, ['feature.vcGuerrillaCount']);
   });
+
+  it('includes nested seatAgg refs in diagnostic surface reporting', () => {
+    const metadata = createMetadata();
+    const def: GameDef = {
+      metadata: { id: 'policy-diagnostics-seat-agg', players: { min: 2, max: 2 } },
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [],
+      derivedMetrics: [],
+      seats: [{ id: 'us' }, { id: 'arvn' }],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: { phases: [{ id: 'main' as never }] },
+      agents: {
+        schemaVersion: 2,
+        catalogFingerprint: 'seat-agg-catalog',
+        surfaceVisibility: {
+          globalVars: {},
+          globalMarkers: {},
+          perPlayerVars: {},
+          derivedMetrics: {},
+          victory: {
+            currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+            currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          },
+          activeCardIdentity: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardTag: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardMetadata: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+          activeCardAnnotation: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
+        },
+        parameterDefs: {},
+        candidateParamDefs: {},
+        library: {
+          stateFeatures: {
+            maxOpponentMargin: {
+              type: 'number',
+              costClass: 'state',
+              expr: {
+                kind: 'seatAgg',
+                over: 'opponents',
+                expr: {
+                  kind: 'ref',
+                  ref: {
+                    kind: 'currentSurface',
+                    family: 'victoryCurrentMargin',
+                    id: 'currentMargin',
+                    selector: { kind: 'role', seatToken: '$seat' },
+                  },
+                },
+                aggOp: 'max',
+              },
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+            projectedThreat: {
+              type: 'number',
+              costClass: 'preview',
+              expr: {
+                kind: 'seatAgg',
+                over: 'opponents',
+                expr: {
+                  kind: 'ref',
+                  ref: {
+                    kind: 'previewSurface',
+                    family: 'victoryCurrentMargin',
+                    id: 'currentMargin',
+                    selector: { kind: 'role', seatToken: '$seat' },
+                  },
+                },
+                aggOp: 'max',
+              },
+              dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+            },
+          },
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          considerations: {},
+          tieBreakers: {},
+          strategicConditions: {},
+        },
+        profiles: {
+          baseline: {
+            fingerprint: 'baseline',
+            params: {},
+            preview: { mode: 'exactWorld' },
+            selection: { mode: 'argmax' },
+            use: { pruningRules: [], considerations: [], tieBreakers: [] },
+            plan: {
+              stateFeatures: ['maxOpponentMargin', 'projectedThreat'],
+              candidateFeatures: [],
+              candidateAggregates: [],
+              considerations: [],
+            },
+          },
+        },
+        bindingsBySeat: { us: 'baseline', arvn: 'baseline' },
+      },
+      actions: [],
+      triggers: [],
+      terminal: { conditions: [] },
+    };
+
+    const snapshot = buildPolicyDiagnosticsSnapshot(def, metadata, 'verbose');
+
+    assert.deepEqual(snapshot.surfaceRefs.current, ['victoryCurrentMargin.currentMargin.$seat']);
+    assert.deepEqual(snapshot.surfaceRefs.preview, ['victoryCurrentMargin.currentMargin.$seat']);
+  });
 });

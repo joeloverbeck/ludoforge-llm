@@ -69,6 +69,7 @@ export interface PolicyPreviewRuntime {
   resolveSurface(
     candidate: PolicyPreviewCandidate,
     ref: CompiledPreviewSurfaceRef,
+    seatContext?: string,
   ): PolicyPreviewSurfaceResolution;
   getPreviewState(candidate: PolicyPreviewCandidate): GameState | undefined;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
@@ -140,7 +141,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
 
   return {
-    resolveSurface(candidate, ref) {
+    resolveSurface(candidate, ref, seatContext) {
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready' && preview.kind !== 'stochastic') {
         return preview;
@@ -154,7 +155,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         : undefined;
       const resolvedSeatId = ref.selector?.kind !== 'role'
         ? undefined
-        : resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId);
+        : resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
       if (!isSurfaceVisibilityAccessible(
         visibility.preview.visibility,
         input.seatId,
@@ -188,18 +189,22 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         if (ref.selector?.kind !== 'role') {
           return { kind: 'unavailable' };
         }
-        const value = getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(
-          resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId),
-        );
+        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
+        if (targetSeatId === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const value = getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(targetSeatId);
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'victoryCurrentRank') {
         if (ref.selector?.kind !== 'role') {
           return { kind: 'unavailable' };
         }
-        const value = getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(
-          resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId),
-        );
+        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
+        if (targetSeatId === undefined) {
+          return { kind: 'unavailable' };
+        }
+        const value = getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(targetSeatId);
         return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
       }
       if (ref.family === 'activeCardAnnotation') {
@@ -422,9 +427,13 @@ function resolvePerPlayerTargetIndex(
   if (ref.family !== 'perPlayerVar' || ref.selector === undefined) {
     return undefined;
   }
-  return ref.selector.kind === 'player'
-    ? (ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer))
-    : resolvePlayerIndexForSeatValue(resolvePolicyRoleSelector(def, state, ref.selector, seatId), seatResolutionIndex) ?? undefined;
+  if (ref.selector.kind === 'player') {
+    return ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer);
+  }
+  const resolvedSeatId = resolvePolicyRoleSelector(def, state, ref.selector, seatId);
+  return resolvedSeatId === undefined
+    ? undefined
+    : resolvePlayerIndexForSeatValue(resolvedSeatId, seatResolutionIndex) ?? undefined;
 }
 
 function resolveActiveCardEntryFromState(

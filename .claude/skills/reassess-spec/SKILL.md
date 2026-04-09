@@ -72,6 +72,8 @@ For specs with many references (>5 types/functions/paths), use up to 2 Explore a
 
 After the Explore agent returns, you may need to read specific files in full to understand control flow or logic that the agent's summary-level output doesn't capture. This is expected — the agent handles breadth (types, signatures, blast radius), you handle depth (code flow, pseudocode accuracy, insertion points).
 
+After Explore agents return, verify spec/ticket dependencies separately if not covered by agent prompts — a quick glob for each dependency path (`specs/<id>*`, `archive/specs/<id>*`) is sufficient. This check is easy to overlook when drafting agent prompts focused on types and blast radius.
+
 Do not present findings yet. Collect everything for Step 3.
 
 ### Step 3: FOUNDATIONS.md Alignment Check
@@ -151,7 +153,7 @@ Present all findings to the user in a structured report:
 
 If the user's answers raise new questions or invalidate previous findings, present a follow-up round (same format, same question limit). Repeat until all findings are resolved.
 
-If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. If the recommendation does not expand the spec's scope (e.g., it only adds a clarifying note or corrects a factual claim), treat it as approved immediately without blast radius re-assessment. If the recommendation expands the spec's scope (e.g., adding a prerequisite refactor justified by Foundation 15), re-assess the blast radius for the expanded scope before treating the recommendation as approved — add any newly-affected files to the findings. Scale the analysis depth to the question type:
+If the user defers a decision back to you (e.g., "you decide", "reassess based on FOUNDATIONS"), first validate any additional context the user provided with their deferral (e.g., facts about how other games use the system, claims about existing architecture) against the codebase using read-only tools — the FOUNDATIONS recommendation is only as sound as the facts it's based on. Then analyze the question against `docs/FOUNDATIONS.md` principles, present your recommendation with the specific Foundation justification, and treat it as approved unless the user objects. If the recommendation does not expand the spec's scope (e.g., it only adds a clarifying note or corrects a factual claim), treat it as approved immediately without blast radius re-assessment. If the recommendation expands the spec's scope (e.g., adding a prerequisite refactor justified by Foundation 15), re-assess the blast radius for the expanded scope before treating the recommendation as approved — add any newly-affected files to the findings. Scale the analysis depth to the question type:
 - **Simple factual questions**: A one-line Foundation reference suffices.
 - **Design questions with a clear FOUNDATIONS answer**: Provide a focused paragraph — state the recommendation, cite the Foundation(s), and briefly explain the implementation consequence. Do not enumerate alternatives.
 - **Architectural questions with multiple viable alternatives**: Provide a brief comparison of alternatives against FOUNDATIONS.md principles before presenting the recommendation.

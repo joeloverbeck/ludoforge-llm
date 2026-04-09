@@ -1578,6 +1578,7 @@ class AgentLibraryCompiler {
   private createExprContext(scope: LibraryRefScope): AnalyzePolicyExprContext {
     return {
       parameterDefs: this.parameterDefs,
+      ...(this.options.referenceSeatIds === undefined ? {} : { referenceSeatIds: this.options.referenceSeatIds }),
       resolveRef: (refPath: string, path: string) => this.resolveRef(scope, refPath, path),
     };
   }
@@ -1961,7 +1962,7 @@ class AgentLibraryCompiler {
   }
 
   private isKnownSeatToken(seatToken: string, path: string, refPath: string): boolean {
-    if (seatToken === 'self' || seatToken === 'active') {
+    if (seatToken === 'self' || seatToken === 'active' || seatToken === '$seat') {
       return true;
     }
     if (this.options.referenceSeatIds === undefined) {

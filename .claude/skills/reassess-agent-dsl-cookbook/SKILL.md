@@ -29,12 +29,15 @@ Read ALL of these files:
    - `packages/engine/src/agents/policy-surface.ts` — reference path families (`var.*`, `victory.*`, `activeCard.*`, `metric.*`)
    - `packages/engine/src/contracts/policy-contract.ts` — valid enums (owner keywords, filter ops, zone scopes, aggregate ops, intrinsic names)
    - `packages/engine/src/cnl/compile-agents.ts` — intrinsic resolution (`candidate.*`, `decision.*`, `turn.*`, `seat.*`, `feature.*`, `aggregate.*`, `option.*`, `context.*`)
+   - `packages/engine/src/agents/policy-evaluation-core.ts` — runtime operator implementations (arithmetic semantics, aggregation reduction, comparison behavior)
 
 If any source file does not exist at the expected path, search for it (it may have been moved). Report the new location.
 
+**Note**: These files may exceed single-read limits. Use offset/limit to read in chunks, focusing on the extraction targets listed in Step 2.
+
 ### Step 2: Extract DSL Truth from Source
 
-From each source file, extract the complete set of DSL capabilities. For efficiency, use an Explore agent to extract DSL truth from all 4 source files in a single pass — provide the file paths and extraction targets in the agent prompt. The source files are large (1000-2000+ lines each) and parallel extraction is significantly faster than sequential inline reads.
+From each source file, extract the complete set of DSL capabilities. Read files directly, using offset/limit for large files (>500 lines) and focusing on the extraction targets below. An Explore agent is an alternative when source files are very large or their structure is unknown, but direct reads produce higher-fidelity extraction of exact enum values and operator names.
 
 **From `policy-expr.ts`:**
 - All values in `KnownOperator` type/set — these are every expression operator the DSL supports
@@ -59,6 +62,10 @@ From each source file, extract the complete set of DSL capabilities. For efficie
 - All candidate aggregate operators (`any`, `all`, `count`, `min`, `max`, `rankDense`, `rankOrdinal`)
 - Selection modes (`argmax`, `softmaxSample`, `weightedSample`)
 - Preview modes (`disabled`, `tolerateStochastic`, `exactWorld`)
+
+**From `policy-evaluation-core.ts`:**
+- Runtime operator semantics — verify cookbook descriptions match actual behavior (e.g., `div` is float division not integer, `sub` argument order, aggregation reduction logic)
+- Focus on arithmetic operators (`add`, `sub`, `mul`, `div`, `neg`, `abs`, `clamp`) and aggregation operators (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`)
 
 ### Step 3: Compare Cookbook Against Source
 
@@ -99,12 +106,12 @@ Present findings in this structure:
 1. **<item>** — exists in <source file>:<line>, not in cookbook. Usage: <what it does>.
 
 ### Stale or Incorrect
-[List each stale/incorrect entry]
-1. **<item>** — cookbook says <X>, source says <Y>. Fix: <correction>.
+[List each stale/incorrect entry with severity: CRITICAL (compilation-breaking), HIGH (incorrect behavior), MEDIUM (misleading), LOW (cosmetic)]
+1. **[SEVERITY] <item>** — cookbook says <X>, source says <Y>. Fix: <correction>.
 
 ### Quality Gaps
-[List quality improvements needed]
-1. **<gap>** — <what's missing and why it matters for LLM agent evolution>.
+[List quality improvements needed with severity]
+1. **[SEVERITY] <gap>** — <what's missing and why it matters for LLM agent evolution>.
 
 ### Proposed Changes
 N additions, N corrections, N quality improvements:

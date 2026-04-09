@@ -1,6 +1,6 @@
 # 120WIDCOMEXP-005: Unified per-expression compilation cache
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/`
@@ -33,7 +33,6 @@ Create `packages/engine/src/kernel/compiled-condition-expr-cache.ts` (or a suita
 
 - A module-level `WeakMap<ConditionAST, CompiledConditionPredicate | null>`
 - An exported `getCompiledCondition(cond: ConditionAST): CompiledConditionPredicate | null` function that:
-- An exported `getCompiledCondition(cond: ConditionAST): CompiledConditionPredicate | null` function that:
   - Returns the cached value if the key exists (including `null` for non-compilable)
   - Otherwise calls `tryCompileCondition(cond)`, stores the result, and returns it
 - No eager compilation pass — lazy population only
@@ -58,8 +57,9 @@ Add the new cache accessor to `packages/engine/src/kernel/index.ts` exports so a
 ## Files to Touch
 
 - `packages/engine/src/kernel/compiled-condition-expr-cache.ts` (new)
+- `packages/engine/src/kernel/compiled-condition-cache.ts` (modify — route existing pipeline cache through the shared per-expression accessor)
 - `packages/engine/src/kernel/index.ts` (modify — add export)
-- `packages/engine/test/kernel/compiled-condition-expr-cache.test.ts` (new)
+- `packages/engine/test/unit/kernel/compiled-condition-expr-cache.test.ts` (new)
 
 ## Out of Scope
 
@@ -87,9 +87,25 @@ Add the new cache accessor to `packages/engine/src/kernel/index.ts` exports so a
 
 ### New/Modified Tests
 
-1. `packages/engine/test/kernel/compiled-condition-expr-cache.test.ts` — cache behavior tests (hit, miss, null sentinel, referential equality)
+1. `packages/engine/test/unit/kernel/compiled-condition-expr-cache.test.ts` — cache behavior tests (hit, miss, null sentinel, referential equality)
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test -- --test-name-pattern="compiled-condition-expr-cache"`
-2. `pnpm turbo test`
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compiled-condition-expr-cache.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-09
+- Added `compiled-condition-expr-cache.ts` with a `WeakMap`-backed `getCompiledCondition(...)` accessor that caches both compiled predicates and `null` sentinel misses by `ConditionAST` identity.
+- Routed `compiled-condition-cache.ts` through the new per-expression accessor so pipeline predicate compilation reuses the same memoized condition-level cache instead of compiling through a separate path.
+- Exported the new accessor from `packages/engine/src/kernel/index.ts` for downstream application-site work in ticket `120WIDCOMEXP-006`.
+- Added `compiled-condition-expr-cache.test.ts` covering compilable hits, non-compilable `null`, referential cache hits, and cached `null` reuse without recompilation.
+- Deviation from original plan: no per-expression value-expression cache was added. Review of the implemented boundary showed the condition-level cache already memoizes the full tree and this ticket provided no concrete profiling evidence that a second cache was needed.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/compiled-condition-expr-cache.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`

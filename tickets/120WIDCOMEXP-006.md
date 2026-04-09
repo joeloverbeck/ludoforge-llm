@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/` (multiple files)
-**Deps**: `tickets/120WIDCOMEXP-005.md`
+**Deps**: `archive/tickets/120WIDCOMEXP-005.md`
 
 ## Problem
 

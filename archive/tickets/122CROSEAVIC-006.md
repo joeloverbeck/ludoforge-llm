@@ -1,6 +1,6 @@
 # 122CROSEAVIC-006: Add `seatAgg` diagnostic formatting
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agents/policy-expr, agents/policy-diagnostics
@@ -66,3 +66,22 @@ Test cases:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-09
+
+Implemented the remaining live diagnostics support for `seatAgg` in `packages/engine/src/agents/policy-diagnostics.ts`. The diagnostics snapshot walker now descends into `seatAgg.expr`, so nested current-surface and preview-surface refs such as `victory.currentMargin.$seat` are collected and exposed through `surfaceRefs` instead of being silently omitted from policy diagnostics.
+
+Added unit coverage in `packages/engine/test/unit/agents/policy-diagnostics.test.ts` proving that diagnostics snapshots include nested `seatAgg` refs for both current and preview victory-margin surfaces.
+
+Ticket premise note: the live diagnostics owner was slightly narrower than the ticket wording implied. `policy-diagnostics.ts` does not currently expose a general expression pretty-printer for policy AST nodes; the concrete missing behavior was nested ref discovery for diagnostics snapshots. This ticket implemented that live owned gap without changing compiler/runtime semantics.
+
+Schema/artifact ripple check: no schema or generated artifact surfaces changed in this ticket. `schema:artifacts:check` ran as part of the engine test lane and stayed clean.
+
+Verification completed with:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node packages/engine/dist/test/unit/agents/policy-diagnostics.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo typecheck`

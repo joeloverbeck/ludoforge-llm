@@ -543,23 +543,6 @@ function traceSeedDecision(seed: number, targetPly: number) {
   assert.fail(`Expected to reach seed ${seed} ply ${targetPly}`);
 }
 
-function projectedSelfMarginContribution(candidate: {
-  readonly stableMoveKey: string;
-  readonly scoreContributions?: readonly {
-    readonly termId: string;
-    readonly contribution: number;
-  }[];
-}): number {
-  const scoreContributions = candidate.scoreContributions;
-  if (scoreContributions === undefined) {
-    assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
-  }
-  const contribution = scoreContributions.find((entry) =>
-    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
-  );
-  assert.notEqual(contribution, undefined, `expected margin contribution (preferProjectedSelfMargin or preferNormalizedMargin) for ${candidate.stableMoveKey}`);
-  return contribution!.contribution;
-}
 
 function duplicateKeyCount(keys: readonly string[]): number {
   return keys.length - new Set(keys).size;

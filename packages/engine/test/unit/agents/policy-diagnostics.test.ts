@@ -164,8 +164,9 @@ describe('policy-diagnostics', () => {
   });
 
   it('omits phase fields when metadata does not provide them', () => {
-    const { phase1Score: _phase1Score, phase2Score: _phase2Score, phase1ActionRanking: _phase1ActionRanking, ...metadata } =
-      createMetadata();
+    const full = createMetadata();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { phase1Score, phase2Score, phase1ActionRanking, ...metadata } = full;
 
     const trace = buildPolicyAgentDecisionTrace(metadata, 'summary');
 

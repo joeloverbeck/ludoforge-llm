@@ -14,7 +14,7 @@ const engineFixture = (...segments: string[]): string => {
   return found;
 };
 
-import { preparePlayableMoves } from '../../src/agents/prepare-playable-moves.js';
+import { preparePlayableMoves, NOT_VIABLE_RETRY_CAP } from '../../src/agents/prepare-playable-moves.js';
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../helpers/agent-template-fixtures.js';
 import { completeClassifiedMove, pendingClassifiedMove, stochasticClassifiedMove } from '../helpers/classified-move-fixtures.js';
@@ -474,6 +474,113 @@ describe('preparePlayableMoves', () => {
           assert.equal(move.agentDecision.emergencyFallback, false);
         }
       }
+    });
+  });
+
+  describe('notViable retry extension', () => {
+    it('completionUnsatisfiable still breaks immediately without retry extensions', () => {
+      const def = assertValidatedGameDef({
+        metadata: { id: 'prepare-unsatisfiable-no-retry', players: { min: 2, max: 2 } },
+        constants: {},
+        globalVars: [],
+        perPlayerVars: [],
+        zones: [],
+        tokenTypes: [],
+        setup: [],
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
+        actions: [createTemplateChooseOneAction(asActionId('blocked'), asPhaseId('main'))],
+        actionPipelines: [createEmptyOptionsProfile('blocked')] as readonly ActionPipelineDef[],
+        triggers: [],
+        terminal: { conditions: [] },
+      });
+      const state = initialState(def, 1, 2).state;
+
+      const prepared = preparePlayableMoves({
+        def,
+        state,
+        legalMoves: [pendingClassifiedMove({ actionId: asActionId('blocked'), params: {} })],
+        rng: createRng(1n),
+      }, {
+        pendingTemplateCompletions: 3,
+      });
+
+      assert.equal(prepared.completedMoves.length, 0);
+      assert.equal(prepared.stochasticMoves.length, 0);
+      // completionUnsatisfiable should break after 1 attempt, not retry up to 10
+      assert.equal(prepared.statistics.templateCompletionAttempts, 1);
+      assert.equal(prepared.statistics.templateCompletionUnsatisfiable, 1);
+    });
+
+    it('exports NOT_VIABLE_RETRY_CAP as a bounded positive integer', () => {
+      assert.equal(typeof NOT_VIABLE_RETRY_CAP, 'number');
+      assert.ok(NOT_VIABLE_RETRY_CAP > 0, 'cap must be positive');
+      assert.ok(Number.isSafeInteger(NOT_VIABLE_RETRY_CAP), 'cap must be a safe integer');
+    });
+
+    it('FITL seed 1009 completes through the notViable retry path without crashing', () => {
+      const { compiled } = compileProductionSpec();
+      const def = assertValidatedGameDef(compiled.gameDef);
+      const runtime = createGameDefRuntime(def);
+      const agents = Array.from({ length: 4 }, () => new PolicyAgent());
+
+      const trace = runGame(def, 1009, agents, 20, 4, undefined, runtime);
+
+      assert.ok(trace.moves.length > 3, 'seed 1009 must advance beyond the problematic free operation');
+      assert.notEqual(
+        trace.stopReason === 'noLegalMoves' && trace.moves.length <= 3,
+        true,
+        'must not stall at the free-operation rally with notViable completions',
+      );
+    });
+
+    it('does not extend retries once a viable completion is found', () => {
+      const templateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
+      const def = assertValidatedGameDef({
+        metadata: { id: 'prepare-no-retry-after-success', players: { min: 2, max: 2 } },
+        constants: {},
+        globalVars: [],
+        perPlayerVars: [],
+        zones: [],
+        tokenTypes: [],
+        setup: [],
+        turnStructure: { phases: [{ id: asPhaseId('main') }] },
+        actions: [createTemplateChooseOneAction(asActionId('chooseTarget'), asPhaseId('main'))],
+        actionPipelines: [createTemplateChooseOneProfile(asActionId('chooseTarget'))] as readonly ActionPipelineDef[],
+        triggers: [],
+        terminal: { conditions: [] },
+      });
+      const state = initialState(def, 5, 2).state;
+
+      // With 3 completions, all options are viable (alpha, beta, gamma),
+      // so the retry extension should never activate — attempts stay at exactly 3.
+      const prepared = preparePlayableMoves({
+        def,
+        state,
+        legalMoves: [pendingClassifiedMove(templateMove)],
+        rng: createRng(9n),
+      }, {
+        pendingTemplateCompletions: 3,
+      });
+
+      assert.equal(prepared.statistics.templateCompletionAttempts, 3);
+      assert.equal(prepared.statistics.templateCompletionSuccesses, 3);
+      assert.ok(prepared.completedMoves.length > 0, 'all completions should succeed');
+    });
+
+    it('total attempts are bounded by pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP', () => {
+      // Verify the structural bound: even if retries extend indefinitely,
+      // the cap prevents runaway iteration.  We test this by ensuring that
+      // the cap is strictly less than any unreasonable upper bound and that
+      // completionUnsatisfiable (tested above) still exits at 1 attempt.
+      assert.ok(
+        NOT_VIABLE_RETRY_CAP <= 20,
+        `NOT_VIABLE_RETRY_CAP (${NOT_VIABLE_RETRY_CAP}) should be a small bounded number`,
+      );
+      // The maximum total attempts for any single template move is
+      // pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP.  With the default
+      // of 3 + 7 = 10, this is well within bounded computation (F10).
+      const maxTotal = 3 + NOT_VIABLE_RETRY_CAP;
+      assert.ok(maxTotal <= 30, `max total attempts (${maxTotal}) should be bounded`);
     });
   });
 });

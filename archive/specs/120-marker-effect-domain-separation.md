@@ -1,6 +1,6 @@
 # Spec 120: Marker Effect Domain Separation
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P3 (quality/maintainability)
 **Complexity**: M
 **Dependencies**: None
@@ -125,3 +125,10 @@ None required. This is a move-only refactoring. All existing tests that exercise
 2. `pnpm turbo test --force` (full fresh test run)
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Completion date: 2026-04-09
+- What actually changed: marker lattice helpers and marker mutation effects were extracted from [packages/engine/src/kernel/effects-choice.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/effects-choice.ts) into [packages/engine/src/kernel/effects-markers.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/effects-markers.ts), and [packages/engine/src/kernel/effect-registry.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/effect-registry.ts) plus [packages/engine/src/kernel/effect-compiler-codegen.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/effect-compiler-codegen.ts) were updated to import marker effects from the new module.
+- Deviations from original plan: none identified from the landed implementation.
+- Verification results: current code inspection confirms marker effect exports live in [packages/engine/src/kernel/effects-markers.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/src/kernel/effects-markers.ts) and registry/codegen imports point to that module; commit `68498669` records the implementation.

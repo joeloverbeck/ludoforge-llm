@@ -1,6 +1,8 @@
 import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
 import { getCompiledTokenFilter } from './compiled-token-filter-cache.js';
+import type { ReadContext } from './eval-context.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
+import { resolvePredicateValue } from './predicate-value-resolution.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
 import { foldTokenFilterExpr } from './token-filter-expr-utils.js';
 import { mapTokenFilterTraversalToTypeMismatch } from './token-filter-runtime-boundary.js';
@@ -18,6 +20,20 @@ export type TokenFilterFieldResolver = (
 function isTokenFilterScalar(value: unknown): value is TokenFilterScalar {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
+
+const tokenFilterExprRequiresContext = (expr: TokenFilterExpr): boolean => {
+  if ('value' in expr) {
+    return !Array.isArray(expr.value)
+      && (typeof expr.value !== 'string' && typeof expr.value !== 'number' && typeof expr.value !== 'boolean');
+  }
+  if (expr.op === 'not') {
+    return expr.arg !== undefined && tokenFilterExprRequiresContext(expr.arg);
+  }
+  if (expr.op !== 'and' && expr.op !== 'or') {
+    return false;
+  }
+  return Array.isArray(expr.args) && expr.args.some(tokenFilterExprRequiresContext);
+};
 
 export function resolveLiteralTokenFilterValue(value: TokenFilterPredicate['value']): PredicateValue | null {
   if (Array.isArray(value)) {
@@ -93,7 +109,11 @@ export function matchesTokenFilterExpr(
   overlay?: FreeOperationExecutionOverlay,
   resolveField?: TokenFilterFieldResolver,
 ): boolean {
-  if (resolveValue === resolveLiteralTokenFilterValue && overlay === undefined) {
+  if (
+    resolveValue === resolveLiteralTokenFilterValue
+    && overlay === undefined
+    && !tokenFilterExprRequiresContext(expr)
+  ) {
     const compiled = getCompiledTokenFilter(expr);
     if (compiled !== null) {
       return compiled(token);
@@ -120,4 +140,35 @@ export function filterTokensByExpr(
   resolveField?: TokenFilterFieldResolver,
 ): readonly Token[] {
   return tokens.filter((token) => matchesTokenFilterExpr(token, expr, resolveValue, overlay, resolveField));
+}
+
+export function matchesTokenFilterExprInContext(
+  token: Token,
+  expr: TokenFilterExpr,
+  ctx: ReadContext,
+  resolveField?: TokenFilterFieldResolver,
+): boolean {
+  if (ctx.freeOperationOverlay === undefined) {
+    const compiled = getCompiledTokenFilter(expr);
+    if (compiled !== null) {
+      return compiled(token, ctx);
+    }
+  }
+
+  return matchesTokenFilterExpr(
+    token,
+    expr,
+    (value) => resolvePredicateValue(value, ctx),
+    ctx.freeOperationOverlay,
+    resolveField,
+  );
+}
+
+export function filterTokensByExprInContext(
+  tokens: readonly Token[],
+  expr: TokenFilterExpr,
+  ctx: ReadContext,
+  resolveField?: TokenFilterFieldResolver,
+): readonly Token[] {
+  return tokens.filter((token) => matchesTokenFilterExprInContext(token, expr, ctx, resolveField));
 }

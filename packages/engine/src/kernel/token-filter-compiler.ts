@@ -1,10 +1,16 @@
-import { typeMismatchError } from './eval-error.js';
+import type { ReadContext } from './eval-context.js';
+import { missingVarError, typeMismatchError } from './eval-error.js';
+import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
+import { matchesResolvedPredicate, type PredicateValue } from './query-predicate.js';
+import { tryCompileValueExpr } from './condition-compiler.js';
 import { isMembershipScalar } from './value-membership.js';
 import type { Token, TokenFilterExpr, TokenFilterPredicate } from './types.js';
+import { isPredicateOp } from '../contracts/index.js';
 
 type CompilableFieldAccessor = (token: Token) => unknown;
+type CompiledPredicateValueAccessor = (ctx: ReadContext | undefined) => PredicateValue;
 
-export type CompiledTokenFilterFn = (token: Token) => boolean;
+export type CompiledTokenFilterFn = (token: Token, ctx?: ReadContext) => boolean;
 
 const isLiteralScalarArray = (
   value: TokenFilterPredicate['value'],
@@ -32,6 +38,11 @@ const isLiteralScalarArray = (
   return true;
 };
 
+const isPredicateScalarArray = (
+  value: unknown,
+): value is readonly (string | number | boolean)[] =>
+  Array.isArray(value) && value.every((entry) => isMembershipScalar(entry));
+
 const compileFieldAccessor = (
   predicate: TokenFilterPredicate,
 ): CompilableFieldAccessor | null => {
@@ -52,101 +63,130 @@ const compileFieldAccessor = (
   return (token) => token.props[fieldName];
 };
 
+const compileLiteralPredicateValueAccessor = (
+  value: TokenFilterPredicate['value'],
+): CompiledPredicateValueAccessor | null => {
+  if (Array.isArray(value)) {
+    return isLiteralScalarArray(value)
+      ? () => value
+      : null;
+  }
+  return isMembershipScalar(value)
+    ? () => value
+    : null;
+};
+
+const requireReadContext = (
+  predicate: TokenFilterPredicate,
+  ctx: ReadContext | undefined,
+): ReadContext => {
+  if (ctx !== undefined) {
+    return ctx;
+  }
+  throw typeMismatchError('Compiled token filter requires ReadContext for dynamic predicate values', {
+    domain: 'token',
+    predicate,
+  });
+};
+
+const compilePredicateValueAccessor = (
+  predicate: TokenFilterPredicate,
+): CompiledPredicateValueAccessor | null => {
+  const { value } = predicate;
+  const literalAccessor = compileLiteralPredicateValueAccessor(value);
+  if (literalAccessor !== null) {
+    return literalAccessor;
+  }
+
+  if (typeof value === 'object' && value !== null && !Array.isArray(value) && 'ref' in value) {
+    if (value.ref === 'grantContext') {
+      return (ctx) => {
+        const runtimeCtx = requireReadContext(predicate, ctx);
+        const grantValue = runtimeCtx.freeOperationOverlay?.grantContext?.[value.key];
+        if (grantValue === undefined) {
+          throw missingVarError(`Free-operation grant context key not found: ${value.key}`, {
+            reference: value,
+            availableGrantContextKeys: Object.keys(runtimeCtx.freeOperationOverlay?.grantContext ?? {}).sort(),
+          });
+        }
+        if (isMembershipScalar(grantValue) || isPredicateScalarArray(grantValue)) {
+          return grantValue;
+        }
+        throw typeMismatchError(`Free-operation grant context ${value.key} must resolve to a scalar or scalar array in predicate position`, {
+          reference: value,
+          key: value.key,
+          actualType: Array.isArray(grantValue) ? 'array' : typeof grantValue,
+          value: grantValue,
+        });
+      };
+    }
+
+    if (value.ref === 'capturedSequenceZones') {
+      return (ctx) => {
+        const runtimeCtx = requireReadContext(predicate, ctx);
+        const resolvedKey = resolveFreeOperationSequenceKey(value.key, runtimeCtx);
+        return resolvedKey === undefined
+          ? []
+          : (runtimeCtx.freeOperationOverlay?.capturedSequenceZonesByKey?.[resolvedKey] ?? []);
+      };
+    }
+
+    const compiledValueExpr = tryCompileValueExpr(value);
+    if (compiledValueExpr === null) {
+      return null;
+    }
+
+    return (ctx) => {
+      const runtimeCtx = requireReadContext(predicate, ctx);
+      const resolved = compiledValueExpr(runtimeCtx);
+      if (isMembershipScalar(resolved) || isPredicateScalarArray(resolved)) {
+        return resolved;
+      }
+      throw typeMismatchError('Predicate value must resolve to a scalar or scalar array', {
+        predicate,
+        resolved,
+        actualType: Array.isArray(resolved) ? 'array' : typeof resolved,
+      });
+    };
+  }
+  return null;
+};
+
 const compilePredicate = (
   predicate: TokenFilterPredicate,
 ): CompiledTokenFilterFn | null => {
+  if (!isPredicateOp(predicate.op)) {
+    return null;
+  }
   const resolveFieldValue = compileFieldAccessor(predicate);
   if (resolveFieldValue === null) {
     return null;
   }
-
-  if (Array.isArray(predicate.value)) {
-    if (!isLiteralScalarArray(predicate.value)) {
-      return null;
-    }
-
-    const expectedType = predicate.value.length === 0 ? null : typeof predicate.value[0];
-    const membership = new Set(predicate.value);
-    switch (predicate.op) {
-      case 'in':
-        return (token) => {
-          const fieldValue = resolveFieldValue(token);
-          if (fieldValue === undefined) {
-            return false;
-          }
-          if (!isMembershipScalar(fieldValue)) {
-            throw typeMismatchError('Predicate membership item value must be a scalar', {
-              domain: 'token',
-              predicate,
-              tokenId: token.id,
-              actualType: Array.isArray(fieldValue) ? 'array' : typeof fieldValue,
-              value: fieldValue,
-            });
-          }
-          if (expectedType !== null && typeof fieldValue !== expectedType) {
-            throw typeMismatchError('Predicate membership item/set scalar types must match', {
-              domain: 'token',
-              predicate,
-              tokenId: token.id,
-              itemType: typeof fieldValue,
-              setType: expectedType,
-              itemValue: fieldValue,
-              setValue: predicate.value,
-            });
-          }
-          return membership.has(fieldValue);
-        };
-      case 'notIn':
-        return (token) => {
-          const fieldValue = resolveFieldValue(token);
-          if (fieldValue === undefined) {
-            return false;
-          }
-          if (!isMembershipScalar(fieldValue)) {
-            throw typeMismatchError('Predicate membership item value must be a scalar', {
-              domain: 'token',
-              predicate,
-              tokenId: token.id,
-              actualType: Array.isArray(fieldValue) ? 'array' : typeof fieldValue,
-              value: fieldValue,
-            });
-          }
-          if (expectedType !== null && typeof fieldValue !== expectedType) {
-            throw typeMismatchError('Predicate membership item/set scalar types must match', {
-              domain: 'token',
-              predicate,
-              tokenId: token.id,
-              itemType: typeof fieldValue,
-              setType: expectedType,
-              itemValue: fieldValue,
-              setValue: predicate.value,
-            });
-          }
-          return !membership.has(fieldValue);
-        };
-      default:
-        return null;
-    }
-  }
-
-  if (!isMembershipScalar(predicate.value)) {
+  const resolvePredicateValue = compilePredicateValueAccessor(predicate);
+  if (resolvePredicateValue === null) {
     return null;
   }
 
-  switch (predicate.op) {
-    case 'eq':
-      return (token) => {
-        const fieldValue = resolveFieldValue(token);
-        return fieldValue !== undefined && fieldValue === predicate.value;
-      };
-    case 'neq':
-      return (token) => {
-        const fieldValue = resolveFieldValue(token);
-        return fieldValue !== undefined && fieldValue !== predicate.value;
-      };
-    default:
-      return null;
-  }
+  const fieldName = predicate.prop ?? (
+    predicate.field?.kind === 'prop' || predicate.field?.kind === 'zoneProp'
+      ? predicate.field.prop
+      : predicate.field?.kind ?? 'unknown'
+  );
+
+  return (token, ctx) =>
+    matchesResolvedPredicate(
+      resolveFieldValue(token),
+      {
+        field: fieldName,
+        op: predicate.op,
+        value: resolvePredicateValue(ctx),
+      },
+      {
+        domain: 'token',
+        predicate,
+        tokenId: token.id,
+      },
+    );
 };
 
 export const tryCompileTokenFilter = (
@@ -161,7 +201,7 @@ export const tryCompileTokenFilter = (
     if (compiledArg === null) {
       return null;
     }
-    return (token) => !compiledArg(token);
+    return (token, ctx) => !compiledArg(token, ctx);
   }
 
   if ((expr.op !== 'and' && expr.op !== 'or') || expr.args.length === 0) {
@@ -178,9 +218,9 @@ export const tryCompileTokenFilter = (
   }
 
   if (expr.op === 'and') {
-    return (token) => {
+    return (token, ctx) => {
       for (const compiledArg of compiledArgs) {
-        if (!compiledArg(token)) {
+        if (!compiledArg(token, ctx)) {
           return false;
         }
       }
@@ -188,9 +228,9 @@ export const tryCompileTokenFilter = (
     };
   }
 
-  return (token) => {
+  return (token, ctx) => {
     for (const compiledArg of compiledArgs) {
-      if (compiledArg(token)) {
+      if (compiledArg(token, ctx)) {
         return true;
       }
     }

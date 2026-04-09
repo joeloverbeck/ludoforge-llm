@@ -2540,7 +2540,7 @@ describe('evalQuery', () => {
           },
           ctx,
         ),
-      (error: unknown) => isEvalErrorCode(error, 'MISSING_VAR'),
+      (error: unknown) => isEvalErrorCode(error, 'MISSING_BINDING'),
     );
   });
 

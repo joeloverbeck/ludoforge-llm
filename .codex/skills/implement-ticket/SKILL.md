@@ -258,6 +258,8 @@ For preparatory tickets that intentionally land shared helpers, contracts, or AP
 2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
 3. Report unrelated pre-existing failures separately from failures caused by your changes.
 4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
+5. Do not run broad verification commands in parallel when they share a mutable build artifact or clean/rebuild the same package output (for example, `dist`). Run those commands sequentially so one verification lane does not invalidate another mid-run.
+6. Before final closeout, compare the active ticket's `Files to Touch` and explicit deliverables against the actual diff. If a named file was intentionally left unchanged, record that deviation explicitly in working notes and the ticket outcome rather than silently omitting it.
    - When selecting a focused verification command for a package, inspect that package's `package.json` or existing test lanes first if the best narrow proof command is not already obvious.
 5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
    - Focused proof commands may run before ticket-authoritative commands for fast feedback, but they do not satisfy the ticket on their own.

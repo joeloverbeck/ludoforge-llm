@@ -15,6 +15,7 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>> = {}) {
   return {
     parameterDefs,
+    referenceSeatIds: ['us', 'arvn', 'nva', 'vc'],
     resolveRef(refPath: string) {
       switch (refPath) {
         case 'candidate.tag.pass':
@@ -60,6 +61,28 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
             type: 'id' as const,
             costClass: 'state' as const,
             ref: { kind: 'optionIntrinsic' as const, intrinsic: 'value' as const },
+          };
+        case 'victory.currentMargin.$seat':
+          return {
+            type: 'number' as const,
+            costClass: 'state' as const,
+            ref: {
+              kind: 'currentSurface' as const,
+              family: 'victoryCurrentMargin' as const,
+              id: 'currentMargin',
+              selector: { kind: 'role' as const, seatToken: '$seat' },
+            },
+          };
+        case 'preview.victory.currentMargin.$seat':
+          return {
+            type: 'number' as const,
+            costClass: 'preview' as const,
+            ref: {
+              kind: 'previewSurface' as const,
+              family: 'victoryCurrentMargin' as const,
+              id: 'currentMargin',
+              selector: { kind: 'role' as const, seatToken: '$seat' },
+            },
           };
         default:
           return null;
@@ -843,5 +866,110 @@ describe('policy-expr analysis', () => {
     assert.ok(diagnostics.some((diagnostic) =>
       diagnostic.path === 'expr.zoneTokenAgg.owner'
       && diagnostic.message.includes('numeric runtime player id')));
+  });
+
+  it('accepts $seat refs inside seatAgg expressions, including nested inner expressions', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      {
+        seatAgg: {
+          over: 'opponents',
+          expr: {
+            add: [
+              { ref: 'victory.currentMargin.$seat' },
+              {
+                boolToNumber: {
+                  gt: [
+                    { ref: 'preview.victory.currentMargin.$seat' },
+                    0,
+                  ],
+                },
+              },
+            ],
+          },
+          aggOp: 'max',
+        },
+      },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.deepEqual(diagnostics, []);
+    assert.equal(analysis?.expr.kind, 'seatAgg');
+    assert.equal(analysis?.expr.kind === 'seatAgg' ? analysis.expr.aggOp : null, 'max');
+  });
+
+  it('rejects $seat refs outside seatAgg expressions', () => {
+    const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const analysis = analyzePolicyExpr(
+      { ref: 'victory.currentMargin.$seat' },
+      createContext(),
+      diagnostics,
+      'expr',
+    );
+
+    assert.equal(analysis, null);
+    assert.ok(diagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.ref'
+      && diagnostic.message.includes('$seat placeholder can only be used within seatAgg.expr.')));
+  });
+
+  it('rejects malformed seatAgg expressions with missing fields or extra keys', () => {
+    const missingAggOpDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const missingAggOp = analyzePolicyExpr(
+      {
+        seatAgg: {
+          over: 'opponents',
+          expr: { ref: 'victory.currentMargin.$seat' },
+        },
+      },
+      createContext(),
+      missingAggOpDiagnostics,
+      'expr',
+    );
+
+    assert.equal(missingAggOp, null);
+    assert.ok(missingAggOpDiagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.seatAgg.aggOp'
+      && diagnostic.message.includes('must be one of')));
+
+    const missingExprDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const missingExpr = analyzePolicyExpr(
+      {
+        seatAgg: {
+          over: 'opponents',
+          aggOp: 'max',
+        },
+      },
+      createContext(),
+      missingExprDiagnostics,
+      'expr',
+    );
+
+    assert.equal(missingExpr, null);
+    assert.ok(missingExprDiagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.seatAgg.expr'
+      && diagnostic.message.includes('must be a scalar, array, or object')));
+
+    const extraKeyDiagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
+    const extraKey = analyzePolicyExpr(
+      {
+        seatAgg: {
+          over: 'opponents',
+          expr: { ref: 'victory.currentMargin.$seat' },
+          aggOp: 'max',
+          unexpected: true,
+        },
+      },
+      createContext(),
+      extraKeyDiagnostics,
+      'expr',
+    );
+
+    assert.equal(extraKey, null);
+    assert.ok(extraKeyDiagnostics.some((diagnostic) =>
+      diagnostic.path === 'expr.seatAgg.unexpected'
+      && diagnostic.message.includes('Unsupported key "unexpected"')));
   });
 });

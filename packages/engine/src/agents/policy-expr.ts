@@ -41,6 +41,7 @@ export interface ResolvedPolicyRef {
 export interface AnalyzePolicyExprContext {
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly referenceSeatIds?: readonly string[];
+  readonly withinSeatAggExpr?: boolean;
   resolveRef(refPath: string, path: string): ResolvedPolicyRef | null;
 }
 
@@ -302,6 +303,16 @@ function analyzeRefExpr(
       severity: 'error',
       message: `Nested preview refs are not allowed in policy expressions ("${expr}").`,
       suggestion: 'Use at most one preview prefix and derive any extra value through named features.',
+    });
+    return null;
+  }
+  if (containsSeatPlaceholder(expr) && context.withinSeatAggExpr !== true) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: '$seat placeholder can only be used within seatAgg.expr.',
+      suggestion: 'Move the ref into a seatAgg inner expression or replace $seat with a concrete seat token.',
     });
     return null;
   }
@@ -1274,9 +1285,17 @@ function analyzeSeatAggOperator(
   }
 
   const obj = expr as Readonly<Record<string, unknown>>;
+  if (!validateAllowedObjectKeys(obj, ['over', 'expr', 'aggOp'], diagnostics, `${path}.seatAgg`)) {
+    return null;
+  }
   const over = analyzeSeatAggOver(obj['over'], context.referenceSeatIds, diagnostics, `${path}.seatAgg.over`);
   const aggOp = obj['aggOp'];
-  const innerExpr = analyzePolicyExpr(obj['expr'] as GameSpecPolicyExpr, context, diagnostics, `${path}.seatAgg.expr`);
+  const innerExpr = analyzePolicyExpr(
+    obj['expr'] as GameSpecPolicyExpr,
+    { ...context, withinSeatAggExpr: true },
+    diagnostics,
+    `${path}.seatAgg.expr`,
+  );
 
   if (typeof aggOp !== 'string' || !isAgentPolicyZoneTokenAggOp(aggOp)) {
     diagnostics.push({
@@ -1377,6 +1396,33 @@ function analyzeSeatAggOver(
   }
 
   return normalized;
+}
+
+function containsSeatPlaceholder(refPath: string): boolean {
+  return refPath.split('.').includes('$seat');
+}
+
+function validateAllowedObjectKeys(
+  obj: Readonly<Record<string, unknown>>,
+  allowedKeys: readonly string[],
+  diagnostics: Diagnostic[],
+  path: string,
+): boolean {
+  const allowed = new Set(allowedKeys);
+  let valid = true;
+  for (const key of Object.keys(obj)) {
+    if (!allowed.has(key)) {
+      valid = false;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.${key}`,
+        severity: 'error',
+        message: `Unsupported key "${key}" in ${path.split('.').at(-1)} expression.`,
+        suggestion: `Use only: ${allowedKeys.join(', ')}.`,
+      });
+    }
+  }
+  return valid;
 }
 
 function analyzeGlobalTokenAggTokenFilter(

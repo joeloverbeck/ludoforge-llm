@@ -1,6 +1,6 @@
 # 122CROSEAVIC-004: Validate `seatAgg` structure and `$seat` usage scope
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl/validate-agents
@@ -81,3 +81,22 @@ Test cases:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-09
+
+Implemented compile-time `seatAgg` validation in the live shared analyzer at `packages/engine/src/agents/policy-expr.ts`. The analyzer now rejects `$seat` refs outside `seatAgg.expr`, allows nested `$seat` refs inside `seatAgg` inner expressions, and fail-closes malformed `seatAgg` objects with unsupported extra keys before emitting IR.
+
+Added regression coverage in `packages/engine/test/unit/agents/policy-expr.test.ts` for valid `$seat` usage inside `seatAgg`, invalid `$seat` usage outside `seatAgg`, missing required `seatAgg` fields, and extra-key rejection.
+
+Deviation from original plan: the ticket's named validator/test files were stale. `packages/engine/src/cnl/validate-agents.ts` only owns top-level `agents` section validation, while authored policy expression validation lives in `packages/engine/src/agents/policy-expr.ts` with tests in `packages/engine/test/unit/agents/policy-expr.test.ts`. The ticket boundary remained valid, so the implementation landed in those live owner files instead.
+
+Schema/artifact ripple check: no schema or generated artifact surfaces changed in this ticket.
+
+Verification completed with:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node packages/engine/dist/test/unit/agents/policy-expr.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo typecheck`

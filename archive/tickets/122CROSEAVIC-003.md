@@ -1,6 +1,6 @@
 # 122CROSEAVIC-003: Compile `seatAgg` from authored YAML to IR
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — cnl/compile-agents
@@ -88,3 +88,24 @@ Test cases:
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-09
+
+Implemented `seatAgg` compilation from authored YAML into IR. The live compiler path runs through `packages/engine/src/agents/policy-expr.ts`, so the required work extended slightly beyond the original ticket wording: `seatAgg` is now recognized by the shared expression analyzer/compiler surface, `packages/engine/src/cnl/compile-agents.ts` threads canonical seat ids into that analysis context, and the compiler's runtime-surface seat-token gate now allows `$seat` to pass through to the parser/resolver groundwork from ticket 002.
+
+Added compilation coverage in `packages/engine/test/unit/compile-agents-authoring.test.ts` for `over: opponents`, `over: all`, explicit canonical seat lists, invalid `aggOp`, invalid explicit seat ids, missing canonical seat definitions, and nested arithmetic inside `seatAgg.expr`.
+
+Deviation from original plan: the original `Files to Touch` list was too narrow for the live compiler architecture. `packages/engine/src/agents/policy-expr.ts` was required in-scope fallout because `compile-agents.ts` delegates authored expression lowering there.
+
+Sibling boundary correction: the analyzer portion originally claimed by `tickets/122CROSEAVIC-006.md` was absorbed here because ticket 003 could not compile `seatAgg` without that shared expression branch. Ticket 006 should now retain only the remaining diagnostics-formatting work.
+
+Schema/artifact ripple check: no schema or generated artifact surfaces changed in this ticket. `seatAgg` IR/schema groundwork had already landed in ticket 001, so no regeneration was required here.
+
+Verification completed with:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node dist/test/unit/compile-agents-authoring.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo typecheck`

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — cnl/validate-agents
-**Deps**: `tickets/122CROSEAVIC-003.md`
+**Deps**: `archive/tickets/122CROSEAVIC-003.md`
 
 ## Problem
 

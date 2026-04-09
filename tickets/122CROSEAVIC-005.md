@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agents/policy-evaluation-core
-**Deps**: `archive/tickets/122CROSEAVIC-002.md`, `tickets/122CROSEAVIC-003.md`
+**Deps**: `archive/tickets/122CROSEAVIC-002.md`, `archive/tickets/122CROSEAVIC-003.md`
 
 ## Problem
 

@@ -36,10 +36,10 @@ function createTestObservability(overrides?: GameSpecObservabilitySection['obser
   return { observers: merged } as GameSpecObservabilitySection;
 }
 
-function createCompileReadyDoc() {
+function createCompileReadyDoc(seatIds: readonly string[] = ['us', 'arvn']) {
   return {
     ...createEmptyGameSpecDoc(),
-    metadata: { id: 'agents-demo', players: { min: 2, max: 2 } },
+    metadata: { id: 'agents-demo', players: { min: seatIds.length, max: seatIds.length } },
     observability: createTestObservability(),
     zones: [{ id: 'deck', owner: 'none', visibility: 'hidden', ordering: 'stack', attributes: { population: 0 } }],
     turnStructure: { phases: [{ id: 'main' }] },
@@ -58,10 +58,7 @@ function createCompileReadyDoc() {
     ],
     terminal: {
       conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }],
-      margins: [
-        { seat: 'us', value: 0 },
-        { seat: 'arvn', value: 0 },
-      ],
+      margins: seatIds.map((seatId) => ({ seat: seatId, value: 0 })),
       ranking: {
         order: 'desc' as const,
       },
@@ -395,6 +392,239 @@ describe('agents authoring surface', () => {
     assert.deepEqual(agents.bindingsBySeat, {
       us: 'baseline',
     });
+  });
+
+  it('compiles seatAgg authored expressions into seatAgg IR nodes', () => {
+    const seatIds = ['us', 'arvn', 'nva', 'vc'] as const;
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(seatIds),
+      dataAssets: [createSeatCatalogAsset(seatIds)],
+      agents: withObserver({
+        library: {
+          stateFeatures: {
+            maxOpponentMargin: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: 'opponents',
+                  expr: { ref: 'victory.currentMargin.$seat' },
+                  aggOp: 'max',
+                },
+              },
+            },
+            allSeatCount: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: 'all',
+                  expr: 1,
+                  aggOp: 'count',
+                },
+              },
+            },
+            namedSeatMarginSum: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: ['us', 'nva', 'vc'],
+                  expr: { ref: 'victory.currentMargin.$seat' },
+                  aggOp: 'sum',
+                },
+              },
+            },
+            nestedSeatAgg: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: 'all',
+                  expr: {
+                    add: [
+                      { ref: 'victory.currentMargin.$seat' },
+                      1,
+                    ],
+                  },
+                  aggOp: 'sum',
+                },
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.gameDef === null, false);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+
+    const stateFeatures = result.gameDef?.agents?.library.stateFeatures;
+    assert.ok(stateFeatures !== undefined);
+    assert.deepEqual(stateFeatures.maxOpponentMargin, {
+      type: 'number',
+      costClass: 'state',
+      expr: {
+        kind: 'seatAgg',
+        over: 'opponents',
+        expr: refExpr({
+          kind: 'currentSurface',
+          family: 'victoryCurrentMargin',
+          id: 'currentMargin',
+          selector: { kind: 'role', seatToken: '$seat' },
+        }),
+        aggOp: 'max',
+      },
+      dependencies: {
+        parameters: [],
+        stateFeatures: [],
+        candidateFeatures: [],
+        aggregates: [],
+        strategicConditions: [],
+      },
+    });
+    assert.deepEqual(stateFeatures.allSeatCount?.expr, {
+      kind: 'seatAgg',
+      over: 'all',
+      expr: literal(1),
+      aggOp: 'count',
+    });
+    assert.deepEqual(stateFeatures.namedSeatMarginSum?.expr, {
+      kind: 'seatAgg',
+      over: ['us', 'nva', 'vc'],
+      expr: refExpr({
+        kind: 'currentSurface',
+        family: 'victoryCurrentMargin',
+        id: 'currentMargin',
+        selector: { kind: 'role', seatToken: '$seat' },
+      }),
+      aggOp: 'sum',
+    });
+    assert.deepEqual(stateFeatures.nestedSeatAgg?.expr, {
+      kind: 'seatAgg',
+      over: 'all',
+      expr: opExpr(
+        'add',
+        refExpr({
+          kind: 'currentSurface',
+          family: 'victoryCurrentMargin',
+          id: 'currentMargin',
+          selector: { kind: 'role', seatToken: '$seat' },
+        }),
+        literal(1),
+      ),
+      aggOp: 'sum',
+    });
+  });
+
+  it('rejects seatAgg with an invalid aggOp', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(['us', 'arvn']),
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn'])],
+      agents: {
+        library: {
+          stateFeatures: {
+            badSeatAgg: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: 'opponents',
+                  expr: { ref: 'victory.currentMargin.$seat' },
+                  aggOp: 'avg',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_EXPR_INVALID'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.badSeatAgg.expr.seatAgg.aggOp',
+      ),
+    );
+  });
+
+  it('rejects seatAgg explicit seat lists that reference unknown canonical seat ids', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(['us', 'arvn', 'nva']),
+      dataAssets: [createSeatCatalogAsset(['us', 'arvn', 'nva'])],
+      agents: {
+        library: {
+          stateFeatures: {
+            badSeatAgg: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: ['us', 'vc'],
+                  expr: { ref: 'victory.currentMargin.$seat' },
+                  aggOp: 'max',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_EXPR_INVALID'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.badSeatAgg.expr.seatAgg.over.1',
+      ),
+    );
+  });
+
+  it('rejects seatAgg when canonical seats are not defined', () => {
+    const compiled = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(['us', 'arvn']),
+      agents: {
+        library: {
+          stateFeatures: {
+            badSeatAgg: {
+              type: 'number',
+              expr: {
+                seatAgg: {
+                  over: 'opponents',
+                  expr: { ref: 'victory.currentMargin.$seat' },
+                  aggOp: 'max',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(compiled.gameDef, null);
+    assert.ok(
+      compiled.diagnostics.some(
+        (diagnostic) =>
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_EXPR_INVALID'
+          && diagnostic.path === 'doc.agents.library.stateFeatures.badSeatAgg.expr.seatAgg.over'
+          && diagnostic.message.includes('GameDef.seats to be defined'),
+      ),
+    );
   });
 
   it('keeps catalog and profile fingerprints stable across equivalent authored insertion order', () => {

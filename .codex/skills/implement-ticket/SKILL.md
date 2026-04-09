@@ -137,6 +137,7 @@ Every stop condition below requires resolution before implementation proceeds.
 - Prefer minimal, architecture-consistent changes over local patches.
 - If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
 - When consolidating logic into a shared authority module, inspect the current import direction first and prefer helper placement that preserves an acyclic dependency graph.
+- When a ticket's named implementation file delegates the owned behavior through a deeper shared authority module, the minimum authority-module work required to make the named deliverable real is in-scope. Treat that as required completion fallout, then update any sibling ticket that previously claimed that absorbed slice so the active series boundary stays accurate.
 - Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
 - Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
 - The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.

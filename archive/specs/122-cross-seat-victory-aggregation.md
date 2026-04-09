@@ -1,6 +1,6 @@
 # Spec 122: Cross-Seat Victory Aggregation
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 15 (GameSpec Authored Agent Policy IR)
@@ -334,3 +334,27 @@ stateFeatures:
     expr:
       seatAgg: { over: opponents, expr: { ref: victory.currentMargin.$seat }, aggOp: max }
 ```
+
+## Outcome
+
+Completed: 2026-04-09
+
+- Implemented the `seatAgg` operator across the intended engine surfaces through the `122CROSEAVIC` ticket series: shared IR/schema groundwork, authored compilation and validation, runtime evaluation, diagnostics coverage, integration proof, and schema-artifact verification.
+- Landed the new compiled `AgentPolicyExpr` variant plus schema support, authored `seatAgg` lowering and validation, `$seat` placeholder handling, runtime evaluation over `opponents` / `all` / explicit seat lists, and diagnostics traversal for nested `seatAgg` refs.
+- Added proof coverage in unit and integration tests, including FITL end-to-end integration and the Texas shared-seat boundary proof.
+
+Deviations from original plan:
+
+- The planned Texas Hold'em positive shared-profile integration case was not possible in the live repo. Texas currently compiles a single canonical seat, `neutral`, so `seatAgg { over: opponents }` resolves to an empty set there. The final implementation kept FITL as the positive cross-seat proof and used Texas as an explicit boundary proof of the current shared-seat model.
+- Schema regeneration did not remain a standalone artifact-change step. Regeneration had already landed during the earlier groundwork, and the final schema-verification ticket closed as a no-op proof pass with no persisted schema diff.
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo typecheck`
+- `pnpm -F @ludoforge/engine build`
+- `node packages/engine/dist/test/integration/agents/seat-agg-e2e.test.js`
+- `pnpm -F @ludoforge/engine test:e2e`
+- `pnpm -F @ludoforge/engine test:all`
+- `pnpm turbo schema:artifacts`
+- `pnpm run check:ticket-deps`

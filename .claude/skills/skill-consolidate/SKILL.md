@@ -33,11 +33,15 @@ If working inside a worktree (e.g., `.claude/worktrees/<name>/`), ALL file paths
 
 Follow these 8 steps in order. Do not skip any step.
 
+Steps 2-5 are analytically intertwined and may be performed in a single pass. The separation structures your output (the diff summary), not necessarily your analysis sequence.
+
 ---
 
 ### Step 1: Read & Parse
 
 Read the target `SKILL.md` from `<skill-path>/SKILL.md`. If the file does not exist, stop and report the error.
+
+If the file exceeds the Read tool's token limit, read in sequential chunks. Record key landmarks (section headings and their line numbers) while reading to support targeted re-reads during editing.
 
 Parse into logical blocks:
 - **Frontmatter**: YAML metadata between `---` delimiters
@@ -128,9 +132,9 @@ For non-redundant instructions (those surviving Steps 2-5), tighten prose:
 
 ### Step 7: Rewrite
 
-Write the consolidated SKILL.md in-place at `<skill-path>/SKILL.md`.
+Apply the consolidated changes to `<skill-path>/SKILL.md`. Prefer targeted `Edit` calls (top-to-bottom to avoid offset drift) for surgical changes. Use `Write` only when restructuring is so extensive that targeted edits would be more complex than a full rewrite.
 
-The rewritten file must:
+The result must:
 1. **Preserve frontmatter exactly** — do not modify name, description, arguments, or any YAML field
 2. **Maintain workflow phase ordering** — if the original has phases 1-7 in sequence, the consolidated version keeps the same logical sequence
 3. **Contain every unique instruction** — deduplicated, regrouped, tightened, but present

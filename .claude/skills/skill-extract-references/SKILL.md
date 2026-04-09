@@ -40,7 +40,8 @@ For each block, determine one of three categories:
 - **Always-loaded reference** — a self-contained block that applies to every invocation but is large enough (roughly 20+ lines) to warrant extraction. Examples: verification checklists, guardrails sections, outcome definitions.
 
 - **Conditional reference** — a block gated by conditional language in the original text. Look for these markers:
-  - "if", "when", "only when", "for tickets that touch", "when the change involves"
+  - Syntactic: "if", "when", "only when", "for tickets that touch", "when the change involves"
+  - Semantic: sections describing optional features ("Some campaigns define...", "If program.md defines...") are conditional even if the section itself is not wrapped in an `if` block.
   - Blocks nested under a conditional header or prefaced by conditional language.
   - The condition from the original text becomes the loading instruction in the thin SKILL.md.
 
@@ -48,7 +49,7 @@ For each block, determine one of three categories:
 
 ### 5. Group and Name
 
-- Merge blocks that share a logical theme into a single reference doc. Do not create one reference per H3 — group by coherent topic.
+- Merge blocks that share a logical theme into a single reference doc. Do not create one reference per H3 — group by coherent topic. Aim for 3-8 reference docs. Fewer than 3 suggests the extraction isn't worthwhile. More than 8 suggests over-fragmentation — merge thematically related docs.
 - Use kebab-case descriptive filenames: `verification-and-closeout.md`, `ai-pipeline-checks.md`, `golden-reassessment.md`.
 - If an existing reference doc in `references/` covers the same theme, merge the extracted content into it rather than creating a duplicate.
 
@@ -69,6 +70,7 @@ For each block, determine one of three categories:
   - A load instruction pointing to a reference file:
     - Unconditional: "Load `references/verification-and-closeout.md`."
     - Conditional: "If the change touches AI pipelines, load `references/ai-pipeline-checks.md`."
+  - Place conditional load instructions at the earliest workflow step where the reference content is first needed, not at the top of the file.
 - **Preserve** universal hard rules as a short section at the bottom.
 - The thin SKILL.md should read as a clear, scannable orchestration sequence — not a wall of checklists.
 

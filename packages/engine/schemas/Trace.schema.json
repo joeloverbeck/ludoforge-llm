@@ -5058,6 +5058,10 @@
         {
           "type": "string",
           "const": "noLegalMoves"
+        },
+        {
+          "type": "string",
+          "const": "agentStuck"
         }
       ]
     }

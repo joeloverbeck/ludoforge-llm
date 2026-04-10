@@ -96,6 +96,79 @@ const resolveCurrentCoupSeat = (
   );
 };
 
+/**
+ * Pre-check for skipIfNoLegalCompletion grants.  If ALL legal moves in the
+ * current state are free-op moves from such grants AND removing those grants
+ * leaves zero legal moves, the grants are effectively uncompletable by the
+ * agent.  Remove them so the main advanceToDecisionPoint loop can advance
+ * past the grant instead of breaking into agent.chooseMove which would throw.
+ */
+const preSkipUncompletableGrants = (
+  def: GameDef,
+  state: GameState,
+  seatResolution: SeatResolutionContext,
+  cachedRuntime?: GameDefRuntime,
+): GameState | null => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return null;
+  }
+  const runtime = state.turnOrderState.runtime;
+  const pending = runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return null;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
+    seatResolution,
+  );
+  const hasSkippable = pending.some(
+    (grant) =>
+      grant.seat === activeSeat
+      && grant.phase === 'ready'
+      && grant.completionPolicy === 'skipIfNoLegalCompletion',
+  );
+  if (!hasSkippable) {
+    return null;
+  }
+  // Check legal moves WITH the grant (current state).
+  const movesWithGrant = legalMoves(def, state, { earlyExitAfterFirst: true }, cachedRuntime);
+  if (movesWithGrant.length === 0) {
+    return null; // No legal moves at all — handled by expireBlockingPendingFreeOperationGrants
+  }
+  // Check legal moves WITHOUT the skippable grants.
+  const remainingGrants = pending.filter(
+    (grant) =>
+      !(grant.seat === activeSeat
+        && grant.phase === 'ready'
+        && grant.completionPolicy === 'skipIfNoLegalCompletion'),
+  );
+  const strippedState: GameState = {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: remainingGrants.length === 0
+        ? (() => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const { pendingFreeOperationGrants: _, ...rest } = runtime;
+          return rest;
+        })()
+        : {
+          ...runtime,
+          pendingFreeOperationGrants: remainingGrants,
+        },
+    },
+  };
+  const movesWithoutGrant = legalMoves(def, strippedState, { earlyExitAfterFirst: true }, cachedRuntime);
+  if (movesWithoutGrant.length > 0) {
+    return null; // Legal moves exist without the grant — grant is not the blocking factor
+  }
+  // The grants were the SOLE source of legal moves.  Remove them so the
+  // advanceToDecisionPoint loop treats this as "no legal moves" and advances.
+  return strippedState;
+};
+
 const expireBlockingPendingFreeOperationGrants = (
   def: GameDef,
   state: GameState,
@@ -533,12 +606,21 @@ export const advanceToDecisionPoint = (
   while (terminalResult(def, nextState, cachedRuntime) === null) {
     const isInterruptPhase = hasInterrupts && interrupts!.some((phase) => phase.id === nextState.currentPhase);
     const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
-    // Skip grants with skipIfNoLegalCompletion when the grant's free-op
-    // moves have no viable completions.  This runs BEFORE hasLegal because
-    // the broadened isRequiredPendingFreeOperationGrant predicate makes
-    // skippable grants surface as legal moves — if we don't remove them
-    // first, hasLegal would break and the agent would deadlock trying to
-    // complete an uncompletable free-op template.
+    // Pre-skip: remove skipIfNoLegalCompletion grants whose only effect is
+    // to surface moves the agent cannot complete.  Without this, hasLegal
+    // would return true (the grant's free-op template passes pre-checks)
+    // but the agent deadlocks because template completion fails.
+    if (phaseValid) {
+      const preSkipped = preSkipUncompletableGrants(def, nextState, seatResolution, cachedRuntime);
+      if (preSkipped !== null) {
+        const tablePreSkip = cachedRuntime?.zobristTable;
+        nextState = tablePreSkip
+          ? { ...preSkipped, _runningHash: reconcileRunningHash(tablePreSkip, nextState, preSkipped) }
+          : preSkipped;
+        advances += 1;
+        continue;
+      }
+    }
     const t0_lm = perfStart(profiler);
     const hasLegal = phaseValid && legalMoves(def, nextState, { earlyExitAfterFirst: true }, cachedRuntime).length > 0;
     perfDynEnd(profiler, 'adp:legalMoves', t0_lm);

@@ -1078,7 +1078,12 @@ export const applyTurnFlowEligibilityAfterMove = (
     if (!hasRequiredGrantWindow && runtime.seatOrder.every((seat) => acted.has(seat))) {
       endedReason = 'rightmostPass';
     }
-  } else if (!hasRequiredGrantWindow && step === 'passChain' && currentCard.firstEligible === null && currentCard.secondEligible === null) {
+  } else if (!hasRequiredGrantWindow && currentCard.firstEligible === null && currentCard.secondEligible === null) {
+    // Card ends when no eligible candidates remain, regardless of whether
+    // the last action was a pass or a non-pass (e.g., event).  Previously
+    // this required `step === 'passChain'`, which missed the case where the
+    // second eligible plays a non-pass while all remaining seats are
+    // ineligible, leaving nonPassCount < 2 and no pass-chain step.
     endedReason = 'rightmostPass';
   } else if (!hasRequiredGrantWindow && currentCard.nonPassCount >= 2) {
     endedReason = 'twoNonPass';

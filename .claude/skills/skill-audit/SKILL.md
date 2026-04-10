@@ -109,7 +109,7 @@ If analysis during classification disproves an initial impression, withdraw the 
 - **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up.
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
-  3. Combine adjacent or overlapping suggestions into a single Edit call.
+  3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location and topic may also be combined into a single edit even if they were classified separately (e.g., an Issue fix and a Feature addition to the same section).
   4. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines.
   5. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   6. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.

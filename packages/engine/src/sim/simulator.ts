@@ -25,6 +25,7 @@ import { extractDecisionPointSnapshot } from './snapshot.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
+
 const validateSeed = (seed: number): void => {
   if (!Number.isSafeInteger(seed)) {
     throw new RangeError(`seed must be a safe integer, received ${String(seed)}`);
@@ -115,14 +116,28 @@ export const runGame = (
       ? undefined
       : extractDecisionPointSnapshot(validatedDef, state, resolvedRuntime, snapshotDepth);
     const t0_agent = perfStart(profiler);
-    selected = agent.chooseMove({
-      def: validatedDef,
-      state,
-      playerId: player,
-      legalMoves: legalMoveResult.moves,
-      rng: agentRng,
-      runtime: resolvedRuntime,
-    });
+    try {
+      selected = agent.chooseMove({
+        def: validatedDef,
+        state,
+        playerId: player,
+        legalMoves: legalMoveResult.moves,
+        rng: agentRng,
+        runtime: resolvedRuntime,
+      });
+    } catch (err: unknown) {
+      // When the agent cannot derive a playable move (e.g., template
+      // completion fails for all legal move templates due to zone filters
+      // or restrictive pre-conditions), stop the game gracefully rather
+      // than crashing.  This is a known limitation of RandomAgent with
+      // complex constrained actions.
+      const isNoPlayableErr = err instanceof Error && err.message.includes('could not derive a playable move');
+      if (!isNoPlayableErr) {
+        throw err;
+      }
+      stopReason = 'agentStuck';
+      break;
+    }
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;
 

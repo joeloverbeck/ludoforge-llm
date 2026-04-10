@@ -28,6 +28,8 @@ The argument is the skill directory path. The framework automatically resolves `
    - Places where Claude had to improvise because the skill didn't provide guidance
    - Outcomes that diverged from what the skill intended
    - Steps that were not exercised this session (mark as "not exercised" — do not speculate about issues)
+
+   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on process clarity, checklist completeness, and whether the instructions matched their stated intent.
 4. **Cross-check alignment** — For each finding from step 3, check whether the skill contradicts or fails to implement:
    - Principles from `docs/FOUNDATIONS.md` (reference by foundation number, e.g., "Foundation 7: Immutability")
    - Conventions from `CLAUDE.md` (reference by section name)
@@ -50,6 +52,7 @@ Output this structure to the conversation (do not write to a file):
 **Skill path**: <path>
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
+**Session evidence**: <rich (skill executed extensively) / moderate (skill used briefly) / thin (self-audit or first-time observation)>
 
 ## Alignment Check
 

@@ -86,3 +86,5 @@ Key rules (always active):
 Typically invoked after implementing a spec or after identifying coverage gaps. Output feeds into spec authoring for proposal implementation. The workflow is:
 
 1. Implement spec -> 2. `/detect-missing-abstractions` (structural debt + architectural fractures) -> 3. Spec authoring from findings
+
+**Plan mode**: If invoked in plan mode, the report file is the deliverable. No implementation plan is produced — write the report directly and exit. The skill is read-only by design; plan mode's edit restrictions are compatible.

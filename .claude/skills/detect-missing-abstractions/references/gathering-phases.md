@@ -4,7 +4,7 @@
 
 Starting from the test file(s), build a dependency graph of engine source modules.
 
-**Short-circuit for integration/simulation tests**: If the test calls a top-level simulation step function (e.g., `runSim()`, `resolveAction()`, `advanceTurn()`, or equivalent) in a loop or sequence, treat the whole resolution pipeline and its registered handlers as exercised. Skip per-import tracing and enumerate all `.ts` files in the relevant `packages/engine/src/` subdirectories directly, excluding barrel/index files that only re-export.
+**Short-circuit for integration/simulation tests**: If the test calls a top-level simulation step function (e.g., `runSim()`, `resolveAction()`, `advanceTurn()`, or equivalent) in a loop or sequence, treat the whole resolution pipeline and its registered handlers as exercised. Skip per-import tracing and enumerate all `.ts` files in the relevant `packages/engine/src/` subdirectories directly, excluding barrel/index files that only re-export. The short-circuit applies only to module enumeration (Phase 1). Phase 2 scenario mapping always requires reading the test file(s) regardless of short-circuit status.
 
 **Otherwise, trace per-import**:
 
@@ -43,6 +43,8 @@ Then cluster tests into **scenario families** — named behavioral groups. Examp
 **Scaling guide**: <10 tests -> 2-5 families; 10-30 -> 4-8; 30-50 -> 5-10; 50-100 -> 5-12. Each family should map to a distinct domain protocol or lifecycle. When in doubt, keep families separate. Property-based test suites that parameterize the same assertion across seeds may produce fewer families — this is expected.
 
 Every later finding must be tied back to scenario families. A finding not grounded in test behavior is speculation.
+
+Record scenario families in a structured table (family name, test count, domain concepts) and include this table verbatim in all Phase 4 sub-agent prompts.
 
 Canary, integration, and performance benchmark tests may produce only 1-3 scenario families. This is expected.
 

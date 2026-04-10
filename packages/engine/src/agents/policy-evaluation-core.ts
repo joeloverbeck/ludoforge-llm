@@ -27,7 +27,6 @@ import {
   createPolicyRuntimeProviders,
   type PolicyRuntimeCandidate,
   type PolicyRuntimeProviders,
-  type PolicyValue,
 } from './policy-runtime.js';
 import type {
   Phase1ActionPreviewEntry,
@@ -36,6 +35,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
+import type { PolicyValue } from './policy-surface.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;

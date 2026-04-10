@@ -1,9 +1,7 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
-import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
-import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
+import { buildSeatResolutionIndex } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
-  CompiledCardMetadataEntry,
   AgentParameterValue,
   AgentPolicyCatalog,
   ChoicePendingRequest,
@@ -29,12 +27,12 @@ import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
   isSurfaceVisibilityAccessible,
+  resolveSurfaceRefValue,
   resolvePolicyRoleSelector,
+  type PolicyValue,
   type PolicyVictorySurface,
+  type SurfaceResolutionContext,
 } from './policy-surface.js';
-import { extractAnnotationValue } from './policy-annotation-resolve.js';
-
-export type PolicyValue = AgentParameterValue | undefined;
 
 export interface PolicyRuntimeCandidate {
   readonly move: Move;
@@ -129,7 +127,6 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   });
   const metricCacheByState = new Map<bigint, Map<string, number>>();
   const victorySurfaceByState = new Map<bigint, PolicyVictorySurface>();
-  const activeCardEntryByState = new Map<bigint, CompiledCardMetadataEntry | undefined>();
 
   function getMetricCache(state: GameState): Map<string, number> {
     let cache = metricCacheByState.get(state.stateHash);
@@ -150,14 +147,22 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     return surface;
   }
 
-  function getActiveCardEntry(state: GameState): CompiledCardMetadataEntry | undefined {
-    if (activeCardEntryByState.has(state.stateHash)) {
-      return activeCardEntryByState.get(state.stateHash);
-    }
-    const entry = resolveActiveCardEntry(input.def, state);
-    activeCardEntryByState.set(state.stateHash, entry);
-    return entry;
-  }
+  const surfaceContext: SurfaceResolutionContext = {
+    def: input.def,
+    seatResolutionIndex,
+    resolveDerivedMetric(state, metricId) {
+      const metricCache = getMetricCache(state);
+      if (metricCache.has(metricId)) {
+        return metricCache.get(metricId)!;
+      }
+      const value = computeDerivedMetricValue(input.def, state, metricId);
+      metricCache.set(metricId, value);
+      return value;
+    },
+    resolveVictorySurface(state) {
+      return getVictorySurface(state);
+    },
+  };
 
   return {
     intrinsics: {
@@ -229,8 +234,15 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             { ref },
           );
         }
-        const targetPlayerIndex = ref.family === 'perPlayerVar'
-          ? resolvePerPlayerTargetIndex(input.def, state, ref, input.playerId, input.seatId, seatResolutionIndex)
+        const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
+          ? ref.selector.kind === 'player'
+            ? ref.selector.player === 'self' ? Number(input.playerId) : Number(state.activePlayer)
+            : (() => {
+              const resolvedSeatId = resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId, seatContext);
+              return resolvedSeatId === undefined
+                ? undefined
+                : seatResolutionIndex.playerIndexBySeatId.get(resolvedSeatId);
+              })()
           : undefined;
         const resolvedSeatId = ref.selector?.kind !== 'role'
           ? undefined
@@ -244,74 +256,18 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         )) {
           return undefined;
         }
-        if (ref.family === 'derivedMetric') {
-          const metricCache = getMetricCache(state);
-          if (metricCache.has(ref.id)) {
-            return metricCache.get(ref.id);
-          }
-          const value = computeDerivedMetricValue(input.def, state, ref.id);
-          metricCache.set(ref.id, value);
-          return value;
-        }
-        if (ref.family === 'globalVar') {
-          const value = state.globalVars[ref.id];
-          return typeof value === 'number' ? value : undefined;
-        }
-        if (ref.family === 'globalMarker') {
-          const markerState = state.globalMarkers?.[ref.id];
-          if (markerState !== undefined) {
-            return markerState;
-          }
-          const lattice = input.def.globalMarkerLattices?.find((entry) => entry.id === ref.id);
-          return lattice?.defaultState;
-        }
-        if (ref.family === 'perPlayerVar') {
-          return resolveSeatVarRef(state, ref, targetPlayerIndex);
-        }
-        if (ref.family === 'activeCardAnnotation') {
-          const current = resolveCurrentEventCardState(input.def, state);
-          if (current === null) {
-            return undefined;
-          }
-          const annotation = input.def.cardAnnotationIndex?.entries[current.card.id];
-          if (annotation === undefined) {
-            return undefined;
-          }
-          const activeSeat = input.def.seats?.[state.activePlayer]?.id ?? null;
-          return extractAnnotationValue(annotation, ref, input.seatId, activeSeat ?? undefined);
-        }
-        if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
-          const activeCardEntry = getActiveCardEntry(state);
-          if (activeCardEntry === undefined) {
-            return undefined;
-          }
-          return resolveActiveCardFamily(activeCardEntry, ref.family, ref.id);
-        }
-        if ((input.def.terminal.margins ?? []).length === 0) {
-          throw input.runtimeError(
-            'UNSUPPORTED_RUNTIME_REF',
-            'victory.currentMargin/currentRank refs require def.terminal.margins to be defined.',
-          );
-        }
-        let victorySurface: PolicyVictorySurface;
         try {
-          victorySurface = getVictorySurface(state);
+          return resolveSurfaceRefValue(state, ref, input.seatId, input.playerId, surfaceContext, seatContext);
         } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown runtime surface evaluation failure.';
+          const code = message === 'victory.currentMargin/currentRank refs require def.terminal.margins to be defined.'
+            ? 'UNSUPPORTED_RUNTIME_REF'
+            : 'RUNTIME_EVALUATION_ERROR';
           throw input.runtimeError(
-            'RUNTIME_EVALUATION_ERROR',
-            error instanceof Error ? error.message : 'Unknown victory surface evaluation failure.',
+            code,
+            message,
           );
         }
-        if (ref.selector?.kind !== 'role') {
-          return undefined;
-        }
-        const seatId = resolvePolicyRoleSelector(input.def, state, ref.selector, input.seatId, seatContext);
-        if (seatId === undefined) {
-          return undefined;
-        }
-        return ref.family === 'victoryCurrentMargin'
-          ? victorySurface.marginBySeat.get(seatId)
-          : victorySurface.rankBySeat.get(seatId);
       },
     },
     previewSurface: {
@@ -375,62 +331,4 @@ function normalizeCompletionOptionValue(optionValue: MoveParamValue): PolicyValu
   return typeof optionValue === 'string' || typeof optionValue === 'number' || typeof optionValue === 'boolean'
     ? optionValue
     : undefined;
-}
-
-function resolvePerPlayerTargetIndex(
-  def: GameDef,
-  state: GameState,
-  ref: CompiledCurrentSurfaceRef | CompiledPreviewSurfaceRef,
-  actingPlayerId: PlayerId,
-  seatId: string,
-  seatResolutionIndex: SeatResolutionIndex,
-): number | undefined {
-  if (ref.family !== 'perPlayerVar' || ref.selector === undefined) {
-    return undefined;
-  }
-  if (ref.selector.kind === 'player') {
-    return ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer);
-  }
-  const resolvedSeatId = resolvePolicyRoleSelector(def, state, ref.selector, seatId);
-  return resolvedSeatId === undefined
-    ? undefined
-    : resolvePlayerIndexForSeatValue(resolvedSeatId, seatResolutionIndex) ?? undefined;
-}
-
-function resolveSeatVarRef(
-  state: GameState,
-  ref: CompiledCurrentSurfaceRef | CompiledPreviewSurfaceRef,
-  playerIndex: number | undefined,
-): number | undefined {
-  if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {
-    return undefined;
-  }
-  const value = state.perPlayerVars[playerIndex]?.[ref.id];
-  return typeof value === 'number' ? value : undefined;
-}
-
-function resolveActiveCardEntry(
-  def: GameDef,
-  state: GameState,
-): CompiledCardMetadataEntry | undefined {
-  const current = resolveCurrentEventCardState(def, state);
-  if (current === null) {
-    return undefined;
-  }
-  return def.cardMetadataIndex?.entries[current.card.id];
-}
-
-function resolveActiveCardFamily(
-  entry: CompiledCardMetadataEntry,
-  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
-  id: string,
-): PolicyValue {
-  switch (family) {
-    case 'activeCardIdentity':
-      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
-    case 'activeCardTag':
-      return entry.tags.includes(id);
-    case 'activeCardMetadata':
-      return entry.metadata[id];
-  }
 }

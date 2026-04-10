@@ -16,6 +16,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 - In Codex sessions, use concise `commentary` updates as the default surface unless the ticket requires a durable repo artifact.
 - Capture reassessment outcomes affecting correctness: discrepancy lists, evidence classification, authoritative boundary restatements, verification-owned scope corrections.
+- In Codex sessions, record at minimum: draft/untracked status when relevant, the discrepancy class (`blocking` vs `nonblocking`), the final authoritative boundary, and any verification command substitutions or semantic expectation corrections.
 - Do not create scratch files solely to satisfy this requirement.
 
 ## Workflow
@@ -34,6 +35,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 - **Session continuity**: Reuse already-verified context from prior tickets in the same series. Prefer reusing or extracting helpers over duplicating logic. If a completed sibling already satisfied part of the current deliverable, anchor reassessment to the remaining gap.
 - **Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows the slice is stale, internally inconsistent, or impossible without broader fallout. Confirm which broader spec work is deferred to siblings.
 - **Named fallout classification**: When a ticket names multiple fallout surfaces, explicitly classify each as `still failing`, `already green`, or `already absorbed by sibling` before coding. Treat already-green named artifacts as verified non-owners unless new evidence reopens them.
+- **Active draft series sanity check**: When the active draft ticket explicitly references sibling draft tickets by number, scope, or out-of-scope ownership, open those siblings long enough to confirm the current ticket has not already been absorbed, contradicted, or rendered stale. A lightweight sanity pass is enough unless reassessment reveals real ownership drift.
 
 #### Draft Handling
 
@@ -44,6 +46,7 @@ When the active ticket or referenced artifacts are untracked drafts:
 3. Classify stale draft wording separately from true boundary errors in working notes and final closeout.
 4. Prefer correcting the active draft ticket over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
 5. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
+6. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
 
 ### Phase 2: Reassess Assumptions
 
@@ -63,6 +66,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - Required test, schema, or fixture updates
    - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
+   - Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
 
 Load `references/triage-and-resolution.md`.
 
@@ -77,10 +81,14 @@ Every stop condition below requires resolution before implementation proceeds.
 10. **Factually wrong ticket**: Stop and present discrepancies. Do not stop for nonblocking drift (see triage reference).
 11. **Unverifiable bug claim**: If a ticket's bug claim is not reproducible, or only mechanism is verified while incidence remains unproven, stop and resolve via **1-3-1** (proof-only, proof-plus-fix, or scope correction).
 12. **Scope gaps or ambiguity**: Apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
-13. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
-14. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
-15. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
-16. If the ticket is accurate and no blocking decision remains, proceed.
+13. **Semantic acceptance drift**: If a draft ticket's acceptance criteria, expected values, or test descriptions are semantically wrong about the live contract, classify whether that is:
+   - nonblocking drift: the implementation boundary is still correct and the literal wording can be safely corrected in working notes / closeout without misleading the user
+   - blocking drift: implementing the literal text would change or misstate the live contract, conflict with `FOUNDATIONS.md`, or violate `AGENTS.md` ticket fidelity
+   For blocking drift, stop and resolve via **1-3-1** before coding.
+14. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
+15. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+16. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -101,6 +109,8 @@ Load `references/verification.md`.
 - If a broad verification failure appears immediately after overlapping build/test commands, rerun the affected checks sequentially before classifying the failure as code-caused.
 
 ### Standard Commands
+
+These are the default broader verification lanes, not an automatic must-run set for every ticket. Ticket-named commands remain authoritative; when the live change boundary is narrower, run the strongest relevant subset and state what was intentionally not run.
 
 ```
 pnpm turbo build

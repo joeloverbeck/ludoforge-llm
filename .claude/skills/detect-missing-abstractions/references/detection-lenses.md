@@ -2,6 +2,10 @@
 
 Phase 4 runs two detection lenses in parallel. Both receive the exercised module list and scenario family table as input.
 
+**Prior-report exclusion**: If Phase 1 produced a known-finding exclusion list from prior reports, include it in both Lens A and Lens B agent prompts. Agents should skip patterns already covered by excluded findings.
+
+**Subsystem scoping**: When the exercised module set exceeds 100 files due to short-circuit, focus Lens A scatter analysis on the subsystem(s) directly imported by the test file. Use other subsystems (e.g., kernel/, sim/) only as boundary context for Lens B fracture analysis. State this scoping decision in the report's Traceability Summary.
+
 ## Lens A: Structural Scatter
 
 Operates bottom-up within the exercised module set.
@@ -15,7 +19,7 @@ Clustering signals:
 4. **Repeated guard clustering**: Recurring combinations of property checks or boolean expressions in 2+ files.
 5. **Exported symbol clustering**: Recurring name prefixes across 3+ files.
 
-Name each cluster by its dominant concept. Filter to clusters exceeding the file-count threshold: >10% of analyzed files or 8+ files, whichever is larger. For small analyses (<50 modules), use 5+ as the floor. When >80% of exercised modules come from barrel re-exports, apply the threshold against directly reachable modules or use a fixed floor of 8.
+Name each cluster by its dominant concept. Filter to clusters exceeding the file-count threshold: max(5, 10% of analyzed modules, 8 when >80% come from barrel re-exports).
 
 **Three counts per cluster**: (a) defining files — export symbols matching the concept, (b) consumer files — import/use those symbols, (c) temporally-coupled files — co-changed with defining files in 5+ commits. Defining files drive the threshold; consumer and temporal counts provide coupling context.
 
@@ -37,7 +41,7 @@ If two clusters share >50% of their defining files, merge them. Track sub-concep
 | **Simulator compensation** | Error handlers in `sim/` compensating for kernel gaps (zero compensation is a positive signal) | **Strong** |
 | **Workaround indicators** | Comments with "workaround"/"hack"/"safety net"/"fallback"/"broadened"; functions named with `fallback`/`defer`/`recover`/`retry`; catch blocks returning fallback values | **Supporting** |
 
-**Step 4 — Scenario grounding**: Map each flagged cluster to scenario families from Phase 2. A cluster that cannot explain any scenario family is demoted to "Needs Investigation" — not promoted to a finding.
+**Step 4 — Scenario grounding**: Map each flagged cluster to scenario families from Phase 2. A cluster that cannot explain any scenario family is demoted to "Needs Investigation" — not promoted to a finding. Patterns found only in test helper functions — not in production source — should be evaluated differently. Test duplication that exists to exercise sub-pipelines independently is acceptable if the canonical implementation has a single production call site. Only flag test scatter when it reveals a missing public API that tests are forced to reconstruct.
 
 **Tool usage**: Grep for patterns, Read specific functions for manual comparison, Bash for git log. For clusters with >20 defining files, delegate scanning to 1-3 parallel Explore sub-agents.
 
@@ -74,3 +78,5 @@ After both lenses complete, compare findings:
 - **Needs Investigation**: Findings from either lens with only one signal.
 
 This cross-lens merge is the core value of the unified approach.
+
+**Sub-agent claim verification**: Before writing findings, verify at least one evidence claim per lens per finding by reading the cited source directly. Prioritize verifying: (a) claims of code duplication (confirm the logic is actually similar, not just similarly named), (b) claims of scattered discriminant guards (confirm the branching logic overlaps).

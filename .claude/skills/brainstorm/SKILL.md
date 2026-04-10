@@ -59,7 +59,7 @@ Classify: design | decision/triage
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
-   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file without user approval. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision.
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
@@ -77,8 +77,9 @@ Classify: design | decision/triage
 
 If the reference file contains hypotheses with explicit counter-evidence checks, verification criteria (e.g., "check whether X is true before proceeding"), or factual claims about the codebase that can be verified by reading code (e.g., "the skill only traces 2-3 levels deep", "the engine uses discriminated unions extensively"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
 
-- Present the checks to the user: "The report prescribes N verification checks. Should I run them now?"
-- If yes, run them (using Explore agents, grep, git log, file reads — whatever the checks require)
+- **Design mode**: Present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them.
+- **Triage mode**: Proceed directly to verification without asking. The user invoked triage specifically to act on the report — verification is an expected prerequisite, not an optional step.
+- Run checks using Explore agents, grep, git log, file reads — whatever the checks require
 - Report results before proceeding to the interview
 - Adjust confidence and approach based on what the checks reveal
 
@@ -101,7 +102,7 @@ Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% c
 
 ### Interview Rules
 
-1. **One question per message.** Never ask multiple questions at once.
+1. **One question per message.** Never ask multiple questions at once. **Exception for triage mode**: Related independent decisions (e.g., disposition of item A + artifact format for item B) may be batched into a single AskUserQuestion call when the questions don't depend on each other's answers.
 2. **Prefer multiple-choice questions** when the answer space is bounded. Open-ended is fine when it isn't.
 3. **Probe motivations before solutions.** Ask "What problem does this solve?" and "What happens if we don't do this?" before "What do you want built?" The user's first request often describes a solution, not the problem. Your job is to find the problem.
 4. **Challenge premature specificity.** If the user jumps to implementation details early, ask why that specific approach matters. Often the constraint is softer than stated.
@@ -136,6 +137,10 @@ When a confidence gap can only be resolved by codebase investigation — not by 
 - **Existing infrastructure**: "Does something like this already exist?" → search for prior art in the codebase
 
 Announce what you're investigating and why, present findings, then resume the interview with the new information incorporated into your confidence score. The user explicitly requesting investigation (e.g., "investigate the matter carefully") is a strong signal to use this path.
+
+### Mid-Flow Investigation (Triage Mode)
+
+If the user responds to a triage question with a request for additional investigation rather than a decision (e.g., "check against FOUNDATIONS.md", "investigate further before I decide"), perform the investigation, present findings with a recommendation, and resume the triage flow. This is not a confidence regression — it's a targeted inquiry within a decision that's otherwise scoped. Do not restart the interview or re-ask resolved questions.
 
 ## Step 3: Propose Approaches
 
@@ -212,7 +217,15 @@ What would you like to do next?
 3. Done for now — I'll review the spec later
 ```
 
-If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent.
+**If triage produced spec(s) and/or report updates**:
+```
+What would you like to do next?
+1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets)
+2. Run another missing-abstractions analysis on a different test suite
+3. Done for now — I'll review the artifacts later
+```
+
+If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
 
 Use AskUserQuestion to present this as a proper choice. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
 
@@ -225,7 +238,7 @@ If the design has cross-repo implications (e.g., the same pattern needs to be ap
 ## Guardrails
 
 - **YAGNI ruthlessly**: Remove unnecessary features from all designs. If a proposed approach has optional extras, strip them unless the user explicitly asked for them.
-- **One question at a time**: Never batch questions. This is non-negotiable.
+- **One question at a time**: Never batch questions in design mode. In triage mode, related independent decisions may be batched (see Interview Rule 1).
 - **No implementation before approval**: The hard gate at the top means exactly what it says.
 - **FOUNDATIONS.md is authoritative**: For implementation topics, if a proposed approach violates a Foundation principle, flag it immediately. Do not propose approaches that violate Foundations without explicitly calling out the violation and getting user sign-off.
 - **Worktree discipline**: If working in a worktree, all file paths use the worktree root.

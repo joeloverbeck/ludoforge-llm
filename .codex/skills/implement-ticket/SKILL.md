@@ -33,6 +33,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 - **Session continuity**: Reuse already-verified context from prior tickets in the same series. Prefer reusing or extracting helpers over duplicating logic. If a completed sibling already satisfied part of the current deliverable, anchor reassessment to the remaining gap.
 - **Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows the slice is stale, internally inconsistent, or impossible without broader fallout. Confirm which broader spec work is deferred to siblings.
+- **Named fallout classification**: When a ticket names multiple fallout surfaces, explicitly classify each as `still failing`, `already green`, or `already absorbed by sibling` before coding. Treat already-green named artifacts as verified non-owners unless new evidence reopens them.
 
 #### Draft Handling
 
@@ -60,6 +61,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - When changing a shared callable type contract, grep both runtime callsites and their tests
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
+   - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
 
 Load `references/triage-and-resolution.md`.

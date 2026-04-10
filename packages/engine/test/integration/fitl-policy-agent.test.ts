@@ -22,6 +22,7 @@ import {
   type ClassifiedMove,
   createRng,
   createGameDefRuntime,
+  computeFullHash,
   enumerateLegalMoves,
   evaluatePlayableMoveCandidate,
   initialState,
@@ -814,27 +815,34 @@ describe('FITL policy agent integration', () => {
         ...base.state.zones,
       },
     };
-    const manyBasesState: GameState = {
+    const manyBasesZones: GameState['zones'] = {
+      ...base.state.zones,
+      'tay-ninh:none': [
+        ...(base.state.zones['tay-ninh:none'] ?? []),
+        { id: 'vc-threshold-base-a' as never, type: 'base', props: { seat: 'vc', strength: 1 } },
+      ],
+      'quang-tri-thua-thien:none': [
+        ...(base.state.zones['quang-tri-thua-thien:none'] ?? []),
+        { id: 'vc-threshold-base-b' as never, type: 'base', props: { seat: 'vc', strength: 1 } },
+      ],
+      'kien-phong:none': [
+        ...(base.state.zones['kien-phong:none'] ?? []),
+        { id: 'vc-threshold-base-c' as never, type: 'base', props: { seat: 'vc', strength: 1 } },
+      ],
+      'quang-duc-long-khanh:none': [
+        ...(base.state.zones['quang-duc-long-khanh:none'] ?? []),
+        { id: 'vc-threshold-base-d' as never, type: 'base', props: { seat: 'vc', strength: 1 } },
+      ],
+    };
+    const manyBasesStateDraft: GameState = {
       ...base.state,
-      zones: {
-        ...base.state.zones,
-        'tay-ninh:none': [
-          ...(base.state.zones['tay-ninh:none'] ?? []),
-          { id: 'vc-threshold-base-a' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
-        ],
-        'quang-tri-thua-thien:none': [
-          ...(base.state.zones['quang-tri-thua-thien:none'] ?? []),
-          { id: 'vc-threshold-base-b' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
-        ],
-        'kien-phong:none': [
-          ...(base.state.zones['kien-phong:none'] ?? []),
-          { id: 'vc-threshold-base-c' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
-        ],
-        'quang-duc-long-khanh:none': [
-          ...(base.state.zones['quang-duc-long-khanh:none'] ?? []),
-          { id: 'vc-threshold-base-d' as never, type: 'base', props: { seat: base.state.activePlayer, strength: 1 } },
-        ],
-      },
+      zones: manyBasesZones,
+    };
+    const manyBasesHash = computeFullHash(runtime.zobristTable, manyBasesStateDraft);
+    const manyBasesState: GameState = {
+      ...manyBasesStateDraft,
+      stateHash: manyBasesHash,
+      _runningHash: manyBasesHash,
     };
 
     const fewBasesResult = evaluatePolicyMove({
@@ -875,13 +883,15 @@ describe('FITL policy agent integration', () => {
     assert.deepEqual(agents.library.considerations.preferPopulousTargets?.scopes, ['completion']);
   });
 
-  it('compiles vc-baseline profile with preview.mode from production YAML', () => {
+  it('compiles vc-baseline profile with the authored preview config from production YAML', () => {
     const { compiled } = compileProductionSpec();
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
     assert.deepEqual(agents.profiles['vc-baseline']?.preview, {
       mode: 'tolerateStochastic',
+      phase1: false,
+      phase1CompletionsPerAction: 1,
     });
     assert.deepEqual(agents.profiles['us-baseline']?.preview, { mode: 'exactWorld' });
     assert.deepEqual(agents.profiles['arvn-baseline']?.preview, { mode: 'exactWorld' });

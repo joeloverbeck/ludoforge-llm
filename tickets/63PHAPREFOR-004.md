@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — integration tests
-**Deps**: `tickets/63PHAPREFOR-003.md`
+**Deps**: `archive/tickets/63PHAPREFOR-003.md`
 
 ## Problem
 

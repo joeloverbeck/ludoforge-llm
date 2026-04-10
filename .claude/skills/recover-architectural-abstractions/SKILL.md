@@ -38,8 +38,8 @@ Starting from the test file(s), build a dependency graph of engine source module
 3. Continue 2-3 levels deep until reaching leaf modules or modules outside `packages/engine/src/`. Barrel/index re-export files count as zero depth.
 4. Produce a list of all engine source files exercised by the test suite
 5. Read `docs/FOUNDATIONS.md` — hold it for Phase 6 validation. Do NOT apply it yet.
-6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery. Produce a numbered exclusion list of known findings with one-line summaries. Include this list verbatim in all sub-agent prompts for Phases 2-4. **Reject any prior report whose path starts with `archive/`** — these are already exploited and must not influence the current analysis. Do NOT proactively search `archive/` for old reports.
-7. Check for existing coverage/trace artifacts in the repo. Use them if present.
+6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery. Produce a numbered exclusion list of known findings with one-line summaries. Include this list verbatim in all sub-agent prompts for Phases 2-4. If no prior reports exist, omit the exclusion list from sub-agent prompts. **Reject any prior report whose path starts with `archive/`** — these are already exploited and must not influence the current analysis. Do NOT proactively search `archive/` for old reports.
+7. Check for existing coverage/trace artifacts (e.g., `coverage/`, `.nyc_output/`, `*.trace.json`) in the repo. Use them if present; skip if none found.
 8. Run bounded git history: `git log --since="6 months ago" --name-only --pretty=format:"COMMIT:%H" -- <exercised-file-paths>` to identify temporal coupling (files that frequently change together across commits). Parse the output to identify **commit clusters** — sets of 3+ exercised files that appear together in 2+ commits. Report the top 5 most frequent clusters by co-occurrence count. Filter the git log to only commits touching 2+ of the exercised files, then count pairwise co-occurrences. The goal is a ranked list of file-pairs/groups that change together, not a raw commit dump. For >30 exercised files, delegate git parsing to a separate sub-agent to keep the main context clean.
 
 **Sub-agent delegation**: For large test suites (>20 direct imports or barrel re-exports), delegate import tracing to 1-3 parallel Explore sub-agents. Each agent traces a subset of the import tree. Merge their deduplicated file lists (take the union). If agents report conflicting facts about the same file (e.g., different import counts), re-read the file directly to resolve. Note any reconciliation in the Traceability Summary. Also delegate git history analysis to a separate sub-agent if the file list exceeds 30 modules.
@@ -68,7 +68,7 @@ Scaling guide for scenario family count: for <10 tests, target 2-5 families; for
 
 Every later architectural inference must be tied back to scenario families. A finding not grounded in test behavior is speculation.
 
-Canary and integration tests may produce only 1-3 scenario families. This is expected — the value shifts from scenario-level precision to broad cross-subsystem coverage. Do not inflate scenario families to fill the table.
+Canary, integration, and performance benchmark tests may produce only 1-3 scenario families. This is expected — the value shifts from scenario-level precision to broad cross-subsystem coverage. Do not inflate scenario families to fill the table.
 
 **Sub-agent delegation**: For large test directories (>30 test files), delegate scenario extraction to 2-3 parallel Explore sub-agents, each handling a subset. Merge and deduplicate scenario families.
 
@@ -108,7 +108,7 @@ Scan the exercised code for these 8 fracture types:
 
 **Evidence rule**: A fracture is NOT reported unless supported by at least two independent signals (e.g., import analysis + temporal coupling, or naming similarity + assertion patterns). Single-signal fractures go in a "Needs investigation" bucket, not in the main findings.
 
-For small test suites (<15 direct engine modules), perform Phase 4 directly rather than delegating to a sub-agent.
+For small test suites (<15 direct test-file imports from engine source, i.e., distinct `packages/engine/src/**` paths in the test's own `import` statements), perform Phase 4 directly rather than delegating to a sub-agent. The transitive module count is irrelevant for this threshold — Phase 4 works from scenario families and temporal coupling clusters, not raw file-by-file reading.
 
 **Sub-agent input**: When delegating Phase 4 to a sub-agent (for larger suites), provide: (1) the scenario family table from Phase 2, (2) the top 5-10 temporal coupling clusters from Phase 1, (3) the list of key boundary modules (files at subsystem borders), and (4) specific questions about each potential fracture area derived from the test patterns.
 
@@ -218,7 +218,8 @@ This is a successful analysis — do not pad findings to justify the effort.
 ## Needs Investigation
 
 <Single-signal fractures that didn't meet the two-signal minimum.
-List them with the one signal found and what second signal to look for.>
+List them with the one signal found, what second signal to look for,
+and what would falsify the hypothesis.>
 
 ## Recommendations
 

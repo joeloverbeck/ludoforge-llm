@@ -13,16 +13,16 @@ Spec 63 introduced Phase 1 representative preview: one template completion per a
 
 In the FITL ARVN agent evolution campaign, candidate features that depend on preview state (e.g., projected opponent token counts, projected opponent margins) return **uniform values across all action types** because the randomly-selected representative for each action type happens to produce similar post-move states. For example:
 
-| Action Type | Representative Target | Projected VC Guerrillas | Differentiation |
+| Action Type | Representative Target | Projected Self-Margin | Differentiation |
 |---|---|---|---|
-| Govern | random zone | 16 | none |
-| Sweep | random zone (no VC presence) | 16 | none |
-| Assault | random zone (no activated guerrillas) | 16 | none |
-| Train | random zone | 16 | none |
+| Govern | random zone | -45 | none |
+| Sweep | random zone (no VC presence) | -45 | none |
+| Assault | random zone (no activated guerrillas) | -45 | none |
+| Train | random zone | -45 | none |
 
-Assault targeting a zone WITH activated VC guerrillas would project 14 guerrillas (removal effect visible). Sweep targeting a zone WITH hidden guerrillas would project different activation states. But the first-successful-RNG completion picks zones randomly, often missing the zones where the action would have maximum impact.
+Assault targeting a zone WITH activated VC guerrillas would project a higher margin (removal effect visible). Sweep targeting a zone WITH hidden guerrillas would project different activation states. But the first-successful-RNG completion picks zones randomly, often missing the zones where the action would have maximum impact.
 
-The result: opponent-aware candidate features (projected enemy token counts, projected opponent margins from opponent infrastructure changes) cannot differentiate between action types. The agent cannot learn to prefer combat actions when enemy infrastructure is vulnerable because the representative completion doesn't demonstrate the combat action's potential.
+The result: opponent-aware candidate features (projected margins, projected opponent infrastructure changes) cannot differentiate between action types. The agent cannot learn to prefer combat actions when enemy infrastructure is vulnerable because the representative completion doesn't demonstrate the combat action's potential.
 
 ### Root Cause
 
@@ -52,7 +52,7 @@ Generate N>1 completions per action type in Phase 1, preview-evaluate each, and 
 
 #### 2. Preview-Evaluate All N Completions
 
-After collecting completions for an action type, apply `applyTrustedMove()` to each and evaluate the profile's candidate features on the resulting state. Extract the projected self-margin (or a configurable ranking expression) from each.
+After collecting completions for an action type, apply `applyTrustedMove()` to each and evaluate the profile's candidate features on the resulting state. Extract the projected self-margin (or a configurable ranking expression) from each. Note: `applyTrustedMove` is already called during Phase 1 preview evaluation (`policy-preview.ts:301`), so this is not a new dependency. The selection step follows the established best-of-N pattern from `greedy-agent.ts:73-88`.
 
 ```typescript
 // Pseudocode for the selection step
@@ -120,14 +120,14 @@ Against a ~60-300 second game: <0.2% overhead.
 
 With best-of-3 selection, the representative for Assault would be the completion that targets the zone with the most enemy tokens (because removing them produces the best projected margin). The representative for Sweep would target the zone with the most hidden guerrillas. This makes opponent-aware features differentiate:
 
-| Action Type | Best-of-3 Representative | Projected VC Guerrillas | Differentiation |
+| Action Type | Best-of-3 Representative | Projected Self-Margin | Differentiation |
 |---|---|---|---|
-| Govern | best-margin zone | 16 | baseline |
-| Sweep | zone with hidden VC | 15 (activation effect) | partial |
-| Assault | zone with activated VC | 13 (removal effect) | strong |
-| Train | best-margin zone | 16 | baseline |
+| Govern | best-margin zone | -45 | baseline |
+| Sweep | zone with hidden VC | -43 (activation effect improves margin) | partial |
+| Assault | zone with activated VC | -40 (removal effect improves margin) | strong |
+| Train | best-margin zone | -45 | baseline |
 
-The agent can now learn: "Assault reduces VC guerrillas by 3 in preview, while Govern doesn't change them. When VC guerrilla count is high, prefer Assault."
+The agent can now learn: "Assault improves projected self-margin by 5 points in preview, while Govern doesn't change it. When enemy presence is high, prefer Assault."
 
 ## Alignment with FOUNDATIONS.md
 
@@ -147,9 +147,9 @@ The agent can now learn: "Assault reduces VC guerrillas by 3 in preview, while G
 | Artifact | Changes |
 |---|---|
 | `packages/engine/src/agents/policy-agent.ts` | `buildPhase1ActionPreviewIndex`: add preview evaluation and best-of-N selection when `completionBudget > 1` |
-| `packages/engine/src/agents/policy-preview.ts` | Extract margin evaluation helper (reusable for selection step) |
+| `packages/engine/src/agents/policy-preview.ts` | Export existing `getSeatMargin()` helper (currently private at line 421) for reuse in selection step |
 | `packages/engine/test/unit/agents/` | Tests: best-of-N selects higher-margin completion; N=1 retains first-of behavior; determinism across runs |
-| `packages/engine/test/integration/` | FITL integration test: best-of-3 produces different projected feature values per action type for opponent-aware features |
+| `packages/engine/test/integration/phase1-preview-differentiation.test.ts` | Extend existing test (already has `projectedSelfMarginContribution` helper and `Phase1Witness` interface): add best-of-3 case asserting different projected margins per action type |
 
 ## Non-Goals
 
@@ -159,7 +159,7 @@ The agent can now learn: "Assault reduces VC guerrillas by 3 in preview, while G
 
 ## Success Criteria
 
-1. With `phase1CompletionsPerAction: 3`, opponent-aware candidate features (e.g., `projectedVcGuerrillas`) produce different values for at least 2 action types at the same decision point in FITL.
+1. With `phase1CompletionsPerAction: 3`, opponent-aware candidate features (e.g., features referencing `preview.victory.currentMargin.<seat>`) produce different values for at least 2 action types at the same decision point in FITL.
 2. The selected representative has projected self-margin >= the first-of-N representative's margin (best-of-N is never worse than first-of-N).
 3. All engine tests pass after fixture migration.
 4. Determinism tests confirm same-seed reproducibility.

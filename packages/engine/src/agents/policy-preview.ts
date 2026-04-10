@@ -418,7 +418,7 @@ function getVictorySurface(
   return preview.victorySurface;
 }
 
-function getSeatMargin(
+export function getSeatMargin(
   def: GameDef,
   state: GameState,
   seatId: string,

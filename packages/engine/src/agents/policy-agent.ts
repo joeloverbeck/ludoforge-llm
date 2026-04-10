@@ -1,11 +1,12 @@
 import type { Agent } from '../kernel/types.js';
+import { applyTrustedMove } from '../kernel/apply-move.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
 import { evaluatePolicyMove, type PolicyEvaluationMetadata } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
-import type { Phase1ActionPreviewEntry } from './policy-preview.js';
+import { getSeatMargin, type Phase1ActionPreviewEntry } from './policy-preview.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
@@ -171,7 +172,12 @@ function buildPhase1ActionPreviewIndex(
       },
     );
     rng = prepared.rng;
-    const representative = prepared.completedMoves[0];
+    const representative = selectPhase1RepresentativeMove(
+      input,
+      resolvedProfile.seatId,
+      completionBudget,
+      prepared.completedMoves,
+    );
     if (representative !== undefined) {
       index.set(actionId, {
         actionId,
@@ -182,6 +188,53 @@ function buildPhase1ActionPreviewIndex(
   perfDynEnd(profiler, 'agent:phase1Completions', t0_prepare);
 
   return { index, rng };
+}
+
+function selectPhase1RepresentativeMove(
+  input: Parameters<Agent['chooseMove']>[0],
+  seatId: string,
+  completionBudget: number,
+  completedMoves: readonly ReturnType<typeof preparePlayableMoves>['completedMoves'][number][],
+) {
+  const firstCompletedMove = completedMoves[0];
+  if (firstCompletedMove === undefined) {
+    return undefined;
+  }
+  if (completionBudget <= 1 || completedMoves.length <= 1) {
+    return firstCompletedMove;
+  }
+
+  let bestMove = firstCompletedMove;
+  let bestMargin = getProjectedSelfMargin(input, seatId, firstCompletedMove);
+
+  for (let index = 1; index < completedMoves.length; index += 1) {
+    const candidate = completedMoves[index];
+    if (candidate === undefined) {
+      continue;
+    }
+    const candidateMargin = getProjectedSelfMargin(input, seatId, candidate);
+    if (candidateMargin > bestMargin) {
+      bestMove = candidate;
+      bestMargin = candidateMargin;
+    }
+  }
+
+  return bestMove;
+}
+
+function getProjectedSelfMargin(
+  input: Parameters<Agent['chooseMove']>[0],
+  seatId: string,
+  move: ReturnType<typeof preparePlayableMoves>['completedMoves'][number],
+): number {
+  const projectedState = applyTrustedMove(
+    input.def,
+    input.state,
+    move,
+    undefined,
+    input.runtime,
+  ).state;
+  return getSeatMargin(input.def, projectedState, seatId, input.runtime) ?? Number.NEGATIVE_INFINITY;
 }
 
 function rankActionIdsByBestCandidateScore(

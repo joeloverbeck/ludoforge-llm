@@ -1,6 +1,6 @@
 # Spec 125 — Surface Resolution Dispatch Consolidation
 
-- **Status**: PROPOSED
+- **Status**: COMPLETED
 - **Priority**: Medium
 - **Complexity**: Low
 - **Dependencies**: None
@@ -123,3 +123,23 @@ Move `resolvePerPlayerTargetIndex`, `resolveSeatVarRef`, `resolveActiveCardEntry
 1. **Unit tests for shared resolver**: Test `resolveSurfaceRefValue()` directly with representative refs from each family. Verify correct values for each `(ref.family, state)` combination.
 2. **Equivalence test**: For a representative set of refs and states, assert that `policy-preview.ts`'s wrapped result and `policy-runtime.ts`'s direct result both produce the same underlying value.
 3. **Existing integration tests**: The `fitl-policy-agent.test.ts` suite (19 tests) exercises both resolvers through the full evaluation pipeline. All must continue passing unchanged.
+
+## Outcome
+
+- Completed: 2026-04-10
+- Changed:
+  - extracted shared surface-resolution dispatch into `packages/engine/src/agents/policy-surface.ts`
+  - rewired both `packages/engine/src/agents/policy-runtime.ts` and `packages/engine/src/agents/policy-preview.ts` to delegate to the shared resolver
+  - updated downstream `PolicyValue` imports to the new shared authority
+  - added direct shared-resolver unit coverage in `packages/engine/test/unit/agents/surface-resolution-dispatch.test.ts`
+- Deviations from original plan:
+  - the work landed as one atomic ticket implementation rather than three staged tickets because the shared extraction was not architecturally complete while runtime and preview still carried duplicate dispatch chains
+  - the spec's `globalMarker` expectation was semantically stale in practice: the live raw contract returns marker-state strings / default-state strings rather than a numeric lattice index
+  - the dedicated preview/runtime equivalence test proposed here was not added as a separate artifact; the implemented proof relied on direct shared-resolver unit coverage plus the existing engine runtime/preview suites
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/surface-resolution-dispatch.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo build`
+  - `pnpm turbo test`
+  - `pnpm turbo typecheck`

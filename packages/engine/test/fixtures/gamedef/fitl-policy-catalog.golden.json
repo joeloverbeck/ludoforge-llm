@@ -2151,6 +2151,88 @@
           "strategicConditions": []
         }
       },
+      "preferStrongNormalizedMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": 8
+        },
+        "value": {
+          "kind": "op",
+          "op": "div",
+          "args": [
+            {
+              "kind": "op",
+              "op": "sub",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "candidateFeature",
+                    "id": "projectedSelfMargin"
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "aggregate",
+                    "id": "minMarginScore"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "max",
+              "args": [
+                {
+                  "kind": "literal",
+                  "value": 1
+                },
+                {
+                  "kind": "op",
+                  "op": "sub",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "maxMarginScore"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "minMarginScore"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [
+            "maxMarginScore",
+            "minMarginScore"
+          ],
+          "strategicConditions": []
+        }
+      },
       "valueCapabilityGain": {
         "scopes": [
           "move"
@@ -2416,6 +2498,58 @@
       },
       "fingerprint": "83f6d4af937cc90c355e0c10300bde879ca5a92cdadfc8c8888ab05ef0075711"
     },
+    "arvn-evolved": {
+      "observerName": "currentPlayer",
+      "params": {
+        "projectedMarginWeight": 3,
+        "governWeight": 5,
+        "trainWeight": 3
+      },
+      "use": {
+        "pruningRules": [
+          "dropPassWhenOtherMovesExist"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preferStrongNormalizedMargin",
+          "preferGovernWeighted",
+          "preferTrainWeighted",
+          "preferPopulousTargets"
+        ],
+        "tieBreakers": [
+          "stableMoveKey"
+        ]
+      },
+      "preview": {
+        "mode": "exactWorld",
+        "phase1": true,
+        "phase1CompletionsPerAction": 1
+      },
+      "selection": {
+        "mode": "argmax"
+      },
+      "plan": {
+        "stateFeatures": [
+          "selfMargin"
+        ],
+        "candidateFeatures": [
+          "projectedSelfMargin"
+        ],
+        "candidateAggregates": [
+          "hasNonPassAlternative",
+          "maxMarginScore",
+          "minMarginScore"
+        ],
+        "considerations": [
+          "preferProjectedSelfMargin",
+          "preferStrongNormalizedMargin",
+          "preferGovernWeighted",
+          "preferTrainWeighted",
+          "preferPopulousTargets"
+        ]
+      },
+      "fingerprint": "f29f290add2ceac1292740a1138f9f76df6d8599088c60c24f216220bd80292a"
+    },
     "nva-baseline": {
       "observerName": "currentPlayer",
       "params": {
@@ -2527,9 +2661,9 @@
   },
   "bindingsBySeat": {
     "us": "us-baseline",
-    "arvn": "arvn-baseline",
+    "arvn": "arvn-evolved",
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "08343188bbfec3cea6b18ff3eacdca677b2af17d8be1eede3b72660dc80cb9d2"
+  "catalogFingerprint": "5aaa6dd1a32f7c48a12e06afca5e747609e19fa56578e2cbdcc01ea4a97fa02b"
 }

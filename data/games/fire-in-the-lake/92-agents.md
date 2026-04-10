@@ -356,6 +356,19 @@ agents:
                 - sub:
                     - { ref: aggregate.maxMarginScore }
                     - { ref: aggregate.minMarginScore }
+      preferStrongNormalizedMargin:
+        scopes: [move]
+        weight: 8
+        value:
+          div:
+            - sub:
+                - { ref: feature.projectedSelfMargin }
+                - { ref: aggregate.minMarginScore }
+            - max:
+                - 1
+                - sub:
+                    - { ref: aggregate.maxMarginScore }
+                    - { ref: aggregate.minMarginScore }
       valueCapabilityGain:
         scopes: [move]
         weight: 3
@@ -426,6 +439,27 @@ agents:
         tieBreakers:
           - stableMoveKey
 
+    arvn-evolved:
+      observer: currentPlayer
+      preview:
+        mode: exactWorld
+        phase1: true
+      params:
+        projectedMarginWeight: 3
+        governWeight: 5
+        trainWeight: 3
+      use:
+        pruningRules:
+          - dropPassWhenOtherMovesExist
+        considerations:
+          - preferProjectedSelfMargin
+          - preferStrongNormalizedMargin
+          - preferGovernWeighted
+          - preferTrainWeighted
+          - preferPopulousTargets
+        tieBreakers:
+          - stableMoveKey
+
     nva-baseline:
       observer: currentPlayer
       params:
@@ -468,7 +502,7 @@ agents:
 
   bindings:
     us: us-baseline
-    arvn: arvn-baseline
+    arvn: arvn-evolved
     nva: nva-baseline
     vc: vc-baseline
 ```

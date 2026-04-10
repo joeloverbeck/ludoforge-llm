@@ -507,6 +507,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           },
         )
       ), 0);
+      evaluation.finalizePreviewOutcome(candidate);
     }
     let rng = input.rng;
     let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];

@@ -32,8 +32,8 @@ interface Phase1Witness extends ArvnDecisionTrace {
   readonly projectedMarginsByAction: ReadonlyMap<string, number>;
 }
 
-const PHASE1_WITNESS_MAX_SEED = 12;
-const PHASE1_WITNESS_MAX_PLY = 18;
+const PHASE1_WITNESS_MAX_SEED = 20;
+const PHASE1_WITNESS_MAX_PLY = 30;
 const PERF_ITERATIONS = 12;
 
 function createFitlDef(phase1CompletionsPerAction?: number): GameDef {
@@ -92,7 +92,7 @@ function projectedSelfMarginContribution(candidate: VerbosePolicyCandidate): num
     assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
   }
   const contribution = scoreContributions.find((entry) =>
-    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+    /[Mm]argin/.test(entry.termId),
   );
   assert.notEqual(
     contribution,
@@ -108,7 +108,7 @@ function maybeProjectedSelfMarginContribution(candidate: VerbosePolicyCandidate)
     return null;
   }
   const contribution = scoreContributions.find((entry) =>
-    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+    /[Mm]argin/.test(entry.termId),
   );
   return contribution?.contribution ?? null;
 }

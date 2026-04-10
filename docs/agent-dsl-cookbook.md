@@ -222,9 +222,44 @@ stateFeatures:
 
 **Aggregation ops:** `count` (count matching tokens), `sum` (sum a prop value), `min`, `max`.
 
+**`prop` field** (required for `sum`/`min`/`max`): Specifies which numeric token property to aggregate. Not needed for `count`.
+
+```yaml
+stateFeatures:
+  # Sum troop strength across all zones
+  totalTroopStrength:
+    type: number
+    expr:
+      globalTokenAgg:
+        aggOp: sum
+        prop: strength
+        tokenFilter:
+          props:
+            faction: { eq: self }
+            type: { eq: troops }
+```
+
 **Field name note:** `globalTokenAgg` and `globalZoneAgg` use `aggOp:` for the operation field. `zoneTokenAgg` uses `op:`. This is an inconsistency in the DSL — use the correct field name for each operator.
 
 **Zone scope** (optional): `board` (default, play area only), `aux` (off-board), `all` (everything).
+
+**Zone filter** (optional): Restrict which zones are included in the aggregation. Same shape as `globalZoneAgg.zoneFilter` — supports `category`, `attribute`, and `variable` sub-filters. Can be combined with `tokenFilter`.
+
+```yaml
+stateFeatures:
+  # Count VC guerrillas in province zones only
+  vcGuerrillasInProvinces:
+    type: number
+    expr:
+      globalTokenAgg:
+        aggOp: count
+        tokenFilter:
+          props:
+            faction: { eq: VC }
+            type: { eq: guerrilla }
+        zoneFilter:
+          category: province
+```
 
 ### Counting Zones with `globalZoneAgg`
 
@@ -260,6 +295,8 @@ stateFeatures:
 - `variable: { <name>: { <op>: <value> } }` — dynamic zone variable
 
 **Zone filter comparison operators (`<op>`):** `eq`, `gt`, `gte`, `lt`, `lte`.
+
+**Zone scope** (optional): `board` (default), `aux`, `all` — same as `globalTokenAgg`.
 
 ### Zone Property Access with `zoneProp`
 
@@ -298,25 +335,7 @@ stateFeatures:
 
 **Owner values:** `self`, `active`, `none`, or numeric player ID (e.g., `"0"`).
 
-`zoneTokenAgg` also accepts an optional `tokenFilter` (same shape as `globalTokenAgg`) to restrict which tokens are counted:
-
-```yaml
-candidateFeatures:
-  vcGuerrillasInTargetZone:
-    type: number
-    expr:
-      coalesce:
-        - zoneTokenAgg:
-            zone: { ref: option.value }
-            owner: none
-            prop: type
-            op: count
-            tokenFilter:
-              props:
-                faction: { eq: VC }
-                type: { eq: guerrilla }
-        - 0
-```
+**Note**: `zoneTokenAgg` does NOT support `tokenFilter`. To count specific token types in a zone, use `globalTokenAgg` with a `zoneFilter` targeting the zone category, or use the `prop` field to aggregate a specific token property.
 
 ### Adjacent Zone Token Counts with `adjacentTokenAgg`
 
@@ -403,13 +422,29 @@ The `strategicConditions` library bucket defines boolean conditions with a proxi
 ```yaml
 strategicConditions:
   nearVictory:
-    expr:
+    target:
       gte:
         - { ref: victory.currentMargin.self }
         - -3
 ```
 
 Use in `when` clauses: `when: { ref: condition.nearVictory.satisfied }`.
+
+**Proximity metric** (optional): Add a `proximity` sub-object to measure how close the condition is to being satisfied. The result is `current / threshold`, clamped to 0-1.
+
+```yaml
+strategicConditions:
+  nearVictory:
+    target:
+      gte:
+        - { ref: victory.currentMargin.self }
+        - -3
+    proximity:
+      current: { ref: victory.currentMargin.self }
+      threshold: -3
+```
+
+Reference via `condition.nearVictory.proximity` (returns 0-1 number). If no `proximity` is defined, referencing `.proximity` causes a compilation error.
 
 ## Candidate Features
 
@@ -682,14 +717,14 @@ profiles:
 | `ref` | `{ ref: path }` | varies | reference a state/feature/candidate value |
 | `const` | `{ const: 5 }` | literal | constant value |
 | `param` | `{ param: name }` | number | profile parameter |
-| `add` | `add: [a, b]` | number | a + b |
-| `sub` | `sub: [a, b]` | number | a - b |
-| `mul` | `mul: [a, b]` | number | a * b |
-| `div` | `div: [a, b]` | number | a / b (float division) |
+| `add` | `add: [a, b, ...]` | number | sum of 2+ operands |
+| `sub` | `sub: [a, b]` | number | a - b (exactly 2) |
+| `mul` | `mul: [a, b, ...]` | number | product of 2+ operands |
+| `div` | `div: [a, b]` | number | a / b (float division, exactly 2) |
 | `neg` | `neg: expr` | number | -expr |
 | `abs` | `abs: expr` | number | \|expr\| |
-| `min` | `min: [a, b]` | number | min(a, b) |
-| `max` | `max: [a, b]` | number | max(a, b) |
+| `min` | `min: [a, b, ...]` | number | min of 2+ operands |
+| `max` | `max: [a, b, ...]` | number | max of 2+ operands |
 | `clamp` | `clamp: [value, min, max]` | number | clamp to range |
 | `eq` | `eq: [a, b]` | boolean | a === b |
 | `ne` | `ne: [a, b]` | boolean | a !== b |
@@ -1120,7 +1155,7 @@ considerations:
 ```yaml
 strategicConditions:
   usNearVictory:
-    expr:
+    target:
       gte:
         - { ref: victory.currentMargin.us }
         - -3

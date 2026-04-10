@@ -25,11 +25,13 @@ Read ALL of these files:
 
 1. **`docs/agent-dsl-cookbook.md`** — the cookbook to reassess
 2. **DSL source-of-truth files** (hardcoded paths):
-   - `packages/engine/src/agents/policy-expr.ts` — `KnownOperator` set (all expression operators)
+   - `packages/engine/src/agents/policy-expr.ts` — `KnownOperator` set (all expression operators) and `analyze*Operator` functions (authored YAML field validation)
    - `packages/engine/src/agents/policy-surface.ts` — reference path families (`var.*`, `victory.*`, `activeCard.*`, `metric.*`)
    - `packages/engine/src/contracts/policy-contract.ts` — valid enums (owner keywords, filter ops, zone scopes, aggregate ops, intrinsic names)
    - `packages/engine/src/cnl/compile-agents.ts` — intrinsic resolution (`candidate.*`, `decision.*`, `turn.*`, `seat.*`, `feature.*`, `aggregate.*`, `option.*`, `context.*`)
+   - `packages/engine/src/cnl/game-spec-doc.ts` — authored YAML type definitions (`GameSpec*Def` interfaces defining valid field names for YAML authoring)
    - `packages/engine/src/agents/policy-evaluation-core.ts` — runtime operator implementations (arithmetic semantics, aggregation reduction, comparison behavior)
+   - `packages/engine/src/kernel/types-core.ts` — compiled `AgentPolicyExpr` union members (exact fields each operator compiles to)
 
 If any source file does not exist at the expected path, search for it (it may have been moved). Report the new location.
 
@@ -41,7 +43,7 @@ From each source file, extract the complete set of DSL capabilities. Read files 
 
 **From `policy-expr.ts`:**
 - All values in `KnownOperator` type/set — these are every expression operator the DSL supports
-- For each aggregation operator (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`), note the required and optional fields
+- For each aggregation operator (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`, `seatAgg`), note the required and optional fields by reading the `analyze*Operator` function and its `validateAllowedObjectKeys` call — these define which fields the authored YAML accepts
 
 **From `policy-surface.ts`:**
 - All reference path families and their sub-paths (e.g., `var.global.<id>`, `var.player.self.<id>`, `activeCard.id`, `activeCard.hasTag.<tag>`, `activeCard.annotation.<side>.<metric>`)
@@ -63,13 +65,21 @@ From each source file, extract the complete set of DSL capabilities. Read files 
 - Selection modes (`argmax`, `softmaxSample`, `weightedSample`)
 - Preview modes (`disabled`, `tolerateStochastic`, `exactWorld`)
 
+**From `game-spec-doc.ts`:**
+- All `GameSpec*Def` interfaces — these define the valid field names for authored YAML (e.g., `GameSpecStrategicConditionDef` uses `target`, not `expr`; `GameSpecStateFeatureDef` uses `expr` and `type`)
+- Cross-reference these field names against the cookbook's YAML examples to catch field name mismatches
+
 **From `policy-evaluation-core.ts`:**
 - Runtime operator semantics — verify cookbook descriptions match actual behavior (e.g., `div` is float division not integer, `sub` argument order, aggregation reduction logic)
 - Focus on arithmetic operators (`add`, `sub`, `mul`, `div`, `neg`, `abs`, `clamp`) and aggregation operators (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`)
 
-### Step 3: Compare Cookbook Against Source
+**From `types-core.ts`:**
+- Compiled `AgentPolicyExpr` union members — each `kind` variant defines the exact fields the compiled form supports (e.g., `zoneTokenAgg` has `zone`, `owner`, `prop`, `aggOp` but no `tokenFilter`)
+- Cross-reference these compiled shapes against cookbook claims about optional fields
 
-For each DSL capability extracted in Step 2, check whether the cookbook documents it:
+### Step 3: Compare Cookbook Against Source (and Assess Quality)
+
+For each DSL capability extracted in Step 2, check whether the cookbook documents it. Steps 3 and 4 can be done in a single pass — quality gaps naturally surface during comparison.
 
 1. **Missing operators** — operators in `KnownOperator` not mentioned in the cookbook's Expression Operators Reference table
 2. **Missing reference paths** — ref families in `policy-surface.ts` not documented (e.g., `activeCard.*`)
@@ -124,7 +134,7 @@ N additions, N corrections, N quality improvements:
 - Patterns: <assessment>
 ```
 
-**Wait for user approval** before modifying the cookbook.
+**Wait for user approval** before modifying the cookbook. If plan mode is active, present the report in the plan file and use `ExitPlanMode` for approval.
 
 ### Step 6: Update Cookbook
 

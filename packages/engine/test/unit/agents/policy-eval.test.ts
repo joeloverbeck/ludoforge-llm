@@ -752,6 +752,32 @@ describe('policy-eval', () => {
       assert.equal(resolveTokenFilter(undefined, asPlayerId(0), state), undefined);
     });
 
+    it('resolves self and active to seat ID strings when seatIds are provided', () => {
+      const { state } = createHelperTestState();
+
+      assert.deepEqual(
+        resolveTokenFilter(
+          {
+            type: 'base',
+            props: {
+              faction: { eq: 'self' },
+              target: { eq: 'active' },
+            },
+          },
+          asPlayerId(0),
+          state,
+          ['us', 'arvn'],
+        ),
+        {
+          type: 'base',
+          props: {
+            faction: { eq: 'us' },
+            target: { eq: 'arvn' },
+          },
+        },
+      );
+    });
+
     it('matches zone scope using board-by-default semantics for omitted zoneKind', () => {
       const boardZone: ZoneDef = {
         id: asZoneId('board:none'),
@@ -877,15 +903,15 @@ describe('policy-eval', () => {
           zones: {
             ...baseInput.state.zones,
             'frontier:none': [
-              { id: asTokenId('frontier-base'), type: 'base', props: { seat: asPlayerId(0), strength: 2 } },
+              { id: asTokenId('frontier-base'), type: 'base', props: { seat: 'us', strength: 2 } },
             ],
             'target-a:none': [
-              { id: asTokenId('province-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
-              { id: asTokenId('province-troop'), type: 'troop', props: { seat: asPlayerId(1), strength: 5 } },
+              { id: asTokenId('province-base-a'), type: 'base', props: { seat: 'us', strength: 3 } },
+              { id: asTokenId('province-troop'), type: 'troop', props: { seat: 'arvn', strength: 5 } },
             ],
             'target-b:none': [
-              { id: asTokenId('province-base-b'), type: 'base', props: { seat: asPlayerId(0), strength: 4 } },
-              { id: asTokenId('province-base-c'), type: 'base', props: { seat: asPlayerId(1), strength: 1 } },
+              { id: asTokenId('province-base-b'), type: 'base', props: { seat: 'us', strength: 4 } },
+              { id: asTokenId('province-base-c'), type: 'base', props: { seat: 'arvn', strength: 1 } },
             ],
           },
         },
@@ -1308,15 +1334,15 @@ describe('policy-eval', () => {
           zones: {
             ...baseInput.state.zones,
             'target-a:none': [
-              { id: asTokenId('adj-base-a'), type: 'base', props: { seat: asPlayerId(0), strength: 3 } },
-              { id: asTokenId('adj-troop-a'), type: 'troop', props: { seat: asPlayerId(0), strength: 1 } },
+              { id: asTokenId('adj-base-a'), type: 'base', props: { seat: 'us', strength: 3 } },
+              { id: asTokenId('adj-troop-a'), type: 'troop', props: { seat: 'us', strength: 1 } },
             ],
             'target-b:none': [
-              { id: asTokenId('adj-base-b'), type: 'base', props: { seat: asPlayerId(0), strength: 2 } },
-              { id: asTokenId('adj-base-c'), type: 'base', props: { seat: asPlayerId(1), strength: 5 } },
+              { id: asTokenId('adj-base-b'), type: 'base', props: { seat: 'us', strength: 2 } },
+              { id: asTokenId('adj-base-c'), type: 'base', props: { seat: 'arvn', strength: 5 } },
             ],
             'rear:none': [
-              { id: asTokenId('non-adj-base'), type: 'base', props: { seat: asPlayerId(0), strength: 9 } },
+              { id: asTokenId('non-adj-base'), type: 'base', props: { seat: 'us', strength: 9 } },
             ],
           },
         },

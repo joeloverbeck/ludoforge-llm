@@ -105,6 +105,7 @@ export function resolveTokenFilter(
   filter: AgentPolicyTokenFilter | undefined,
   playerId: PlayerId,
   state: GameState,
+  seatIds?: readonly string[],
 ): ResolvedTokenFilter | undefined {
   if (filter === undefined) {
     return undefined;
@@ -115,12 +116,12 @@ export function resolveTokenFilter(
 
   const resolvedProps = Object.fromEntries(
     Object.entries(filter.props).map(([key, comparison]) => {
-      const value = comparison.eq === 'self'
-        ? playerId
+      const value: string | number | boolean = comparison.eq === 'self'
+        ? (seatIds !== undefined ? (seatIds[playerId] ?? playerId) : playerId)
         : comparison.eq === 'active'
-          ? state.activePlayer
+          ? (seatIds !== undefined ? (seatIds[state.activePlayer] ?? state.activePlayer) : state.activePlayer)
           : comparison.eq;
-      return [key, { eq: value }];
+      return [key, { eq: value }] as const;
     }),
   );
 
@@ -166,7 +167,14 @@ export function matchesTokenFilter(
   if (filter.props === undefined) {
     return true;
   }
-  return Object.entries(filter.props).every(([key, comparison]) => token.props[key] === comparison.eq);
+  return Object.entries(filter.props).every(([key, comparison]) => {
+    const actual = token.props[key];
+    const expected = comparison.eq;
+    if (typeof actual === 'string' && typeof expected === 'string') {
+      return actual.toLowerCase() === expected.toLowerCase();
+    }
+    return actual === expected;
+  });
 }
 
 export function matchesZoneScope(
@@ -576,7 +584,8 @@ export class PolicyEvaluationContext {
     expr: Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
   ): PolicyValue {
     const currentState = this.activeState;
-    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState);
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
     const zoneIds: string[] = [];
 
     for (const zoneDef of this.input.def.zones) {
@@ -653,7 +662,8 @@ export class PolicyEvaluationContext {
     }
     const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
     const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
-    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState);
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
     return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
   }
 

@@ -318,7 +318,7 @@ agents:
           lt:
             - { ref: feature.arvnTroopCount }
             - 10
-        weight: 4
+        weight: 2
         value:
           boolToNumber:
             ref: candidate.tag.train
@@ -435,7 +435,7 @@ agents:
         eventWeight: 1.5
         projectedMarginWeight: 3
         resourceWeight: 0.02
-        governWeight: 3
+        governWeight: 5
         trainWeight: 2
         sweepWeight: 0.5
         assaultWeight: 0.5

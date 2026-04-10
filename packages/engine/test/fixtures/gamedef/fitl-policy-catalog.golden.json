@@ -1949,7 +1949,7 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 4
+          "value": 2
         },
         "value": {
           "kind": "op",
@@ -2432,7 +2432,7 @@
         "eventWeight": 1.5,
         "projectedMarginWeight": 3,
         "resourceWeight": 0.02,
-        "governWeight": 3,
+        "governWeight": 5,
         "trainWeight": 2,
         "sweepWeight": 0.5,
         "assaultWeight": 0.5
@@ -2488,7 +2488,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "33f58d2e0ca1b54ccc8dd21b263226dfd07e9a5e4f2c8c9041ec58ccf152c2d5"
+      "fingerprint": "70fe847b941ccfc4b4ab9aa8f93a3eda8c142a1805868b71c400bdda732ad48f"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2603,5 +2603,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "206996bc9081be6cd95424ac0717945cae0c95cae2235f79668990e5eedfa14c"
+  "catalogFingerprint": "2940197e3dab8f852c45251983932fdc7e341c473991c2a94f30ec528270bb6b"
 }

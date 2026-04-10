@@ -26,7 +26,7 @@ Read ALL of these files:
 1. **`docs/agent-dsl-cookbook.md`** — the cookbook to reassess
 2. **DSL source-of-truth files** (hardcoded paths):
    - `packages/engine/src/agents/policy-expr.ts` — `KnownOperator` set (all expression operators) and `analyze*Operator` functions (authored YAML field validation)
-   - `packages/engine/src/agents/policy-surface.ts` — reference path families (`var.*`, `victory.*`, `activeCard.*`, `metric.*`)
+   - `packages/engine/src/agents/policy-surface.ts` — reference path families (`var.*`, `victory.*`, `activeCard.*`, `metric.*`, `condition.*`)
    - `packages/engine/src/contracts/policy-contract.ts` — valid enums (owner keywords, filter ops, zone scopes, aggregate ops, intrinsic names)
    - `packages/engine/src/cnl/compile-agents.ts` — intrinsic resolution (`candidate.*`, `decision.*`, `turn.*`, `seat.*`, `feature.*`, `aggregate.*`, `option.*`, `context.*`)
    - `packages/engine/src/cnl/game-spec-doc.ts` — authored YAML type definitions (`GameSpec*Def` interfaces defining valid field names for YAML authoring)
@@ -35,7 +35,7 @@ Read ALL of these files:
 
 If any source file does not exist at the expected path, search for it (it may have been moved). Report the new location.
 
-**Note**: These files may exceed single-read limits. Use offset/limit to read in chunks, focusing on the extraction targets listed in Step 2.
+**Note**: These files may exceed single-read limits (most are 400-800+ lines). Use offset/limit to read in chunks, focusing on the extraction targets listed in Step 2. For large files (>500 lines), grep for specific symbols first, then read targeted ranges.
 
 ### Step 2: Extract DSL Truth from Source
 
@@ -43,7 +43,7 @@ From each source file, extract the complete set of DSL capabilities. Read files 
 
 **From `policy-expr.ts`:**
 - All values in `KnownOperator` type/set — these are every expression operator the DSL supports
-- For each aggregation operator (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`, `seatAgg`), note the required and optional fields by reading the `analyze*Operator` function and its `validateAllowedObjectKeys` call — these define which fields the authored YAML accepts
+- For each aggregation operator (`globalTokenAgg`, `globalZoneAgg`, `zoneTokenAgg`, `adjacentTokenAgg`, `seatAgg`), note the required and optional fields by reading the `analyze*Operator` function — look for `validateAllowedObjectKeys` calls (if present) or individual `obj['fieldName']` reads that define which fields the authored YAML accepts
 
 **From `policy-surface.ts`:**
 - All reference path families and their sub-paths (e.g., `var.global.<id>`, `var.player.self.<id>`, `activeCard.id`, `activeCard.hasTag.<tag>`, `activeCard.annotation.<side>.<metric>`)
@@ -67,7 +67,7 @@ From each source file, extract the complete set of DSL capabilities. Read files 
 
 **From `game-spec-doc.ts`:**
 - All `GameSpec*Def` interfaces — these define the valid field names for authored YAML (e.g., `GameSpecStrategicConditionDef` uses `target`, not `expr`; `GameSpecStateFeatureDef` uses `expr` and `type`)
-- Cross-reference these field names against the cookbook's YAML examples to catch field name mismatches
+- Cross-reference these field names against the cookbook's YAML examples to catch field name mismatches. If cross-referencing finds no mismatches, note this as a positive finding in the report
 
 **From `policy-evaluation-core.ts`:**
 - Runtime operator semantics — verify cookbook descriptions match actual behavior (e.g., `div` is float division not integer, `sub` argument order, aggregation reduction logic)
@@ -79,7 +79,7 @@ From each source file, extract the complete set of DSL capabilities. Read files 
 
 ### Step 3: Compare Cookbook Against Source (and Assess Quality)
 
-For each DSL capability extracted in Step 2, check whether the cookbook documents it. Steps 3 and 4 can be done in a single pass — quality gaps naturally surface during comparison.
+For each DSL capability extracted in Step 2, check whether the cookbook documents it. Steps 3 and 4 SHOULD be done in a single pass — the separation below is for clarity of instruction, not execution order. Quality gaps naturally surface during comparison.
 
 1. **Missing operators** — operators in `KnownOperator` not mentioned in the cookbook's Expression Operators Reference table
 2. **Missing reference paths** — ref families in `policy-surface.ts` not documented (e.g., `activeCard.*`)
@@ -125,6 +125,7 @@ Present findings in this structure:
 
 ### Proposed Changes
 N additions, N corrections, N quality improvements:
+(additions = missing operators/refs/intrinsics/enums; corrections = stale/incorrect entries; quality improvements = examples, patterns, guidance, warnings)
 - [Brief list of what will be added/changed in each cookbook section]
 
 ### Current Coverage

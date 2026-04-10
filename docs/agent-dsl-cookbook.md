@@ -97,6 +97,8 @@ Preview refs require `preview.mode: tolerateStochastic` (or `exactWorld`) on the
 - `feature.<id>` for the current state
 - `preview.feature.<id>` for the post-move preview state
 
+**Preview scope limitations:** Preview refs support surface refs (`var.*`, `victory.*`, `metric.*`, `globalMarker.*`, `activeCard.*`) and `preview.feature.*`. There is NO `preview.condition.*` or `preview.aggregate.*` — strategic conditions and candidate aggregates are only evaluated on the current state.
+
 Pattern:
 
 ```yaml
@@ -288,6 +290,8 @@ stateFeatures:
         zoneFilter:
           category: province
 ```
+
+**`source` field** (default: `variable`): Whether `field` refers to a dynamic zone variable or a static zone attribute. Can be omitted when aggregating zone variables.
 
 **Zone filter options:**
 - `category: <string>` — zone category (e.g., province, city, loc)
@@ -708,6 +712,8 @@ profiles:
 
 **Preview modes:** `disabled` (no preview), `tolerateStochastic` (evaluate even with randomness), `exactWorld` (only deterministic outcomes).
 
+**Multi-step preview:** Set `preview.phase1: true` to enable Phase 1 preview, which simulates the event plus one granted follow-up operation. Control the number of follow-up completions evaluated with `preview.phase1CompletionsPerAction: N` (default: 1, must be a positive integer).
+
 **Selection modes:** `argmax` (default — highest score wins), `softmaxSample` (probabilistic selection with temperature), `weightedSample` (sample proportional to scores).
 
 ## Expression Operators Reference
@@ -716,7 +722,7 @@ profiles:
 |----------|--------|---------|-------|
 | `ref` | `{ ref: path }` | varies | reference a state/feature/candidate value |
 | `const` | `{ const: 5 }` | literal | constant value |
-| `param` | `{ param: name }` | number | profile parameter |
+| `param` | `{ param: name }` | varies | profile parameter (type depends on parameter definition) |
 | `add` | `add: [a, b, ...]` | number | sum of 2+ operands |
 | `sub` | `sub: [a, b]` | number | a - b (exactly 2) |
 | `mul` | `mul: [a, b, ...]` | number | product of 2+ operands |

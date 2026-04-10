@@ -52,7 +52,8 @@ Output this structure to the conversation (do not write to a file):
 **Skill path**: <path>
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
-**Session evidence**: <rich (skill executed extensively) / moderate (skill used briefly) / thin (self-audit or first-time observation)>
+**Session evidence**: <rich / moderate / thin>
+(rich = skill executed 2+ times or across multiple scenarios; moderate = single full execution or partial use; thin = self-audit or first-time observation only)
 
 ## Alignment Check
 
@@ -114,7 +115,12 @@ If analysis during classification disproves an initial impression, withdraw the 
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location may be combined into a single edit even if classified separately — especially when they form a coherent section or paragraph together (e.g., an Issue fix and a Feature addition to the same section). Use judgment: if the combined edit reads as a unified addition, combine; if the findings are logically independent, keep separate.
   4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next.
-  5. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines. Heuristic: when edits touch 4+ distinct locations in a file under 300 lines and edits are adjacent or affect shared structures (e.g., numbered lists), a single full-file re-read after all edits is more efficient than per-edit verification. When 4+ edits are non-adjacent and structurally independent, targeted spot-checks are preferred.
+  5. After edits, verify by re-reading. Use this decision tree:
+     - **Adjacent/overlapping edits** → verify after each edit (catch offset drift)
+     - **4+ edits touching adjacent sections, numbered lists, or shared structures** → single full-file re-read after all edits
+     - **4+ non-adjacent, structurally independent edits** → targeted spot-checks (re-read edited section + 10 lines context)
+     - **<4 non-adjacent edits** → batched re-read after all edits
+     - **Edits spanning >50 lines** → full-file re-read
   6. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   7. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   8. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.

@@ -119,7 +119,7 @@ describe('Texas Hold\'em policy agent integration', () => {
     const agents = compiled.gameDef?.agents;
 
     assert.ok(agents);
-    assert.deepEqual(agents.profiles['baseline']?.preview, { mode: 'disabled' },
+    assert.deepEqual(agents.profiles['baseline']?.preview, { mode: 'disabled', phase1: false, phase1CompletionsPerAction: 1 },
       'Texas baseline profile should explicitly disable preview because the game relies on hidden information');
     assert.deepEqual(agents.profiles['baseline']?.selection, { mode: 'softmaxSample', temperature: 0.5 });
   });

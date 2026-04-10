@@ -31,6 +31,7 @@ Read context (reference file + detect topic type)
 Classify: design | decision/triage
          |
          +--> DECISION MODE: short interview -> verify claims -> write specs/tickets directly
+         |         \--> [If artifact needs design] transition to DESIGN Steps 3-4
          |
          +--> DESIGN MODE (default):
               Confidence-driven interview loop (target: 95%)
@@ -57,11 +58,12 @@ Classify: design | decision/triage
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
-   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc).
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview.
+   - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
 3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles.
 
-4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A well-analyzed report may start you at 60-70% — you mainly need to understand the user's intent and risk tolerance, not the problem domain.
+4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A directional report with general suggestions may start you at 60-70%. A report with specific, codebase-grounded proposals (concrete file references, verified claims, detailed tradeoffs) may start at 70-80% — the remaining gap is typically just user intent and risk tolerance.
 
 5. **Project context**: Briefly check relevant project state (recent files, existing specs/tickets in the area) only if the topic clearly relates to a specific part of the codebase. Do not do a broad exploration — keep it targeted.
 
@@ -69,7 +71,7 @@ Classify: design | decision/triage
 
 ## Step 1.5: Counter-Evidence Verification (Optional)
 
-If the reference file contains hypotheses with explicit counter-evidence checks or verification criteria (e.g., "check whether X is true before proceeding"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
+If the reference file contains hypotheses with explicit counter-evidence checks, verification criteria (e.g., "check whether X is true before proceeding"), or factual claims about the codebase that can be verified by reading code (e.g., "the skill only traces 2-3 levels deep", "the engine uses discriminated unions extensively"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
 
 - Present the checks to the user: "The report prescribes N verification checks. Should I run them now?"
 - If yes, run them (using Explore agents, grep, git log, file reads — whatever the checks require)
@@ -141,6 +143,8 @@ Present **2-3 distinct approaches** with:
 - **Recommendation**: Lead with your recommended option and explain why
 
 **If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
+
+**If triage produced a set of approved changes** (decision/triage → design transition), the approach options shift from "which changes" to "how to apply them" — e.g., incremental patches vs. structured rewrite vs. phased rollout. Present these implementation strategies as the approaches.
 
 **If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`.
 

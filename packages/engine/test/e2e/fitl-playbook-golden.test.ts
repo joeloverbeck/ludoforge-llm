@@ -2277,40 +2277,51 @@ const TURN_8: PlaybookTurn = {
         params: {},
       },
     },
-    // ARVN mandatory: Binh Dinh troop → Qui Nhon
+    // ARVN mandatory: batch move all Binh Dinh troops (1→Qui Nhon, 1→Da Nang)
     {
-      kind: 'simple',
-      label: 'ARVN mandatory redeploy Binh Dinh troop to Qui Nhon',
+      kind: 'resolved',
+      label: 'ARVN mandatory batch redeploy Binh Dinh troops',
       move: {
         actionId: asActionId('coupArvnRedeployMandatory'),
         params: {
           sourceSpace: 'binh-dinh:none',
-          targetSpace: 'qui-nhon:none',
         },
       },
-    },
-    // ARVN mandatory: Binh Dinh troop → Da Nang
-    {
-      kind: 'simple',
-      label: 'ARVN mandatory redeploy Binh Dinh troop to Da Nang',
-      move: {
-        actionId: asActionId('coupArvnRedeployMandatory'),
-        params: {
-          sourceSpace: 'binh-dinh:none',
-          targetSpace: 'da-nang:none',
-        },
+      options: {
+        overrides: [
+          {
+            when: (r) => r.name === '$destination',
+            value: (r) => {
+              const match = r.decisionKey.match(/\[(\d+)\]$/);
+              const index = match ? parseInt(match[1]!) : 0;
+              return index === 0 ? 'qui-nhon:none' : 'da-nang:none';
+            },
+          },
+        ],
       },
     },
-    // ARVN police: Saigon → loc-saigon-can-tho
+    // ARVN police: batch redeploy from Saigon (1→LoC, rest stay)
     {
-      kind: 'simple',
+      kind: 'resolved',
       label: 'ARVN redeploy police Saigon to LoC Saigon-Can Tho',
       move: {
         actionId: asActionId('coupArvnRedeployPolice'),
         params: {
           sourceSpace: 'saigon:none',
-          targetSpace: 'loc-saigon-can-tho:none',
         },
+      },
+      options: {
+        overrides: [
+          {
+            when: (r) => r.name === '$destination',
+            value: (r) => {
+              const match = r.decisionKey.match(/\[(\d+)\]$/);
+              const index = match ? parseInt(match[1]!) : 0;
+              // First police → LoC Saigon-Can Tho; rest stay in Saigon
+              return index === 0 ? 'loc-saigon-can-tho:none' : 'saigon:none';
+            },
+          },
+        ],
       },
     },
     // ARVN passes redeploy
@@ -2338,49 +2349,28 @@ const TURN_8: PlaybookTurn = {
         ],
       },
     },
-    // NVA redeploy: 4 troops from Southern Laos → North Vietnam
+    // NVA redeploy: batch move Southern Laos troops (4→North Vietnam, 1 stays)
     {
-      kind: 'simple',
-      label: 'NVA redeploy troop 1 Southern Laos to North Vietnam',
+      kind: 'resolved',
+      label: 'NVA batch redeploy Southern Laos troops to North Vietnam',
       move: {
         actionId: asActionId('coupNvaRedeployTroops'),
         params: {
           sourceSpace: 'southern-laos:none',
-          targetSpace: 'north-vietnam:none',
         },
       },
-    },
-    {
-      kind: 'simple',
-      label: 'NVA redeploy troop 2 Southern Laos to North Vietnam',
-      move: {
-        actionId: asActionId('coupNvaRedeployTroops'),
-        params: {
-          sourceSpace: 'southern-laos:none',
-          targetSpace: 'north-vietnam:none',
-        },
-      },
-    },
-    {
-      kind: 'simple',
-      label: 'NVA redeploy troop 3 Southern Laos to North Vietnam',
-      move: {
-        actionId: asActionId('coupNvaRedeployTroops'),
-        params: {
-          sourceSpace: 'southern-laos:none',
-          targetSpace: 'north-vietnam:none',
-        },
-      },
-    },
-    {
-      kind: 'simple',
-      label: 'NVA redeploy troop 4 Southern Laos to North Vietnam',
-      move: {
-        actionId: asActionId('coupNvaRedeployTroops'),
-        params: {
-          sourceSpace: 'southern-laos:none',
-          targetSpace: 'north-vietnam:none',
-        },
+      options: {
+        overrides: [
+          {
+            when: (r) => r.name === '$destination',
+            value: (r) => {
+              const match = r.decisionKey.match(/\[(\d+)\]$/);
+              const index = match ? parseInt(match[1]!) : 0;
+              // First 4 troops → North Vietnam; 5th troop stays in Southern Laos
+              return index < 4 ? 'north-vietnam:none' : 'southern-laos:none';
+            },
+          },
+        ],
       },
     },
     // NVA passes redeploy

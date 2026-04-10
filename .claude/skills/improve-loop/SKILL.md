@@ -178,7 +178,7 @@ Use a sequential experiment ID: `exp-001`, `exp-002`, etc. (continue from where 
 
 Append to `$WT/campaigns/<campaign>/musings.md`:
 ```markdown
-**Result**: <status> (<old_metric> -> <new_metric> ms, noise_floor: X%)
+**Result**: <status> (<old_metric> -> <new_metric>, noise_floor: X%)
 **Partial signals**: <if any intermediate metrics showed directional improvement/regression>
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
@@ -197,7 +197,7 @@ Go back to Step 1. Do NOT stop.
 |-------|--------|
 | ACCEPT | `git add <files>` + `git commit -m "improve-loop: ..."` + append to checkpoints.jsonl |
 | REJECT | `git checkout -- <files>` |
-| NEAR_MISS | `git stash push -m "near-miss-exp-NNN: ..."` |
+| NEAR_MISS | `git stash push -m "near-miss-exp-NNN: ..." -- <mutable-files> <regenerated-fixture-files>` |
 | EARLY_ABORT | `git checkout -- <files>` (or kill harness + checkout) |
 | CRASH (trivial) | Fix, retry (up to 3x) |
 | CRASH (fundamental) | `git checkout -- <files>`, log, continue |
@@ -219,7 +219,10 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 1. Review the worktree branch: `git log --oneline` shows all accepted improvements.
 2. Promote high-confidence lessons to global store (if not already done by Step 7.6).
 3. **Commit `campaigns/lessons-global.jsonl`** with `git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`. This file persists across campaigns — without this commit, lessons are lost when the worktree is removed.
-4. Squash-merge into main: `git merge --squash improve/<campaign>`
+4. Switch to the main repo root (NOT the worktree) and squash-merge:
+   ```bash
+   cd <main-repo-root> && git merge --squash improve/<campaign>
+   ```
 5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
 6. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
 
@@ -232,7 +235,8 @@ If the human interrupts the loop for investigation (e.g., "stop, investigate thi
 3. **Resume protocol**: After investigation completes:
    - If the investigation **unlocked new capabilities** (fixed a fragile test, added infrastructure that enables previously-blocked features, etc.): reset `consecutive_rejects = 0` and `strategy = "normal"`. Note in musings: `**CAPABILITY UNLOCKED**: <description>. Resetting plateau counter.`
    - If the investigation was **diagnostic only** (no new capabilities): resume from saved state with no reset.
-4. The human may redirect from investigation to campaign completion (Option B/D from ceiling report) — follow their direction.
+4. The human may redirect from investigation to campaign completion — follow their direction. This can happen via ceiling report options (B/D), or directly when the investigation reveals a structural limitation that makes continuing the loop unproductive. Skip to "After Campaign Completes" with any infrastructure commits from the investigation included in the squash merge.
+5. **Engine limitation discovery**: If the investigation reveals an engine/DSL/runtime limitation (not a campaign design issue), document it as a spec and adjust the campaign approach to work within the limitation. Log in musings: `**ENGINE LIMITATION**: <description>. See Spec NNN.`
 
 ## Guardrails
 

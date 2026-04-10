@@ -77,3 +77,5 @@ cd $WT && git stash push -m "near-miss-exp-NNN: <description>"
 ```bash
 cd $WT && git checkout -- <changed-files>
 ```
+
+**Guidance for campaign authors**: For campaigns with multi-phase or multi-case accept/reject logic (e.g., win-gated ramp-up followed by composite score optimization), include a decision tree or truth table in program.md rather than prose descriptions. Multi-case prose is error-prone when applied mentally during the loop.

@@ -313,7 +313,7 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.deepEqual(grants[0]?.actionIds, ['march']);
     assert.equal(grants[0]?.allowDuringMonsoon, true);
     assert.equal(grants[0]?.viabilityPolicy, 'requireUsableForEventPlay');
-    assert.equal(grants[0]?.completionPolicy, 'required');
+    assert.equal(grants[0]?.completionPolicy, 'skipIfNoLegalCompletion');
     assert.equal(grants[0]?.outcomePolicy, 'mustChangeGameplayState');
     assert.equal(grants[0]?.postResolutionTurnFlow, 'resumeCardFlow');
     assert.deepEqual(grants[0]?.moveZoneBindings, ['$targetSpaces', '$chainSpaces']);

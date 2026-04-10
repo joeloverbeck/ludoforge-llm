@@ -298,6 +298,36 @@ export const expireReadyBlockingGrantsForSeat = (
   };
 };
 
+/**
+ * Skip only `skipIfNoLegalCompletion` grants for the given seat.
+ * Used as a fallback when the agent cannot derive a playable move from
+ * template completion despite legal moves existing — the grant's zone
+ * filter or constraint makes it effectively uncompletable for the agent.
+ */
+export const skipReadySkippableGrantsForSeat = (
+  grants: readonly TurnFlowPendingFreeOperationGrant[],
+  seat: string,
+): GrantArrayResult => {
+  const nextGrants: TurnFlowPendingFreeOperationGrant[] = [];
+  const trace: TurnFlowGrantLifecycleTraceEntry[] = [];
+  for (const grant of grants) {
+    if (
+      grant.seat !== seat
+      || grant.phase !== 'ready'
+      || grant.completionPolicy !== 'skipIfNoLegalCompletion'
+    ) {
+      nextGrants.push(grant);
+      continue;
+    }
+    const transitioned = skipGrant(grant);
+    trace.push(transitioned.traceEntry);
+  }
+  return {
+    grants: nextGrants,
+    trace,
+  };
+};
+
 export const advanceSequenceGrants = (
   grants: readonly TurnFlowPendingFreeOperationGrant[],
   readySequenceBatchIds: ReadonlySet<string>,

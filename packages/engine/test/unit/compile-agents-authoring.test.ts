@@ -1066,6 +1066,8 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      phase1: false,
+      phase1CompletionsPerAction: 1,
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
       mode: 'argmax',
@@ -1107,6 +1109,89 @@ describe('agents authoring surface', () => {
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
       mode: 'argmax',
+    });
+  });
+
+  it('compiles preview.phase1 with the default phase1CompletionsPerAction', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'tolerateStochastic',
+              phase1: true,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'tolerateStochastic',
+      phase1: true,
+      phase1CompletionsPerAction: 1,
+    });
+  });
+
+  it('compiles preview.phase1CompletionsPerAction when preview.phase1 is enabled', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'tolerateStochastic',
+              phase1: true,
+              phase1CompletionsPerAction: 3,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'tolerateStochastic',
+      phase1: true,
+      phase1CompletionsPerAction: 3,
     });
   });
 
@@ -1523,6 +1608,138 @@ describe('agents authoring surface', () => {
       result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_MODE_RESERVED' && d.path === 'doc.agents.profiles.baseline.preview.mode'),
       true,
     );
+  });
+
+  it('emits diagnostic when preview.phase1 is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              phase1: 'yes' as unknown as boolean,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some((d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_PHASE1_INVALID' && d.path === 'doc.agents.profiles.baseline.preview.phase1'),
+      true,
+    );
+  });
+
+  it('emits diagnostic when preview.phase1CompletionsPerAction is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              phase1: true,
+              phase1CompletionsPerAction: 0,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_PHASE1_COMPLETIONS_INVALID'
+          && d.path === 'doc.agents.profiles.baseline.preview.phase1CompletionsPerAction',
+      ),
+      true,
+    );
+  });
+
+  it('emits warning when preview.phase1CompletionsPerAction is set while preview.phase1 is disabled', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              phase1: false,
+              phase1CompletionsPerAction: 2,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_PHASE1_COMPLETIONS_UNUSED'
+          && d.path === 'doc.agents.profiles.baseline.preview.phase1CompletionsPerAction'
+          && d.severity === 'warning',
+      ),
+      true,
+    );
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'exactWorld',
+      phase1: false,
+      phase1CompletionsPerAction: 2,
+    });
   });
 
   it('validates profile.use consideration references during authoring validation', () => {

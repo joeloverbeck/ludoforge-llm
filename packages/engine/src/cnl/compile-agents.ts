@@ -670,7 +670,7 @@ function lowerPreviewConfig(
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const { mode } = authored;
+  const { mode, phase1, phase1CompletionsPerAction } = authored;
 
   if (mode === undefined) {
     diagnostics.push({
@@ -713,7 +713,52 @@ function lowerPreviewConfig(
     return undefined;
   }
 
-  return { mode };
+  if (phase1 !== undefined && typeof phase1 !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_PHASE1_INVALID,
+      path: `${path}.phase1`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.phase1 must be a boolean, got ${typeof phase1}.`,
+      suggestion: 'Set preview.phase1 to true or false.',
+    });
+    return undefined;
+  }
+
+  if (
+    phase1CompletionsPerAction !== undefined
+    && (
+      typeof phase1CompletionsPerAction !== 'number'
+      || !Number.isSafeInteger(phase1CompletionsPerAction)
+      || phase1CompletionsPerAction <= 0
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_PHASE1_COMPLETIONS_INVALID,
+      path: `${path}.phase1CompletionsPerAction`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.phase1CompletionsPerAction must be a positive safe integer, got ${String(phase1CompletionsPerAction)}.`,
+      suggestion: 'Set preview.phase1CompletionsPerAction to a positive integer such as 1 or 3.',
+    });
+    return undefined;
+  }
+
+  const loweredPhase1 = phase1 ?? false;
+  const loweredPhase1CompletionsPerAction = phase1CompletionsPerAction ?? 1;
+  if (!loweredPhase1 && phase1CompletionsPerAction !== undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_PHASE1_COMPLETIONS_UNUSED,
+      path: `${path}.phase1CompletionsPerAction`,
+      severity: 'warning',
+      message: `Profile "${profileId}" preview.phase1CompletionsPerAction has no effect unless preview.phase1 is true.`,
+      suggestion: 'Remove preview.phase1CompletionsPerAction or set preview.phase1 to true.',
+    });
+  }
+
+  return {
+    mode,
+    phase1: loweredPhase1,
+    phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
+  };
 }
 
 function lowerSelectionConfig(

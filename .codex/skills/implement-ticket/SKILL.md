@@ -14,9 +14,9 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 ## Working Notes
 
-- In Codex sessions, use concise `commentary` updates as the default working-notes surface unless the ticket explicitly requires a durable repo artifact.
-- Working notes should capture reassessment outcomes that affect implementation correctness: discrepancy lists, evidence classification, authoritative boundary restatements, and verification-owned scope corrections.
-- Do not create scratch files solely to satisfy the "working notes" requirement unless the ticket itself requires a persisted artifact.
+- In Codex sessions, use concise `commentary` updates as the default surface unless the ticket requires a durable repo artifact.
+- Capture reassessment outcomes affecting correctness: discrepancy lists, evidence classification, authoritative boundary restatements, verification-owned scope corrections.
+- Do not create scratch files solely to satisfy this requirement.
 
 ## Workflow
 
@@ -24,312 +24,81 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
-3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`; isolate your diff from unrelated edits).
-   - If equivalent `AGENTS.md` instructions are already present in the session context, you may rely on that context for behavior, but still prefer opening the file when repo-local details might differ or when the ticket references on-disk policy.
-4. Before editing, inspect repo state (for example `git status --short`) and call out unrelated dirty files, pre-existing failures, or evidence of concurrent work. Do this early enough that your diff can be isolated from repo-preexisting state.
+3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`).
+   - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
+4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 
-**Session continuity**: If a prior ticket in the same series was implemented earlier in this session, reuse already-verified context. Prefer reusing or extracting helpers from that earlier ticket over duplicating logic. If the completed sibling already satisfied part of the current ticket's deliverable, anchor reassessment to the remaining owned gap rather than treating broader stale wording as a new discrepancy.
+#### Session and Series Context
 
-**Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows that slice is stale, internally inconsistent, or impossible to satisfy without broader owned fallout. Confirm which broader spec work is deferred to siblings before coding.
+- **Session continuity**: Reuse already-verified context from prior tickets in the same series. Prefer reusing or extracting helpers over duplicating logic. If a completed sibling already satisfied part of the current deliverable, anchor reassessment to the remaining gap.
+- **Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows the slice is stale, internally inconsistent, or impossible without broader fallout. Confirm which broader spec work is deferred to siblings.
+- **Named fallout classification**: When a ticket names multiple fallout surfaces, explicitly classify each as `still failing`, `already green`, or `already absorbed by sibling` before coding. Treat already-green named artifacts as verified non-owners unless new evidence reopens them.
 
-**Draft artifact discipline**: If the active ticket or referenced series artifacts are untracked draft files, they can still define the session boundary. Call out the draft state explicitly in working notes, treat the active ticket as the authoritative contract for this session once reassessment is complete, and avoid broad sibling/spec edits unless the corrected boundary truly requires them.
+#### Draft Handling
 
-**Draft ticket quick path**:
-- Confirm explicitly when the active ticket or referenced spec is untracked/a draft.
-- Treat the active draft ticket as the session contract once reassessment is complete.
-- Distinguish stale draft wording from true boundary changes in working notes and final closeout.
-- Prefer correcting the active draft ticket outcome over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
+When the active ticket or referenced artifacts are untracked drafts:
+
+1. Confirm draft/untracked state explicitly, including siblings and referenced specs.
+2. Treat the active draft ticket as the session contract once reassessment is complete.
+3. Classify stale draft wording separately from true boundary errors in working notes and final closeout.
+4. Prefer correcting the active draft ticket over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
+5. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
 
 ### Phase 2: Reassess Assumptions
 
-**Artifact verification**
-
-5. Verify every referenced artifact against the live codebase with targeted reads and `rg`:
+6. Verify every referenced artifact against the live codebase with targeted reads and `rg`:
    - File existence and path accuracy
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
-   - When a ticket names concrete callsites, verify whether that behavior is still owned there or has already been centralized behind a shared helper or policy path; treat already-migrated sites as stale sub-claims, not new owned work.
-   - When a ticket widens compilation or optimization for an existing AST/expression family, compare the live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
-   - Stale paths that uniquely identify their intended artifact are non-blocking — note the corrected path.
-   - Path-only drift is not a scope discrepancy. Example: ticket names `src/kernel/foo.ts` but the artifact moved to `src/contracts/foo.ts` with the same purpose.
-   - Stale test paths: prefer the live test surface that owns the behavior.
-6. Build a discrepancy list for anything the ticket states that does not match reality.
-
-**Architectural constraints**
-
-7. Check constraints the ticket may have underspecified:
+   - Concrete callsites: check whether behavior is still owned there or has been centralized behind a shared helper; treat already-migrated sites as stale sub-claims.
+   - Widened compilation/optimization for an existing AST/expression family: compare live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
+7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.
+8. Check constraints the ticket may have underspecified:
    - Shared type or schema ripple effects
-   - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers (translators, adapters, viewers, switch statements)
-   - Same-package fallout for widened shared unions or contract families: grep local `switch` statements, discriminated-union helpers, and exhaustiveness guards before broad verification
-   - When changing a shared function, callback, or callable type contract, grep both runtime callsites and the tests that own those callsites before broad verification.
+   - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
+   - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
+   - When changing a shared callable type contract, grep both runtime callsites and their tests
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
-   - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports before deciding whether the fix is policy-only or a legality correction.
+   - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
+   - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
 
-**Evidence classification**
+Load `references/triage-and-resolution.md`.
 
-8. When a ticket claims a live bug, measured runtime symptom, or concrete production evidence (counts, seeds, traces, campaign observations), classify what you verified before coding:
-   - **Incidence verified**: reproduced the claimed symptom in the live codebase
-   - **Mechanism verified**: proved the code still permits the claimed failure mode
-   - **Both verified**
-   - **Neither verified**
-   Record this explicitly in working notes. See also [Production-Proof & Regression Tickets](#production-proof--regression-tickets) for implementation guidance.
+If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
 
-**Migration & rewrite awareness**
-
-9. **Mid-migration**: If the codebase is already mid-migration, distinguish the ticket's intended end state from work already landed. Treat extra files needed for Foundation 14 atomicity as required scope. Call out partial-migration state before coding. When a referenced spec is already dirty but the current ticket does not own spec edits, treat it as read-only context.
-10. **Ticket rewrites**: If you materially correct the ticket scope, re-extract files, acceptance criteria, invariants, and verification commands from the corrected ticket. Treat the rewritten ticket as authoritative. If later verification disproves the rewrite premise, restore the original boundary and note why. If later typecheck/build evidence proves that a rewritten acceptance case is impossible under the live typed/runtime surface, amend the active ticket again before continuing so the authoritative boundary matches what the codebase can actually represent. When the rewrite disproves an active spec's stated root cause, fix point, or owned boundary, update that spec in the same turn unless another active ticket explicitly owns that correction.
-    - If a rewritten verification-owned ticket later exposes a concrete live failure while running its authoritative acceptance commands, treat that failure as in-scope immediately when fixing it is necessary to satisfy the rewritten boundary. Refresh working notes to record the newly discovered failure surface before patching.
-
-**Sibling coherence**
-
-11. If correcting one ticket changes ownership within an active series, inspect remaining siblings, update or defer overlapping tickets, keep deps and status coherent, and run the ticket dependency checker. If a user-confirmed 1-3-1 resolution changes inter-ticket contracts, update the downstream sibling in the same turn. Note which earlier sibling outcomes remain authoritative, which were superseded, and which shared contracts or helpers are reused unchanged. See also [Series Consistency](#series-consistency) for implementation-phase rules.
-    - Before creating a new ticket or materially extending an active one, read `tickets/README.md` and `tickets/_TEMPLATE.md` unless they were already loaded in the current task. Apply repo-local ticket authoring and dependency rules instead of improvising markdown structure.
+9. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
 
 ### Phase 3: Resolve Before Coding
 
 Every stop condition below requires resolution before implementation proceeds.
 
-12. **Factually wrong ticket**: Stop and present discrepancies before editing code.
-13. **Unverifiable bug claim**: If a ticket's bug claim or measured symptom is not currently reproducible, or only the mechanism is verified while claimed incidence remains unproven, stop and resolve the boundary. Apply the **1-3-1 rule** to choose between proof-only, proof-plus-fix, or ticket-scope correction.
-14. **Scope gaps or ambiguity**: For scope gaps, implementation choices, dependency conflicts, or ambiguous boundaries, apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
-15. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain — multiple sequential 1-3-1 rounds are normal.
-16. Before coding, restate the authoritative boundary in working notes and confirm explicitly that there are no blocking discrepancies remaining.
-
-**Confirmation semantics**:
-- If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have already presented the discrepancy and choices, treat that as confirmation for the recommended option. Restate the authoritative boundary, then continue without forcing an extra round.
-- If the user's response is only informational or does not clearly authorize a direction, remain stopped and ask for confirmation.
-
-**Stale ticket boundary triage**:
-- Stale wording but valid boundary → keep the boundary, correct stale claims, resolve implementation direction via 1-3-1.
-- Stale deliverable inside a valid boundary → implement the live owned subset, call out the stale sub-claim explicitly in working notes/final summary, and do not trigger 1-3-1 unless the stale deliverable blocks correctness or forces a real scope decision.
-- Stale incidence but relevant mechanism/invariant → treat as a proof-boundary decision, not automatic invalidation.
-- Active ticket mostly collapsed by earlier sibling work but a concrete owned invariant still remains → rewrite the ticket around that residual live boundary instead of archiving as a no-op or absorbing unrelated sibling scope.
-- Boundary itself is wrong → stop and resolve whether to rewrite, narrow, or supersede before coding.
-
-**Post-confirmation architecture reset**:
-- When a user-confirmed 1-3-1 decision broadens or reframes the solution, restate the new authoritative boundary in working notes before coding.
-- If the confirmed resolution changes the active ticket's owned boundary, amend the active ticket first, then open every directly affected sibling ticket before coding. Compare the active ticket's new owned files/deliverables against each sibling's stated ownership, then update affected siblings in the same turn unless you can explicitly justify why no sibling edit is required.
-- Re-extract owned deliverables, affected files, proof obligations, `Files to Touch`, acceptance criteria, test paths, and verification commands from the confirmed boundary rather than continuing from stale phrasing.
-- Record a short working-notes block naming the affected sibling ticket(s), what scope was absorbed into the active ticket, and what scope remains deferred.
-
-**1-3-1 edge cases** (all resolve via 1-3-1 before coding):
-
-| Situation | Preferred resolution |
-|-----------|---------------------|
-| Ticket uses raw strings for a branded domain type | Prefer the existing branded type |
-| Ticket proposes a field already covered by an existing contract field | Reuse the existing field |
-| Narrow factual mismatch inside a valid boundary | Bounded discrepancy, not automatic rewrite |
-| Bug claim no longer reproducible but invariant is worth proving | Convert to proof/regression-only after confirmation |
-| Audit shows the suspected surface already satisfies the invariant | Complete as audit-plus-proof with tests only |
-| Acceptance claim lacks a verified reproducer | Correct to strongest evidenced boundary |
-| Conversion boundary between plain domain object and trusted/validated form | Resolve ownership explicitly |
-| Ticket narrows semantics for one member of an existing shared surface family | Prefer the already-landed shared family contract unless the ticket owns a family-wide redesign |
-
-17. If the ticket is accurate and no blocking decision remains, proceed.
+10. **Factually wrong ticket**: Stop and present discrepancies. Do not stop for nonblocking drift (see triage reference).
+11. **Unverifiable bug claim**: If a ticket's bug claim is not reproducible, or only mechanism is verified while incidence remains unproven, stop and resolve via **1-3-1** (proof-only, proof-plus-fix, or scope correction).
+12. **Scope gaps or ambiguity**: Apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
+13. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
+14. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+15. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
-### General Principles
+Load `references/implementation-general.md`.
 
-- Implement every explicit ticket deliverable. Do not silently skip items.
-- Prefer minimal, architecture-consistent changes over local patches.
-- If an existing authority/helper API is broader than the caller's verified live contract, prefer adding the narrowest authority-level helper that preserves semantics over embedding a caller-local workaround or silently widening behavior.
-- When consolidating logic into a shared authority module, inspect the current import direction first and prefer helper placement that preserves an acyclic dependency graph.
-- When a ticket's named implementation file delegates the owned behavior through a deeper shared authority module, the minimum authority-module work required to make the named deliverable real is in-scope. Treat that as required completion fallout, then update any sibling ticket that previously claimed that absorbed slice so the active series boundary stays accurate.
-- Follow TDD for bug fixes: write the failing test first, then fix the code. Never adapt tests to preserve a bug.
-- Treat `docs/FOUNDATIONS.md` as higher priority than ticket wording. Surface conflicts and propose Foundation-compliant resolutions before continuing.
-- The ticket's `Files to Touch` list is a strong hint, not a hard limit. Include adjacent files for contracts, runtime consumers, schemas, fixtures, or tests when coherent completion requires them.
-- When a ticket moves, consolidates, or re-exports an existing helper/symbol, minimal consumer import fallout required to keep the repository building is in-scope even if the ticket named only the owning file. Treat these as behavior-preserving completion edits, not a boundary expansion.
-- "No code changes" means no production/runtime behavior changes. Ticket outcomes, archival moves, dependency rewrites, and sibling-ticket status updates are still required when they are the owned deliverable.
-- If reassessment reveals a generic architectural limitation broader than the ticket's boundary, prefer creating or extending a follow-up spec over burying the gap in ticket-only notes.
+If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 
-### Mechanical Refactors
-
-For tickets whose primary deliverable is a mechanical extraction, rename, deduplication, or import cleanup with no intended behavior change:
-- Prove the duplication or stale local surface exists before editing.
-- If the ticket listed imports, helpers, or adjacent touch points that prove unnecessary during reassessment, record those stale sub-claims explicitly in working notes before coding so the final closeout can distinguish required fallout from ticket drift.
-- In the named module, scan private helper functions as well as exported entry points for the same class of write, mutation, alias, or local rebuild the ticket is trying to eliminate. Same-file helper fallout is usually in-scope, not a separate boundary expansion.
-- Extract or consolidate the shared surface with the narrowest architecture-consistent module or helper.
-- If the ticket's named shared helper covers only part of the live write pattern, compose it with the smallest additional authority helper needed to eliminate the remaining caller-local transform instead of leaving a special case behind.
-- Immediately scan touched files for dangling references to removed local aliases, helpers, or imports before running broader verification.
-- Prefer acceptance proof based on three things: the old local surfaces are gone, consumers now reference the shared surface, and authoritative non-regression commands pass.
-- If verification exposes a nearby dangling symbol, import, or signature ripple that is necessary to make the refactor complete, treat it as in-scope fallout rather than a separate discrepancy.
-
-### Schema & Contract Migrations
-
-When a change touches schemas or contracts, check updates across these layers:
-
-#### Layer Checklist
-
-- **Authored layer**: schema/doc types, source-shape/parser-facing doc types, validators, unknown-key allowlists
-- **Compiled/runtime layer**: kernel/runtime types, Zod/JSON schemas, compiled DSL/AST shapes, generated schema artifacts
-- **Consumer layer**: diagnostics/debug snapshots, exported provider interfaces and adapter wrappers, injected callback plumbing from orchestration down to provider/factory layers
-- **Test layer**: fixtures, goldens, manually constructed runtime/test context objects (e.g., `GameDefRuntime`)
-
-#### Migration Guidelines
-
-**Additive changes**:
-- When a ticket adds a new authored config key, surface family, or section field, update authored-shape doc types even if the ticket only names lowering or validator files.
-- Preparatory tickets may add optional schema, trace, or contract fields ahead of later logic tickets, so long as verification proves artifact surfaces remain in sync.
-- For additive compiled-field migrations, requiring the new field in compiler-owned artifacts while temporarily leaving handwritten TypeScript fixtures optional is valid when explicit, Foundation-compliant, and verified.
-- If a new UI/store/model field mainly supports one feature path, consider keeping it optional on local test-helper contracts to avoid unnecessary fixture churn.
-
-**Required-field migrations**:
-- When an earlier ticket made a field required, add empty/default placeholders across constructors, defaults, fixtures, and goldens for atomicity.
-- When the current ticket makes a shared field required, treat repo-owned constructors, helpers, fixtures, runtime schemas, and generated artifacts as in-scope immediately, even if sibling tickets or stale wording tried to defer them.
-- Prefer updating shared helpers first, then use focused typecheck output to mop up remaining direct inline fixtures.
-- Do not preserve a ticket's original slice when doing so would leave the repository in a knowingly broken mid-migration state. `FOUNDATIONS.md` §14 and §15 override that slicing.
-- When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb work a later sibling originally claimed if necessary to make the confirmed boundary true in live runtime. Call out the absorbed sibling boundary explicitly.
-- When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
-- When centralizing or hoisting derived data into an earlier phase, compare the old consumer evaluation point against the new computation point and preserve any timing-sensitive filtering, state reads, or post-effect semantics.
-
-**Runtime & identity boundaries**:
-- Prefer a runtime-only storage layer behind the existing outward contract when an optimization would otherwise change canonical outward state or serialized shape.
-- If Foundations require artifact-facing identifiers to remain canonical strings, introduce a separate runtime-only branded type rather than redefining the artifact-facing domain ID.
-
-**Expression & state scoping**:
-- When a ticket introduces callback-driven recursive evaluation on a derived state, verify that the inner pass resolves actor/seat identity and sources RNG from the derived state itself.
-- When evaluating existing authored expressions against a derived state, audit the full expression subtree for hidden reads of the original state and migrate caches/helpers to be state-scoped.
-
-### Golden & Fixture Drift
-
-When a change alters compiled output, scoring, move selection, observability, or preview readiness:
-- Treat owned production goldens (catalogs, summaries, traces, fixed-seed outputs) as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
-- Before editing an owned golden, capture fresh authoritative output from the current built runtime or test harness so the update reflects live post-change behavior rather than manual reconstruction.
-- When earlier groundwork introduced a required placeholder and the current ticket populates it, expect goldens to drift from stubs to populated values — normal ticket-owned fallout.
-- When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket explicitly owns a breaking schema redesign.
-- When a nearby golden looks like expected drift, probe it explicitly — "no ticket-owned diff" is a valid conclusion.
-
-### Gate, Audit & Profiling Tickets
-
-For tickets whose primary deliverable is a measured decision:
-1. Identify the explicit threshold, decision gate, or downstream trigger.
-2. Verify which sibling tickets, specs, or reports depend on that gate.
-3. A complete implementation may legitimately end in "do not change runtime code" when the result closes proposed follow-up as not actionable. Still complete every owned repository deliverable: update ticket outcome, archive/amend deciding spec/report, reconcile dependent ticket statuses.
-4. When a completed gate proves downstream siblings are not actionable, update those siblings in the same turn.
-5. Distinguish runtime/code changes from repository-owned deliverables (ticket outcomes, archived specs, dependency rewrites, status updates).
-6. If a diagnostic report has no named output file, prefer `reports/` over ephemeral scratch files.
-
-### Investigation Tickets
-
-For tickets whose primary deliverable is a verdict rather than a production code change:
-1. Capture the decisive evidence directly in the owned ticket or other explicitly owned artifact.
-2. If the verdict warrants downstream implementation, create or extend the follow-up ticket in the same turn and keep deps/status consistent.
-3. After the verdict and any required follow-up artifact are in place, decide whether the investigation ticket is now archive-ready.
-4. If archival is the obvious next state, either complete the archival steps in the same turn when the user asked for full closeout or explicitly hand off that closeout to `post-ticket-review`.
-5. Distinguish clearly between ticket-owned deliverables (verdict text, follow-up ticket, dependency updates, archival readiness) and runtime/code changes, which may remain out of scope.
-
-### Series Consistency
-
-When a ticket change affects other active tickets in the same series:
-- Inspect siblings for overlap, stale staged ownership, or stale assumptions.
-- Update statuses, deps, and scope text so the active series stays coherent.
-- Run `pnpm run check:ticket-deps` when available.
-- If a downstream sibling already cleanly owns the remaining fallout after reassessment, leave that sibling unchanged and just validate that deps/status still reflect the corrected boundary.
-- If sibling drift is informative but non-blocking, note it in working notes and final summary without absorbing that sibling's scope.
-- If sibling/spec artifacts are already dirty or exist only as untracked drafts, prefer editing only the active ticket unless the user asked for broader cleanup or the stale sibling/spec would directly invalidate the implemented boundary.
-- If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
-- When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
-
-**Series rewrite checklist**:
-- Open each directly affected sibling ticket before coding when a confirmed boundary rewrite absorbs or defers work across the series.
-- Compare the sibling's named files, deliverables, and deps against the active ticket's rewritten boundary.
-- Update sibling scope/deps/status text in the same turn when ownership changed, or record why no sibling edit was necessary.
-- Run `pnpm run check:ticket-deps` when available after those updates.
-- In working notes and final closeout, name which sibling scope was absorbed and which scope remains deferred.
-
-### Groundwork Tickets
-
-For preparatory tickets that intentionally land shared helpers, contracts, or APIs ahead of caller migration:
-- Implement the owned groundwork fully even when no live caller adopts it yet.
-- Keep broader behavioral adoption anchored to the sibling tickets that own it.
-- In the final summary, explicitly separate what landed now from what remains deferred to later siblings.
-- Treat deferred adoption as residual risk only when callers still rely on older paths after the groundwork lands.
-
-### Production-Proof & Regression Tickets
-
-- For proof/regression tickets, prefer extending the live test module that already owns the contract under audit before creating new files solely to match stale ticket test paths.
-- If cited production examples, cards, or seeds are stale, prefer a current deterministic reproducer or synthetic proof fixture.
-- Run a bounded seed/turn/trace scan to discover a current reproducer, then encode it into owned integration tests.
-- Distinguish clearly between **incidence proof** (the cited repro still happens now) and **mechanism proof** (the code still permits the failure). If incidence remains unverified, resolve via 1-3-1 first — do not silently treat mechanism proof as equivalent.
-- For lifecycle/state-source migrations where a field becomes the single source of truth, audit both read paths and all write paths that can advance, consume, skip, expire, or probe that field. Check grant construction, issue-time probes, post-consumption advancement, post-skip/expire behavior, and any derived-state authorization or probe-time synthesized pending state.
-- When you reproduce a live measured symptom before fixing it, record exact pre-fix evidence in a durable owned surface before the implementation overwrites that state. Prefer the rewritten ticket, active spec, or implementation notes.
-- When a proof needs live authored behavior plus a small test-only policy or authoring hook, compile the production spec with a narrow in-memory overlay rather than editing production data solely to make the invariant testable.
-- If the ticket names files to inspect rather than modify, read and assess them; leave unchanged when evidence shows no edit is needed; state the no-change decision explicitly.
-- If a ticket names an authored data file as an optional surface tweak, verify whether compiled defaults already satisfy the contract before editing.
+If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`.
 
 ## Verification
 
-### Execution Order
+Load `references/verification.md`.
 
-1. Run the most relevant tests for the touched area.
-   - If a focused check reads built `dist/` artifacts while a rebuild or clean is still in progress, treat any resulting failure as inconclusive, wait for the build to finish, and rerun before classifying it as a real regression.
-2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
-3. Report unrelated pre-existing failures separately from failures caused by your changes.
-4. Prefer the narrowest commands that validate the real changed code path. For documentation-only tickets whose examples depend on already-verified behavior, artifact inspection plus dependency-integrity checks may suffice.
-5. Do not run broad verification commands in parallel when they share a mutable build artifact or clean/rebuild the same package output (for example, `dist`). Run those commands sequentially so one verification lane does not invalidate another mid-run.
-6. Before final closeout, compare the active ticket's `Files to Touch` and explicit deliverables against the actual diff. If a named file was intentionally left unchanged, record that deviation explicitly in working notes and the ticket outcome rather than silently omitting it.
-   - When selecting a focused verification command for a package, inspect that package's `package.json` or existing test lanes first if the best narrow proof command is not already obvious.
-5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale or superseded. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
-   - Focused proof commands may run before ticket-authoritative commands for fast feedback, but they do not satisfy the ticket on their own.
-6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
-   - In this repo, engine tests use `node --test`; for example, replace Jest-style name filtering with `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/<file>.test.js` when you need a focused built-test proof.
-7. **Long-running authoritative commands**: Some ticket-required verification commands may run for minutes with sparse or bursty output (for example determinism lanes or large property suites). Treat that as normal when consistent with repo history, keep the command running, and provide periodic progress updates rather than substituting a narrower check.
-8. **Post-clean reruns**: If a later authoritative command cleans shared build output (for example `dist`), a rerun of an earlier authoritative test lane may require rebuilding first. Treat the first post-clean module-resolution failure as an ordering issue unless the rebuilt rerun still fails.
+### Verification Safety
 
-### Build Ordering & Output Contention
-
-Tests depending on `dist` require typecheck/rebuild first. Module-resolution errors during concurrent clean/rebuild are ordering failures — rerun after the serialized build finishes.
-
-Before running broader commands, check whether they share generated output trees, caches, or clean steps. Commands that run `clean`, write `dist`, regenerate schemas, or depend on built test files must finish before another command touching the same tree starts.
-
-Do not launch authoritative commands that share those outputs in the same parallel tool batch, even when batching other read-only checks around them would otherwise be convenient.
-
-**In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run them serially even when they all appear in the ticket's acceptance list.
-
-### Escalation Ladder
-
-Default verification order:
-1. Focused test or reproducer for touched behavior
-2. Touched-package typecheck/build/lint
-3. Required artifact regeneration for schema/contract changes
-4. Ticket-explicit broader package or root commands
-
-Escalate sooner for shared exported contracts or cross-package consumers.
-
-### Failure Isolation
-
-- **Broader failures**: Determine whether they are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
-- **Mechanical-refactor fallout**: After removing local aliases or helpers, scan the touched files for remaining references in type annotations, return types, overloads, test seams, and import lists before assuming a later `typecheck` failure is broader fallout.
-- **Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
-- **Compiled-IR fixture drift**: For positive schema or contract tests covering compiled nodes, copy the shape from nearby live compiled examples, existing goldens, or current compiled fixtures rather than reconstructing it from authored syntax or spec pseudocode.
-- **Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
-- **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
-- **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level file failure without the nested assertion details, rerun the built module directly (for example `node dist/test/...`) or with a repo-approved verbose reporter path so the failing subtest output becomes visible before patching.
-- **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
-- **Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.
-
-### Export & Regression Guards
-
-- If implementation adds a helper or type primarily for tests, check whether the module has export-surface guards. Prefer structural local typing or test-local seams over widening a curated public API.
-- If a ticket includes a vague "no performance regression" clause without naming a benchmark, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
-
-### Schema & Artifact Regeneration
-
-- If you changed runtime Zod/object schemas or shared serialized contract shapes, regenerate schema artifacts before interpreting schema-test failures.
-- Confirm producing commands have exited before diagnosing artifact contents. Confirm artifact paths match command write targets.
-- Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
-- When touched source contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.
-- New lowered ref kinds or expression variants: assume `GameDef.schema.json` may drift even if edits are outside `schemas-core.ts`.
-- Runtime schema shape changes: expect `Trace.schema.json` or other serialized artifacts to drift even if the ticket only named TypeScript or Zod surfaces.
-- When a shared generator rewrites multiple artifacts, identify which encode the changed contract and summarize specifically.
-- If regeneration leaves no persisted diff, state explicitly that the surface was checked and remained in sync.
-
-### Measured-Gate Outcome
-
-For profiling/audit tickets, capture: measured surface, command(s), decisive result, threshold comparison, downstream action (archived/amended/deferred/not-actionable).
+- Treat verification commands that delete or regenerate shared outputs as sequential-only unless the repo explicitly documents them as parallel-safe.
+- In repositories where tests execute compiled files from `dist`, do not run build commands that rewrite `dist` in parallel with those tests. A build that starts with `rm -rf dist` can create false negative failures unrelated to the implementation.
+- If a broad verification failure appears immediately after overlapping build/test commands, rerun the affected checks sequentially before classifying the failure as code-caused.
 
 ### Standard Commands
 
@@ -343,21 +112,7 @@ pnpm turbo schema:artifacts
 
 ## Follow-Up
 
-1. If implementation completed and no blocking discrepancy remains, update the active ticket before final closeout:
-   - set the ticket status to its completed state when appropriate
-   - add or amend the ticket outcome with what actually landed, any boundary corrections, and the verification that ran
-   - if the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome rather than only in chat
-2. Summarize what changed, what was verified, and any residual risk.
-   - State explicitly: audited schema/artifact ripple effects (even if none needed), deferred verification owned by another ticket, resolved 1-3-1 decisions (especially Foundation type discipline), rules-evidence notes for game-specific legality corrections.
-   - State explicitly: any ticket premise that remained unverified, especially claimed repro seeds, counts, traces, or production observations.
-   - Closeout checklist:
-     - what landed in this ticket
-     - which verification commands ran
-     - whether schema/artifact surfaces were checked and whether they changed
-     - what scope remains deferred to sibling tickets, if any
-     - any unverified ticket premise or residual risk
-3. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
-4. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When implementation appears complete and the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest `post-ticket-review` as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
+Load `references/closeout-and-followup.md`.
 
 ## Codex Adaptation Notes
 

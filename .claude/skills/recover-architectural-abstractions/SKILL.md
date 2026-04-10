@@ -17,7 +17,7 @@ Given a complex test suite, recover the as-built architecture of the exercised a
 
 **Optional**: `--prior-reports` — paths to earlier `missing-abstractions` or `architectural-abstractions` reports **in `reports/`**. The skill builds on previous analysis rather than rediscovering known issues. **Never use reports from `archive/`** — archived reports are already exploited and no longer reflect current code; including them muddies the current assessment.
 
-**Output**: Structured report at `reports/architectural-abstractions-<date>-<context>.md`. `<context>` is derived from the input: for a test file, strip the path prefix and `.test.ts`/`.test.js` suffix; for a directory, use the directory name.
+**Output**: Structured report at `reports/architectural-abstractions-<date>-<context>.md`. `<context>` is derived from the input: for a test file, strip the path prefix and `.test.ts`/`.test.js` suffix; for a directory, use the directory name; for a glob pattern matching multiple files, use the common prefix of matched filenames after stripping the directory path (e.g., `zobrist*` → `zobrist`).
 
 ## Background
 
@@ -27,7 +27,7 @@ These fractures manifest as: fixing a bug in subsystem A requires compensating c
 
 ## Methodology
 
-**Phase dependency graph**: Phases 1-3 are parallelizable — launch sub-agents for all three simultaneously. Phase 4 requires all three to complete. Phases 5-6 are sequential after Phase 4.
+**Phase dependency graph**: Phase 1 (import tracing + git history) and Phase 2 (scenario mapping) can be parallelized because both start from the test files. Phase 3 should be deferred until Phase 1 completes — it frequently collapses into Phase 1's outputs. In practice, launch 2-3 agents that partition the Phase 1+2 work by focus area (e.g., deep imports, git history, test helper analysis). Phase 4 requires Phases 1-3 to complete. Phases 5-6 are sequential after Phase 4.
 
 ### Phase 1: GATHER
 
@@ -38,8 +38,8 @@ Starting from the test file(s), build a dependency graph of engine source module
 3. Continue 2-3 levels deep until reaching leaf modules or modules outside `packages/engine/src/`. Barrel/index re-export files count as zero depth.
 4. Produce a list of all engine source files exercised by the test suite
 5. Read `docs/FOUNDATIONS.md` — hold it for Phase 6 validation. Do NOT apply it yet.
-6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery. Produce a numbered exclusion list of known findings with one-line summaries. Include this list verbatim in all sub-agent prompts for Phases 2-4. **Reject any prior report whose path starts with `archive/`** — these are already exploited and must not influence the current analysis. Do NOT proactively search `archive/` for old reports.
-7. Check for existing coverage/trace artifacts in the repo. Use them if present.
+6. Read any `prior_reports` if provided — note already-identified issues to avoid rediscovery. Produce a numbered exclusion list of known findings with one-line summaries. Include this list verbatim in all sub-agent prompts for Phases 2-4. If no prior reports exist, omit the exclusion list from sub-agent prompts. **Reject any prior report whose path starts with `archive/`** — these are already exploited and must not influence the current analysis. Do NOT proactively search `archive/` for old reports.
+7. Check for existing coverage/trace artifacts (e.g., `coverage/`, `.nyc_output/`, `*.trace.json`) in the repo. Use them if present; skip if none found.
 8. Run bounded git history: `git log --since="6 months ago" --name-only --pretty=format:"COMMIT:%H" -- <exercised-file-paths>` to identify temporal coupling (files that frequently change together across commits). Parse the output to identify **commit clusters** — sets of 3+ exercised files that appear together in 2+ commits. Report the top 5 most frequent clusters by co-occurrence count. Filter the git log to only commits touching 2+ of the exercised files, then count pairwise co-occurrences. The goal is a ranked list of file-pairs/groups that change together, not a raw commit dump. For >30 exercised files, delegate git parsing to a separate sub-agent to keep the main context clean.
 
 **Sub-agent delegation**: For large test suites (>20 direct imports or barrel re-exports), delegate import tracing to 1-3 parallel Explore sub-agents. Each agent traces a subset of the import tree. Merge their deduplicated file lists (take the union). If agents report conflicting facts about the same file (e.g., different import counts), re-read the file directly to resolve. Note any reconciliation in the Traceability Summary. Also delegate git history analysis to a separate sub-agent if the file list exceeds 30 modules.
@@ -64,11 +64,11 @@ Then cluster tests into **scenario families** — named behavioral groups. Examp
 - "decision resolution and override"
 - "capability cost enforcement"
 
-Scaling guide for scenario family count: for 10-30 tests, target 4-8 families; for 30-50 tests, target 5-10; for 50-100 tests, target 5-12. These are guidelines, not constraints — the test content determines the natural family count. Each family should map to a distinct domain protocol or lifecycle, not just a shared implementation detail. When in doubt, keep families separate — they can be merged in the report table.
+Scaling guide for scenario family count: for <10 tests, target 2-5 families; for 10-30 tests, target 4-8 families; for 30-50 tests, target 5-10; for 50-100 tests, target 5-12. These are guidelines, not constraints — the test content determines the natural family count. Each family should map to a distinct domain protocol or lifecycle, not just a shared implementation detail. When in doubt, keep families separate — they can be merged in the report table. Property-based test suites that parameterize the same assertion across seeds/games may naturally produce fewer families — collapsing seed-variant tests into one family per distinct verification strategy is expected.
 
 Every later architectural inference must be tied back to scenario families. A finding not grounded in test behavior is speculation.
 
-Canary and integration tests may produce only 1-3 scenario families. This is expected — the value shifts from scenario-level precision to broad cross-subsystem coverage. Do not inflate scenario families to fill the table.
+Canary, integration, and performance benchmark tests may produce only 1-3 scenario families. This is expected — the value shifts from scenario-level precision to broad cross-subsystem coverage. Do not inflate scenario families to fill the table.
 
 **Sub-agent delegation**: For large test directories (>30 test files), delegate scenario extraction to 2-3 parallel Explore sub-agents, each handling a subset. Merge and deduplicate scenario families.
 
@@ -108,7 +108,9 @@ Scan the exercised code for these 8 fracture types:
 
 **Evidence rule**: A fracture is NOT reported unless supported by at least two independent signals (e.g., import analysis + temporal coupling, or naming similarity + assertion patterns). Single-signal fractures go in a "Needs investigation" bucket, not in the main findings.
 
-**Sub-agent input**: When delegating Phase 4 to a sub-agent, provide: (1) the scenario family table from Phase 2, (2) the top 5-10 temporal coupling clusters from Phase 1, (3) the list of key boundary modules (files at subsystem borders), and (4) specific questions about each potential fracture area derived from the test patterns.
+For small test suites (<15 direct test-file imports from engine source, i.e., distinct `packages/engine/src/**` paths in the test's own `import` statements), perform Phase 4 directly rather than delegating to a sub-agent. The transitive module count is irrelevant for this threshold — Phase 4 works from scenario families and temporal coupling clusters, not raw file-by-file reading.
+
+**Sub-agent input**: When delegating Phase 4 to a sub-agent (for larger suites), provide: (1) the scenario family table from Phase 2, (2) the top 5-10 temporal coupling clusters from Phase 1, (3) the list of key boundary modules (files at subsystem borders), and (4) specific questions about each potential fracture area derived from the test patterns.
 
 **Tool usage**: Grep for shared type names across modules, Grep for duplicate predicate patterns, Read key functions at boundary points, Bash for git log co-change analysis.
 
@@ -209,10 +211,15 @@ For large module sets (>30 files), group by module cluster (e.g., "legal-moves +
 Name them explicitly — "acceptable complexity" is a valid and important finding.
 Brief explanation of why they don't need intervention.>
 
+When the primary outcome is acceptable architecture, this should be the most substantial
+section. Candidate Abstractions may be empty or contain only conditional/deferred items.
+This is a successful analysis — do not pad findings to justify the effort.
+
 ## Needs Investigation
 
 <Single-signal fractures that didn't meet the two-signal minimum.
-List them with the one signal found and what second signal to look for.>
+List them with the one signal found, what second signal to look for,
+and what would falsify the hypothesis.>
 
 ## Recommendations
 
@@ -242,5 +249,5 @@ List them with the one signal found and what second signal to look for.>
 - Focus on cross-subsystem fractures. Single-concept scatter (e.g., "this function is duplicated in 5 files") is the domain of `detect-missing-abstractions`, not this skill.
 - Always check against `docs/FOUNDATIONS.md` — but only in Phase 6, not earlier.
 - The report should be actionable: each finding either needs a spec or doesn't.
-- If a report already exists at the target path, overwrite it — each run produces a complete standalone report.
+- If a report already exists at the target path, read it first and note any previously-found fractures in the Executive Summary's delta comparison. Then overwrite it — each run produces a complete standalone report.
 - If prior reports are provided, acknowledge already-known issues and focus analysis on NEW findings. Do not re-report what was already found.

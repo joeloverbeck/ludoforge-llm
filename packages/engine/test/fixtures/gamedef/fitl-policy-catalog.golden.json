@@ -1949,7 +1949,7 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 4
+          "value": 2
         },
         "value": {
           "kind": "op",
@@ -2432,7 +2432,7 @@
         "eventWeight": 1.5,
         "projectedMarginWeight": 3,
         "resourceWeight": 0.02,
-        "governWeight": 3,
+        "governWeight": 5,
         "trainWeight": 2,
         "sweepWeight": 0.5,
         "assaultWeight": 0.5
@@ -2488,7 +2488,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "33f58d2e0ca1b54ccc8dd21b263226dfd07e9a5e4f2c8c9041ec58ccf152c2d5"
+      "fingerprint": "70fe847b941ccfc4b4ab9aa8f93a3eda8c142a1805868b71c400bdda732ad48f"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2568,7 +2568,9 @@
         ]
       },
       "preview": {
-        "mode": "tolerateStochastic"
+        "mode": "tolerateStochastic",
+        "phase1": false,
+        "phase1CompletionsPerAction": 1
       },
       "selection": {
         "mode": "argmax"
@@ -2594,7 +2596,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "b32e74e7268fb9cf5d7966805b6e1041bcf0ea84c22460ce4d4cf3129fe9e528"
+      "fingerprint": "c2c588239ce1fafd3a391061f3cecbe833f491672d14239245ae5d3cbee790c3"
     }
   },
   "bindingsBySeat": {
@@ -2603,5 +2605,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "206996bc9081be6cd95424ac0717945cae0c95cae2235f79668990e5eedfa14c"
+  "catalogFingerprint": "e2ce58d4ca52f2fee53aaeb630e7a201059382735b58a93dfe2f4569fa5bcfe3"
 }

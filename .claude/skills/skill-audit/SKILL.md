@@ -28,6 +28,8 @@ The argument is the skill directory path. The framework automatically resolves `
    - Places where Claude had to improvise because the skill didn't provide guidance
    - Outcomes that diverged from what the skill intended
    - Steps that were not exercised this session (mark as "not exercised" — do not speculate about issues)
+
+   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on: (a) instructions that could be read ambiguously, (b) missing guidance for edge cases visible in the skill text, (c) cross-skill consistency with workflow partners.
 4. **Cross-check alignment** — For each finding from step 3, check whether the skill contradicts or fails to implement:
    - Principles from `docs/FOUNDATIONS.md` (reference by foundation number, e.g., "Foundation 7: Immutability")
    - Conventions from `CLAUDE.md` (reference by section name)
@@ -50,6 +52,7 @@ Output this structure to the conversation (do not write to a file):
 **Skill path**: <path>
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
+**Session evidence**: <rich (skill executed extensively) / moderate (skill used briefly) / thin (self-audit or first-time observation)>
 
 ## Alignment Check
 
@@ -94,7 +97,7 @@ Output this structure to the conversation (do not write to a file):
 
 [If all findings are LOW severity and *this specific skill* was already audited and updated earlier in this session, note: "The skill has converged — further auditing has diminishing returns." Convergence applies per-skill, not per-session — auditing a different skill is always valid even if another skill has converged.]
 
-[If follow-up edits were made to the target skill this session, recommend a reaudit: "`/skill-audit <path>` to verify convergence."]
+[If follow-up edits were made to the target skill this session, recommend a reaudit: "`/skill-audit <path>` to verify convergence." Re-audit can be deferred to the next session if the edits were straightforward and the audit-edit cycle has already iterated once this session.]
 ```
 
 If analysis during classification disproves an initial impression, withdraw the finding inline with a brief explanation rather than omitting it silently — this documents the reasoning for completeness.
@@ -110,9 +113,10 @@ If analysis during classification disproves an initial impression, withdraw the 
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location and topic may also be combined into a single edit even if they were classified separately (e.g., an Issue fix and a Feature addition to the same section).
-  4. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines.
-  5. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
-  6. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
-  7. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.
-  8. The user may run a subsequent `/skill-audit` on the same skill after edits — this is a normal audit-edit-reaudit workflow.
+  4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next.
+  5. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines. Heuristic: when edits touch 4+ distinct locations in a file under 300 lines, a single full-file re-read after all edits is more efficient than per-edit verification.
+  6. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
+  7. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
+  8. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.
+  9. The user may run a subsequent `/skill-audit` on the same skill after edits — this is a normal audit-edit-reaudit workflow.
 - **Cross-skill consistency** — If the target skill is part of a multi-skill workflow, scan sibling skills for inconsistent file references, terminology, or shared constants. Report cross-skill inconsistencies as Issues. Sibling skills are those in the same explicit workflow — triple patterns (e.g., `*-evaluate`, `*-plan`, `*-implement`), complementary pairs (e.g., audit/consolidate), or any skills that explicitly name each other as workflow partners. Standalone skills with no workflow partners do not require cross-skill checks — note "standalone skill, no cross-skill check needed" and move on. When auditing skill-audit itself, the cross-skill check applies to skill-consolidate (its complementary pair). Self-referential audit is valid but findings should focus on the skill's instructions, not its meta-properties.

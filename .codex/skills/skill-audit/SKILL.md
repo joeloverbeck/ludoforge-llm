@@ -17,6 +17,7 @@ Use this skill to evaluate a target skill against the work done in the current C
 2. Read `docs/FOUNDATIONS.md` if it has not already been read in the current task.
 3. Read `AGENTS.md` for repository conventions if it has not already been read in the current task.
 4. Reflect on the current session and identify:
+   - which concrete task window, target interaction, or skill-use slice in the current session is being audited when multiple tasks or skills appear in the same conversation
    - moments where the skill's instructions were unclear or ambiguous
    - steps that were skipped, reordered, or worked around
    - cases the skill did not anticipate
@@ -107,6 +108,7 @@ Output the audit in the conversation, not in a file.
 ## Guardrails
 
 - Report only during the audit. Do not edit the target skill unless the user later asks for changes.
+- If the user later asks to implement the audit recommendations, treat that as a new task: reopen the target skill, use the audit findings as implementation input, and switch out of report-only behavior for that follow-up turn.
 - Do not invent findings for steps that were not exercised. Mark them as `not exercised this session`.
 - Any suggestion that conflicts with `docs/FOUNDATIONS.md` must be rejected and called out explicitly.
 - Stay within the target skill's stated scope. Do not expand the audit into a redesign of a different skill.

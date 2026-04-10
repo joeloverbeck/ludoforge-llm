@@ -389,7 +389,7 @@ function createTwoPhaseIsolationDef(
   });
 }
 
-function createTemplatePreviewDef(): GameDef {
+function createTemplatePreviewDef(enablePhase1Preview = false): GameDef {
   const actionId = asActionId('chooseTarget');
   const templateProfile: ActionPipelineDef = {
     id: `profile-${actionId}`,
@@ -503,7 +503,10 @@ function createTemplatePreviewDef(): GameDef {
         passive: {
           fingerprint: 'template-preview-profile',
           params: {},
-          preview: { mode: 'exactWorld' },
+          preview: {
+            mode: 'exactWorld',
+            ...(enablePhase1Preview ? { phase1: true, phase1CompletionsPerAction: 1 } : {}),
+          },
           selection: { mode: 'argmax' },
           use: {
             pruningRules: [],
@@ -820,6 +823,52 @@ describe('PolicyAgent', () => {
     assert.deepEqual(completedTemplateCandidate.unknownPreviewRefs, [{ refId: 'globalVar.usMargin', reason: 'unresolved' }]);
     assert.equal(completedTemplateCandidate.previewOutcome, 'unresolved');
     assert.equal(completedTemplateCandidate.previewFailureReason, 'notDecisionComplete');
+  });
+
+  it('uses representative phase-1 previews when preview.phase1 is enabled', () => {
+    const def = createTemplatePreviewDef(true);
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(42n),
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, false);
+    assert.deepEqual(result.agentDecision.previewUsage.refIds, ['globalVar.usMargin']);
+    assert.equal(result.agentDecision.previewUsage.evaluatedCandidateCount, 2);
+    assert.deepEqual(result.agentDecision.previewUsage.outcomeBreakdown, {
+      ready: 2,
+      stochastic: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
+    if (result.agentDecision.candidates === undefined) {
+      assert.fail('expected verbose policy candidates');
+    }
+
+    const chooseTargetCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId === 'chooseTarget');
+    const passCandidate = result.agentDecision.candidates.find((candidate) => candidate.actionId === 'pass');
+    assert.ok(chooseTargetCandidate);
+    assert.ok(passCandidate);
+    assert.equal(chooseTargetCandidate?.previewOutcome, 'ready');
+    assert.equal(passCandidate?.previewOutcome, 'ready');
+    assert.deepEqual(chooseTargetCandidate?.unknownPreviewRefs, []);
+    assert.deepEqual(passCandidate?.unknownPreviewRefs, []);
+    assert.equal((chooseTargetCandidate?.score ?? Number.NEGATIVE_INFINITY) > (passCandidate?.score ?? Number.POSITIVE_INFINITY), true);
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {

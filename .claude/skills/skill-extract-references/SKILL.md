@@ -7,6 +7,8 @@ description: Extract logically grouped content from a bloated SKILL.md into refe
 
 Refactor a skill by extracting large, logically grouped content blocks into `references/` docs and rewriting the SKILL.md as a thin orchestration entry point.
 
+Complements skill-consolidate: consolidate first to deduplicate and tighten, then extract-references if the result is still over 60 lines. Or extract first to reduce cognitive load, then consolidate individual reference docs.
+
 **Argument**: A skill directory path (e.g., `.claude/skills/implement-ticket`). The skill locates `SKILL.md` inside it automatically.
 
 ## Procedure
@@ -23,7 +25,7 @@ If the SKILL.md is under 60 lines, output "Nothing to extract — SKILL.md is al
 ### 3. Parse into Blocks
 
 Split the SKILL.md into logical blocks using markdown structure:
-- H2 (`##`) and H3 (`###`) headers define block boundaries.
+- H2 (`##`) and H3 (`###`) headers define primary block boundaries. H4+ sub-sections belong to their enclosing H3 (or H2 if no H3 parent) and are extracted or retained with it.
 - Numbered list groups and fenced code blocks within a header section belong to that block.
 - The YAML frontmatter is always **core** — never extracted.
 - The top-level title (H1) and any immediately following paragraph before the first H2 is **core**.
@@ -71,8 +73,20 @@ For each block, determine one of three categories:
     - Unconditional: "Load `references/verification-and-closeout.md`."
     - Conditional: "If the change touches AI pipelines, load `references/ai-pipeline-checks.md`."
   - Place conditional load instructions at the earliest workflow step where the reference content is first needed, not at the top of the file.
+- **Rewrite internal anchor links** (`#heading-slug`) that pointed to now-extracted content. Replace with prose references to the reference doc containing the target heading (e.g., "see `references/verification.md`").
 - **Preserve** universal hard rules as a short section at the bottom.
 - The thin SKILL.md should read as a clear, scannable orchestration sequence — not a wall of checklists.
+- **Target**: the thin SKILL.md should be roughly 25-40% of the original line count. If it exceeds 50%, consider extracting more blocks.
+
+### 7b. Verify
+
+Re-read the thin SKILL.md and each reference doc. Check:
+- Frontmatter unchanged.
+- No content lost between original and combined output (compare total line counts as a sanity check).
+- No broken internal anchor links pointing to extracted headings.
+- No duplicate content across reference docs.
+
+If any issue is found, fix it before proceeding.
 
 ### 8. Output Summary
 

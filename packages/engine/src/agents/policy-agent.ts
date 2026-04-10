@@ -5,6 +5,7 @@ import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
 import { evaluatePolicyMove, type PolicyEvaluationMetadata } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
+import type { Phase1ActionPreviewEntry } from './policy-preview.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
@@ -43,19 +44,6 @@ export class PolicyAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
     const profiler = input.profiler;
     const resolvedProfile = resolveEffectivePolicyProfile(input.def, input.playerId, this.profileId);
-    const phase1EvaluationInput = {
-      ...input,
-      legalMoves: input.legalMoves.map((classified) => classified.move),
-      trustedMoveIndex: new Map(),
-      selectionGrouping: 'actionId' as const,
-      ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
-      ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
-    };
-
-    const t0_eval = perfStart(profiler);
-    const phase1 = evaluatePolicyMove(phase1EvaluationInput);
-    perfDynEnd(profiler, 'agent:evaluatePolicyMove', t0_eval);
-
     const choose = resolvedProfile === null
       ? undefined
       : buildCompletionChooseCallback({
@@ -67,6 +55,26 @@ export class PolicyAgent implements Agent {
         profile: resolvedProfile.profile,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       });
+    const phase1Preparation = buildPhase1ActionPreviewIndex(
+      input,
+      resolvedProfile,
+      choose,
+      profiler,
+    );
+    const phase1EvaluationInput = {
+      ...input,
+      legalMoves: input.legalMoves.map((classified) => classified.move),
+      trustedMoveIndex: new Map(),
+      ...(phase1Preparation.index.size === 0 ? {} : { phase1ActionPreviewIndex: phase1Preparation.index }),
+      rng: phase1Preparation.rng,
+      selectionGrouping: 'actionId' as const,
+      ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
+      ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
+    };
+
+    const t0_eval = perfStart(profiler);
+    const phase1 = evaluatePolicyMove(phase1EvaluationInput);
+    perfDynEnd(profiler, 'agent:evaluatePolicyMove', t0_eval);
 
     const t0_prepare = perfStart(profiler);
     const prepared = preparePlayableMoves(input, {
@@ -123,6 +131,57 @@ export class PolicyAgent implements Agent {
       }, this.traceLevel),
     };
   }
+}
+
+function buildPhase1ActionPreviewIndex(
+  input: Parameters<Agent['chooseMove']>[0],
+  resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
+  choose: ReturnType<typeof buildCompletionChooseCallback> | undefined,
+  profiler: Parameters<typeof perfStart>[0],
+): {
+    readonly index: ReadonlyMap<string, Phase1ActionPreviewEntry>;
+    readonly rng: typeof input.rng;
+  } {
+  if (resolvedProfile?.profile.preview.phase1 !== true) {
+    return { index: new Map(), rng: input.rng };
+  }
+
+  const completionBudget = resolvedProfile.profile.preview.phase1CompletionsPerAction ?? 1;
+  const actionIds = [...new Set(input.legalMoves.map((classified) => String(classified.move.actionId)))].sort();
+  const index = new Map<string, Phase1ActionPreviewEntry>();
+  let rng = input.rng;
+
+  const t0_prepare = perfStart(profiler);
+  for (const actionId of actionIds) {
+    const actionIdFilter = input.legalMoves.find(
+      (classified) => String(classified.move.actionId) === actionId,
+    )?.move.actionId;
+    if (actionIdFilter === undefined) {
+      continue;
+    }
+    const prepared = preparePlayableMoves(
+      {
+        ...input,
+        rng,
+      },
+      {
+        pendingTemplateCompletions: completionBudget,
+        actionIdFilter,
+        ...(choose === undefined ? {} : { choose }),
+      },
+    );
+    rng = prepared.rng;
+    const representative = prepared.completedMoves[0];
+    if (representative !== undefined) {
+      index.set(actionId, {
+        actionId,
+        trustedMove: representative,
+      });
+    }
+  }
+  perfDynEnd(profiler, 'agent:phase1Completions', t0_prepare);
+
+  return { index, rng };
 }
 
 function rankActionIdsByBestCandidateScore(

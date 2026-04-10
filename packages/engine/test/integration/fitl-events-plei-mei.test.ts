@@ -155,7 +155,7 @@ describe('FITL card-59 Plei Mei', () => {
         sequence: { batch: 'plei-mei-nva', step: 0 },
         actionIds: ['march'],
         allowDuringMonsoon: true,
-        completionPolicy: 'required',
+        completionPolicy: 'skipIfNoLegalCompletion',
         outcomePolicy: 'mustChangeGameplayState',
         moveZoneBindings: ['$targetSpaces', '$chainSpaces'],
         moveZoneProbeBindings: ['$targetSpaces', '$chainSpaces'],

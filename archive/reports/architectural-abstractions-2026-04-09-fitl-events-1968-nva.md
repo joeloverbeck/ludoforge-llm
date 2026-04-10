@@ -1,3 +1,5 @@
+**Status**: COMPLETED
+
 # Architectural Abstraction Recovery: fitl-events-1968-nva
 
 **Date**: 2026-04-09
@@ -142,3 +144,14 @@ Cross-subsystem fractures were found at moderate severity. The 846-line test sui
   - For Candidate 2: Check whether `updateChoiceScope` references marker state. If not, proceed with spec.
 - **Acceptable**: Event card execution pipeline, decision resolution system, global marker state machine
 - **Needs investigation**: None
+
+## Outcome
+
+- Completed: 2026-04-10
+- What actually changed:
+  - This report was archived after its findings were exploited in follow-on repository work.
+  - The document was updated to meet the archival workflow requirements and moved from `reports/` to `archive/reports/`.
+- Deviations from original plan:
+  - None for the archival step itself; this update only records final status and archival outcome.
+- Verification results:
+  - Passed `pnpm run check:ticket-deps`

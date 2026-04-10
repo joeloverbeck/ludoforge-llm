@@ -1,6 +1,6 @@
 # Spec 63 — Phase 1 Preview for Template Operations
 
-- **Status**: Draft
+- **Status**: COMPLETED
 - **Priority**: High
 - **Complexity**: Medium
 - **Dependencies**: None
@@ -192,3 +192,18 @@ Profiles without `phase1: true` retain the current Phase 1 behavior (no preview 
 3. All engine tests pass after fixture migration
 4. Determinism tests confirm same-seed reproducibility
 5. No measurable regression in game simulation throughput (< 5% increase in per-decision time)
+
+## Outcome
+
+- Completed: 2026-04-10
+- What changed:
+  - Implemented the Phase 1 representative-preview architecture across the engine and compiler in the 63PHAPREFOR ticket series.
+  - Landed production-proof integration coverage for FITL ARVN Phase 1 preview differentiation in `packages/engine/test/integration/phase1-preview-differentiation.test.ts`.
+  - Added bounded deterministic witness discovery plus same-seed replay assertions to prove that Phase 1 projected-margin differentiation is observable and deterministic through the public `PolicyAgent` API.
+- Deviations from original plan:
+  - The production-proof test uses bounded deterministic witness discovery instead of a single preselected fixed seed/ply because the live FITL decision surface was revalidated against the current codebase.
+  - The performance criterion was treated as informational rather than a hard automated `< 5%` gate because the repository does not provide a stable benchmark lane for enforcing that threshold.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/phase1-preview-differentiation.test.js`
+  - `pnpm -F @ludoforge/engine test`

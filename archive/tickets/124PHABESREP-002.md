@@ -1,6 +1,6 @@
 # 124PHABESREP-002: FITL integration test for best-of-N Phase 1 differentiation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
@@ -75,3 +75,21 @@ Run the same decision point twice with the same seed. Assert the projected margi
 
 1. `pnpm -F @ludoforge/engine test -- --test-name-pattern "best-of-3|bestOf3|phase1.*differentiation"`
 2. `pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-10
+- What landed:
+  - Extended `packages/engine/test/integration/phase1-preview-differentiation.test.ts` to exercise FITL ARVN with `phase1CompletionsPerAction: 3`.
+  - Added a bounded comparable witness search proving a live ARVN decision point where best-of-3 both differentiates template actions and keeps every tested projected self-margin at least as strong as first-of-1 at the same seed/ply.
+  - Kept the determinism replay assertion on the same witness surface so the integration proof remains seed-stable and non-flaky.
+- Boundary notes:
+  - The archived sibling `124PHABESREP-001` remained the engine-code owner; this ticket stayed test-only.
+  - No schema or generated artifact changes were required; schema artifact sync was checked and remained clean through the package test lane.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node dist/test/integration/phase1-preview-differentiation.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`
+- Verification command substitution:
+  - The ticket's focused `--test-name-pattern` example is stale for this package's Node test runner workflow. The live focused proof used the repo-approved built-test form instead of the Jest-style filter.

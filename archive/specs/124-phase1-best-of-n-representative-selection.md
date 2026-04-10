@@ -1,6 +1,6 @@
 # Spec 124 — Phase 1 Best-of-N Representative Selection
 
-- **Status**: PROPOSED
+- **Status**: COMPLETED
 - **Priority**: High
 - **Complexity**: Low-Medium
 - **Dependencies**: Spec 63 (Phase 1 Preview for Template Operations) — completed
@@ -164,3 +164,21 @@ The agent can now learn: "Assault improves projected self-margin by 5 points in 
 3. All engine tests pass after fixture migration.
 4. Determinism tests confirm same-seed reproducibility.
 5. Performance overhead < 5% of per-decision time for N=3.
+
+## Outcome
+
+- Completed: 2026-04-10
+- What landed:
+  - `packages/engine/src/agents/policy-agent.ts` now keeps the existing `N=1` fast path and, for `phase1CompletionsPerAction > 1`, selects the completion with the best projected `victory.currentMargin.self` as the Phase 1 representative.
+  - `packages/engine/src/agents/policy-preview.ts` exports `getSeatMargin()` for reuse by representative selection.
+  - Unit coverage was added for `N=1` backward compatibility, best-of-N selection, determinism, and deterministic tie-breaking.
+  - FITL integration coverage was extended to prove a bounded ARVN witness where best-of-3 differentiates template action types and keeps projected margins at least as strong as first-of-1 at the same seed/ply.
+- Deviations from original plan:
+  - No production performance benchmark gate was added in this implementation slice; the existing informational overhead test remains skipped.
+  - Delivery was split across `124PHABESREP-001` for engine behavior and `124PHABESREP-002` for the FITL integration proof.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node dist/test/unit/agents/policy-agent.test.js`
+  - `pnpm -F @ludoforge/engine exec node dist/test/integration/phase1-preview-differentiation.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo test`

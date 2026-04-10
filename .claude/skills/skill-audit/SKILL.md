@@ -97,7 +97,7 @@ Output this structure to the conversation (do not write to a file):
 
 [If all findings are LOW severity and *this specific skill* was already audited and updated earlier in this session, note: "The skill has converged — further auditing has diminishing returns." Convergence applies per-skill, not per-session — auditing a different skill is always valid even if another skill has converged.]
 
-[If follow-up edits were made to the target skill this session, recommend a reaudit: "`/skill-audit <path>` to verify convergence."]
+[If follow-up edits were made to the target skill this session, recommend a reaudit: "`/skill-audit <path>` to verify convergence." Re-audit can be deferred to the next session if the edits were straightforward and the audit-edit cycle has already iterated once this session.]
 ```
 
 If analysis during classification disproves an initial impression, withdraw the finding inline with a brief explanation rather than omitting it silently — this documents the reasoning for completeness.

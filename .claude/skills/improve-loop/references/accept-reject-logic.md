@@ -11,6 +11,13 @@ Apply the accept/reject logic from program.md. **If program.md defines its own a
 4. Log the phase transition in musings: `**PHASE TRANSITION**: <old phase> → <new phase>. New baseline: <metric>.`
 5. The transition itself is not an experiment — do not log it in results.tsv as an experiment row
 
+**Phase transition checklist** (apply on every tier advance or phase change):
+- [ ] Re-run harness at new tier/phase to establish new baseline
+- [ ] Update `best_metric`, `best_wins`, `best_avgMargin` (and any phase-specific variables) to new baseline values
+- [ ] Reset `consecutive_rejects = 0` and `strategy = "normal"`
+- [ ] Log transition in musings with new baseline values
+- [ ] If `sync-fixtures.sh` exists, run it before the baseline harness run
+
 **Multi-metric phase accept logic guidance**: When a ramp-up phase tracks both a primary count (e.g., wins) and a secondary continuous metric (e.g., avgMargin), the accept rule must handle the case where the primary count INCREASES but the secondary metric REGRESSES. Recommended two-case pattern:
 - **Primary count increased**: Use the composite metric (e.g., `compositeScore`) as the arbiter. The composite already weights the count heavily (e.g., 10x per win). Accept if `new_compositeScore > best_compositeScore + NOISE_TOLERANCE`.
 - **Primary count unchanged**: Use the secondary metric as the arbiter. Accept if secondary improved or if it's equal with lines_delta < 0 (simplification).

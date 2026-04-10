@@ -108,6 +108,7 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
 - Verify that no immutable files have been modified since baseline. If any have, **hard error** — abort the loop.
 - Review experiment history in results.tsv — what's been tried, what worked, what failed.
 - Note the current `best_metric` and cumulative `lines_delta`.
+- If the harness produces diagnostic artifacts (traces, logs, profiles) beyond the primary metric, read them to inform hypothesis generation. Campaign-specific OBSERVE protocols in program.md extend this step.
 
 ### Steps 1b-1f: STRATEGY MANAGEMENT
 
@@ -154,6 +155,11 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
   - Skip to Step 8 (REPEAT).
 - Count `lines_delta` for this change (net lines added minus lines removed across all mutable files).
 - Tag the change with a `category` from program.md's experiment categories list.
+- **Fixture sync**: If `$WT/campaigns/<campaign>/sync-fixtures.sh` exists, run it now (after implementing changes, before executing the harness):
+  ```bash
+  cd $WT && bash campaigns/<campaign>/sync-fixtures.sh
+  ```
+  This prevents stale-fixture test failures from wasting the first experiment iteration.
 
 ### Steps 4-5: EXECUTE and MEASURE
 
@@ -224,7 +230,13 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
    cd <main-repo-root> && git merge --squash improve/<campaign>
    ```
 5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
-6. Remove the worktree: `git worktree remove .claude/worktrees/improve-<campaign>`
+6. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
+7. Remove the worktree and delete the branch:
+   ```bash
+   git worktree remove .claude/worktrees/improve-<campaign>
+   git branch -D improve/<campaign>
+   ```
+   Force-delete (`-D`) is required because squash-merge does not mark the branch as merged.
 
 ## Human Investigation Interrupt
 
@@ -237,6 +249,15 @@ If the human interrupts the loop for investigation (e.g., "stop, investigate thi
    - If the investigation was **diagnostic only** (no new capabilities): resume from saved state with no reset.
 4. The human may redirect from investigation to campaign completion — follow their direction. This can happen via ceiling report options (B/D), or directly when the investigation reveals a structural limitation that makes continuing the loop unproductive. Skip to "After Campaign Completes" with any infrastructure commits from the investigation included in the squash merge.
 5. **Engine limitation discovery**: If the investigation reveals an engine/DSL/runtime limitation (not a campaign design issue), document it as a spec and adjust the campaign approach to work within the limitation. Log in musings: `**ENGINE LIMITATION**: <description>. See Spec NNN.`
+6. **Bug fix during investigation**: If the investigation reveals a code bug (not a policy issue):
+   1. Implement the fix in engine code.
+   2. Run the full test suite.
+   3. Commit with a descriptive message (use `fix:` prefix, not `infra:`).
+   4. If the fix changes compiled output, run `sync-fixtures.sh` and commit fixture updates separately.
+   5. Re-run the harness to establish the post-fix baseline.
+   6. Update `best_metric` if the baseline changed.
+   7. Log the fix in musings with `**BUG FIX**:` prefix.
+   8. This counts as "unlocked new capabilities" — reset `consecutive_rejects = 0` and `strategy = "normal"`.
 
 ## Guardrails
 

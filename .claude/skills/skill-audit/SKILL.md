@@ -110,7 +110,7 @@ If analysis during classification disproves an initial impression, withdraw the 
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call.
-  4. After edits, re-read each edited section plus 10 lines of surrounding context. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines.
+  4. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines.
   5. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   6. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   7. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.

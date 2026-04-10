@@ -61,3 +61,19 @@ Some campaigns define multiple mutability tiers with different commit policies. 
 6. **Fixture re-regeneration after Tier 1 rollback**: If golden/snapshot fixtures were regenerated during the experiment (because Tier 1 changes altered compiled output), re-run fixture regeneration (or `sync-fixtures.sh`) AFTER Tier 1 rollback to restore fixtures to the post-Tier-2-only state. Verify with a build+test cycle before committing Tier 2.
 
 **Campaign authors**: Define tiers explicitly in `program.md` with file lists and commit policies. If no tiers are defined, all mutable files follow the default single-tier protocol.
+
+## Tier 4: GameSpecDoc Changes
+
+Some campaigns define a Tier 4 for game-level specification changes required when DSL extensions need new declarations, or when the game spec itself has structural issues blocking the campaign objective.
+
+**Characteristics**:
+- Changes affect action definitions, phase structures, or game-level declarations (not just agent policy YAML)
+- May require test updates across integration AND e2e test suites (not just golden fixtures)
+- May produce infrastructure commits significantly larger than typical Tier 3 changes
+- Fixture regeneration via `sync-fixtures.sh` is required, but additional test file edits (param format changes, decision override updates) are common
+
+**Commit protocol**:
+- Commit as infrastructure with `infra:` prefix, independent of experiment results
+- Run the FULL test suite (not just the harness gate) before committing
+- Log in musings but do NOT log in results.tsv (these are infrastructure, not experiments)
+- If the Tier 4 change alters game semantics (e.g., batch vs one-at-a-time actions), update the playbook golden test to match the new semantics

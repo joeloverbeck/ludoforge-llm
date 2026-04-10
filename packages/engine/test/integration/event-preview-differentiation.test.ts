@@ -97,10 +97,10 @@ describe('FITL production event preview differentiation', () => {
 
     assert.equal(shaded.length, 0, 'expected no shaded Green Berets candidates at this decision point');
     assert.equal(unshaded.length > 0, true, 'expected unshaded Green Berets candidates');
-    assert.equal(unshaded.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
+    assert.equal(unshaded.every((candidate) => candidate.previewOutcome === 'ready'), true);
   });
 
-  it('surfaces Green Berets branches independently even when template previews remain unresolved', () => {
+  it('surfaces Green Berets branches independently with Phase 1 preview ready', () => {
     const { result } = traceDecisionAtSeedPly(1, 2);
     const candidates = candidatesForCard(requireVerboseCandidates(result), 'card-68');
     const irregularsBranch = candidatesForParam(candidates, 'branch', 'place-irregulars-and-support');
@@ -108,8 +108,8 @@ describe('FITL production event preview differentiation', () => {
 
     assert.equal(irregularsBranch.length > 0, true, 'expected Green Berets irregulars branch candidates');
     assert.equal(rangersBranch.length > 0, true, 'expected Green Berets rangers branch candidates');
-    assert.equal(irregularsBranch.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
-    assert.equal(rangersBranch.every((candidate) => candidate.previewOutcome === 'unresolved'), true);
+    assert.equal(irregularsBranch.every((candidate) => candidate.previewOutcome === 'ready'), true);
+    assert.equal(rangersBranch.every((candidate) => candidate.previewOutcome === 'ready'), true);
     assert.equal(
       new Set(candidates.map((candidate) => candidate.stableMoveKey)).size,
       candidates.length,

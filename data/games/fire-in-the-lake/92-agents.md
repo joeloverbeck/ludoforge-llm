@@ -410,48 +410,18 @@ agents:
 
     arvn-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        phase1: true
       params:
-        eventWeight: 1.5
-        projectedMarginWeight: 1
-        resourceWeight: 0.02
-      use:
-        pruningRules:
-          - dropPassWhenOtherMovesExist
-        considerations:
-          - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
-          - preferTrainAction
-          - preferPatrolAction
-          - preferSweepAction
-          - preferAssaultAction
-          - preferGovernAction
-        tieBreakers:
-          - stableMoveKey
-
-    arvn-evolved:
-      observer: currentPlayer
-      params:
-        eventWeight: 1.5
-        projectedMarginWeight: 3
-        resourceWeight: 0.02
+        projectedMarginWeight: 8
         governWeight: 5
-        trainWeight: 2
-        sweepWeight: 0.5
-        assaultWeight: 0.5
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
-          - preferTrainWeighted
-          - preferPatrolAction
-          - preferSweepWeighted
-          - preferAssaultWeighted
           - preferGovernWeighted
-          - trainWhenFewTroops
           - preferPopulousTargets
         tieBreakers:
           - stableMoveKey
@@ -498,7 +468,7 @@ agents:
 
   bindings:
     us: us-baseline
-    arvn: arvn-evolved
+    arvn: arvn-baseline
     nva: nva-baseline
     vc: vc-baseline
 ```

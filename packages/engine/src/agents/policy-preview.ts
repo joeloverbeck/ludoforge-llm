@@ -28,6 +28,7 @@ import { extractAnnotationValue as extractAnnotationValueForPreview } from './po
 export interface PolicyPreviewCandidate {
   readonly move: Move;
   readonly stableMoveKey: string;
+  readonly actionId?: string;
 }
 
 export interface PolicyPreviewDependencies {
@@ -54,12 +55,18 @@ export interface PolicyPreviewDependencies {
   readonly computeDerivedMetricValue?: typeof computeDerivedMetricValue;
 }
 
+export interface Phase1ActionPreviewEntry {
+  readonly actionId: string;
+  readonly trustedMove: TrustedExecutableMove;
+}
+
 export interface CreatePolicyPreviewRuntimeInput {
   readonly def: GameDef;
   readonly state: GameState;
   readonly playerId: PlayerId;
   readonly seatId: string;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
   readonly previewMode: AgentPreviewMode;
@@ -75,6 +82,7 @@ export interface PolicyPreviewRuntime {
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
+  hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
 }
 
 export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
@@ -265,6 +273,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         ? outcome.grantedOperation
         : undefined;
     },
+    hasPreviewData(candidate) {
+      const candidateActionId = candidate.actionId ?? String(candidate.move.actionId);
+      return input.trustedMoveIndex.has(candidate.stableMoveKey)
+        || input.phase1ActionPreviewIndex?.has(candidateActionId) === true;
+    },
   };
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
@@ -279,9 +292,13 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     }
 
     const trustedMove = input.trustedMoveIndex.get(candidate.stableMoveKey);
-    const outcome = trustedMove === undefined
-      ? classifyPreviewOutcome(deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime))
-      : tryApplyPreview(trustedMove);
+    const candidateActionId = candidate.actionId ?? String(candidate.move.actionId);
+    const representativeTrustedMove = input.phase1ActionPreviewIndex?.get(candidateActionId)?.trustedMove;
+    const outcome = trustedMove !== undefined
+      ? tryApplyPreview(trustedMove)
+      : representativeTrustedMove !== undefined
+        ? tryApplyPreview(representativeTrustedMove)
+        : classifyPreviewOutcome(deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime));
     cache.set(candidate.stableMoveKey, outcome);
     return outcome;
   }

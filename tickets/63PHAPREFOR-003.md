@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — schemas, test fixtures
-**Deps**: `tickets/63PHAPREFOR-002.md`
+**Deps**: `archive/tickets/63PHAPREFOR-002.md`
 
 ## Problem
 

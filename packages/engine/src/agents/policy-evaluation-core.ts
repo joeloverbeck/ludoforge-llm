@@ -30,6 +30,7 @@ import {
   type PolicyValue,
 } from './policy-runtime.js';
 import type {
+  Phase1ActionPreviewEntry,
   PolicyPreviewDependencies,
   PolicyPreviewGrantedOperation,
   PolicyPreviewTraceOutcome,
@@ -68,6 +69,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly catalog: AgentPolicyCatalog;
   readonly parameterValues: Readonly<Record<string, AgentParameterValue>>;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
   readonly completion?: {
@@ -237,6 +239,7 @@ export class PolicyEvaluationContext {
       playerId: input.playerId,
       seatId: input.seatId,
       trustedMoveIndex: input.trustedMoveIndex,
+      ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
       catalog: input.catalog,
       ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
@@ -288,6 +291,10 @@ export class PolicyEvaluationContext {
     const value = this.evaluateExpr(feature.expr, candidate);
     candidateCache.set(featureId, value);
     return value;
+  }
+
+  hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
+    return this.runtimeProviders.previewSurface.hasPreviewData(candidate);
   }
 
   evaluateAggregate(aggregateId: string): PolicyValue {

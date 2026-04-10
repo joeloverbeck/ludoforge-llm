@@ -371,6 +371,45 @@ function createInput(agents: AgentPolicyCatalog, legalMoves: readonly Move[], se
   } as const;
 }
 
+function createRepresentativePreviewCatalog(): AgentPolicyCatalog {
+  return createCatalog(
+    {
+      candidateFeatures: {
+        projectedMargin: {
+          type: 'number',
+          costClass: 'preview',
+          expr: refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'usMargin' }),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+        },
+      },
+      scoreTerms: {
+        preferProjectedMargin: {
+          costClass: 'preview',
+          weight: literal(1),
+          value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedMargin' }),
+          dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedMargin'], aggregates: [], strategicConditions: [] },
+        },
+      },
+    },
+    {
+      use: {
+        pruningRules: [],
+        considerations: ['preferProjectedMargin'],
+        tieBreakers: ['stableMoveKey'],
+      },
+      plan: {
+        stateFeatures: [],
+        candidateFeatures: ['projectedMargin'],
+        candidateAggregates: [],
+        considerations: [],
+      },
+    },
+    {
+      '$target': { type: 'id' },
+    },
+  );
+}
+
 function createSelectionScoreCatalog(
   selection: AgentPolicyCatalog['profiles']['baseline']['selection'] | undefined,
   scores: Readonly<Record<string, number>>,
@@ -2559,6 +2598,118 @@ describe('policy-eval', () => {
     assert.equal(
       result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, lowMarginMove))?.score,
       2,
+    );
+  });
+
+  it('evaluates preview-backed score terms through representative phase-1 action previews', () => {
+    const chooseTargetAction: ActionDef = {
+      id: asActionId('chooseTarget'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        eff({ setVar: { scope: 'global', var: 'usMargin', value: 8 } }),
+      ],
+      limits: [],
+    };
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const agents = createRepresentativePreviewCatalog();
+    const def = {
+      ...createBaseDef(agents),
+      actions: [chooseTargetAction, passAction],
+    };
+    const state = initialState(def, 7, 2).state;
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const alphaMove: Move = { actionId: asActionId('chooseTarget'), params: { variant: 'alpha' } };
+    const betaMove: Move = { actionId: asActionId('chooseTarget'), params: { variant: 'beta' } };
+    const representativeMove: Move = { actionId: asActionId('chooseTarget'), params: { '$target': 'gamma' } };
+
+    const result = evaluatePolicyMove({
+      def,
+      state: {
+        ...state,
+        globalVars: {
+          ...state.globalVars,
+          usMargin: 1,
+        },
+      },
+      playerId: asPlayerId(0),
+      legalMoves: [passMove, alphaMove, betaMove],
+      trustedMoveIndex: new Map(),
+      phase1ActionPreviewIndex: new Map([
+        [
+          'chooseTarget',
+          {
+            actionId: 'chooseTarget',
+            trustedMove: createTrustedExecutableMove(representativeMove, state.stateHash, 'templateCompletion'),
+          },
+        ],
+      ]),
+      previewDependencies: {
+        classifyPlayableMoveCandidate(currentDef, currentState, move) {
+          if (move.actionId === asActionId('chooseTarget') && typeof move.params['$target'] !== 'string') {
+            return { kind: 'rejected', move, rejection: 'notDecisionComplete' };
+          }
+          return {
+            kind: 'playableComplete',
+            move: createTrustedExecutableMove(move, currentState.stateHash, 'templateCompletion'),
+            warnings: [],
+          };
+        },
+        applyMove(_currentDef, currentState, trustedMove) {
+          const currentMargin = typeof currentState.globalVars.usMargin === 'number' ? currentState.globalVars.usMargin : 0;
+          const nextMargin = trustedMove.move.actionId === asActionId('chooseTarget')
+            ? 8
+            : currentMargin;
+          return {
+            state: {
+              ...currentState,
+              globalVars: {
+                ...currentState.globalVars,
+                usMargin: nextMargin,
+              },
+            },
+          };
+        },
+      },
+      rng: createRng(7n),
+    });
+
+    assert.equal(result.move.actionId, asActionId('chooseTarget'));
+    assert.equal(result.metadata.previewUsage.evaluatedCandidateCount, 3);
+    assert.deepEqual(result.metadata.previewUsage.refIds, ['globalVar.usMargin']);
+    assert.deepEqual(result.metadata.previewUsage.outcomeBreakdown, {
+      ready: 3,
+      stochastic: 0,
+      unknownRandom: 0,
+      unknownHidden: 0,
+      unknownUnresolved: 0,
+      unknownFailed: 0,
+    });
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, alphaMove))?.score,
+      8,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, betaMove))?.score,
+      8,
+    );
+    assert.equal(
+      result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, passMove))?.score,
+      1,
     );
   });
 

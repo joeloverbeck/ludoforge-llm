@@ -19,6 +19,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
+  type Phase1ActionPreviewEntry,
   type PolicyPreviewDependencies,
   type PolicyPreviewGrantedOperation,
   type PolicyPreviewTraceOutcome,
@@ -74,6 +75,7 @@ export interface PolicyPreviewSurfaceProvider {
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
+  hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
 }
 
 export interface PolicyCompletionProvider {
@@ -99,6 +101,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly playerId: PlayerId;
   readonly seatId: string;
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly catalog: AgentPolicyCatalog;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
@@ -119,6 +122,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     playerId: input.playerId,
     seatId: input.seatId,
     trustedMoveIndex: input.trustedMoveIndex,
+    ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
@@ -325,6 +329,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);
+      },
+      hasPreviewData(candidate) {
+        return previewRuntime.hasPreviewData(candidate);
       },
     },
     ...(input.completion === undefined

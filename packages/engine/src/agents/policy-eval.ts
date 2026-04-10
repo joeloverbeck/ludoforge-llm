@@ -20,6 +20,7 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { createRng, stepRng } from '../kernel/prng.js';
 import { pickRandom } from './agent-move-selection.js';
 import type {
+  Phase1ActionPreviewEntry,
   PolicyPreviewDependencies,
   PolicyPreviewGrantedOperation,
   PolicyPreviewTraceOutcome,
@@ -140,6 +141,7 @@ export interface EvaluatePolicyMoveInput {
   readonly playerId: PlayerId;
   readonly legalMoves: readonly Move[];
   readonly trustedMoveIndex: ReadonlyMap<string, TrustedExecutableMove>;
+  readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
   readonly completionStatistics?: PolicyCompletionStatistics;
@@ -419,6 +421,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       catalog,
       parameterValues: profile.params,
       trustedMoveIndex: input.trustedMoveIndex,
+      ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
       previewDependencies,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     }, candidates);
@@ -432,7 +435,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     for (const candidate of activeCandidates) {
       for (const featureId of profile.plan.candidateFeatures) {
         const feature = catalog.library.candidateFeatures[featureId];
-        if (feature?.costClass === 'preview') {
+        if (feature?.costClass === 'preview' && !evaluation.hasPreviewData(candidate)) {
           continue;
         }
         evaluation.evaluateCandidateFeature(candidate, featureId);

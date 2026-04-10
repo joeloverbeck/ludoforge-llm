@@ -76,8 +76,9 @@ Every stop condition below requires resolution before implementation proceeds.
 11. **Unverifiable bug claim**: If a ticket's bug claim is not reproducible, or only mechanism is verified while incidence remains unproven, stop and resolve via **1-3-1** (proof-only, proof-plus-fix, or scope correction).
 12. **Scope gaps or ambiguity**: Apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 13. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
-14. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
-15. If the ticket is accurate and no blocking decision remains, proceed.
+14. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+15. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+16. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -90,6 +91,12 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 ## Verification
 
 Load `references/verification.md`.
+
+### Verification Safety
+
+- Treat verification commands that delete or regenerate shared outputs as sequential-only unless the repo explicitly documents them as parallel-safe.
+- In repositories where tests execute compiled files from `dist`, do not run build commands that rewrite `dist` in parallel with those tests. A build that starts with `rm -rf dist` can create false negative failures unrelated to the implementation.
+- If a broad verification failure appears immediately after overlapping build/test commands, rerun the affected checks sequentially before classifying the failure as code-caused.
 
 ### Standard Commands
 

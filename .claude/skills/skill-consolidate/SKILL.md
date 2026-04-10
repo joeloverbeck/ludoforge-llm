@@ -142,6 +142,19 @@ The result must:
 
 ---
 
+### Step 7b: Verify
+
+Re-read the written file (or key sections for large files). Check:
+- Frontmatter unchanged
+- Workflow phase ordering preserved
+- No duplicate headings or broken numbered lists
+- Anchor links (e.g., `#stale-vs-blocking-triage`) resolve to existing headings
+- No accidentally dropped sections
+
+If any issue is found, fix it with a targeted `Edit` before proceeding.
+
+---
+
 ### Step 8: Diff Summary
 
 After writing, present a structured summary in the conversation:
@@ -167,6 +180,9 @@ If the file grew, state the increase with a brief justification (e.g., readabili
 
 ### Wording Tightened
 - <N> instructions shortened for conciseness (no semantic changes)
+
+### Semantic Preservation
+All <N> unique instructions preserved. [If any were intentionally dropped as truly redundant: list them with justification.]
 
 ### Observations (if any)
 - Gaps noticed but not filled (per no-scope-expansion guardrail). Omit this section if there are none.

@@ -1,0 +1,75 @@
+# Verification
+
+## Execution Order
+
+1. Run the most relevant tests for the touched area.
+   - If a focused check reads built `dist/` artifacts while a rebuild is still in progress, treat the failure as inconclusive; wait for the build and rerun.
+2. Run required typecheck, lint, or artifact-generation commands. If a full repo-wide command is too expensive, explain what was run and what remains unverified.
+3. Report unrelated pre-existing failures separately from failures caused by your changes.
+4. Prefer the narrowest commands that validate the actual changed code path. For documentation-only tickets, artifact inspection plus dependency-integrity checks may suffice.
+5. **Ticket-named commands are authoritative**: Run them before declaring completion unless reassessment proves them stale. Narrower checks provide fast feedback but do not replace ticket-explicit commands.
+   - Focused proof commands may run first for fast feedback but do not satisfy the ticket on their own.
+6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
+   - In this repo, engine tests use `node --test`; replace Jest-style name filtering with `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/<file>.test.js`.
+7. **Long-running commands**: Some ticket-required commands may run for minutes with sparse output. Treat that as normal when consistent with repo history; keep running and provide periodic progress updates.
+8. **Post-clean reruns**: If a later authoritative command cleans shared build output (e.g., `dist`), rerun earlier test lanes after rebuilding. Treat the first post-clean module-resolution failure as an ordering issue.
+
+## Build Ordering & Output Contention
+
+Tests depending on `dist` require typecheck/rebuild first. Module-resolution errors during concurrent clean/rebuild are ordering failures — rerun after the serialized build.
+
+Before running broader commands, check whether they share generated output trees, caches, or clean steps. Commands that clean, write `dist`, regenerate schemas, or depend on built test files must finish before another command touching the same tree starts.
+
+Do not launch contending commands in the same parallel tool batch.
+
+**In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run serially.
+
+## Escalation Ladder
+
+1. Focused test or reproducer for touched behavior
+2. Touched-package typecheck/build/lint
+3. Required artifact regeneration for schema/contract changes
+4. Ticket-explicit broader package or root commands
+
+Escalate sooner for shared exported contracts or cross-package consumers.
+
+## Failure Isolation
+
+**Boundary determination**: Determine whether broader failures are inside the corrected ticket boundary or owned by another active ticket. Do not silently absorb out-of-boundary scope. Minimal downstream fixes for shared exported contract fallout are required scope. Document as residual risk if covered by another ticket; stop and resolve with the user if not.
+
+**Mechanical-refactor fallout**: After removing local aliases or helpers, scan touched files for remaining references in type annotations, return types, overloads, test seams, and import lists before assuming a `typecheck` failure is broader fallout.
+
+**Test helper staleness**: Inspect shared test helpers, fixtures, and goldens for stale assumptions. Check seed-specific helper states or turn-position fixtures. Retarget to a current seed/turn exercising the same invariant. Test malformed and unsupported shapes for clean fallback on new fast paths. Check callers constructing minimal contexts when a new fast path depends on enriched context objects. With `exactOptionalPropertyTypes`, model "field absent" by omitting the optional field rather than assigning `undefined`.
+
+**Compiled-IR fixture drift**: For positive schema or contract tests covering compiled nodes, copy the shape from nearby live compiled examples, existing goldens, or current compiled fixtures rather than reconstructing from authored syntax or spec pseudocode.
+
+**Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
+
+**Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
+
+**Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level failure without nested assertion details, rerun the built module directly or with a repo-approved verbose reporter so the failing subtest becomes visible before patching.
+
+**Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
+
+**Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.
+
+## Export & Regression Guards
+
+- If implementation adds a helper or type primarily for tests, check whether the module has export-surface guards. Prefer structural local typing or test-local seams over widening a curated public API.
+- If a ticket includes a vague "no performance regression" clause without naming a benchmark, resolve with 1-3-1 or satisfy through the nearest existing regression suite.
+
+## Schema & Artifact Regeneration
+
+- If you changed runtime Zod/object schemas or shared contract shapes, regenerate schema artifacts before interpreting schema-test failures.
+- Confirm producing commands have exited before diagnosing artifact contents. Confirm artifact paths match command write targets.
+- Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
+- When touched source contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.
+- New lowered ref kinds or expression variants: assume `GameDef.schema.json` may drift even if edits are outside `schemas-core.ts`.
+- Runtime schema shape changes: expect `Trace.schema.json` or other serialized artifacts to drift even if the ticket only named TypeScript or Zod surfaces.
+- When a shared generator rewrites multiple artifacts, identify which encode the changed contract and summarize specifically.
+- If regeneration leaves no persisted diff, state explicitly that the surface was checked and remained in sync.
+- If an authoritative verification lane fails on schema sync or golden fallout, treat that failure as stronger evidence than a draft sibling's deferred ownership text. Absorb the minimum required artifact update, then rewrite sibling ownership to match.
+
+## Measured-Gate Outcome
+
+For profiling/audit tickets, capture: measured surface, command(s), decisive result, threshold comparison, downstream action (archived/amended/deferred/not-actionable).

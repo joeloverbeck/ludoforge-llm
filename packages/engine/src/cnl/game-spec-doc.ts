@@ -660,6 +660,8 @@ export interface GameSpecAgentProfileDef {
   readonly use: GameSpecAgentProfileUse;
   readonly preview?: {
     readonly mode?: string;
+    readonly phase1?: boolean;
+    readonly phase1CompletionsPerAction?: number;
   };
   readonly selection?: {
     readonly mode?: string;

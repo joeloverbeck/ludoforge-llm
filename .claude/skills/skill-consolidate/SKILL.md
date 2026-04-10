@@ -132,7 +132,7 @@ For non-redundant instructions (those surviving Steps 2-5), tighten prose:
 
 ### Step 7: Rewrite
 
-Apply the consolidated changes to `<skill-path>/SKILL.md`. Prefer targeted `Edit` calls (top-to-bottom to avoid offset drift) for surgical changes. Use `Write` only when restructuring is so extensive that targeted edits would be more complex than a full rewrite.
+Apply the consolidated changes to `<skill-path>/SKILL.md`. Prefer targeted `Edit` calls (top-to-bottom to avoid offset drift) for surgical changes. Use `Write` when changes touch more than 40% of the file's sections or when topic regrouping moves content across 3+ sections. Use `Edit` when changes are confined to in-place deduplication or wording tightening within existing sections.
 
 The result must:
 1. **Preserve frontmatter exactly** — do not modify name, description, arguments, or any YAML field
@@ -184,4 +184,5 @@ Do NOT commit. Leave the file for user review via `git diff`.
 - **No commit**: Write the file and stop. The user handles the file lifecycle.
 - **Worktree discipline**: If working in a worktree, ALL file operations use the worktree root path.
 - **Both skill locations**: Works on skills in `.claude/skills/`, `.codex/skills/`, or any other path the user provides.
+- **Plan mode**: If plan mode is active when this skill is invoked, the user's invocation constitutes implicit approval to write the target file. Proceed with the consolidation workflow; do not create a plan file for a consolidation task.
 - **Idempotency**: Running the skill twice on the same file should produce minimal or no further changes. If a skill is already well-consolidated, say so and make no edits.

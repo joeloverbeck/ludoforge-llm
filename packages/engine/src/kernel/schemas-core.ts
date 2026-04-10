@@ -959,6 +959,8 @@ const CompiledAgentProfileSchema = z
     preview: z
       .object({
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
+        phase1: z.boolean().optional(),
+        phase1CompletionsPerAction: z.number().int().positive().optional(),
       })
       .strict(),
     selection: z

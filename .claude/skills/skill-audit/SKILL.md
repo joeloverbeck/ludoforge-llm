@@ -29,7 +29,7 @@ The argument is the skill directory path. The framework automatically resolves `
    - Outcomes that diverged from what the skill intended
    - Steps that were not exercised this session (mark as "not exercised" — do not speculate about issues)
 
-   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on process clarity, checklist completeness, and whether the instructions matched their stated intent.
+   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on: (a) instructions that could be read ambiguously, (b) missing guidance for edge cases visible in the skill text, (c) cross-skill consistency with workflow partners.
 4. **Cross-check alignment** — For each finding from step 3, check whether the skill contradicts or fails to implement:
    - Principles from `docs/FOUNDATIONS.md` (reference by foundation number, e.g., "Foundation 7: Immutability")
    - Conventions from `CLAUDE.md` (reference by section name)
@@ -113,7 +113,7 @@ If analysis during classification disproves an initial impression, withdraw the 
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location and topic may also be combined into a single edit even if they were classified separately (e.g., an Issue fix and a Feature addition to the same section).
-  4. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines.
+  4. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines. Heuristic: when edits touch 4+ distinct locations in a file under 300 lines, a single full-file re-read after all edits is more efficient than per-edit verification.
   5. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   6. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   7. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.

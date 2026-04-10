@@ -798,7 +798,9 @@
         ]
       },
       "preview": {
-        "mode": "disabled"
+        "mode": "disabled",
+        "phase1": false,
+        "phase1CompletionsPerAction": 1
       },
       "selection": {
         "mode": "softmaxSample",
@@ -823,11 +825,11 @@
           "preferLargerRaise"
         ]
       },
-      "fingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced"
+      "fingerprint": "7cd681cf141998631c959fb931562980d76b0e20b2281336c255fe43215cd49d"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "c020b0df2f801b0c22faa9a3a7b5934880cbafdfcaf15f3b7b037570a11b4212"
+  "catalogFingerprint": "a73e785afa2a6914eab0a6dc3998b28619b0f8c936972620e4c514adf9d2e54e"
 }

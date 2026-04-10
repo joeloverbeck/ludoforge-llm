@@ -705,6 +705,8 @@ export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
 
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
+  readonly phase1?: boolean;
+  readonly phase1CompletionsPerAction?: number;
 }
 
 export type AgentSelectionMode = 'argmax' | 'softmaxSample' | 'weightedSample';

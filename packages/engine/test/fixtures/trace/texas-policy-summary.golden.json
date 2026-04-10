@@ -11,7 +11,7 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced",
+    "profileFingerprint": "7cd681cf141998631c959fb931562980d76b0e20b2281336c255fe43215cd49d",
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
     "finalScore": 100,

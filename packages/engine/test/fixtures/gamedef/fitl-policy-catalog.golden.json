@@ -2568,7 +2568,9 @@
         ]
       },
       "preview": {
-        "mode": "tolerateStochastic"
+        "mode": "tolerateStochastic",
+        "phase1": false,
+        "phase1CompletionsPerAction": 1
       },
       "selection": {
         "mode": "argmax"
@@ -2594,7 +2596,7 @@
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "b32e74e7268fb9cf5d7966805b6e1041bcf0ea84c22460ce4d4cf3129fe9e528"
+      "fingerprint": "c2c588239ce1fafd3a391061f3cecbe833f491672d14239245ae5d3cbee790c3"
     }
   },
   "bindingsBySeat": {
@@ -2603,5 +2605,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "2940197e3dab8f852c45251983932fdc7e341c473991c2a94f30ec528270bb6b"
+  "catalogFingerprint": "e2ce58d4ca52f2fee53aaeb630e7a201059382735b58a93dfe2f4569fa5bcfe3"
 }

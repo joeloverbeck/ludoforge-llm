@@ -29,7 +29,7 @@ describe('FITL PolicyAgent determinism canary', () => {
   const runtime = createGameDefRuntime(def);
 
   const PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-  const MAX_TURNS = 100;
+  const MAX_TURNS = 300;
   const PLAYER_COUNT = 4;
 
   const runOnce = (seed: number) => {
@@ -39,9 +39,11 @@ describe('FITL PolicyAgent determinism canary', () => {
     return runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
   };
 
-  // Seeds 1001-1004 produce terminal results with the current GameDef.
-  // These are canaries for grant-related determinism regressions.
-  for (const seed of [1001, 1002, 1003, 1004]) {
+  // Seeds that produce terminal results with the current GameDef + phase-gated
+  // victory checkpoints (phases: [coupVictory]).  Canaries for grant-related
+  // determinism regressions.  Seeds were re-selected after Spec 66 corrected
+  // victory timing to match FITL rules (Section 6.1).
+  for (const seed of [1020, 1040, 1049, 1054]) {
     it(`seed ${seed}: game reaches terminal within ${MAX_TURNS} moves`, () => {
       const trace = runOnce(seed);
       assert.equal(

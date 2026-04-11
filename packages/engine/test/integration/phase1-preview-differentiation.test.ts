@@ -1,5 +1,4 @@
 import * as assert from 'node:assert/strict';
-import { performance } from 'node:perf_hooks';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
@@ -34,7 +33,7 @@ interface Phase1Witness extends ArvnDecisionTrace {
 
 const PHASE1_WITNESS_MAX_SEED = 20;
 const PHASE1_WITNESS_MAX_PLY = 30;
-const PERF_ITERATIONS = 12;
+
 
 function createFitlDef(phase1CompletionsPerAction?: number): GameDef {
   const { compiled } = compileProductionSpec();
@@ -291,28 +290,6 @@ function projectedMarginsAtDecision(
   return templateCandidatesWithProjectedMargins(def, candidates).projectedMarginsByAction;
 }
 
-function measureAverageDecisionTimeMs(
-  def: GameDef,
-  state: GameState,
-  legalMoves: readonly ClassifiedMove[],
-): number {
-  const runtime = createGameDefRuntime(def);
-  const agent = new PolicyAgent({ traceLevel: 'verbose' });
-
-  const t0 = performance.now();
-  for (let iteration = 0; iteration < PERF_ITERATIONS; iteration += 1) {
-    agent.chooseMove({
-      def,
-      state,
-      playerId: state.activePlayer,
-      legalMoves,
-      rng: createRng(BigInt(900000 + iteration)),
-      runtime,
-    });
-  }
-  return (performance.now() - t0) / PERF_ITERATIONS;
-}
-
 describe('FITL ARVN phase-1 preview differentiation', () => {
   it('finds a bounded production witness where best-of-3 phase-1 projected margin differentiates template operations', () => {
     const def = createFitlDef(3);
@@ -360,17 +337,4 @@ describe('FITL ARVN phase-1 preview differentiation', () => {
     assert.deepEqual(canonicalPhase1Snapshot(firstReplay.result), canonicalPhase1Snapshot(secondReplay.result));
   });
 
-  it.skip('records informational phase-1 overhead for the discovered witness decision', () => {
-    const enabledDef = createFitlDef(3);
-    const disabledDef = createFitlDef();
-    const witness = findArvnPhase1Witness(enabledDef);
-
-    const baselineMs = measureAverageDecisionTimeMs(disabledDef, witness.state, witness.legalMoves);
-    const phase1Ms = measureAverageDecisionTimeMs(enabledDef, witness.state, witness.legalMoves);
-    const overheadRatio = baselineMs === 0 ? Number.POSITIVE_INFINITY : (phase1Ms - baselineMs) / baselineMs;
-
-    assert.equal(Number.isFinite(baselineMs), true);
-    assert.equal(Number.isFinite(phase1Ms), true);
-    assert.equal(Number.isFinite(overheadRatio), true);
-  });
 });

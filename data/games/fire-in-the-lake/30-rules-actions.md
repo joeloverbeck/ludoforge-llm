@@ -182,7 +182,7 @@ actions:
       - macro: coup-casualties-aid
     limits: [{ scope: phase, max: 1 }]
   - id: coupPacifyPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -195,7 +195,7 @@ actions:
     effects: []
     limits: []
   - id: coupAgitatePass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -702,7 +702,6 @@ actions:
                                   - { prop: type, op: eq, value: base }
                         right: 0
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -812,7 +811,6 @@ actions:
                                   - { prop: type, op: eq, value: base }
                         right: 0
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -883,7 +881,6 @@ actions:
                                       query: tokensInZone
                                       zone: $zone
                                       filter: { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedPolice
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -931,29 +928,26 @@ actions:
                 options:
                   query: mapSpaces
                   filter:
-                    op: or
-                    args:
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, op: eq, value: NVA }
-                                  - { prop: type, op: eq, value: base }
-                        right: 0
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
+                    op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $zone
+                          filter:
+                            op: and
+                            args:
+                              - { prop: faction, op: eq, value: NVA }
+                              - { prop: type, op: eq, value: base }
+                    right: 0
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
     limits: []
   - id: coupRedeployPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupRedeploy]
@@ -963,7 +957,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupCommitment]

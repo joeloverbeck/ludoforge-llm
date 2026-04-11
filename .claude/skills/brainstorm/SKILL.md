@@ -128,6 +128,10 @@ Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% c
 
 If the user says something like "just go" or "that's enough questions", respect it. Announce your current confidence, list remaining gaps as assumptions you'll make, and proceed to Step 3. Mark those assumptions explicitly in the design so the user can correct them.
 
+### High-Confidence Start
+
+If prior session context (e.g., extended debugging, codebase exploration, or diagnostic work earlier in the conversation) puts starting confidence above 80%, the interview may reduce to 1-2 targeted questions about remaining gaps. If confidence reaches 95% after context reading alone (no user questions needed), announce the confidence score with explicit gaps/assumptions and proceed directly to Step 3. The interview is a tool for gap-filling, not a mandatory ceremony.
+
 ### Investigation Questions
 
 When a confidence gap can only be resolved by codebase investigation — not by asking the user — investigate directly rather than asking. This commonly happens for:
@@ -159,9 +163,11 @@ Present **2-3 distinct approaches** with:
 
 **Wait for user to choose or ask questions.** Do not proceed until the user picks an approach (or asks you to refine/combine).
 
+**If the user rejects all approaches** or asks for re-analysis, investigate the concerns raised, then present a revised set. This is not a confidence regression — it's an iteration on the solution space. Do not restart the interview unless the rejection reveals a misunderstanding of the problem.
+
 ## Step 4: Present Design
 
-Once an approach is chosen, present the design **section by section**. Scale each section to its complexity — a sentence for trivial parts, up to 200 words for nuanced parts.
+Once an approach is chosen, present the design **section by section**. Scale each section to its complexity — a sentence for trivial parts, up to 200 words for nuanced parts. For designs with fewer than 3 substantive sections, present the full design in a single message and ask for overall approval rather than section-by-section. Reserve section-by-section flow for designs with 4+ sections where individual sections warrant independent review.
 
 Sections to cover (skip irrelevant ones):
 
@@ -225,7 +231,7 @@ What would you like to do next?
 3. Done for now — I'll review the artifacts later
 ```
 
-If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
+If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. If the brainstorm was invoked mid-task (e.g., during active troubleshooting or implementation) and the design is a targeted fix, present a brief confirmation ("Ready to implement — proceeding unless you'd prefer a different path") rather than the full menu. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
 
 Use AskUserQuestion to present this as a proper choice. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
 

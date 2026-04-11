@@ -2,6 +2,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  asPhaseId,
   asTokenId,
   initialState,
   terminalResult,
@@ -71,6 +72,7 @@ const buildDuringCoupState = (
   }));
   return {
     ...start,
+    currentPhase: asPhaseId('coupVictory'),
     globalVars: {
       ...start.globalVars,
       patronage: 0,
@@ -115,6 +117,7 @@ const buildFinalCoupState = (
 
   return {
     ...start,
+    currentPhase: asPhaseId('coupRedeploy'),
     globalVars: {
       ...start.globalVars,
       patronage: 0,
@@ -295,6 +298,7 @@ describe('FITL active support/opposition doubling in victory calculations', () =
 
       const state: GameState = {
         ...start,
+        currentPhase: asPhaseId('coupVictory'),
         globalVars: { ...start.globalVars, patronage: 0 },
         markers: buildSupportMarkers([
           ['saigon:none', 'activeOpposition'],
@@ -341,6 +345,7 @@ describe('FITL active support/opposition doubling in victory calculations', () =
 
       const state: GameState = {
         ...start,
+        currentPhase: asPhaseId('coupVictory'),
         globalVars: { ...start.globalVars, patronage: 0 },
         markers: buildSupportMarkers([
           ['saigon:none', 'passiveOpposition'],

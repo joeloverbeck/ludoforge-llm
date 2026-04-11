@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — agents (PolicyAgent, GreedyAgent, RandomAgent)
-**Deps**: None
+**Deps**: `archive/tickets/126FREOPEBIN-005.md`
 
 ## Problem
 
@@ -14,12 +14,13 @@
 
 1. `PolicyAgent` in `packages/engine/src/agents/policy-agent.ts` throws `NoPlayableMovesAfterPreparationError` at line 90 — confirmed.
 2. `NoPlayableMovesAfterPreparationError` defined in `packages/engine/src/agents/no-playable-move.ts` line 3 — confirmed.
-3. `GreedyAgent` (line 63) and `RandomAgent` (line 30) also throw the same error — confirmed. All three agents need the fallback.
-4. The error propagates to the simulator which records `agentStuck` stop reason — this is the mechanism that ends the game.
+3. `GreedyAgent` and `RandomAgent` already fall back to `stochasticMoves`; they still throw `NoPlayableMovesAfterPreparationError` when every pending template is unsatisfiable and no stochastic fallback exists — confirmed.
+4. The error propagates to the simulator which records `agentStuck` stop reason — this is the mechanism that ends the game once kernel discovery no longer crashes first.
+5. Live seed `1021`, previously grouped with the `agentStuck` cohort, currently crashes earlier on the `legalChoices` surface with `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED` for missing `$targetSpaces`. Ticket `126FREOPEBIN-005` is now the prerequisite boundary before this ticket's FITL reproducer is reachable.
 
 ## Architecture Check
 
-1. The fallback is engine-agnostic — it applies to the generic `Agent` interface, not FITL-specific logic.
+1. The fallback remains engine-agnostic — it applies to shared agent/template-preparation behavior, not FITL-specific logic.
 2. This aligns with Foundation 10 (Bounded Computation): the game should always be able to advance if legal moves exist.
 3. No backwards-compatibility shims — the existing error path is replaced with a fallback, not aliased.
 
@@ -27,13 +28,13 @@
 
 ### 1. Investigate template completion failure
 
-Before implementing the fallback, investigate why the template matcher fails on per-zone bindings. Read the `preparePlayableMoves` and `buildCompletionChooseCallback` code paths. Determine if:
+Before implementing the fallback, investigate why the template matcher fails on the remaining post-`005` unsatisfiable legal moves. Read the `preparePlayableMoves` and `buildCompletionChooseCallback` code paths. Determine if:
 - (a) The legal moves are valid but the template matcher can't handle interpolated binding names → fallback is correct
 - (b) The legal moves are malformed → fix belongs in the enumerator (ticket 001), not here
 
 ### 2. Add random fallback in all three agents
 
-If investigation confirms (a): when `preparePlayableMoves` returns zero playable moves but the input `legalMoves` list is non-empty, fall back to random selection from `legalMoves` instead of throwing `NoPlayableMovesAfterPreparationError`. Apply to `PolicyAgent`, `GreedyAgent`, and `RandomAgent`.
+If investigation confirms (a): when `preparePlayableMoves` returns zero playable moves but the input `legalMoves` list is non-empty, fall back to random selection from `legalMoves` instead of throwing `NoPlayableMovesAfterPreparationError`. Reassess whether the correct boundary is all three agents or a narrower shared-preparation / `PolicyAgent`-first fix, since `GreedyAgent` and `RandomAgent` already have stochastic fallbacks.
 
 Log a diagnostic warning when the fallback triggers (agent name, action count, reason) so the issue is visible in simulation traces without crashing.
 
@@ -52,6 +53,7 @@ If `legalMoves` itself is empty, the agents should still throw — that indicate
 
 - Zone filter probe fix (ticket 001)
 - Enumeration budgets (ticket 002)
+- Remaining legalChoices crash prerequisite (ticket 005)
 - Full PolicyAgent AI strategy overhaul
 - Template matcher improvements beyond the fallback
 

@@ -4,11 +4,11 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — data-only and test-only
-**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `tickets/126FREOPEBIN-003.md`
+**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `tickets/126FREOPEBIN-003.md`, `archive/tickets/126FREOPEBIN-005.md`
 
 ## Problem
 
-After implementing engine fixes (tickets 001–003), a full seed scan is needed to verify the fixes work and to determine whether the FITL march zone filter itself needs restructuring. The march zone filter uses `$movingTroops@{$zone}` which references per-target-space bindings that may not exist at filter evaluation time. If the engine fix (ticket 001) makes the probe `inconclusive` for these cases but the game design intent requires a definitive answer, the zone filter data must be corrected to only reference bindings available at probe time.
+After implementing the remaining engine fixes in this series, a full seed scan is needed to verify the fixes work and to determine whether the FITL march zone filter itself needs restructuring. The march zone filter uses `$movingTroops@{$zone}` which references per-target-space bindings that may not exist at filter evaluation time. If the engine-side deferral fixes still leave the game-design intent ambiguous in practice, the zone filter data must be corrected to only reference bindings available at probe time.
 
 ## Assumption Reassessment (2026-04-11)
 
@@ -17,6 +17,7 @@ After implementing engine fixes (tickets 001–003), a full seed scan is needed 
 3. Previously-crashing seeds: 1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1042, 1043, 1046, 1047, 1051 — from spec evidence table.
 4. Previously-hanging seeds: 1040, 1054 — from spec evidence table.
 5. Ticket `126FREOPEBIN-002` did not add a new simulator stop reason. It fixed the live hang by charging existing free-operation viability probe budgets during `chooseOne` / `chooseN` traversal, including the `card-75` event-play stall on seed `1040`.
+6. Ticket `126FREOPEBIN-003` is not the next live prerequisite by itself; the remaining `legalChoices` crash on missing `$targetSpaces` is now tracked in ticket `126FREOPEBIN-005` and must land before the seed scan is authoritative.
 
 ## Architecture Check
 
@@ -28,7 +29,7 @@ After implementing engine fixes (tickets 001–003), a full seed scan is needed 
 
 ### 1. Re-run seed scan
 
-After tickets 001–003 are implemented, re-run the seed scan across 1000–2200 with all 4 FITL PolicyAgent profiles and `MAX_TURNS=300`. Categorize results:
+After tickets 003 and 005 are implemented, re-run the seed scan across 1000–2200 with all 4 FITL PolicyAgent profiles and `MAX_TURNS=300`. Categorize results:
 - `terminal` (correct completion)
 - `maxTurns` (300 moves, no winner — game design issue, not engine bug)
 - `agentStuck` (agent fallback exhausted — investigate if frequent)

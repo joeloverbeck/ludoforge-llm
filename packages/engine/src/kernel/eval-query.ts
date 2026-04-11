@@ -417,6 +417,7 @@ const evaluateFreeOperationZoneFilterForZone = (
   ctx: ReadContext,
 ): ZoneFilterEvaluationResult => {
   return evaluateFreeOperationZoneFilterProbe({
+    surface: 'legalChoices',
     zoneId,
     baseBindings: ctx.bindings,
     rebindableAliases,

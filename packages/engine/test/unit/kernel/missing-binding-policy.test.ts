@@ -7,6 +7,7 @@ import { FREE_OPERATION_ZONE_FILTER_SURFACES } from '../../../src/kernel/free-op
 import {
   MISSING_BINDING_POLICY_CONTEXTS,
   isPerZoneInterpolatedBindingMissingVar,
+  isUnresolvedTemplateBindingMissingVar,
   shouldDeferFreeOperationZoneFilterFailure,
   shouldDeferMissingBinding,
 } from '../../../src/kernel/missing-binding-policy.js';
@@ -101,6 +102,35 @@ describe('shouldDeferFreeOperationZoneFilterFailure()', () => {
     for (const surface of FREE_OPERATION_ZONE_FILTER_SURFACES) {
       assert.equal(shouldDeferFreeOperationZoneFilterFailure(surface, missingVar), false);
     }
+  });
+});
+
+describe('isUnresolvedTemplateBindingMissingVar()', () => {
+  it('recognizes unresolved binding-query templates that are still absent from the current bindings', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'Binding not found: $targetSpaces', {
+      binding: '$targetSpaces',
+      bindingTemplate: '$targetSpaces',
+      query: {
+        query: 'binding',
+        name: '$targetSpaces',
+      },
+    });
+
+    assert.equal(isUnresolvedTemplateBindingMissingVar(missingVar, {}), true);
+    assert.equal(isUnresolvedTemplateBindingMissingVar(missingVar, { $targetSpaces: [] }), false);
+  });
+
+  it('rejects non-binding-query missing vars', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'Binding not found: $targetSpaces', {
+      binding: '$targetSpaces',
+      bindingTemplate: '$targetSpaces',
+      query: {
+        query: 'gvar',
+        name: '$targetSpaces',
+      },
+    });
+
+    assert.equal(isUnresolvedTemplateBindingMissingVar(missingVar, {}), false);
   });
 });
 

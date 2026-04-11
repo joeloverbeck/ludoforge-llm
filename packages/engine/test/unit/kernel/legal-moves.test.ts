@@ -1790,6 +1790,113 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('16bb. defers unresolved binding-query templates on legalChoices free-operation probing', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operationProfile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseN: {
+                internalDecisionId: 'decision:$targetSpaces',
+                bind: '$targetSpaces',
+                options: { query: 'zones' },
+                min: 1,
+                max: 1,
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = asTaggedGameDef({
+      ...makeBaseDef({
+        actions: [action],
+        actionPipelines: [profile],
+        zones: [
+          { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+          { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            actionClassByActionId: { operation: 'operation' },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    });
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [], 'board:vietnam': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              phase: 'ready',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: 'in',
+                item: { _t: 2, ref: 'binding', name: '$zone' },
+                set: { _t: 2, ref: 'binding', name: '$targetSpaces' },
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+    );
+  });
+
   it('16c. keeps free-operation template probing deterministic with multi-unresolved zone aliases', () => {
     const action: ActionDef = {
       id: asActionId('operation'),

@@ -214,6 +214,7 @@ export const evaluateZoneFilterForMove = (
   }
   for (const zone of zones) {
     const probeResult = evaluateFreeOperationZoneFilterProbe({
+      surface,
       zoneId: asZoneId(zone),
       baseBindings,
       rebindableAliases,

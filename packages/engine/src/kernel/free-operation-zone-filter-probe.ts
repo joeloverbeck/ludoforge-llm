@@ -1,6 +1,7 @@
 import { isEvalErrorCode } from './eval-error.js';
 import type { ZoneId } from './branded.js';
 import type { ConditionAST } from './types.js';
+import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
   zoneFilterDeferred,
   zoneFilterResolved,
@@ -8,9 +9,13 @@ import {
   type ZoneFilterEvaluationResult,
 } from './zone-filter-evaluation-result.js';
 import { collectZoneSelectorAliasesFromCondition } from './zone-selector-aliases.js';
-import { isPerZoneInterpolatedBindingMissingVar } from './missing-binding-policy.js';
+import {
+  isPerZoneInterpolatedBindingMissingVar,
+  isUnresolvedTemplateBindingMissingVar,
+} from './missing-binding-policy.js';
 
 export interface FreeOperationZoneFilterProbeInput {
+  readonly surface: FreeOperationZoneFilterSurface;
   readonly zoneId: ZoneId;
   readonly baseBindings: Readonly<Record<string, unknown>>;
   readonly rebindableAliases: ReadonlySet<string>;
@@ -46,6 +51,12 @@ export const evaluateFreeOperationZoneFilterProbe = (
       return zoneFilterResolved(input.evaluateWithBindings(bindings));
     } catch (error) {
       if (isPerZoneInterpolatedBindingMissingVar(error, input.zoneId)) {
+        return zoneFilterDeferred('missingVar');
+      }
+      if (
+        input.surface === 'legalChoices' &&
+        isUnresolvedTemplateBindingMissingVar(error, bindings)
+      ) {
         return zoneFilterDeferred('missingVar');
       }
       if (!isEvalErrorCode(error, 'MISSING_BINDING')) {

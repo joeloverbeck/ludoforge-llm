@@ -111,6 +111,24 @@ const resolveMissingVarBindingTemplate = (error: unknown): string | null => {
   return null;
 };
 
+const hasBindingQueryContext = (
+  error: unknown,
+  bindingTemplate: string,
+): boolean => {
+  if (!isEvalErrorCode(error, 'MISSING_VAR')) {
+    return false;
+  }
+  const query = error.context?.query;
+  return (
+    typeof query === 'object' &&
+    query !== null &&
+    'query' in query &&
+    'name' in query &&
+    (query as { readonly query?: unknown }).query === 'binding' &&
+    (query as { readonly name?: unknown }).name === bindingTemplate
+  );
+};
+
 export const isPerZoneInterpolatedBindingMissingVar = (
   error: unknown,
   candidateZone?: string,
@@ -123,6 +141,24 @@ export const isPerZoneInterpolatedBindingMissingVar = (
     return false;
   }
   return candidateZone === undefined || error.context.binding.endsWith(`@${candidateZone}`);
+};
+
+export const isUnresolvedTemplateBindingMissingVar = (
+  error: unknown,
+  bindings: Readonly<Record<string, unknown>>,
+): boolean => {
+  if (!isEvalErrorCode(error, 'MISSING_VAR') || typeof error.context?.binding !== 'string') {
+    return false;
+  }
+  const binding = error.context.binding;
+  if (binding.length === 0 || binding === '$zone' || Object.prototype.hasOwnProperty.call(bindings, binding)) {
+    return false;
+  }
+  const bindingTemplate = resolveMissingVarBindingTemplate(error);
+  if (bindingTemplate === null || bindingTemplate !== binding || !hasBindingQueryContext(error, bindingTemplate)) {
+    return false;
+  }
+  return true;
 };
 
 export const shouldDeferFreeOperationZoneFilterFailure = (

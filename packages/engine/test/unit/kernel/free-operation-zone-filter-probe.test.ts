@@ -8,6 +8,7 @@ import { evaluateFreeOperationZoneFilterProbe } from '../../../src/kernel/free-o
 describe('evaluateFreeOperationZoneFilterProbe()', () => {
   it('defers interpolated per-zone missing vars for the candidate zone', () => {
     const result = evaluateFreeOperationZoneFilterProbe({
+      surface: 'legalChoices',
       zoneId: asZoneId('can-tho:none'),
       baseBindings: {},
       rebindableAliases: new Set<string>(),
@@ -29,7 +30,7 @@ describe('evaluateFreeOperationZoneFilterProbe()', () => {
     });
   });
 
-  it('fails non-per-zone missing vars', () => {
+  it('defers unresolved binding-query template missing vars on legalChoices', () => {
     const error = createEvalError('MISSING_VAR', 'Binding not found: $targetSpaces', {
       binding: '$targetSpaces',
       bindingTemplate: '$targetSpaces',
@@ -39,6 +40,32 @@ describe('evaluateFreeOperationZoneFilterProbe()', () => {
       },
     });
     const result = evaluateFreeOperationZoneFilterProbe({
+      surface: 'legalChoices',
+      zoneId: asZoneId('can-tho:none'),
+      baseBindings: {},
+      rebindableAliases: new Set<string>(),
+      evaluateWithBindings: () => {
+        throw error;
+      },
+    });
+
+    assert.deepEqual(result, {
+      status: 'deferred',
+      reason: 'missingVar',
+    });
+  });
+
+  it('fails unresolved binding-query template missing vars on turnFlowEligibility', () => {
+    const error = createEvalError('MISSING_VAR', 'Binding not found: $targetSpaces', {
+      binding: '$targetSpaces',
+      bindingTemplate: '$targetSpaces',
+      query: {
+        query: 'binding',
+        name: '$targetSpaces',
+      },
+    });
+    const result = evaluateFreeOperationZoneFilterProbe({
+      surface: 'turnFlowEligibility',
       zoneId: asZoneId('can-tho:none'),
       baseBindings: {},
       rebindableAliases: new Set<string>(),

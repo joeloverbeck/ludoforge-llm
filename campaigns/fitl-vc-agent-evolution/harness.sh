@@ -12,7 +12,7 @@ RUNNER_LOG="$SCRIPT_DIR/run.log.runner"
 SEED_COUNT=${SEED_COUNT:-$(cat "$SCRIPT_DIR/seed-tier.txt" 2>/dev/null || echo 1)}
 PLAYER_COUNT=4
 EVOLVED_SEAT="vc"
-MAX_TURNS=${MAX_TURNS:-100}
+MAX_TURNS=${MAX_TURNS:-200}
 
 # --- Step 1: Build (always, to prevent stale JS) ---
 echo "Building engine..." >&2

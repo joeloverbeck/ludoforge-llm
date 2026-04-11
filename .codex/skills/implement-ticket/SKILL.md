@@ -115,6 +115,11 @@ Every stop condition below requires resolution before implementation proceeds.
       - `missing proof surface`: the repo cannot currently prove the acceptance claim without new instrumentation or trace/schema changes
     - `missing proof surface` is not automatically blocking when the implementation boundary is still correct, but you must explicitly decide whether the ticket can be closed with indirect proof, needs a ticket rewrite, or requires a stop-and-confirm via 1-3-1.
 18. If the ticket is accurate and no blocking decision remains, proceed.
+19. If valid owned work lands and only then reveals a new blocker that prevents full acceptance, treat that as a distinct `partial completion, new blocker` state rather than either forcing completion or discarding the completed work.
+    - Record the completed owned work explicitly in working notes and in the active ticket.
+    - Mark the active ticket `BLOCKED` rather than `COMPLETE` when acceptance is still unmet.
+    - Restate the remaining unmet acceptance or invariant as the new live boundary.
+    - Stop before further implementation widens the ticket again unless the user confirms the broader boundary.
 
 ## Implementation Rules
 
@@ -124,6 +129,7 @@ Load `references/implementation-general.md`.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
 - If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
+- If completed owned work remains valid but a newly exposed blocker is narrower and prerequisite to the original ticket acceptance, prefer creating a new prerequisite ticket and blocking the current active ticket rather than repeatedly widening the active ticket. Keep the current ticket focused on its delivered work plus the now-explicit dependency.
 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 

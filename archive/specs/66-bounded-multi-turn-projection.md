@@ -1,6 +1,6 @@
 # Spec 66: Bounded Multi-Turn Margin Projection
 
-**Status**: Draft
+**Status**: NOT IMPLEMENTED
 **Priority**: P3
 **Complexity**: XL
 **Dependencies**: Spec 63 (observability, for evaluation), Spec 64

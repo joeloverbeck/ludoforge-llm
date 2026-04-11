@@ -24,6 +24,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
   - `authoritative boundary`: the final owned implementation slice after reassessment
   - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
   - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
+- Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 - Do not create scratch files solely to satisfy this requirement.
 
 ## Workflow
@@ -77,6 +78,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - When changing a shared callable type contract, grep both runtime callsites and their tests
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
+   - Policy/catalog fallout for agent or scoring changes: check compiled policy catalogs, explicit consideration-list assertions, and fixed-seed policy goldens or summary traces when the repo owns them
    - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
    - Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
@@ -101,6 +103,11 @@ Every stop condition below requires resolution before implementation proceeds.
 14. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
 15. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
 16. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+    - If the ticket's acceptance depends on traces, harness output, campaign metrics, or another observability surface, classify the expected proof shape before coding:
+      - `direct proof`: the current repo surface exposes the exact invariant or contribution path the ticket names
+      - `indirect proof`: the current repo surface proves the change through a compiled artifact, golden, catalog, or adjacent observable effect, but not the literal named field
+      - `missing proof surface`: the repo cannot currently prove the acceptance claim without new instrumentation or trace/schema changes
+    - `missing proof surface` is not automatically blocking when the implementation boundary is still correct, but you must explicitly decide whether the ticket can be closed with indirect proof, needs a ticket rewrite, or requires a stop-and-confirm via 1-3-1.
 17. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
@@ -129,6 +136,20 @@ Load `references/verification.md`.
 - Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution.
 - After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
+- For campaign, tournament, or trace-inspection tickets, prefer the smallest bounded seed/run window that reaches the claimed scenario or reproducer before escalating to larger harness runs. If the first bounded run misses the target behavior, widen only enough to reach the intended trace slice.
+
+### Trace-Heavy Ticket Evidence
+
+Use this when the ticket's acceptance depends on saved traces, decision-gap inspection, harness summaries, or campaign metrics:
+
+1. Confirm which command writes the authoritative trace/report artifact and where it lands.
+2. Confirm whether the existing artifact exposes the literal acceptance field or only an adjacent proxy.
+3. Inspect one saved artifact directly before broad reruns so you know what the surface can and cannot prove.
+4. Classify evidence gathered during verification as:
+   - `direct`: the artifact shows the exact invariant the ticket names
+   - `indirect`: the artifact proves the change through compiled structure, goldens, score gaps, or adjacent observable behavior
+   - `insufficient`: the artifact does not expose enough to support the claim
+5. If evidence remains `indirect`, state that explicitly in working notes and closeout instead of overstating certainty.
 
 ### Generated Artifact Isolation Checklist
 

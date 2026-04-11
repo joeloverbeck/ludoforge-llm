@@ -370,6 +370,47 @@ agents:
                 zone: { ref: option.value }
                 prop: population
             - 0
+      preferRedeployToPopulousZones:
+        scopes: [completion]
+        when:
+          eq:
+            - { ref: decision.name }
+            - "$destination"
+        weight: 2
+        value:
+          coalesce:
+            - zoneProp:
+                zone: { ref: option.value }
+                prop: population
+            - 0
+      preferRedeployNearEnemies:
+        scopes: [completion]
+        when:
+          eq:
+            - { ref: decision.name }
+            - "$destination"
+        weight: 1
+        value:
+          coalesce:
+            - adjacentTokenAgg:
+                anchorZone: { ref: option.value }
+                aggOp: count
+                tokenFilter:
+                  props:
+                    faction: { eq: VC }
+                    type: { eq: guerrilla }
+            - 0
+      preferPacifyPopulousZones:
+        scopes: [move]
+        when:
+          eq: [{ ref: candidate.actionId }, coupPacifyARVN]
+        weight: 3
+        value:
+          coalesce:
+            - zoneProp:
+                zone: { ref: candidate.param.targetSpace }
+                prop: population
+            - 0
 
       preferNormalizedMargin:
         scopes: [move]
@@ -487,6 +528,9 @@ agents:
           - governWhenPatronageLow
           - trainWhenControlLow
           - preferPopulousTargets
+          - preferRedeployToPopulousZones
+          - preferRedeployNearEnemies
+          - preferPacifyPopulousZones
         tieBreakers:
           - stableMoveKey
 

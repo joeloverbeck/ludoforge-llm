@@ -99,6 +99,9 @@ describe('FITL production data integration compilation', () => {
         'governWhenPatronageLow',
         'trainWhenControlLow',
         'preferPopulousTargets',
+        'preferRedeployToPopulousZones',
+        'preferRedeployNearEnemies',
+        'preferPacifyPopulousZones',
       ],
       'Expected ARVN evolved profile to include the decomposed victory considerations',
     );

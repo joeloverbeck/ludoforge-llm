@@ -140,6 +140,12 @@ If the current audit targets a different skill than any earlier audit in this se
 - Use the current Codex conversation and tool history as the session evidence source.
 - Use `AGENTS.md` rather than `CLAUDE.md` for repository-specific behavior.
 - When auditing `skill-audit` itself, evidence should come from the actual audit interaction in the current session: target-skill read/validation, audit-scope selection, report structure/template usage, severity calibration, and whether the resulting recommendations were concrete enough for the next user turn to act on.
+ - For `skill-audit` self-audits, explicitly sanity-check this evidence set before drafting findings:
+   - `target resolution`: did the audit validate and open the intended target skill cleanly?
+   - `scope selection`: did the audit clearly name the session slice being evaluated?
+   - `report structure`: did the audit follow the stated template and classification scheme?
+   - `severity calibration`: were severities proportionate to the actual session evidence?
+   - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
 
 ## Example Prompts
 

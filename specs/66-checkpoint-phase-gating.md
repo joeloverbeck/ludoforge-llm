@@ -1,5 +1,10 @@
 # Spec 66 — Checkpoint Phase Gating
 
+- **Status**: Ready
+- **Priority**: High
+- **Complexity**: Low-Medium
+- **Dependencies**: None
+
 ## Problem
 
 The engine evaluates `duringCoup` victory checkpoints after **every phase transition** within a Coup round, not just during the designated victory-check phase. This produces unlawful game states where a faction crosses its victory threshold during a later Coup phase (e.g., VC agitation during Support) and the game terminates before the remaining Coup phases (Redeploy, Commitment, Reset) execute.
@@ -31,19 +36,19 @@ Add an optional `phases` field to the `CheckpointDef` type. When present, the ch
 
 This is game-agnostic (Foundation 1): the game spec declares which phases a checkpoint applies to; the engine enforces the constraint without knowing anything about FITL's coup structure.
 
-**Schema change** (in `packages/engine/src/kernel/types.ts` or equivalent):
+**Type change** (in `packages/engine/src/kernel/types-victory.ts`):
 
 ```typescript
-interface CheckpointDef {
-  id: string;
-  seat: string;
-  timing: 'duringCoup' | 'finalCoup';
-  phases?: readonly string[];  // NEW: only evaluate when currentPhase is in this list
-  when: ConditionExpr;
+interface VictoryCheckpointDef {
+  readonly id: string;
+  readonly seat: string;
+  readonly timing: VictoryTiming;
+  readonly phases?: readonly string[];  // NEW: only evaluate when currentPhase is in this list
+  readonly when: ConditionAST;
 }
 ```
 
-**JSON Schema update** (in `packages/engine/schemas/`): Add `phases` as an optional array of strings to the checkpoint definition.
+**Zod schema update** (in `packages/engine/src/kernel/schemas-extensions.ts`): Add `phases` as an optional array of strings to `VictoryCheckpointSchema`.
 
 ### 2. Update `evaluateVictory()` in `terminal.ts`
 
@@ -52,15 +57,15 @@ When scanning checkpoints, filter out any checkpoint whose `phases` array is def
 ```typescript
 // Before (current):
 const duringCheckpoint = checkpoints.find(
-  (cp) => cp.timing === 'duringCoup' && evaluateConditionWithCache(cp.when, baseCtx),
+  (checkpoint) => checkpoint.timing === 'duringCoup' && evaluateConditionWithCache(checkpoint.when, baseCtx),
 );
 
 // After (proposed):
 const duringCheckpoint = checkpoints.find(
-  (cp) =>
-    cp.timing === 'duringCoup' &&
-    (cp.phases === undefined || cp.phases.includes(state.currentPhase)) &&
-    evaluateConditionWithCache(cp.when, baseCtx),
+  (checkpoint) =>
+    checkpoint.timing === 'duringCoup' &&
+    (checkpoint.phases === undefined || checkpoint.phases.includes(state.currentPhase)) &&
+    evaluateConditionWithCache(checkpoint.when, baseCtx),
 );
 ```
 
@@ -83,7 +88,7 @@ checkpoints:
 
 ### 4. Compiler validation
 
-The compiler should validate that every phase referenced in a checkpoint's `phases` array exists in the game's `turnStructure.phases` or `coupPlan.phases`. Unknown phase IDs are a compile-time error.
+The compiler should validate that every phase referenced in a checkpoint's `phases` array exists in the game's `turnStructure.phases` or `coupPlan.phases`. Unknown phase IDs are a compile-time error. The existing `validateTerminal()` function in `packages/engine/src/kernel/validate-gamedef-extensions.ts` is the insertion point for this validation.
 
 ### 5. Remove the isCoup guard from checkpoint conditions
 
@@ -132,20 +137,19 @@ However, this removal is **optional** and low-priority. The guard is harmless (j
 ## Affected Files
 
 ### Engine (Tier 2 changes)
-- `packages/engine/src/kernel/types.ts` — Add `phases` to `CheckpointDef`
-- `packages/engine/src/kernel/types-core.ts` — If checkpoint types are defined here
-- `packages/engine/src/kernel/schemas-core.ts` — Update Zod schema for checkpoint
+- `packages/engine/src/kernel/types-victory.ts` — Add `phases` to `VictoryCheckpointDef`
+- `packages/engine/src/kernel/schemas-extensions.ts` — Update `VictoryCheckpointSchema` Zod schema
 - `packages/engine/src/kernel/terminal.ts` — Phase-gating logic in `evaluateVictory()`
-- `packages/engine/schemas/` — JSON Schema artifact update
-- `packages/engine/src/cnl/validate-agents.ts` or relevant compiler validation — Phase reference validation
+- `packages/engine/src/kernel/validate-gamedef-extensions.ts` — Phase reference validation in `validateTerminal()`
 
 ### Game data
 - `data/games/fire-in-the-lake/90-terminal.md` — Add `phases` to all checkpoints
 
 ### Tests
-- New unit tests for phase-gated terminal evaluation
-- New compiler validation tests for phase references
-- New FITL integration tests for correct Coup sequencing
+- `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts` — **Already exists** with 3 tests: victory halt at coupVictory, phase advancement when no victory, final-coup ranking after coupRedeploy. Covers test cases 9 and partially 8/11 from the Testing Requirements below.
+- New unit tests for phase-gated terminal evaluation (test cases 1-5: phase skip, phase fire, ungated backward compat, mixed gating, finalCoup gating)
+- New compiler validation tests for phase references (test cases 6-7: valid phases accepted, invalid phase rejected)
+- Additional FITL integration tests if gaps remain after evaluating existing test coverage (test cases 10, 12-14)
 - Update any existing tests that assert checkpoint behavior without phase gating
 
 ## Alignment with FOUNDATIONS.md

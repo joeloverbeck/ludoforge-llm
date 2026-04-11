@@ -1,6 +1,6 @@
 # 63AGEEVOOBS-003: Per-decision margin trajectory in ARVN tournament runner
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — campaign-only
@@ -91,3 +91,17 @@ evolvedMoves.map((m, i) => ({
 
 1. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 3 --trace-all false --trace-seed 1000 && node -e "const t=JSON.parse(require('fs').readFileSync('campaigns/fitl-arvn-agent-evolution/last-trace.json','utf8'));t.evolvedMoves.slice(0,3).forEach((m,i)=>console.log(i,m.marginBefore,m.marginAfter,m.marginDelta))"`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-11
+- Added ARVN runner helpers to extract `agentDecision.stateFeatures.selfMargin` and enrich saved evolved moves with `marginBefore`, `marginAfter`, and `marginDelta`.
+- Per-seed ARVN trace summaries now include margin trajectory fields on each `evolvedMoves` entry while preserving the existing summary JSON surface.
+- Verified the ticket’s key premise against live output before editing: ARVN verbose policy traces do include `stateFeatures.selfMargin` at decision time.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 3 --trace-all false --trace-seed 1000 >/dev/null 2>/dev/null && node -e "const t=JSON.parse(require('fs').readFileSync('campaigns/fitl-arvn-agent-evolution/last-trace.json','utf8')); const first=t.evolvedMoves.slice(0,3).map((m,i)=>({i,marginBefore:m.marginBefore,marginAfter:m.marginAfter,marginDelta:m.marginDelta})); const last=t.evolvedMoves.at(-1); const deltasOk=t.evolvedMoves.every(m => m.marginBefore == null || m.marginAfter == null || m.marginDelta === m.marginAfter - m.marginBefore); console.log(JSON.stringify({first,deltasOk,lastMoveAfter:last?.marginAfter,evolvedMargin:t.evolvedMargin}, null, 2));"`
+- `pnpm turbo build`
+- `pnpm turbo test`

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign-only
-**Deps**: `tickets/63AGEEVOOBS-003.md`
+**Deps**: `archive/tickets/63AGEEVOOBS-003.md`
 
 ## Problem
 

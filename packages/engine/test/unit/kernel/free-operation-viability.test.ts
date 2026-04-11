@@ -86,6 +86,98 @@ const makeBaseState = (): GameState => ({
 });
 
 describe('free-operation viability runtime', () => {
+  it('counts chooseN branch traversal against maxParamExpansions before the first completed selection resolves', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operation-profile-branch-budget',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            eff({
+              chooseN: {
+                internalDecisionId: 'decision:$targets',
+                bind: '$targets',
+                options: {
+                  query: 'enums',
+                  values: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'],
+                },
+                min: 8,
+                max: 8,
+              },
+            }) as ActionPipelineDef['stages'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({
+      actions: [action],
+      actionPipelines: [profile],
+    });
+    const state = makeBaseState();
+    const seatResolution = createSeatResolutionContext(def, state.playerCount);
+
+    const usableWithinBudget = isFreeOperationGrantUsableInCurrentState(
+      def,
+      state,
+      {
+        seat: '0',
+        operationClass: 'operation',
+        actionIds: ['operation'],
+        viabilityPolicy: 'requireUsableAtIssue',
+      },
+      '0',
+      ['0', '1'],
+      seatResolution,
+      {
+        budgets: {
+          maxParamExpansions: 32,
+          maxDecisionProbeSteps: 32,
+        },
+      },
+    );
+
+    const blockedByTraversalBudget = isFreeOperationGrantUsableInCurrentState(
+      def,
+      state,
+      {
+        seat: '0',
+        operationClass: 'operation',
+        actionIds: ['operation'],
+        viabilityPolicy: 'requireUsableAtIssue',
+      },
+      '0',
+      ['0', '1'],
+      seatResolution,
+      {
+        budgets: {
+          maxParamExpansions: 7,
+          maxDecisionProbeSteps: 32,
+        },
+      },
+    );
+
+    assert.equal(usableWithinBudget, true);
+    assert.equal(blockedByTraversalBudget, false);
+  });
+
   it('caps high-cardinality chooseN viability probes before materializing the full search tree', () => {
     const action: ActionDef = {
       id: asActionId('operation'),

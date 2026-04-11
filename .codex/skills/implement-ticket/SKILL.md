@@ -106,14 +106,15 @@ Every stop condition below requires resolution before implementation proceeds.
    - blocking drift: implementing the literal text would change or misstate the live contract, conflict with `FOUNDATIONS.md`, or violate `AGENTS.md` ticket fidelity
    For blocking drift, stop and resolve via **1-3-1** before coding.
 14. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
-15. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
-16. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+15. If a **1-3-1** stop leads to a user-confirmed boundary change for an active draft ticket, immediately refresh the working-notes checkpoint and rewrite the active ticket before coding so the recorded contract matches the confirmed direction.
+16. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+17. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
     - If the ticket's acceptance depends on traces, harness output, campaign metrics, or another observability surface, classify the expected proof shape before coding:
       - `direct proof`: the current repo surface exposes the exact invariant or contribution path the ticket names
       - `indirect proof`: the current repo surface proves the change through a compiled artifact, golden, catalog, or adjacent observable effect, but not the literal named field
       - `missing proof surface`: the repo cannot currently prove the acceptance claim without new instrumentation or trace/schema changes
     - `missing proof surface` is not automatically blocking when the implementation boundary is still correct, but you must explicitly decide whether the ticket can be closed with indirect proof, needs a ticket rewrite, or requires a stop-and-confirm via 1-3-1.
-17. If the ticket is accurate and no blocking decision remains, proceed.
+18. If the ticket is accurate and no blocking decision remains, proceed.
 
 ## Implementation Rules
 
@@ -122,6 +123,7 @@ Load `references/implementation-general.md`.
 - If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
+- If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 

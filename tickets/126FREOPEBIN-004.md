@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — data-only and test-only
-**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `tickets/126FREOPEBIN-002.md`, `tickets/126FREOPEBIN-003.md`
+**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `tickets/126FREOPEBIN-003.md`
 
 ## Problem
 
@@ -16,6 +16,7 @@ After implementing engine fixes (tickets 001–003), a full seed scan is needed 
 2. `fitl-policy-agent-canary.test.ts` exists at `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` — confirmed. Will be updated with validated terminal seeds.
 3. Previously-crashing seeds: 1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1042, 1043, 1046, 1047, 1051 — from spec evidence table.
 4. Previously-hanging seeds: 1040, 1054 — from spec evidence table.
+5. Ticket `126FREOPEBIN-002` did not add a new simulator stop reason. It fixed the live hang by charging existing free-operation viability probe budgets during `chooseOne` / `chooseN` traversal, including the `card-75` event-play stall on seed `1040`.
 
 ## Architecture Check
 
@@ -31,7 +32,6 @@ After tickets 001–003 are implemented, re-run the seed scan across 1000–2200
 - `terminal` (correct completion)
 - `maxTurns` (300 moves, no winner — game design issue, not engine bug)
 - `agentStuck` (agent fallback exhausted — investigate if frequent)
-- `enumerationBudgetExhausted` (new stop reason — investigate if frequent)
 - Crash or hang (regressions — must be zero)
 
 ### 2. Assess march zone filter

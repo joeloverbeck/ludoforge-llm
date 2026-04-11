@@ -234,6 +234,9 @@ const visitSelectableDecisionValues = (
   currentMove: Move,
   request: ChoicePendingRequest,
   visit: (value: MoveParamValue) => boolean,
+  options?: {
+    readonly consumeParamExpansionBudget?: () => boolean;
+  },
 ): boolean => {
   const probeValue = (value: MoveParamValue): number => {
     if (probeGrant === null) {
@@ -258,6 +261,9 @@ const visitSelectableDecisionValues = (
   if (request.type === 'chooseOne') {
     for (const selection of [...selectChoiceOptionValuesByLegalityPrecedence(request)]
       .sort((left, right) => probeValue(right) - probeValue(left))) {
+      if (options?.consumeParamExpansionBudget !== undefined && !options.consumeParamExpansionBudget()) {
+        return false;
+      }
       if (visit(selection)) {
         return true;
       }
@@ -281,6 +287,9 @@ const visitSelectableDecisionValues = (
     }
     const upper = selectableValues.length - remaining;
     for (let index = start; index <= upper; index += 1) {
+      if (options?.consumeParamExpansionBudget !== undefined && !options.consumeParamExpansionBudget()) {
+        return false;
+      }
       current.push(selectableValues[index] as MoveParamScalar);
       if (enumerate(index + 1, remaining - 1)) {
         current.pop();
@@ -293,6 +302,9 @@ const visitSelectableDecisionValues = (
 
   for (const size of sizeOrder) {
     if (size === 0) {
+      if (options?.consumeParamExpansionBudget !== undefined && !options.consumeParamExpansionBudget()) {
+        return false;
+      }
       if (visit([])) {
         return true;
       }
@@ -583,6 +595,10 @@ const hasLegalCompletedProbeMove = (
   });
   let decisionProbeSteps = 0;
   let paramExpansions = 0;
+  const consumeParamExpansionBudget = (): boolean => {
+    paramExpansions += 1;
+    return paramExpansions <= budgets.maxParamExpansions;
+  };
   const resolveDecisionSequence = options?.resolveDecisionSequence ?? ((move, resolveOptions) =>
     resolveMoveDecisionSequence(
       def,
@@ -647,10 +663,6 @@ const hasLegalCompletedProbeMove = (
       request.move,
       nextDecision,
       (selection) => {
-        paramExpansions += 1;
-        if (paramExpansions > budgets.maxParamExpansions) {
-          return false;
-        }
         return visit({
           ...request.move,
           params: {
@@ -659,6 +671,7 @@ const hasLegalCompletedProbeMove = (
           },
         });
       },
+      { consumeParamExpansionBudget },
     );
   };
 

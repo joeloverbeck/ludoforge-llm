@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — data-only and test-only
-**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `tickets/126FREOPEBIN-003.md`, `archive/tickets/126FREOPEBIN-005.md`
+**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `archive/tickets/126FREOPEBIN-003.md`, `archive/tickets/126FREOPEBIN-005.md`
 
 ## Problem
 
@@ -17,7 +17,7 @@ After implementing the remaining engine fixes in this series, a full seed scan i
 3. Previously-crashing seeds: 1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1042, 1043, 1046, 1047, 1051 — from spec evidence table.
 4. Previously-hanging seeds: 1040, 1054 — from spec evidence table.
 5. Ticket `126FREOPEBIN-002` did not add a new simulator stop reason. It fixed the live hang by charging existing free-operation viability probe budgets during `chooseOne` / `chooseN` traversal, including the `card-75` event-play stall on seed `1040`.
-6. Ticket `126FREOPEBIN-003` is not the next live prerequisite by itself; the remaining `legalChoices` crash on missing `$targetSpaces` is now tracked in ticket `126FREOPEBIN-005` and must land before the seed scan is authoritative.
+6. Tickets `126FREOPEBIN-003` and `126FREOPEBIN-005` have now landed, so this seed scan is the next authoritative series step; it should verify whether any crash/hang or residual `agentStuck` cohorts remain before considering FITL data correction.
 
 ## Architecture Check
 

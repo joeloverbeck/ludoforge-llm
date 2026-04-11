@@ -1203,6 +1203,29 @@ describe('FITL policy agent integration', () => {
     }
   });
 
+  it('advances seed 1041 past the former phase-2 action-filter dead-end', () => {
+    const { compiled } = compileProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const runtime = createGameDefRuntime(def);
+    const agents = createPolicyAgents(4);
+
+    const trace = runGame(def, 1041, agents, 20, 4, { skipDeltas: true }, runtime);
+
+    assert.equal(trace.moves.length, 20);
+    assert.notEqual(trace.stopReason, 'agentStuck');
+    const fallbackMoves = trace.moves.filter(
+      (move) => move.agentDecision?.kind === 'policy' && move.agentDecision.emergencyFallback === true,
+    );
+    assert.equal(fallbackMoves.length > 0, true);
+    assert.equal(
+      fallbackMoves.some((move) => (
+        move.agentDecision?.kind === 'policy'
+        && move.agentDecision.failure?.code === 'PHASE1_ACTION_FILTER_EMPTY'
+      )),
+      true,
+    );
+  });
+
   it('produces viable moves with and without VC completion guidance on seed-6 free Rally state', () => {
     // Verify that both guided and unguided agents produce valid, executable
     // moves at the seed-6 free-rally decision point. This test is deliberately

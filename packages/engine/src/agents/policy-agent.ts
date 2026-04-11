@@ -4,7 +4,11 @@ import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
-import { evaluatePolicyMove, type PolicyEvaluationMetadata } from './policy-eval.js';
+import {
+  evaluatePolicyMove,
+  type PolicyEvaluationFailure,
+  type PolicyEvaluationMetadata,
+} from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { getSeatMargin, type Phase1ActionPreviewEntry } from './policy-preview.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
@@ -14,6 +18,16 @@ import { preparePlayableMoves } from './prepare-playable-moves.js';
 // policy evaluation. 3 completions provides sufficient diversity for ranking
 // while reducing completion work by 40%.
 const DEFAULT_COMPLETIONS_PER_TEMPLATE = 3;
+
+const emptyActionFilterFailure = (
+  actionId: string,
+): PolicyEvaluationFailure => ({
+  code: 'PHASE1_ACTION_FILTER_EMPTY',
+  message: `PolicyAgent phase-1 selected action "${actionId}" but phase-2 preparation produced no candidates; widened to broader prepared moves.`,
+  detail: {
+    actionId,
+  },
+});
 
 export interface PolicyAgentConfig {
   readonly profileId?: string;
@@ -85,7 +99,28 @@ export class PolicyAgent implements Agent {
     });
     perfDynEnd(profiler, 'agent:preparePlayableMoves', t0_prepare);
 
-    const playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+    let phase2Prepared = prepared;
+    let phase2Failure: PolicyEvaluationFailure | null = null;
+    let playableMoves = prepared.completedMoves.length > 0 ? prepared.completedMoves : prepared.stochasticMoves;
+    if (playableMoves.length === 0) {
+      const t0_broaderPrepare = perfStart(profiler);
+      const broaderPrepared = preparePlayableMoves({
+        ...input,
+        rng: prepared.rng,
+      }, {
+        pendingTemplateCompletions: this.completionsPerTemplate,
+        ...(choose === undefined ? {} : { choose }),
+      });
+      perfDynEnd(profiler, 'agent:preparePlayableMovesFallback', t0_broaderPrepare);
+      const broaderPlayableMoves = (
+        broaderPrepared.completedMoves.length > 0 ? broaderPrepared.completedMoves : broaderPrepared.stochasticMoves
+      );
+      if (broaderPlayableMoves.length > 0) {
+        phase2Prepared = broaderPrepared;
+        playableMoves = broaderPlayableMoves;
+        phase2Failure = emptyActionFilterFailure(String(phase1.move.actionId));
+      }
+    }
     if (playableMoves.length === 0) {
       throw new NoPlayableMovesAfterPreparationError('policy', input.legalMoves.length);
     }
@@ -98,9 +133,9 @@ export class PolicyAgent implements Agent {
       ...input,
       legalMoves: playableMoves.map((move) => move.move),
       trustedMoveIndex,
-      rng: prepared.rng,
-      completionStatistics: prepared.statistics,
-      movePreparations: prepared.movePreparations,
+      rng: phase2Prepared.rng,
+      completionStatistics: phase2Prepared.statistics,
+      movePreparations: phase2Prepared.movePreparations,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });
@@ -119,6 +154,7 @@ export class PolicyAgent implements Agent {
       rng: phase2.rng,
       agentDecision: buildPolicyAgentDecisionTrace({
         ...phase2.metadata,
+        ...(phase2Failure === null ? {} : { failure: phase2Failure, usedFallback: true }),
         canonicalOrder: phase1.metadata.canonicalOrder,
         candidates: phase1.metadata.candidates,
         pruningSteps: phase1.metadata.pruningSteps,

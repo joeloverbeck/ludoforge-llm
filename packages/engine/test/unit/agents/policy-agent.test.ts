@@ -963,6 +963,41 @@ describe('PolicyAgent', () => {
     assert.equal(result.agentDecision.emergencyFallback, false);
   });
 
+  it('falls back to broader prepared moves when the chosen phase-2 action filter is empty', () => {
+    const def = createDef({
+      metadata: { id: 'policy-agent-empty-phase2-filter', players: { min: 2, max: 2 } },
+      actionPipelines: [createEmptyOptionsProfile('event')],
+      agents: {
+        ...createCatalog(),
+        bindingsBySeat: {
+          us: 'aggressive',
+        },
+      },
+    });
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent();
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }),
+        pendingClassifiedMove({ actionId: asActionId('event'), params: {} }),
+      ],
+      rng: createRng(42n),
+    });
+
+    assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy agent decision');
+    }
+    assert.equal(result.agentDecision.emergencyFallback, true);
+    assert.equal(result.agentDecision.failure?.code, 'PHASE1_ACTION_FILTER_EMPTY');
+    assert.equal(result.agentDecision.selectedStableMoveKey !== null, true);
+  });
+
   it('uses completion guidance to prefer the highest-scoring template option', () => {
     const def = createGuidedTemplateDef();
     const state = initialState(def, 7, 2).state;

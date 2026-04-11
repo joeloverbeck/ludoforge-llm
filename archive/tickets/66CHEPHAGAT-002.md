@@ -1,6 +1,6 @@
 # 66CHEPHAGAT-002: Compiler validation for checkpoint phase references
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — GameDef validator
@@ -15,8 +15,9 @@ After adding the optional `phases` field to checkpoints (66CHEPHAGAT-001), a gam
 1. `validateTerminal()` in `packages/engine/src/kernel/validate-gamedef-extensions.ts:264` already validates checkpoints (duplicate IDs, empty array, `when` condition AST). This is the correct insertion point.
 2. `turnStructure.phases` provides the list of all declared phase IDs (confirmed via `validate-gamedef-structure.ts:378`).
 3. `coupPlan.phases` provides coup-specific phase IDs (confirmed via `validate-gamedef-extensions.ts:76-87` where coup phases are already validated against `turnStructure.phases`).
-4. Since `coupPlan.phases` IDs must already be in `turnStructure.phases` (enforced by existing validation at line 78-87), validating against `turnStructure.phases` alone is sufficient — it covers both regular and coup phases.
+4. Since `coupPlan.phases` IDs must already be in `turnStructure.phases` (enforced by existing validation at line 78-87), validating against declared turn phases covers both regular and coup phases.
 5. The `phases` field will be `readonly string[]` after 66CHEPHAGAT-001.
+6. `turnStructure.interrupts` is also part of the live `GameDef` shape and should be accepted as a valid checkpoint phase target when present. Confirmed from `types-core.ts` and phase-lookup consumers.
 
 ## Architecture Check
 
@@ -30,7 +31,7 @@ After adding the optional `phases` field to checkpoints (66CHEPHAGAT-001), a gam
 
 In `packages/engine/src/kernel/validate-gamedef-extensions.ts`, inside the existing `validateTerminal()` function, after the per-checkpoint `when` validation loop (around line 304), add validation for each checkpoint's `phases` array:
 
-- Build a `Set<string>` of all phase IDs from `def.turnStructure.phases` (including interrupt phases from `def.turnStructure.interrupts`).
+- Build a `Set<string>` of all phase IDs from `def.turnStructure.phases` plus any `def.turnStructure.interrupts`.
 - For each checkpoint with a `phases` array:
   - If `phases` is empty, emit a **warning** diagnostic (`VICTORY_CHECKPOINT_PHASES_EMPTY`) — an empty array means the checkpoint never fires, which is likely unintentional.
   - For each phase ID in `phases`, if it is not in the valid set, emit an **error** diagnostic (`VICTORY_CHECKPOINT_PHASE_UNKNOWN`) with a clear message naming the invalid phase and the checkpoint ID.
@@ -85,3 +86,20 @@ Add tests to the existing validation test file or create `packages/engine/test/u
 2. `pnpm turbo test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Added static checkpoint-phase validation in `packages/engine/src/kernel/validate-gamedef-extensions.ts` with two new diagnostics:
+  - `VICTORY_CHECKPOINT_PHASE_UNKNOWN` as an error for undeclared phase ids
+  - `VICTORY_CHECKPOINT_PHASES_EMPTY` as a warning for empty `phases` arrays
+- Validation now accepts phase ids declared in either `turnStructure.phases` or `turnStructure.interrupts`, matching the live `GameDef` phase surface.
+- Added focused validator coverage in `packages/engine/test/unit/validate-terminal-phase-refs.test.ts` for valid main/interrupt phases, omitted `phases`, unknown phases, empty arrays, and mixed valid/invalid arrays.
+- Kept the ticket boundary intact: no runtime gating changes, no FITL data edits, and no schema artifact updates were needed here.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/validate-terminal-phase-refs.test.js`
+- `pnpm turbo test`
+- `pnpm turbo typecheck`
+- `pnpm turbo lint`

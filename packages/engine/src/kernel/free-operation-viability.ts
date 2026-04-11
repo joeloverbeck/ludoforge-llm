@@ -2,7 +2,11 @@ import { findActionById } from './action-capabilities.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { toExecutionPipeline } from './apply-move-pipeline.js';
 import { asActionId, asPlayerId } from './branded.js';
-import { selectChoiceOptionValuesByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from './choice-option-policy.js';
+import {
+  estimateMoveParamValueComplexity,
+  selectChoiceOptionValuesByLegalityPrecedence,
+  selectUniqueChoiceOptionValuesByLegalityPrecedence,
+} from './choice-option-policy.js';
 import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalRuntimeResources, type ReadContext } from './eval-context.js';
@@ -13,7 +17,9 @@ import {
   collectGrantAwareMoveZoneCandidates,
   resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-bindings.js';
+import { doesGrantPotentiallyAuthorizeMove } from './free-operation-grant-authorization.js';
 import {
+  classifyMoveDecisionSequenceSatisfiability,
   resolveMoveDecisionSequence,
   type ResolveMoveDecisionSequenceResult,
 } from './move-decision-sequence.js';
@@ -210,23 +216,6 @@ const STRICT_FREE_OPERATION_PROBE_BUDGETS = {
   maxDecisionProbeSteps: 4_096,
 } as const;
 
-const rankProbeOptionValue = (
-  state: GameState,
-  value: MoveParamValue,
-): number => {
-  if (typeof value === 'string') {
-    return state.zones[value]?.length ?? 0;
-  }
-  if (Array.isArray(value)) {
-    return value.reduce((score, item) => (
-      typeof item === 'string'
-        ? score + (state.zones[item]?.length ?? 0)
-        : score
-    ), 0);
-  }
-  return 0;
-};
-
 const visitSelectableDecisionValues = (
   def: GameDef,
   state: GameState,
@@ -240,7 +229,7 @@ const visitSelectableDecisionValues = (
 ): boolean => {
   const probeValue = (value: MoveParamValue): number => {
     if (probeGrant === null) {
-      return rankProbeOptionValue(state, value);
+      return estimateMoveParamValueComplexity(state, value);
     }
     const fauxMove: Move = {
       actionId: currentMove.actionId,
@@ -256,11 +245,11 @@ const visitSelectableDecisionValues = (
     if (probeZones.length > 0) {
       return probeZones.reduce((score, zoneId) => score + (state.zones[zoneId]?.length ?? 0), 0);
     }
-    return rankProbeOptionValue(state, value);
+    return estimateMoveParamValueComplexity(state, value);
   };
   if (request.type === 'chooseOne') {
     for (const selection of [...selectChoiceOptionValuesByLegalityPrecedence(request)]
-      .sort((left, right) => probeValue(right) - probeValue(left))) {
+      .sort((left, right) => probeValue(left) - probeValue(right))) {
       if (options?.consumeParamExpansionBudget !== undefined && !options.consumeParamExpansionBudget()) {
         return false;
       }
@@ -272,7 +261,7 @@ const visitSelectableDecisionValues = (
   }
 
   const selectableValues = [...selectUniqueChoiceOptionValuesByLegalityPrecedence(request)]
-    .sort((left, right) => probeValue(right) - probeValue(left));
+    .sort((left, right) => probeValue(left) - probeValue(right));
   if (request.type !== 'chooseN') {
     throw new Error('chooseN viability enumeration requires a chooseN request');
   }
@@ -643,7 +632,30 @@ const hasLegalCompletedProbeMove = (
     if (request.illegal !== undefined || request.stochasticDecision !== undefined) {
       return false;
     }
-    if (!isFreeOperationPotentiallyGrantedForMove(def, authorizationState, request.move, seatResolution)) {
+    const probeGrant = options?.selectionGrant
+      ?? (authorizationState.turnOrderState.type === 'cardDriven'
+        ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
+        : null);
+    const pendingProbeGrants = authorizationState.turnOrderState.type === 'cardDriven'
+      ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants ?? []
+      : [];
+    const probeGrantStillPotential = probeGrant === null
+      ? null
+      : doesGrantPotentiallyAuthorizeMove(
+        def,
+        authorizationState,
+        pendingProbeGrants,
+        probeGrant,
+        request.move,
+        { useProbeBindings: true },
+      );
+    if (
+      probeGrantStillPotential === false
+      || (
+        probeGrantStillPotential === null
+        && !isFreeOperationPotentiallyGrantedForMove(def, authorizationState, request.move, seatResolution)
+      )
+    ) {
       return false;
     }
 
@@ -652,10 +664,6 @@ const hasLegalCompletedProbeMove = (
       return false;
     }
 
-    const probeGrant = options?.selectionGrant
-      ?? (authorizationState.turnOrderState.type === 'cardDriven'
-        ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
-        : null);
     return visitSelectableDecisionValues(
       def,
       authorizationState,
@@ -849,6 +857,18 @@ export const isFreeOperationGrantUsableInCurrentState = (
         : { actionClass: probeGrant.operationClass }),
     };
     if (!isFreeOperationApplicableForMove(def, explorationState, probeMove, seatResolution)) {
+      continue;
+    }
+    if (
+      classifyMoveDecisionSequenceSatisfiability(
+        def,
+        explorationState,
+        probeMove,
+        {
+          ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+        },
+      ).classification === 'unsatisfiable'
+    ) {
       continue;
     }
     if (hasLegalCompletedProbeMove(def, explorationState, authorizationState, probeMove, seatResolution, {

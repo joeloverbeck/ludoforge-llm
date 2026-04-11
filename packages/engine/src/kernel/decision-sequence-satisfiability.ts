@@ -22,6 +22,7 @@ export interface DecisionSequenceSatisfiabilityResult {
 export interface DecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
+  readonly orderSelections?: (request: ChoicePendingRequest, selectableValues: readonly MoveParamValue[]) => readonly MoveParamValue[];
 }
 
 export type DecisionSequenceChoiceDiscoverer = (
@@ -88,10 +89,12 @@ const enumerateChooseNSelections = (
 const forEachDecisionSelection = (
   request: ChoicePendingRequest,
   visit: (selection: MoveParamValue) => boolean,
+  options?: DecisionSequenceSatisfiabilityOptions,
 ): boolean => {
   const selectableValues = collectSelectableOptionValues(request);
+  const orderedValues = options?.orderSelections?.(request, selectableValues) ?? selectableValues;
   if (request.type === 'chooseOne') {
-    for (const selection of selectableValues) {
+    for (const selection of orderedValues) {
       if (!visit(selection)) {
         return false;
       }
@@ -99,7 +102,7 @@ const forEachDecisionSelection = (
     return true;
   }
 
-  return enumerateChooseNSelections(request, selectableValues, visit);
+  return enumerateChooseNSelections(request, orderedValues, visit);
 };
 
 export const classifyDecisionSequenceSatisfiability = (
@@ -194,7 +197,7 @@ export const classifyDecisionSequenceSatisfiability = (
         return false;
       }
       return true;
-    });
+    }, options);
 
     if (branchOutcome !== 'unsatisfiable') {
       return branchOutcome;

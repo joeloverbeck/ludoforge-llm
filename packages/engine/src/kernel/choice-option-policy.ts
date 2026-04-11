@@ -1,4 +1,4 @@
-import type { ChoiceOption, ChoicePendingRequest, MoveParamScalar, MoveParamValue } from './types.js';
+import type { ChoiceOption, ChoicePendingRequest, GameState, MoveParamScalar, MoveParamValue } from './types.js';
 
 export interface ChoiceOptionPolicy {
   readonly allowIllegalFallback?: boolean;
@@ -70,6 +70,30 @@ export const selectUniqueChoiceOptionValuesByLegalityPrecedence = (
   }
   return uniqueValues;
 };
+
+export const estimateMoveParamValueComplexity = (
+  state: GameState,
+  value: MoveParamValue,
+): number => {
+  if (typeof value === 'string') {
+    return state.zones[value]?.length ?? 0;
+  }
+  if (Array.isArray(value)) {
+    return value.reduce((score, item) => (
+      typeof item === 'string'
+        ? score + (state.zones[item]?.length ?? 0)
+        : score
+    ), 0);
+  }
+  return 0;
+};
+
+export const orderMoveParamValuesByAscendingComplexity = (
+  state: GameState,
+  values: readonly MoveParamValue[],
+): readonly MoveParamValue[] => (
+  [...values].sort((left, right) => estimateMoveParamValueComplexity(state, left) - estimateMoveParamValueComplexity(state, right))
+);
 
 export const pickDeterministicChoiceValue = (
   request: ChoicePendingRequest,

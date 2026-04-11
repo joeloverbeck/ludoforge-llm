@@ -130,6 +130,11 @@ Load `references/implementation-general.md`.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
 - If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
 - If completed owned work remains valid but a newly exposed blocker is narrower and prerequisite to the original ticket acceptance, prefer creating a new prerequisite ticket and blocking the current active ticket rather than repeatedly widening the active ticket. Keep the current ticket focused on its delivered work plus the now-explicit dependency.
+- When a ticket is split after exploratory or partial code changes already exist in the worktree, explicitly classify those diffs before closeout:
+  - `belongs to completed current ticket`: keep and document them under the current ticket's partial/completed outcome
+  - `keep as in-progress for follow-up`: leave them in place only if they match the new live boundary and call that out explicitly in working notes or closeout
+  - `revert before handoff`: remove them if they no longer belong to either the current ticket or the new prerequisite
+  Record the classification so the ticket rewrite and the live workspace state do not silently diverge.
 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 

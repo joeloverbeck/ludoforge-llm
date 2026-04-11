@@ -11,6 +11,7 @@ import {
 } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import { getSeatMargin, type Phase1ActionPreviewEntry } from './policy-preview.js';
+import type { PolicyPreviewDependencies } from './policy-preview.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
@@ -59,6 +60,7 @@ export class PolicyAgent implements Agent {
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
     const profiler = input.profiler;
     const resolvedProfile = resolveEffectivePolicyProfile(input.def, input.playerId, this.profileId);
+    const previewDependencies = createMemoizedPreviewDependencies();
     const choose = resolvedProfile === null
       ? undefined
       : buildCompletionChooseCallback({
@@ -83,6 +85,7 @@ export class PolicyAgent implements Agent {
       ...(phase1Preparation.index.size === 0 ? {} : { phase1ActionPreviewIndex: phase1Preparation.index }),
       rng: phase1Preparation.rng,
       selectionGrouping: 'actionId' as const,
+      previewDependencies,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     };
@@ -136,6 +139,7 @@ export class PolicyAgent implements Agent {
       rng: phase2Prepared.rng,
       completionStatistics: phase2Prepared.statistics,
       movePreparations: phase2Prepared.movePreparations,
+      previewDependencies,
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
     });
@@ -168,6 +172,22 @@ export class PolicyAgent implements Agent {
       }, this.traceLevel),
     };
   }
+}
+
+function createMemoizedPreviewDependencies(): PolicyPreviewDependencies {
+  const applyMoveCache = new Map<string, ReturnType<typeof applyTrustedMove>>();
+  return {
+    applyMove(def, state, move, options, runtime) {
+      const cacheKey = `${state.stateHash}:${toMoveIdentityKey(def, move.move)}`;
+      const cached = applyMoveCache.get(cacheKey);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const applied = applyTrustedMove(def, state, move, options, runtime);
+      applyMoveCache.set(cacheKey, applied);
+      return applied;
+    },
+  };
 }
 
 function buildPhase1ActionPreviewIndex(

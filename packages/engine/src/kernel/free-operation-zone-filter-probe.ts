@@ -2,11 +2,13 @@ import { isEvalErrorCode } from './eval-error.js';
 import type { ZoneId } from './branded.js';
 import type { ConditionAST } from './types.js';
 import {
+  zoneFilterDeferred,
   zoneFilterResolved,
   zoneFilterFailed,
   type ZoneFilterEvaluationResult,
 } from './zone-filter-evaluation-result.js';
 import { collectZoneSelectorAliasesFromCondition } from './zone-selector-aliases.js';
+import { isPerZoneInterpolatedBindingMissingVar } from './missing-binding-policy.js';
 
 export interface FreeOperationZoneFilterProbeInput {
   readonly zoneId: ZoneId;
@@ -43,6 +45,9 @@ export const evaluateFreeOperationZoneFilterProbe = (
     try {
       return zoneFilterResolved(input.evaluateWithBindings(bindings));
     } catch (error) {
+      if (isPerZoneInterpolatedBindingMissingVar(error, input.zoneId)) {
+        return zoneFilterDeferred('missingVar');
+      }
       if (!isEvalErrorCode(error, 'MISSING_BINDING')) {
         // Non-MISSING_BINDING errors cannot be retried — return as failed
         // so the caller can apply surface-aware deferral policy.

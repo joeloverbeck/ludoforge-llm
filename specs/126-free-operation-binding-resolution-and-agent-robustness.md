@@ -13,7 +13,7 @@ Simulation canary tests reveal three classes of game-ending failures when runnin
 
 2. **Infinite hang — `enumerateLegalMoves` never returns**: Certain game states cause the legal-move enumerator to enter an unbounded loop, violating Foundation 10 (Bounded Computation). The hang occurs inside a single call to `enumerateLegalMoves()`, so the simulator's `maxTurns` guard never triggers.
 
-3. **Agent stuck — `agentStuck` stop reason**: `PolicyAgent` cannot derive a playable move from the classified legal moves, even though `enumerateLegalMoves()` returns a non-empty list. The agent's template completion fails for all legal move templates.
+3. **Agent stuck — `agentStuck` stop reason**: `PolicyAgent` cannot derive a playable move from the classified legal moves, even though `enumerateLegalMoves()` returns a non-empty list. The agent's template completion fails for all legal move templates, resulting in `NoPlayableMovesAfterPreparationError`.
 
 ### Observed Evidence
 
@@ -68,7 +68,7 @@ The hang in `enumerateLegalMoves()` likely stems from the same binding resolutio
 
 ### Issue 3: Agent template completion fragility
 
-`PolicyAgent` classifies legal moves by template and attempts to complete parameters. When the legal-move set contains moves with complex per-zone bindings that the agent's template matcher can't handle, all templates fail and the agent throws `NoPlayableMoveError`.
+`PolicyAgent` classifies legal moves by template and attempts to complete parameters. When the legal-move set contains moves with complex per-zone bindings that the agent's template matcher can't handle, all templates fail and the agent throws `NoPlayableMovesAfterPreparationError` (defined in `packages/engine/src/agents/no-playable-move.ts`).
 
 ## Proposed Solution
 
@@ -82,19 +82,23 @@ The zone filter probe must recognize that `MISSING_VAR` for interpolated per-zon
 
 2. **In `missing-binding-policy.ts`**: Extend `shouldDeferFreeOperationZoneFilterFailure` to apply the `MISSING_VAR` deferral policy on the `turnFlowEligibility` surface as well, not just `legalChoices`. The rationale: if a per-zone binding doesn't exist because the zone wasn't selected in the parent operation, the filter probe for that zone is inherently inconclusive regardless of which surface is asking.
 
-3. **In `eval-query.ts`**: Where `applyZonesFilter` catches and wraps zone filter errors into `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED`, verify that the catch/rethrow path respects the updated deferral policy before escalating.
+3. **In `eval-query.ts`**: Where `applyZonesFilter` (private/internal to `eval-query.ts` — zero external blast radius) catches and wraps zone filter errors into `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED`, verify that the catch/rethrow path respects the updated deferral policy before escalating.
+
+4. **In `free-operation-grant-authorization.ts`** (blast radius): This file also imports and calls both `evaluateFreeOperationZoneFilterProbe` (line 216) and `shouldDeferFreeOperationZoneFilterFailure` (line 192). Any signature or return-type changes in the above steps must be propagated to this consumer.
 
 ### Part B: Bound the legal-move enumerator to prevent infinite hangs (Foundation 10)
 
-**Scope**: `packages/engine/src/kernel/legal-moves.ts`
+**Scope**: `packages/engine/src/kernel/legal-moves.ts`, `packages/engine/src/kernel/move-enumeration-budgets.ts`
 
 The legal-move enumerator must always terminate. Even if Part A fixes the immediate binding resolution, defensive bounds are needed.
 
-1. Add a configurable budget (e.g., `maxLegalMoveEnumerationSteps`) to the legal-move enumeration loop. When the budget is exhausted, the enumerator stops and returns the moves discovered so far, plus a diagnostic warning.
+**Existing infrastructure**: `MoveEnumerationBudgets` in `move-enumeration-budgets.ts` already provides 5 budget fields (`maxTemplates`, `maxParamExpansions`, `maxDecisionProbeSteps`, `maxDeferredPredicates`, `maxCompletionDecisions`) with a resolver (`resolveMoveEnumerationBudgets`) and per-action tracking in `legal-moves.ts`. The existing system bounds template and parameter expansion but may not bound all code paths — `decision-sequence-satisfiability.ts` and `free-operation-viability.ts` also consume `MoveEnumerationBudgets` and are candidate hang locations.
 
-2. This budget should be part of `GameDef.terminal` or a kernel-level option (not game-specific), defaulting to a generous bound (e.g., 100,000 steps) that well-formed games never approach.
+1. **Investigate** the actual hang mechanism by tracing seeds 1040 and 1054 to identify the specific unbounded loop. The existing budget system already bounds template and parameter expansion, so the hang may originate in a different code path (e.g., decision-sequence satisfiability, free-operation viability checks, or zone filter probe retries).
 
-3. The simulator must treat budget-exhausted enumeration gracefully: the game continues with whatever moves were found, or stops with a new `'enumerationBudgetExhausted'` stop reason if zero moves were found.
+2. Add a new top-level bound as a field in `MoveEnumerationBudgets` (e.g., `maxTotalExpansions`) to cap the overall enumeration cost. This integrates with the existing budget infrastructure rather than creating a parallel mechanism on `GameDef.terminal`.
+
+3. The simulator must treat budget-exhausted enumeration gracefully: the game continues with whatever moves were found, or stops with a new `'enumerationBudgetExhausted'` stop reason if zero moves were found. Budget exhaustion behavior must be transparent to the 72+ consumer files that call `enumerateLegalMoves` — callers that don't opt into budget-aware behavior should see no change.
 
 ### Part C: Improve agent robustness for complex per-zone bindings
 
@@ -102,7 +106,7 @@ The legal-move enumerator must always terminate. Even if Part A fixes the immedi
 
 1. **Investigate** why `PolicyAgent` can't complete templates for the legal moves produced by the enumerator. The per-zone binding pattern (`$movingTroops@{$space}`) may require the agent's template matcher to understand interpolated binding names.
 
-2. If the legal moves themselves are valid but the agent can't map them, the agent should fall back to random selection from the legal-move list rather than throwing `NoPlayableMoveError`. This aligns with Foundation 10: the game should always be able to advance.
+2. If the legal moves themselves are valid but the agent can't map them, the agent should fall back to random selection from the legal-move list rather than throwing `NoPlayableMovesAfterPreparationError`. This aligns with Foundation 10: the game should always be able to advance.
 
 3. If the legal moves are malformed (contain unresolvable bindings), the issue is in the enumerator (Part A) and should be fixed there, not papered over in the agent.
 
@@ -122,8 +126,8 @@ Consult FITL Rules Section 3.3.3 (March) and Section 4.1 (Special Activities) to
 ### Unit Tests
 
 - `free-operation-zone-filter-probe.test.ts`: Test that `MISSING_VAR` for interpolated per-zone bindings produces `inconclusive` rather than `failed`.
-- `missing-binding-policy.test.ts`: Test that `turnFlowEligibility` surface defers `MISSING_VAR` for per-zone bindings.
-- `legal-moves-enumeration-budget.test.ts`: Test that the enumeration budget halts runaway enumeration and produces a diagnostic.
+- `missing-binding-policy.test.ts`: Extend the existing test file (`packages/engine/test/unit/kernel/missing-binding-policy.test.ts`) with cases that `turnFlowEligibility` surface defers `MISSING_VAR` for per-zone bindings.
+- `legal-moves-enumeration-budget.test.ts`: Test that the new `MoveEnumerationBudgets` top-level bound halts runaway enumeration and produces a diagnostic.
 
 ### Integration Tests
 
@@ -141,13 +145,13 @@ Consult FITL Rules Section 3.3.3 (March) and Section 4.1 (Special Activities) to
 |---|---|
 | F1 (Engine Agnosticism) | All fixes are in generic kernel code. No FITL-specific logic in the engine. FITL-specific changes (Part D) are data-only. |
 | F8 (Determinism) | Same seeds will produce same results after the fix. No non-deterministic fallbacks. |
-| F10 (Bounded Computation) | Part B adds explicit enumeration budgets. Part A prevents infinite retries. |
+| F10 (Bounded Computation) | Part B extends existing `MoveEnumerationBudgets` with a top-level bound. Part A prevents infinite retries. |
 | F12 (Compiler-Kernel Boundary) | Zone filter evaluation is a kernel runtime concern. The compiler already validated the filter structure. |
 | F15 (Architectural Completeness) | Addresses root cause (binding scope mismatch), not symptoms (seed selection). |
 | F16 (Testing as Proof) | Each fix is proven by targeted tests and validated by the seed scan. |
 
 ## Out of Scope
 
-- Full `PolicyAgent` overhaul (Spec 30 covers non-player AI strategy). This spec only addresses crash/hang robustness.
+- Full `PolicyAgent` overhaul (agent AI strategy is a separate concern). This spec only addresses crash/hang robustness.
 - Evolution pipeline or CLI integration.
 - `maxTurns` seeds that play 300 moves without a winner — these are a game-design quality issue, not an engine bug.

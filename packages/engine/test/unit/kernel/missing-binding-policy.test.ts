@@ -6,6 +6,7 @@ import { createEvalError } from '../../../src/kernel/eval-error.js';
 import { FREE_OPERATION_ZONE_FILTER_SURFACES } from '../../../src/kernel/free-operation-zone-filter-contract.js';
 import {
   MISSING_BINDING_POLICY_CONTEXTS,
+  isPerZoneInterpolatedBindingMissingVar,
   shouldDeferFreeOperationZoneFilterFailure,
   shouldDeferMissingBinding,
 } from '../../../src/kernel/missing-binding-policy.js';
@@ -75,10 +76,47 @@ describe('shouldDeferFreeOperationZoneFilterFailure()', () => {
     assert.equal(shouldDeferFreeOperationZoneFilterFailure('turnFlowEligibility', missing), false);
   });
 
-  it('does not defer non-missing-binding errors on either surface', () => {
-    const missingVar = createEvalError('MISSING_VAR', 'missing var');
+  it('defers per-zone interpolated missing vars on legalChoices and turnFlowEligibility only', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'Binding not found: $movingTroops@can-tho:none', {
+      binding: '$movingTroops@can-tho:none',
+      bindingTemplate: '$movingTroops@{$space}',
+      query: {
+        query: 'binding',
+        name: '$movingTroops@{$space}',
+      },
+    });
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('legalChoices', missingVar), true);
+    assert.equal(shouldDeferFreeOperationZoneFilterFailure('turnFlowEligibility', missingVar), true);
+  });
+
+  it('does not defer non-per-zone missing vars on either surface', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'Binding not found: $targetSpaces', {
+      binding: '$targetSpaces',
+      bindingTemplate: '$targetSpaces',
+      query: {
+        query: 'binding',
+        name: '$targetSpaces',
+      },
+    });
     for (const surface of FREE_OPERATION_ZONE_FILTER_SURFACES) {
       assert.equal(shouldDeferFreeOperationZoneFilterFailure(surface, missingVar), false);
     }
+  });
+});
+
+describe('isPerZoneInterpolatedBindingMissingVar()', () => {
+  it('recognizes interpolated binding-query missing vars and respects the candidate zone when provided', () => {
+    const missingVar = createEvalError('MISSING_VAR', 'Binding not found: $movingTroops@can-tho:none', {
+      binding: '$movingTroops@can-tho:none',
+      bindingTemplate: '$movingTroops@{$space}',
+      query: {
+        query: 'binding',
+        name: '$movingTroops@{$space}',
+      },
+    });
+
+    assert.equal(isPerZoneInterpolatedBindingMissingVar(missingVar), true);
+    assert.equal(isPerZoneInterpolatedBindingMissingVar(missingVar, 'can-tho:none'), true);
+    assert.equal(isPerZoneInterpolatedBindingMissingVar(missingVar, 'an-loc:none'), false);
   });
 });

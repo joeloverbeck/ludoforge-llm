@@ -118,10 +118,9 @@ If analysis during classification disproves an initial impression, withdraw the 
   5. After edits, verify by re-reading. Use this decision tree:
      - **Adjacent/overlapping edits** → verify after each edit (catch offset drift)
      - **4+ edits touching adjacent sections, numbered lists, or shared structures** → single full-file re-read after all edits
-     - **4+ non-adjacent, structurally independent edits** → targeted spot-checks (re-read edited section + 10 lines context)
+     - **4+ non-adjacent, structurally independent edits** → targeted grep for unique phrases from each edit (preferred) or re-read edited section + 10 lines context
      - **<4 non-adjacent edits** → batched re-read after all edits
      - **Edits spanning >50 lines** → full-file re-read
-     - A targeted grep for unique phrases from each edit is an acceptable alternative to re-reading sections, especially for non-adjacent edits where offset drift is not a concern.
   6. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   7. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   8. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.

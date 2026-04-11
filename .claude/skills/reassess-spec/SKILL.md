@@ -69,9 +69,18 @@ For each reference, validate against the actual codebase:
 9. **Causal/behavioral claims**: If the spec describes a root cause, failure mechanism, or execution flow, trace the actual code path to confirm. The most valuable discrepancies are often not wrong names but wrong explanations — a spec may correctly name a function but misunderstand its behavior or miss a branching path (e.g., an optimization that short-circuits the described flow, or a pipeline vs non-pipeline routing distinction the spec doesn't account for). Instruct Explore agents to trace call chains for any claimed failure mechanism.
 10. **Campaign-scoped files**: For specs modifying campaign-level files that exist in multiple campaign directories (e.g., `run-tournament.mjs`, `harness.sh`, `program.md`), verify whether the spec explicitly scopes which copies are affected. If not, flag as an Issue — the spec must state its campaign scope to avoid ambiguity during ticket decomposition.
 
-For specs with many references (>5 types/functions/paths), use up to 2 Explore agents to perform extraction and validation. Split across agents by whatever axis minimizes cross-agent dependency — e.g., internal structure vs external blast radius, structural validation (files, signatures, line counts) vs semantic validation (type shapes, pattern search, consumer analysis), or infrastructure layer (engine vs harness/campaign vs skill) when the spec touches multiple layers. A single agent prompt covering both axes tends to produce shallow results on one or both. For specs that describe failure mechanisms or execution flows, prefer isolating behavioral claim tracing (Step 2.9) into one agent and structural validation (files, types, blast radius) into the other — behavioral claims produce the highest-value discrepancies but require deeper code reading. For specs with fewer than ~10 references, a single agent suffices. If the spec's behavioral claims appear straightforward on initial read (simple filtering logic, well-described code paths), a single comprehensive agent covering both structural and behavioral validation may be more efficient than splitting — reserve the two-agent split for specs with complex control flow claims, multi-layer pipeline descriptions, or ambiguous failure mechanisms. Provide each agent with either the full spec content or a comprehensive structured extraction of all references in its scope. If summarizing, ensure you capture every reference from every section — including those embedded in prose, code blocks, tables, and footnotes. The goal is completeness, not format. This is read-only — agent-based exploration is safe and significantly faster.
+Use Explore agents to perform extraction and validation. Agent count decision table:
 
-**Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. This is the highest-value output from the Explore agent and must not be omitted.
+| Condition | Agents | Split axis |
+|---|---|---|
+| <5 references | 1 | Single comprehensive agent |
+| ≥5 references, simple or no behavioral claims | 1 | Comprehensive (structural + behavioral) |
+| ≥5 references, complex behavioral claims (control flow, failure mechanisms, multi-layer pipelines) | 2 | Agent 1: structural (files, types, signatures, blast radius) / Agent 2: behavioral (claim tracing, code path validation per Step 2.9) |
+| Spec touches multiple layers (engine + campaign + skill) | 2 | Split by layer, not by validation type |
+
+Provide each agent with either the full spec content or a comprehensive structured extraction of all references in its scope. If summarizing, ensure you capture every reference from every section — including those embedded in prose, code blocks, tables, and footnotes. The goal is completeness, not format. This is read-only — agent-based exploration is safe and significantly faster.
+
+**Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. Instruct Explore agents to separate source-file consumers from test-file consumers in their blast radius analysis — test migration scope is frequently underestimated. This is the highest-value output from the Explore agent and must not be omitted.
 
 When multiple Explore agents return conflicting findings on the same factual claim (e.g., one agent says a parameter exists, the other says it doesn't), treat the conflict as unresolved. Verify the claim directly by reading the authoritative source file before classifying the finding. Do not prefer one agent's result over another without independent verification — agent conflicts are the highest-signal indicator that a claim needs manual tracing.
 
@@ -156,7 +165,7 @@ Present all findings to the user in a structured report:
 
 **Plan mode**: Present the full findings report as text first (the structured report from Steps 2-4), then handle questions based on the scenario:
 
-1. **All factual, no questions**: All findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts). Present findings inline → proceed directly to plan file write → ExitPlanMode. The ExitPlanMode approval gate subsumes the Step 5 wait. Note: design preferences with a clear default (e.g., which token types to count, which metric to use) are blocking questions even when one option is obviously better — present the default as "(Recommended)" in `AskUserQuestion` but let the user override. These belong in scenario 2 or 3, not scenario 1.
+1. **All factual, no questions**: All findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts). Present findings inline → write the plan file with the diff summary as "Approved Changes (Diff Summary)" per Step 6's plan mode note → ExitPlanMode. The ExitPlanMode approval gate subsumes the Step 5 wait. Note: design preferences with a clear default (e.g., which token types to count, which metric to use) are blocking questions even when one option is obviously better — present the default as "(Recommended)" in `AskUserQuestion` but let the user override. These belong in scenario 2 or 3, not scenario 1.
 2. **Mostly factual, 1-2 blocking questions**: Present findings inline → use `AskUserQuestion` for only the blocking questions. In the inline `### Questions` section, reference the AskUserQuestion call by number (e.g., "See questions below for selection") rather than duplicating the full question text.
 3. **Multiple questions (up to 3)**: Present findings inline → use a single `AskUserQuestion` call containing all questions (the tool supports up to 4 per invocation). This gives the user full context before being asked to decide.
 
@@ -175,7 +184,9 @@ If the user requests deeper analysis of a specific finding before deciding, perf
 
 ### Step 6: Write the Updated Spec
 
-After all findings are resolved and the user has approved the changes:
+**Plan mode**: Skip Steps 6.1-6.3. The plan file's "Approved Changes (Diff Summary)" section (written in Step 5) serves as the draft and presentation. ExitPlanMode approval covers this gate — proceed directly to Step 6.4 after plan approval.
+
+**Non-plan mode**: After all findings are resolved and the user has approved the changes:
 
 1. **Draft the updated spec** incorporating all approved changes. Preserve the spec's existing structure and voice. Do not rewrite sections that have no findings — change only what was agreed upon.
 2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <one-line change description>`. Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition.
@@ -188,7 +199,7 @@ If the user requests changes to the draft, incorporate them and re-present befor
 
 ### Step 7: Post-Write Verification and Final Summary
 
-After writing the updated spec, verify that all file paths referenced in the updated spec exist (quick glob per path). This catches stale references introduced during the rewrite.
+After writing the updated spec, verify that all file paths in the updated spec exist (quick glob per path) — both original references and paths newly added during the reassessment. This catches stale references introduced during the rewrite.
 
 Then present:
 

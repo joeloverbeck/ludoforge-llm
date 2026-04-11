@@ -90,23 +90,50 @@ export const shouldDeferMissingBinding = (
   context: MissingBindingPolicyContext,
 ): boolean => classifyMissingBindingProbeError(error, context) !== null;
 
+const resolveMissingVarBindingTemplate = (error: unknown): string | null => {
+  if (!isEvalErrorCode(error, 'MISSING_VAR')) {
+    return null;
+  }
+  if (typeof error.context?.bindingTemplate === 'string') {
+    return error.context.bindingTemplate;
+  }
+  const query = error.context?.query;
+  if (
+    typeof query === 'object' &&
+    query !== null &&
+    'query' in query &&
+    'name' in query &&
+    (query as { readonly query?: unknown }).query === 'binding' &&
+    typeof (query as { readonly name?: unknown }).name === 'string'
+  ) {
+    return (query as { readonly name: string }).name;
+  }
+  return null;
+};
+
+export const isPerZoneInterpolatedBindingMissingVar = (
+  error: unknown,
+  candidateZone?: string,
+): boolean => {
+  if (!isEvalErrorCode(error, 'MISSING_VAR') || typeof error.context?.binding !== 'string') {
+    return false;
+  }
+  const bindingTemplate = resolveMissingVarBindingTemplate(error);
+  if (bindingTemplate === null || !bindingTemplate.includes('@{$')) {
+    return false;
+  }
+  return candidateZone === undefined || error.context.binding.endsWith(`@${candidateZone}`);
+};
+
 export const shouldDeferFreeOperationZoneFilterFailure = (
   surface: FreeOperationZoneFilterSurface,
   error: unknown,
 ): boolean =>
-  surface === 'legalChoices' &&
   (
-    shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.LEGAL_CHOICES_FREE_OPERATION_ZONE_FILTER_PROBE) ||
-    (
-      isEvalErrorCode(error, 'MISSING_VAR') &&
-      (
-        typeof error.context?.binding === 'string' ||
-        (
-          typeof error.context?.query === 'object' &&
-          error.context?.query !== null &&
-          'query' in error.context.query &&
-          (error.context.query as { readonly query?: unknown }).query === 'binding'
-        )
-      )
-    )
+    surface === 'legalChoices' &&
+    shouldDeferMissingBinding(error, MISSING_BINDING_POLICY_CONTEXTS.LEGAL_CHOICES_FREE_OPERATION_ZONE_FILTER_PROBE)
+  ) ||
+  (
+    (surface === 'legalChoices' || surface === 'turnFlowEligibility') &&
+    isPerZoneInterpolatedBindingMissingVar(error)
   );

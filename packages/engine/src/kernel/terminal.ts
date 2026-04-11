@@ -145,8 +145,12 @@ function evaluateVictory(
   }
 
   const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources);
+  const currentPhase = String(state.currentPhase);
   const duringCheckpoint = checkpoints.find(
-    (checkpoint) => checkpoint.timing === 'duringCoup' && evaluateConditionWithCache(checkpoint.when, baseCtx),
+    (checkpoint) =>
+      checkpoint.timing === 'duringCoup'
+      && (checkpoint.phases === undefined || checkpoint.phases.includes(currentPhase))
+      && evaluateConditionWithCache(checkpoint.when, baseCtx),
   );
   if (duringCheckpoint !== undefined) {
     const hasMargins = (def.terminal.margins?.length ?? 0) > 0;
@@ -174,7 +178,10 @@ function evaluateVictory(
   }
 
   const finalCheckpoint = checkpoints.find(
-    (checkpoint) => checkpoint.timing === 'finalCoup' && evaluateConditionWithCache(checkpoint.when, baseCtx),
+    (checkpoint) =>
+      checkpoint.timing === 'finalCoup'
+      && (checkpoint.phases === undefined || checkpoint.phases.includes(currentPhase))
+      && evaluateConditionWithCache(checkpoint.when, baseCtx),
   );
   if (finalCheckpoint === undefined) {
     return null;

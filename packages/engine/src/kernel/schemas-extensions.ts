@@ -503,6 +503,7 @@ export const VictoryCheckpointSchema = z
     id: StringSchema.min(1),
     seat: StringSchema.min(1),
     timing: VictoryTimingSchema,
+    phases: z.array(StringSchema.min(1)).optional(),
     when: ConditionASTSchema,
   })
   .strict();

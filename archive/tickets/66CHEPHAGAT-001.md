@@ -1,6 +1,6 @@
 # 66CHEPHAGAT-001: Add `phases` field to checkpoint type, schema, and evaluateVictory gating
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel types, Zod schema, terminal evaluation
@@ -136,3 +136,19 @@ Tests should use minimal synthetic GameDef fixtures (not production FITL data) t
 2. `pnpm turbo test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Added optional `phases` to `VictoryCheckpointDef`, `VictoryCheckpointSchema`, and regenerated `packages/engine/schemas/GameDef.schema.json` so the runtime/schema surface stays atomic.
+- Updated `packages/engine/src/kernel/terminal.ts` to gate both `duringCoup` and `finalCoup` checkpoint evaluation on `state.currentPhase` when `phases` is present; omitting `phases` preserves the pre-change behavior.
+- Added `packages/engine/test/unit/terminal-phase-gating.test.ts` covering skipped gated checkpoints, allowed gated checkpoints, ungated backward compatibility, mixed gated/ungated ordering, final-coup gating, and schema strictness for the new field.
+- Kept the boundary aligned to this ticket only: no FITL data changes, compiler validation, or `phase-advance.ts` changes landed here because those remain explicitly deferred to sibling work.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/terminal-phase-gating.test.js`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm turbo test`
+- `pnpm turbo typecheck`
+- `pnpm turbo lint`

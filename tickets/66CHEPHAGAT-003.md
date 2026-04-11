@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — game data and tests only
-**Deps**: `tickets/66CHEPHAGAT-001.md`
+**Deps**: `archive/tickets/66CHEPHAGAT-001.md`
 
 ## Problem
 

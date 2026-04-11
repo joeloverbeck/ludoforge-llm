@@ -22,8 +22,10 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
   - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
   - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
   - `authoritative boundary`: the final owned implementation slice after reassessment
+  - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`
   - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
   - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
+  - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 - Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 - Do not create scratch files solely to satisfy this requirement.
 
@@ -41,6 +43,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
+   - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
 
 #### Session and Series Context
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — GameDef validator
-**Deps**: `tickets/66CHEPHAGAT-001.md`
+**Deps**: `archive/tickets/66CHEPHAGAT-001.md`
 
 ## Problem
 

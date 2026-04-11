@@ -4737,6 +4737,13 @@
                   }
                 ]
               },
+              "phases": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
               "when": {
                 "$ref": "#/definitions/anon_15cb1372"
               }

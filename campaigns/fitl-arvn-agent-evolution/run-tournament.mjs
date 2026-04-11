@@ -141,6 +141,73 @@ function summarizeAllMoves(trace, def) {
   return bySeat;
 }
 
+function classifyDecision(agentDecision) {
+  if (!agentDecision?.candidates?.length) {
+    return null;
+  }
+
+  const unpruned = agentDecision.candidates.filter((candidate) => !candidate.pruned);
+  if (unpruned.length === 0) {
+    return null;
+  }
+
+  const actionId = String(unpruned[0].actionId ?? '');
+  const isStrategic = !actionId.toLowerCase().includes('coup');
+  const gap = unpruned.length >= 2
+    ? Number(unpruned[0].score ?? 0) - Number(unpruned[1].score ?? 0)
+    : 0;
+  const tied = unpruned.length >= 2 && gap < 0.001;
+
+  return { isStrategic, gap, tied };
+}
+
+function createDecisionStats() {
+  return {
+    strategicCount: 0,
+    tacticalCount: 0,
+    strategicGapSum: 0,
+    tacticalGapSum: 0,
+    tiedCount: 0,
+    totalDecisions: 0,
+  };
+}
+
+function accumulateDecisionStats(stats, agentDecision) {
+  const decision = classifyDecision(agentDecision);
+  if (!decision) {
+    return;
+  }
+
+  stats.totalDecisions++;
+  if (decision.tied) {
+    stats.tiedCount++;
+  }
+
+  if (decision.isStrategic) {
+    stats.strategicCount++;
+    stats.strategicGapSum += decision.gap;
+    return;
+  }
+
+  stats.tacticalCount++;
+  stats.tacticalGapSum += decision.gap;
+}
+
+function buildDecisionBreakdown(stats, roundValue = (value) => value) {
+  return {
+    strategic: roundValue(stats.strategicCount),
+    tactical: roundValue(stats.tacticalCount),
+    strategicAvgGap: stats.strategicCount > 0
+      ? roundValue(stats.strategicGapSum / stats.strategicCount)
+      : 0,
+    tacticalAvgGap: stats.tacticalCount > 0
+      ? roundValue(stats.tacticalGapSum / stats.tacticalCount)
+      : 0,
+    tiedDecisions: roundValue(stats.tiedCount),
+    totalDecisions: roundValue(stats.totalDecisions),
+  };
+}
+
 // ---------------------------------------------------------------------------
 // Step 1: Compile the FITL spec
 // ---------------------------------------------------------------------------
@@ -211,6 +278,8 @@ let errors = 0;
 let totalMargin = 0;
 let traceSaved = false;
 const traceDir = join(HERE, 'traces');
+const aggregateDecisionStats = createDecisionStats();
+const round4 = (v) => Math.round(v * 10000) / 10000;
 
 for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
   const seed = 1000 + seedOffset;
@@ -253,6 +322,26 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
     }
     totalMargin += evolvedMargin;
 
+    const evolvedMoves = trace.moves
+      .filter((m) => Number(m.player) === evolvedPlayerIndex)
+      .map((m) => ({
+        move: m.move,
+        legalMoveCount: m.legalMoveCount,
+        agentDecision: m.agentDecision ?? null,
+      }));
+
+    const seedDecisionStats = createDecisionStats();
+    for (const evolvedMove of evolvedMoves) {
+      accumulateDecisionStats(seedDecisionStats, evolvedMove.agentDecision);
+    }
+
+    aggregateDecisionStats.strategicCount += seedDecisionStats.strategicCount;
+    aggregateDecisionStats.tacticalCount += seedDecisionStats.tacticalCount;
+    aggregateDecisionStats.strategicGapSum += seedDecisionStats.strategicGapSum;
+    aggregateDecisionStats.tacticalGapSum += seedDecisionStats.tacticalGapSum;
+    aggregateDecisionStats.tiedCount += seedDecisionStats.tiedCount;
+    aggregateDecisionStats.totalDecisions += seedDecisionStats.totalDecisions;
+
     // Compute all-seat margins for diagnostic output
     const allMargins = computeAllSeatMargins(def, runtime, trace.finalState);
     const marginStr = Object.entries(allMargins).map(([s, m]) => `${s}=${m}`).join(', ');
@@ -266,14 +355,6 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
       (TRACE_SEED !== null && seed === Number(TRACE_SEED) && !traceSaved);
 
     if (shouldSaveTrace) {
-      const evolvedMoves = trace.moves
-        .filter((m) => Number(m.player) === evolvedPlayerIndex)
-        .map((m) => ({
-          move: m.move,
-          legalMoveCount: m.legalMoveCount,
-          agentDecision: m.agentDecision ?? null,
-        }));
-
       // Enriched: all-seat margins at game end
       const allSeatMargins = computeAllSeatMargins(def, runtime, trace.finalState);
 
@@ -306,6 +387,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         allSeatMargins,
         movesBySeat,
         evolvedMoveCount: evolvedMoves.length,
+        decisionBreakdown: buildDecisionBreakdown(seedDecisionStats, round4),
         evolvedMoves,
         opponentMoveCount: opponentMoves.length,
         opponentMoves,
@@ -335,8 +417,16 @@ const gamesWithMargin = completed;
 const avgMargin = gamesWithMargin > 0 ? totalMargin / gamesWithMargin : 0;
 const winRate = completed > 0 ? wins / completed : 0;
 const compositeScore = avgMargin + 10 * winRate;
-
-const round4 = (v) => Math.round(v * 10000) / 10000;
+const averagedDecisionStats = completed > 0
+  ? {
+      strategicCount: aggregateDecisionStats.strategicCount / completed,
+      tacticalCount: aggregateDecisionStats.tacticalCount / completed,
+      strategicGapSum: aggregateDecisionStats.strategicGapSum / completed,
+      tacticalGapSum: aggregateDecisionStats.tacticalGapSum / completed,
+      tiedCount: aggregateDecisionStats.tiedCount / completed,
+      totalDecisions: aggregateDecisionStats.totalDecisions / completed,
+    }
+  : createDecisionStats();
 
 const result = {
   compositeScore: round4(compositeScore),
@@ -350,6 +440,7 @@ const result = {
   playerCount: PLAYER_COUNT,
   evolvedSeat: EVOLVED_SEAT,
   maxTurns: MAX_TURNS,
+  decisionBreakdown: buildDecisionBreakdown(averagedDecisionStats, round4),
 };
 
 // Output JSON as the last line of stdout (harness parses this)

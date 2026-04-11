@@ -17,6 +17,12 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 - In Codex sessions, use concise `commentary` updates as the default surface unless the ticket requires a durable repo artifact.
 - Capture reassessment outcomes affecting correctness: discrepancy lists, evidence classification, authoritative boundary restatements, verification-owned scope corrections.
 - In Codex sessions, record at minimum: draft/untracked status when relevant, the discrepancy class (`blocking` vs `nonblocking`), the final authoritative boundary, and any verification command substitutions or semantic expectation corrections.
+- A minimal Codex working-notes checklist is:
+  - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
+  - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
+  - `authoritative boundary`: the final owned implementation slice after reassessment
+  - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
+  - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - Do not create scratch files solely to satisfy this requirement.
 
 ## Workflow
@@ -31,6 +37,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
+   - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
 
 #### Session and Series Context
@@ -48,8 +55,9 @@ When the active ticket or referenced artifacts are untracked drafts:
 2. Treat the active draft ticket as the session contract once reassessment is complete.
 3. Classify stale draft wording separately from true boundary errors in working notes and final closeout.
 4. Prefer correcting the active draft ticket over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
-5. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
-6. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
+5. When live evidence proves a draft example snippet, helper sketch, or command block is semantically wrong but the owned boundary is still correct, update the active draft ticket so future turns do not inherit the stale example.
+6. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
+7. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
 
 ### Phase 2: Reassess Assumptions
 
@@ -96,6 +104,9 @@ Every stop condition below requires resolution before implementation proceeds.
 ## Implementation Rules
 
 Load `references/implementation-general.md`.
+
+- If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
+- If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 

@@ -45,7 +45,7 @@ If the spec was reassessed in this same session (e.g., via `/reassess-spec`), th
 - **Validate** that file paths mentioned in the spec exist in the codebase (use Grep, Glob, or bash equivalents as available).
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
 - **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
-- For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If the Dependencies field indicates no dependencies (e.g., `None`, `None (...)`, or equivalent), skip this sub-step
+- **Dependency path resolution** (this sub-step only): For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If the Dependencies field indicates no dependencies (e.g., `None`, `None (...)`, or equivalent), skip this sub-step — the other validation sub-steps (file paths, types, namespace collision) still apply
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 
@@ -57,7 +57,8 @@ Analyze the spec and identify discrete work units. If the spec includes a Ticket
 - Map **dependencies** between tickets (which must be done before which). Distinguish hard dependencies (ticket B cannot be implemented without ticket A's code) from value dependencies (ticket A increases the benefit of ticket B but B is independently implementable). Only hard dependencies go in the `Deps` field. Note value dependencies in the Step 4 parallelism notes if relevant.
 - Determine **priority ordering** (what to implement first)
 - Ensure **every spec deliverable is covered** — no silent skipping. If a deliverable seems wrong or unnecessary, flag it to the user using the 1-3-1 rule instead of omitting it
-- Consider natural boundaries: type changes, new modules, test suites, integration points
+- Consider natural boundaries: type changes, new modules, test suites, integration points. For non-engine work (campaign scripts, tooling, data files), natural boundaries include: per-file, per-feature-within-file, or per-target-system (e.g., one runner at a time)
+- **Port-ticket pattern**: If the spec targets N structurally-similar files with identical changes (e.g., ARVN + VC tournament runners), consider an "implement + port" pattern: one full-detail ticket for the first implementation, then lightweight "port" tickets for siblings that reference the source ticket and list only the target file paths and any differences (seat names, config values, etc.)
 - **Spec-level dependencies**: Dependencies from the spec's Dependencies field go in the Deps field of the earliest ticket(s) that directly implement the dependency's deliverables. Downstream tickets depend transitively through the ticket chain — do not duplicate spec dependencies in every ticket
 - **Gate tickets**: For specs with profiling gates or conditional phases, create explicit gate tickets. Downstream tickets that depend on the gate's outcome use a plain backtick-quoted path in their Deps field (e.g., `` `tickets/FOO-003.md` ``) — do NOT append annotations like `(gate — close if profiling fails)` inside Deps, as `check:ticket-deps` only accepts pure file paths. Instead, note the gate condition in the downstream ticket's Problem or What to Change section: "**Gate condition**: Close this ticket if `tickets/FOO-003.md` profiling shows no measurable improvement." In the Step 7 dependency graph, annotate gate edges to distinguish them from hard dependencies (e.g., `003 (gate) → 004`)
 
@@ -100,7 +101,7 @@ Every ticket MUST include:
   - **Tests That Must Pass**: Specific behavior tests
   - **Invariants**: Must-always-hold architectural and data contract invariants
 - **Test Plan**:
-  - **New/Modified Tests**: Paths with rationale
+  - **New/Modified Tests**: Paths with rationale. For campaign scripts or tooling without a formal test harness, manual verification commands with expected output are acceptable
   - **Commands**: Targeted test commands and full suite verification
 
 ### Step 6: Validate Ticket Dependencies

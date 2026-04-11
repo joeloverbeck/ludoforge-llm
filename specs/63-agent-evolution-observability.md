@@ -8,19 +8,16 @@
 
 ## Overview
 
-The agent evolution harness and improve-loop OBSERVE protocol lack the
-diagnostic depth needed to identify which decisions are bottlenecks. The
-ARVN campaign ran 24 experiments tuning 4-6 strategic decisions while
-58-64 redeployment decisions were perfectly tied and resolved alphabetically
---- a fact invisible to the loop because the harness only reports final-state
-metrics.
+The agent evolution harness lacks the diagnostic depth needed to identify
+which decisions are bottlenecks. The ARVN campaign ran 24 experiments tuning
+4-6 strategic decisions while 58-64 redeployment decisions were perfectly
+tied and resolved alphabetically --- a fact invisible to the loop because
+the harness only reports final-state metrics.
 
-This spec adds three observability layers:
+This spec adds two observability layers:
 
 1. **Harness decision-type breakdown** in the tournament runner JSON output.
 2. **Per-decision margin trajectory** in the trace output.
-3. **Improve-loop OBSERVE protocol amendment** to mandate per-decision gap
-   analysis during the first experiment of each tier.
 
 ## Problem Statement
 
@@ -30,9 +27,9 @@ The tournament runner (`run-tournament.mjs`) outputs a single JSON line:
 ```
 
 This tells the loop WHAT the outcome is, not WHY. The per-seed trace files
-contain per-decision candidate scores, gaps, and action types --- but the
-loop's OBSERVE protocol never reads them, and nothing surfaces the critical
-signal: "58 out of 69 decisions are perfectly tied."
+contain per-decision candidate scores, gaps, and action types --- but
+nothing surfaces the critical signal: "58 out of 69 decisions are perfectly
+tied."
 
 ### Specific gaps
 
@@ -55,6 +52,12 @@ signal: "58 out of 69 decisions are perfectly tied."
 
 ### A. Harness enrichment (run-tournament.mjs)
 
+**Scope**: The two FITL tournament runners
+(`campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` and
+`campaigns/fitl-vc-agent-evolution/run-tournament.mjs`). The Texas
+Hold'em runner has a different output format and no `coup*`-prefixed
+actions, so it is out of scope.
+
 Add to the per-seed output and the summary JSON:
 
 ```json
@@ -74,11 +77,18 @@ Add to the per-seed output and the summary JSON:
 Classification rule: a decision is "strategic" if its top unpruned
 candidate's actionId does NOT contain "coup" (case-insensitive). All Coup
 sub-phase decisions (pacify, redeploy, agitate, victory check, resources)
-are "tactical." This is heuristic but game-agnostic --- it classifies by
-the action naming convention, not by hardcoded game knowledge.
+are "tactical." This is a convention-based heuristic, currently
+FITL-specific --- games that adopt the `coup*` action naming convention
+get the same treatment; games without it would classify all decisions as
+strategic.
 
 Gap = score of 1st unpruned candidate - score of 2nd unpruned candidate.
 Tied = gap < 0.001 (floating-point epsilon).
+
+**Note**: Gap computation requires the `candidates` array in the
+agentDecision trace, which is only available at `traceLevel: 'verbose'`.
+The FITL tournament runners currently use verbose (`run-tournament.mjs`
+line 220), so this prerequisite is met.
 
 ### B. Trace margin trajectory
 
@@ -99,24 +109,19 @@ Add `marginDelta` to each evolved move's trace output:
 game end if this is the last). This requires tracking state across the
 move loop in run-tournament.mjs.
 
-### C. Improve-loop OBSERVE protocol amendment
-
-Add to the campaign program.md template and the improve-loop skill:
-
-> **First OBSERVE at each tier**: Read one per-seed trace file (the
-> most promising losing seed). Parse the decision-type breakdown and
-> gap distribution. If >50% of decisions are tied (gap < 0.001),
-> the bottleneck is tactical scoring, not strategic scoring. Adjust
-> hypothesis generation accordingly.
-
-This is a process requirement, not an engine change.
+**Prerequisite**: Margin trajectory depends on the agent profile defining
+`selfMargin` as a state feature. ARVN's profile includes it
+(`data/games/fire-in-the-lake/92-agents.md`, line 63). Profiles without
+`selfMargin` will have `null` margin fields in the trace.
 
 ## FOUNDATIONS Alignment
 
 - **#1 Engine Agnosticism**: The strategic/tactical classification uses
-  action naming conventions, not game-specific logic. Any game whose Coup
-  or phase actions follow the `coup*` prefix convention gets the same
-  treatment.
+  a convention-based heuristic (the `coup*` action prefix), not hardcoded
+  game logic. This is currently FITL-specific --- other games would need
+  to adopt the naming convention, or all decisions would be classified as
+  strategic. The harness enrichment lives in campaign-specific tournament
+  runners, not in the engine.
 - **#9 Replay, Telemetry, Auditability**: This spec directly extends the
   event stream with decision-level diagnostics.
 - **#8 Determinism**: The enriched output is derived deterministically
@@ -124,11 +129,11 @@ This is a process requirement, not an engine change.
 
 ## Acceptance Criteria
 
-1. `run-tournament.mjs` JSON output includes `decisionBreakdown` with
-   strategic/tactical counts, average gaps, and tied-decision count.
+1. FITL tournament runners (`campaigns/fitl-arvn-agent-evolution/run-tournament.mjs`
+   and `campaigns/fitl-vc-agent-evolution/run-tournament.mjs`) JSON output
+   includes `decisionBreakdown` with strategic/tactical counts, average
+   gaps, and tied-decision count.
 2. Per-seed trace files include `marginBefore`, `marginAfter`,
    `marginDelta` for each evolved move.
-3. The improve-loop skill's OBSERVE phase references per-decision gap
-   analysis for the first experiment at each tier.
-4. All existing harness consumers (harness.sh parsing, results.tsv)
+3. All existing harness consumers (harness.sh parsing, results.tsv)
    continue to work unchanged (new fields are additive).

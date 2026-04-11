@@ -19,7 +19,7 @@ The argument is the skill directory path. The framework automatically resolves `
 
 ## Checklist
 
-1. **Read the target skill** — The skill content may already be loaded by the command framework (visible above the `ARGUMENTS:` line). If not, read the SKILL.md file at the provided path. Parse its name, description, and full content. If the file does not exist or is not a skill file, stop and report the error.
+1. **Read the target skill** — The skill content may already be loaded by the command framework (visible above the `ARGUMENTS:` line). If not, read the SKILL.md file at the provided path. Parse its name, description, and full content. If the file does not exist or is not a skill file, stop and report the error. If the skill directory contains a `references/` subdirectory, read all `.md` files in it — these contain the skill's extracted instructions and are the primary audit surface. The SKILL.md may be a thin entry point that delegates to references.
 2. **Read alignment documents** — Read `docs/FOUNDATIONS.md` — skip if its contents are already in conversation context (e.g., read directly or returned by a sub-agent earlier in this session). Do not rely on memory or training knowledge as a substitute. `CLAUDE.md` is always available via system context injection and does not need explicit reading.
 3. **Session reflection** — Review the current conversation context to identify:
    - Moments where the skill's instructions were unclear or ambiguous
@@ -29,7 +29,7 @@ The argument is the skill directory path. The framework automatically resolves `
    - Outcomes that diverged from what the skill intended
    - Steps that were not exercised this session (mark as "not exercised" — do not speculate about issues)
 
-   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on: (a) instructions that could be read ambiguously, (b) missing guidance for edge cases visible in the skill text, (c) cross-skill consistency with workflow partners.
+   When auditing a skill exercised earlier in this session, session evidence is direct (execution gaps, workarounds, improvisation). When auditing a skill being used for the first time in this session (including self-audit), evidence is observational — focus on: (a) instructions that could be read ambiguously, (b) missing guidance for edge cases visible in the skill text, (c) cross-skill consistency with workflow partners. When identifying findings, note whether the gap is an over-constrained assumption (skill says X but should allow Y) or missing coverage (skill says nothing about Z) — this distinction guides whether the fix is relaxing a constraint vs adding new guidance.
 4. **Cross-check alignment** — For each finding from step 3, check whether the skill contradicts or fails to implement:
    - Principles from `docs/FOUNDATIONS.md` (reference by foundation number, e.g., "Foundation 7: Immutability")
    - Conventions from `CLAUDE.md` (reference by section name)
@@ -52,7 +52,8 @@ Output this structure to the conversation (do not write to a file):
 **Skill path**: <path>
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
-**Session evidence**: <rich (skill executed extensively) / moderate (skill used briefly) / thin (self-audit or first-time observation)>
+**Session evidence**: <rich / moderate / thin>
+(rich = skill executed 2+ times or across multiple scenarios; moderate = single full execution or partial use; thin = self-audit or first-time observation only)
 
 ## Alignment Check
 
@@ -112,11 +113,16 @@ If analysis during classification disproves an initial impression, withdraw the 
 - **Follow-up implementation** — After the report is presented, the user may request implementation of specific suggestions. At that point, edit the target skill file directly — the "report only" guardrail applies only to the audit phase, not to user-directed follow-up.
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
-  3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location and topic may also be combined into a single edit even if they were classified separately (e.g., an Issue fix and a Feature addition to the same section).
-  4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next.
-  5. After edits to each file, re-read the edited sections plus 10 lines of surrounding context. For non-adjacent edits within a single file, batched verification (re-read once after all edits) is acceptable. For adjacent or overlapping edits, verify after each one to catch offset drift. A full-file re-read is required when edits touch adjacent sections, numbered lists, or shared structures, or span more than ~50 lines. Heuristic: when edits touch 4+ distinct locations in a file under 300 lines, a single full-file re-read after all edits is more efficient than per-edit verification.
+  3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location may be combined into a single edit even if classified separately — especially when they form a coherent section or paragraph together (e.g., an Issue fix and a Feature addition to the same section). Use judgment: if the combined edit reads as a unified addition, combine; if the findings are logically independent, keep separate. When findings target adjacent but independent bullets in a list, prefer separate Edit calls in top-to-bottom order — this keeps each finding traceable and avoids offset drift from combining unrelated content.
+  4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next. After completing all files, verify cross-file references are consistent (e.g., step numbers referenced in SKILL.md match headings in reference files).
+  5. After edits, verify by re-reading. Use this decision tree:
+     - **Adjacent/overlapping edits** → verify after each edit (catch offset drift)
+     - **4+ edits touching adjacent sections, numbered lists, or shared structures** → single full-file re-read after all edits
+     - **4+ non-adjacent, structurally independent edits** → targeted spot-checks (re-read edited section + 10 lines context)
+     - **<4 non-adjacent edits** → batched re-read after all edits
+     - **Edits spanning >50 lines** → full-file re-read
   6. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   7. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   8. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.
   9. The user may run a subsequent `/skill-audit` on the same skill after edits — this is a normal audit-edit-reaudit workflow.
-- **Cross-skill consistency** — If the target skill is part of a multi-skill workflow, scan sibling skills for inconsistent file references, terminology, or shared constants. Report cross-skill inconsistencies as Issues. Sibling skills are those in the same explicit workflow — triple patterns (e.g., `*-evaluate`, `*-plan`, `*-implement`), complementary pairs (e.g., audit/consolidate), or any skills that explicitly name each other as workflow partners. Standalone skills with no workflow partners do not require cross-skill checks — note "standalone skill, no cross-skill check needed" and move on. When auditing skill-audit itself, the cross-skill check applies to skill-consolidate (its complementary pair). Self-referential audit is valid but findings should focus on the skill's instructions, not its meta-properties.
+- **Cross-skill consistency** — If the target skill is part of a multi-skill workflow, scan sibling skills for inconsistent file references, terminology, or shared constants. Report cross-skill inconsistencies as Issues. Sibling skills are those in the same explicit workflow — triple patterns (e.g., `*-evaluate`, `*-plan`, `*-implement`), complementary pairs (e.g., audit/consolidate), or any skills that explicitly name each other as workflow partners. Standalone skills with no workflow partners do not require cross-skill checks — note "standalone skill, no cross-skill check needed" and move on. When auditing skill-audit itself, the cross-skill check applies to skill-consolidate (its complementary pair). For the audit/consolidate pair, verify that skill-consolidate's description of its relationship to skill-audit (in its introduction) accurately reflects skill-audit's current behavior and scope. Self-referential audit is valid but findings should focus on the skill's instructions, not its meta-properties. Skills with `references/` subdirectories were likely created by `skill-extract-references` — the reference files are the primary instruction surface, not SKILL.md.

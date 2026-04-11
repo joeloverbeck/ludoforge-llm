@@ -1,10 +1,17 @@
+import { computeDerivedMetricValue } from '../kernel/derived-values.js';
+import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
+import { resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
 import { buildAdjacencyGraph } from '../kernel/spatial.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { createEvalContext, createEvalRuntimeResources } from '../kernel/eval-context.js';
 import { evalValue } from '../kernel/eval-value.js';
+import type { PlayerId } from '../kernel/branded.js';
 import type {
+  AgentParameterValue,
+  CompiledCardMetadataEntry,
   SurfaceVisibilityClass,
   CompiledSurfaceRef,
+  CompiledSurfaceRefBase,
   CompiledSurfaceCatalog,
   SurfaceSelector,
   CompiledSurfaceVisibility,
@@ -13,15 +20,101 @@ import type {
   GameState,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { extractAnnotationValue } from './policy-annotation-resolve.js';
 
 export interface PolicyVictorySurface {
   readonly marginBySeat: ReadonlyMap<string, number>;
   readonly rankBySeat: ReadonlyMap<string, number>;
 }
 
+export type PolicyValue = AgentParameterValue | undefined;
+
+export interface SurfaceResolutionContext {
+  readonly def: GameDef;
+  readonly seatResolutionIndex: SeatResolutionIndex;
+  readonly resolveDerivedMetric?: (state: GameState, metricId: string) => number;
+  readonly resolveVictorySurface: (state: GameState) => PolicyVictorySurface;
+}
+
 export type ResolvedPolicySurfaceRef = CompiledSurfaceRef & {
   readonly visibility: CompiledSurfaceVisibility;
 };
+
+export function resolveSurfaceRefValue(
+  state: GameState,
+  ref: CompiledSurfaceRefBase,
+  seatId: string,
+  playerId: PlayerId,
+  context: SurfaceResolutionContext,
+  seatContext?: string,
+): PolicyValue {
+  if (ref.family === 'derivedMetric') {
+    if (context.resolveDerivedMetric !== undefined) {
+      return context.resolveDerivedMetric(state, ref.id);
+    }
+    return computeDerivedMetricValue(context.def, state, ref.id);
+  }
+  if (ref.family === 'globalVar') {
+    const value = state.globalVars[ref.id];
+    return typeof value === 'number' ? value : undefined;
+  }
+  if (ref.family === 'globalMarker') {
+    const markerState = state.globalMarkers?.[ref.id];
+    if (markerState !== undefined) {
+      return markerState;
+    }
+    const lattice = context.def.globalMarkerLattices?.find((entry) => entry.id === ref.id);
+    return lattice?.defaultState;
+  }
+  if (ref.family === 'perPlayerVar') {
+    const targetPlayerIndex = resolvePerPlayerTargetIndex(
+      context.def,
+      state,
+      ref,
+      playerId,
+      seatId,
+      context.seatResolutionIndex,
+      seatContext,
+    );
+    return resolveSeatVarRef(state, ref, targetPlayerIndex);
+  }
+  if (ref.family === 'activeCardAnnotation') {
+    const current = resolveCurrentEventCardState(context.def, state);
+    if (current === null) {
+      return undefined;
+    }
+    const annotation = context.def.cardAnnotationIndex?.entries[current.card.id];
+    if (annotation === undefined) {
+      return undefined;
+    }
+    const activeSeatId = context.def.seats?.[state.activePlayer]?.id;
+    return extractAnnotationValue(annotation, ref, seatId, activeSeatId);
+  }
+  if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
+    const activeCardEntry = resolveActiveCardEntry(context.def, state);
+    if (activeCardEntry === undefined) {
+      return undefined;
+    }
+    return resolveActiveCardFamilyValue(activeCardEntry, ref.family, ref.id);
+  }
+  if (ref.family !== 'victoryCurrentMargin' && ref.family !== 'victoryCurrentRank') {
+    return undefined;
+  }
+  if ((context.def.terminal.margins ?? []).length === 0) {
+    throw new Error('victory.currentMargin/currentRank refs require def.terminal.margins to be defined.');
+  }
+  if (ref.selector?.kind !== 'role') {
+    return undefined;
+  }
+  const resolvedSeatId = resolvePolicyRoleSelector(context.def, state, ref.selector, seatId, seatContext);
+  if (resolvedSeatId === undefined) {
+    return undefined;
+  }
+  const victorySurface = context.resolveVictorySurface(state);
+  return ref.family === 'victoryCurrentMargin'
+    ? victorySurface.marginBySeat.get(resolvedSeatId)
+    : victorySurface.rankBySeat.get(resolvedSeatId);
+}
 
 export function parseAuthoredPolicySurfaceRef(
   catalog: CompiledSurfaceCatalog,
@@ -402,4 +495,63 @@ export function buildPolicyVictorySurface(
     rankBySeat.set(row.seat, index + 1);
   });
   return { marginBySeat, rankBySeat };
+}
+
+function resolvePerPlayerTargetIndex(
+  def: GameDef,
+  state: GameState,
+  ref: CompiledSurfaceRefBase,
+  actingPlayerId: PlayerId,
+  seatId: string,
+  seatResolutionIndex: SeatResolutionIndex,
+  seatContext?: string,
+): number | undefined {
+  if (ref.family !== 'perPlayerVar' || ref.selector === undefined) {
+    return undefined;
+  }
+  if (ref.selector.kind === 'player') {
+    return ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer);
+  }
+  const resolvedSeatId = resolvePolicyRoleSelector(def, state, ref.selector, seatId, seatContext);
+  return resolvedSeatId === undefined
+    ? undefined
+    : resolvePlayerIndexForSeatValue(resolvedSeatId, seatResolutionIndex) ?? undefined;
+}
+
+function resolveSeatVarRef(
+  state: GameState,
+  ref: CompiledSurfaceRefBase,
+  playerIndex: number | undefined,
+): number | undefined {
+  if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {
+    return undefined;
+  }
+  const value = state.perPlayerVars[playerIndex]?.[ref.id];
+  return typeof value === 'number' ? value : undefined;
+}
+
+function resolveActiveCardEntry(
+  def: GameDef,
+  state: GameState,
+): CompiledCardMetadataEntry | undefined {
+  const current = resolveCurrentEventCardState(def, state);
+  if (current === null) {
+    return undefined;
+  }
+  return def.cardMetadataIndex?.entries[current.card.id];
+}
+
+function resolveActiveCardFamilyValue(
+  entry: CompiledCardMetadataEntry,
+  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
+  id: string,
+): PolicyValue {
+  switch (family) {
+    case 'activeCardIdentity':
+      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
+    case 'activeCardTag':
+      return entry.tags.includes(id);
+    case 'activeCardMetadata':
+      return entry.metadata[id];
+  }
 }

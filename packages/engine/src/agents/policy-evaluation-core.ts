@@ -27,7 +27,6 @@ import {
   createPolicyRuntimeProviders,
   type PolicyRuntimeCandidate,
   type PolicyRuntimeProviders,
-  type PolicyValue,
 } from './policy-runtime.js';
 import type {
   Phase1ActionPreviewEntry,
@@ -36,6 +35,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
+import type { PolicyValue } from './policy-surface.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -295,6 +295,15 @@ export class PolicyEvaluationContext {
 
   hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
     return this.runtimeProviders.previewSurface.hasPreviewData(candidate);
+  }
+
+  /** Ensure the candidate's previewOutcome is set from the preview surface.
+   *  Call after all feature evaluation to finalize outcome before trace generation.
+   *  Only syncs metadata for candidates that actually attempted preview ref resolution. */
+  finalizePreviewOutcome(candidate: PolicyEvaluationCandidate): void {
+    if (candidate.previewRefIds.size > 0) {
+      this.syncPreviewMetadata(candidate);
+    }
   }
 
   evaluateAggregate(aggregateId: string): PolicyValue {
@@ -901,27 +910,18 @@ export class PolicyEvaluationContext {
       candidate.previewRefIds.add(refId);
       const resolution = this.runtimeProviders.previewSurface.resolveSurface(candidate, ref, this.currentSeatContext);
       if (resolution.kind === 'unknown') {
-        candidate.previewOutcome = resolution.reason;
-        if (resolution.failureReason !== undefined) {
-          candidate.previewFailureReason = resolution.failureReason;
-        }
-        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
-        if (grantedOperation !== undefined) {
-          candidate.grantedOperation = grantedOperation;
-        }
+        // Track the individual ref failure but do NOT stamp previewOutcome here.
+        // Eagerly stamping the outcome on a per-ref failure contaminates the
+        // candidate's outcome when a coalesce wrapper successfully falls through
+        // to a non-preview branch — the outcome would be 'unresolved' even though
+        // the preview surface itself is 'ready'. syncPreviewMetadata (called by
+        // resolvePreviewStateFeatureRef or finalizePreviewOutcome) determines the
+        // canonical outcome from the preview surface.
         candidate.unknownPreviewRefs.set(refId, resolution.reason);
         return undefined;
       }
       if (candidate.previewOutcome === undefined) {
-        candidate.previewOutcome = this.runtimeProviders.previewSurface.getOutcome(candidate);
-        const previewFailureReason = this.runtimeProviders.previewSurface.getFailureReason(candidate);
-        if (previewFailureReason !== undefined) {
-          candidate.previewFailureReason = previewFailureReason;
-        }
-        const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
-        if (grantedOperation !== undefined) {
-          candidate.grantedOperation = grantedOperation;
-        }
+        this.syncPreviewMetadata(candidate);
       }
       return resolution.kind === 'value' ? resolution.value : undefined;
     }

@@ -674,15 +674,14 @@ function compileExpandedDoc(
   );
   const mergedDerivedMetrics = [...(sections.derivedMetrics ?? []), ...synthesized];
   sections.derivedMetrics = mergedDerivedMetrics.length > 0 ? mergedDerivedMetrics : null;
+  const mergedDerivedMetricIds = (sections.derivedMetrics ?? []).map((metric) => metric.id);
 
   // --- Observer validation + compilation (before agents, per Spec 102 Part F) ---
   const knownSurfaceIds: KnownSurfaceIds = {
     globalVars: new Set(mergedGlobalVars.map((v) => v.name)),
     globalMarkers: new Set((sections.globalMarkerLattices ?? []).map((m) => m.id)),
     perPlayerVars: new Set(perPlayerVars.value.map((v) => v.name)),
-    derivedMetrics: new Set(
-      (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
-    ),
+    derivedMetrics: new Set(mergedDerivedMetricIds),
   };
   const knownZoneInfo: KnownZoneInfo | undefined =
     effectiveZones !== null
@@ -702,7 +701,7 @@ function compileExpandedDoc(
       knownGlobalVarIds: mergedGlobalVars.map((v) => v.name),
       knownGlobalMarkerIds: (sections.globalMarkerLattices ?? []).map((m) => m.id),
       knownPerPlayerVarIds: perPlayerVars.value.map((v) => v.name),
-      knownDerivedMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((m) => m.id),
+      knownDerivedMetricIds: mergedDerivedMetricIds,
       ...(knownZoneInfo !== undefined ? { knownZoneBaseIds: [...knownZoneInfo.zoneBaseIds] } : {}),
     }),
   );
@@ -725,7 +724,7 @@ function compileExpandedDoc(
         ...(
           derivedMetricsCompilationFailed || victoryStandingsCompilationFailed
             ? {}
-            : { policyMetricIds: (resolvedTableRefDoc.derivedMetrics ?? []).map((metric) => metric.id) }
+            : { policyMetricIds: mergedDerivedMetricIds }
         ),
         ...{ hasVictoryMargins: (terminal?.margins?.length ?? 0) > 0 },
         ...(sections.observers === null ? {} : { observerCatalog: sections.observers }),

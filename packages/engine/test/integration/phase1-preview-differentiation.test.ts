@@ -32,11 +32,11 @@ interface Phase1Witness extends ArvnDecisionTrace {
   readonly projectedMarginsByAction: ReadonlyMap<string, number>;
 }
 
-const PHASE1_WITNESS_MAX_SEED = 12;
-const PHASE1_WITNESS_MAX_PLY = 18;
+const PHASE1_WITNESS_MAX_SEED = 20;
+const PHASE1_WITNESS_MAX_PLY = 30;
 const PERF_ITERATIONS = 12;
 
-function createFitlDef(enableArvnPhase1: boolean): GameDef {
+function createFitlDef(phase1CompletionsPerAction?: number): GameDef {
   const { compiled } = compileProductionSpec();
   const baseline = structuredClone(assertValidatedGameDef(compiled.gameDef));
   const agents = baseline.agents;
@@ -47,7 +47,7 @@ function createFitlDef(enableArvnPhase1: boolean): GameDef {
   const arvnProfile = agents!.profiles[arvnProfileId!];
   assert.notEqual(arvnProfile, undefined, `expected bound ARVN profile "${String(arvnProfileId)}" to exist`);
 
-  if (!enableArvnPhase1) {
+  if (phase1CompletionsPerAction === undefined) {
     return baseline;
   }
 
@@ -62,7 +62,7 @@ function createFitlDef(enableArvnPhase1: boolean): GameDef {
           preview: {
             ...arvnProfile!.preview,
             phase1: true,
-            phase1CompletionsPerAction: 1,
+            phase1CompletionsPerAction,
           },
         },
       },
@@ -92,7 +92,7 @@ function projectedSelfMarginContribution(candidate: VerbosePolicyCandidate): num
     assert.fail(`expected score contributions for ${candidate.stableMoveKey}`);
   }
   const contribution = scoreContributions.find((entry) =>
-    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+    /[Mm]argin/.test(entry.termId),
   );
   assert.notEqual(
     contribution,
@@ -108,7 +108,7 @@ function maybeProjectedSelfMarginContribution(candidate: VerbosePolicyCandidate)
     return null;
   }
   const contribution = scoreContributions.find((entry) =>
-    entry.termId === 'preferProjectedSelfMargin' || entry.termId === 'preferNormalizedMargin',
+    /[Mm]argin/.test(entry.termId),
   );
   return contribution?.contribution ?? null;
 }
@@ -212,6 +212,59 @@ function findArvnPhase1Witness(def: GameDef): Phase1Witness {
   );
 }
 
+function findComparableArvnPhase1Witness(
+  bestOfNDef: GameDef,
+  firstOfOneDef: GameDef,
+): Phase1Witness {
+  for (let seed = 1; seed <= PHASE1_WITNESS_MAX_SEED; seed += 1) {
+    for (let ply = 0; ply <= PHASE1_WITNESS_MAX_PLY; ply += 1) {
+      const trace = traceArvnDecisionAtPly(bestOfNDef, seed, ply);
+      const activeSeatId = bestOfNDef.seats?.[Number(trace.state.activePlayer)]?.id;
+      if (activeSeatId !== 'arvn') {
+        continue;
+      }
+
+      const candidates = requireVerboseCandidates(trace.result);
+      const { templateCandidates, projectedMarginsByAction } = templateCandidatesWithProjectedMargins(bestOfNDef, candidates);
+      const uniqueProjectedMargins = new Set(projectedMarginsByAction.values());
+      if (templateCandidates.length < 2 || projectedMarginsByAction.size < 2 || uniqueProjectedMargins.size < 2) {
+        continue;
+      }
+
+      const firstOfOneProjectedMargins = projectedMarginsAtDecision(firstOfOneDef, seed, ply);
+      const sameActionIds = [...projectedMarginsByAction.keys()].sort();
+      if (
+        sameActionIds.length !== firstOfOneProjectedMargins.size
+        || sameActionIds.some((actionId, index) => actionId !== [...firstOfOneProjectedMargins.keys()].sort()[index])
+      ) {
+        continue;
+      }
+
+      const isNeverWorse = [...projectedMarginsByAction.entries()].every(([actionId, margin]) => {
+        const firstOfOneMargin = firstOfOneProjectedMargins.get(actionId);
+        return firstOfOneMargin !== undefined && margin >= firstOfOneMargin;
+      });
+      if (!isNeverWorse) {
+        continue;
+      }
+
+      return {
+        seed,
+        ply,
+        state: trace.state,
+        legalMoves: trace.legalMoves,
+        result: trace.result,
+        templateCandidates,
+        projectedMarginsByAction,
+      };
+    }
+  }
+
+  assert.fail(
+    `Expected a bounded comparable ARVN witness within seeds 1-${PHASE1_WITNESS_MAX_SEED} and plies 0-${PHASE1_WITNESS_MAX_PLY}`,
+  );
+}
+
 function canonicalPhase1Snapshot(result: ReturnType<PolicyAgent['chooseMove']>) {
   const decision = requirePolicyDecision(result);
   const candidates = requireVerboseCandidates(result).map((candidate) => ({
@@ -226,6 +279,16 @@ function canonicalPhase1Snapshot(result: ReturnType<PolicyAgent['chooseMove']>) 
     phase1ActionRanking: decision.phase1ActionRanking,
     candidates,
   };
+}
+
+function projectedMarginsAtDecision(
+  def: GameDef,
+  seed: number,
+  ply: number,
+): ReadonlyMap<string, number> {
+  const trace = traceArvnDecisionAtPly(def, seed, ply);
+  const candidates = requireVerboseCandidates(trace.result);
+  return templateCandidatesWithProjectedMargins(def, candidates).projectedMarginsByAction;
 }
 
 function measureAverageDecisionTimeMs(
@@ -251,8 +314,8 @@ function measureAverageDecisionTimeMs(
 }
 
 describe('FITL ARVN phase-1 preview differentiation', () => {
-  it('finds a bounded production witness where phase-1 projected margin differentiates template operations', () => {
-    const def = createFitlDef(true);
+  it('finds a bounded production witness where best-of-3 phase-1 projected margin differentiates template operations', () => {
+    const def = createFitlDef(3);
     const witness = findArvnPhase1Witness(def);
     const decision = requirePolicyDecision(witness.result);
     const uniqueProjectedMargins = [...new Set(witness.projectedMarginsByAction.values())].sort((left, right) => left - right);
@@ -264,8 +327,31 @@ describe('FITL ARVN phase-1 preview differentiation', () => {
     assert.equal(decision.phase1ActionRanking !== undefined, true);
   });
 
+  it('keeps best-of-3 projected margins at least as strong as first-of-1 for the same witness decision', () => {
+    const bestOf3Def = createFitlDef(3);
+    const firstOf1Def = createFitlDef(1);
+    const witness = findComparableArvnPhase1Witness(bestOf3Def, firstOf1Def);
+
+    const firstOf1ProjectedMargins = projectedMarginsAtDecision(firstOf1Def, witness.seed, witness.ply);
+    const bestOf3ProjectedMargins = projectedMarginsAtDecision(bestOf3Def, witness.seed, witness.ply);
+
+    assert.deepEqual(
+      [...bestOf3ProjectedMargins.keys()].sort(),
+      [...firstOf1ProjectedMargins.keys()].sort(),
+    );
+    for (const [actionId, bestOf3Margin] of bestOf3ProjectedMargins.entries()) {
+      const firstOf1Margin = firstOf1ProjectedMargins.get(actionId);
+      assert.notEqual(firstOf1Margin, undefined, `expected first-of-1 projected margin for action "${actionId}"`);
+      assert.equal(
+        bestOf3Margin >= firstOf1Margin!,
+        true,
+        `expected best-of-3 projected margin for "${actionId}" to be >= first-of-1`,
+      );
+    }
+  });
+
   it('replays the discovered witness seed and ply deterministically', () => {
-    const def = createFitlDef(true);
+    const def = createFitlDef(3);
     const witness = findArvnPhase1Witness(def);
 
     const firstReplay = traceArvnDecisionAtPly(def, witness.seed, witness.ply);
@@ -275,8 +361,8 @@ describe('FITL ARVN phase-1 preview differentiation', () => {
   });
 
   it.skip('records informational phase-1 overhead for the discovered witness decision', () => {
-    const enabledDef = createFitlDef(true);
-    const disabledDef = createFitlDef(false);
+    const enabledDef = createFitlDef(3);
+    const disabledDef = createFitlDef();
     const witness = findArvnPhase1Witness(enabledDef);
 
     const baselineMs = measureAverageDecisionTimeMs(disabledDef, witness.state, witness.legalMoves);

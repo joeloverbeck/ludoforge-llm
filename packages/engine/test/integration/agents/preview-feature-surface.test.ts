@@ -227,3 +227,128 @@ describe('FITL preview.feature policy surface integration', () => {
     assert.ok(unresolved, 'expected at least one candidate with unresolved preview.feature metadata');
   });
 });
+
+function compileFitlCoalescePreviewOverlay(seat: 'arvn'): GameDef {
+  const { parsed } = compileProductionSpec();
+  const doc = structuredClone(parsed.doc);
+
+  assert.ok(doc.agents?.library, 'expected FITL production doc to author agents');
+  const baseProfileId = doc.agents?.bindings?.[seat];
+  assert.ok(baseProfileId, `expected authored binding for seat "${seat}"`);
+  const baseProfile = baseProfileId === undefined ? undefined : doc.agents?.profiles?.[baseProfileId];
+  assert.ok(baseProfile, `expected authored profile "${baseProfileId}"`);
+  if (doc.agents === undefined || doc.agents.library === undefined || baseProfileId === undefined || baseProfile === undefined) {
+    throw new Error('Expected FITL agent authoring');
+  }
+
+  const profileId = 'arvn-coalesce-preview-test';
+  const overlaidDoc = {
+    ...doc,
+    agents: {
+      ...doc.agents,
+      library: {
+        ...doc.agents.library,
+        candidateFeatures: {
+          ...doc.agents.library.candidateFeatures,
+          projectedSelfResources: {
+            type: 'number',
+            expr: {
+              coalesce: [
+                { ref: 'preview.var.player.self.resources' },
+                { ref: 'feature.selfResources' },
+              ],
+            },
+          },
+        },
+        considerations: {
+          ...doc.agents.library.considerations,
+          ...moveConsiderationDefs({
+            preferProjectedMarginWithResourceFallback: {
+              weight: { param: 'projectedMarginWeight' },
+              value: { ref: 'feature.projectedSelfMargin' },
+            },
+            preferProjectedResources: {
+              weight: 0.5,
+              value: { ref: 'feature.projectedSelfResources' },
+            },
+          }),
+        },
+      },
+      profiles: {
+        ...doc.agents.profiles,
+        [profileId]: {
+          ...baseProfile,
+          preview: {
+            mode: 'exactWorld',
+            phase1: true,
+          },
+          params: { ...(baseProfile.params ?? {}), projectedMarginWeight: 5 },
+          use: {
+            pruningRules: baseProfile.use?.pruningRules ?? [],
+            considerations: [
+              'preferProjectedMarginWithResourceFallback',
+              'preferProjectedResources',
+            ],
+            tieBreakers: ['stableMoveKey'],
+          },
+        },
+      },
+      bindings: {
+        ...doc.agents.bindings,
+        [seat]: profileId,
+      },
+    },
+  };
+
+  const validationDiagnostics = validateGameSpec(overlaidDoc);
+  assert.deepEqual(
+    validationDiagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+    [],
+    'FITL coalesce-preview overlay should validate cleanly',
+  );
+
+  const compiled = compileGameSpecToGameDef(overlaidDoc, { sourceMap: parsed.sourceMap });
+  assert.deepEqual(
+    compiled.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
+    [],
+    'FITL coalesce-preview overlay should compile cleanly',
+  );
+  assert.ok(compiled.gameDef, 'expected compiled FITL coalesce-preview overlay gameDef');
+
+  return assertValidatedGameDef(compiled.gameDef);
+}
+
+describe('coalesce-wrapped preview surface refs do not contaminate previewOutcome', () => {
+  it('preserves ready previewOutcome when a coalesced preview.var ref falls through to a state feature', () => {
+    const def = compileFitlCoalescePreviewOverlay('arvn');
+    const runtime = createGameDefRuntime(def);
+    const initial = initialState(def, 6, 4).state;
+    const openingChoice = new PolicyAgent().chooseMove({
+      def,
+      state: initial,
+      playerId: initial.activePlayer,
+      legalMoves: enumerateLegalMoves(def, initial, undefined, runtime).moves,
+      rng: createRng(6n),
+      runtime,
+    });
+    const state = applyMove(def, initial, openingChoice.move, undefined, runtime).state;
+    const legalMoveCandidates = enumerateLegalMoves(def, state, undefined, runtime).moves;
+
+    const result = evaluatePreparedPolicyDecision(def, state, legalMoveCandidates, runtime);
+    const candidatesWithPreview = result.metadata.candidates.filter(
+      (candidate) => candidate.previewRefIds.length > 0,
+    );
+
+    assert.ok(candidatesWithPreview.length > 0, 'expected candidates with preview ref evaluation');
+
+    const readyCandidates = candidatesWithPreview.filter(
+      (candidate) => candidate.previewOutcome === 'ready',
+    );
+    assert.ok(
+      readyCandidates.length > 0,
+      'expected at least one candidate with ready previewOutcome despite coalesced preview.var ref — ' +
+        'a coalesced unknown preview surface ref must not contaminate the candidate-level outcome ' +
+        `(found outcomes: ${candidatesWithPreview.map((c) => c.previewOutcome).join(', ')})`,
+    );
+  });
+});

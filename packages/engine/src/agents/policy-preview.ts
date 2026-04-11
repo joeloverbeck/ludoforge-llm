@@ -1,14 +1,12 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
-import { resolveCurrentEventCardState } from '../kernel/event-execution.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
-import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue, type SeatResolutionIndex } from '../kernel/identity.js';
+import { buildSeatResolutionIndex } from '../kernel/identity.js';
 import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
 import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
   AgentPreviewMode,
   CompiledPreviewSurfaceRef,
-  CompiledCardMetadataEntry,
   GameDef,
   GameState,
   Move,
@@ -21,9 +19,11 @@ import {
   getPolicySurfaceVisibility,
   isSurfaceVisibilityAccessible,
   resolvePolicyRoleSelector,
+  resolveSurfaceRefValue,
+  type PolicyValue,
   type PolicyVictorySurface,
+  type SurfaceResolutionContext,
 } from './policy-surface.js';
-import { extractAnnotationValue as extractAnnotationValueForPreview } from './policy-annotation-resolve.js';
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -147,6 +147,16 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   } satisfies Required<PolicyPreviewDependencies>;
   const cache = new Map<string, PreviewOutcome>();
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const surfaceContext: SurfaceResolutionContext = {
+    def: input.def,
+    seatResolutionIndex,
+    resolveDerivedMetric(state, metricId) {
+      return deps.computeDerivedMetricValue(input.def, state, metricId);
+    },
+    resolveVictorySurface(state) {
+      return buildPolicyVictorySurface(input.def, state, input.runtime);
+    },
+  };
 
   return {
     resolveSurface(candidate, ref, seatContext) {
@@ -158,8 +168,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       if (visibility === null) {
         return { kind: 'unavailable' };
       }
-      const targetPlayerIndex = ref.family === 'perPlayerVar'
-        ? resolvePerPlayerTargetIndex(input.def, preview.state, ref, input.playerId, input.seatId, seatResolutionIndex)
+      const targetPlayerIndex = ref.family === 'perPlayerVar' && ref.selector !== undefined
+        ? ref.selector.kind === 'player'
+          ? ref.selector.player === 'self' ? Number(input.playerId) : Number(preview.state.activePlayer)
+          : (() => {
+              const resolvedSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
+              return resolvedSeatId === undefined
+                ? undefined
+                : seatResolutionIndex.playerIndexBySeatId.get(resolvedSeatId);
+            })()
         : undefined;
       const resolvedSeatId = ref.selector?.kind !== 'role'
         ? undefined
@@ -176,83 +193,39 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       if (preview.hiddenSamplingZones.length > 0 && !visibility.preview.allowWhenHiddenSampling) {
         return { kind: 'unknown', reason: 'hidden' };
       }
-      if (ref.family === 'derivedMetric') {
-        const cachedValue = preview.metricCache.get(ref.id);
-        if (cachedValue !== undefined) {
-          return { kind: 'value', value: cachedValue };
-        }
-        const value = deps.computeDerivedMetricValue(input.def, preview.state, ref.id);
-        preview.metricCache.set(ref.id, value);
-        return { kind: 'value', value };
+      let resolved: PolicyValue;
+      try {
+        resolved = resolveSurfaceRefValue(preview.state, ref, input.seatId, input.playerId, {
+          ...surfaceContext,
+          resolveDerivedMetric(state, metricId) {
+            const cachedValue = preview.metricCache.get(metricId);
+            if (cachedValue !== undefined) {
+              return cachedValue;
+            }
+            const value = deps.computeDerivedMetricValue(input.def, state, metricId);
+            preview.metricCache.set(metricId, value);
+            return value;
+          },
+          resolveVictorySurface(state) {
+            if (state === preview.state) {
+              return getVictorySurface(input.def, preview, input.runtime);
+            }
+            return buildPolicyVictorySurface(input.def, state, input.runtime);
+          },
+        }, seatContext);
+      } catch {
+        return { kind: 'unavailable' };
       }
-      if (ref.family === 'globalVar') {
-        const value = preview.state.globalVars[ref.id];
-        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
+      if (resolved === undefined || ref.family === 'globalMarker') {
+        return { kind: 'unavailable' };
       }
-      if (ref.family === 'perPlayerVar') {
-        const value = resolveSeatVarRef(preview.state, ref, targetPlayerIndex);
-        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
-      }
-      if (ref.family === 'victoryCurrentMargin') {
-        if (ref.selector?.kind !== 'role') {
-          return { kind: 'unavailable' };
-        }
-        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
-        if (targetSeatId === undefined) {
-          return { kind: 'unavailable' };
-        }
-        const value = getVictorySurface(input.def, preview, input.runtime).marginBySeat.get(targetSeatId);
-        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
-      }
-      if (ref.family === 'victoryCurrentRank') {
-        if (ref.selector?.kind !== 'role') {
-          return { kind: 'unavailable' };
-        }
-        const targetSeatId = resolvePolicyRoleSelector(input.def, preview.state, ref.selector, input.seatId, seatContext);
-        if (targetSeatId === undefined) {
-          return { kind: 'unavailable' };
-        }
-        const value = getVictorySurface(input.def, preview, input.runtime).rankBySeat.get(targetSeatId);
-        return typeof value === 'number' ? { kind: 'value', value } : { kind: 'unavailable' };
-      }
-      if (ref.family === 'activeCardAnnotation') {
-        const current = resolveCurrentEventCardState(input.def, preview.state);
-        if (current === null) {
-          return { kind: 'unavailable' };
-        }
-        const annotation = input.def.cardAnnotationIndex?.entries[current.card.id];
-        if (annotation === undefined) {
-          return { kind: 'unavailable' };
-        }
-        const previewActiveSeatId = input.def.seats?.[preview.state.activePlayer]?.id;
-        const resolved = extractAnnotationValueForPreview(annotation, ref, input.seatId, previewActiveSeatId);
-        if (resolved === undefined) {
-          return { kind: 'unavailable' };
-        }
-        return typeof resolved === 'number'
-          ? { kind: 'value', value: resolved }
-          : typeof resolved === 'boolean'
-            ? { kind: 'value', value: resolved ? 1 : 0 }
+      return typeof resolved === 'number'
+        ? { kind: 'value', value: resolved }
+        : typeof resolved === 'boolean'
+          ? { kind: 'value', value: resolved ? 1 : 0 }
+          : typeof resolved === 'string'
+            ? { kind: 'value', value: 0 }
             : { kind: 'unavailable' };
-      }
-      if (ref.family === 'activeCardIdentity' || ref.family === 'activeCardTag' || ref.family === 'activeCardMetadata') {
-        const entry = resolveActiveCardEntryFromState(input.def, preview.state);
-        if (entry === undefined) {
-          return { kind: 'unavailable' };
-        }
-        const resolved = resolveActiveCardFamilyValue(entry, ref.family, ref.id);
-        if (resolved === undefined) {
-          return { kind: 'unavailable' };
-        }
-        return typeof resolved === 'number'
-          ? { kind: 'value', value: resolved }
-          : typeof resolved === 'boolean'
-            ? { kind: 'value', value: resolved ? 1 : 0 }
-            : typeof resolved === 'string'
-              ? { kind: 'value', value: 0 }
-              : { kind: 'unavailable' };
-      }
-      return { kind: 'unavailable' };
     },
     getPreviewState(candidate) {
       const outcome = getPreviewOutcome(candidate);
@@ -433,64 +406,6 @@ function toPreviewTraceOutcome(outcome: PreviewOutcome): PolicyPreviewTraceOutco
   return outcome.kind === 'ready' ? 'ready' : outcome.kind === 'stochastic' ? 'stochastic' : outcome.reason;
 }
 
-function resolvePerPlayerTargetIndex(
-  def: GameDef,
-  state: GameState,
-  ref: CompiledPreviewSurfaceRef,
-  actingPlayerId: PlayerId,
-  seatId: string,
-  seatResolutionIndex: SeatResolutionIndex,
-): number | undefined {
-  if (ref.family !== 'perPlayerVar' || ref.selector === undefined) {
-    return undefined;
-  }
-  if (ref.selector.kind === 'player') {
-    return ref.selector.player === 'self' ? Number(actingPlayerId) : Number(state.activePlayer);
-  }
-  const resolvedSeatId = resolvePolicyRoleSelector(def, state, ref.selector, seatId);
-  return resolvedSeatId === undefined
-    ? undefined
-    : resolvePlayerIndexForSeatValue(resolvedSeatId, seatResolutionIndex) ?? undefined;
-}
-
-function resolveActiveCardEntryFromState(
-  def: GameDef,
-  state: GameState,
-): CompiledCardMetadataEntry | undefined {
-  const current = resolveCurrentEventCardState(def, state);
-  if (current === null) {
-    return undefined;
-  }
-  return def.cardMetadataIndex?.entries[current.card.id];
-}
-
-function resolveActiveCardFamilyValue(
-  entry: CompiledCardMetadataEntry,
-  family: 'activeCardIdentity' | 'activeCardTag' | 'activeCardMetadata',
-  id: string,
-): string | number | boolean | undefined {
-  switch (family) {
-    case 'activeCardIdentity':
-      return id === 'id' ? entry.cardId : id === 'deckId' ? entry.deckId : undefined;
-    case 'activeCardTag':
-      return entry.tags.includes(id);
-    case 'activeCardMetadata':
-      return entry.metadata[id];
-  }
-}
-
-function resolveSeatVarRef(
-  state: GameState,
-  ref: CompiledPreviewSurfaceRef,
-  playerIndex: number | undefined,
-): number | undefined {
-  if (ref.family !== 'perPlayerVar' || playerIndex === undefined) {
-    return undefined;
-  }
-  const value = state.perPlayerVars[playerIndex]?.[ref.id];
-  return typeof value === 'number' ? value : undefined;
-}
-
 function getVictorySurface(
   def: GameDef,
   preview: Extract<PreviewOutcome, { readonly kind: 'ready' } | { readonly kind: 'stochastic' }>,
@@ -503,7 +418,7 @@ function getVictorySurface(
   return preview.victorySurface;
 }
 
-function getSeatMargin(
+export function getSeatMargin(
   def: GameDef,
   state: GameState,
   seatId: string,

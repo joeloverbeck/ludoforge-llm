@@ -26,7 +26,7 @@ import type {
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
-import { type PolicyValue } from './policy-runtime.js';
+import { type PolicyValue } from './policy-surface.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 
@@ -507,6 +507,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           },
         )
       ), 0);
+      evaluation.finalizePreviewOutcome(candidate);
     }
     let rng = input.rng;
     let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];

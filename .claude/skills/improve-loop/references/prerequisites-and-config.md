@@ -65,4 +65,5 @@ Campaign Completes" step explicitly commits this file.
 | `MAX_ITERATIONS` | `unlimited` | Hard cap on total experiments (graceful stop when reached) |
 | `CHECKS_TIMEOUT` | 120 | Timeout in seconds for correctness checks (`checks.sh`) |
 | `PRIMARY_METRIC_KEY` | `combined_duration_ms` | Key name to parse from harness output (e.g., `compositeScore`) |
+| `ZERO_EFFECT_THRESHOLD` | 3 | Consecutive zero-effect experiments before mandatory diagnostic |
 | `CEILING_THRESHOLD` | `2 * PLATEAU_THRESHOLD` | Consecutive non-accepts across ALL strategies before ceiling report |

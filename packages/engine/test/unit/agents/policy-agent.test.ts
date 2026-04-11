@@ -3,9 +3,12 @@ import { describe, it } from 'node:test';
 
 import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { buildCompletionChooseCallback } from '../../../src/agents/completion-guidance-choice.js';
 import { completeClassifiedMove, completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
+import { resolveEffectivePolicyProfile } from '../../../src/agents/policy-profile-resolution.js';
+import { preparePlayableMoves } from '../../../src/agents/prepare-playable-moves.js';
 import {
   type ActionPipelineDef,
   asActionId,
@@ -153,6 +156,43 @@ function createCatalog(): AgentPolicyCatalog {
       us: 'passive',
     },
   };
+}
+
+function findSeedForDistinctVictoryMarginCompletions(
+  def: GameDef,
+  expectedOrder: readonly string[],
+): number {
+  const state = initialState(def, 7, 2).state;
+  const legalMoves = [pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} })];
+  const resolvedProfile = resolveEffectivePolicyProfile(def, asPlayerId(0));
+  assert.ok(resolvedProfile);
+  const choose = buildCompletionChooseCallback({
+    state,
+    def,
+    catalog: resolvedProfile.catalog,
+    playerId: asPlayerId(0),
+    seatId: resolvedProfile.seatId,
+    profile: resolvedProfile.profile,
+  });
+
+  for (let seed = 1; seed <= 64; seed += 1) {
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves,
+      rng: createRng(BigInt(seed)),
+    }, {
+      pendingTemplateCompletions: 2,
+      actionIdFilter: asActionId('chooseTarget'),
+      ...(choose === undefined ? {} : { choose }),
+    });
+    const targets = prepared.completedMoves.map((move) => move.move.params['$targetMargin']);
+    if (targets.length >= expectedOrder.length && expectedOrder.every((value, index) => targets[index] === value)) {
+      return seed;
+    }
+  }
+
+  assert.fail(`expected a bounded seed with completion order ${expectedOrder.join(', ')}`);
 }
 
 function createDef(overrides: Partial<GameDef> = {}): GameDef {
@@ -557,6 +597,211 @@ function createTemplatePreviewDef(enablePhase1Preview = false): GameDef {
   };
 }
 
+function createVictoryMarginTemplatePreviewDef(options?: {
+  readonly phase1CompletionsPerAction?: number;
+  readonly tieOnHighLow?: boolean;
+}): GameDef {
+  const actionId = asActionId('chooseTarget');
+  const phase1CompletionsPerAction = options?.phase1CompletionsPerAction ?? 1;
+  const tieOnHighLow = options?.tieOnHighLow ?? false;
+  const templateProfile: ActionPipelineDef = {
+    id: `profile-${actionId}`,
+    actionId,
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        stage: 'resolve',
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$targetMargin',
+              bind: '$targetMargin',
+              options: { query: 'enums', values: ['low', 'high'] },
+            },
+          }),
+          eff({
+            if: {
+              when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$targetMargin' }, right: 'high' },
+              then: [eff({ setVar: { scope: 'global', var: 'usMargin', value: tieOnHighLow ? 2 : 8 } })],
+              else: [eff({ setVar: { scope: 'global', var: 'usMargin', value: 2 } })],
+            },
+          }),
+        ],
+      },
+    ],
+    atomicity: 'atomic',
+  };
+
+  return {
+    metadata: { id: `policy-agent-template-victory-${tieOnHighLow ? 'tie' : 'best'}`, players: { min: 2, max: 2 } },
+    constants: {},
+    globalVars: [{ name: 'usMargin', type: 'int', init: 1, min: -10, max: 10 }],
+    perPlayerVars: [],
+    zones: [],
+    derivedMetrics: [],
+    seats: [{ id: 'us' }, { id: 'arvn' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: phaseId }] },
+    agents: {
+      schemaVersion: 2,
+      catalogFingerprint: `template-victory-${tieOnHighLow ? 'tie' : 'best'}-catalog`,
+      surfaceVisibility: {
+        globalVars: {
+          usMargin: {
+            current: 'public',
+            preview: { visibility: 'public', allowWhenHiddenSampling: true },
+          },
+        },
+        globalMarkers: {},
+        perPlayerVars: {},
+        derivedMetrics: {},
+        victory: {
+          currentMargin: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+          currentRank: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
+        },
+        activeCardIdentity: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardTag: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardMetadata: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+        activeCardAnnotation: {
+          current: 'hidden',
+          preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
+        },
+      },
+      parameterDefs: {},
+      candidateParamDefs: {
+        '$targetMargin': { type: 'id' },
+      },
+      library: {
+        stateFeatures: {},
+        candidateFeatures: {
+          projectedSelfMargin: {
+            type: 'number',
+            costClass: 'preview',
+            expr: refExpr({
+              kind: 'previewSurface',
+              family: 'victoryCurrentMargin',
+              id: 'currentMargin',
+              selector: { kind: 'role', seatToken: 'self' },
+            }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        candidateAggregates: {},
+        pruningRules: {},
+        considerations: moveConsiderations({
+          preferChooseTargetPhase1: {
+            costClass: 'candidate',
+            weight: literal(100),
+            value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'candidateIntrinsic', intrinsic: 'actionId' }), literal('chooseTarget'))),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+          preferProjectedSelfMargin: {
+            costClass: 'preview',
+            weight: literal(1),
+            value: refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedSelfMargin' }),
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projectedSelfMargin'], aggregates: [], strategicConditions: [] },
+          },
+        }),
+        tieBreakers: {
+          stableMoveKey: {
+            kind: 'stableMoveKey',
+            costClass: 'state',
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+        strategicConditions: {},
+      },
+      profiles: {
+        passive: {
+          fingerprint: `template-victory-${tieOnHighLow ? 'tie' : 'best'}-profile`,
+          params: {},
+          preview: {
+            mode: 'exactWorld',
+            phase1: true,
+            phase1CompletionsPerAction,
+          },
+          selection: { mode: 'argmax' },
+          use: {
+            pruningRules: [],
+            considerations: ['preferChooseTargetPhase1', 'preferProjectedSelfMargin'],
+            tieBreakers: ['stableMoveKey'],
+          },
+          plan: {
+            stateFeatures: [],
+            candidateFeatures: ['projectedSelfMargin'],
+            candidateAggregates: [],
+            considerations: ['preferChooseTargetPhase1', 'preferProjectedSelfMargin'],
+          },
+        },
+      },
+      bindingsBySeat: {
+        us: 'passive',
+      },
+    },
+    actions: [
+      {
+        id: asActionId('pass'),
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      },
+      {
+        id: actionId,
+        actor: 'active',
+        executor: 'actor',
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$targetMargin',
+              bind: '$targetMargin',
+              options: { query: 'enums', values: ['low', 'high'] },
+            },
+          }),
+          eff({
+            if: {
+              when: { op: '==' as const, left: { _t: 2 as const, ref: 'binding' as const, name: '$targetMargin' }, right: 'high' },
+              then: [eff({ setVar: { scope: 'global', var: 'usMargin', value: tieOnHighLow ? 2 : 8 } })],
+              else: [eff({ setVar: { scope: 'global', var: 'usMargin', value: 2 } })],
+            },
+          }),
+        ],
+        limits: [],
+      },
+    ],
+    actionPipelines: [templateProfile] as readonly ActionPipelineDef[],
+    triggers: [],
+    terminal: {
+      conditions: [],
+      margins: [
+        { seat: 'us', value: { _t: 2 as const, ref: 'gvar', var: 'usMargin' } },
+        { seat: 'arvn', value: 0 },
+      ],
+    },
+  };
+}
+
 function createEmptyOptionsProfile(actionId: string): ActionPipelineDef {
   return {
     id: `profile-${actionId}`,
@@ -869,6 +1114,115 @@ describe('PolicyAgent', () => {
     assert.deepEqual(chooseTargetCandidate?.unknownPreviewRefs, []);
     assert.deepEqual(passCandidate?.unknownPreviewRefs, []);
     assert.equal((chooseTargetCandidate?.score ?? Number.NEGATIVE_INFINITY) > (passCandidate?.score ?? Number.POSITIVE_INFINITY), true);
+  });
+
+  it('keeps N=1 phase-1 representative selection on the first completion', () => {
+    const def = createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 1 });
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+    const seed = findSeedForDistinctVictoryMarginCompletions(
+      createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 2 }),
+      ['low', 'high'],
+    );
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(BigInt(seed)),
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    const chooseTargetCandidate = result.agentDecision.candidates?.find((candidate) => candidate.actionId === 'chooseTarget');
+    assert.ok(chooseTargetCandidate);
+    assert.equal(chooseTargetCandidate?.previewOutcome, 'ready');
+    assert.equal(chooseTargetCandidate?.score, 102);
+  });
+
+  it('selects the highest projected self-margin representative when phase1CompletionsPerAction > 1', () => {
+    const def = createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 2 });
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+    const seed = findSeedForDistinctVictoryMarginCompletions(def, ['low', 'high']);
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(BigInt(seed)),
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    const chooseTargetCandidate = result.agentDecision.candidates?.find((candidate) => candidate.actionId === 'chooseTarget');
+    assert.ok(chooseTargetCandidate);
+    assert.equal(chooseTargetCandidate?.previewOutcome, 'ready');
+    assert.equal(chooseTargetCandidate?.score, 108);
+  });
+
+  it('keeps best-of-N representative selection deterministic for the same seed and state', () => {
+    const def = createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 2 });
+    const state = initialState(def, 7, 2).state;
+    const seed = findSeedForDistinctVictoryMarginCompletions(def, ['low', 'high']);
+    const input = {
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(BigInt(seed)),
+    } as const;
+
+    const first = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
+    const second = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
+
+    assert.deepEqual(first.move.move, second.move.move);
+    assert.deepEqual(first.agentDecision, second.agentDecision);
+  });
+
+  it('breaks best-of-N representative ties by first completion order', () => {
+    const def = createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 2, tieOnHighLow: true });
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'verbose' });
+    const seed = findSeedForDistinctVictoryMarginCompletions(
+      createVictoryMarginTemplatePreviewDef({ phase1CompletionsPerAction: 2 }),
+      ['low', 'high'],
+    );
+
+    const result = agent.chooseMove({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      legalMoves: [
+        completeClassifiedMove({ actionId: asActionId('pass'), params: {} }, state.stateHash),
+        pendingClassifiedMove({ actionId: asActionId('chooseTarget'), params: {} }),
+      ],
+      rng: createRng(BigInt(seed)),
+    });
+
+    assert.equal(result.agentDecision?.kind, 'policy');
+    if (result.agentDecision?.kind !== 'policy') {
+      assert.fail('expected policy decision trace');
+    }
+    const chooseTargetCandidate = result.agentDecision.candidates?.find((candidate) => candidate.actionId === 'chooseTarget');
+    assert.ok(chooseTargetCandidate);
+    assert.equal(chooseTargetCandidate?.previewOutcome, 'ready');
+    assert.equal(chooseTargetCandidate?.score, 102);
   });
 
   it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {

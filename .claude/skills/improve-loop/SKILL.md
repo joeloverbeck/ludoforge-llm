@@ -102,19 +102,35 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
 - Prevents condition drift in long-running loops.
 - **Iteration cap**: If `MAX_ITERATIONS` is set (not `unlimited`) and `experiment_count >= MAX_ITERATIONS`, append to musings: `**ITERATION CAP**: Reached MAX_ITERATIONS (${MAX_ITERATIONS}). Exiting loop gracefully.` Exit the loop and proceed to "After Campaign Completes."
 
-### Step 1: OBSERVE
+### Step 1a: REFRESH (Correctness)
 
 - Re-read mutable files **from disk** (not from stale context). This ensures each iteration operates on fresh state.
 - Verify that no immutable files have been modified since baseline. If any have, **hard error** — abort the loop.
 - Review experiment history in results.tsv — what's been tried, what worked, what failed.
 - Note the current `best_metric` and cumulative `lines_delta`.
-- If the harness produces diagnostic artifacts (traces, logs, profiles) beyond the primary metric, read them to inform hypothesis generation. Campaign-specific OBSERVE protocols in program.md extend this step.
 
-### Steps 1b-1f: STRATEGY MANAGEMENT
+### Step 1b: DIAGNOSE (Decision Landscape)
 
-Load `references/strategy-management.md`. Execute Steps 1b through 1f as described there.
+**Mandatory triggers** — run the full diagnostic when ANY of these apply:
+- First iteration at a new tier or phase
+- After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments
+- Every `PIVOT_CHECK_INTERVAL` experiments
 
-### Step 1g: META-REVIEW
+**Diagnostic protocol**:
+1. Read one per-seed trace file (choose the most promising losing seed — closest to winning).
+2. Parse each evolved-seat decision: extract actionId, score, gap (1st vs 2nd unpruned candidate), and pruning status.
+3. Classify decisions as **strategic** (actionId does NOT start with `coup`) or **tactical** (actionId starts with `coup` — pacification, redeployment, agitation, victory checks).
+4. Compute: (a) fraction of tied decisions (gap < 0.001), (b) strategic vs tactical count, (c) average gap for each type.
+5. If >30% of decisions are tied, flag in musings: `**TIED-DECISION BOTTLENECK**: N% of decisions have gap < 0.001. Prioritize scoring for <strategic|tactical> decisions.`
+6. Record the decision landscape summary in musings (counts, gaps, types).
+
+**When NOT triggered**: read diagnostic artifacts if the harness produces them (traces, logs, profiles) to inform hypothesis generation. Campaign-specific OBSERVE protocols in program.md extend this step. This lighter-weight observation is always appropriate but does not replace the full diagnostic at trigger points.
+
+### Steps 1c-1g: STRATEGY MANAGEMENT
+
+Load `references/strategy-management.md`. Execute Steps 1c through 1g as described there.
+
+### Step 1h: META-REVIEW
 
 If `meta_improvement: true` in program.md, load `references/meta-review.md`.
 
@@ -189,6 +205,8 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
 
+**Zero-effect detection**: If the game traces are identical to the previous experiment (same move counts AND same margins for all seeds), flag as `**ZERO-EFFECT**` in the musings entry. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
+
 ### Step 7.6: EXTRACT LESSON
 
 Load `references/lesson-management.md`. Execute the curation gate and lesson extraction as described there.
@@ -231,7 +249,8 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
    ```
 5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
 6. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
-7. Remove the worktree and delete the branch:
+7. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If any were identified, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
+8. Remove the worktree and delete the branch:
    ```bash
    git worktree remove .claude/worktrees/improve-<campaign>
    git branch -D improve/<campaign>
@@ -265,3 +284,4 @@ These rules are unique to this section; all other constraints are defined inline
 
 - **Never weaken assertions** — the tests must remain equally rigorous.
 - **Never add dependencies** — optimize with what's available.
+- **Profile-coupled tests**: If a test fails because the evolved profile changed the game trajectory (not because the code is broken), this is a profile-coupling issue, not a code bug. Fix the test to be resilient to profile evolution: use search-based witnesses instead of hardcoded seed/ply pairs, use regex matching for consideration term names instead of exact string lists, and widen search bounds for witness finding. Commit test decoupling as `infra:` independent of the experiment. Does NOT count toward the 3-retry CRASH limit.

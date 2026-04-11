@@ -53,6 +53,60 @@ interface EventCardLike {
 }
 
 describe('FITL production data integration compilation', () => {
+  it('exposes synthesized derived metrics through the currentPlayer observer when FITL opts in', () => {
+    const { compiled } = compileProductionSpec();
+    const currentPlayer = compiled.gameDef.observers?.observers.currentPlayer;
+
+    assert.ok(currentPlayer, 'Expected FITL currentPlayer observer profile');
+    assert.deepEqual(
+      currentPlayer.surfaces.derivedMetrics['auto:victory:controlledPopulation:coin'],
+      {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: false },
+      },
+      'Expected synthesized COIN controlled-population metric to be publicly observable for currentPlayer',
+    );
+  });
+
+  it('compiles ARVN policy features and considerations for decomposed victory signals', () => {
+    const { compiled } = compileProductionSpec();
+    const catalog = compiled.gameDef.agents;
+
+    assert.ok(catalog, 'Expected compiled FITL policy catalog');
+    assert.deepEqual(catalog.library.stateFeatures.patronage?.expr, {
+      kind: 'ref',
+      ref: {
+        kind: 'currentSurface',
+        family: 'globalVar',
+        id: 'patronage',
+      },
+    });
+    assert.deepEqual(catalog.library.stateFeatures.coinControlPop?.expr, {
+      kind: 'ref',
+      ref: {
+        kind: 'currentSurface',
+        family: 'derivedMetric',
+        id: 'auto:victory:controlledPopulation:coin',
+      },
+    });
+    assert.deepEqual(
+      catalog.profiles['arvn-evolved']?.use.considerations,
+      [
+        'preferProjectedSelfMargin',
+        'preferStrongNormalizedMargin',
+        'preferGovernWeighted',
+        'preferTrainWeighted',
+        'governWhenPatronageLow',
+        'trainWhenControlLow',
+        'preferPopulousTargets',
+        'preferRedeployToPopulousZones',
+        'preferRedeployNearEnemies',
+        'preferPacifyPopulousZones',
+      ],
+      'Expected ARVN evolved profile to include the decomposed victory considerations',
+    );
+  });
+
   it('parses and validates the canonical production GameSpecDoc with required invariants', () => {
     const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
 

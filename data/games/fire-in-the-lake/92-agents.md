@@ -64,6 +64,14 @@ agents:
         type: number
         expr:
           ref: victory.currentMargin.self
+      patronage:
+        type: number
+        expr:
+          ref: var.global.patronage
+      coinControlPop:
+        type: number
+        expr:
+          ref: metric.auto:victory:controlledPopulation:coin
       selfResources:
         type: number
         expr:
@@ -322,6 +330,26 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.train
+      governWhenPatronageLow:
+        scopes: [move]
+        when:
+          lt:
+            - { ref: feature.patronage }
+            - 20
+        weight: 8
+        value:
+          boolToNumber:
+            ref: candidate.tag.govern
+      trainWhenControlLow:
+        scopes: [move]
+        when:
+          lt:
+            - { ref: feature.coinControlPop }
+            - 25
+        weight: 5
+        value:
+          boolToNumber:
+            ref: candidate.tag.train
       preferPopulousTargets:
         scopes: [completion]
         when:
@@ -342,10 +370,64 @@ agents:
                 zone: { ref: option.value }
                 prop: population
             - 0
+      preferRedeployToPopulousZones:
+        scopes: [completion]
+        when:
+          eq:
+            - { ref: decision.name }
+            - "$destination"
+        weight: 2
+        value:
+          coalesce:
+            - zoneProp:
+                zone: { ref: option.value }
+                prop: population
+            - 0
+      preferRedeployNearEnemies:
+        scopes: [completion]
+        when:
+          eq:
+            - { ref: decision.name }
+            - "$destination"
+        weight: 1
+        value:
+          coalesce:
+            - adjacentTokenAgg:
+                anchorZone: { ref: option.value }
+                aggOp: count
+                tokenFilter:
+                  props:
+                    faction: { eq: VC }
+                    type: { eq: guerrilla }
+            - 0
+      preferPacifyPopulousZones:
+        scopes: [move]
+        when:
+          eq: [{ ref: candidate.actionId }, coupPacifyARVN]
+        weight: 3
+        value:
+          coalesce:
+            - zoneProp:
+                zone: { ref: candidate.param.targetSpace }
+                prop: population
+            - 0
 
       preferNormalizedMargin:
         scopes: [move]
         weight: 5
+        value:
+          div:
+            - sub:
+                - { ref: feature.projectedSelfMargin }
+                - { ref: aggregate.minMarginScore }
+            - max:
+                - 1
+                - sub:
+                    - { ref: aggregate.maxMarginScore }
+                    - { ref: aggregate.minMarginScore }
+      preferStrongNormalizedMargin:
+        scopes: [move]
+        weight: 8
         value:
           div:
             - sub:
@@ -410,49 +492,45 @@ agents:
 
     arvn-baseline:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        phase1: true
       params:
-        eventWeight: 1.5
-        projectedMarginWeight: 1
-        resourceWeight: 0.02
+        projectedMarginWeight: 8
+        governWeight: 5
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
-          - preferTrainAction
-          - preferPatrolAction
-          - preferSweepAction
-          - preferAssaultAction
-          - preferGovernAction
+          - preferGovernWeighted
+          - preferPopulousTargets
         tieBreakers:
           - stableMoveKey
 
     arvn-evolved:
       observer: currentPlayer
+      preview:
+        mode: exactWorld
+        phase1: true
       params:
-        eventWeight: 1.5
         projectedMarginWeight: 3
-        resourceWeight: 0.02
         governWeight: 5
-        trainWeight: 2
-        sweepWeight: 0.5
-        assaultWeight: 0.5
+        trainWeight: 3
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
-          - preserveResources
-          - preferEvent
-          - preferTrainWeighted
-          - preferPatrolAction
-          - preferSweepWeighted
-          - preferAssaultWeighted
+          - preferStrongNormalizedMargin
           - preferGovernWeighted
-          - trainWhenFewTroops
+          - preferTrainWeighted
+          - governWhenPatronageLow
+          - trainWhenControlLow
           - preferPopulousTargets
+          - preferRedeployToPopulousZones
+          - preferRedeployNearEnemies
+          - preferPacifyPopulousZones
         tieBreakers:
           - stableMoveKey
 

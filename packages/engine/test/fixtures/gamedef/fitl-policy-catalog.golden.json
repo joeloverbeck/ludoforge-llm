@@ -518,7 +518,36 @@
         }
       }
     },
-    "derivedMetrics": {},
+    "derivedMetrics": {
+      "auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:controlledPopulation:coin": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:controlledPopulation:solo": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      }
+    },
     "victory": {
       "currentMargin": {
         "current": "public",
@@ -757,6 +786,44 @@
               "kind": "role",
               "seatToken": "self"
             }
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "patronage": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "currentSurface",
+            "family": "globalVar",
+            "id": "patronage"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "coinControlPop": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "currentSurface",
+            "family": "derivedMetric",
+            "id": "auto:victory:controlledPopulation:coin"
           }
         },
         "dependencies": {
@@ -1974,6 +2041,106 @@
           "strategicConditions": []
         }
       },
+      "governWhenPatronageLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "lt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "patronage"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 20
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 8
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "govern"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "patronage"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "trainWhenControlLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "lt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "coinControlPop"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 25
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 5
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "train"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "coinControlPop"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferPopulousTargets": {
         "scopes": [
           "completion"
@@ -2069,6 +2236,181 @@
           "strategicConditions": []
         }
       },
+      "preferRedeployToPopulousZones": {
+        "scopes": [
+          "completion"
+        ],
+        "costClass": "state",
+        "when": {
+          "kind": "op",
+          "op": "eq",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "decisionIntrinsic",
+                "intrinsic": "name"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": "$destination"
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 2
+        },
+        "value": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "zoneProp",
+              "zone": {
+                "kind": "ref",
+                "ref": {
+                  "kind": "optionIntrinsic",
+                  "intrinsic": "value"
+                }
+              },
+              "prop": "population"
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferRedeployNearEnemies": {
+        "scopes": [
+          "completion"
+        ],
+        "costClass": "state",
+        "when": {
+          "kind": "op",
+          "op": "eq",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "decisionIntrinsic",
+                "intrinsic": "name"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": "$destination"
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 1
+        },
+        "value": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "adjacentTokenAgg",
+              "anchorZone": {
+                "kind": "ref",
+                "ref": {
+                  "kind": "optionIntrinsic",
+                  "intrinsic": "value"
+                }
+              },
+              "tokenFilter": {
+                "props": {
+                  "faction": {
+                    "eq": "VC"
+                  },
+                  "type": {
+                    "eq": "guerrilla"
+                  }
+                }
+              },
+              "aggOp": "count"
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferPacifyPopulousZones": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "eq",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateIntrinsic",
+                "intrinsic": "actionId"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": "coupPacifyARVN"
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 3
+        },
+        "value": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "zoneProp",
+              "zone": {
+                "kind": "ref",
+                "ref": {
+                  "kind": "candidateParam",
+                  "id": "targetSpace"
+                }
+              },
+              "prop": "population"
+            },
+            {
+              "kind": "literal",
+              "value": 0
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferNormalizedMargin": {
         "scopes": [
           "move"
@@ -2077,6 +2419,88 @@
         "weight": {
           "kind": "literal",
           "value": 5
+        },
+        "value": {
+          "kind": "op",
+          "op": "div",
+          "args": [
+            {
+              "kind": "op",
+              "op": "sub",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "candidateFeature",
+                    "id": "projectedSelfMargin"
+                  }
+                },
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "library",
+                    "refKind": "aggregate",
+                    "id": "minMarginScore"
+                  }
+                }
+              ]
+            },
+            {
+              "kind": "op",
+              "op": "max",
+              "args": [
+                {
+                  "kind": "literal",
+                  "value": 1
+                },
+                {
+                  "kind": "op",
+                  "op": "sub",
+                  "args": [
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "maxMarginScore"
+                      }
+                    },
+                    {
+                      "kind": "ref",
+                      "ref": {
+                        "kind": "library",
+                        "refKind": "aggregate",
+                        "id": "minMarginScore"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [
+            "maxMarginScore",
+            "minMarginScore"
+          ],
+          "strategicConditions": []
+        }
+      },
+      "preferStrongNormalizedMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": 8
         },
         "value": {
           "kind": "op",
@@ -2374,9 +2798,8 @@
     "arvn-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "eventWeight": 1.5,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.02
+        "projectedMarginWeight": 8,
+        "governWeight": 5
       },
       "use": {
         "pruningRules": [
@@ -2384,28 +2807,24 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferTrainAction",
-          "preferPatrolAction",
-          "preferSweepAction",
-          "preferAssaultAction",
-          "preferGovernAction"
+          "preferGovernWeighted",
+          "preferPopulousTargets"
         ],
         "tieBreakers": [
           "stableMoveKey"
         ]
       },
       "preview": {
-        "mode": "exactWorld"
+        "mode": "exactWorld",
+        "phase1": true,
+        "phase1CompletionsPerAction": 1
       },
       "selection": {
         "mode": "argmax"
       },
       "plan": {
         "stateFeatures": [
-          "selfMargin",
-          "selfResources"
+          "selfMargin"
         ],
         "candidateFeatures": [
           "projectedSelfMargin"
@@ -2415,27 +2834,18 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferTrainAction",
-          "preferPatrolAction",
-          "preferSweepAction",
-          "preferAssaultAction",
-          "preferGovernAction"
+          "preferGovernWeighted",
+          "preferPopulousTargets"
         ]
       },
-      "fingerprint": "13a4d863b36067cfc6d61a2a01264d78918ab49630775d53c90c2b694bfbf775"
+      "fingerprint": "83f6d4af937cc90c355e0c10300bde879ca5a92cdadfc8c8888ab05ef0075711"
     },
     "arvn-evolved": {
       "observerName": "currentPlayer",
       "params": {
-        "eventWeight": 1.5,
         "projectedMarginWeight": 3,
-        "resourceWeight": 0.02,
         "governWeight": 5,
-        "trainWeight": 2,
-        "sweepWeight": 0.5,
-        "assaultWeight": 0.5
+        "trainWeight": 3
       },
       "use": {
         "pruningRules": [
@@ -2443,22 +2853,24 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferTrainWeighted",
-          "preferPatrolAction",
-          "preferSweepWeighted",
-          "preferAssaultWeighted",
+          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
-          "trainWhenFewTroops",
-          "preferPopulousTargets"
+          "preferTrainWeighted",
+          "governWhenPatronageLow",
+          "trainWhenControlLow",
+          "preferPopulousTargets",
+          "preferRedeployToPopulousZones",
+          "preferRedeployNearEnemies",
+          "preferPacifyPopulousZones"
         ],
         "tieBreakers": [
           "stableMoveKey"
         ]
       },
       "preview": {
-        "mode": "exactWorld"
+        "mode": "exactWorld",
+        "phase1": true,
+        "phase1CompletionsPerAction": 1
       },
       "selection": {
         "mode": "argmax"
@@ -2466,29 +2878,31 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "selfResources",
-          "arvnTroopCount"
+          "patronage",
+          "coinControlPop"
         ],
         "candidateFeatures": [
           "projectedSelfMargin"
         ],
         "candidateAggregates": [
-          "hasNonPassAlternative"
+          "hasNonPassAlternative",
+          "maxMarginScore",
+          "minMarginScore"
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preserveResources",
-          "preferEvent",
-          "preferTrainWeighted",
-          "preferPatrolAction",
-          "preferSweepWeighted",
-          "preferAssaultWeighted",
+          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
-          "trainWhenFewTroops",
-          "preferPopulousTargets"
+          "preferTrainWeighted",
+          "governWhenPatronageLow",
+          "trainWhenControlLow",
+          "preferPopulousTargets",
+          "preferRedeployToPopulousZones",
+          "preferRedeployNearEnemies",
+          "preferPacifyPopulousZones"
         ]
       },
-      "fingerprint": "70fe847b941ccfc4b4ab9aa8f93a3eda8c142a1805868b71c400bdda732ad48f"
+      "fingerprint": "4cc97bd4ea69c98d75ccebcaacf8c4fb115390107de746c64b8dd598b098a54d"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2605,5 +3019,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "e2ce58d4ca52f2fee53aaeb630e7a201059382735b58a93dfe2f4569fa5bcfe3"
+  "catalogFingerprint": "c9327cb21869adf3cd8721e8b37a5360e7a196e9ed50bd95797e5386a2baece7"
 }

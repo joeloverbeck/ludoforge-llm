@@ -195,7 +195,7 @@ function selectPhase1RepresentativeMove(
   seatId: string,
   completionBudget: number,
   completedMoves: readonly ReturnType<typeof preparePlayableMoves>['completedMoves'][number][],
-) {
+): ReturnType<typeof preparePlayableMoves>['completedMoves'][number] | undefined {
   const firstCompletedMove = completedMoves[0];
   if (firstCompletedMove === undefined) {
     return undefined;

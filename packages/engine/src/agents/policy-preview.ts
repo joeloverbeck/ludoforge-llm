@@ -7,6 +7,7 @@ import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
   AgentPreviewMode,
   CompiledPreviewSurfaceRef,
+  ExecutionOptions,
   GameDef,
   GameState,
   Move,
@@ -42,7 +43,7 @@ export interface PolicyPreviewDependencies {
     def: GameDef,
     state: GameState,
     move: import('../kernel/types.js').TrustedExecutableMove,
-    options?: undefined,
+    options?: ExecutionOptions,
     runtime?: GameDefRuntime,
   ) => { readonly state: GameState };
   readonly derivePlayerObservation?: typeof derivePlayerObservation;
@@ -134,11 +135,21 @@ type PreviewOutcome =
 
 const defaultDependencies = {
   classifyPlayableMoveCandidate,
-  applyMove: applyTrustedMove,
+  applyMove: applyPreviewMove,
   derivePlayerObservation,
   evaluateGrantedOperation: () => undefined,
   computeDerivedMetricValue,
 } satisfies Required<PolicyPreviewDependencies>;
+
+export function applyPreviewMove(
+  def: GameDef,
+  state: GameState,
+  move: TrustedExecutableMove,
+  options: ExecutionOptions = { advanceToDecisionPoint: false },
+  runtime?: GameDefRuntime,
+): { readonly state: GameState } {
+  return applyTrustedMove(def, state, move, options, runtime);
+}
 
 export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInput): PolicyPreviewRuntime {
   const deps = {
@@ -302,7 +313,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         input.def,
         input.state,
         trustedMove,
-        undefined,
+        { advanceToDecisionPoint: false },
         input.runtime,
       ).state;
       const eventRngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
@@ -380,7 +391,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         input.def,
         previewState,
         classification.move,
-        undefined,
+        { advanceToDecisionPoint: false },
         input.runtime,
       ).state;
       return {

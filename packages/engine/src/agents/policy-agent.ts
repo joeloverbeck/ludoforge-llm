@@ -10,7 +10,7 @@ import {
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
-import { getSeatMargin, type Phase1ActionPreviewEntry } from './policy-preview.js';
+import { applyPreviewMove, getSeatMargin, type Phase1ActionPreviewEntry } from './policy-preview.js';
 import type { PolicyPreviewDependencies } from './policy-preview.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
@@ -175,7 +175,7 @@ export class PolicyAgent implements Agent {
 }
 
 function createMemoizedPreviewDependencies(): PolicyPreviewDependencies {
-  const applyMoveCache = new Map<string, ReturnType<typeof applyTrustedMove>>();
+  const applyMoveCache = new Map<string, ReturnType<typeof applyPreviewMove>>();
   return {
     applyMove(def, state, move, options, runtime) {
       const cacheKey = `${state.stateHash}:${toMoveIdentityKey(def, move.move)}`;
@@ -183,7 +183,7 @@ function createMemoizedPreviewDependencies(): PolicyPreviewDependencies {
       if (cached !== undefined) {
         return cached;
       }
-      const applied = applyTrustedMove(def, state, move, options, runtime);
+      const applied = applyPreviewMove(def, state, move, options, runtime);
       applyMoveCache.set(cacheKey, applied);
       return applied;
     },

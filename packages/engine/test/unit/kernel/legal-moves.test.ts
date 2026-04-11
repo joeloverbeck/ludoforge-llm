@@ -4742,4 +4742,95 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       'legal-moves-turn-order.ts should not use legacy unsatisfiable-only helper for admission',
     );
   });
+
+  it('returns early from earlyExitAfterFirst when a filtered trivial move already exists', () => {
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const malformedGrantedAction: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: { chosen: '$owner' },
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = asTaggedGameDef({
+      ...makeBaseDef({
+        actions: [passAction, malformedGrantedAction],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+          { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+          { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { pass: 'pass', operation: 'operation' },
+            freeOperationActionIds: ['operation'],
+          },
+        },
+      },
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [],
+        'played:none': [],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: null,
+            actedSeats: ['1'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'optional-bad-grant',
+              phase: 'ready',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const result = enumerateLegalMoves(def, state, { earlyExitAfterFirst: true });
+
+    assert.equal(result.moves.length, 1);
+    assert.equal(String(result.moves[0]?.move.actionId), 'pass');
+    assert.equal(result.moves[0]?.move.actionClass, 'pass');
+  });
 });

@@ -114,7 +114,7 @@ If analysis during classification disproves an initial impression, withdraw the 
   1. Read the target skill file before starting edits (required by the Edit tool contract).
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location may be combined into a single edit even if classified separately — especially when they form a coherent section or paragraph together (e.g., an Issue fix and a Feature addition to the same section). Use judgment: if the combined edit reads as a unified addition, combine; if the findings are logically independent, keep separate.
-  4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next.
+  4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next. After completing all files, verify cross-file references are consistent (e.g., step numbers referenced in SKILL.md match headings in reference files).
   5. After edits, verify by re-reading. Use this decision tree:
      - **Adjacent/overlapping edits** → verify after each edit (catch offset drift)
      - **4+ edits touching adjacent sections, numbered lists, or shared structures** → single full-file re-read after all edits

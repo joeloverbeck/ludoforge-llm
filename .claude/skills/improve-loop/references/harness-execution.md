@@ -17,10 +17,7 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 ## Step 4: EXECUTE
 
 - Read `HARNESS_RUNS` from program.md (default: 1).
-- **Fixture sync**: If `$WT/campaigns/<campaign>/sync-fixtures.sh` exists, run it before the harness to prevent stale-fixture CRASH failures:
-  ```bash
-  cd $WT && bash campaigns/<campaign>/sync-fixtures.sh
-  ```
+- **Fixture sync**: Already handled in Step 3 (IMPLEMENT). If `sync-fixtures.sh` was not run during IMPLEMENT (e.g., infrastructure-only change), run it now before the harness.
 - Run the harness:
   ```bash
   cd $WT && bash campaigns/<campaign>/harness.sh

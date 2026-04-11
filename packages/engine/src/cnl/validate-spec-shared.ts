@@ -56,6 +56,7 @@ export const FROM_TEMPLATE_PHASE_KEYS = ['fromTemplate', 'args'] as const;
 export const TRIGGER_KEYS = ['id', 'event', 'when', 'match', 'effects'] as const;
 export const TRIGGER_EVENT_KEYS = ['type', 'phase', 'action', 'zone', 'scope', 'var', 'player'] as const;
 export const END_CONDITION_KEYS = ['when', 'result'] as const;
+export const VICTORY_CHECKPOINT_KEYS = ['id', 'seat', 'timing', 'phases', 'when'] as const;
 export const TERMINAL_KEYS = ['conditions', 'checkpoints', 'margins', 'ranking', 'scoring'] as const;
 export const TURN_ORDER_TYPE_VALUES: readonly string[] = ['roundRobin', 'fixedOrder', 'cardDriven', 'simultaneous'];
 

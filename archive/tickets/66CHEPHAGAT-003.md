@@ -1,9 +1,9 @@
 # 66CHEPHAGAT-003: Add phase gating to FITL checkpoint data and integration tests
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: None — game data and tests only
+**Engine Changes**: Yes — generic CNL/GameSpecDoc victory lowering
 **Deps**: `archive/tickets/66CHEPHAGAT-001.md`
 
 ## Problem
@@ -19,9 +19,10 @@ FITL's four `duringCoup` victory checkpoints currently fire on every phase trans
 
 ## Architecture Check
 
-1. Only game data files change — no engine code is modified. This preserves engine agnosticism (Foundation 1).
-2. The `phases` values reference phase IDs already declared in the FITL turn structure — compiler validation (66CHEPHAGAT-002) will catch any typos.
-3. Existing integration tests already set `currentPhase` to specific coup phases, so they will naturally validate the gating behavior.
+1. The FITL `phases` values remain pure spec data, but the compiler must preserve that generic field from GameSpecDoc into GameDef to satisfy Foundations 2, 12, 14, and 15.
+2. The CNL/GameSpecDoc changes stay game-agnostic: they carry a generic optional `phases` array on victory checkpoints and validate its authored shape without introducing FITL-specific logic.
+3. The `phases` values reference phase IDs already declared in the FITL turn structure — compiler/GameDef validation still catches typos.
+4. Existing integration tests already set `currentPhase` to specific coup phases, so they naturally validate the gating behavior once the compiler path preserves the field.
 
 ## What to Change
 
@@ -62,6 +63,11 @@ Add to `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts`
 ## Files to Touch
 
 - `data/games/fire-in-the-lake/90-terminal.md` (modify)
+- `packages/engine/src/cnl/game-spec-doc.ts` (modify)
+- `packages/engine/src/cnl/compile-victory.ts` (modify)
+- `packages/engine/src/cnl/validate-spec-shared.ts` (modify)
+- `packages/engine/src/cnl/validate-actions.ts` (modify)
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` (modify)
 - `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts` (modify)
 
 ## Out of Scope
@@ -85,7 +91,7 @@ Add to `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts`
 
 1. All `duringCoup` checkpoints have `phases: [coupVictory]` — no checkpoint evaluates outside the Victory phase
 2. `final-coup-ranking` has `phases: [coupRedeploy]` — final ranking only at Redeploy
-3. No engine code changes in this ticket — data and tests only
+3. No FITL-specific engine logic is added; compiler changes remain generic spec plumbing only
 4. FITL game compilation produces no new errors or warnings
 
 ## Test Plan
@@ -100,3 +106,21 @@ Add to `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts`
 2. `pnpm turbo test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
+
+## Outcome
+
+- Added `phases: [coupVictory]` to all four FITL `duringCoup` checkpoints and `phases: [coupRedeploy]` to `final-coup-ranking` in `data/games/fire-in-the-lake/90-terminal.md`.
+- Fixed the generic CNL/GameSpecDoc victory pipeline so authored checkpoint `phases` survive from YAML into the compiled `GameDef`, and added authored-shape validation plus checkpoint unknown-key validation for that field.
+- Expanded `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts` to prove:
+  - the production FITL compile now carries checkpoint phase gates,
+  - mid-Coup threshold crossings do not end the game outside `coupVictory`,
+  - Redeploy remains reachable when no one wins at `coupVictory`,
+  - final-Coup ranking is suppressed until `coupRedeploy`.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-coup-victory-phase-gating.test.js`
+- `pnpm turbo test`
+- `pnpm turbo typecheck`
+- `pnpm turbo lint`

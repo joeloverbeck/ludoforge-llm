@@ -6,6 +6,7 @@ terminal:
     - id: us-victory
       seat: 'us'
       timing: duringCoup
+      phases: [coupVictory]
       when:
         op: and
         args:
@@ -55,6 +56,7 @@ terminal:
     - id: arvn-victory
       seat: 'arvn'
       timing: duringCoup
+      phases: [coupVictory]
       when:
         op: and
         args:
@@ -134,6 +136,7 @@ terminal:
     - id: nva-victory
       seat: 'nva'
       timing: duringCoup
+      phases: [coupVictory]
       when:
         op: and
         args:
@@ -220,6 +223,7 @@ terminal:
     - id: vc-victory
       seat: 'vc'
       timing: duringCoup
+      phases: [coupVictory]
       when:
         op: and
         args:
@@ -269,6 +273,7 @@ terminal:
     - id: final-coup-ranking
       seat: 'nva'
       timing: finalCoup
+      phases: [coupRedeploy]
       when:
         op: and
         args:

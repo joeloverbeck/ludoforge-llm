@@ -436,6 +436,7 @@ export interface GameSpecVictoryCheckpoint {
   readonly id: string;
   readonly seat: string;
   readonly timing: GameSpecVictoryTiming;
+  readonly phases?: readonly string[];
   readonly when: ConditionAST;
 }
 

@@ -248,6 +248,21 @@ export function lowerVictory(
         });
       }
 
+      const checkpointPhases =
+        Array.isArray(checkpoint.phases) && checkpoint.phases.every((phase) => typeof phase === 'string' && phase.trim() !== '')
+          ? checkpoint.phases
+          : undefined;
+
+      if (checkpoint.phases !== undefined && checkpointPhases === undefined) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_PHASES_INVALID,
+          path: `${checkpointPath}.phases`,
+          severity: 'error',
+          message: 'victory checkpoint phases must be an array of non-empty strings when declared.',
+          suggestion: 'Set checkpoint.phases to phase ids such as [coupVictory].',
+        });
+      }
+
       if (!isRecord(checkpoint.when)) {
         diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_VICTORY_CHECKPOINT_WHEN_INVALID,
@@ -276,6 +291,7 @@ export function lowerVictory(
           id: checkpoint.id,
           seat: checkpoint.seat,
           timing: checkpoint.timing,
+          ...(checkpointPhases === undefined ? {} : { phases: checkpointPhases }),
           when: loweredWhen.value,
         });
       }

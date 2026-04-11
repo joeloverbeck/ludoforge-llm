@@ -8,6 +8,7 @@ import {
   PHASE_KEYS,
   TERMINAL_KEYS,
   TURN_STRUCTURE_KEYS,
+  VICTORY_CHECKPOINT_KEYS,
   isRecord,
   resolvePhaseIdFromTemplate,
   uniqueSorted,
@@ -397,6 +398,21 @@ export function validateTerminal(doc: GameSpecDoc, diagnostics: Diagnostic[]): v
       continue;
     }
     validateUnknownKeys(endCondition, END_CONDITION_KEYS, `doc.terminal.conditions.${index}`, diagnostics, 'end condition');
+  }
+
+  if (Array.isArray(doc.terminal.checkpoints)) {
+    for (const [index, checkpoint] of doc.terminal.checkpoints.entries()) {
+      if (!isRecord(checkpoint)) {
+        continue;
+      }
+      validateUnknownKeys(
+        checkpoint,
+        VICTORY_CHECKPOINT_KEYS,
+        `doc.terminal.checkpoints.${index}`,
+        diagnostics,
+        'victory checkpoint',
+      );
+    }
   }
 }
 

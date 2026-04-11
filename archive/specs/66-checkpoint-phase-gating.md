@@ -1,6 +1,6 @@
 # Spec 66 — Checkpoint Phase Gating
 
-- **Status**: Ready
+- **Status**: COMPLETED
 - **Priority**: High
 - **Complexity**: Low-Medium
 - **Dependencies**: None
@@ -166,3 +166,10 @@ However, this removal is **optional** and low-priority. The guard is harmless (j
 | 14. No Backwards Compat | Optional field with backward-compatible default (absent = fire always). No shims needed |
 | 15. Architectural Completeness | Addresses root cause (unconstrained checkpoint evaluation) rather than symptom |
 | 16. Testing as Proof | Comprehensive test plan covering unit, integration, and edge cases |
+
+## Outcome
+
+- Completed on 2026-04-11.
+- Implemented the generic checkpoint `phases` field across kernel/runtime, validator, and CNL/GameSpecDoc victory lowering so authored YAML phase gates survive into compiled `GameDef` artifacts.
+- Updated FITL terminal checkpoint data to gate `duringCoup` checks to `coupVictory` and final-Coup ranking to `coupRedeploy`.
+- Verified with focused engine build/test plus full `pnpm turbo test`, `pnpm turbo typecheck`, and `pnpm turbo lint`.

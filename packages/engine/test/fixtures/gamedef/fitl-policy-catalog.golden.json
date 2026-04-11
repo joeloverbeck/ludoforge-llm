@@ -518,7 +518,36 @@
         }
       }
     },
-    "derivedMetrics": {},
+    "derivedMetrics": {
+      "auto:victory:markerTotal:supportOpposition:activeSupport:passiveSupport": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:controlledPopulation:coin": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:controlledPopulation:solo": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      },
+      "auto:victory:markerTotal:supportOpposition:activeOpposition:passiveOpposition": {
+        "current": "public",
+        "preview": {
+          "visibility": "public",
+          "allowWhenHiddenSampling": false
+        }
+      }
+    },
     "victory": {
       "currentMargin": {
         "current": "public",
@@ -2665,5 +2694,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "5aaa6dd1a32f7c48a12e06afca5e747609e19fa56578e2cbdcc01ea4a97fa02b"
+  "catalogFingerprint": "f9da3c026caa1a9a77f8f365c7a40c4d799e2f700f7f57a5f9e3de989b7804ba"
 }

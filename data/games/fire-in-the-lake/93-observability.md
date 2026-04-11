@@ -6,6 +6,8 @@ observability:
     currentPlayer:
       description: "Standard FITL player perspective — most surfaces public"
       surfaces:
+        derivedMetrics:
+          _default: public
         perPlayerVars:
           _default: seatVisible
           resources:

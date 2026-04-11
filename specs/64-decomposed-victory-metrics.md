@@ -2,7 +2,7 @@
 
 **Status**: Draft
 **Priority**: P2
-**Complexity**: M
+**Complexity**: S
 **Dependencies**: None
 **Source**: ARVN agent evolution campaign ceiling analysis (2026-04-11)
 
@@ -15,11 +15,22 @@ agent cannot distinguish "margin is low because Patronage is low" from
 remedies (Govern for Patronage, Train/Patrol for control), but the agent
 treats them identically because only the composite is visible.
 
-This spec adds support for declaring derived observability metrics in
-GameSpecDoc that decompose the victory formula into individually
-addressable components. The agent policy DSL already supports
-`ref: metric.<id>` and `ref: preview.metric.<id>` --- the missing piece
-is the game data declaring these metrics.
+The engine already has the infrastructure to solve this:
+
+- The compiler auto-synthesizes derived metrics from victory standings
+  (e.g., `auto:victory:controlledPopulation:coin` for ARVN's COIN-
+  controlled population component).
+- The agent DSL supports `ref: metric.<id>` and
+  `ref: preview.metric.<id>` for derived metrics.
+- Patronage is a global variable accessible via
+  `ref: var.global.patronage`.
+
+The missing pieces are purely declarative:
+
+1. The FITL observer profile does not expose derived metrics to agents
+   (they default to `hidden` in `compile-observers.ts:45`).
+2. The ARVN agent profiles do not declare `stateFeatures` referencing
+   the decomposed signals.
 
 ## Problem Statement
 
@@ -30,67 +41,54 @@ is -15, the agent doesn't know whether Patronage is 10 (needs Govern) or
 COIN-Controlled Pop is 10 (needs Train/Patrol). Both produce margin -15
 but require opposite strategies.
 
-The DSL cookbook documents `ref: metric.<id>` as an available reference
-path, but FITL declares no derived metrics. The agent policy DSL already
-supports conditional scoring via `when` clauses referencing metrics:
+The decomposed signals already exist in the compiled GameDef:
 
-```yaml
-governWhenPatronageLow:
-  scopes: [move]
-  when:
-    lt: [{ ref: metric.patronage }, 20]
-  weight: 8
-  value:
-    boolToNumber: { ref: candidate.tag.govern }
-```
+- `auto:victory:controlledPopulation:coin` — auto-synthesized from the
+  ARVN victory standing formula (`synthesize-derived-metrics.ts`).
+- `patronage` — a global variable declared via content data assets
+  (`data/games/fire-in-the-lake/40-content-data-assets.md:781`).
 
-But `metric.patronage` doesn't exist because the game spec doesn't
-declare it.
+The DSL cookbook (`docs/agent-dsl-cookbook.md`) documents both
+`ref: metric.<id>` and `ref: var.global.<id>` as available reference
+paths. But the FITL observer profile does not expose `derivedMetrics`
+surfaces (defaulting them to hidden), and the agent profiles don't
+reference these signals in their `stateFeatures` or `considerations`.
 
 ## Proposed Changes
 
-### A. FITL observability metrics (Tier 4 game spec)
+### A. FITL observer derived-metric visibility
 
-Add to `data/games/fire-in-the-lake/91-observability.md` (or a new
-metrics section):
+Add `derivedMetrics` surface visibility to
+`data/games/fire-in-the-lake/93-observability.md` in the `currentPlayer`
+observer profile:
 
 ```yaml
 observability:
-  metrics:
-    patronage:
-      expr: { ref: var.player.self.resources }
-      visibility: seatVisible
-    coinControlledPopulation:
-      expr:
-        # Sum of population in zones where COIN pieces > insurgent pieces
-        # This requires a zone aggregation with control-aware filtering
-        globalZoneAgg:
-          field: population
-          source: attribute
-          aggOp: sum
-          zoneFilter:
-            variable:
-              coinControl: { gt: 0 }
-      visibility: public
+  observers:
+    currentPlayer:
+      surfaces:
+        derivedMetrics:
+          _default: public
+        # ... existing surfaces unchanged ...
 ```
 
-The exact expressions depend on how COIN-controlled population is
-computed in the current FITL spec. This may require a new zone variable
-(`coinControl`) that tracks the COIN vs insurgent piece balance, or it
-may already exist.
+This makes all auto-synthesized derived metrics (including
+`auto:victory:controlledPopulation:coin`) visible to agents using the
+`currentPlayer` observer profile.
 
 ### B. Agent profile conditional strategies (Tier 1 YAML)
 
-Once the metrics exist, the evolved ARVN profile can use them:
+Once the metrics are visible, the evolved ARVN profile in
+`data/games/fire-in-the-lake/92-agents.md` can use them:
 
 ```yaml
 stateFeatures:
   patronage:
     type: number
-    expr: { ref: metric.patronage }
+    expr: { ref: var.global.patronage }
   coinControlPop:
     type: number
-    expr: { ref: metric.coinControlledPopulation }
+    expr: { ref: metric.auto:victory:controlledPopulation:coin }
 
 considerations:
   governWhenPatronageLow:
@@ -109,40 +107,29 @@ considerations:
       boolToNumber: { ref: candidate.tag.train }
 ```
 
-### C. Preview support for metrics
-
-The preview system already supports `ref: preview.metric.<id>`. No
-engine changes needed --- just declaring the metrics in the game spec
-makes them available to preview evaluation.
-
 ## FOUNDATIONS Alignment
 
-- **#1 Engine Agnosticism**: Derived metrics are declared in GameSpecDoc,
-  not in engine code. The metric expression language is the same generic
-  expression system used everywhere. No ARVN-specific engine logic.
-- **#2 Evolution-First Design**: Metrics declared in GameSpecDoc are
-  available to the evolution pipeline. The agent can build conditional
-  strategies based on decomposed victory components.
-- **#7 Specs Are Data**: Metrics are declarative expressions, not
-  executable code.
-- **#4 Authoritative State**: Metrics are projections of the authoritative
-  state, respecting visibility rules.
+- **#1 Engine Agnosticism**: No engine changes. All additions are
+  declarative YAML in game-specific data files.
+- **#2 Evolution-First Design**: Metrics and variables are in
+  GameSpecDoc-governed artifacts. The evolution pipeline can mutate
+  agent profiles to build conditional strategies around decomposed
+  signals.
+- **#4 Authoritative State**: Derived metric visibility is configured
+  via the observer profile, respecting the observer contract. Agents
+  see only what the observer allows.
+- **#7 Specs Are Data**: All additions are declarative YAML — observer
+  visibility configuration and agent profile expressions.
 
 ## Acceptance Criteria
 
-1. FITL game spec declares at least `patronage` and
-   `coinControlledPopulation` as observability metrics.
-2. Agent profiles can reference `ref: metric.patronage` and
-   `ref: preview.metric.patronage` in state features and considerations.
-3. The decomposed metrics appear in agent decision traces
+1. The FITL observer profile in `93-observability.md` exposes
+   `derivedMetrics` surfaces to agents (not hidden).
+2. ARVN agent profiles declare `stateFeatures` referencing
+   `ref: var.global.patronage` and
+   `ref: metric.auto:victory:controlledPopulation:coin`.
+3. Agent profiles include conditional `considerations` that
+   differentiate strategy based on the decomposed components.
+4. The decomposed metrics appear in agent decision traces
    (via stateFeatures that reference them).
-4. Existing profiles and tests are unaffected (metrics are additive).
-
-## Open Questions
-
-1. Does the FITL game spec already have a zone variable that tracks
-   COIN vs insurgent piece balance? If not, is a new zone variable
-   needed, or can it be computed via `globalZoneAgg` with token filters?
-2. Is `var.player.self.resources` the correct reference for ARVN
-   Patronage, or is Patronage a separate variable? (Need to verify
-   against the FITL game spec.)
+5. Existing profiles and tests are unaffected (changes are additive).

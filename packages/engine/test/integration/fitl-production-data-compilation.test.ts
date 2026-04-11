@@ -53,6 +53,21 @@ interface EventCardLike {
 }
 
 describe('FITL production data integration compilation', () => {
+  it('exposes synthesized derived metrics through the currentPlayer observer when FITL opts in', () => {
+    const { compiled } = compileProductionSpec();
+    const currentPlayer = compiled.gameDef.observers?.observers.currentPlayer;
+
+    assert.ok(currentPlayer, 'Expected FITL currentPlayer observer profile');
+    assert.deepEqual(
+      currentPlayer.surfaces.derivedMetrics['auto:victory:controlledPopulation:coin'],
+      {
+        current: 'public',
+        preview: { visibility: 'public', allowWhenHiddenSampling: false },
+      },
+      'Expected synthesized COIN controlled-population metric to be publicly observable for currentPlayer',
+    );
+  });
+
   it('parses and validates the canonical production GameSpecDoc with required invariants', () => {
     const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
 

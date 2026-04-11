@@ -208,6 +208,29 @@ function buildDecisionBreakdown(stats, roundValue = (value) => value) {
   };
 }
 
+function extractSelfMargin(agentDecision) {
+  const value = agentDecision?.stateFeatures?.selfMargin;
+  return typeof value === 'number' ? value : null;
+}
+
+function enrichEvolvedMovesWithMargins(evolvedMoves, finalMargin) {
+  const margins = evolvedMoves.map((move) => extractSelfMargin(move.agentDecision));
+
+  return evolvedMoves.map((move, index) => {
+    const marginBefore = margins[index];
+    const nextMargin = index + 1 < margins.length ? margins[index + 1] : finalMargin;
+    const marginAfter = marginBefore !== null && nextMargin !== null ? nextMargin : null;
+
+    return {
+      ...move,
+      marginBefore,
+      marginAfter,
+      marginDelta:
+        marginBefore !== null && marginAfter !== null ? marginAfter - marginBefore : null,
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Step 1: Compile the FITL spec
 // ---------------------------------------------------------------------------
@@ -329,6 +352,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         legalMoveCount: m.legalMoveCount,
         agentDecision: m.agentDecision ?? null,
       }));
+    const evolvedMovesWithMargins = enrichEvolvedMovesWithMargins(evolvedMoves, vcMargin);
 
     const seedDecisionStats = createDecisionStats();
     for (const evolvedMove of evolvedMoves) {
@@ -386,9 +410,9 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         vcMargin,
         allSeatMargins,
         movesBySeat,
-        evolvedMoveCount: evolvedMoves.length,
+        evolvedMoveCount: evolvedMovesWithMargins.length,
         decisionBreakdown: buildDecisionBreakdown(seedDecisionStats, round4),
-        evolvedMoves,
+        evolvedMoves: evolvedMovesWithMargins,
         opponentMoveCount: opponentMoves.length,
         opponentMoves,
       };

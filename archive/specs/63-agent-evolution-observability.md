@@ -1,6 +1,6 @@
 # Spec 63: Agent Evolution Observability
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: None
@@ -137,3 +137,37 @@ move loop in run-tournament.mjs.
    `marginDelta` for each evolved move.
 3. All existing harness consumers (harness.sh parsing, results.tsv)
    continue to work unchanged (new fields are additive).
+
+## Outcome
+
+Completed: 2026-04-11
+
+Implemented the observability slice across both FITL tournament runners.
+`campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` and
+`campaigns/fitl-vc-agent-evolution/run-tournament.mjs` now emit additive
+`decisionBreakdown` summary data, and both runners now attach
+`marginBefore`, `marginAfter`, and `marginDelta` fields to saved evolved
+move traces.
+
+Deviations from original plan:
+
+- The work shipped through the ticket series
+  `63AGEEVOOBS-001` through `63AGEEVOOBS-004` instead of one monolithic
+  implementation step.
+- The ARVN runner satisfies the intended last-move margin invariant with
+  real `selfMargin` data.
+- The VC runner preserves the same margin field shape but currently emits
+  `null` values for those fields in live traces because the FITL binding
+  still maps `vc` to `vc-baseline`, whose emitted `agentDecision` payload
+  does not include `stateFeatures.selfMargin`. This remained out of scope
+  for the campaign-only observability tickets and was documented in the
+  final ticket contract instead of being hidden.
+
+Verification results:
+
+- Focused runner proofs passed for ARVN and VC summary enrichment.
+- Focused trace proof passed for ARVN margin trajectory invariants.
+- VC trace proof confirmed additive margin fields, null-safe delta
+  behavior, and the current baseline-profile limitation described above.
+- `pnpm -F @ludoforge/engine build` passed during implementation.
+- `pnpm turbo build` and `pnpm turbo test` passed after the series landed.

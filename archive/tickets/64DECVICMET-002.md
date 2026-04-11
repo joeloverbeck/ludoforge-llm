@@ -1,6 +1,6 @@
 # 64DECVICMET-002: Add decomposed victory stateFeatures and conditional considerations to ARVN agent profiles
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — game data only
@@ -110,3 +110,20 @@ After adding the features and considerations, recompile and run the agent test s
 1. `pnpm turbo build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
+
+## Outcome
+
+- Completed: 2026-04-11
+- Changed:
+  - Added shared FITL agent-library stateFeatures `patronage` and `coinControlPop` in `data/games/fire-in-the-lake/92-agents.md`.
+  - Added ARVN evolved considerations `governWhenPatronageLow` and `trainWhenControlLow`, and wired them into the `arvn-evolved` profile.
+  - Added a focused production-compilation assertion in `packages/engine/test/integration/fitl-production-data-compilation.test.ts`.
+  - Regenerated `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json` and `packages/runner/src/bootstrap/fitl-game-def.json`.
+- Deviations from original plan:
+  - No architecture or scope rewrite was needed; the broader observer-visibility slice remained out of scope because it had already been completed by `archive/tickets/64DECVICMET-001.md`.
+  - The focused compilation proof was added explicitly instead of relying only on existing golden coverage.
+- Verification results:
+  - `pnpm turbo build`
+  - `pnpm -F @ludoforge/runner bootstrap:fixtures`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`

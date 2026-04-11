@@ -1,6 +1,6 @@
 # Spec 64: Decomposed Victory Margin Metrics
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: None
@@ -133,3 +133,19 @@ considerations:
 4. The decomposed metrics appear in agent decision traces
    (via stateFeatures that reference them).
 5. Existing profiles and tests are unaffected (changes are additive).
+
+## Outcome
+
+- Completed: 2026-04-11
+- Changed:
+  - Exposed synthesized derived metrics to FITL agents through the `currentPlayer` observer profile in `data/games/fire-in-the-lake/93-observability.md`.
+  - Added ARVN agent-library stateFeatures for `patronage` and `coinControlPop` plus conditional considerations keyed off those decomposed signals in `data/games/fire-in-the-lake/92-agents.md`.
+  - Added production-compilation regression coverage and regenerated the FITL policy/bootstrap artifacts that encode the new observer and policy catalog surfaces.
+- Deviations from original plan:
+  - The work landed as two implementation tickets rather than one direct spec-only change boundary: `archive/tickets/64DECVICMET-001.md` handled the observer/compiler visibility slice and `archive/tickets/64DECVICMET-002.md` handled the ARVN policy slice.
+  - The observer visibility change required generic compiler plumbing so synthesized derived metric ids participate in observer and agent policy surfaces, not just a FITL YAML edit.
+- Verification results:
+  - `pnpm turbo build`
+  - `pnpm -F @ludoforge/runner bootstrap:fixtures`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`

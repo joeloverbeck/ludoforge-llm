@@ -105,6 +105,7 @@ Output the audit in the conversation, not in a file.
 **Total**: N issues, N improvements, N features — N CRITICAL, N HIGH, N MEDIUM, N LOW
 
 [If the skill was already updated and only low-severity findings remain, note that further auditing may have diminishing returns.]
+[Optional] **Recommended next actions**: <top 1-2 follow-ups when the audit clearly points to concrete next steps>
 ```
 
 ## Guardrails
@@ -138,6 +139,7 @@ If the current audit targets a different skill than any earlier audit in this se
 - Do not assume slash-command invocation or Claude-specific argument plumbing.
 - Use the current Codex conversation and tool history as the session evidence source.
 - Use `AGENTS.md` rather than `CLAUDE.md` for repository-specific behavior.
+- When auditing `skill-audit` itself, evidence should come from the actual audit interaction in the current session: target-skill read/validation, audit-scope selection, report structure/template usage, severity calibration, and whether the resulting recommendations were concrete enough for the next user turn to act on.
 
 ## Example Prompts
 

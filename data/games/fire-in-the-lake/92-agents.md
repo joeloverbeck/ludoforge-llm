@@ -64,6 +64,14 @@ agents:
         type: number
         expr:
           ref: victory.currentMargin.self
+      patronage:
+        type: number
+        expr:
+          ref: var.global.patronage
+      coinControlPop:
+        type: number
+        expr:
+          ref: metric.auto:victory:controlledPopulation:coin
       selfResources:
         type: number
         expr:
@@ -322,6 +330,26 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.train
+      governWhenPatronageLow:
+        scopes: [move]
+        when:
+          lt:
+            - { ref: feature.patronage }
+            - 20
+        weight: 8
+        value:
+          boolToNumber:
+            ref: candidate.tag.govern
+      trainWhenControlLow:
+        scopes: [move]
+        when:
+          lt:
+            - { ref: feature.coinControlPop }
+            - 25
+        weight: 5
+        value:
+          boolToNumber:
+            ref: candidate.tag.train
       preferPopulousTargets:
         scopes: [completion]
         when:
@@ -456,6 +484,8 @@ agents:
           - preferStrongNormalizedMargin
           - preferGovernWeighted
           - preferTrainWeighted
+          - governWhenPatronageLow
+          - trainWhenControlLow
           - preferPopulousTargets
         tieBreakers:
           - stableMoveKey

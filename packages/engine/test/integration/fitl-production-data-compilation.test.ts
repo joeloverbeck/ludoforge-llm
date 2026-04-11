@@ -68,6 +68,42 @@ describe('FITL production data integration compilation', () => {
     );
   });
 
+  it('compiles ARVN policy features and considerations for decomposed victory signals', () => {
+    const { compiled } = compileProductionSpec();
+    const catalog = compiled.gameDef.agents;
+
+    assert.ok(catalog, 'Expected compiled FITL policy catalog');
+    assert.deepEqual(catalog.library.stateFeatures.patronage?.expr, {
+      kind: 'ref',
+      ref: {
+        kind: 'currentSurface',
+        family: 'globalVar',
+        id: 'patronage',
+      },
+    });
+    assert.deepEqual(catalog.library.stateFeatures.coinControlPop?.expr, {
+      kind: 'ref',
+      ref: {
+        kind: 'currentSurface',
+        family: 'derivedMetric',
+        id: 'auto:victory:controlledPopulation:coin',
+      },
+    });
+    assert.deepEqual(
+      catalog.profiles['arvn-evolved']?.use.considerations,
+      [
+        'preferProjectedSelfMargin',
+        'preferStrongNormalizedMargin',
+        'preferGovernWeighted',
+        'preferTrainWeighted',
+        'governWhenPatronageLow',
+        'trainWhenControlLow',
+        'preferPopulousTargets',
+      ],
+      'Expected ARVN evolved profile to include the decomposed victory considerations',
+    );
+  });
+
   it('parses and validates the canonical production GameSpecDoc with required invariants', () => {
     const { parsed, validatorDiagnostics, compiled } = compileProductionSpec();
 

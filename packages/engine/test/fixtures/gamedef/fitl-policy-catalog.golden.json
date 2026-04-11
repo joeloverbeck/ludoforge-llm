@@ -796,6 +796,44 @@
           "strategicConditions": []
         }
       },
+      "patronage": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "currentSurface",
+            "family": "globalVar",
+            "id": "patronage"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "coinControlPop": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "currentSurface",
+            "family": "derivedMetric",
+            "id": "auto:victory:controlledPopulation:coin"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "selfResources": {
         "type": "number",
         "costClass": "state",
@@ -2003,6 +2041,106 @@
           "strategicConditions": []
         }
       },
+      "governWhenPatronageLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "lt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "patronage"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 20
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 8
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "govern"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "patronage"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "trainWhenControlLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "when": {
+          "kind": "op",
+          "op": "lt",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "coinControlPop"
+              }
+            },
+            {
+              "kind": "literal",
+              "value": 25
+            }
+          ]
+        },
+        "weight": {
+          "kind": "literal",
+          "value": 5
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "candidateTag",
+                "tagName": "train"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "coinControlPop"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferPopulousTargets": {
         "scopes": [
           "completion"
@@ -2543,6 +2681,8 @@
           "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "preferTrainWeighted",
+          "governWhenPatronageLow",
+          "trainWhenControlLow",
           "preferPopulousTargets"
         ],
         "tieBreakers": [
@@ -2559,7 +2699,9 @@
       },
       "plan": {
         "stateFeatures": [
-          "selfMargin"
+          "selfMargin",
+          "patronage",
+          "coinControlPop"
         ],
         "candidateFeatures": [
           "projectedSelfMargin"
@@ -2574,10 +2716,12 @@
           "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "preferTrainWeighted",
+          "governWhenPatronageLow",
+          "trainWhenControlLow",
           "preferPopulousTargets"
         ]
       },
-      "fingerprint": "f29f290add2ceac1292740a1138f9f76df6d8599088c60c24f216220bd80292a"
+      "fingerprint": "f35e601f2da42786e2ec143183064e1e900db24588f1673bc41724a315225b22"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2694,5 +2838,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "f9da3c026caa1a9a77f8f365c7a40c4d799e2f700f7f57a5f9e3de989b7804ba"
+  "catalogFingerprint": "ec61e7b96f7c3aaea8eb1b718abc36fafce3b65c89a4253ffa55c385ec330ecb"
 }

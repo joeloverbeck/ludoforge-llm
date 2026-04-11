@@ -15,6 +15,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 ## Working Notes
 
 - In Codex sessions, use concise `commentary` updates as the default surface unless the ticket requires a durable repo artifact.
+- In normal Codex runs, capture the working-notes checklist in `commentary` updates and/or the final closeout; do not create a repo artifact just to hold these notes unless the ticket explicitly requires one.
 - Capture reassessment outcomes affecting correctness: discrepancy lists, evidence classification, authoritative boundary restatements, verification-owned scope corrections.
 - In Codex sessions, record at minimum: draft/untracked status when relevant, the discrepancy class (`blocking` vs `nonblocking`), the final authoritative boundary, and any verification command substitutions or semantic expectation corrections.
 - A minimal Codex working-notes checklist is:
@@ -126,6 +127,19 @@ Load `references/verification.md`.
 - For deterministic but seed-sensitive preparation flows, prefer bounded witness discovery over hardcoding an unverified seed. Keep the search bounded, deterministic, and aligned with the invariant being proven.
 - If an initial bounded witness proves only part of the target invariant, keep searching for a stronger bounded witness before classifying the ticket as stale, contradictory, or blocked. Escalate only after bounded search aligned to the full invariant fails or reveals a true contract conflict.
 - Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution.
+- After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
+- When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
+
+### Generated Artifact Isolation Checklist
+
+Use this after commands that regenerate fixtures, bootstrap JSON, schema artifacts, or golden files:
+
+1. Run the narrowest authoritative generator for the owned surface.
+2. Inspect every regenerated file, not just the one the ticket named.
+3. Classify each regenerated artifact as `owned`, `already-owned sibling fallout`, or `unrelated churn`.
+4. Keep only the owned artifacts required to make the ticket true in live runtime.
+5. Revert unrelated churn before final closeout.
+6. Rerun the narrowest affected proof lane after artifact triage so the kept generated files are validated.
 
 ### Standard Commands
 

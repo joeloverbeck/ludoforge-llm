@@ -1,6 +1,6 @@
 # 63AGEEVOOBS-002: Decision-type breakdown in VC tournament runner
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — campaign-only
@@ -70,3 +70,18 @@ Add `decisionBreakdown` to the VC runner's `traceSummary` object and final `resu
 
 1. `node campaigns/fitl-vc-agent-evolution/run-tournament.mjs --seeds 3 2>/dev/null | tail -1 | node -e "const d=require('fs').readFileSync('/dev/stdin','utf8');const j=JSON.parse(d);console.log(JSON.stringify(j.decisionBreakdown,null,2))"`
 2. `pnpm turbo build && pnpm turbo test`
+
+## Outcome
+
+- Completed: 2026-04-11
+- Ported the archived ARVN decision-breakdown logic into `campaigns/fitl-vc-agent-evolution/run-tournament.mjs`.
+- The VC runner now classifies evolved-seat decisions, accumulates per-seed and cross-seed stats, and includes `decisionBreakdown` in both saved trace summaries and the final result JSON.
+- Matched the archived ARVN runner’s finite-gap/tie behavior for single-candidate decisions so the two FITL runners stay consistent and the JSON remains numeric.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `node campaigns/fitl-vc-agent-evolution/run-tournament.mjs --seeds 3 2>/dev/null | tail -1 | node -e "const d=require('fs').readFileSync(0,'utf8'); const j=JSON.parse(d); console.log(JSON.stringify(j.decisionBreakdown,null,2));"`
+- `node campaigns/fitl-vc-agent-evolution/run-tournament.mjs --seeds 1 --trace-all false --trace-seed 1000 >/dev/null 2>/dev/null && node -e "const t=JSON.parse(require('fs').readFileSync('campaigns/fitl-vc-agent-evolution/last-trace.json','utf8')); console.log(JSON.stringify(t.decisionBreakdown,null,2));"`
+- `pnpm turbo build`
+- `pnpm turbo test`

@@ -42,6 +42,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
+   - Check whether any likely verification commands contend on generated output trees such as `dist`, schema artifacts, compiled JSON, or goldens. If they do, plan those lanes as sequential-only before you start running checks.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
    - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
    - For active untracked drafts, prefer correcting stale command examples in the ticket once the repo-valid replacement is confirmed, so future turns do not inherit the drift.
@@ -144,6 +145,15 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 
 Load `references/verification.md`.
 
+Before running broader checks, identify whether any ticket-relevant commands clean or rewrite shared outputs such as `packages/*/dist`, generated schemas, compiled JSON, or goldens. If they do, run those lanes serially even when the surrounding Codex guidance favors parallel tool use.
+
+For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness.
+
+If a verification lane fails immediately after overlapping output-contending commands, treat the first result as inconclusive until you rerun it serially. Recovery order:
+1. Classify the failure as a possible ordering artifact rather than as code-caused.
+2. Rebuild the touched package or regenerate the touched artifact tree to restore a clean authoritative output.
+3. Rerun the failed proof lane serially before drawing conclusions or widening scope.
+
 ### Verification Safety
 
 - Keep bugfix/regression verification on a red-green path: when you add or expose a focused failing proof for the ticket, keep rerunning that focused lane until it passes before escalating to broader package or repo commands.
@@ -199,6 +209,13 @@ pnpm turbo schema:artifacts
 ## Follow-Up
 
 Load `references/closeout-and-followup.md`.
+
+For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
+- completion date or resulting status
+- what landed in the owned boundary
+- any boundary correction or semantic correction confirmed during reassessment
+- verification commands that actually ran
+- whether schema/artifact fallout was checked and whether it changed
 
 ## Codex Adaptation Notes
 

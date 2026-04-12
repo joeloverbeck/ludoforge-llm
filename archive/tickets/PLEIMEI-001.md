@@ -1,6 +1,6 @@
 # PLEIMEI-001: Plei Mei shaded zone filter no longer rejects South Vietnam march origins
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — data-only (FITL GameSpecDoc YAML zone filter)
@@ -85,3 +85,15 @@ The fix must:
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:integration:fitl-events`
 2. `pnpm turbo typecheck`
+
+## Outcome
+
+- Completed: 2026-04-12
+- Simplified the Plei Mei shaded March `zoneFilter` in `data/games/fire-in-the-lake/41-events/033-064.md` to validate only the initial mover-origin bindings. This removes the stale dependency on optional per-origin trail-continuation bindings that were deferring zone-filter evaluation when no chain continuation existed.
+- The resulting filter now rejects any free March that includes South Vietnam origins, suppresses shaded play when no outside-South origin exists, and preserves the existing Monsoon-from-Central-Laos happy path.
+- No engine, schema, or generated-artifact changes were required.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `node packages/engine/dist/test/integration/fitl-events-plei-mei.test.js`
+  - `pnpm -F @ludoforge/engine test:integration:fitl-events`
+  - `pnpm turbo typecheck`

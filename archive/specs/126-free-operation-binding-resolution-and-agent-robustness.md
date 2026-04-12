@@ -1,6 +1,6 @@
 # Spec 126 — Free-Operation Binding Resolution and Agent Robustness
 
-- **Status**: PROPOSED
+- **Status**: COMPLETED
 - **Priority**: High
 - **Complexity**: Medium
 - **Dependencies**: None (Spec 66 checkpoint-phase-gating is prerequisite context, already completed)
@@ -155,3 +155,22 @@ Consult FITL Rules Section 3.3.3 (March) and Section 4.1 (Special Activities) to
 - Full `PolicyAgent` overhaul (agent AI strategy is a separate concern). This spec only addresses crash/hang robustness.
 - Evolution pipeline or CLI integration.
 - `maxTurns` seeds that play 300 moves without a winner — these are a game-design quality issue, not an engine bug.
+
+## Outcome
+
+Completed: 2026-04-12
+
+Implemented across the `126FREOPEBIN` ticket series. The delivered work covered:
+- free-operation zone-filter deferral for per-zone interpolated missing bindings
+- boundedness fixes in free-operation viability, policy preview, real move application, and legal-move early-exit behavior
+- `PolicyAgent` fallback for phase-1/phase-2 action-filter mismatch
+- a generic template-completion guard so invalid guided `chooseN` draws classify as unsatisfiable instead of crashing agent move preparation
+- focused FITL regressions and bounded-seed stability coverage, plus refreshed canary selection
+
+Deviation from original plan: the spec's initial broad failure buckets and sample terminal seeds drifted as live investigation progressed. The work was delivered through a series of narrower root-cause tickets (`001` through `009`), including prerequisite splits where new blockers appeared after valid partial fixes. The final implementation stayed Foundation-compliant by keeping generic engine fixes in `packages/engine/src/kernel` and FITL-specific semantics in data/tests only.
+
+Verification:
+- targeted ticket-level build/test lanes for each delivered slice in the `126FREOPEBIN` series
+- `pnpm turbo test`
+- `pnpm turbo typecheck`
+- `pnpm run check:ticket-deps`

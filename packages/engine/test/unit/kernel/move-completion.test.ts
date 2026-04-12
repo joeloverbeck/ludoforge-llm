@@ -258,6 +258,19 @@ describe('template-completion chooseN bounds', () => {
     assert.equal(result.kind, 'unsatisfiable');
   });
 
+  it('treats guided chooseN cardinality mismatches as unsatisfiable instead of throwing', () => {
+    const action = createChooseNAction('guided-invalid-choose-n');
+    const profile = createChooseNProfile('guided-invalid-choose-n', 1, 1, ['a', 'b', 'c']);
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('guided-invalid-choose-n'), params: {} };
+
+    const result = completeTemplateMove(def, baseState, templateMove, createRng(3n), undefined, {
+      choose: () => ['a', 'b'],
+    });
+
+    assert.equal(result.kind, 'unsatisfiable');
+  });
+
   it('default budget (256) allows actions that would exceed the old 50-decision limit', () => {
     // Create an action with many sequential chooseN decisions by using
     // a large option set — a single chooseN with 1 decision is enough to

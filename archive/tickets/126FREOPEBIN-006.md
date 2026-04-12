@@ -1,10 +1,10 @@
 # 126FREOPEBIN-006: FITL seed 1012 slow/hang boundary after March Trail correction
 
-**Status**: BLOCKED
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Unknown until reassessment; do not assume data-only
-**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `archive/tickets/126FREOPEBIN-003.md`, `archive/tickets/126FREOPEBIN-005.md`, `tickets/126FREOPEBIN-007.md`
+**Deps**: `archive/tickets/126FREOPEBIN-001.md`, `archive/tickets/126FREOPEBIN-002.md`, `archive/tickets/126FREOPEBIN-003.md`, `archive/tickets/126FREOPEBIN-005.md`, `archive/tickets/126FREOPEBIN-007.md`
 
 ## Problem
 
@@ -80,10 +80,15 @@ If the remaining issue moves again after this work, stop and handle it in the sm
 3. Re-run the bounded `1012` witness and confirm whether the hotspot moved
 4. If the hotspot moves, create the narrowest prerequisite follow-up ticket before continuing
 
-## Partial Outcome (2026-04-12)
+## Outcome (2026-04-12)
 
 - Landed engine-agnostic boundedness work in free-operation viability and move-decision satisfiability.
 - Added targeted regression coverage for lower-complexity branch ordering and probe-binding-based early pruning.
 - Verified that the original `1012` free-operation/event-side hotspot moved: the bounded 30-second trace now reaches about ply `184` instead of about ply `110`.
-- Verified the remaining blocker is later and narrower: `PolicyAgent.chooseMove` preview application of a VC `attack`, spending about `3.3s` in `applyMove -> advanceToDecisionPoint -> legalMoves`.
-- Ticket is blocked on `126FREOPEBIN-007`, which owns that new policy-preview/runtime boundary.
+- Verification then exposed a later narrower blocker in policy preview/runtime evaluation; that work was split to `126FREOPEBIN-007` rather than widening this ticket.
+- After archived follow-ups `126FREOPEBIN-007` and `126FREOPEBIN-008` landed, seed `1012` reached a bounded `maxTurns (300)` classification, confirming this ticket's free-operation/event-side boundary was fully cleared.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/free-operation-viability.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/move-decision-sequence.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-policy-agent-enumeration-hang.test.js`

@@ -1,6 +1,6 @@
 # 126FREOPEBIN-007: Policy preview applyMove slowdown on FITL seed 1012
 
-**Status**: BLOCKED
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Expected — engine/agent runtime only, game-agnostic
@@ -79,11 +79,15 @@ Remaining unblock proof now belongs to `126FREOPEBIN-008`.
 3. Re-run the bounded seed `1012` witness and confirm whether the hotspot moved
 4. If the hotspot moves, create the narrowest prerequisite follow-up ticket before continuing
 
-## Partial Outcome (2026-04-12)
+## Outcome (2026-04-12)
 
 - Landed a shared preview-application path that skips `advanceToDecisionPoint` during policy preview evaluation.
 - Aligned memoized preview application in `PolicyAgent` with the same non-advancing preview semantics.
 - Added targeted unit coverage proving preview application now receives `{ advanceToDecisionPoint: false }`.
 - Verified that the original `007` hotspot is cleared: the former ply-183 preview witness now takes about `7ms` instead of several seconds.
-- Verified the remaining blocker is later and distinct: in a 30-second bounded seed-`1012` run, the seed now reaches about ply `185`, and the slowest remaining step is actual `applyTrustedMove` at ply `183` on `attack` at about `3138ms`.
-- Ticket is blocked on `126FREOPEBIN-008`, which owns that newly exposed real-move execution boundary.
+- Verification then exposed a later distinct blocker in actual move execution; that work was split to `126FREOPEBIN-008` instead of widening this ticket.
+- After `126FREOPEBIN-008` landed, seed `1012` reached a bounded `maxTurns (300)` classification, which confirmed this ticket's preview/runtime boundary was fully cleared.
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview.test.js`
+  - bounded seed witness before handoff: former ply-183 preview hotspot reduced to about `7ms`

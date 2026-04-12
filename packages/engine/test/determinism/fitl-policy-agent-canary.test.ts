@@ -39,12 +39,10 @@ describe('FITL PolicyAgent determinism canary', () => {
     return runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
   };
 
-  // Seeds that produce terminal results with the current GameDef + phase-gated
-  // victory checkpoints (phases: [coupVictory]).  Canaries for grant-related
-  // determinism regressions.  Seeds 1040/1054 replaced with 2046/2057 because
-  // the originals hit an infinite loop in enumerateLegalMoves (binding
-  // interpolation bug in free-operation zone filters).
-  for (const seed of [1020, 1049, 2046, 2057]) {
+  // Targeted post-fix terminal canaries validated after the 126FREOPEBIN
+  // engine chain landed. These seeds all terminate and replay identically,
+  // including former hang witnesses 1040 and 1054.
+  for (const seed of [1020, 1040, 1049, 1054, 2046]) {
     it(`seed ${seed}: game reaches terminal within ${MAX_TURNS} moves`, () => {
       const trace = runOnce(seed);
       assert.equal(

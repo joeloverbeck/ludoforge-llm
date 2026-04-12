@@ -17,7 +17,6 @@ import {
   collectGrantAwareMoveZoneCandidates,
   resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-bindings.js';
-import { doesGrantPotentiallyAuthorizeMove } from './free-operation-grant-authorization.js';
 import {
   classifyMoveDecisionSequenceSatisfiability,
   resolveMoveDecisionSequence,
@@ -636,19 +635,9 @@ const hasLegalCompletedProbeMove = (
       ?? (authorizationState.turnOrderState.type === 'cardDriven'
         ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants?.find((grant) => grant.grantId === '__probe__') ?? null
         : null);
-    const pendingProbeGrants = authorizationState.turnOrderState.type === 'cardDriven'
-      ? authorizationState.turnOrderState.runtime.pendingFreeOperationGrants ?? []
-      : [];
     const probeGrantStillPotential = probeGrant === null
       ? null
-      : doesGrantPotentiallyAuthorizeMove(
-        def,
-        authorizationState,
-        pendingProbeGrants,
-        probeGrant,
-        request.move,
-        { useProbeBindings: true },
-      );
+      : isFreeOperationPotentiallyGrantedForMove(def, authorizationState, request.move, seatResolution);
     if (
       probeGrantStillPotential === false
       || (

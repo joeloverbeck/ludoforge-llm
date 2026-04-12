@@ -35,7 +35,9 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
    cd $WT && pnpm install   # or npm install / yarn install
    ```
 
-5. **Copy runtime files**: If the campaign has runtime files (`results.tsv`, `seed-tier.txt`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`) in the source campaign folder but not in the worktree, copy them. These files are gitignored and won't be created by `git worktree add`.
+5. **Set persistent working directory**: After setup, run `cd $WT` as a standalone Bash command to anchor the session's working directory in the worktree. All subsequent Bash commands will execute from the worktree root. Do NOT rely solely on `cd $WT &&` chains — if any later command uses `cd` to another directory, the working directory drifts silently. Verify with `pwd` before the baseline harness run.
+
+6. **Copy runtime files**: Copy ALL non-tracked files from the source campaign folder to the worktree campaign folder. Use `ls` to enumerate, then copy any that don't exist in the worktree. Common runtime files include `results.tsv`, `seed-tier.txt`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`, `last-trace.json`, and `traces/`. These are gitignored and won't be created by `git worktree add`.
 
 ## Phase 0 — Setup
 
@@ -58,7 +60,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 
 10. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND this is a new worktree (not resuming), clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`.
 11. Initialize strategy state: `strategy = "normal"`, `consecutive_rejects = 0`, `total_accepts = 0`.
-12. Read `campaigns/lessons-global.jsonl` if it exists — inject relevant global lessons into context.
+12. Read `campaigns/lessons-global.jsonl` if it exists — inject relevant global lessons into context. When applying global lessons from a different campaign (different `campaign` field), treat them as **hypotheses to verify**, not established facts. Cross-campaign lessons may be stale due to engine changes, different game mechanics, or different optimization targets. Note in musings which global lessons are being applied and flag any that come from campaigns targeting a different faction, game, or metric.
 13. Read `$WT/campaigns/<campaign>/lessons.jsonl` if resuming — prune lessons with `decay_weight < 0.3`. For lessons lacking a `type` field (backward compatibility), treat as `finding` (if `polarity: positive`) or `negative` (if `polarity: negative`).
 14. **Continuation campaign detection**: If results.tsv has only the header row but musings.md contains prior experiment history, this is a continuation campaign. Read prior musings, note in musings: `**CONTINUATION**: This campaign builds on prior optimization.` Avoid repeating exhausted approaches.
 
@@ -86,6 +88,15 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
    ```json
    {"exp_id": "baseline", "metric": <baseline_metric>, "commit": "<commit-hash>", "lines_delta_cumulative": 0, "description": "baseline", "timestamp": "<ISO-8601>"}
    ```
+
+### Baseline Failure Protocol
+
+If the baseline harness fails (non-zero exit), this is a **campaign-blocking issue**, not an experiment failure. Do NOT apply workarounds to make the harness pass.
+
+1. **Investigate the root cause.** Follow the same diagnostic approach as the Human Investigation Interrupt protocol — read error output, trace logs, and reproduce minimally.
+2. **If the root cause is in the game spec or engine** (not the campaign configuration): escalate as an engine limitation. Create a spec in the main repo root (not the worktree) documenting the bug with reproduction steps. Then trigger degenerate campaign completion — the campaign cannot proceed until the bug is fixed.
+3. **If the root cause is in the campaign configuration** (wrong seed count, missing files, incorrect profile name, harness misconfiguration): fix the configuration and retry the baseline. This does not count as an experiment.
+4. **Never mask a failing baseline with a workaround** (e.g., remapping error codes, suppressing exceptions, loosening assertions). A workaround produces unreliable metrics that invalidate all subsequent experiments.
 
 ## Phase 2 — Improvement Loop
 
@@ -242,9 +253,9 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 
 **Degenerate campaign** (zero accepted experiments — only infrastructure commits or early halt due to a discovered bug/limitation): simplify the completion flow:
 1. Create specs if engine limitations were discovered (in the main repo root, not the worktree).
-2. Copy gitignored runtime files back to the source campaign folder (see step 4 below).
-3. Switch to the main repo root and squash-merge (infrastructure commits only).
-4. Commit the squash-merge with a summary noting the campaign was halted due to `<reason>` and listing infrastructure changes. Skip lesson promotion and metric impact summary.
+2. Copy gitignored runtime files back to the source campaign folder (see step 4 below). The musings.md from a degenerate campaign contains diagnostic history (investigation notes, baseline analysis, root cause findings) that may be valuable when the campaign is restarted after the blocking issue is resolved — preserve it on disk even though it's not committed.
+3. **Pre-merge check**: Verify the branch has commits worth keeping: `git diff main...improve/<campaign> --stat`. If no meaningful diff remains (all changes were reverted in the working tree, or only invalid/diagnostic commits exist), skip the squash-merge and proceed directly to step 5.
+4. If the branch has useful infrastructure commits: switch to the main repo root and squash-merge. Commit with a summary noting the campaign was halted due to `<reason>` and listing infrastructure changes. Skip lesson promotion and metric impact summary.
 5. Remove the worktree and delete the branch (step 9 below).
 
 **Normal campaign** (one or more accepted experiments):

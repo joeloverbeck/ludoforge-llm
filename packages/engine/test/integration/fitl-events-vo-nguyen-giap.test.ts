@@ -281,7 +281,6 @@ describe('FITL card-56 Vo Nguyen Giap', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [SPACE_A, SPACE_B],
-        $chainSpaces: [],
         [`$movingGuerrillas@${SPACE_A}`]: [asTokenId('giap-march-a')],
         [`$movingGuerrillas@${SPACE_B}`]: [asTokenId('giap-march-b')],
         [`$movingTroops@${SPACE_A}`]: [],
@@ -375,7 +374,6 @@ describe('FITL card-56 Vo Nguyen Giap', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [SPACE_A],
-        $chainSpaces: [],
         [`$movingGuerrillas@${SPACE_A}`]: [],
         [`$movingTroops@${SPACE_A}`]: [asTokenId('giap-attack-a-t1'), asTokenId('giap-attack-a-t2')],
       },

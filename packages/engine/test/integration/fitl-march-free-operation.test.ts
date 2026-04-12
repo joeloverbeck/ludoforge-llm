@@ -87,7 +87,6 @@ describe('FITL march free operation probe', () => {
         freeOperation: true,
         params: {
           $targetSpaces: [HUE],
-          $chainSpaces: [],
           [`$movingGuerrillas@${HUE}`]: [],
           [`$movingTroops@${HUE}`]: [
             asTokenId('march-freeop-t1'),

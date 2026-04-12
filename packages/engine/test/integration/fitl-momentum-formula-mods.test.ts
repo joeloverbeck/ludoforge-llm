@@ -387,7 +387,6 @@ describe('FITL momentum formula modifiers', () => {
       actionId: asActionId('march'),
       params: {
         $targetSpaces: [LOC_SPACE],
-        $chainSpaces: [],
         [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
         [`$movingTroops@${LOC_SPACE}`]: [],
       },
@@ -431,7 +430,6 @@ describe('FITL momentum formula modifiers', () => {
       actionId: asActionId('march'),
       params: {
         $targetSpaces: [LOC_SPACE],
-        $chainSpaces: [],
         [`$movingGuerrillas@${LOC_SPACE}`]: [mover],
         [`$movingTroops@${LOC_SPACE}`]: [],
       },

@@ -802,7 +802,6 @@ describe('FITL NVA/VC special activities integration', () => {
           targetSpaces: ['quang-tri-thua-thien:none'],
           '$movingGuerrillas@quang-tri-thua-thien:none': [],
           '$movingTroops@quang-tri-thua-thien:none': [],
-          $chainSpaces: [],
         },
         compound: {
           specialActivity: {

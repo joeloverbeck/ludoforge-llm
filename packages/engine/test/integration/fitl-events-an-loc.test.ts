@@ -176,7 +176,7 @@ describe('FITL card-71 An Loc', () => {
         completionPolicy: 'required',
         outcomePolicy: 'mustChangeGameplayState',
         moveZoneBindings: ['$targetSpaces'],
-        moveZoneProbeBindings: ['$targetSpaces', '$chainSpaces'],
+        moveZoneProbeBindings: ['$targetSpaces'],
         sequenceContext: { captureMoveZoneCandidatesAs: 'an-loc-city' },
       },
       {
@@ -337,7 +337,6 @@ describe('FITL card-71 An Loc', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('an-loc-march-t1')],
       },
@@ -349,7 +348,6 @@ describe('FITL card-71 An Loc', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [HUE],
-        $chainSpaces: [],
         [`$movingGuerrillas@${HUE}`]: [asTokenId('an-loc-march-g1')],
         [`$movingTroops@${HUE}`]: [],
       },
@@ -361,7 +359,6 @@ describe('FITL card-71 An Loc', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [HUE],
-        $chainSpaces: [],
         [`$movingGuerrillas@${HUE}`]: [],
         [`$movingTroops@${HUE}`]: [
           asTokenId('an-loc-march-t1'),
@@ -377,7 +374,6 @@ describe('FITL card-71 An Loc', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [HUE],
-        $chainSpaces: [],
         [`$movingGuerrillas@${HUE}`]: [],
         [`$movingTroops@${HUE}`]: [
           asTokenId('an-loc-march-t1'),

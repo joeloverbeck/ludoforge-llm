@@ -5,6 +5,7 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  asTokenId,
   asZoneId,
   classifyMoveDecisionSequenceAdmissionForLegalMove,
   classifyMoveDecisionSequenceSatisfiability,
@@ -21,6 +22,7 @@ import {
   type GameDef,
   type GameState,
   type Move,
+  type Token,
 } from '../../../src/kernel/index.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
@@ -80,6 +82,12 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
 const makeMove = (actionId: string): Move => ({
   actionId: asActionId(actionId),
   params: {},
+});
+
+const makeToken = (id: string): Token => ({
+  id: asTokenId(id),
+  type: 'piece',
+  props: {},
 });
 
 describe('move decision sequence helpers', () => {
@@ -458,6 +466,78 @@ phase: [asPhaseId('main')],
 
     assert.equal(resolveMoveDecisionSequence(def, state, makeMove('branching-op')).complete, false);
     assert.equal(isMoveDecisionSequenceSatisfiable(def, state, makeMove('branching-op')), true);
+  });
+
+  it('tries lower-complexity branches first during satisfiability classification', () => {
+    const def = asTaggedGameDef({
+      ...makeBaseDef(),
+      zones: [
+        { id: asZoneId('dense:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+        { id: asZoneId('sparse:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [],
+        'dense:none': Array.from({ length: 10 }, (_, index) => makeToken(`dense-${index}`)),
+        'sparse:none': [],
+      },
+    });
+    const move = makeMove('complexity-ordered-op');
+
+    const result = classifyMoveDecisionSequenceSatisfiability(
+      def,
+      state,
+      move,
+      {
+        budgets: { maxParamExpansions: 7, maxDecisionProbeSteps: 32 },
+        discoverer: (candidateMove) => {
+          if (!('$targetSpace' in candidateMove.params)) {
+            return {
+              kind: 'pending',
+              complete: false,
+              decisionKey: asDecisionKey('$targetSpace'),
+              name: '$targetSpace',
+              type: 'chooseOne',
+              options: [
+                { value: 'dense:none', legality: 'legal', illegalReason: null },
+                { value: 'sparse:none', legality: 'legal', illegalReason: null },
+              ],
+              targetKinds: [],
+            } as const;
+          }
+          if (candidateMove.params.$targetSpace === 'dense:none' && !('$denseBranch' in candidateMove.params)) {
+            return {
+              kind: 'pending',
+              complete: false,
+              decisionKey: asDecisionKey('$denseBranch'),
+              name: '$denseBranch',
+              type: 'chooseN',
+              options: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'].map((value) => ({
+                value,
+                legality: 'legal' as const,
+                illegalReason: null,
+              })),
+              min: 8,
+              max: 8,
+              selected: [],
+              canConfirm: false,
+              targetKinds: [],
+            } as const;
+          }
+          if (candidateMove.params.$targetSpace === 'dense:none') {
+            return {
+              kind: 'illegal',
+              complete: false,
+              reason: 'emptyDomain',
+            } as const;
+          }
+          return { kind: 'complete', complete: true } as const;
+        },
+      },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
   });
 
   it('uses an injected discoverer instead of the default legalChoicesDiscover path', () => {

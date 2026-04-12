@@ -2,11 +2,13 @@ import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from './choice-option-policy.js';
+import { isEffectRuntimeReason } from './effect-error.js';
 import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { nextInt } from './prng.js';
+import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import type {
   ChoicePendingRequest,
   ChoiceStochasticPendingRequest,
@@ -135,10 +137,18 @@ export const completeTemplateMove = (
     return request.outcomes[index]?.bindings;
   };
 
-  const result = completeMoveDecisionSequence(def, state, templateMove, {
-    choose,
-    chooseStochastic,
-  }, runtime);
+  let result: ReturnType<typeof completeMoveDecisionSequence>;
+  try {
+    result = completeMoveDecisionSequence(def, state, templateMove, {
+      choose,
+      chooseStochastic,
+    }, runtime);
+  } catch (error) {
+    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
+      return { kind: 'unsatisfiable' };
+    }
+    throw error;
+  }
 
   if (exceeded) {
     return { kind: 'unsatisfiable' };

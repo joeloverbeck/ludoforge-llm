@@ -157,8 +157,8 @@ describe('FITL card-59 Plei Mei', () => {
         allowDuringMonsoon: true,
         completionPolicy: 'skipIfNoLegalCompletion',
         outcomePolicy: 'mustChangeGameplayState',
-        moveZoneBindings: ['$targetSpaces', '$chainSpaces'],
-        moveZoneProbeBindings: ['$targetSpaces', '$chainSpaces'],
+        moveZoneBindings: ['$targetSpaces'],
+        moveZoneProbeBindings: ['$targetSpaces'],
       },
       {
         sequence: { batch: 'plei-mei-nva', step: 1 },
@@ -263,7 +263,6 @@ describe('FITL card-59 Plei Mei', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-march-t1'), asTokenId('plei-march-t2')],
       },
@@ -281,7 +280,6 @@ describe('FITL card-59 Plei Mei', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-march-t1'), asTokenId('plei-march-t2')],
       },
@@ -295,7 +293,6 @@ describe('FITL card-59 Plei Mei', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-march-t1'), asTokenId('plei-march-t2')],
       },
@@ -343,8 +340,7 @@ describe('FITL card-59 Plei Mei', () => {
           freeOperation: true,
           params: {
             $targetSpaces: [QUANG_TRI],
-            $chainSpaces: [],
-            [`$movingGuerrillas@${QUANG_TRI}`]: [],
+                [`$movingGuerrillas@${QUANG_TRI}`]: [],
             [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-inside-t1')],
           },
         }),
@@ -399,7 +395,6 @@ describe('FITL card-59 Plei Mei', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-ambush-marcher')],
       },
@@ -410,7 +405,6 @@ describe('FITL card-59 Plei Mei', () => {
       freeOperation: true,
       params: {
         $targetSpaces: [QUANG_TRI],
-        $chainSpaces: [],
         [`$movingGuerrillas@${QUANG_TRI}`]: [],
         [`$movingTroops@${QUANG_TRI}`]: [asTokenId('plei-ambush-marcher')],
       },

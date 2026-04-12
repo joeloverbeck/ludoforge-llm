@@ -284,6 +284,11 @@ export const validateTerminal = (diagnostics: Diagnostic[], def: GameDef, contex
     'terminal.checkpoints',
   );
 
+  const validPhaseIds = new Set([
+    ...def.turnStructure.phases.map((phase) => String(phase.id)),
+    ...(def.turnStructure.interrupts ?? []).map((phase) => String(phase.id)),
+  ]);
+
   def.terminal.checkpoints.forEach((checkpoint, index) => {
     if (typeof checkpoint.when !== 'object' || checkpoint.when === null || Array.isArray(checkpoint.when)) {
       diagnostics.push({
@@ -301,6 +306,29 @@ export const validateTerminal = (diagnostics: Diagnostic[], def: GameDef, contex
       conditionSurfacePathForTerminalCheckpointWhen(index),
       context,
     );
+
+    if (checkpoint.phases !== undefined && checkpoint.phases.length === 0) {
+      diagnostics.push({
+        code: 'VICTORY_CHECKPOINT_PHASES_EMPTY',
+        path: `terminal.checkpoints[${index}].phases`,
+        severity: 'warning',
+        message: `Victory checkpoint "${checkpoint.id}" declares an empty phases array and will never fire.`,
+        suggestion: 'List one or more declared phase ids, or omit phases to evaluate the checkpoint in every phase.',
+      });
+    }
+
+    checkpoint.phases?.forEach((phaseId, phaseIndex) => {
+      if (validPhaseIds.has(phaseId)) {
+        return;
+      }
+      diagnostics.push({
+        code: 'VICTORY_CHECKPOINT_PHASE_UNKNOWN',
+        path: `terminal.checkpoints[${index}].phases[${phaseIndex}]`,
+        severity: 'error',
+        message: `Victory checkpoint "${checkpoint.id}" references unknown phase "${phaseId}".`,
+        suggestion: 'Reference a phase id declared in turnStructure.phases or turnStructure.interrupts.',
+      });
+    });
   });
 
   def.terminal.margins?.forEach((margin, index) => {

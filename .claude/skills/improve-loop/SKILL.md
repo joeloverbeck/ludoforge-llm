@@ -68,6 +68,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
    ```bash
    cd $WT && bash campaigns/<campaign>/harness.sh
    ```
+   **CRITICAL**: Always use `cd $WT &&` before the harness command. Harness scripts resolve `PROJECT_ROOT` from their own `SCRIPT_DIR` — running `bash campaigns/.../harness.sh` from the main repo root silently uses the main repo's files instead of the worktree's. When both trees have identical files (e.g., at baseline), this bug is silent but causes all subsequent experiments to evaluate against the wrong code.
 2. Parse the harness output as key=value lines. Extract the primary metric using `PRIMARY_METRIC_KEY` (e.g., `compositeScore=10.5333` when `PRIMARY_METRIC_KEY=compositeScore`, or `combined_duration_ms=12345` for the default).
 3. If multi-run: collect all primary metric values, compute MAD (see harness execution reference for MAD formula), record `baseline_metric` = median.
 4. If single-run: record `baseline_metric` = the primary metric value.
@@ -117,14 +118,12 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
 - Every `PIVOT_CHECK_INTERVAL` experiments
 
 **Diagnostic protocol**:
-1. Read one per-seed trace file (choose the most promising losing seed — closest to winning).
-2. Parse each evolved-seat decision: extract actionId, score, gap (1st vs 2nd unpruned candidate), and pruning status.
-3. Classify decisions as **strategic** (actionId does NOT start with `coup`) or **tactical** (actionId starts with `coup` — pacification, redeployment, agitation, victory checks).
-4. Compute: (a) fraction of tied decisions (gap < 0.001), (b) strategic vs tactical count, (c) average gap for each type.
-5. If >30% of decisions are tied, flag in musings: `**TIED-DECISION BOTTLENECK**: N% of decisions have gap < 0.001. Prioritize scoring for <strategic|tactical> decisions.`
-6. Record the decision landscape summary in musings (counts, gaps, types).
+1. Read trace/diagnostic artifacts produced by the harness (traces, logs, profiles).
+2. If the campaign's program.md defines an **OBSERVE Phase Protocol**, follow its campaign-specific diagnostic steps (e.g., decision classification rules, trace parsing format, what to extract from per-seed traces). The OBSERVE protocol is the campaign's domain-specific diagnostic — the skill does not hardcode game-specific classification logic.
+3. If no OBSERVE protocol is defined, apply a generic diagnostic: identify the evolved system's decision points, count tied decisions (score gap < 0.001), and record a summary in musings.
+4. Record the diagnostic summary in musings (whatever the protocol produces).
 
-**When NOT triggered**: read diagnostic artifacts if the harness produces them (traces, logs, profiles) to inform hypothesis generation. Campaign-specific OBSERVE protocols in program.md extend this step. This lighter-weight observation is always appropriate but does not replace the full diagnostic at trigger points.
+**When NOT triggered**: read diagnostic artifacts if the harness produces them to inform hypothesis generation. This lighter-weight observation is always appropriate but does not replace the full diagnostic at trigger points.
 
 ### Steps 1c-1g: STRATEGY MANAGEMENT
 
@@ -164,7 +163,7 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 ### Step 3: IMPLEMENT
 
 - Apply the change to the mutable files in the worktree.
-- **Scope check**: Verify that ONLY declared mutable files were modified (`git diff --name-only` against mutable file list from program.md). If any non-mutable file was changed:
+- **Scope check**: Verify that ONLY declared mutable files were modified (`git diff --name-only` against mutable file list from program.md). Files modified by `sync-fixtures.sh` (golden/snapshot fixtures) are derived artifacts and are excluded from the scope check — they follow the same commit/rollback policy as the mutable files that generated them. If any non-mutable, non-fixture file was changed:
   - Rollback: `cd $WT && git checkout -- <all-changed-files>`
   - Log as `REJECT` with description `"scope violation: touched immutable file <path>"`
   - Append to musings: `**SCOPE VIOLATION**: Attempted to modify <path>, which is not in the mutable file list.`
@@ -205,7 +204,7 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
 
-**Zero-effect detection**: If the game traces are identical to the previous experiment (same move counts AND same margins for all seeds), flag as `**ZERO-EFFECT**` in the musings entry. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
+**Zero-effect detection**: If the evolved system's trace is functionally identical to the previous experiment, flag as `**ZERO-EFFECT**` in the musings entry. For agent evolution campaigns, compare the evolved seat's move sequence (actionIds in order) and final margin from the trace files. Byte-level trace comparison is too strict (timestamps, intermediate scores may differ); compare the decision-relevant fields only. For non-agent campaigns, compare the primary metric output and any trace summary the harness produces. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
 
 ### Step 7.6: EXTRACT LESSON
 
@@ -240,17 +239,27 @@ Go back to Step 1. Do NOT stop.
 ## After Campaign Completes
 
 When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
+
+**Degenerate campaign** (zero accepted experiments — only infrastructure commits or early halt due to a discovered bug/limitation): simplify the completion flow:
+1. Create specs if engine limitations were discovered (in the main repo root, not the worktree).
+2. Copy gitignored runtime files back to the source campaign folder (see step 4 below).
+3. Switch to the main repo root and squash-merge (infrastructure commits only).
+4. Commit the squash-merge with a summary noting the campaign was halted due to `<reason>` and listing infrastructure changes. Skip lesson promotion and metric impact summary.
+5. Remove the worktree and delete the branch (step 9 below).
+
+**Normal campaign** (one or more accepted experiments):
 1. Review the worktree branch: `git log --oneline` shows all accepted improvements.
 2. Promote high-confidence lessons to global store (if not already done by Step 7.6).
 3. **Commit `campaigns/lessons-global.jsonl`** with `git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`. This file persists across campaigns — without this commit, lessons are lost when the worktree is removed.
-4. Switch to the main repo root (NOT the worktree) and squash-merge:
+4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history.
+5. Switch to the main repo root (NOT the worktree) and squash-merge:
    ```bash
    cd <main-repo-root> && git merge --squash improve/<campaign>
    ```
-5. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
-6. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
-7. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If any were identified, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
-8. Remove the worktree and delete the branch:
+6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
+7. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
+8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If any were identified, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
+9. Remove the worktree and delete the branch:
    ```bash
    git worktree remove .claude/worktrees/improve-<campaign>
    git branch -D improve/<campaign>

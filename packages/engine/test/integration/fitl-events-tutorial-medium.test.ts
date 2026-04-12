@@ -134,8 +134,8 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(shadedGrants[0]?.outcomePolicy, 'mustChangeGameplayState');
     assert.deepEqual(shadedGrants[0]?.moveZoneBindings, ['$targetSpaces']);
     assert.equal(shadedGrants[0]?.sequenceContext?.captureMoveZoneCandidatesAs, 'sihanouk-rally-spaces');
-    assert.deepEqual(shadedGrants[1]?.moveZoneBindings, ['$targetSpaces', '$chainSpaces']);
-    assert.deepEqual(shadedGrants[1]?.moveZoneProbeBindings, ['$targetSpaces', '$chainSpaces']);
+    assert.deepEqual(shadedGrants[1]?.moveZoneBindings, ['$targetSpaces']);
+    assert.deepEqual(shadedGrants[1]?.moveZoneProbeBindings, ['$targetSpaces']);
     assert.deepEqual(shadedGrants[1]?.executionContext, { originRestrictionKey: 'sihanouk-rally-spaces' });
     assert.equal(shadedGrants[1]?.allowDuringMonsoon, true);
 

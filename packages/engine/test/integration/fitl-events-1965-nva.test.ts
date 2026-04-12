@@ -316,8 +316,8 @@ describe('FITL 1965 NVA-first event-card production spec', () => {
     assert.equal(grants[0]?.completionPolicy, 'skipIfNoLegalCompletion');
     assert.equal(grants[0]?.outcomePolicy, 'mustChangeGameplayState');
     assert.equal(grants[0]?.postResolutionTurnFlow, 'resumeCardFlow');
-    assert.deepEqual(grants[0]?.moveZoneBindings, ['$targetSpaces', '$chainSpaces']);
-    assert.deepEqual(grants[0]?.moveZoneProbeBindings, ['$targetSpaces', '$chainSpaces']);
+    assert.deepEqual(grants[0]?.moveZoneBindings, ['$targetSpaces']);
+    assert.deepEqual(grants[0]?.moveZoneProbeBindings, ['$targetSpaces']);
     assert.equal((grants[0]?.zoneFilter as { op?: string } | undefined)?.op, 'and');
 
     assert.deepEqual(grants[1]?.sequence, { batch: 'plei-mei-nva', step: 1 });

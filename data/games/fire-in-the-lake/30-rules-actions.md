@@ -182,7 +182,7 @@ actions:
       - macro: coup-casualties-aid
     limits: [{ scope: phase, max: 1 }]
   - id: coupPacifyPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -195,7 +195,7 @@ actions:
     effects: []
     limits: []
   - id: coupAgitatePass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupSupport]
@@ -702,7 +702,6 @@ actions:
                                   - { prop: type, op: eq, value: base }
                         right: 0
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -812,7 +811,6 @@ actions:
                                   - { prop: type, op: eq, value: base }
                         right: 0
                       - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: saigon:none }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -883,7 +881,6 @@ actions:
                                       query: tokensInZone
                                       zone: $zone
                                       filter: { prop: faction, op: in, value: ['NVA', 'VC'] }
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
             - moveToken:
                 token: $movedPolice
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
@@ -931,29 +928,26 @@ actions:
                 options:
                   query: mapSpaces
                   filter:
-                    op: or
-                    args:
-                      - op: '>'
-                        left:
-                          aggregate:
-                            op: count
-                            query:
-                              query: tokensInZone
-                              zone: $zone
-                              filter:
-                                op: and
-                                args:
-                                  - { prop: faction, op: eq, value: NVA }
-                                  - { prop: type, op: eq, value: base }
-                        right: 0
-                      - { op: '==', left: { ref: zoneProp, zone: $zone, prop: id }, right: { ref: binding, name: sourceSpace } }
+                    op: '>'
+                    left:
+                      aggregate:
+                        op: count
+                        query:
+                          query: tokensInZone
+                          zone: $zone
+                          filter:
+                            op: and
+                            args:
+                              - { prop: faction, op: eq, value: NVA }
+                              - { prop: type, op: eq, value: base }
+                    right: 0
             - moveToken:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
     limits: []
   - id: coupRedeployPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupRedeploy]
@@ -963,7 +957,7 @@ actions:
     effects: []
     limits: []
   - id: coupCommitmentPass
-    tags: [pass]
+    tags: []
     actor: active
     executor: 'actor'
     phase: [coupCommitment]
@@ -3380,43 +3374,240 @@ actionPipelines:
                     enforceOriginRestriction: true
       - stage: select-trail-chain-destinations
         effects:
-          - if:
-              when:
-                op: and
-                args:
-                  - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
-                  - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - chooseN:
-                    bind: $chainSpaces
-                    options:
-                      query: mapSpaces
-                      filter:
-                        conditionMacro: fitl-space-in-laos-cambodia
-                        args: { spaceExpr: $zone }
-                    min: 0
-                    max: 99
+          - forEach:
+              bind: $trailOrigin
+              over: { query: binding, name: $targetSpaces }
+              effects:
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+                        - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+                        - conditionMacro: fitl-space-in-laos-cambodia
+                          args: { spaceExpr: $trailOrigin }
+                        - op: '>'
+                          left:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$trailOrigin}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$trailOrigin}'
+                          right: 0
+                    then:
+                      - chooseN:
+                          bind: '$chainSpaces@{$trailOrigin}'
+                          options:
+                            query: adjacentZones
+                            zone: $trailOrigin
+                            filter:
+                              op: and
+                              args:
+                                - op: or
+                                  args:
+                                    - { op: '==', left: { ref: zoneProp, zone: $zone, prop: category }, right: 'loc' }
+                                    - op: and
+                                      args:
+                                        - op: or
+                                          args:
+                                            - { op: '==', left: { ref: binding, name: __freeOperation }, right: true }
+                                            - { op: '>', left: { ref: gvar, var: nvaResources }, right: 0 }
+                                        - op: in
+                                          item: { ref: zoneProp, zone: $zone, prop: category }
+                                          set: ['province', 'city']
+                                - op: not
+                                  arg:
+                                    op: in
+                                    item: { ref: zoneProp, zone: $zone, prop: id }
+                                    set: { ref: binding, name: $targetSpaces }
+                          min: 0
+                          max: 1
       - stage: resolve-trail-chain-destinations
         effects:
-          - if:
-              when:
-                op: and
-                args:
-                  - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
-                  - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
-              then:
-                - forEach:
-                    bind: $destSpace
-                    over: { query: binding, name: $chainSpaces }
-                    effects:
-                      - macro: insurgent-march-resolve-destination
-                        args:
-                          destSpace: $destSpace
-                          faction: 'NVA'
-                          resourceVar: nvaResources
-                          allowTrailCountryFreeCost: true
-                          maxActivatedGuerrillas: 99
-                          enforceOriginRestriction: false
+          - forEach:
+              bind: $trailOrigin
+              over: { query: binding, name: $targetSpaces }
+              effects:
+                - if:
+                    when:
+                      op: and
+                      args:
+                        - { op: '>', left: { ref: gvar, var: trail }, right: 0 }
+                        - { op: '!=', left: { ref: binding, name: __actionClass }, right: 'limitedOperation' }
+                        - conditionMacro: fitl-space-in-laos-cambodia
+                          args: { spaceExpr: $trailOrigin }
+                        - op: '>'
+                          left:
+                            op: '+'
+                            left:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$trailOrigin}'
+                            right:
+                              aggregate:
+                                op: count
+                                query:
+                                  query: binding
+                                  name: '$movingTroops@{$trailOrigin}'
+                          right: 0
+                    then:
+                      - forEach:
+                          bind: $destSpace
+                          over: { query: binding, name: '$chainSpaces@{$trailOrigin}' }
+                          effects:
+                            - chooseN:
+                                bind: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                options:
+                                  query: binding
+                                  name: '$movingGuerrillas@{$trailOrigin}'
+                                min: 0
+                                max: 99
+                            - chooseN:
+                                bind: '$continuingTroops@{$trailOrigin}->{$destSpace}'
+                                options:
+                                  query: binding
+                                  name: '$movingTroops@{$trailOrigin}'
+                                min: 0
+                                max: 99
+                            - let:
+                                bind: $movingCount
+                                value:
+                                  op: '+'
+                                  left:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: binding
+                                        name: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                  right:
+                                    aggregate:
+                                      op: count
+                                      query:
+                                        query: binding
+                                        name: '$continuingTroops@{$trailOrigin}->{$destSpace}'
+                                in:
+                                  - if:
+                                      when: { op: '>', left: { ref: binding, name: $movingCount }, right: 0 }
+                                      then:
+                                        - if:
+                                            when:
+                                              op: and
+                                              args:
+                                                - { op: '==', left: { ref: gvar, var: trail }, right: 4 }
+                                                - conditionMacro: fitl-space-in-laos-cambodia
+                                                  args:
+                                                    spaceExpr: $destSpace
+                                            then: []
+                                            else:
+                                              - macro: per-province-city-cost
+                                                args:
+                                                  space: $destSpace
+                                                  resource: nvaResources
+                                                  amount: -1
+                                        - forEach:
+                                            bind: $piece
+                                            over:
+                                              query: binding
+                                              name: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                            effects:
+                                              - moveToken:
+                                                  token: $piece
+                                                  from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                                  to: { zoneExpr: $destSpace }
+                                        - forEach:
+                                            bind: $piece
+                                            over:
+                                              query: binding
+                                              name: '$continuingTroops@{$trailOrigin}->{$destSpace}'
+                                            effects:
+                                              - moveToken:
+                                                  token: $piece
+                                                  from: { zoneExpr: { ref: tokenZone, token: $piece } }
+                                                  to: { zoneExpr: $destSpace }
+                                        - let:
+                                            bind: $isLocOrSupport
+                                            value:
+                                              if:
+                                                when:
+                                                  op: or
+                                                  args:
+                                                    - { op: '==', left: { ref: zoneProp, zone: $destSpace, prop: category }, right: 'loc' }
+                                                    - op: or
+                                                      args:
+                                                        - { op: '==', left: { ref: markerState, space: $destSpace, marker: supportOpposition }, right: 'passiveSupport' }
+                                                        - { op: '==', left: { ref: markerState, space: $destSpace, marker: supportOpposition }, right: 'activeSupport' }
+                                                then: true
+                                                else: false
+                                            in:
+                                              - let:
+                                                  bind: $coinCount
+                                                  value:
+                                                    aggregate:
+                                                      op: count
+                                                      query:
+                                                        query: tokensInZone
+                                                        zone: $destSpace
+                                                        filter:
+                                                          op: and
+                                                          args:
+                                                            - { prop: faction, op: in, value: ['US', 'ARVN'] }
+                                                            - { prop: type, op: in, value: ['troops', 'police', 'irregular', 'ranger'] }
+                                                  in:
+                                                    - if:
+                                                        when:
+                                                          op: and
+                                                          args:
+                                                            - { op: '==', left: { ref: binding, name: $isLocOrSupport }, right: true }
+                                                            - op: '>'
+                                                              left:
+                                                                op: '+'
+                                                                left: { ref: binding, name: $movingCount }
+                                                                right: { ref: binding, name: $coinCount }
+                                                              right: 3
+                                                        then:
+                                                          - forEach:
+                                                              bind: $movedPiece
+                                                              over:
+                                                                query: binding
+                                                                name: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                                              limit: 99
+                                                              effects:
+                                                                - setTokenProp: { token: $movedPiece, prop: activity, value: active }
+                                                          - if:
+                                                              when:
+                                                                op: and
+                                                                args:
+                                                                  - { op: '==', left: { ref: gvar, var: mom_claymores }, right: true }
+                                                                  - op: '>'
+                                                                    left:
+                                                                      aggregate:
+                                                                        op: count
+                                                                        query:
+                                                                          query: binding
+                                                                          name: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                                                    right: 0
+                                                              then:
+                                                                - forEach:
+                                                                    bind: $claymoresRemoved
+                                                                    over:
+                                                                      query: binding
+                                                                      name: '$continuingGuerrillas@{$trailOrigin}->{$destSpace}'
+                                                                    limit: 1
+                                                                    effects:
+                                                                      - moveToken:
+                                                                          token: $claymoresRemoved
+                                                                          from: { zoneExpr: { ref: tokenZone, token: $claymoresRemoved } }
+                                                                          to: 'available-NVA:none'
     atomicity: atomic
   - id: march-vc-profile
     actionId: march

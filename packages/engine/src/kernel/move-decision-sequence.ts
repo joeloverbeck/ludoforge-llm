@@ -5,7 +5,7 @@ import {
   type DecisionSequenceSatisfiabilityResult,
 } from './decision-sequence-satisfiability.js';
 import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
-import { pickDeterministicChoiceValue } from './choice-option-policy.js';
+import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
@@ -225,6 +225,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
     baseMove,
     discoverChoices,
     {
+      orderSelections: (_request, selectableValues) => orderMoveParamValuesByAscendingComplexity(state, selectableValues),
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
     },

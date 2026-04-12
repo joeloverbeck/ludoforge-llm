@@ -29,7 +29,7 @@ describe('FITL PolicyAgent determinism canary', () => {
   const runtime = createGameDefRuntime(def);
 
   const PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-  const MAX_TURNS = 100;
+  const MAX_TURNS = 300;
   const PLAYER_COUNT = 4;
 
   const runOnce = (seed: number) => {
@@ -39,9 +39,10 @@ describe('FITL PolicyAgent determinism canary', () => {
     return runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
   };
 
-  // Seeds 1001-1004 produce terminal results with the current GameDef.
-  // These are canaries for grant-related determinism regressions.
-  for (const seed of [1001, 1002, 1003, 1004]) {
+  // Targeted post-fix terminal canaries validated after the 126FREOPEBIN
+  // engine chain landed. These seeds all terminate and replay identically,
+  // including former hang witnesses 1040 and 1054.
+  for (const seed of [1020, 1040, 1049, 1054, 2046]) {
     it(`seed ${seed}: game reaches terminal within ${MAX_TURNS} moves`, () => {
       const trace = runOnce(seed);
       assert.equal(

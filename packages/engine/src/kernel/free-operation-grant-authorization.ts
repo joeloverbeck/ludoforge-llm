@@ -154,16 +154,21 @@ export const evaluateZoneFilterForMove = (
   move: Move,
   grant: Pick<
     TurnFlowPendingFreeOperationGrant,
-    'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings' | 'sequenceBatchId'
+    'seat' | 'executeAsSeat' | 'executionContext' | 'moveZoneBindings' | 'moveZoneProbeBindings' | 'sequenceBatchId'
   >,
   zoneFilter: ConditionAST,
   surface: FreeOperationZoneFilterSurface,
+  options?: {
+    readonly useProbeBindings?: boolean;
+  },
 ): ZoneFilterEvaluationResult => {
   const adjacencyGraph = buildAdjacencyGraph(def.zones);
   const baseBindings = resolveGrantAwareMoveRuntimeBindings(def, state, move, grant);
   const capturedSequenceZonesByKey = resolveCapturedSequenceZonesByKey(state, grant);
   const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(zoneFilter);
-  const zones = collectGrantMoveZoneCandidates(def, state, move, grant);
+  const zones = options?.useProbeBindings === true
+    ? collectGrantMoveZoneProbeCandidates(def, state, move, grant)
+    : collectGrantMoveZoneCandidates(def, state, move, grant);
   const evalRuntimeResources = createEvalRuntimeResources({ collector: createCollector() });
   const freeOperationOverlay = grant.executionContext === undefined && capturedSequenceZonesByKey === undefined
     ? undefined
@@ -203,7 +208,10 @@ export const evaluateZoneFilterForMove = (
     }));
   };
   if (zones.length === 0) {
-    if (grant.moveZoneBindings !== undefined && grant.moveZoneBindings.length > 0) {
+    const configuredMoveZoneBindings = options?.useProbeBindings === true
+      ? (grant.moveZoneProbeBindings ?? grant.moveZoneBindings)
+      : grant.moveZoneBindings;
+    if (configuredMoveZoneBindings !== undefined && configuredMoveZoneBindings.length > 0) {
       return zoneFilterResolved(surface === 'legalChoices');
     }
     try {
@@ -214,6 +222,7 @@ export const evaluateZoneFilterForMove = (
   }
   for (const zone of zones) {
     const probeResult = evaluateFreeOperationZoneFilterProbe({
+      surface,
       zoneId: asZoneId(zone),
       baseBindings,
       rebindableAliases,
@@ -265,14 +274,29 @@ export const doesGrantPotentiallyAuthorizeMove = (
   _pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
+  options?: {
+    readonly useProbeBindings?: boolean;
+  },
 ): boolean =>
   grant.phase !== 'sequenceWaiting' &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move, { allowUnresolvedMoveZones: true }) &&
   (
     grant.zoneFilter === undefined
-    || collectGrantMoveZoneCandidates(def, state, move, grant).length === 0
-    || unwrapZoneFilterResult(evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility'))
+    || (
+      (options?.useProbeBindings === true
+        ? collectGrantMoveZoneProbeCandidates(def, state, move, grant)
+        : collectGrantMoveZoneCandidates(def, state, move, grant)).length === 0
+    )
+    || unwrapZoneFilterResult(evaluateZoneFilterForMove(
+      def,
+      state,
+      move,
+      grant,
+      grant.zoneFilter,
+      'turnFlowEligibility',
+      options,
+    ))
   );
 
 export const doesGrantRequireSequenceContextMatch = doesGrantSatisfySequenceContext;

@@ -1,7 +1,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asTokenId, initialState, terminalResult, type GameDef, type GameState } from '../../src/kernel/index.js';
+import { asPhaseId, asTokenId, initialState, terminalResult, type GameDef, type GameState } from '../../src/kernel/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -45,6 +45,7 @@ describe('FITL production terminal victory', () => {
     }));
     const state: GameState = {
       ...start,
+      currentPhase: asPhaseId('coupVictory'),
       globalVars: {
         ...start.globalVars,
         patronage: 0,
@@ -71,6 +72,7 @@ describe('FITL production terminal victory', () => {
     }));
     const state: GameState = {
       ...start,
+      currentPhase: asPhaseId('coupVictory'),
       globalVars: {
         ...start.globalVars,
         patronage: 0,
@@ -106,6 +108,7 @@ describe('FITL production terminal victory', () => {
     const start = withClearedZones(initialState(def, 7104, 4).state);
     const state: GameState = {
       ...start,
+      currentPhase: asPhaseId('coupRedeploy'),
       globalVars: {
         ...start.globalVars,
         patronage: 0,

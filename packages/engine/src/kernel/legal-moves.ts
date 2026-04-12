@@ -334,6 +334,13 @@ const classifyEnumeratedMoves = (
   return classified;
 };
 
+const finalizeEarlyExitMoves = (
+  def: GameDef,
+  state: GameState,
+  moves: readonly Move[],
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): readonly Move[] => applyTurnFlowWindowFilters(def, state, moves, seatResolution);
+
 function createMutableEnumerationReadContext(
   def: GameDef,
   adjacencyGraph: AdjacencyGraph,
@@ -1265,7 +1272,14 @@ const enumerateRawLegalMoves = (
           snapshot,
         },
       );
-      if (enumeration.moves.length > 0) break;
+      if (enumeration.moves.length > 0) {
+        const earlyExitMoves = finalizeEarlyExitMoves(def, state, enumeration.moves, seatResolution);
+        if (earlyExitMoves.length > 0) {
+          return { moves: earlyExitMoves, warnings, discoveryCache };
+        }
+        enumeration.moves.length = 0;
+        break;
+      }
     }
   }
 

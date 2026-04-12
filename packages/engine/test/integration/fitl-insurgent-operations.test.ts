@@ -907,7 +907,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const provinceFinal = applyMoveWithResolvedDecisionIds(def, provinceSetup, {
       actionId: asActionId('march'),
-      params: { $targetSpaces: [ATTACK_SPACE], $chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [provinceMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
+      params: { $targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [provinceMover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(provinceFinal.globalVars.nvaResources, 4, 'Province/City destination should spend 1 NVA resource');
@@ -933,7 +933,7 @@ describe('FITL insurgent operations integration', () => {
     );
     const locFinal = applyMoveWithResolvedDecisionIds(def, locSetup, {
       actionId: asActionId('march'),
-      params: { $targetSpaces: [LOC_SPACE], $chainSpaces: [], [`$movingGuerrillas@${LOC_SPACE}`]: [], [`$movingTroops@${LOC_SPACE}`]: [locMover] },
+      params: { $targetSpaces: [LOC_SPACE], [`$movingGuerrillas@${LOC_SPACE}`]: [], [`$movingTroops@${LOC_SPACE}`]: [locMover] },
     }).state;
 
     assert.equal(locFinal.globalVars.nvaResources, 5, 'LoC destination should be free for March');
@@ -976,7 +976,7 @@ describe('FITL insurgent operations integration', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { $targetSpaces: [LOC_SPACE], $chainSpaces: [], [`$movingGuerrillas@${LOC_SPACE}`]: [mover], [`$movingTroops@${LOC_SPACE}`]: [] },
+      params: { $targetSpaces: [LOC_SPACE], [`$movingGuerrillas@${LOC_SPACE}`]: [mover], [`$movingTroops@${LOC_SPACE}`]: [] },
     }).state;
     const moved = (final.zones[LOC_SPACE] ?? []).find((token) => token.id === mover);
 
@@ -1025,7 +1025,7 @@ describe('FITL insurgent operations integration', () => {
 
     const final = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { $targetSpaces: [ATTACK_SPACE], $chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
+      params: { $targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     const moved = (final.zones[ATTACK_SPACE] ?? []).find((token) => token.id === mover);
 
@@ -1058,12 +1058,12 @@ describe('FITL insurgent operations integration', () => {
 
     const nonFree = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
-      params: { $targetSpaces: [ATTACK_SPACE], $chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
+      params: { $targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
     const free = applyMoveWithResolvedDecisionIds(def, setup, {
       actionId: asActionId('march'),
       freeOperation: true,
-      params: { $targetSpaces: [ATTACK_SPACE], $chainSpaces: [], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
+      params: { $targetSpaces: [ATTACK_SPACE], [`$movingGuerrillas@${ATTACK_SPACE}`]: [mover], [`$movingTroops@${ATTACK_SPACE}`]: [] },
     }).state;
 
     assert.equal(nonFree.globalVars.nvaResources, 4, 'Non-free March should spend 1 NVA resource for Province/City destination');
@@ -1396,11 +1396,11 @@ describe('FITL insurgent operations integration', () => {
       actionId: asActionId('march'),
       params: {
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [NE_CAMBODIA],
+        [`$chainSpaces@${SOUTHERN_LAOS}`]: [NE_CAMBODIA],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
-        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
-        [`$movingTroops@${NE_CAMBODIA}`]: [],
+        [`$continuingGuerrillas@${SOUTHERN_LAOS}->${NE_CAMBODIA}`]: [mover],
+        [`$continuingTroops@${SOUTHERN_LAOS}->${NE_CAMBODIA}`]: [],
       },
     }).state;
 
@@ -1500,11 +1500,11 @@ describe('FITL insurgent operations integration', () => {
       actionId: asActionId('march'),
       params: {
         $targetSpaces: [SOUTHERN_LAOS],
-        $chainSpaces: [NE_CAMBODIA],
+        [`$chainSpaces@${SOUTHERN_LAOS}`]: [NE_CAMBODIA],
         [`$movingGuerrillas@${SOUTHERN_LAOS}`]: [mover],
         [`$movingTroops@${SOUTHERN_LAOS}`]: [],
-        [`$movingGuerrillas@${NE_CAMBODIA}`]: [mover],
-        [`$movingTroops@${NE_CAMBODIA}`]: [],
+        [`$continuingGuerrillas@${SOUTHERN_LAOS}->${NE_CAMBODIA}`]: [mover],
+        [`$continuingTroops@${SOUTHERN_LAOS}->${NE_CAMBODIA}`]: [],
       },
     }).state;
 

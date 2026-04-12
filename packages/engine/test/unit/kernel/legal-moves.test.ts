@@ -1790,6 +1790,113 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('16bb. defers unresolved binding-query templates on legalChoices free-operation probing', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+actor: 'active',
+executor: 'actor',
+phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'operationProfile',
+      actionId: asActionId('operation'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            {
+              chooseN: {
+                internalDecisionId: 'decision:$targetSpaces',
+                bind: '$targetSpaces',
+                options: { query: 'zones' },
+                min: 1,
+                max: 1,
+              },
+            } as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = asTaggedGameDef({
+      ...makeBaseDef({
+        actions: [action],
+        actionPipelines: [profile],
+        zones: [
+          { id: asZoneId('board:cambodia'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'cambodia', coastal: false }, adjacentTo: [] },
+          { id: asZoneId('board:vietnam'), owner: 'none', visibility: 'public', ordering: 'set', category: 'province', attributes: { population: 1, econ: 0, terrainTags: [], country: 'southVietnam', coastal: false }, adjacentTo: [] },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+
+            windows: [],
+            actionClassByActionId: { operation: 'operation' },
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+        },
+      },
+    });
+
+    const state = makeBaseState({
+      zones: { 'board:cambodia': [], 'board:vietnam': [] },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-0',
+              phase: 'ready',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              zoneFilter: {
+                op: 'in',
+                item: { _t: 2, ref: 'binding', name: '$zone' },
+                set: { _t: 2, ref: 'binding', name: '$targetSpaces' },
+              },
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const moves = legalMoves(def, state);
+    assert.equal(
+      moves.some((move) => String(move.actionId) === 'operation' && move.freeOperation === true),
+      true,
+    );
+  });
+
   it('16c. keeps free-operation template probing deterministic with multi-unresolved zone aliases', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
@@ -4634,5 +4741,96 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       0,
       'legal-moves-turn-order.ts should not use legacy unsatisfiable-only helper for admission',
     );
+  });
+
+  it('returns early from earlyExitAfterFirst when a filtered trivial move already exists', () => {
+    const passAction: ActionDef = {
+      id: asActionId('pass'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const malformedGrantedAction: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: { chosen: '$owner' },
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const def = asTaggedGameDef({
+      ...makeBaseDef({
+        actions: [passAction, malformedGrantedAction],
+        zones: [
+          { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+          { id: asZoneId('played:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+          { id: asZoneId('lookahead:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+          { id: asZoneId('leader:none'), owner: 'none', visibility: 'public', ordering: 'queue' },
+        ],
+      }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { pass: 'pass', operation: 'operation' },
+            freeOperationActionIds: ['operation'],
+          },
+        },
+      },
+    });
+    const state = makeBaseState({
+      zones: {
+        'board:none': [],
+        'played:none': [],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: null,
+            actedSeats: ['1'],
+            passedSeats: [],
+            nonPassCount: 1,
+            firstActionClass: 'operation',
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'optional-bad-grant',
+              phase: 'ready',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+    });
+
+    const result = enumerateLegalMoves(def, state, { earlyExitAfterFirst: true });
+
+    assert.equal(result.moves.length, 1);
+    assert.equal(String(result.moves[0]?.move.actionId), 'pass');
+    assert.equal(result.moves[0]?.move.actionClass, 'pass');
   });
 });

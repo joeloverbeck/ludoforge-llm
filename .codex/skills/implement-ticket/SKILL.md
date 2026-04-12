@@ -22,8 +22,10 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
   - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
   - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
   - `authoritative boundary`: the final owned implementation slice after reassessment
+  - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`
   - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
   - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
+  - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 - Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 - Do not create scratch files solely to satisfy this requirement.
 
@@ -40,7 +42,10 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
+   - Check whether any likely verification commands contend on generated output trees such as `dist`, schema artifacts, compiled JSON, or goldens. If they do, plan those lanes as sequential-only before you start running checks.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
+   - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
+   - For active untracked drafts, prefer correcting stale command examples in the ticket once the repo-valid replacement is confirmed, so future turns do not inherit the drift.
 
 #### Session and Series Context
 
@@ -95,20 +100,27 @@ Every stop condition below requires resolution before implementation proceeds.
 
 10. **Factually wrong ticket**: Stop and present discrepancies. Do not stop for nonblocking drift (see triage reference).
 11. **Unverifiable bug claim**: If a ticket's bug claim is not reproducible, or only mechanism is verified while incidence remains unproven, stop and resolve via **1-3-1** (proof-only, proof-plus-fix, or scope correction).
+    - If the user confirms a proof-only or proof-plus-fix path, record explicitly whether evidence is `incidence verified`, `mechanism verified`, or `both verified`, and do not overstate reproduced incidence in working notes or closeout.
 12. **Scope gaps or ambiguity**: Apply the **1-3-1 rule** (1 problem, 3 options, 1 recommendation).
 13. **Semantic acceptance drift**: If a draft ticket's acceptance criteria, expected values, or test descriptions are semantically wrong about the live contract, classify whether that is:
    - nonblocking drift: the implementation boundary is still correct and the literal wording can be safely corrected in working notes / closeout without misleading the user
    - blocking drift: implementing the literal text would change or misstate the live contract, conflict with `FOUNDATIONS.md`, or violate `AGENTS.md` ticket fidelity
    For blocking drift, stop and resolve via **1-3-1** before coding.
 14. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
-15. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
-16. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
+15. If a **1-3-1** stop leads to a user-confirmed boundary change for an active draft ticket, immediately refresh the working-notes checkpoint and rewrite the active ticket before coding so the recorded contract matches the confirmed direction.
+16. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+17. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
     - If the ticket's acceptance depends on traces, harness output, campaign metrics, or another observability surface, classify the expected proof shape before coding:
       - `direct proof`: the current repo surface exposes the exact invariant or contribution path the ticket names
       - `indirect proof`: the current repo surface proves the change through a compiled artifact, golden, catalog, or adjacent observable effect, but not the literal named field
       - `missing proof surface`: the repo cannot currently prove the acceptance claim without new instrumentation or trace/schema changes
     - `missing proof surface` is not automatically blocking when the implementation boundary is still correct, but you must explicitly decide whether the ticket can be closed with indirect proof, needs a ticket rewrite, or requires a stop-and-confirm via 1-3-1.
-17. If the ticket is accurate and no blocking decision remains, proceed.
+18. If the ticket is accurate and no blocking decision remains, proceed.
+19. If valid owned work lands and only then reveals a new blocker that prevents full acceptance, treat that as a distinct `partial completion, new blocker` state rather than either forcing completion or discarding the completed work.
+    - Record the completed owned work explicitly in working notes and in the active ticket.
+    - Mark the active ticket `BLOCKED` rather than `COMPLETE` when acceptance is still unmet.
+    - Restate the remaining unmet acceptance or invariant as the new live boundary.
+    - Stop before further implementation widens the ticket again unless the user confirms the broader boundary.
 
 ## Implementation Rules
 
@@ -116,6 +128,14 @@ Load `references/implementation-general.md`.
 
 - If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
+- If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
+- If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
+- If completed owned work remains valid but a newly exposed blocker is narrower and prerequisite to the original ticket acceptance, prefer creating a new prerequisite ticket and blocking the current active ticket rather than repeatedly widening the active ticket. Keep the current ticket focused on its delivered work plus the now-explicit dependency.
+- When a ticket is split after exploratory or partial code changes already exist in the worktree, explicitly classify those diffs before closeout:
+  - `belongs to completed current ticket`: keep and document them under the current ticket's partial/completed outcome
+  - `keep as in-progress for follow-up`: leave them in place only if they match the new live boundary and call that out explicitly in working notes or closeout
+  - `revert before handoff`: remove them if they no longer belong to either the current ticket or the new prerequisite
+  Record the classification so the ticket rewrite and the live workspace state do not silently diverge.
 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 
@@ -125,18 +145,30 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 
 Load `references/verification.md`.
 
+Before running broader checks, identify whether any ticket-relevant commands clean or rewrite shared outputs such as `packages/*/dist`, generated schemas, compiled JSON, or goldens. If they do, run those lanes serially even when the surrounding Codex guidance favors parallel tool use.
+
+For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness.
+
+If a verification lane fails immediately after overlapping output-contending commands, treat the first result as inconclusive until you rerun it serially. Recovery order:
+1. Classify the failure as a possible ordering artifact rather than as code-caused.
+2. Rebuild the touched package or regenerate the touched artifact tree to restore a clean authoritative output.
+3. Rerun the failed proof lane serially before drawing conclusions or widening scope.
+
 ### Verification Safety
 
 - Keep bugfix/regression verification on a red-green path: when you add or expose a focused failing proof for the ticket, keep rerunning that focused lane until it passes before escalating to broader package or repo commands.
 - Treat verification commands that delete or regenerate shared outputs as sequential-only unless the repo explicitly documents them as parallel-safe.
 - In repositories where tests execute compiled files from `dist`, do not run build commands that rewrite `dist` in parallel with those tests. A build that starts with `rm -rf dist` can create false negative failures unrelated to the implementation.
 - If a broad verification failure appears immediately after overlapping build/test commands, rerun the affected checks sequentially before classifying the failure as code-caused.
+- When a ticket names a broad scan, campaign, replay window, or other potentially expensive proof command, estimate feasibility early with one or two representative worst-case witnesses before committing to the literal full run. If those witnesses show the named proof surface is no longer proportionate to the live boundary, stop via 1-3-1 instead of discovering that drift deep into implementation.
 - For deterministic but seed-sensitive preparation flows, prefer bounded witness discovery over hardcoding an unverified seed. Keep the search bounded, deterministic, and aligned with the invariant being proven.
+- When a ticket names a simulator path, agent profile, campaign harness, replay harness, or other configuration-sensitive reproducer, preserve that authoritative setup in quick repro probes before classifying the witness as stale, fixed, or shifted. Do not treat a cheaper default-path probe as authoritative if profile wiring, RNG routing, or harness behavior can materially change the witness.
 - If an initial bounded witness proves only part of the target invariant, keep searching for a stronger bounded witness before classifying the ticket as stale, contradictory, or blocked. Escalate only after bounded search aligned to the full invariant fails or reveals a true contract conflict.
 - Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution.
 - After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
 - For campaign, tournament, or trace-inspection tickets, prefer the smallest bounded seed/run window that reaches the claimed scenario or reproducer before escalating to larger harness runs. If the first bounded run misses the target behavior, widen only enough to reach the intended trace slice.
+- When a ticket names a high-level reproducer but the setup proves too coupled or noisy, prefer the narrowest valid proof surface that still exercises the owned invariant: first the authority/helper that owns the behavior, then a production-data integration slice, then the broader end-to-end flow only if needed.
 
 ### Trace-Heavy Ticket Evidence
 
@@ -177,6 +209,13 @@ pnpm turbo schema:artifacts
 ## Follow-Up
 
 Load `references/closeout-and-followup.md`.
+
+For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
+- completion date or resulting status
+- what landed in the owned boundary
+- any boundary correction or semantic correction confirmed during reassessment
+- verification commands that actually ran
+- whether schema/artifact fallout was checked and whether it changed
 
 ## Codex Adaptation Notes
 

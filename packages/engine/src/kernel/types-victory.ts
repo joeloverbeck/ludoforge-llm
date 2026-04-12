@@ -6,6 +6,7 @@ export interface VictoryCheckpointDef {
   readonly id: string;
   readonly seat: string;
   readonly timing: VictoryTiming;
+  readonly phases?: readonly string[];
   readonly when: ConditionAST;
 }
 

@@ -7,6 +7,7 @@
 2. Summarize what changed, what was verified, and any residual risk. Include:
    - Audited schema/artifact ripple effects (even if none needed)
    - Deferred verification owned by another ticket
+   - Deferred sibling/spec scope confirmed during reassessment, when relevant
    - Resolved 1-3-1 decisions (especially Foundation type discipline)
    - Rules-evidence notes for game-specific legality corrections
    - Any unverified ticket premise (claimed repro seeds, counts, traces, production observations)

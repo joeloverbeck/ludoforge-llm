@@ -3724,12 +3724,10 @@
             "march"
           ],
           "moveZoneBindings": [
-            "$targetSpaces",
-            "$chainSpaces"
+            "$targetSpaces"
           ],
           "moveZoneProbeBindings": [
-            "$targetSpaces",
-            "$chainSpaces"
+            "$targetSpaces"
           ],
           "executionContext": {
             "originRestrictionKey": "sihanouk-rally-spaces"
@@ -3796,12 +3794,10 @@
                   "march"
                 ],
                 "moveZoneBindings": [
-                  "$targetSpaces",
-                  "$chainSpaces"
+                  "$targetSpaces"
                 ],
                 "moveZoneProbeBindings": [
-                  "$targetSpaces",
-                  "$chainSpaces"
+                  "$targetSpaces"
                 ],
                 "allowDuringMonsoon": true,
                 "completionPolicy": "skipIfNoLegalCompletion",

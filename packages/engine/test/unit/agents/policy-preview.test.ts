@@ -183,6 +183,38 @@ function createEventAnnotationIndex(
 }
 
 describe('policy-preview', () => {
+  it('applies preview moves without advancing to the next decision point by default', () => {
+    const def = createDef();
+    const state = initialState(def, 1, 2).state;
+    const candidate = createCandidate();
+    const trustedMove = createTrustedExecutableMove(candidate.move, state.stateHash, 'templateCompletion');
+    let receivedOptions: unknown;
+
+    const runtime = createPolicyPreviewRuntime({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map([[candidate.stableMoveKey, trustedMove]]),
+      previewMode: 'exactWorld',
+      dependencies: {
+        applyMove: (_def, _state, _move, options) => {
+          receivedOptions = options;
+          return {
+            state: {
+              ...state,
+              globalVars: { ...state.globalVars, score: 8 },
+            },
+          };
+        },
+        derivePlayerObservation: () => createObservation(false),
+      },
+    });
+
+    assert.deepEqual(runtime.resolveSurface(candidate, previewScoreRef), { kind: 'value', value: 8 });
+    assert.deepEqual(receivedOptions, { advanceToDecisionPoint: false });
+  });
+
   it('caches preview application per candidate', () => {
     const def = createDef();
     const state = initialState(def, 1, 2).state;

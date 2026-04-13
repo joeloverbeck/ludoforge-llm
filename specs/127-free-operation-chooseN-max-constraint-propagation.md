@@ -200,7 +200,7 @@ operates at a different layer than the pipeline's `chooseN`.
 |--------|------|
 | `packages/engine/src/kernel/move-completion.ts` | `completeTemplateMove` — random selection uses `chooseN` max |
 | `packages/engine/src/kernel/free-operation-viability.ts` | Zone-filter evaluation after selection |
-| `packages/engine/src/kernel/legal-choices.ts` | `legalChoicesEvaluate` — where grant context and zone filters are resolved |
+| `packages/engine/src/kernel/legal-choices.ts` | `legalChoicesEvaluate` — where grant context and zone filters are resolved. Note: `mapChooseNOptions` is internal (not exported) and is NOT a modification target |
 | `packages/engine/src/agents/prepare-playable-moves.ts` | Template completion retry loop — limited retries hide the issue |
 
 ## Lessons from Prior Attempt (MANDATORY — do not repeat these mistakes)
@@ -301,18 +301,24 @@ The implementation should:
    the `extractBindingCountConstraints` approach from the prior
    attempt's first commit).
 
-2. **Clamp `chooseN.max` at the source** — in the `effects-choice.ts`
-   or `effects-pipeline.ts` path where chooseN requests are built,
-   BEFORE options are enumerated.  When a free-operation grant's
-   `moveZoneBindings` includes the `chooseN.bind` name, and the
-   grant's `zoneFilter` contains a binding-count constraint for that
-   binding, intersect the constraint's upper bound with the pipeline's
-   `max`.
+2. **Clamp `chooseN.max` at the source** — in `effects-choice.ts`
+   (`applyChooseN`, around line 772) where chooseN requests are built,
+   BEFORE options are enumerated.  If
+   `env.freeOperationOverlay?.zoneFilter` exists, call
+   `extractBindingCountBounds(zoneFilter, bind)` — the function
+   returns null when the binding name does not appear in the filter,
+   making a separate `moveZoneBindings` check redundant.  When a
+   bound is returned, intersect the constraint's upper bound with the
+   pipeline's `max`.  Concretely, the existing line
+   `const clampedMax = Math.min(maxCardinality, normalizedOptions.length)`
+   at `effects-choice.ts:772` gains a third argument for the
+   extracted upper bound.
 
-3. **Do not modify `legal-choices.ts`** beyond minimal changes to
-   pass the active grant's constraints into the effects context.
-   No new probe paths, no singleton special cases, no resolution
-   changes.
+3. **Do not modify `legal-choices.ts`** beyond minimal changes (if
+   any) to pass the active grant's constraints into the effects
+   context.  The zone filter is already available in `EffectEnv` via
+   `freeOperationOverlay`, so no new threading may be needed.  No
+   new probe paths, no singleton special cases, no resolution changes.
 
 4. **Do not modify event-execution.ts, free-operation-viability.ts,
    policy-agent.ts, or move-decision-sequence.ts.** The fix lives
@@ -343,15 +349,19 @@ immediate fix.  However, the prior attempt showed that:
    - Stop at or-nodes (constraints inside or are not universal)
    - Unit test thoroughly
 
-2. In effects-choice.ts (or effects-pipeline.ts):
+2. In effects-choice.ts (applyChooseN, around line 772):
    - When building a chooseN for a free-operation move:
-     a. Look up the active grant from the effect context
-     b. If grant has zoneFilter and moveZoneBindings includes chooseN.bind:
-        call extractBindingCountBounds(grant.zoneFilter, chooseN.bind)
+     a. Check env.freeOperationOverlay?.zoneFilter
+     b. If zoneFilter exists:
+        call extractBindingCountBounds(zoneFilter, bind)
+        (returns null when the binding name does not appear in the
+        filter — no separate moveZoneBindings check needed)
      c. If bounds.max exists: clamp chooseN.max = min(chooseN.max, bounds.max)
+        (add as third argument to the existing Math.min on line 772)
    - This is the ONLY behavioral change
 
-3. No changes to legal-choices.ts, move-decision-sequence.ts,
+3. No changes to legal-choices.ts (zone filter already threaded via
+   freeOperationOverlay), move-decision-sequence.ts,
    free-operation-viability.ts, event-execution.ts, or policy-agent.ts
 ```
 
@@ -388,6 +398,13 @@ rejecting the implementation:
    any ticket complete.** A ticket is not done until all tests pass.
 
 ## Test plan
+
+### Existing related test
+
+`packages/engine/test/integration/fitl-march-free-operation.test.ts` already
+tests card-71 (An Loc) free-operation zone-filter evaluation at the unit
+level (isolated state, forced zone-filter checks).  The regression test
+below covers the distinct seed-1000 full-game reproduction scenario.
 
 ### Regression test (pin the bug)
 

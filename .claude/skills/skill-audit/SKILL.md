@@ -37,7 +37,7 @@ The argument is the skill directory path. The framework automatically resolves `
    - **Issue**: Something broken, misleading, or contradictory in the skill
    - **Improvement**: A refinement to existing behavior that would make the skill more effective
    - **Feature**: A new capability that aligns with the skill's stated intent but is currently missing
-6. **Severity-tag each finding** — CRITICAL / HIGH / MEDIUM / LOW
+6. **Severity-tag each finding** — CRITICAL (skill produces wrong output or violates guardrails) / HIGH (common path confused or blocked) / MEDIUM (uncommon path confused or suboptimal outcome) / LOW (minor friction or edge-case gap)
 7. **Present the report** — Output the structured report using the template below.
 
 Scale analysis depth to skill complexity. For small skills (<50 lines, <3 steps), the reflection can be a single paragraph. For large skills (>150 lines, >6 steps), each sub-item in step 3 deserves explicit consideration.
@@ -53,7 +53,7 @@ Output this structure to the conversation (do not write to a file):
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
 **Session evidence**: <rich / moderate / thin>
-(rich = skill executed 2+ times or across multiple scenarios; moderate = single full execution or partial use; thin = self-audit or first-time observation only)
+(rich = skill executed 2+ times or across multiple scenarios; moderate = single full execution, or single execution with implementation follow-up; thin = self-audit or first-time observation only)
 
 ## Alignment Check
 

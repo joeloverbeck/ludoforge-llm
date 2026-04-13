@@ -55,6 +55,11 @@ Output the audit in the conversation, not in a file.
 **Session summary**: <1-2 sentences on how the skill was used in this session>
 **Audit scope**: <optional specific turn window / interaction slice when helpful>
 
+[Optional for same-target re-audits] **Delta from earlier audit**:
+- `resolved`: <brief prior findings now fixed>
+- `still open`: <brief prior findings still applicable>
+- `new`: <brief newly discovered findings>
+
 ## Alignment Check
 
 - **FOUNDATIONS.md**: <aligned / N violations found>
@@ -152,3 +157,20 @@ If the current audit targets a different skill than any earlier audit in this se
 - `Use $skill-audit to review .codex/skills/implement-ticket`
 - `Audit .claude/skills/spec-to-tickets and report only`
 - `Review .codex/skills/skill-audit against this session and identify issues, improvements, and features`
+
+## Self-Audit Example
+
+```markdown
+# Skill Audit: skill-audit
+
+**Skill path**: .codex/skills/skill-audit/SKILL.md
+**Session date**: 2026-04-13
+**Session summary**: The skill was used to audit another skill and then to perform this self-audit.
+**Audit scope**: The audit/report interactions in this session only.
+
+## Alignment Check
+
+- **FOUNDATIONS.md**: aligned
+- **AGENTS.md**: aligned
+- **What worked well**: The report stayed scoped to actual audit behavior rather than generic meta-commentary.
+```

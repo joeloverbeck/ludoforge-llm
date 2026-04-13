@@ -566,6 +566,11 @@ export type MoveLegalityProbeResult =
       readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
     }>;
 
+/**
+ * Canonical shape: viable, complete, move, warnings, code, context, error,
+ * nextDecision, nextDecisionSet, stochasticDecision.
+ * All construction sites must materialize every property.
+ */
 export type MoveViabilityProbeResult =
   | Readonly<{
       readonly viable: true;

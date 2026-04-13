@@ -1,6 +1,6 @@
 # 130CANHOTPAT-005: ESLint rule — no-conditional-spread for kernel/agents
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — ESLint configuration
@@ -109,3 +109,35 @@ Add similar comments to `ClassifiedMove`, `PolicyEvaluationCoreResult`, `MoveVia
 1. `pnpm turbo lint` — verify rule works and no false positives
 2. `pnpm turbo typecheck` — verify no type regressions
 3. `pnpm turbo test` — full suite verification
+
+## Outcome (2026-04-13)
+
+Implemented a local ESLint rule in `tools/eslint-rules/no-conditional-spread.js` and registered it in `eslint.config.js` as `local/no-conditional-spread`.
+
+During reassessment, the draft ticket's blanket wording proved too broad: kernel and agents still contain legitimate non-hot-path conditional spreads. The implemented rule therefore enforces the spec boundary more precisely by flagging conditional spreads only when constructing the canonical hot-path runtime object shapes introduced by tickets 001-004:
+
+- `EffectCursor`
+- `ClassifiedMove`
+- `PolicyEvaluationCoreResult`
+- `MoveViabilityProbeResult`
+- `GameState`
+
+Added canonical-shape registry comments to the corresponding exported types in:
+
+- `packages/engine/src/kernel/effect-context.ts`
+- `packages/engine/src/kernel/types-core.ts`
+- `packages/engine/src/agents/policy-eval.ts`
+- `packages/engine/src/kernel/apply-move.ts`
+
+Added lint-policy coverage for the config scope and synthetic rule behavior:
+
+- `packages/engine/test/unit/lint/canonical-hot-path-conditional-spread-lint-policy.test.ts`
+- `packages/engine/test/unit/lint/no-conditional-spread-rule.test.ts`
+
+No schema or generated-artifact changes were required.
+
+Verification:
+
+1. `pnpm turbo lint`
+2. `pnpm turbo typecheck`
+3. `pnpm turbo test`

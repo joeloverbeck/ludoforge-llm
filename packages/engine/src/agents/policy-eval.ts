@@ -153,6 +153,11 @@ export interface EvaluatePolicyMoveInput {
   readonly selectionGrouping?: 'none' | 'actionId';
 }
 
+/**
+ * Canonical shape: kind, move, rng, failure, fallbackMove,
+ * fallbackStableMoveKey, fallbackScore, metadata.
+ * All construction sites must materialize every property.
+ */
 export type PolicyEvaluationCoreResult =
   | {
       readonly kind: 'success';

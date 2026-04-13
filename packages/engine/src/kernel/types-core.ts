@@ -1077,6 +1077,13 @@ export interface RevealGrant {
   readonly filter?: TokenFilterExpr;
 }
 
+/**
+ * Canonical shape: globalVars, perPlayerVars, zoneVars, playerCount, zones,
+ * nextTokenOrdinal, currentPhase, activePlayer, turnCount, rng, stateHash,
+ * _runningHash, actionUsage, turnOrderState, markers, reveals, globalMarkers,
+ * activeLastingEffects, interruptPhaseStack.
+ * All construction sites must materialize every property.
+ */
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
   readonly perPlayerVars: Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
@@ -1122,7 +1129,10 @@ export interface TrustedExecutableMove extends Move {
   readonly provenance: TrustedMoveProvenance;
 }
 
-/** A legal move with its viability pre-computed during enumeration. */
+/**
+ * Canonical shape: move, viability, trustedMove.
+ * All construction sites must materialize every property.
+ */
 export interface ClassifiedMove {
   readonly move: Move;
   readonly viability: import('./apply-move.js').MoveViabilityProbeResult;

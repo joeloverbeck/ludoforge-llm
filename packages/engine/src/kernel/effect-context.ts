@@ -237,6 +237,8 @@ export interface EffectEnv {
 /**
  * Fields that change between effects in an execution sequence.
  * Small enough to clone cheaply for nested scopes (5 fields vs ~24).
+ * Canonical shape: state, rng, bindings, decisionScope, effectPath, tracker.
+ * All construction sites must materialize every property.
  */
 export interface EffectCursor {
   state: GameState;

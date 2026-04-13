@@ -158,15 +158,21 @@ export type PolicyEvaluationCoreResult =
       readonly kind: 'success';
       readonly move: Move;
       readonly rng: Rng;
+      readonly failure: undefined;
+      readonly fallbackMove: undefined;
+      readonly fallbackStableMoveKey: undefined;
+      readonly fallbackScore: undefined;
       readonly metadata: PolicyEvaluationMetadata;
     }
   | {
       readonly kind: 'failure';
+      readonly move: Move | undefined;
+      readonly rng: Rng | undefined;
       readonly failure: PolicyEvaluationFailure;
+      readonly fallbackMove: Move | undefined;
+      readonly fallbackStableMoveKey: string | undefined;
+      readonly fallbackScore: number | null | undefined;
       readonly metadata: PolicyEvaluationMetadata;
-      readonly fallbackMove?: Move | undefined;
-      readonly fallbackStableMoveKey?: string | undefined;
-      readonly fallbackScore?: number | null | undefined;
     };
 
 interface CandidateEntry extends PolicyEvaluationCandidate {
@@ -350,10 +356,15 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
   if (candidates.length === 0) {
     return {
       kind: 'failure',
+      move: undefined,
+      rng: undefined,
       failure: {
         code: 'EMPTY_LEGAL_MOVES',
         message: 'Policy evaluation requires at least one legal move.',
       },
+      fallbackMove: undefined,
+      fallbackStableMoveKey: undefined,
+      fallbackScore: undefined,
       metadata: {
         seatId: null,
         requestedProfileId,
@@ -609,6 +620,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       kind: 'success',
       move: selected.move,
       rng,
+      failure: undefined,
+      fallbackMove: undefined,
+      fallbackStableMoveKey: undefined,
+      fallbackScore: undefined,
       metadata: {
         seatId,
         requestedProfileId,
@@ -735,12 +750,14 @@ function failureWithMetadata(
   const fallbackCandidate = candidates[0];
   return {
     kind: 'failure',
+    move: undefined,
+    rng: undefined,
     failure,
-    ...(fallbackCandidate === undefined ? {} : {
-      fallbackMove: fallbackCandidate.move,
-      fallbackStableMoveKey: fallbackCandidate.stableMoveKey,
-      fallbackScore: Number.isFinite(fallbackCandidate.score) ? fallbackCandidate.score : null,
-    }),
+    fallbackMove: fallbackCandidate?.move,
+    fallbackStableMoveKey: fallbackCandidate?.stableMoveKey,
+    fallbackScore: fallbackCandidate === undefined
+      ? undefined
+      : (Number.isFinite(fallbackCandidate.score) ? fallbackCandidate.score : null),
     metadata: {
       seatId,
       requestedProfileId,

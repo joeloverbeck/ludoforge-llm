@@ -1,6 +1,6 @@
 # 130CANHOTPAT-003: PolicyEvaluationCoreResult — unify success/failure shapes
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — agents/policy-eval and consumer files
@@ -133,3 +133,21 @@ Consumer sites that branch on `kind` and access variant-specific properties may 
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo test`
+
+## Outcome (2026-04-13)
+
+Implemented in `packages/engine/src/agents/policy-eval.ts`.
+
+`PolicyEvaluationCoreResult` now materializes a single success/failure property set at runtime:
+- success results always include `failure`, `fallbackMove`, `fallbackStableMoveKey`, and `fallbackScore` as own properties with `undefined`
+- failure results always include `move`, `rng`, `fallbackMove`, `fallbackStableMoveKey`, and `fallbackScore` as own properties, with fallback metadata normalized to `undefined` when absent and `null` only for non-finite fallback scores
+
+The live implementation boundary was narrower than the draft ticket predicted. Reassessment confirmed the type definition and construction sites were concentrated in `packages/engine/src/agents/policy-eval.ts`, and existing consumers already relied on `kind` discrimination rather than property absence, so no consumer-file edits were required.
+
+No schema, generated-artifact, or serialization changes were required.
+
+Verification completed with:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

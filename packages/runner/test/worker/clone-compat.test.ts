@@ -41,6 +41,12 @@ const toClassifiedMove = (move: typeof LEGAL_TICK_MOVE): ClassifiedMove => ({
     complete: true,
     move,
     warnings: [],
+    code: undefined,
+    context: undefined,
+    error: undefined,
+    nextDecision: undefined,
+    nextDecisionSet: undefined,
+    stochasticDecision: undefined,
   },
   trustedMove: undefined,
 });

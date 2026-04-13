@@ -1,6 +1,6 @@
 # 130CANHOTPAT-004: MoveViabilityProbeResult — unify 4 discriminated variant shapes
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel/apply-move and all consumer files
@@ -141,3 +141,22 @@ Grep for all import sites of `MoveViabilityProbeResult`. Consumer sites that use
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo test`
+
+## Outcome (2026-04-13)
+
+Implemented the canonical `MoveViabilityProbeResult` runtime shape in `packages/engine/src/kernel/apply-move.ts`.
+
+All four variants now materialize the same property set at construction time:
+- viable complete results always include `code`, `context`, `error`, `nextDecision`, `nextDecisionSet`, and `stochasticDecision` as own properties with `undefined`
+- viable incomplete results always include `code`, `context`, and `error` as `undefined`, while `nextDecision`, `nextDecisionSet`, and `stochasticDecision` are always present as `T | undefined`
+- non-viable results always include `complete`, `move`, `warnings`, `nextDecision`, `nextDecisionSet`, and `stochasticDecision` as own properties, and the non-ILLEGAL_MOVE branch now materializes `context: undefined` when absent
+
+The live boundary was narrower than the draft ticket predicted. Reassessment confirmed that broad consumer rewrites were unnecessary: the actual manual constructor fallout was limited to `packages/engine/src/kernel/legal-moves.ts` plus direct test fixtures and helper literals in engine/runner tests that authored `MoveViabilityProbeResult` or `ClassifiedMove` inline.
+
+No schema, generated-artifact, or serialization changes were required.
+
+Verification completed with:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

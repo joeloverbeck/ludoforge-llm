@@ -184,6 +184,12 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       complete: true,
       move: { actionId: asActionId('simple'), params: {} },
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
     });
     assert.deepEqual(result.moves[0]?.trustedMove, {
       actionId: asActionId('simple'),

@@ -79,6 +79,7 @@ export const completeTemplateMove = (
 ): TemplateCompletionResult => {
   const resolved = resolveMoveEnumerationBudgets(options?.budgets);
   const maxDecisions = resolved.maxCompletionDecisions;
+  const preferNonEmptyOptionalChooseN = templateMove.freeOperation === true;
   let cursor = rng;
   let iterations = 0;
   let exceeded = false;
@@ -108,7 +109,18 @@ export const completeTemplateMove = (
       return undefined;
     }
 
-    const selection = selectFromChooseN(options, min, max, cursor);
+    // Template completion is trying to derive a playable move, not sample
+    // uniformly from all confirmable prefixes. When an optional chooseN has
+    // selectable options, prefer a non-empty pick over immediately confirming
+    // an empty selection that often dead-ends later in the decision chain.
+    const effectiveMin = preferNonEmptyOptionalChooseN && min === 0 && request.canConfirm === true && optionCount > 0
+      ? 1
+      : min;
+    if (max < effectiveMin) {
+      return undefined;
+    }
+
+    const selection = selectFromChooseN(options, effectiveMin, max, cursor);
     cursor = selection.rng;
     return selection.selected;
   };
@@ -142,6 +154,7 @@ export const completeTemplateMove = (
     result = completeMoveDecisionSequence(def, state, templateMove, {
       choose,
       chooseStochastic,
+      evaluateOneDecisionPerPass: templateMove.freeOperation === true,
     }, runtime);
   } catch (error) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {

@@ -1,6 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { isEvalErrorCode } from './eval-error.js';
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
+import { compareTurnFlowFreeOperationGrantPriority } from '../contracts/index.js';
 import type { FreeOperationBlockExplanation } from './free-operation-denial-contract.js';
 import type { FreeOperationZoneFilterSurface } from './free-operation-zone-filter-contract.js';
 import {
@@ -155,6 +156,18 @@ const analyzeFreeOperationGrantMatch = (
   };
 };
 
+const selectHighestPriorityApplicableGrant = (
+  grants: readonly TurnFlowPendingFreeOperationGrant[],
+): TurnFlowPendingFreeOperationGrant | null =>
+  grants.reduce<TurnFlowPendingFreeOperationGrant | null>((selected, grant) => {
+    if (selected === null) {
+      return grant;
+    }
+    return compareTurnFlowFreeOperationGrantPriority(selected, grant) <= 0
+      ? selected
+      : grant;
+  }, null);
+
 const explainFreeOperationBlockFromAnalysis = (
   analysis: FreeOperationGrantAnalysis,
 ): FreeOperationBlockExplanation => {
@@ -261,6 +274,7 @@ export interface FreeOperationDiscoveryAnalysisResult {
   readonly denial: FreeOperationBlockExplanation;
   readonly executionPlayer: ReturnType<typeof asPlayerId>;
   readonly zoneFilter?: ConditionAST;
+  readonly bindingCountZoneFilter?: ConditionAST;
   readonly executionContext?: TurnFlowPendingFreeOperationGrant['executionContext'] | undefined;
   readonly capturedSequenceZonesByKey?: Readonly<Record<string, readonly string[]>> | undefined;
   readonly tokenInterpretations?: TurnFlowPendingFreeOperationGrant['tokenInterpretations'] | undefined;
@@ -302,6 +316,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
   }
 
   const prioritized = analysis.applicableGrants.find((grant) => grant.executeAsSeat !== undefined) ?? analysis.applicableGrants[0];
+  const highestPriorityGrant = selectHighestPriorityApplicableGrant(analysis.applicableGrants);
   const executionSeat = prioritized?.executeAsSeat ?? prioritized?.seat;
   const executionPlayer = executionSeat === undefined
     ? state.activePlayer
@@ -320,6 +335,7 @@ export const resolveFreeOperationDiscoveryAnalysis = (
     denial: explainFreeOperationBlockFromAnalysis(analysis),
     executionPlayer,
     ...(zoneFilter === undefined ? {} : { zoneFilter }),
+    ...(highestPriorityGrant?.zoneFilter === undefined ? {} : { bindingCountZoneFilter: highestPriorityGrant.zoneFilter }),
     ...(prioritized?.executionContext === undefined ? {} : { executionContext: prioritized.executionContext }),
     ...(prioritized === undefined ? {} : { capturedSequenceZonesByKey: resolveCapturedSequenceZonesByKey(state, prioritized) }),
     ...(prioritized?.tokenInterpretations === undefined ? {} : { tokenInterpretations: prioritized.tokenInterpretations }),

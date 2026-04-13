@@ -1,5 +1,7 @@
 # Spec 127 — Free Operation chooseN Max Constraint Propagation
 
+**Status**: COMPLETED
+
 ## Problem
 
 When a free-operation grant carries a `zoneFilter` that constrains the
@@ -18,126 +20,92 @@ Template completion retries up to `NOT_VIABLE_RETRY_CAP` (7) times,
 giving a combined success probability of ~22%.  In practice, both the
 PolicyAgent and RandomAgent almost always fail, producing `agentStuck`.
 
+## Reassessment Update (2026-04-13)
+
+The original draft correctly identified the singleton binding-count
+constraint, but it under-described the live root cause in the current
+codebase.
+
+### Verified findings
+
+1. The FITL rule-authoritative source is correct. Card 71 ("An Loc")
+   in `data/games/fire-in-the-lake/41-events/065-096.md` explicitly
+   encodes a shaded free NVA March into exactly one City via
+   `count($targetSpaces) == 1`, followed by two same-city Attacks.
+
+2. In the original seed-1000 stuck witness, the active free-operation context
+   includes overlapping applicable March grants:
+   - `freeOpEffect:1:nva:2` with `zoneFilter: in($zone, grantContext.selectedSpaces)`
+   - `freeOp:1:2:event:0` with the An Loc singleton-city `and` filter
+
+3. The current execution overlay exposes a merged legality
+   `zoneFilter` that becomes an `or` across applicable grants. Ticket
+   001's extractor intentionally stops at `or`, so directly reading
+   `env.freeOperationOverlay?.zoneFilter` is insufficient for this
+   witness.
+
+4. The correct clamp source is the **highest-priority applicable
+   grant** under the existing free-operation priority contract, not
+   the first applicable grant and not the merged legality union.
+
+5. Even after the first `$targetSpaces` request is correctly clamped to
+   `max = 1`, `completeTemplateMove` can still return
+   `unsatisfiable`. The remaining failure is in later completion
+   steps, where discovery-only pending requests lose legality-ranked
+   option information that `legalChoicesEvaluate` already knows.
+
+### Corrected root cause
+
+This is a two-part engine coordination bug:
+
+1. **Wrong governing filter at completion time**:
+   completion needs the highest-priority applicable grant's concrete
+   `zoneFilter` for binding-count extraction, while legality still
+   needs the merged union filter.
+
+2. **Later-decision legality loss during template completion**:
+   after the first destination choice, completion still samples from
+   discovery-only requests that can include many already-illegal
+   branches.
+
+The full witness therefore requires more than a narrow
+`chooseN.max` clamp in `effects-choice.ts`.
+
+6. The original seed-1000 simulator path has drifted on the live
+   codebase and no longer reaches the old stuck state, so the active
+   regression proof must use a bounded synthetic overlapping-grant
+   witness instead of a stale full-game trace.
+
 ### Reproduction
 
-Run the FITL game with seed 1000 using the `arvn-evolved` agent
-profile (see campaign `fitl-arvn-agent-evolution`).  After 140 moves
-the NVA agent (player 2) receives a free-operation march grant from
-the An Loc event card.  The game reaches `agentStuck` because neither
-of the 2 legal march moves can be completed by the PolicyAgent.
+Use a bounded synthetic witness in
+`packages/engine/test/integration/fitl-free-operation-march-completion.test.ts`.
 
-#### Minimal reproduction (no full game required)
+That regression should:
 
-Build a regression test that:
+1. Build a minimal game-agnostic action pipeline with:
+   - `chooseN $targetSpaces`
+   - a later branch point that includes one already-illegal path and
+     one legal path
+2. Construct a witness state with 2 overlapping applicable
+   free-operation grants for the same action:
+   - a higher-priority singleton grant with
+     `and(count($targetSpaces) == 1, in($zone, ...))`
+   - a lower-priority overlapping grant that broadens legality and
+     causes the merged legality filter to become `or`
+3. Assert there are 2 legal free-operation templates for the target
+   action.
+4. Assert `extractBindingCountBounds` returns no bounds from the
+   merged `or` legality filter.
+5. Assert the completion-only governing filter still yields
+   `$targetSpaces.max === 1`.
+6. Assert guided singleton completion succeeds.
+7. Assert unguided random completion succeeds end-to-end and chooses
+   the legal later branch instead of drifting into the dead branch.
 
-1. Compiles the FITL game spec.
-2. Runs the game with seed 1000, 4 players, max 200 turns,
-   using profiles `us-baseline`, `arvn-evolved`, `nva-baseline`,
-   `vc-baseline`.
-3. Captures the `finalState` from the trace (stop reason will be
-   `agentStuck`).
-4. Calls `enumerateLegalMoves` on the final state — asserts 2 legal
-   moves (both `march`, both `freeOperation: true`).
-5. Calls `completeTemplateMove` on the first legal move, forcing
-   `$targetSpaces` selection to `['an-loc:none']` (1 target) —
-   asserts the result is `completed`.
-6. Calls `completeTemplateMove` on the first legal move, forcing
-   `$targetSpaces` selection to `['an-loc:none', 'binh-dinh:none']`
-   (2 targets) — asserts the result is `unsatisfiable` (this is the
-   bug; after the fix, it should either complete or the `chooseN`
-   `max` should be 1).
-
-Steps 5-6 pin down the exact failure: the pipeline accepts 1 target
-but rejects 2+, even though the `chooseN` max allows up to 29.
-
-#### Frozen game state at the stuck point
-
-| Field | Value |
-|-------|-------|
-| `activePlayer` | 2 (NVA) |
-| `currentPhase` | `main` |
-| `globalVars.nvaResources` | 33 |
-| `globalVars.marchCount` | 0 |
-
-**NVA tokens by zone** (69 total: 39 troops, 18 guerrillas, 12 bases):
-
-| Zone | Tokens |
-|------|--------|
-| `available-NVA:none` | 10 troops, 4 guerrillas, 4 bases |
-| `central-laos:none` | 2 troops, 3 guerrillas, 2 bases |
-| `southern-laos:none` | 3 troops, 4 guerrillas, 1 base |
-| `north-vietnam:none` | 2 troops, 3 guerrillas, 1 base |
-| `northeast-cambodia:none` | 5 troops |
-| `the-parrots-beak:none` | 5 troops, 1 guerrilla, 1 base |
-| `the-fishhook:none` | 4 troops |
-| `sihanoukville:none` | 3 troops |
-| `quang-nam:none` | 5 troops |
-| `kien-phong:none` | 3 guerrillas |
-| `loc-can-tho-chau-doc:none` | 2 guerrillas |
-
-**Active free-operation grants for NVA** (from turn order state):
-
-The grant `freeOp:1:2:event:0` is the one that produces the 2 legal
-march moves.  Its critical fields:
-
-```yaml
-grantId: "freeOp:1:2:event:0"
-phase: ready
-seat: nva
-operationClass: operation
-actionIds: [march]
-moveZoneBindings: [$targetSpaces]
-zoneFilter:
-  op: and
-  args:
-    - op: "=="                              # <-- THE CONSTRAINT
-      left:
-        aggregate:
-          op: count
-          query: { query: binding, name: "$targetSpaces" }
-      right: 1                              # count($targetSpaces) must equal 1
-    - op: in
-      item: { ref: zoneProp, zone: "$zone", prop: id }
-      set: [hue:none, da-nang:none, kontum:none, qui-nhon:none,
-            cam-ranh:none, an-loc:none, saigon:none, can-tho:none]
-    - op: ">"
-      left:
-        aggregate:
-          op: count
-          query: { query: binding, name: "$movingTroops@{$zone}" }
-      right: 0
-```
-
-The `count($targetSpaces) == 1` clause means the free operation only
-permits a single march destination.  But the `insurgent-march-select-
-destinations` macro's non-limited-operation branch computes:
-
-```yaml
-max:
-  if:
-    when: { op: "==", left: { ref: binding, name: __actionClass }, right: limitedOperation }
-    then: 1
-    else:
-      if:
-        when: { op: "==", left: { ref: binding, name: __freeOperation }, right: true }
-        then: 99
-        else: ...
-```
-
-For `__freeOperation = true`, `max = 99`.  The engine resolves this to
-`max = 29` (29 valid destinations).  The zone-filter constraint
-(`count == 1`) is invisible to the `chooseN`.
-
-**Legal moves at the stuck point:**
-
-```json
-{"actionId":"march","params":{},"freeOperation":true,"actionClass":"operation"}
-{"actionId":"march","params":{},"freeOperation":true}
-```
-
-Both are `viable: true, complete: false` — template moves awaiting
-completion.  Both fail with `completionUnsatisfiable` when the
-random selector picks `count > 1`.
+This keeps the proof bounded, deterministic, and directly tied to the
+architectural root cause even though the historical full-game seed no
+longer reproduces on the live codebase.
 
 ## Scope
 
@@ -146,7 +114,8 @@ random selector picks `count > 1`.
 - Diagnose and fix the constraint propagation gap between
   free-operation `zoneFilter` binding-count constraints and `chooseN`
   max parameters during template completion.
-- Regression test using the frozen game state described above.
+- Regression test using the bounded overlapping-grant witness
+  described above.
 - The fix must be **game-agnostic** — it cannot hardcode FITL-specific
   logic into the engine.
 
@@ -292,6 +261,27 @@ hangs, event test failures, and performance regressions.
 
 ## Recommendation
 
+## Outcome
+
+- Completion date: 2026-04-13
+- What changed:
+  - added a completion-only governing free-operation filter sourced from the highest-priority applicable grant
+  - clamped free-operation `chooseN.max` from that governing filter instead of the merged legality union
+  - constrained later-step legality-guided completion to free-operation templates only
+  - replaced the stale seed-1000 simulator witness with a bounded synthetic overlapping-grant regression
+- Deviations from original plan:
+  - the historical seed-1000 reproducer no longer existed on the live codebase, so the final proof surface shifted to a bounded synthetic witness
+  - the final implementation avoided global completion-path widening after verification showed that broader change caused unrelated regressions
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-free-operation-march-completion.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine test:integration:fitl-events`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo lint`
+  - `pnpm turbo test`
+  - all passed on the final patch
+
 **Option A (engine-level max clamping)** is now the recommended
 approach, informed by the lessons from the prior attempt.
 
@@ -403,37 +393,35 @@ rejecting the implementation:
 
 `packages/engine/test/integration/fitl-march-free-operation.test.ts` already
 tests card-71 (An Loc) free-operation zone-filter evaluation at the unit
-level (isolated state, forced zone-filter checks).  The regression test
-below covers the distinct seed-1000 full-game reproduction scenario.
+level (isolated state, forced zone-filter checks). The regression test
+below covers the bounded overlapping-grant completion scenario that now
+serves as the active proof surface.
 
 ### Regression test (pin the bug)
 
 File: `packages/engine/test/integration/fitl-free-operation-march-completion.test.ts`
 
-1. **Setup**: Compile FITL, run seed 1000 to move 140 (`agentStuck`),
-   capture `finalState`.
-2. **Assert legal moves**: 2 legal march moves, both
-   `freeOperation: true`.
-3. **Assert 1-target completion succeeds**: Force `$targetSpaces =
-   ['an-loc:none']`, assert `completed`.
-4. **Assert 2-target selection is impossible (post-fix)**: The
-   `chooseN` max should now be 1 (clamped by zone-filter constraint),
-   so selecting 2 targets is structurally impossible.
-5. **Assert random completion succeeds (post-fix)**: Call
+1. **Setup**: Build the bounded overlapping-grant witness state.
+2. **Assert legal templates**: 2 legal free-operation templates for
+   the target action.
+3. **Assert merged filter remains broad**: The merged legality filter
+   is `or`, and ticket 001's extractor returns no count bounds from it.
+4. **Assert governing clamp applies**: The completion-only governing
+   filter clamps the first `$targetSpaces` request to `max = 1`.
+5. **Assert guided completion succeeds**: Force a singleton
+   `$targetSpaces` choice and assert `completed`.
+6. **Assert random completion succeeds (post-fix)**: Call
    `completeTemplateMove` with no custom `choose` callback (pure
-   random), assert `completed` (not `unsatisfiable`).
+   random), assert `completed` and verify the legal later branch was
+   taken.
 
 ### Broader verification
 
 - **Full CI green**: `pnpm turbo test`, `pnpm turbo typecheck`,
   `pnpm turbo lint` — all must pass.
-- Run the FITL tournament harness with seed 1000 — game should no
-  longer hit `agentStuck`.
-- Run seeds 1000-1014 with all FITL profiles — no new `agentStuck`
-  occurrences.
-- **Determinism canary**: seeds 1000-1002 in
-  `draft-state-determinism-parity.test.ts` must complete within
-  60 seconds each (no hangs).
+- **Determinism canary**: the FITL-heavy seeds in
+  `draft-state-determinism-parity.test.ts` and
+  `fitl-policy-agent-canary.test.ts` must complete without hanging.
 - **Event card canary**: all 153 FITL event card suites must pass
   (838 tests, 0 failures).
 - **Memory canary**: `draft-state-gc-measurement.test.ts` must

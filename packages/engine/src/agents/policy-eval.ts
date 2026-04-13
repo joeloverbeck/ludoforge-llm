@@ -164,6 +164,9 @@ export type PolicyEvaluationCoreResult =
       readonly kind: 'failure';
       readonly failure: PolicyEvaluationFailure;
       readonly metadata: PolicyEvaluationMetadata;
+      readonly fallbackMove?: Move | undefined;
+      readonly fallbackStableMoveKey?: string | undefined;
+      readonly fallbackScore?: number | null | undefined;
     };
 
 interface CandidateEntry extends PolicyEvaluationCandidate {
@@ -702,9 +705,7 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
     return core;
   }
 
-  const candidates = canonicalizeCandidates(input.def, input.legalMoves);
-  const fallbackCandidate = candidates[0];
-  const fallbackMove = fallbackCandidate?.move;
+  const fallbackMove = core.fallbackMove;
   if (fallbackMove === undefined || input.fallbackOnError === false) {
     throw new PolicyRuntimeError(core.failure);
   }
@@ -714,8 +715,8 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
     rng: input.rng,
     metadata: {
       ...core.metadata,
-      selectedStableMoveKey: fallbackCandidate?.stableMoveKey ?? null,
-      finalScore: fallbackCandidate === undefined || !Number.isFinite(fallbackCandidate.score) ? null : fallbackCandidate.score,
+      selectedStableMoveKey: core.fallbackStableMoveKey ?? null,
+      finalScore: core.fallbackScore ?? null,
       usedFallback: true,
     },
   };
@@ -731,9 +732,15 @@ function failureWithMetadata(
   completionStatistics?: PolicyCompletionStatistics,
   movePreparations?: readonly PolicyMovePreparationTrace[],
 ): PolicyEvaluationCoreResult {
+  const fallbackCandidate = candidates[0];
   return {
     kind: 'failure',
     failure,
+    ...(fallbackCandidate === undefined ? {} : {
+      fallbackMove: fallbackCandidate.move,
+      fallbackStableMoveKey: fallbackCandidate.stableMoveKey,
+      fallbackScore: Number.isFinite(fallbackCandidate.score) ? fallbackCandidate.score : null,
+    }),
     metadata: {
       seatId,
       requestedProfileId,

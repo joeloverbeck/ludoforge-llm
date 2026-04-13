@@ -1,4 +1,4 @@
-import { legalChoicesDiscover, legalChoicesEvaluate } from './legal-choices.js';
+import { legalChoicesDiscover } from './legal-choices.js';
 import {
   classifyDecisionSequenceSatisfiability,
   type DecisionSequenceChoiceDiscoverer,
@@ -27,7 +27,6 @@ export interface ResolveMoveDecisionSequenceOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoveryCache?: DiscoveryCache;
-  readonly evaluateChoices?: boolean;
 }
 
 export type DiscoveryCache = Map<Move, ChoiceRequest>;
@@ -84,22 +83,14 @@ export const resolveMoveDecisionSequence = (
   const maxDeferredPredicates = budgets.maxDeferredPredicates;
   let deferredPredicatesEvaluated = 0;
   let move = baseMove;
-  let evaluateChoices = options?.evaluateChoices === true;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const cached = evaluateChoices ? undefined : options?.discoveryCache?.get(move);
-    const request = cached ?? (evaluateChoices
-      ? legalChoicesEvaluate(def, state, move, {
-        onDeferredPredicatesEvaluated: (count) => {
-          deferredPredicatesEvaluated += count;
-        },
-      }, runtime)
-      : legalChoicesDiscover(def, state, move, {
-        onDeferredPredicatesEvaluated: (count) => {
-          deferredPredicatesEvaluated += count;
-        },
-      }, runtime));
-    evaluateChoices = false;
+    const cached = options?.discoveryCache?.get(move);
+    const request = cached ?? legalChoicesDiscover(def, state, move, {
+      onDeferredPredicatesEvaluated: (count) => {
+        deferredPredicatesEvaluated += count;
+      },
+    }, runtime);
     if (deferredPredicatesEvaluated > maxDeferredPredicates) {
       emitWarning({
         code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',

@@ -277,22 +277,6 @@ describe('template-completion chooseN bounds', () => {
     assert.deepEqual(result.move.params['$targets'], []);
   });
 
-  it('prefers a non-empty selection for optional chooseN decisions when options exist', () => {
-    const action = createChooseNAction('optional-non-empty-choose-n');
-    const profile = createChooseNProfile('optional-non-empty-choose-n', 0, 2, ['a', 'b']);
-    const def = createDef(action, profile);
-    const templateMove: Move = { actionId: asActionId('optional-non-empty-choose-n'), freeOperation: true, params: {} };
-
-    for (let seed = 0n; seed < 40n; seed += 1n) {
-      const result = completeTemplateMove(def, baseState, templateMove, createRng(seed));
-      assert.equal(result.kind, 'completed');
-      if (result.kind !== 'completed') throw new Error('unreachable');
-      const selected = result.move.params['$targets'];
-      assert.ok(Array.isArray(selected));
-      assert.ok(selected.length >= 1 && selected.length <= 2);
-    }
-  });
-
   it('persists sampled stochastic bindings and completes exact chooseN branches', () => {
     const action = createChooseNAction('stochastic-choose-n');
     const profile = createStochasticProfile('stochastic-choose-n');

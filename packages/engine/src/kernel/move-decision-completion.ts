@@ -16,7 +16,6 @@ export interface CompleteMoveDecisionSequenceOptions extends ResolveMoveDecision
   readonly chooseStochastic?: (
     request: ChoiceStochasticPendingRequest,
   ) => Readonly<Record<string, MoveParamScalar>> | undefined;
-  readonly evaluateOneDecisionPerPass?: boolean;
 }
 
 export const completeMoveDecisionSequence = (
@@ -28,28 +27,14 @@ export const completeMoveDecisionSequence = (
 ): ReturnType<typeof resolveMoveDecisionSequence> => {
   const choose = options?.choose ?? ((request: ChoicePendingRequest) => pickDeterministicChoiceValue(request));
   let move = baseMove;
-  const evaluateOneDecisionPerPass = options?.evaluateOneDecisionPerPass === true;
 
   for (;;) {
-    let advanced = false;
     const result = resolveMoveDecisionSequence(
       def,
       state,
       move,
       {
-        choose: evaluateOneDecisionPerPass
-          ? (request) => {
-            if (advanced) {
-              return undefined;
-            }
-            const selected = choose(request);
-            if (selected !== undefined) {
-              advanced = true;
-            }
-            return selected;
-          }
-          : choose,
-        evaluateChoices: true,
+        choose,
         ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
         ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
       },
@@ -57,19 +42,11 @@ export const completeMoveDecisionSequence = (
     );
 
     if (result.complete || result.illegal !== undefined || result.nextDecision !== undefined) {
-      if (!evaluateOneDecisionPerPass || result.nextDecision === undefined || advanced === false) {
-        return result;
-      }
-      move = result.move;
-      continue;
+      return result;
     }
 
     if (result.stochasticDecision === undefined) {
-      if (!evaluateOneDecisionPerPass || advanced === false) {
-        return result;
-      }
-      move = result.move;
-      continue;
+      return result;
     }
 
     const selectedBindings = options?.chooseStochastic?.(result.stochasticDecision);

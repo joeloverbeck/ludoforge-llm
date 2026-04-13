@@ -1,6 +1,6 @@
 # 130CANHOTPAT-006: GameState shape consistency property test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — new test file
@@ -8,7 +8,7 @@
 
 ## Problem
 
-After ticket 001 makes all GameState optional fields always-present, there is no automated test verifying that this invariant holds across different game configurations. Future changes could re-introduce conditional properties without detection. A property-based test ensures all GameState objects have identical `Object.keys()` regardless of which features a game uses (Foundation 16: Testing as Proof).
+After ticket 001 makes all GameState optional fields always-present, there is no automated test verifying that this invariant holds across different game configurations. Future changes could re-introduce conditional properties without detection. A deterministic architectural proof ensures all GameState objects have identical `Object.keys()` regardless of which features a game uses (Foundation 16: Testing as Proof).
 
 ## Assumption Reassessment (2026-04-13)
 
@@ -19,7 +19,7 @@ After ticket 001 makes all GameState optional fields always-present, there is no
 
 ## Architecture Check
 
-1. A property-based test that asserts `Object.keys()` consistency is a direct proof of the V8 hidden class invariant — if all GameState objects have identical keys, they share a single hidden class.
+1. A deterministic multi-fixture test that asserts `Object.keys()` consistency is a direct proof of the V8 hidden class invariant — if all GameState objects have identical keys, they share a single hidden class.
 2. Engine-agnostic — the test runs across multiple game configurations without game-specific logic.
 3. Foundation 16 compliance — architectural property (shape consistency) proven via automated test.
 
@@ -52,11 +52,11 @@ assert.strictEqual(keySignatures.size, 1,
 
 ### 2. Choose test location
 
-Place in the engine test suite alongside other architectural property tests. Suggested path: `packages/engine/test/kernel/game-state-shape-consistency.test.ts` (or similar convention matching existing test organization).
+Place in the engine test suite alongside other architectural property tests. Live test layout uses `packages/engine/test/unit/kernel/`, so the correct path is `packages/engine/test/unit/kernel/game-state-shape-consistency.test.ts`.
 
 ## Files to Touch
 
-- `packages/engine/test/kernel/game-state-shape-consistency.test.ts` (new)
+- `packages/engine/test/unit/kernel/game-state-shape-consistency.test.ts` (new)
 
 ## Out of Scope
 
@@ -80,9 +80,22 @@ Place in the engine test suite alongside other architectural property tests. Sug
 
 ### New/Modified Tests
 
-1. `packages/engine/test/kernel/game-state-shape-consistency.test.ts` — property test verifying GameState shape consistency across game configurations
+1. `packages/engine/test/unit/kernel/game-state-shape-consistency.test.ts` — deterministic architectural proof verifying GameState shape consistency across game configurations
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test` — run new test + existing suite
-2. `pnpm turbo test` — full suite verification
+1. `pnpm -F @ludoforge/engine build` — compile engine tests to `dist/`
+2. `node --test dist/test/unit/kernel/game-state-shape-consistency.test.js` — focused proof run
+3. `pnpm -F @ludoforge/engine test` — run new test + existing suite
+4. `pnpm turbo test` — full suite verification
+
+## Outcome (2026-04-13)
+
+1. Added `packages/engine/test/unit/kernel/game-state-shape-consistency.test.ts`, which compiles FITL and Texas production specs, captures `Object.keys()` signatures from initial state plus several move transitions, and asserts a single canonical `GameState` key signature across the corpus.
+2. Reassessment showed the ticket's "property-based" wording was stale for the live repo. The implemented proof is deterministic and fixture-driven, using existing production-spec helpers rather than introducing a new property-testing library.
+3. Generated artifact fallout remained `none`; the change was limited to the new engine unit test.
+4. Verification passed with:
+   - `pnpm -F @ludoforge/engine build`
+   - `node --test dist/test/unit/kernel/game-state-shape-consistency.test.js`
+   - `pnpm -F @ludoforge/engine test`
+   - `pnpm turbo test`

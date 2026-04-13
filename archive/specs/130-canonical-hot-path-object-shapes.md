@@ -1,6 +1,6 @@
 # Spec 130: Canonical Hot-Path Object Shapes
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: L
 **Dependencies**: None (standalone; should be implemented BEFORE Specs 128/129 to establish shape discipline)
@@ -180,3 +180,11 @@ The rule applies to files in `packages/engine/src/kernel/` and `packages/engine/
 - **Compound effect**: Establishing shape discipline makes Specs 128/129 safer — V8 can optimize the new patterns from the start instead of fighting polymorphism introduced during migration
 - **Measurement**: `fitl-perf-optimization` campaign harness
 - **Validation**: all existing tests pass + stateHash determinism preserved
+
+## Outcome (2026-04-13)
+
+- Implemented through archived tickets `130CANHOTPAT-001` through `130CANHOTPAT-006`.
+- Canonical hot-path runtime shapes were enforced for `GameState`, `EffectCursor`, `ClassifiedMove`, `PolicyEvaluationCoreResult`, and `MoveViabilityProbeResult`, while preserving intentionally stable serialized surfaces where the ticketed work called for runtime-only normalization.
+- Added a targeted lint rule guarding canonical hot-path conditional spread regressions and a deterministic engine proof that `GameState` preserves one `Object.keys()` signature across FITL and Texas runtime transitions.
+- Deviations from the original plan: the `GameState` proof landed as a deterministic corpus-style architectural test using existing production fixtures rather than a new property-testing library, and the lint rule was implemented as a shape-aware guard for the canonical hot-path types rather than a blanket ban across all kernel/agent conditional spreads.
+- Verification for the delivered ticket series passed, including `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck`, and `pnpm run check:ticket-deps` during closeout/archive review.

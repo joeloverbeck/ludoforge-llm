@@ -7,6 +7,7 @@ import type { Move } from './types.js';
 interface FreeOperationPreflightOverlayInput {
   readonly executionPlayer: PlayerId;
   readonly zoneFilter?: FreeOperationExecutionOverlay['zoneFilter'];
+  readonly bindingCountZoneFilter?: FreeOperationExecutionOverlay['bindingCountZoneFilter'];
   readonly executionContext?: FreeOperationExecutionOverlay['grantContext'] | undefined;
   readonly capturedSequenceZonesByKey?: CapturedSequenceZonesByKey | undefined;
   readonly tokenInterpretations?: FreeOperationExecutionOverlay['tokenInterpretations'] | undefined;
@@ -41,6 +42,7 @@ export const buildFreeOperationPreflightOverlay = (
     ...(options?.skipPhaseCheck === false ? {} : { skipPhaseCheck: true }),
     ...((
       analysis.zoneFilter === undefined
+      && analysis.bindingCountZoneFilter === undefined
       && analysis.executionContext === undefined
       && analysis.capturedSequenceZonesByKey === undefined
       && analysis.tokenInterpretations === undefined
@@ -58,6 +60,7 @@ export const buildFreeOperationPreflightOverlay = (
                     moveParams: move.params,
                   } satisfies FreeOperationPreflightOverlayDiagnostics,
                 }),
+            ...(analysis.bindingCountZoneFilter === undefined ? {} : { bindingCountZoneFilter: analysis.bindingCountZoneFilter }),
             ...(analysis.executionContext === undefined ? {} : { grantContext: analysis.executionContext }),
             ...(analysis.capturedSequenceZonesByKey === undefined
               ? {}

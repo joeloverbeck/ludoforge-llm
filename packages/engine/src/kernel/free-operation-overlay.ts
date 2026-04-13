@@ -14,6 +14,7 @@ export interface FreeOperationZoneFilterDiagnostics {
 
 export interface FreeOperationExecutionOverlay {
   readonly zoneFilter?: ConditionAST;
+  readonly bindingCountZoneFilter?: ConditionAST;
   readonly zoneFilterDiagnostics?: FreeOperationZoneFilterDiagnostics;
   readonly grantContext?: ResolvedFreeOperationExecutionContext;
   readonly capturedSequenceZonesByKey?: CapturedSequenceZonesByKey;

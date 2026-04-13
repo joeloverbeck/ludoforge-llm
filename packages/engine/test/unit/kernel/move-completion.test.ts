@@ -129,6 +129,60 @@ const createStochasticProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createLaterBranchTrapProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$gate',
+            bind: '$gate',
+            options: { query: 'enums', values: ['open'] },
+          },
+        }),
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$path',
+            bind: '$path',
+            options: { query: 'enums', values: ['trap', 'safe'] },
+          },
+        }),
+        eff({
+          if: {
+            when: { op: '==', left: { _t: 2, ref: 'binding', name: '$path' }, right: 'trap' },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 describe('template-completion chooseN bounds', () => {
   it('uses a caller-provided choose callback when present', () => {
     const actionId = asActionId('guided-template');
@@ -242,6 +296,19 @@ describe('template-completion chooseN bounds', () => {
     const selected = first.move.params['$targets'];
     assert.ok(Array.isArray(selected), 'Stochastic chooseN branch should be completed');
     assert.equal(selected.length, first.move.params.$roll, 'Persisted roll should match exact chooseN cardinality');
+  });
+
+  it('re-evaluates later decisions during completion instead of drifting into trap branches', () => {
+    const action = createChooseNAction('later-branch-trap');
+    const profile = createLaterBranchTrapProfile('later-branch-trap');
+    const def = createDef(action, profile);
+    const templateMove: Move = { actionId: asActionId('later-branch-trap'), freeOperation: true, params: {} };
+
+    const result = completeTemplateMove(def, baseState, templateMove, createRng(0n));
+    assert.equal(result.kind, 'completed');
+    if (result.kind !== 'completed') throw new Error('unreachable');
+    assert.equal(result.move.params.$path, 'safe');
+    assert.equal(result.move.params.$safe, 'done');
   });
 
   it('returns unsatisfiable when custom maxCompletionDecisions budget is exceeded', () => {

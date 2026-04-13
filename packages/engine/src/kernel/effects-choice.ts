@@ -17,6 +17,7 @@ import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar }
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toTraceProvenanceContext } from './effect-context.js';
+import { extractBindingCountBounds } from './zone-filter-constraint-extraction.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { ReadContext } from './eval-context.js';
 import type {
@@ -769,7 +770,10 @@ export const applyChooseN = (
     });
   });
   const comparableBindingMap = buildComparableDomainBindingMap('chooseN', bind, decisionKey, options, normalizedOptions);
-  const clampedMax = Math.min(maxCardinality, normalizedOptions.length);
+  const zoneFilterMax = env.freeOperationOverlay?.bindingCountZoneFilter
+    ? (extractBindingCountBounds(env.freeOperationOverlay.bindingCountZoneFilter, bind)?.max ?? Infinity)
+    : Infinity;
+  const clampedMax = Math.min(maxCardinality, normalizedOptions.length, zoneFilterMax);
   const prioritizedTierEntries = resolvePrioritizedTierEntries(chooseN.options, evalCtx, bind, decisionKey);
   const prioritizedQualifierMode = chooseN.options.query === 'prioritized' && chooseN.options.qualifierKey !== undefined
     ? 'byQualifier'

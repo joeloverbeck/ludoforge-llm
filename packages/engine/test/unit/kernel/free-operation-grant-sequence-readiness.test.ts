@@ -155,6 +155,10 @@ const createSequenceState = (
     },
   },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('free-operation grant sequence readiness', () => {

@@ -237,6 +237,8 @@ export interface EffectEnv {
 /**
  * Fields that change between effects in an execution sequence.
  * Small enough to clone cheaply for nested scopes (5 fields vs ~24).
+ * Canonical shape: state, rng, bindings, decisionScope, effectPath, tracker.
+ * All construction sites must materialize every property.
  */
 export interface EffectCursor {
   state: GameState;
@@ -245,7 +247,7 @@ export interface EffectCursor {
   decisionScope: DecisionScope;
   effectPath: string | undefined;
   /** Present when inside a mutable-state scope (Spec 78 draft execution). */
-  tracker?: DraftTracker;
+  tracker: DraftTracker | undefined;
 }
 
 export interface MutableReadScope {
@@ -277,6 +279,7 @@ export const toEffectCursor = (ctx: EffectContext): EffectCursor => ({
   bindings: ctx.bindings,
   decisionScope: ctx.decisionScope,
   effectPath: ctx.effectPath,
+  tracker: undefined,
 });
 
 export interface TraceProvenanceContext {

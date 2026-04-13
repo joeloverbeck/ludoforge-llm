@@ -162,6 +162,10 @@ const makeFocusedState = (resourceCount: number, tokenCount: number): GameState 
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const buildFocusedGroups = (): readonly BenchmarkGroup[] => {

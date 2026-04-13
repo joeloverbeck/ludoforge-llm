@@ -24,6 +24,10 @@ const makeState = (perPlayerVars: PerPlayerVars, overrides: Partial<GameState> =
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   ...overrides,
 });
 

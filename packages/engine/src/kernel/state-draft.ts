@@ -53,18 +53,10 @@ export function createMutableState(state: GameState): MutableGameState {
     actionUsage: { ...state.actionUsage },
     markers: { ...state.markers },
     turnOrderState: { ...state.turnOrderState },
-    ...(state.reveals !== undefined
-      ? { reveals: { ...state.reveals } }
-      : {}),
-    ...(state.globalMarkers !== undefined
-      ? { globalMarkers: { ...state.globalMarkers } }
-      : {}),
-    ...(state.activeLastingEffects !== undefined
-      ? { activeLastingEffects: [...state.activeLastingEffects] }
-      : {}),
-    ...(state.interruptPhaseStack !== undefined
-      ? { interruptPhaseStack: [...state.interruptPhaseStack] }
-      : {}),
+    reveals: state.reveals !== undefined ? { ...state.reveals } : undefined,
+    globalMarkers: state.globalMarkers !== undefined ? { ...state.globalMarkers } : undefined,
+    activeLastingEffects: state.activeLastingEffects !== undefined ? [...state.activeLastingEffects] : undefined,
+    interruptPhaseStack: state.interruptPhaseStack !== undefined ? [...state.interruptPhaseStack] : undefined,
   };
 }
 

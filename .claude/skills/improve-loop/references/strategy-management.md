@@ -6,9 +6,9 @@
 - If count >= `PLATEAU_THRESHOLD`:
   - Check for near-miss stashes (`git stash list | grep near-miss`)
   - If near-misses exist and strategy is `normal` → switch to `combine`
-  - If no near-misses or already tried combine → switch to `ablation` (review recent accepts, try removing complexity)
+  - If no near-misses or already tried combine → switch to `ablation` (review recent accepts, try removing complexity). **Degenerate case**: if `ablation` has no actionable target (only 1 accepted experiment with `lines_delta < 20` and the change is a single function call removal), skip directly to `radical`. Document in musings: `**ABLATION SKIPPED**: Only 1 minimal accept — nothing to ablate.`
   - If already tried ablation → switch to `radical` (large structural changes, rethink approach)
-  - If already tried radical → switch to `backtrack` (see Step 1d)
+  - If already tried radical → switch to `backtrack` (see Step 1d). **Degenerate case**: if `backtrack` has only one checkpoint (baseline), skip backtracking — reverting to baseline undoes the only accepted improvement. Document in musings: `**BACKTRACK SKIPPED**: Only baseline checkpoint — backtracking would erase the only improvement.`
 - After any ACCEPT, reset `strategy = "normal"` and `consecutive_rejects = 0`.
 - After any **tier/phase advance** (including unwinnable seed escape), reset `consecutive_rejects = 0` and `strategy = "normal"`. The new tier is a fresh optimization context.
 
@@ -32,6 +32,7 @@ Evidence for structural unwinnability MUST include per-decision trace data from 
   - `ucb1_score = success_rate + UCB_EXPLORATION_C * sqrt(ln(total_experiments) / category_attempts)`
 - Categories with 0 attempts get `ucb1_score = infinity` (always explored first).
 - Rank categories by UCB1 score. The top-ranked category is the preferred target for hypothesis generation in `normal` mode.
+- **Tie-breaking among infinite scores**: When multiple categories have infinite UCB1 scores (no experiments yet), break ties by priority order in program.md's "root causes to seed" list — earlier items correspond to higher-priority categories. If a category has no corresponding root cause, it ranks below those that do.
 
 ## Step 1e: BACKTRACK CHECK
 
@@ -55,7 +56,7 @@ Evidence for structural unwinnability MUST include per-decision trace data from 
 ## Step 1g: CEILING DETECTION (Hard Ceiling Report)
 
 - Count total consecutive non-accepts (REJECT, NEAR_MISS, EARLY_ABORT, CRASH) from the tail of results.tsv.
-- If count >= `CEILING_THRESHOLD` (default: `2 * PLATEAU_THRESHOLD`) AND all strategies (normal, combine, ablation, radical, backtrack) have been attempted since the last ACCEPT:
+- If count >= `CEILING_THRESHOLD` (default: `2 * PLATEAU_THRESHOLD`) AND all strategies (normal, combine, ablation, radical, backtrack) have been attempted since the last ACCEPT. Strategies that were provably empty (no near-misses for combine, single minimal accept for ablation, single checkpoint for backtrack) count as "attempted" when documented with a `**SKIPPED**` note in musings:
   1. Generate a **ceiling report** in musings.md. The report MUST include per-decision trace evidence (read 2-3 per-seed traces before writing):
      ```markdown
      ## CEILING REPORT

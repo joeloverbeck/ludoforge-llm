@@ -95,6 +95,10 @@ const makeState = (zones: Record<string, readonly Token[]>, globalVars: Record<s
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const DEFAULT_FACTION_CONFIG: SeatGroupConfig = {

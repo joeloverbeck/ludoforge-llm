@@ -566,33 +566,59 @@ export type MoveLegalityProbeResult =
       readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
     }>;
 
+/**
+ * Canonical shape: viable, complete, move, warnings, code, context, error,
+ * nextDecision, nextDecisionSet, stochasticDecision.
+ * All construction sites must materialize every property.
+ */
 export type MoveViabilityProbeResult =
   | Readonly<{
       readonly viable: true;
       readonly complete: true;
       readonly move: Move;
       readonly warnings: readonly RuntimeWarning[];
+      readonly code: undefined;
+      readonly context: undefined;
+      readonly error: undefined;
+      readonly nextDecision: undefined;
+      readonly nextDecisionSet: undefined;
+      readonly stochasticDecision: undefined;
     }>
   | Readonly<{
       readonly viable: true;
       readonly complete: false;
       readonly move: Move;
       readonly warnings: readonly RuntimeWarning[];
-      readonly nextDecision?: ChoicePendingRequest;
-      readonly nextDecisionSet?: readonly ChoicePendingRequest[];
-      readonly stochasticDecision?: ChoiceStochasticPendingRequest;
+      readonly code: undefined;
+      readonly context: undefined;
+      readonly error: undefined;
+      readonly nextDecision: ChoicePendingRequest | undefined;
+      readonly nextDecisionSet: readonly ChoicePendingRequest[] | undefined;
+      readonly stochasticDecision: ChoiceStochasticPendingRequest | undefined;
     }>
   | Readonly<{
       readonly viable: false;
+      readonly complete: undefined;
+      readonly move: undefined;
+      readonly warnings: undefined;
       readonly code: 'ILLEGAL_MOVE';
       readonly context: IllegalMoveContext;
       readonly error: KernelRuntimeError<'ILLEGAL_MOVE'>;
+      readonly nextDecision: undefined;
+      readonly nextDecisionSet: undefined;
+      readonly stochasticDecision: undefined;
     }>
   | Readonly<{
       readonly viable: false;
+      readonly complete: undefined;
+      readonly move: undefined;
+      readonly warnings: undefined;
       readonly code: Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>;
-      readonly context?: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      readonly context: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>> | undefined;
       readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
+      readonly nextDecision: undefined;
+      readonly nextDecisionSet: undefined;
+      readonly stochasticDecision: undefined;
     }>;
 
 interface MovePreflightContext {
@@ -1908,6 +1934,12 @@ export const probeMoveViability = (
         complete: true,
         move: sequence.move,
         warnings: sequence.warnings,
+        code: undefined,
+        context: undefined,
+        error: undefined,
+        nextDecision: undefined,
+        nextDecisionSet: undefined,
+        stochasticDecision: undefined,
       };
     }
     return {
@@ -1915,9 +1947,12 @@ export const probeMoveViability = (
       complete: false,
       move: sequence.move,
       warnings: sequence.warnings,
-      ...(sequence.nextDecision === undefined ? {} : { nextDecision: sequence.nextDecision }),
-      ...(sequence.nextDecisionSet === undefined ? {} : { nextDecisionSet: sequence.nextDecisionSet }),
-      ...(sequence.stochasticDecision === undefined ? {} : { stochasticDecision: sequence.stochasticDecision }),
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: sequence.nextDecision,
+      nextDecisionSet: sequence.nextDecisionSet,
+      stochasticDecision: sequence.stochasticDecision,
     };
   } catch (error) {
     if (isKernelRuntimeError(error)) {
@@ -1925,17 +1960,29 @@ export const probeMoveViability = (
         const illegalError = error as KernelRuntimeError<'ILLEGAL_MOVE'>;
         return {
           viable: false,
+          complete: undefined,
+          move: undefined,
+          warnings: undefined,
           code: illegalError.code,
           context: illegalError.context as IllegalMoveContext,
           error: illegalError,
+          nextDecision: undefined,
+          nextDecisionSet: undefined,
+          stochasticDecision: undefined,
         };
       }
       const nonIllegalError = error as KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
       return {
         viable: false,
+        complete: undefined,
+        move: undefined,
+        warnings: undefined,
         code: nonIllegalError.code,
+        context: nonIllegalError.context,
         error: nonIllegalError,
-        ...(nonIllegalError.context === undefined ? {} : { context: nonIllegalError.context }),
+        nextDecision: undefined,
+        nextDecisionSet: undefined,
+        stochasticDecision: undefined,
       };
     }
     throw error;

@@ -16,6 +16,12 @@ export function completeClassifiedMove(move: Move, sourceStateHash = 0n): Classi
       complete: true,
       move,
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
     },
     trustedMove: trustedMove(move, sourceStateHash),
   };
@@ -29,6 +35,9 @@ export function pendingClassifiedMove(move: Move, decisionId = 'decision:$pendin
       complete: false,
       move,
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
       nextDecision: {
         kind: 'pending',
         complete: false,
@@ -38,7 +47,10 @@ export function pendingClassifiedMove(move: Move, decisionId = 'decision:$pendin
         targetKinds: [],
         type: 'chooseOne',
       },
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
     },
+    trustedMove: undefined,
   };
 }
 
@@ -50,6 +62,11 @@ export function stochasticClassifiedMove(move: Move, sourceStateHash = 0n): Clas
       complete: false,
       move,
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
       stochasticDecision: {
         kind: 'pendingStochastic',
         complete: false,

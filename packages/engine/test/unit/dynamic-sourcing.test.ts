@@ -76,6 +76,10 @@ const makeState = (zones: Record<string, readonly Token[]>): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeCtx = (zones: Record<string, readonly Token[]>): EffectContext => makeExecutionEffectContext({

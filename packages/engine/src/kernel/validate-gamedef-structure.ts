@@ -1069,7 +1069,10 @@ export const validateSpaceMarkerLattices = (
       }
       return markers;
     })(),
+    reveals: undefined,
     globalMarkers: {},
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
   };
 
   const evalCtx = createEvalContext({

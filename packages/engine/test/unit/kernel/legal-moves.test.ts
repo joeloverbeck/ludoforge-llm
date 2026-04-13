@@ -87,6 +87,10 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   ...overrides,
 });
 
@@ -180,6 +184,12 @@ describe('legalMoves() template moves (KERDECSEQMOD-002)', () => {
       complete: true,
       move: { actionId: asActionId('simple'), params: {} },
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
     });
     assert.deepEqual(result.moves[0]?.trustedMove, {
       actionId: asActionId('simple'),

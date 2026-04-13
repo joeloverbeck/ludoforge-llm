@@ -43,6 +43,10 @@ const makeEvalCtx = (): ReadContext => {
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
 
   return makeEvalContext({

@@ -89,6 +89,10 @@ const makeBaseState = (): GameState => ({
     },
   },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeToken = (id: string): Token => ({

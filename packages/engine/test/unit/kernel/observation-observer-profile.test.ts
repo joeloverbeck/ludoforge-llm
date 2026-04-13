@@ -76,6 +76,10 @@ const mkState = (
     actionUsage: {},
     turnOrderState: { type: 'preserve' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     ...(reveals !== undefined ? { reveals } : {}),
   }) as unknown as GameState;
 

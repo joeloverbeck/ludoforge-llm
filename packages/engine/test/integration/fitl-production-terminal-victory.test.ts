@@ -51,6 +51,10 @@ describe('FITL production terminal victory', () => {
         patronage: 0,
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       zones: {
         ...start.zones,
         'played:none': [{ id: asTokenId('coup-during'), type: 'card', props: { isCoup: true } }],
@@ -78,6 +82,10 @@ describe('FITL production terminal victory', () => {
         patronage: 0,
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       zones: {
         ...start.zones,
         'played:none': [{ id: asTokenId('coup-during'), type: 'card', props: { isCoup: true } }],
@@ -114,6 +122,10 @@ describe('FITL production terminal victory', () => {
         patronage: 0,
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       zones: {
         ...start.zones,
         'played:none': [{ id: asTokenId('coup-final'), type: 'card', props: { isCoup: true } }],

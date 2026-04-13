@@ -28,7 +28,7 @@ const fromHexBigInt = (value: HexBigInt, path: string): bigint => {
 export const serializeGameState = (state: GameState): SerializedGameState => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to strip internal field from serialized output
   const { _runningHash, ...rest } = state;
-  return {
+  const serialized = {
     ...rest,
     rng: {
       algorithm: state.rng.algorithm,
@@ -36,7 +36,22 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
       state: state.rng.state.map((word) => toHexBigInt(word)),
     },
     stateHash: toHexBigInt(state.stateHash),
+  } as {
+    -readonly [K in keyof SerializedGameState]: SerializedGameState[K];
   };
+  if (serialized.reveals === undefined) {
+    delete serialized.reveals;
+  }
+  if (serialized.globalMarkers === undefined) {
+    delete serialized.globalMarkers;
+  }
+  if (serialized.activeLastingEffects === undefined) {
+    delete serialized.activeLastingEffects;
+  }
+  if (serialized.interruptPhaseStack === undefined) {
+    delete serialized.interruptPhaseStack;
+  }
+  return serialized;
 };
 
 export const deserializeGameState = (state: SerializedGameState): GameState => {
@@ -50,6 +65,10 @@ export const deserializeGameState = (state: SerializedGameState): GameState => {
     },
     stateHash,
     _runningHash: stateHash,
+    reveals: state.reveals,
+    globalMarkers: state.globalMarkers,
+    activeLastingEffects: state.activeLastingEffects,
+    interruptPhaseStack: state.interruptPhaseStack,
   };
   validateTurnFlowRuntimeStateInvariants(deserialized);
   return deserialized;

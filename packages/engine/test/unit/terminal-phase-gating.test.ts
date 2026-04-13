@@ -77,6 +77,10 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
     },
   },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   ...overrides,
 });
 

@@ -1077,6 +1077,13 @@ export interface RevealGrant {
   readonly filter?: TokenFilterExpr;
 }
 
+/**
+ * Canonical shape: globalVars, perPlayerVars, zoneVars, playerCount, zones,
+ * nextTokenOrdinal, currentPhase, activePlayer, turnCount, rng, stateHash,
+ * _runningHash, actionUsage, turnOrderState, markers, reveals, globalMarkers,
+ * activeLastingEffects, interruptPhaseStack.
+ * All construction sites must materialize every property.
+ */
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
   readonly perPlayerVars: Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
@@ -1093,10 +1100,10 @@ export interface GameState {
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
-  readonly reveals?: Readonly<Record<string, readonly RevealGrant[]>>;
-  readonly globalMarkers?: Readonly<Record<string, string>>;
-  readonly activeLastingEffects?: readonly ActiveLastingEffect[];
-  readonly interruptPhaseStack?: readonly InterruptPhaseFrame[];
+  readonly reveals: Readonly<Record<string, readonly RevealGrant[]>> | undefined;
+  readonly globalMarkers: Readonly<Record<string, string>> | undefined;
+  readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
+  readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
 }
 
 export interface CompoundMovePayload {
@@ -1122,11 +1129,14 @@ export interface TrustedExecutableMove extends Move {
   readonly provenance: TrustedMoveProvenance;
 }
 
-/** A legal move with its viability pre-computed during enumeration. */
+/**
+ * Canonical shape: move, viability, trustedMove.
+ * All construction sites must materialize every property.
+ */
 export interface ClassifiedMove {
   readonly move: Move;
   readonly viability: import('./apply-move.js').MoveViabilityProbeResult;
-  readonly trustedMove?: TrustedExecutableMove;
+  readonly trustedMove: TrustedExecutableMove | undefined;
 }
 
 export interface DecisionAuthorityBaseContext {
@@ -1773,7 +1783,14 @@ export interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameState extends Omit<GameState, 'rng' | 'stateHash' | '_runningHash'> {
+export interface SerializedGameState extends Omit<
+  GameState,
+  'rng' | 'stateHash' | '_runningHash' | 'reveals' | 'globalMarkers' | 'activeLastingEffects' | 'interruptPhaseStack'
+> {
+  readonly reveals?: GameState['reveals'];
+  readonly globalMarkers?: GameState['globalMarkers'];
+  readonly activeLastingEffects?: GameState['activeLastingEffects'];
+  readonly interruptPhaseStack?: GameState['interruptPhaseStack'];
   readonly rng: SerializedRngState;
   readonly stateHash: HexBigInt;
 }

@@ -53,6 +53,10 @@ const makeBaseState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeMove = (params: Move['params'] = {}): Move => ({

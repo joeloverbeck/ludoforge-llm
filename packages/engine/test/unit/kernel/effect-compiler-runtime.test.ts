@@ -72,6 +72,10 @@ const minimalState: GameState = {
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 };
 
 describe('buildEffectEnvFromCompiledCtx', () => {

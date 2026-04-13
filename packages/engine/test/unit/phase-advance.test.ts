@@ -63,6 +63,10 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
   },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   ...overrides,
 });
 
@@ -511,6 +515,10 @@ phase: [asPhaseId('p2')],
         },
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const logs: TriggerLogEntry[] = [];
 
@@ -596,6 +604,10 @@ phase: [asPhaseId('p2')],
         },
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const operationResources = createEvalRuntimeResources();
@@ -1380,6 +1392,10 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
         },
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const next = advanceToDecisionPoint(def, state);
@@ -1481,6 +1497,10 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
         },
       },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const next = advanceToDecisionPoint(def, state);

@@ -71,6 +71,10 @@ const createLifecycleState = (
     },
   },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const createLifecycleDef = (operationLegal: boolean): GameDef =>

@@ -284,6 +284,12 @@ const classifyEnumeratedMoves = (
           complete: true,
           move,
           warnings: [],
+          code: undefined,
+          context: undefined,
+          error: undefined,
+          nextDecision: undefined,
+          nextDecisionSet: undefined,
+          stochasticDecision: undefined,
         },
         trustedMove: createTrustedExecutableMove(move, state.stateHash, 'enumerateLegalMoves'),
       });
@@ -295,15 +301,13 @@ const classifyEnumeratedMoves = (
       classified.push({
         move,
         viability,
-        ...(viability.complete || viability.stochasticDecision !== undefined
-          ? {
-            trustedMove: createTrustedExecutableMove(
-              viability.move,
-              state.stateHash,
-              'enumerateLegalMoves',
-            ),
-          }
-          : {}),
+        trustedMove: viability.complete || viability.stochasticDecision !== undefined
+          ? createTrustedExecutableMove(
+            viability.move,
+            state.stateHash,
+            'enumerateLegalMoves',
+          )
+          : undefined,
       });
       continue;
     }
@@ -316,7 +320,14 @@ const classifyEnumeratedMoves = (
           complete: false,
           move,
           warnings: [],
+          code: undefined,
+          context: undefined,
+          error: undefined,
+          nextDecision: undefined,
+          nextDecisionSet: undefined,
+          stochasticDecision: undefined,
         },
+        trustedMove: undefined,
       });
       continue;
     }

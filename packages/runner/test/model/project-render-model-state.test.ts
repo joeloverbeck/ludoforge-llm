@@ -35,7 +35,14 @@ function toClassifiedMoves(moves: readonly Move[]): readonly ClassifiedMove[] {
       complete: true,
       move,
       warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
     },
+    trustedMove: undefined,
   }));
 }
 

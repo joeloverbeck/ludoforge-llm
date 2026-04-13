@@ -149,6 +149,10 @@ const createState = (): GameState => ({
   },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 function expectedMoves(): readonly Move[] {
@@ -1668,6 +1672,10 @@ capabilities: ['cardEvent'],
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const template = legalMoves(def, state).find((move) => move.actionId === asActionId('distribute'));

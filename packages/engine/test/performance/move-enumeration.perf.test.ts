@@ -89,6 +89,10 @@ const makeSimpleState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('move enumeration performance', () => {

@@ -75,6 +75,10 @@ const makeState = (_def: GameDef, table: ReturnType<typeof createZobristTable>):
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
   const fullHash = computeFullHash(table, base);
   return { ...base, stateHash: fullHash, _runningHash: fullHash };

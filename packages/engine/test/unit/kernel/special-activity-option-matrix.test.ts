@@ -71,6 +71,10 @@ const makeCardDrivenState = (overrides?: {
   _runningHash: 0n,
   actionUsage: {},
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   turnOrderState: {
     type: 'cardDriven',
     runtime: {

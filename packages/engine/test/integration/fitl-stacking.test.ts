@@ -183,6 +183,10 @@ describe('FITL stacking: compile-time and runtime enforcement', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     });
 
     const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({

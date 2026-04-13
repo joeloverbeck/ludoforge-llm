@@ -1,6 +1,7 @@
 import eslint from "@eslint/js";
 import globals from "globals";
 import tseslint from "typescript-eslint";
+import noConditionalSpread from "./tools/eslint-rules/no-conditional-spread.js";
 
 export default tseslint.config(
   {
@@ -39,6 +40,19 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    files: ["packages/engine/src/kernel/**/*.ts", "packages/engine/src/agents/**/*.ts"],
+    plugins: {
+      local: {
+        rules: {
+          "no-conditional-spread": noConditionalSpread,
+        },
+      },
+    },
+    rules: {
+      "local/no-conditional-spread": "error",
     },
   },
   {

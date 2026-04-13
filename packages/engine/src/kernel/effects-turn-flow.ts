@@ -568,15 +568,9 @@ export const applyPopInterruptPhase = (
     ...exitedState,
     currentPhase: resumeFrame.resumePhase,
     _runningHash: phaseHashPop,
+    interruptPhaseStack: nextStack.length === 0 ? undefined : nextStack,
   };
-  const { interruptPhaseStack, ...resumeStateWithoutStack } = resumeBaseState;
-  void interruptPhaseStack;
-  const preResetState = nextStack.length === 0
-    ? resumeStateWithoutStack
-    : {
-        ...resumeBaseState,
-        interruptPhaseStack: nextStack,
-      };
+  const preResetState = resumeBaseState;
   const resumedState = resetPhaseUsage(
     popTable ? { ...preResetState, _runningHash: updatePhaseUsageResetHash(preResetState._runningHash, popTable, preResetState.actionUsage) } : preResetState,
   );

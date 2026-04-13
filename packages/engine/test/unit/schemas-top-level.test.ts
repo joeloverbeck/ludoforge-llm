@@ -222,6 +222,10 @@ const validGameState = {
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 } as const;
 
 const validGameTrace = {

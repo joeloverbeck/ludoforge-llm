@@ -1,5 +1,7 @@
 # TypeScript skill: rebase it on the Rust skill’s skeleton
 
+**Status**: COMPLETED
+
 The blunt recommendation: treat the Rust skill as v2 and the TypeScript skill as v1. The current TS version traces imports only 2–3 levels deep, clusters mainly by hyphenated filename fragments and exported-name fragments, counts only defining files, makes workaround count the main Phase 3 signal, requires 3+ workarounds AND file threshold to diagnose, and stops at recommendations instead of proposal objects.
 
 1. Origin: Phase 1 TRACE, especially step 3.
@@ -294,3 +296,13 @@ For each cluster that met the file-count threshold but showed no structural debt
 Typically invoked after implementing a spec or after `/golden-gap-analysis` identifies coverage gaps. Output feeds into `/assessment-to-specs` for spec generation from proposals. The workflow is:
 
 1. Implement spec → 2. `/golden-gap-analysis` (coverage) → 3. `/detect-missing-abstractions` (structural debt) → 4. `/assessment-to-specs` (spec drafting from proposals)
+
+## Outcome
+
+- Completion date: 2026-04-13
+- What actually changed:
+  - this brainstorming note was used as design input for the current `detect-missing-abstractions` direction and is no longer an active working document
+- Deviations from original plan:
+  - none recorded; this remained a brainstorming/reference artifact rather than a directly executable task
+- Verification results:
+  - archival-only change; no code or test surface changed

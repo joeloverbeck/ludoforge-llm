@@ -59,6 +59,10 @@ const makeState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
@@ -648,6 +652,10 @@ describe('effects control-flow handlers', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const ctx = makeCtx({ def, state });
     const effect: EffectAST = eff({
@@ -719,6 +727,10 @@ describe('effects control-flow handlers', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const ctx = makeCtx({ def, state });
     const effect: EffectAST = eff({
@@ -779,6 +791,10 @@ describe('effects control-flow handlers', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const ctx = makeCtx({ def, state });
     const effects: readonly EffectAST[] = [
@@ -841,6 +857,10 @@ describe('effects control-flow handlers', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const ctx = makeCtx({
       def,

@@ -134,6 +134,9 @@ const makeState = (): GameState => ({
     leaderFlipped: 'no',
     momentum: 'mid',
   },
+  reveals: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const tokenById = (state: GameState, tokenId: string) =>

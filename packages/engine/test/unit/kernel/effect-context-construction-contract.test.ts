@@ -56,6 +56,10 @@ const makeState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 type RuntimeEffectContextOptions = Parameters<typeof createExecutionEffectContext>[0];
@@ -215,6 +219,7 @@ describe('effect-context construction contract', () => {
       bindings: context.bindings,
       decisionScope: context.decisionScope,
       effectPath: undefined,
+      tracker: undefined,
     });
     assert.deepEqual(provenanceCtx, {
       state: context.state,
@@ -228,6 +233,7 @@ describe('effect-context construction contract', () => {
       effectPath: undefined,
     });
     assert.equal(Object.hasOwn(cursor, 'effectPath'), true);
+    assert.equal(Object.hasOwn(cursor, 'tracker'), true);
     assert.equal(Object.hasOwn(provenanceCtx, 'traceContext'), true);
     assert.equal(Object.hasOwn(provenanceCtx, 'effectPath'), true);
     assert.equal(Object.hasOwn(emissionCtx, 'traceContext'), true);

@@ -45,6 +45,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - Check whether any likely verification commands contend on generated output trees such as `dist`, schema artifacts, compiled JSON, or goldens. If they do, plan those lanes as sequential-only before you start running checks.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
    - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
+   - For active tracked tickets that are not yet archival records, correct nonblocking stale wording or path drift in place before marking the ticket complete so the active ticket remains a reliable session contract for later turns.
    - For active untracked drafts, prefer correcting stale command examples in the ticket once the repo-valid replacement is confirmed, so future turns do not inherit the drift.
 
 #### Session and Series Context
@@ -79,11 +80,14 @@ When the active ticket or referenced artifacts are untracked drafts:
 7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.
 8. Check constraints the ticket may have underspecified:
    - Shared type or schema ripple effects
+   - Shared contract migration fanout: estimate the likely blast radius early with targeted `rg` counts before coding so fixture fallout, helper updates, and broad touch points are visible up front
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
    - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
    - When changing a shared callable type contract, grep both runtime callsites and their tests
+   - Shared state/object-shape migrations: explicitly inspect initializers, clone/draft builders, serialization/deserialization, and any runtime delete/unset/cleanup helpers that may silently reintroduce shape drift after your main type change
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
+   - Direct fixture fanout: when tests or helpers author runtime state inline, decide whether a shared builder/default can absorb the migration or whether a deliberate mechanical bulk update is the correct narrow move
    - Policy/catalog fallout for agent or scoring changes: check compiled policy catalogs, explicit consideration-list assertions, and fixed-seed policy goldens or summary traces when the repo owns them
    - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
@@ -142,6 +146,8 @@ If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, o
 
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`.
 
+When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
+
 ## Verification
 
 Load `references/verification.md`.
@@ -171,6 +177,7 @@ If a verification lane fails immediately after overlapping output-contending com
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
 - For campaign, tournament, or trace-inspection tickets, prefer the smallest bounded seed/run window that reaches the claimed scenario or reproducer before escalating to larger harness runs. If the first bounded run misses the target behavior, widen only enough to reach the intended trace slice.
 - When a ticket names a high-level reproducer but the setup proves too coupled or noisy, prefer the narrowest valid proof surface that still exercises the owned invariant: first the authority/helper that owns the behavior, then a production-data integration slice, then the broader end-to-end flow only if needed.
+- For shared contract or object-shape migrations, verify both sides of the boundary deliberately: the live runtime shape you intended to change, and any serialized/golden/fixture surface you intended to preserve. Do not assume one implies the other.
 
 ### Trace-Heavy Ticket Evidence
 
@@ -216,6 +223,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
+- for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:

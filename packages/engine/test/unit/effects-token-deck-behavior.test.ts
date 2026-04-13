@@ -59,6 +59,10 @@ const makeState = (zones: Record<string, readonly Token[]>): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('deck behavior — shuffleTokenArray utility', () => {

@@ -295,15 +295,13 @@ const classifyEnumeratedMoves = (
       classified.push({
         move,
         viability,
-        ...(viability.complete || viability.stochasticDecision !== undefined
-          ? {
-            trustedMove: createTrustedExecutableMove(
-              viability.move,
-              state.stateHash,
-              'enumerateLegalMoves',
-            ),
-          }
-          : {}),
+        trustedMove: viability.complete || viability.stochasticDecision !== undefined
+          ? createTrustedExecutableMove(
+            viability.move,
+            state.stateHash,
+            'enumerateLegalMoves',
+          )
+          : undefined,
       });
       continue;
     }
@@ -317,6 +315,7 @@ const classifyEnumeratedMoves = (
           move,
           warnings: [],
         },
+        trustedMove: undefined,
       });
       continue;
     }

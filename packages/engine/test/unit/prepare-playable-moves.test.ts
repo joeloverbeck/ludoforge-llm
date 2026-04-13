@@ -137,6 +137,7 @@ describe('preparePlayableMoves', () => {
               context: rejectedError.context!,
               error: rejectedError,
             },
+            trustedMove: undefined,
           },
         ];
       })(),

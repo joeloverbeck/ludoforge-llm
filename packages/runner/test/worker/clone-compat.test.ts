@@ -42,6 +42,7 @@ const toClassifiedMove = (move: typeof LEGAL_TICK_MOVE): ClassifiedMove => ({
     move,
     warnings: [],
   },
+  trustedMove: undefined,
 });
 
 const EFFECT_PROVENANCE = {

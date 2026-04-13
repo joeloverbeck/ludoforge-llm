@@ -245,7 +245,7 @@ export interface EffectCursor {
   decisionScope: DecisionScope;
   effectPath: string | undefined;
   /** Present when inside a mutable-state scope (Spec 78 draft execution). */
-  tracker?: DraftTracker;
+  tracker: DraftTracker | undefined;
 }
 
 export interface MutableReadScope {
@@ -277,6 +277,7 @@ export const toEffectCursor = (ctx: EffectContext): EffectCursor => ({
   bindings: ctx.bindings,
   decisionScope: ctx.decisionScope,
   effectPath: ctx.effectPath,
+  tracker: undefined,
 });
 
 export interface TraceProvenanceContext {

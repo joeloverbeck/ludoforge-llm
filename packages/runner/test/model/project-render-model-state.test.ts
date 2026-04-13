@@ -36,6 +36,7 @@ function toClassifiedMoves(moves: readonly Move[]): readonly ClassifiedMove[] {
       move,
       warnings: [],
     },
+    trustedMove: undefined,
   }));
 }
 

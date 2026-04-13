@@ -39,6 +39,7 @@ export function pendingClassifiedMove(move: Move, decisionId = 'decision:$pendin
         type: 'chooseOne',
       },
     },
+    trustedMove: undefined,
   };
 }
 

@@ -1,6 +1,6 @@
 # 130CANHOTPAT-002: EffectCursor + ClassifiedMove — eliminate conditional spreads
 
-**Status**: PENDING
+**Status**: COMPLETE
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — kernel effect-context, types-core, effect handler files, legal-moves
@@ -101,3 +101,15 @@ In `legal-moves.ts`, ensure every ClassifiedMove literal includes `trustedMove`:
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo typecheck`
 4. `pnpm turbo test`
+
+## Outcome (2026-04-13)
+
+- Landed the `EffectCursor` and `ClassifiedMove` contract changes so `tracker` and `trustedMove` are now always-present as `| undefined` instead of conditionally omitted.
+- Updated the live constructor paths in `effect-context.ts`, compiled delegate cursor construction, and legal-move classification so direct object literals no longer create alternate shapes by omitting those fields.
+- Updated direct fixture and contract-test surfaces, including `ClassifiedMove` test helpers and runner-side test literals that construct `ClassifiedMove` values directly.
+- No schema or generated-artifact fallout was required for this ticket.
+- Verification run:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo test`

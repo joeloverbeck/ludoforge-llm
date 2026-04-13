@@ -1126,7 +1126,7 @@ export interface TrustedExecutableMove extends Move {
 export interface ClassifiedMove {
   readonly move: Move;
   readonly viability: import('./apply-move.js').MoveViabilityProbeResult;
-  readonly trustedMove?: TrustedExecutableMove;
+  readonly trustedMove: TrustedExecutableMove | undefined;
 }
 
 export interface DecisionAuthorityBaseContext {

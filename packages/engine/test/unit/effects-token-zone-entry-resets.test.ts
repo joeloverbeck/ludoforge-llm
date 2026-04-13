@@ -252,6 +252,10 @@ describe('moveToken with onZoneEntry resets', () => {
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   });
 
   const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => {

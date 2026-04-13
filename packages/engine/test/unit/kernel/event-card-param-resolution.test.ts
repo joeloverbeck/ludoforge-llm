@@ -46,6 +46,10 @@ const makeBaseState = (cardId: string): GameState => ({
   perPlayerVars: {},
   zoneVars: {},
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   playerCount: 2,
   zones: {
     'draw:none': [],

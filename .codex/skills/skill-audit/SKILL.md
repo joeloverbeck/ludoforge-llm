@@ -122,6 +122,7 @@ Output the audit in the conversation, not in a file.
 - Any suggestion that conflicts with `docs/FOUNDATIONS.md` must be rejected and called out explicitly.
 - Stay within the target skill's stated scope. Do not expand the audit into a redesign of a different skill.
 - Every `Issue` and `Improvement` must be grounded in actual session evidence. Pure hypotheticals belong in `Features` or should be omitted.
+- Do not record a finding unless the session evidence shows the skill text itself was insufficient, misleading, or missing guidance. A one-off failure to follow the skill is not, by itself, evidence of a skill defect.
 - If the target skill is part of a multi-skill workflow, report terminology or reference drift across sibling skills as issues when it affects correctness or usability.
 - When re-auditing the same target within one session, prefer delta-oriented findings: note what was fixed since the last audit before repeating older items that still remain.
 - Do not treat a re-audit as a blank-slate audit when prior findings exist in the same session; explicitly classify each prior finding as `resolved`, `still open`, or `new`.
@@ -145,12 +146,17 @@ If the current audit targets a different skill than any earlier audit in this se
 - Use the current Codex conversation and tool history as the session evidence source.
 - Use `AGENTS.md` rather than `CLAUDE.md` for repository-specific behavior.
 - When auditing `skill-audit` itself, evidence should come from the actual audit interaction in the current session: target-skill read/validation, audit-scope selection, report structure/template usage, severity calibration, and whether the resulting recommendations were concrete enough for the next user turn to act on.
- - For `skill-audit` self-audits, explicitly sanity-check this evidence set before drafting findings:
-   - `target resolution`: did the audit validate and open the intended target skill cleanly?
-   - `scope selection`: did the audit clearly name the session slice being evaluated?
-   - `report structure`: did the audit follow the stated template and classification scheme?
-   - `severity calibration`: were severities proportionate to the actual session evidence?
-   - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
+- For `skill-audit` self-audits, explicitly sanity-check this evidence set before drafting findings:
+  - `target resolution`: did the audit validate and open the intended target skill cleanly?
+  - `scope selection`: did the audit clearly name the session slice being evaluated?
+  - `report structure`: did the audit follow the stated template and classification scheme?
+  - `severity calibration`: were severities proportionate to the actual session evidence?
+  - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
+- For self-audits, compare the immediately previous audit output against the report template before drafting findings. Explicitly check whether the required headings, summary fields, per-finding structure, and total-count summary were present.
+- Use this optional self-audit rubric when deciding whether each evidence dimension passed:
+  - `pass`: the audit satisfied the requirement cleanly
+  - `minor drift`: the audit was usable but omitted structure or precision the skill asked for
+  - `material drift`: the audit missed enough of the requirement that findings or handoff quality were meaningfully weakened
 
 ## Example Prompts
 

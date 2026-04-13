@@ -32,6 +32,10 @@ const gameStateFixture: GameState = {
   actionUsage: { playCard: { turnCount: 1, phaseCount: 1, gameCount: 2 } },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 };
 
 const traceFixture: GameTrace = {

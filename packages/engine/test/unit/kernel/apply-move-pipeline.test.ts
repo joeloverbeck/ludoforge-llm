@@ -63,6 +63,10 @@ const makeState = (activePlayer: number): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeCtx = (def: GameDef, state: GameState): ReadContext => {

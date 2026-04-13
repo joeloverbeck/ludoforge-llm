@@ -71,6 +71,10 @@ const makeState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const makeCtx = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({
@@ -335,6 +339,10 @@ describe('effects complex integration chains', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const template = { actionId: asActionId('distribute'), params: {} };

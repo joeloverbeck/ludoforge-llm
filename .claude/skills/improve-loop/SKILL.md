@@ -46,7 +46,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 1. Read `$WT/campaigns/<campaign>/program.md` completely.
 2. Verify `$WT/campaigns/<campaign>/harness.sh` exists and is executable.
 3. Read `$WT/campaigns/<campaign>/results.tsv` — if it has data rows beyond the header, resume from the last accepted state (the current HEAD of the worktree branch IS the last accepted state).
-4. Identify the **mutable files** from program.md. Read each one into context.
+4. Identify the **mutable files** from program.md. If the mutable surface is a small set of files (<10), read each one into context. If the mutable surface is a directory tree (e.g., "all files under `packages/engine/src/`"), read only the files relevant to the current experiment hypothesis — the full tree is too large for context. Use profiling data and program.md's root causes to guide which files to read.
 5. Identify the **root causes to seed** from program.md as the initial hypothesis queue.
 
 #### Configuration
@@ -116,7 +116,7 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
 
 ### Step 1a: REFRESH (Correctness)
 
-- Re-read mutable files **from disk** (not from stale context). This ensures each iteration operates on fresh state.
+- Re-read mutable files **from disk** (not from stale context). This ensures each iteration operates on fresh state. If the mutable surface is a directory tree, re-read only the specific files modified in the previous experiment. If no experiment has run yet, read the files identified by profiling as hot paths.
 - Verify that no immutable files have been modified since baseline. If any have, **hard error** — abort the loop.
 - Review experiment history in results.tsv — what's been tried, what worked, what failed.
 - Note the current `best_metric` and cumulative `lines_delta`.
@@ -187,6 +187,20 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
   ```
   This prevents stale-fixture test failures from wasting the first experiment iteration.
 
+### Step 3.5: SMOKE TEST (optional fast pre-check)
+
+If the campaign harness takes >5 minutes per run, perform a lightweight pre-check before the full harness:
+
+1. Build the project (catches compilation errors in ~30s instead of discovering them mid-harness).
+2. Run a single-seed benchmark (not the full harness) to catch obvious failures:
+   - If state_hash differs from baseline → REJECT immediately (determinism violation). Log: `"determinism violation: state_hash changed"`.
+   - If the primary metric is worse than `best_metric` by more than `ABORT_THRESHOLD` → REJECT immediately (obvious regression).
+3. Only proceed to Step 4 (full harness) if the smoke test passes.
+
+The smoke test does NOT run the test suite — that's the harness's job. It is a fast filter that saves 10+ minutes per obviously-bad experiment.
+
+**Determinism pre-check guidance**: Experiments that change control flow affecting move selection (bypassing evaluation functions, altering action selection logic, modifying RNG threading) are especially likely to cause determinism violations. Prioritize the smoke test for these.
+
 ### Steps 4-5: EXECUTE and MEASURE
 
 Load `references/harness-execution.md`. Execute Steps 4, 4d, and 5 as described there.
@@ -214,6 +228,8 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 **Partial signals**: <if any intermediate metrics showed directional improvement/regression>
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
+
+**V8 JIT deopt pattern detection**: If 3+ consecutive rejects show measured regressions (not within-noise, but slowdowns >1%) with root causes attributable to V8 JIT deoptimization (object shape changes, closure body modifications, hidden class mutations, WeakMap/caching overhead in kernel execution paths), flag as `**V8 JIT CEILING**` in musings. Skip directly to ceiling report with architectural spec creation (Option D in Step 1g). Further micro-optimization experiments are provably futile — the architecture must change. This pattern is distinct from a normal plateau (where experiments are within noise) — V8 deopt regressions are ACTIVE performance degradation, not just failure to improve.
 
 **Zero-effect detection**: If the evolved system's trace is functionally identical to the previous experiment, flag as `**ZERO-EFFECT**` in the musings entry. For agent evolution campaigns, compare the evolved seat's move sequence (actionIds in order) and final margin from the trace files. Byte-level trace comparison is too strict (timestamps, intermediate scores may differ); compare the decision-relevant fields only. For non-agent campaigns, compare the primary metric output and any trace summary the harness produces. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
 
@@ -269,7 +285,7 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
    ```
 6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
 7. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
-8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If any were identified, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
+8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If specs were already created during the campaign (e.g., during a human investigation interrupt or by user request), reference them in the squash-merge commit message but skip spec creation. If not yet created, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
 9. Remove the worktree and delete the branch:
    ```bash
    git worktree remove .claude/worktrees/improve-<campaign>

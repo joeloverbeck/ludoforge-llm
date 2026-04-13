@@ -61,6 +61,10 @@ const makeBaseState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 }) as unknown as GameState;
 
 const makeMove = (actionId: string, params: Record<string, unknown> = {}): Move => ({

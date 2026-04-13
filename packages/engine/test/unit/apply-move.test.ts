@@ -99,6 +99,10 @@ const createState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 const playMove = (boost: number): Move => ({
@@ -468,6 +472,10 @@ describe('applyMove', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
     const gatedMove: Move = { actionId: asActionId('gated'), params: {} };
 

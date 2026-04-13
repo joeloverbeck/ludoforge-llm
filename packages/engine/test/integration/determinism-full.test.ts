@@ -84,6 +84,10 @@ const createInitialState = (seed: bigint): GameState => {
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
 };
 

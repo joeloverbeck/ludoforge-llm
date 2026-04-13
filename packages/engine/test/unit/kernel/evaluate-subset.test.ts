@@ -70,6 +70,10 @@ const makeCtx = (sourceTokens: readonly Token[], globalVars?: Record<string, num
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
   return makeExecutionEffectContext({
     def: testDef,

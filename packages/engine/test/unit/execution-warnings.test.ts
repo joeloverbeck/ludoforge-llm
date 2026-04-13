@@ -55,6 +55,10 @@ function makeCtx(zones: Record<string, Token[]>, bindings?: Record<string, unkno
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
   return makeExecutionEffectContext({
     def: minimalDef,

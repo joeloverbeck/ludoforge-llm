@@ -56,6 +56,10 @@ const makeState = (): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 type RuntimeEffectContextOptions = Parameters<typeof createExecutionEffectContext>[0];

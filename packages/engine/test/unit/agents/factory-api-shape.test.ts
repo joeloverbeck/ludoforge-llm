@@ -57,6 +57,10 @@ const stateStub: GameState = {
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 };
 
 const moveStub: Move = { actionId: asActionId('only'), params: {} };

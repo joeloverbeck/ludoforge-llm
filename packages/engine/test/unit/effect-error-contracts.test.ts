@@ -77,6 +77,10 @@ describe('effect error context contracts', () => {
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
 
   const makeContext = (overrides?: EffectContextTestOverrides): EffectContext => makeExecutionEffectContext({

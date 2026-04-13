@@ -28,6 +28,10 @@ const fixtureState: GameState = {
   },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 };
 
 describe('determinism state round-trip helper', () => {

@@ -38,6 +38,10 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   ...overrides,
 });
 

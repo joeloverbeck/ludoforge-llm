@@ -86,7 +86,10 @@ const createBaseState = (): GameState => ({
   },
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
   globalMarkers: { cap_topGun: 'inactive' },
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('zobrist full hash and incremental update helpers', () => {

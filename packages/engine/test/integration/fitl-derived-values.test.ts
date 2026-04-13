@@ -151,6 +151,10 @@ function buildStateFromScenario(
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   };
 }
 
@@ -468,6 +472,10 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
       actionUsage: {},
       turnOrderState: { type: 'roundRobin' },
       markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
     };
 
     const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);
@@ -521,6 +529,10 @@ describe('FITL compilation produces auto-synthesized derivedMetrics', () => {
         'quang-duc-long-khanh:none': { supportOpposition: 'activeOpposition' },
         'saigon:none': { supportOpposition: 'passiveSupport' },
       },
+      reveals: undefined,
+      globalMarkers: undefined,
+      activeLastingEffects: undefined,
+      interruptPhaseStack: undefined,
     };
 
     const results = computeAllVictoryStandings(gameDef, state, gameDef.victoryStandings);

@@ -115,12 +115,7 @@ If analysis during classification disproves an initial impression, withdraw the 
   2. Process edits top-to-bottom within the file to avoid offset drift.
   3. Combine adjacent or overlapping suggestions into a single Edit call. Findings that address the same skill location may be combined into a single edit even if classified separately — especially when they form a coherent section or paragraph together (e.g., an Issue fix and a Feature addition to the same section). Use judgment: if the combined edit reads as a unified addition, combine; if the findings are logically independent, keep separate. When findings target adjacent but independent bullets in a list, prefer separate Edit calls in top-to-bottom order — this keeps each finding traceable and avoids offset drift from combining unrelated content. Exception: when multiple findings modify different items within the same short numbered list (<10 items), combine into a single Edit to avoid mid-list offset drift.
   4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next. After completing all files, verify cross-file references are consistent (e.g., step numbers referenced in SKILL.md match headings in reference files).
-  5. After edits, verify by re-reading. Use this decision tree:
-     - **Adjacent/overlapping edits** → verify after each edit (catch offset drift)
-     - **4+ edits touching adjacent sections, numbered lists, or shared structures** → single full-file re-read after all edits
-     - **4+ non-adjacent, structurally independent edits** → targeted grep for unique phrases from each edit (preferred) or re-read edited section + 10 lines context
-     - **<4 non-adjacent edits** → batched re-read after all edits
-     - **Edits spanning >50 lines** → full-file re-read
+  5. After edits, verify by re-reading. **Default**: grep for a unique phrase from each edit to confirm it landed. **Override** for special cases: if edits are adjacent or overlapping, verify after each edit to catch offset drift; if edits span >50 lines total, do a full-file re-read instead of targeted greps.
   6. Watch for numbered list breakage — insertions commonly break numbering, create duplicate headings, or split contiguous lists.
   7. If a session interruption occurred between audit report and implementation, re-read the target skill before editing to verify it hasn't been modified by another process.
   8. If the system enforces plan mode, write a brief plan listing edits top-to-bottom, then execute after approval.

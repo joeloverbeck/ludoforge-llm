@@ -66,6 +66,10 @@ const makeState = (): GameState => ({
   markers: {
     hanoi: { control: 'nva', posture: 'active' },
   },
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('enumeration snapshot', () => {

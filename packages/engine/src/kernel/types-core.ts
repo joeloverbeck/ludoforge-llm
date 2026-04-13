@@ -1093,10 +1093,10 @@ export interface GameState {
   readonly actionUsage: Readonly<Record<string, ActionUsageRecord>>;
   readonly turnOrderState: TurnOrderRuntimeState;
   readonly markers: Readonly<Record<string, Readonly<Record<string, string>>>>;
-  readonly reveals?: Readonly<Record<string, readonly RevealGrant[]>>;
-  readonly globalMarkers?: Readonly<Record<string, string>>;
-  readonly activeLastingEffects?: readonly ActiveLastingEffect[];
-  readonly interruptPhaseStack?: readonly InterruptPhaseFrame[];
+  readonly reveals: Readonly<Record<string, readonly RevealGrant[]>> | undefined;
+  readonly globalMarkers: Readonly<Record<string, string>> | undefined;
+  readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
+  readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
 }
 
 export interface CompoundMovePayload {
@@ -1773,7 +1773,14 @@ export interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameState extends Omit<GameState, 'rng' | 'stateHash' | '_runningHash'> {
+export interface SerializedGameState extends Omit<
+  GameState,
+  'rng' | 'stateHash' | '_runningHash' | 'reveals' | 'globalMarkers' | 'activeLastingEffects' | 'interruptPhaseStack'
+> {
+  readonly reveals?: GameState['reveals'];
+  readonly globalMarkers?: GameState['globalMarkers'];
+  readonly activeLastingEffects?: GameState['activeLastingEffects'];
+  readonly interruptPhaseStack?: GameState['interruptPhaseStack'];
   readonly rng: SerializedRngState;
   readonly stateHash: HexBigInt;
 }

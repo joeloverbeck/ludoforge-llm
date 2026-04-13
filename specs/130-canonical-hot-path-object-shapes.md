@@ -52,6 +52,7 @@ return {
   ...(fallbackCandidate === undefined ? {} : {
     fallbackMove: fallbackCandidate.move,
     fallbackStableMoveKey: fallbackCandidate.stableMoveKey,
+    fallbackScore: fallbackCandidate.score,
   }),
   metadata: { ... },
 };
@@ -65,6 +66,7 @@ return {
   failure,
   fallbackMove: fallbackCandidate?.move,
   fallbackStableMoveKey: fallbackCandidate?.stableMoveKey,
+  fallbackScore: fallbackCandidate?.score ?? null,
   metadata: { ... },
 };
 ```
@@ -80,11 +82,11 @@ Document the expected shape of each hot-path type, with all properties listed (i
 | Type | File | Call frequency | Properties |
 |------|------|----------------|------------|
 | `EffectCursor` | `effect-context.ts` | ~10K/game | `state`, `rng`, `bindings`, `decisionScope`, `effectPath`, `tracker` |
-| `ReadContext` / `MutableReadScope` | `effect-context.ts` | ~50K/game | All fields always present |
-| `ClassifiedMove` | `types.ts` | ~3K/game | `move`, `viability`, `trustedMove` |
-| `PolicyEvaluationCoreResult` | `policy-eval.ts` | ~400/game | Success and failure shapes unified |
-| `MoveViabilityProbeResult` | `apply-move.ts` | ~3K/game | Viable/not-viable shapes |
-| `GameState` | `types.ts` | ~200 creates/game | All optional fields always present |
+| `ReadContext` / `MutableReadScope` | `eval-context.ts` | ~50K/game | All fields always present |
+| `ClassifiedMove` | `types-core.ts` | ~3K/game | `move`, `viability`, `trustedMove` |
+| `PolicyEvaluationCoreResult` | `policy-eval.ts` | ~400/game | Success and failure shapes unified (including `fallbackScore`) |
+| `MoveViabilityProbeResult` | `apply-move.ts` | ~3K/game | 4 discriminated variants unified (viable+complete, viable+incomplete, illegal-move, other-error) |
+| `GameState` | `types-core.ts` | ~200 creates/game | All optional fields always present |
 
 For each type, the canonical shape lists every property that appears in ANY construction site. All construction sites must include ALL properties.
 
@@ -102,34 +104,36 @@ Systematically audit all construction sites for the priority types listed above.
 |------|------------------------------|-------|
 | `EffectCursor` | ~15 | `effect-context.ts`, `effect-dispatch.ts`, `effects-control.ts` |
 | `ClassifiedMove` | ~8 | `legal-moves.ts` |
-| `PolicyEvaluationCoreResult` | ~12 | `policy-eval.ts` |
+| `PolicyEvaluationCoreResult` | ~16 | `policy-eval.ts` |
 | `MoveViabilityProbeResult` | ~6 | `apply-move.ts` |
-| `GameState` | ~20 | `state-draft.ts`, `apply-move.ts`, `turn-flow-eligibility.ts`, `effects-*.ts` |
+| `GameState` | ~25 | `state-draft.ts`, `apply-move.ts`, `turn-flow-eligibility.ts`, `effects-*.ts` |
 
 ### 4. GameState Optional Fields — Always-Present with Undefined
 
-`GameState` has several conditionally-present fields (`reveals`, `globalMarkers`, `activeLastingEffects`, `interruptPhaseStack`, `freeOperationGrants`, `windowContexts`, etc.). These create different hidden classes depending on game configuration:
+`GameState` has four conditionally-present fields (`reveals`, `globalMarkers`, `activeLastingEffects`, `interruptPhaseStack`). These create different hidden classes depending on game configuration:
 
 - A game without global markers: `GameState` has no `globalMarkers` property
 - A game with global markers: `GameState` has `globalMarkers: Record<string, string>`
 
-**Fix**: All optional `GameState` fields become always-present in the runtime representation. The type signature uses `T | undefined` (not `T?` with exactOptionalPropertyTypes). The initial state constructor (`initializeGame`) populates all fields.
+**Fix**: All optional `GameState` fields become always-present in the runtime representation. The type signature uses `T | undefined` (not `T?` with exactOptionalPropertyTypes). The initial state constructor (`initialState` in `initial-state.ts`) populates all fields.
 
 ```typescript
 // Before
 interface GameState {
   // ... required fields ...
   readonly globalMarkers?: Readonly<Record<string, string>>;
-  readonly reveals?: Readonly<Record<string, unknown>>;
-  readonly activeLastingEffects?: readonly LastingEffectState[];
+  readonly reveals?: Readonly<Record<string, readonly RevealGrant[]>>;
+  readonly activeLastingEffects?: readonly ActiveLastingEffect[];
+  readonly interruptPhaseStack?: readonly InterruptPhaseFrame[];
 }
 
 // After  
 interface GameState {
   // ... required fields ...
   readonly globalMarkers: Readonly<Record<string, string>> | undefined;
-  readonly reveals: Readonly<Record<string, unknown>> | undefined;
-  readonly activeLastingEffects: readonly LastingEffectState[] | undefined;
+  readonly reveals: Readonly<Record<string, readonly RevealGrant[]>> | undefined;
+  readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
+  readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
 }
 ```
 

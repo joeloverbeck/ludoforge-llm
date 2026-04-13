@@ -71,7 +71,10 @@ export const initialState = (
     _runningHash: 0n,
     actionUsage: {},
     markers: initialMarkers,
+    reveals: undefined,
     globalMarkers: initialGlobalMarkers,
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
     turnOrderState: initialTurnOrderState,
   };
   const withInitialActivePlayer = resolveInitialActivePlayer(baseState, validatedDef.turnOrder);

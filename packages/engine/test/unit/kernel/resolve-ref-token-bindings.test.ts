@@ -53,6 +53,10 @@ const makeState = (tokens: readonly Token[]): GameState => ({
   actionUsage: {},
   turnOrderState: { type: 'roundRobin' },
   markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
 });
 
 describe('resolveRef tokenProp token bindings', () => {

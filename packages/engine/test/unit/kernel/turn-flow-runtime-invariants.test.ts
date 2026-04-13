@@ -72,6 +72,10 @@ const makeState = (): GameState =>
       },
     },
     markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
   }) as unknown as GameState;
 
 describe('turn-flow-runtime-invariants', () => {

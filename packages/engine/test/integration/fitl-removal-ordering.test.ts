@@ -278,6 +278,10 @@ describe('FITL removal ordering macros', () => {
         actionUsage: {},
         turnOrderState: { type: 'roundRobin' },
         markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       });
 
       // Scenario: 2 NVA troops + 1 NVA base (untunneled), damage 3 → remove 2 troops, remaining 1, no guerrillas, remove base
@@ -337,6 +341,10 @@ describe('FITL removal ordering macros', () => {
         actionUsage: {},
         turnOrderState: { type: 'roundRobin' },
         markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       };
 
       // Simulate: basesRemoved = 2, so Aid += 2 * 6 = 12
@@ -406,6 +414,10 @@ describe('FITL removal ordering macros', () => {
         actionUsage: {},
         turnOrderState: { type: 'roundRobin' },
         markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
       };
 
       const effects: readonly EffectAST[] = [

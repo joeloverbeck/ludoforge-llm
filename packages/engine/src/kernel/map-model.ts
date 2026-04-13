@@ -363,7 +363,10 @@ function buildMarkerConstraintValidationState(
     actionUsage: {},
     turnOrderState: { type: 'roundRobin' },
     markers,
+    reveals: undefined,
     globalMarkers: {},
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
   };
 }
 

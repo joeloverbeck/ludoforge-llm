@@ -1,6 +1,6 @@
 # Spec 128: Full-Scope Draft State for applyMove Boundary
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: XL
 **Dependencies**: Spec 78 (scoped draft state — COMPLETED)
@@ -199,3 +199,29 @@ The key invariant remains: `applyMove` and `applyTrustedMove` both call `applyMo
 - **Target**: 8-12% reduction in `combined_duration_ms` (eliminating ~12% CPU from object allocation/copying, minus overhead from COW tracking)
 - **Measurement**: `fitl-perf-optimization` campaign harness (3 seeds × 3 runs, median)
 - **Validation**: all existing tests pass + stateHash determinism preserved
+
+## Outcome
+
+**Completed**: 2026-04-14
+
+- Landed the full draft-state rollout across archived tickets `128FULSCODRA-001` through `128FULSCODRA-006`, including widened `DraftTracker` coverage, full `applyMoveCore` draft ownership, lifecycle mutable-path threading, and the determinism / immutability proof lanes required by the spec.
+- The original measurement gate in archived ticket `128FULSCODRA-007` first recorded a slower historical result (`15152.90ms` against the preserved campaign row `13755.39ms`), which left the series blocked pending investigation.
+- Archived ticket `128FULSCODRA-008` then reran the authoritative FITL harness in isolated same-environment worktrees and established the decisive live comparison:
+  - pre-128 `eab78a45`: `13887.36ms`
+  - current `HEAD` `b33b7b44`: `13849.72ms`
+- That same-environment comparison put current `HEAD` at `-0.27%` relative to the pre-128 point, so no live post-128 regression remained on the branch by the end of the series.
+- The reconciled measurement was recorded in `campaigns/fitl-perf-optimization/results.tsv` as `exp-009`.
+
+### Deviations From Original Plan
+
+- The spec’s hoped-for direct 8-12% wall-clock win was not validated as a clean standalone series outcome. The live branch ultimately closed on “no worse than pre-128 in the same environment” rather than on proving a large isolated speedup against the older preserved campaign baseline row.
+- The series needed a second measurement-reconciliation stage after later Spec 131 work changed the live benchmark context. That meant the final closeout relied on same-environment pre-128 reruns rather than the original historical baseline alone.
+
+### Verification
+
+1. `pnpm -F @ludoforge/engine test`
+2. `bash campaigns/fitl-perf-optimization/harness.sh`
+3. `bash campaigns/fitl-perf-optimization/checks.sh`
+4. `node --prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+5. `node --prof-process isolate-*.log`
+6. `bash campaigns/fitl-perf-optimization/harness.sh` in isolated worktrees for pre-128 `eab78a45` and current `HEAD` `b33b7b44`

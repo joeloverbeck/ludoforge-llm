@@ -1,6 +1,6 @@
 # Spec 131: Recover Post-127 Policy Fallback Regression While Preserving Spec 128
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 128 (in progress; landed tickets 001–006 must remain intact)
@@ -152,3 +152,28 @@ node --prof-process isolate-*.log
 - keep the already-correct Spec 127 revert in place
 - remove the main remaining post-127 regression source
 - re-establish a clean benchmark baseline before any further performance work
+
+## Outcome
+
+**Completed**: 2026-04-14
+
+- Landed the primary recovery in archived ticket `131POLFALREG-001` by removing the fallback-threading optimization from the hot `policy-eval.ts` core result and restoring fallback candidate resolution to the colder wrapper path.
+- Ran the measurement gate in archived ticket `131POLFALREG-002`, which initially recorded a failing current-`HEAD` harness result and kept the bounded Spec 130 narrowing follow-up active.
+- Closed the bounded follow-up in archived ticket `131POLFALREG-003` without additional engine changes after same-environment reruns showed no residual Spec 130 regression requiring a fix.
+- The decisive same-environment sweep recorded:
+  - `14a33c29`: `14435.91ms`
+  - `fb2acad4`: `14341.11ms`
+  - current `HEAD` at ticket close (`48a04c41`): `14571.49ms`
+- The repository-owned rerun on current `HEAD` refreshed the campaign logs with `combined_duration_ms=14202.54`, `games_completed=3`, `errors=0`, and deterministic `state_hash` fingerprint `dbca86daa0157586`, which is within the spec's intended recovery band relative to the historical `14a33c29` reference (`14090.38ms`).
+
+### Deviations From Original Plan
+
+- The spec's original benchmark table for later Spec 130 commits turned out to be historical evidence rather than the decisive live verdict surface. Same-environment reruns were needed before treating those commits as residual regression sources.
+- The bounded follow-up stage did not require a second code fix. It completed as an evidence-driven closeout once the live reruns showed the remaining slowdown premise was no longer reproducible.
+
+### Verification
+
+1. `pnpm -F @ludoforge/engine test`
+2. `bash campaigns/fitl-perf-optimization/harness.sh`
+3. `bash campaigns/fitl-perf-optimization/checks.sh`
+4. `bash campaigns/fitl-perf-optimization/harness.sh` in isolated worktrees for `700bc128`, `752d35dc`, `08c1f2a3`, `5713399c`, `fb2acad4`, current `HEAD`, and `14a33c29`

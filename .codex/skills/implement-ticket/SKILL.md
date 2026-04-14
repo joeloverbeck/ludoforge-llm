@@ -54,6 +54,12 @@ When the ticket is a **proof, benchmark, audit, or investigation ticket**, do th
 3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
 4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
 
+When a profiling or investigation ticket may close on **contradictory live evidence** rather than on a code fix, use this quick contradiction checklist before widening scope:
+
+1. Rerun the named baseline in the same environment when the ticket depends on a relative performance claim.
+2. Rerun current `HEAD` in that same environment before treating an earlier recorded verdict as definitive.
+3. Reclassify the current ticket as `evidence-only closeout`, `still-live fix ticket`, or `needs 1-3-1 boundary reset` before profiling deeper or editing code.
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
@@ -135,6 +141,11 @@ Load `references/triage-and-resolution.md`.
 If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
 
 9. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
+10. If stronger live evidence contradicts an archived sibling ticket's benchmark or investigation verdict, classify that contradiction explicitly before coding:
+   - `historical evidence only`: the archived sibling remains an accurate record of what was measured then, and the current ticket documents the stronger rerun plus the updated live boundary
+   - `active-series contract drift`: the contradiction changes how active dependent tickets should be interpreted, so rewrite the active current ticket before completion
+   - `blocking verdict conflict`: the contradiction changes the series decision boundary so materially that proceeding would violate ticket fidelity; stop via 1-3-1 before coding or closeout
+   Prefer `historical evidence only` when the archived ticket remains a truthful record of its own run and the current ticket can carry the stronger same-environment comparison without misleading future work.
 
 ### Phase 3: Resolve Before Coding
 
@@ -184,6 +195,12 @@ If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, o
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`.
 
 When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
+
+For historical benchmark sweeps across commits, branches, or detached worktrees:
+- expect each isolated worktree to need its own dependency/bootstrap setup before the first measurement
+- treat measurement logs written inside those worktrees as evidence artifacts; do not overwrite or discard them just to reuse the same worktree for a different commit
+- if preserving those logs blocks further checkout movement, create a fresh isolated worktree for the next comparison rather than destroying the recorded evidence
+- record in working notes which measurements were temp-worktree evidence versus which logs were refreshed in the main repo as the ticket-owned final artifacts
 
 ## Verification
 

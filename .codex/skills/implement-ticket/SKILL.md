@@ -31,6 +31,22 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 ## Workflow
 
+### Ticket-Type Triage
+
+Before loading every optional reference, classify the ticket into the smallest live category that preserves correctness:
+
+- **Bounded local refactor**: one main module or a tight cluster of same-domain files, no schema/serialized artifact ownership, no blocking discrepancies, and no verified sibling ownership drift beyond a lightweight sanity check
+- **Shared-contract or migration ticket**: exported types, schemas, generated artifacts, serialized surfaces, or broad fixture fallout are likely
+- **Proof, benchmark, audit, or investigation ticket**: the decisive deliverable is evidence, measurement, or a verdict rather than production code
+- **Mixed ticket**: more than one category applies; load the minimum extra references for each active category rather than defaulting to the whole skill body
+
+When the ticket is a **bounded local refactor**, keep the read phase lean after the mandatory `FOUNDATIONS.md`, ticket, `Deps`, repo-state, and `AGENTS.md` checks:
+
+1. Validate the named files, functions, and commands.
+2. Open sibling drafts only long enough to confirm the current ticket has not been absorbed or contradicted.
+3. Load only the optional reference files needed by the live boundary you actually found.
+4. Still emit the full working-notes checkpoint before coding.
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
@@ -67,6 +83,7 @@ When the active ticket or referenced artifacts are untracked drafts:
 5. When live evidence proves a draft example snippet, helper sketch, or command block is semantically wrong but the owned boundary is still correct, update the active draft ticket so future turns do not inherit the stale example.
    - Timing: apply these nonblocking draft-ticket corrections either immediately after reassessment or during final closeout, but do not mark the ticket complete while the stale draft text remains.
    - Preference: if the stale draft text could mislead the implementation itself (for example wrong type mutability, wrong owned file, wrong command shape, or wrong acceptance semantics), correct the active draft ticket before code edits. If it only affects future readability or closeout accuracy, correcting it during final closeout is acceptable.
+   - Acceptance-text rule: rewrite the active draft ticket before completion when the stale wording changes the meaning of an acceptance criterion, invariant, owned file list, or verification expectation a later turn could reasonably follow literally. A closeout-only semantic correction is sufficient only when the live boundary stayed correct and the stale text is clearly documented in the outcome without leaving the ticket’s forward-looking contract misleading.
 6. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
 7. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
 
@@ -237,6 +254,7 @@ Load `references/closeout-and-followup.md`.
 Before declaring completion or updating the ticket status, run one final acceptance sweep against the ticket text and your final diff:
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
+- re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text

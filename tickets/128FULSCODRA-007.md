@@ -1,20 +1,21 @@
 # 128FULSCODRA-007: Performance benchmarking gate
 
-**Status**: PENDING
+**Status**: BLOCKED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — benchmarking only
-**Deps**: `archive/tickets/128FULSCODRA-006.md`
+**Deps**: `archive/tickets/128FULSCODRA-006.md`, `tickets/128FULSCODRA-008.md`
 
 ## Problem
 
 Spec 128's stated goal is 8-12% reduction in `combined_duration_ms` by eliminating ~12% CPU overhead from object allocation/copying. After all conversion tickets are complete and determinism is proven, the actual performance impact must be measured to validate the optimization's effectiveness and detect any V8 JIT regressions introduced by the code changes.
 
-## Assumption Reassessment (2026-04-13)
+## Assumption Reassessment (2026-04-14)
 
-1. The `fitl-perf-optimization` campaign harness exists and measures `combined_duration_ms` across 3 seeds x 3 runs (median). Confirmed — this is the standard measurement tool for kernel performance.
-2. V8 profiling data showed ~12% CPU in object allocation/copying builtins. Confirmed per spec source data.
-3. Constraint 4 (No V8 Hidden Class Regression): `DraftTracker` is created once per `applyMoveCore` scope and accessed via explicit helpers — it doesn't participate in inline-cache-sensitive sites. This should be verified by the benchmark.
+1. The live benchmark harness is `campaigns/fitl-perf-optimization/harness.sh`; it rebuilds the engine, runs the full `pnpm turbo test` gate, executes 3 benchmark runs, checks deterministic `state_hash`, and reports the median `combined_duration_ms`. Confirmed.
+2. The campaign's durable result log is `campaigns/fitl-perf-optimization/results.tsv`, whose current baseline row is `13755.39ms`. Confirmed.
+3. V8 profiling data in Spec 128 still identifies object-allocation builtins (`Scavenger::ScavengeObject`, `CreateDataProperty`, `CloneObjectIC`) as the motivating bottleneck. Confirmed.
+4. The live benchmark harness output does not expose per-phase timing beyond the aggregate per-function buckets in JSON and the deterministic state-hash guard, so the hidden-class regression check here is indirect: benchmark outcome plus representative `--prof` hotspot inspection. Confirmed.
 
 ## Architecture Check
 
@@ -41,7 +42,7 @@ Run a V8 CPU profile on one representative seed to verify:
 
 ### 3. Record results
 
-Document benchmark results in the campaign's experiment log:
+Document benchmark results in the campaign result log:
 - Pre-conversion baseline vs post-conversion median
 - Percentage improvement
 - V8 profiling delta
@@ -49,7 +50,8 @@ Document benchmark results in the campaign's experiment log:
 
 ## Files to Touch
 
-- Campaign experiment log (record results)
+- `campaigns/fitl-perf-optimization/results.tsv` (append result row)
+- `tickets/128FULSCODRA-007.md` (mark complete and record outcome)
 
 ## Out of Scope
 
@@ -78,6 +80,15 @@ Document benchmark results in the campaign's experiment log:
 
 ### Commands
 
-1. Run campaign harness (specific command depends on campaign setup)
-2. `pnpm -F @ludoforge/engine test` (verify tests still pass)
-3. V8 profiling: `node --prof` on a representative seed, then `node --prof-process`
+1. `bash campaigns/fitl-perf-optimization/harness.sh`
+2. `bash campaigns/fitl-perf-optimization/checks.sh`
+3. `node --prof campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+4. `node --prof-process isolate-*.log`
+
+## Outcome So Far (2026-04-14)
+
+- Completed the measurement-owned work: ran the live FITL benchmark harness, the correctness guard, and a representative `node --prof` capture on the benchmark runner.
+- The benchmark gate did not meet acceptance. The live median was `15152.90ms` versus the campaign baseline `13755.39ms`, a `+10.16%` regression rather than the required `>1%` improvement.
+- Determinism held in the benchmark harness: `errors=0`, `games_completed=3`, `total_moves=600`, and the harness accepted the repeated-run `state_hash` check.
+- The representative processed V8 profile still shows allocation-related builtins in the hotspot set: `CreateDataProperty 4.8%`, `CloneObjectIC 1.5%`, and `CloneObjectIC_Slow 1.1%`. This is indirect evidence only; the current benchmark surface does not prove the exact regression source.
+- Ticket `128FULSCODRA-008` now owns the regression investigation and performance recovery required before this measurement gate can be rerun to completion.

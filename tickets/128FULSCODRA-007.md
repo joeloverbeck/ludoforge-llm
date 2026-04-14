@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — benchmarking only
-**Deps**: `tickets/128FULSCODRA-006.md`
+**Deps**: `archive/tickets/128FULSCODRA-006.md`
 
 ## Problem
 

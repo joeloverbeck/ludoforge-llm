@@ -14,6 +14,7 @@ import {
 import type { SeatResolutionContext } from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { omitOptionalStateKey } from './state-shape.js';
+import type { DraftTracker } from './state-draft.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -520,6 +521,7 @@ const applyEffectList = (
   actionId: string,
   effectPathRoot: string,
   policy?: MoveExecutionPolicy,
+  tracker?: DraftTracker,
 ): ExecutionStateResult => {
   const runtimeTableIndex = buildRuntimeTableIndex(def);
   const runtimeResources = createEvalRuntimeResources({
@@ -542,6 +544,7 @@ const applyEffectList = (
       effectPathRoot,
     },
     effectPath: '',
+    ...(tracker === undefined ? {} : { tracker }),
     ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
   }));
@@ -563,6 +566,7 @@ export const executeEventMove = (
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
   actionId = String(move.actionId),
+  tracker?: DraftTracker,
 ): EventMoveExecutionResult => {
   const context = resolvePlayableEventExecutionContext(def, state, move);
   if (context === null) {
@@ -601,11 +605,12 @@ export const executeEventMove = (
       eventEffects,
       state.activePlayer,
       move.params,
-      collector,
-      actionId,
-      `action:${actionId}.eventEffects`,
-      policy,
-    );
+    collector,
+    actionId,
+    `action:${actionId}.eventEffects`,
+    policy,
+    tracker,
+  );
     nextState = sideAndBranchResult.state;
     nextRng = sideAndBranchResult.rng;
     emittedEvents.push(...sideAndBranchResult.emittedEvents);

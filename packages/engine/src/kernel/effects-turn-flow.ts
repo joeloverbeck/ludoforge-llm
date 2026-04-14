@@ -411,7 +411,7 @@ export const applyGotoPhaseExact = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker, env.profiler);
   const table = env.cachedRuntime?.zobristTable;
   const phaseChangedState = {
     ...exitedState,
@@ -424,7 +424,7 @@ export const applyGotoPhaseExact = (
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker, env.profiler);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -451,6 +451,7 @@ export const applyAdvancePhase = (
     }),
     {
       policy,
+      ...(cursor.tracker === undefined ? {} : { tracker: cursor.tracker }),
       ...(env.cachedRuntime === undefined ? {} : { cachedRuntime: env.cachedRuntime }),
     },
   ));
@@ -501,7 +502,7 @@ export const applyPushInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
@@ -519,7 +520,7 @@ export const applyPushInterruptPhase = (
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -550,7 +551,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -577,7 +578,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(env.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   return {
     state: finalState,
     rng: { state: finalState.rng },

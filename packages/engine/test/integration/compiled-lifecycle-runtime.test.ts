@@ -104,6 +104,7 @@ describe('compiled lifecycle runtime integration', () => {
       createEvalRuntimeResources(),
       'lifecycle',
       runtime,
+      undefined,
       profiler,
     );
 
@@ -125,6 +126,7 @@ describe('compiled lifecycle runtime integration', () => {
       undefined,
       createEvalRuntimeResources(),
       'lifecycle',
+      undefined,
       undefined,
       profiler,
     );

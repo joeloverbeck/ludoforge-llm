@@ -22,6 +22,7 @@ import {
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import type { DraftTracker } from './state-draft.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
@@ -389,6 +390,7 @@ export interface AdvancePhaseRequest {
   readonly triggerLogCollector?: TriggerLogEntry[];
   readonly policy?: MoveExecutionPolicy;
   readonly cachedRuntime?: GameDefRuntime;
+  readonly tracker?: DraftTracker;
 }
 
 export const buildAdvancePhaseRequest = (
@@ -399,6 +401,7 @@ export const buildAdvancePhaseRequest = (
     readonly triggerLogCollector?: TriggerLogEntry[] | undefined;
     readonly policy?: MoveExecutionPolicy | undefined;
     readonly cachedRuntime?: GameDefRuntime | undefined;
+    readonly tracker?: DraftTracker | undefined;
   },
 ): AdvancePhaseRequest => ({
   def,
@@ -407,6 +410,7 @@ export const buildAdvancePhaseRequest = (
   ...(options?.triggerLogCollector === undefined ? {} : { triggerLogCollector: options.triggerLogCollector }),
   ...(options?.policy === undefined ? {} : { policy: options.policy }),
   ...(options?.cachedRuntime === undefined ? {} : { cachedRuntime: options.cachedRuntime }),
+  ...(options?.tracker === undefined ? {} : { tracker: options.tracker }),
 });
 
 export const advancePhase = (request: AdvancePhaseRequest): GameState => {
@@ -417,6 +421,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     triggerLogCollector,
     policy,
     cachedRuntime,
+    tracker,
   } = request;
   assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advancePhase evalRuntimeResources');
   const lifecycleResources = evalRuntimeResources;
@@ -436,7 +441,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
         { currentPhase: state.currentPhase },
       );
     }
-    let redirected = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+    let redirected = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
     const beforeRedirect = redirected;
     redirected = applyCoupPhaseEntryReset(def, resetPhaseUsage({
       ...redirected,
@@ -446,10 +451,10 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     if (table) {
       redirected = { ...redirected, _runningHash: reconcileRunningHash(table, beforeRedirect, redirected) };
     }
-    return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+    return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   }
 
-  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   const isLastPhase = currentPhaseIndex === phases.length - 1;
 
   if (!isLastPhase) {
@@ -472,10 +477,10 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
       nextState = { ...nextState, _runningHash: reconcileRunningHash(tableMid, beforeMidPhase, nextState) };
     }
 
-    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   }
 
-  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   const turnFlowLifecycle = applyTurnFlowCardBoundary(def, nextState);
   nextState = turnFlowLifecycle.state;
   const boundaryDurations = resolveBoundaryDurationsAtTurnEnd(turnFlowLifecycle.traceEntries);
@@ -488,6 +493,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     lifecycleResources,
     'boundaryExpiry',
     cachedRuntime,
+    tracker,
   );
   nextState = expiry.state;
   if (triggerLogCollector !== undefined) {
@@ -513,8 +519,8 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
   if (tableTurn) {
     rolledState = { ...rolledState, _runningHash: reconcileRunningHash(tableTurn, beforeTurnRoll, rolledState) };
   }
-  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
-  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
+  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
 };
 
 /**
@@ -575,6 +581,7 @@ export const advanceToDecisionPoint = (
   state: GameState,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
+  tracker?: DraftTracker,
   evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
   profiler?: import('./perf-profiler.js').PerfProfiler,
@@ -663,6 +670,7 @@ export const advanceToDecisionPoint = (
       triggerLogCollector,
       policy,
       cachedRuntime,
+      tracker,
     }));
     perfDynEnd(profiler, 'adp:advancePhase', t0_adv);
     perfDynEnd(profiler, 'adp:iterations', 0); // count-only

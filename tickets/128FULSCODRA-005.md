@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel phase-advance, action-usage, event-execution, grant-lifecycle, free-operation-viability, apply-move hash boundary
-**Deps**: `tickets/128FULSCODRA-002.md`
+**Deps**: `archive/tickets/128FULSCODRA-002.md`
 
 ## Problem
 

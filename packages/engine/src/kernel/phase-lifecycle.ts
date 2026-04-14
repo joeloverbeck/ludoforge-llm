@@ -17,6 +17,7 @@ import { dispatchTriggers } from './trigger-dispatch.js';
 import { deepEqual } from './deep-equal.js';
 import type { EffectAST, GameDef, GameState, TriggerEvent, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import type { DraftTracker, MutableGameState } from './state-draft.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
@@ -30,6 +31,7 @@ export const dispatchLifecycleEvent = (
   evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'lifecycle',
   cachedRuntime?: GameDefRuntime,
+  tracker?: DraftTracker,
   profiler?: PerfProfiler,
 ): GameState => {
   if (evalRuntimeResources !== undefined) {
@@ -76,6 +78,7 @@ export const dispatchLifecycleEvent = (
       traceContext,
       effectPath: '',
       ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+      ...(tracker === undefined ? {} : { tracker }),
       ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
       ...(profiler === undefined ? {} : { profiler }),
@@ -91,6 +94,7 @@ export const dispatchLifecycleEvent = (
         runtimeTableIndex,
         traceContext,
         policy,
+        tracker,
         profiler,
         cachedRuntime,
         beforeWarningCount,
@@ -116,6 +120,7 @@ export const dispatchLifecycleEvent = (
         ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
         effectPathRoot: `${effectPathRoot}.triggeredEvent(${emittedEvent.type})`,
         evalRuntimeResources: runtimeResources,
+        ...(tracker === undefined ? {} : { tracker }),
         ...(policy === undefined ? {} : { policy }),
       });
       currentState = emittedResult.state;
@@ -140,6 +145,7 @@ export const dispatchLifecycleEvent = (
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     effectPathRoot: `${effectPathRoot}.eventDispatch`,
     evalRuntimeResources: runtimeResources,
+    ...(tracker === undefined ? {} : { tracker }),
     ...(policy === undefined ? {} : { policy }),
   });
   perfDynEnd(profiler, 'lifecycle:dispatchTriggers', t0_triggerDispatch);
@@ -150,6 +156,12 @@ export const dispatchLifecycleEvent = (
 
   if (result.state.rng === result.rng.state) {
     return result.state;
+  }
+
+  if (tracker !== undefined) {
+    const mutableState = result.state as MutableGameState;
+    mutableState.rng = result.rng.state;
+    return mutableState;
   }
 
   return {
@@ -169,6 +181,7 @@ interface ExecuteLifecycleEffectOptions {
   readonly runtimeTableIndex: ReturnType<typeof buildRuntimeTableIndex>;
   readonly traceContext: { readonly eventContext: 'lifecycleEffect'; readonly effectPathRoot: string };
   readonly policy: MoveExecutionPolicy | undefined;
+  readonly tracker: DraftTracker | undefined;
   readonly profiler: PerfProfiler | undefined;
   readonly cachedRuntime: GameDefRuntime | undefined;
   readonly beforeWarningCount: number;
@@ -185,6 +198,7 @@ const executeLifecycleEffect = ({
   runtimeTableIndex,
   traceContext,
   policy,
+  tracker,
   profiler,
   cachedRuntime,
   beforeWarningCount,
@@ -205,6 +219,7 @@ const executeLifecycleEffect = ({
     },
     traceContext,
     effectPath: '',
+    ...(tracker === undefined ? {} : { tracker }),
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
@@ -229,6 +244,7 @@ const executeLifecycleEffect = ({
     resources: createEvalRuntimeResources({ collector: verificationCollector }),
     traceContext,
     effectPath: '',
+    ...(tracker === undefined ? {} : { tracker }),
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     verifyCompiledEffects: true,
     ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),

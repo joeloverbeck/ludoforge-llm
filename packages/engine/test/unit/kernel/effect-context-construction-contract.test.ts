@@ -21,6 +21,7 @@ import { createCollector } from '../../../src/kernel/execution-collector.js';
 import { createRng } from '../../../src/kernel/prng.js';
 import type { RuntimeTableIndex } from '../../../src/kernel/runtime-table-index.js';
 import { buildAdjacencyGraph } from '../../../src/kernel/spatial.js';
+import { createDraftTracker } from '../../../src/kernel/state-draft.js';
 import type { GameDef, GameState } from '../../../src/kernel/types.js';
 
 const makeDef = (): GameDef =>
@@ -88,6 +89,7 @@ const makeRuntimeEffectContextOptions = (
     ...(overrides.runtimeTableIndex === undefined ? {} : { runtimeTableIndex: overrides.runtimeTableIndex }),
     ...(overrides.traceContext === undefined ? {} : { traceContext: overrides.traceContext }),
     ...(overrides.effectPath === undefined ? {} : { effectPath: overrides.effectPath }),
+    ...(overrides.tracker === undefined ? {} : { tracker: overrides.tracker }),
     ...(overrides.maxEffectOps === undefined ? {} : { maxEffectOps: overrides.maxEffectOps }),
     ...(overrides.freeOperation === undefined ? {} : { freeOperation: overrides.freeOperation }),
     ...(overrides.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: overrides.freeOperationOverlay }),
@@ -259,6 +261,16 @@ describe('effect-context construction contract', () => {
       traceContext: context.traceContext,
       effectPath: context.effectPath,
     });
+  });
+
+  it('threads an explicit tracker into the cursor without leaking it into the env', () => {
+    const tracker = createDraftTracker();
+    const context = createExecutionEffectContext(makeRuntimeEffectContextOptions({ tracker }));
+    const env = toEffectEnv(context);
+    const cursor = toEffectCursor(context);
+
+    assert.equal(cursor.tracker, tracker);
+    assert.equal(Object.hasOwn(env, 'tracker'), false);
   });
 
   it('preserves free-operation overlay payloads as one object', () => {

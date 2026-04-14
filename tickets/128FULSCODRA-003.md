@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel effect handlers (markers, tokens, vars, reveals)
-**Deps**: `tickets/128FULSCODRA-002.md`
+**Deps**: `archive/tickets/128FULSCODRA-002.md`
 
 ## Problem
 

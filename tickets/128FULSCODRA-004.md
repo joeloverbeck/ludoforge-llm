@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel turn flow subsystem
-**Deps**: `tickets/128FULSCODRA-002.md`
+**Deps**: `archive/tickets/128FULSCODRA-002.md`
 
 ## Problem
 

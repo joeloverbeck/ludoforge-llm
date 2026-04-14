@@ -10,6 +10,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-index.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import type { DraftTracker } from './state-draft.js';
 import type { GameDef, GameState, Rng, TriggerDef, TriggerEvent, TriggerLogEntry } from './types.js';
 
 interface MutableTriggerEvalContext {
@@ -46,6 +47,7 @@ export interface DispatchTriggersRequest {
   readonly policy?: MoveExecutionPolicy;
   readonly effectPathRoot?: string;
   readonly evalRuntimeResources?: EvalRuntimeResources;
+  readonly tracker?: DraftTracker;
 }
 
 export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTriggersResult => {
@@ -154,6 +156,7 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
         ...(event.type === 'actionResolved' ? { actionId: String(event.action) } : {}),
       },
       effectPath: '',
+      ...(request.tracker === undefined ? {} : { tracker: request.tracker }),
       ...(policy?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: policy.verifyCompiledEffects }),
       ...(policy?.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: policy.phaseTransitionBudget }),
     }));
@@ -180,6 +183,7 @@ export const dispatchTriggers = (request: DispatchTriggersRequest): DispatchTrig
         ...(request.cachedRuntime === undefined ? {} : { cachedRuntime: request.cachedRuntime }),
         effectPathRoot: `${effectPathRoot}.cascade(${emittedEvent.type})`,
         evalRuntimeResources: runtimeResources,
+        ...(request.tracker === undefined ? {} : { tracker: request.tracker }),
         ...(policy === undefined ? {} : { policy }),
       });
       nextState = cascadeResult.state;

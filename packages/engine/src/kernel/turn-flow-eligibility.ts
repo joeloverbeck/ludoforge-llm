@@ -33,6 +33,7 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
+import type { DraftTracker } from './state-draft.js';
 import {
   assertCardMetadataSeatOrderRuntimeInvariant,
   requireCardDrivenActiveSeat,
@@ -843,6 +844,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   sideEffectManifest?: EventSideEffectManifest,
   options?: {
     readonly originatingPhase?: GameState['currentPhase'];
+    readonly tracker?: DraftTracker;
   },
 ): TurnFlowTransitionResult => {
   const runtime = cardDrivenRuntime(state);

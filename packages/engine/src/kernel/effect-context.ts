@@ -52,6 +52,7 @@ export interface WriteContext extends ReadContext {
 interface EffectContextBase extends WriteContext {
   readonly traceContext?: EffectTraceContext;
   readonly effectPath?: string;
+  readonly tracker?: DraftTracker;
   readonly maxEffectOps?: number;
   readonly verifyCompiledEffects?: boolean;
   readonly freeOperation?: boolean;
@@ -268,7 +269,7 @@ export interface MutableReadScope {
 export const toEffectEnv = (ctx: EffectContext): EffectEnv => {
   // Destructure out cursor fields; the rest is the env.
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { state: _s, rng: _r, bindings: _b, decisionScope: _d, effectPath: _e, ...env } = ctx;
+  const { state: _s, rng: _r, bindings: _b, decisionScope: _d, effectPath: _e, tracker: _t, ...env } = ctx;
   return env as EffectEnv;
 };
 
@@ -279,7 +280,7 @@ export const toEffectCursor = (ctx: EffectContext): EffectCursor => ({
   bindings: ctx.bindings,
   decisionScope: ctx.decisionScope,
   effectPath: ctx.effectPath,
-  tracker: undefined,
+  tracker: ctx.tracker,
 });
 
 export interface TraceProvenanceContext {

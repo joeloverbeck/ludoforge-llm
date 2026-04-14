@@ -78,6 +78,7 @@ import { createExecutionEffectContext, type PhaseTransitionBudget } from './effe
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import { doesCompletedProbeMoveChangeGameplayState } from './free-operation-viability.js';
 import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
+import { createDraftTracker, createMutableState, freezeState, type DraftTracker, type MutableGameState } from './state-draft.js';
 import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
   ActionDef,
@@ -995,6 +996,7 @@ const executeMoveAction = (
   options: ExecutionOptions | undefined,
   coreOptions: ApplyMoveCoreOptions | undefined,
   shared: SharedMoveExecutionContext,
+  tracker?: DraftTracker,
   cachedRuntime?: GameDefRuntime,
 ): MoveActionExecutionResult => {
   const profiler: PerfProfiler | undefined = options?.profiler;
@@ -1085,6 +1087,7 @@ const executeMoveAction = (
         effectPathRoot: `action:${String(action.id)}.cost`,
       },
       effectPath: '',
+      ...(tracker === undefined ? {} : { tracker }),
     }))
     : { state, rng };
 
@@ -1119,6 +1122,7 @@ const executeMoveAction = (
       options,
       shared.phaseTransitionBudget === undefined ? undefined : { phaseTransitionBudget: shared.phaseTransitionBudget },
       shared,
+      tracker,
       cachedRuntime,
     );
     effectState = saResult.stateWithRng;
@@ -1144,6 +1148,7 @@ const executeMoveAction = (
         effectPathRoot: `action:${String(action.id)}.effects`,
       },
       effectPath: '',
+      ...(tracker === undefined ? {} : { tracker }),
     }));
     effectState = effectResult.state;
     effectRng = effectResult.rng;
@@ -1192,6 +1197,7 @@ const executeMoveAction = (
           effectPathRoot: `action:${String(action.id)}.stages[${stageIdx}]`,
         },
         effectPath: '',
+        ...(tracker === undefined ? {} : { tracker }),
       }));
       effectState = stageResult.state;
       effectRng = stageResult.rng;
@@ -1228,6 +1234,7 @@ const executeMoveAction = (
     shared.executionPolicy,
     shared.evalRuntimeResources.collector,
     String(action.id),
+    tracker,
   );
   effectState = lastingActivation.state;
   effectRng = lastingActivation.rng;
@@ -1249,6 +1256,7 @@ const executeMoveAction = (
           effectPathRoot: `action:${String(action.id)}.afterEffects`,
         },
         effectPath: '',
+        ...(tracker === undefined ? {} : { tracker }),
       }),
     );
     effectState = afterResult.state;
@@ -1281,6 +1289,7 @@ const executeMoveAction = (
       ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
       effectPathRoot: `action:${String(action.id)}.emittedEvent(${emittedEvent.type})`,
       evalRuntimeResources: shared.evalRuntimeResources,
+      ...(tracker === undefined ? {} : { tracker }),
       ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
     });
     triggerState = emittedEventResult.state;
@@ -1301,15 +1310,26 @@ const executeMoveAction = (
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
     effectPathRoot: `action:${String(action.id)}.actionResolved`,
     evalRuntimeResources: shared.evalRuntimeResources,
+    ...(tracker === undefined ? {} : { tracker }),
     ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
   });
   perfEnd(profiler, 'dispatchTriggers', t0_triggers);
 
+  const stateWithRng = tracker === undefined || triggerResult.state.rng === triggerResult.rng.state
+    ? (triggerResult.state.rng === triggerResult.rng.state
+      ? triggerResult.state
+      : {
+        ...triggerResult.state,
+        rng: triggerResult.rng.state,
+      })
+    : (() => {
+      const mutableState = triggerResult.state as MutableGameState;
+      mutableState.rng = triggerResult.rng.state;
+      return mutableState;
+    })();
+
   return {
-    stateWithRng: {
-      ...triggerResult.state,
-      rng: triggerResult.rng.state,
-    },
+    stateWithRng,
     triggerFirings: [...executionTraceEntries, ...triggerResult.triggerLog],
     sideEffectManifest: lastingActivation.sideEffectManifest,
   };
@@ -1320,6 +1340,7 @@ const applyReleasedDeferredEventEffects = (
   state: GameState,
   releasedDeferredEventEffects: readonly TurnFlowReleasedDeferredEventEffect[],
   shared: SharedMoveExecutionContext,
+  tracker?: DraftTracker,
 ): MoveActionExecutionResult => {
   if (releasedDeferredEventEffects.length === 0) {
     return { stateWithRng: state, triggerFirings: [] };
@@ -1355,6 +1376,7 @@ const applyReleasedDeferredEventEffects = (
         effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEventEffects`,
       },
       effectPath: '',
+      ...(tracker === undefined ? {} : { tracker }),
       ...(shared.executionPolicy?.verifyCompiledEffects === undefined
         ? {}
         : { verifyCompiledEffects: shared.executionPolicy.verifyCompiledEffects }),
@@ -1376,6 +1398,7 @@ const applyReleasedDeferredEventEffects = (
         ...(shared.cachedRuntime === undefined ? {} : { cachedRuntime: shared.cachedRuntime }),
         effectPathRoot: `action:${deferredEventEffect.actionId}.deferredEvent(${emittedEvent.type})`,
         evalRuntimeResources: shared.evalRuntimeResources,
+        ...(tracker === undefined ? {} : { tracker }),
         ...(shared.executionPolicy === undefined ? {} : { policy: shared.executionPolicy }),
       });
       nextState = emittedEventResult.state;
@@ -1387,11 +1410,21 @@ const applyReleasedDeferredEventEffects = (
       createDeferredLifecycleTraceEntry('executed', deferredEventEffect),
     ];
   }
+  const stateWithRng = tracker === undefined || nextState.rng === nextRng.state
+    ? (nextState.rng === nextRng.state
+      ? nextState
+      : {
+        ...nextState,
+        rng: nextRng.state,
+      })
+    : (() => {
+      const mutableState = nextState as MutableGameState;
+      mutableState.rng = nextRng.state;
+      return mutableState;
+    })();
+
   return {
-    stateWithRng: {
-      ...nextState,
-      rng: nextRng.state,
-    },
+    stateWithRng,
     triggerFirings: triggerLog,
   };
 };
@@ -1404,6 +1437,8 @@ const applyMoveCore = (
   coreOptions?: ApplyMoveCoreOptions,
   cachedRuntime?: GameDefRuntime,
 ): ApplyMoveResult => {
+  const mutableState = createMutableState(state);
+  const tracker = createDraftTracker();
   const profiler: PerfProfiler | undefined = options?.profiler;
   validateTurnFlowRuntimeStateInvariants(state);
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
@@ -1426,7 +1461,7 @@ const applyMoveCore = (
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
   const t0_exec = perfStart(profiler);
-  const executed = executeMoveAction(def, state, move, seatResolution, options, coreOptions, shared, cachedRuntime);
+  const executed = executeMoveAction(def, mutableState, move, seatResolution, options, coreOptions, shared, tracker, cachedRuntime);
   perfEnd(profiler, 'executeMoveAction', t0_exec);
 
   const t0_freeOp = perfStart(profiler);
@@ -1449,6 +1484,7 @@ const applyMoveCore = (
       }
       const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move, undefined, {
         originatingPhase: state.currentPhase,
+        tracker,
       });
       return {
         state: progressed.state,
@@ -1462,6 +1498,7 @@ const applyMoveCore = (
     })()
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.sideEffectManifest, {
       originatingPhase: state.currentPhase,
+      tracker,
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
 
@@ -1471,6 +1508,7 @@ const applyMoveCore = (
     turnFlowResult.state,
     turnFlowResult.releasedDeferredEventEffects ?? [],
     shared,
+    tracker,
   );
   perfEnd(profiler, 'applyDeferredEventEffects', t0_deferred);
 
@@ -1484,6 +1522,7 @@ const applyMoveCore = (
     shared.evalRuntimeResources,
     'boundaryExpiry',
     shared.cachedRuntime,
+    tracker,
   );
   perfEnd(profiler, 'applyBoundaryExpiry', t0_boundary);
 
@@ -1499,6 +1538,7 @@ const applyMoveCore = (
       boundaryExpiryResult.state,
       lifecycleAndAdvanceLog,
       runtime.executionPolicy,
+      tracker,
       shared.evalRuntimeResources,
       cachedRuntime,
       profiler,
@@ -1514,11 +1554,9 @@ const applyMoveCore = (
   const reconciledHash = cachedRuntime?.zobristTable
     ? reconcileRunningHash(cachedRuntime.zobristTable, state, progressedState)
     : computeFullHash(createZobristTable(def), progressedState);
-  const stateWithHash = {
-    ...progressedState,
-    stateHash: reconciledHash,
-    _runningHash: reconciledHash,
-  };
+  const stateWithHash = progressedState as MutableGameState;
+  stateWithHash.stateHash = reconciledHash;
+  stateWithHash._runningHash = reconciledHash;
   perfEnd(profiler, 'computeFullHash', t0_hash);
 
   if (shouldVerifyHash(options, stateWithHash.turnCount)) {
@@ -1535,7 +1573,7 @@ const applyMoveCore = (
   }
 
   return {
-    state: stateWithHash,
+    state: freezeState(stateWithHash),
     triggerFirings: [
       ...executed.triggerFirings,
       ...turnFlowResult.traceEntries,
@@ -1717,6 +1755,7 @@ const applySimultaneousSubmission = (
       resetState,
       lifecycleAndAdvanceLog,
       commitRuntime.executionPolicy,
+      undefined,
       createEvalRuntimeResources({ collector: commitRuntime.collector }),
       cachedRuntime,
     );

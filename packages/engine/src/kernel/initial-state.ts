@@ -99,7 +99,7 @@ export const initialState = (
   const afterTurnStart = dispatchLifecycleEvent(validatedDef, {
     ...lifecycleResult.state,
     rng: setupResult.rng.state,
-  }, { type: 'turnStart' }, undefined, executionPolicy, runtimeResources, 'lifecycle', cachedRuntime, options?.profiler);
+  }, { type: 'turnStart' }, undefined, executionPolicy, runtimeResources, 'lifecycle', cachedRuntime, undefined, options?.profiler);
   const stateWithRng = dispatchLifecycleEvent(
     validatedDef,
     afterTurnStart,
@@ -109,6 +109,7 @@ export const initialState = (
     runtimeResources,
     'lifecycle',
     cachedRuntime,
+    undefined,
     options?.profiler,
   );
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);

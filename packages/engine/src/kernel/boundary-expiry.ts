@@ -10,6 +10,7 @@ import type {
   TurnFlowDuration,
 } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import type { DraftTracker } from './state-draft.js';
 
 interface BoundaryExpiryResult {
   readonly state: GameState;
@@ -25,6 +26,7 @@ export const applyBoundaryExpiry = (
   evalRuntimeResources?: EvalRuntimeResources,
   effectPathRoot = 'boundaryExpiry',
   cachedRuntime?: GameDefRuntime,
+  tracker?: DraftTracker,
 ): BoundaryExpiryResult => {
   if (evalRuntimeResources !== undefined) {
     assertEvalRuntimeResourcesContract(evalRuntimeResources, 'applyBoundaryExpiry evalRuntimeResources');
@@ -56,6 +58,7 @@ export const applyBoundaryExpiry = (
       runtimeResources,
       effectPathRoot,
       cachedRuntime,
+      tracker,
     );
   }
   if (triggerLogCollector !== undefined && traceEntries.length > 0) {

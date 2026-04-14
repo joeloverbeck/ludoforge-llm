@@ -49,6 +49,7 @@ interface EffectContextTestOptions {
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly decisionScope?: DecisionScope;
   readonly iterationPath?: string;
+  readonly tracker?: RuntimeEffectContextOptions['tracker'];
 }
 
 export type EffectContextTestOverrides = Partial<RuntimeEffectContextOptions> & {
@@ -79,6 +80,7 @@ const makeRuntimeEffectContextOptions = ({
   phaseTransitionBudget,
   decisionScope,
   iterationPath,
+  tracker,
 }: EffectContextTestOptions): RuntimeEffectContextOptions => ({
   def,
   adjacencyGraph,
@@ -99,6 +101,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(transientDecisionSelections === undefined ? {} : { transientDecisionSelections }),
   resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),
+  ...(tracker === undefined ? {} : { tracker }),
   decisionScope: decisionScope ?? (() => {
     if (iterationPath === undefined || iterationPath === '') {
       return emptyScope();

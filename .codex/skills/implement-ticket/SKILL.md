@@ -86,6 +86,7 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
    - Concrete callsites: check whether behavior is still owned there or has been centralized behind a shared helper; treat already-migrated sites as stale sub-claims.
+   - Claimed dead fallbacks: when a ticket says an immutable fallback, compatibility branch, or alternate path is now dead, enumerate remaining callers and classify the path as `dead`, `shared immutable authority`, or `must be migrated now` before accepting removal.
    - Widened compilation/optimization for an existing AST/expression family: compare live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
    - When a ticket depends on auto-synthesized or compiler-generated outputs, compare the pre-synthesis authored source, the post-synthesis compiled section, and every downstream consumer that relies on the generated ids or artifacts. Confirm they share the same live source of truth before accepting a YAML-only or caller-local fix.
 7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.

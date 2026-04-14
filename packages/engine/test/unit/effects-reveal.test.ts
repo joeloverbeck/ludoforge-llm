@@ -17,6 +17,7 @@ import {
   type GameState,
 } from '../../src/kernel/index.js';
 import { isEvalErrorCode } from '../../src/kernel/eval-error.js';
+import { createDraftTracker, createMutableState } from '../../src/kernel/state-draft.js';
 import { tokenFilterPathSuffix } from '../../src/kernel/token-filter-expr-utils.js';
 import type { TokenFilterExpr } from '../../src/kernel/types.js';
 import { isNormalizedEffectRuntimeFailure } from '../helpers/effect-error-assertions.js';
@@ -127,6 +128,57 @@ describe('effects reveal', () => {
         { observers: [asPlayerId(0)] },
         { observers: [asPlayerId(1)] },
       ],
+    });
+  });
+
+  it('tracker-backed reveal clones the reveals map before mutation and preserves the original state', () => {
+    const original = {
+      ...makeState(),
+      reveals: {
+        'hand:0': [{ observers: [asPlayerId(0)] }],
+      },
+    };
+    const mutable = createMutableState(original);
+    const tracker = createDraftTracker();
+    const preMutationReveals = mutable.reveals;
+
+    const result = applyEffect(
+      eff({ reveal: { zone: 'hand:0', to: { id: asPlayerId(1) } } }),
+      makeCtx({ state: mutable, tracker }),
+    );
+
+    assert.equal(tracker.reveals, true);
+    assert.notEqual(result.state.reveals, preMutationReveals);
+    assert.deepEqual(original.reveals, {
+      'hand:0': [{ observers: [asPlayerId(0)] }],
+    });
+    assert.deepEqual(result.state.reveals, {
+      'hand:0': [
+        { observers: [asPlayerId(0)] },
+        { observers: [asPlayerId(1)] },
+      ],
+    });
+  });
+
+  it('tracker-backed conceal can clear reveals without mutating the original state', () => {
+    const original = {
+      ...makeState(),
+      reveals: {
+        'hand:0': [{ observers: [asPlayerId(1)] }],
+      },
+    };
+    const mutable = createMutableState(original);
+    const tracker = createDraftTracker();
+
+    const result = applyEffect(
+      eff({ conceal: { zone: 'hand:0', from: { id: asPlayerId(1) } } }),
+      makeCtx({ state: mutable, tracker }),
+    );
+
+    assert.equal(tracker.reveals, true);
+    assert.equal(result.state.reveals, undefined);
+    assert.deepEqual(original.reveals, {
+      'hand:0': [{ observers: [asPlayerId(1)] }],
     });
   });
 

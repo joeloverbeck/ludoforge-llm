@@ -15,6 +15,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { createDraftTracker, createMutableState } from '../../../src/kernel/state-draft.js';
 import { makeExecutionEffectContext } from '../../helpers/effect-context-test-helpers.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -181,6 +182,25 @@ describe('zobrist incremental hash — marker effect handlers', () => {
 
       const expected = computeFullHash(table, result.state);
       assert.equal(result.state._runningHash, expected, 'incremental hash must match full recompute after setGlobalMarker');
+    });
+
+    it('tracker-backed path clones globalMarkers before mutation and preserves the original state', () => {
+      const baseState = {
+        ...makeState(def, table),
+        globalMarkers: { capability: 'inactive' },
+      };
+      const mutable = createMutableState(baseState);
+      const tracker = createDraftTracker();
+      const preMutationGlobalMarkers = mutable.globalMarkers;
+      const ctx = { ...makeCtx(def, mutable), tracker };
+
+      const effect: EffectAST = eff({ setGlobalMarker: { marker: 'capability', state: 'active' } });
+      const result = applyEffects([effect], ctx);
+
+      assert.equal(tracker.globalMarkers, true);
+      assert.notEqual(result.state.globalMarkers, preMutationGlobalMarkers);
+      assert.deepEqual(baseState.globalMarkers, { capability: 'inactive' });
+      assert.deepEqual(result.state.globalMarkers, { capability: 'active' });
     });
   });
 

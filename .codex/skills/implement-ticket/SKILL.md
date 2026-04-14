@@ -39,6 +39,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
+   - When a draft or recently edited ticket names specific files, prefer a quick path-validation pass (`rg --files`, targeted `find`, or equivalent) before opening the file directly if there is any sign of path drift.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
@@ -65,8 +66,18 @@ When the active ticket or referenced artifacts are untracked drafts:
 4. Prefer correcting the active draft ticket over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
 5. When live evidence proves a draft example snippet, helper sketch, or command block is semantically wrong but the owned boundary is still correct, update the active draft ticket so future turns do not inherit the stale example.
    - Timing: apply these nonblocking draft-ticket corrections either immediately after reassessment or during final closeout, but do not mark the ticket complete while the stale draft text remains.
+   - Preference: if the stale draft text could mislead the implementation itself (for example wrong type mutability, wrong owned file, wrong command shape, or wrong acceptance semantics), correct the active draft ticket before code edits. If it only affects future readability or closeout accuracy, correcting it during final closeout is acceptable.
 6. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
 7. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
+
+#### Draft Drift Preflight
+
+When the active ticket is an untracked draft, or when a tracked ticket appears stale, run this quick preflight before coding:
+
+1. Confirm ticket-named file paths still exist before opening them blindly.
+2. Confirm ticket-named commands still match the live repo tooling and output paths.
+3. Check example snippets for semantic drift that would mislead implementation (for example `readonly` vs mutable fields, stale return shapes, or wrong helper names).
+4. Check sibling draft ownership only far enough to confirm the current ticket has not already been absorbed, contradicted, or split differently.
 
 ### Phase 2: Reassess Assumptions
 

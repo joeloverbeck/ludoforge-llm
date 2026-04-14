@@ -8,7 +8,9 @@
 
 ## Overview
 
-Extend the existing `state-draft.ts` copy-on-write system from inner effect-execution scopes to the **entire `applyMove` boundary**. Convert all 61 `...state` spread sites in the kernel to use the draft system. Eliminate the remaining ~12% CPU overhead from immutable object spreads during state transitions.
+Extend the existing `state-draft.ts` copy-on-write system from inner effect-execution scopes to the **entire `applyMove` boundary**. Convert all remaining kernel spread sites outside the draft machinery to use the draft system. Eliminate the remaining ~12% CPU overhead from immutable object spreads during state transitions.
+
+**Spread site methodology**: A raw grep for `...(state|cursor\.state)` yields 61 matches across 18 kernel files, but 15 of those are in `state-draft.ts` itself (the draft machinery — not conversion targets). Additional sites use variable names like `...progressedState` or `...nextState`. The convertible site count (excluding draft infrastructure, `initial-state.ts` construction, `serde.ts` deserialization) is approximately 45-55 depending on counting methodology.
 
 ### Rationale
 
@@ -37,12 +39,18 @@ The existing Spec 78 implementation (`state-draft.ts`) satisfies these constrain
 The draft system exists but its coverage is narrow:
 
 - **Covered**: Effect handlers inside `applyEffectsWithBudgetState` — `setVar`, `moveToken`, `setMarkerState`, `createToken`, `destroyToken`
-- **Not covered (61 spread sites)**:
-  - `apply-move.ts` — lifecycle phase transitions, turn order updates, free operation state, hash computation boundary
-  - `turn-flow-eligibility.ts` — eligibility window state updates (4 spread sites)
-  - `effects-markers.ts` — global marker state transitions (6+ spread sites)
-  - `effects-token.ts` — zone mutation finalization (2 spread sites outside draft scope)
-  - `phase-advance.ts`, `grant-lifecycle.ts`, `event-execution.ts` — phase/grant/event state updates
+- **Not covered (45-55 convertible spread sites)**:
+  - `apply-move.ts` — lifecycle phase transitions, turn order updates, free operation state, hash computation boundary (~10 spread sites including `...progressedState`, `...nextState` variants)
+  - `turn-flow-lifecycle.ts` — turn flow lifecycle state updates (7 spread sites)
+  - `turn-flow-eligibility.ts` — eligibility window state updates (4-6 spread sites)
+  - `effects-markers.ts` — global marker state transitions (7 spread sites in immutable fallback path; already has dual-path draft logic from Spec 78)
+  - `effects-turn-flow.ts` — turn flow effect state updates (2-5 spread sites)
+  - `phase-advance.ts` — phase advance state transitions (4-8 spread sites including `...progressedState` variants)
+  - `action-usage.ts` — action usage tracking updates (4 spread sites)
+  - `effects-token.ts` — zone mutation finalization (2-4 spread sites outside draft scope)
+  - `effects-reveal.ts` — reveal state updates (2 spread sites)
+  - `event-execution.ts` — event state updates (1 spread site)
+  - `grant-lifecycle.ts`, `scoped-var-runtime-access.ts`, `free-operation-viability.ts` — minor spread sites (1 each)
 
 These uncovered sites create new GameState objects via `{ ...state, field: newValue }` — each copying 15+ top-level properties plus nested record contents.
 
@@ -52,11 +60,11 @@ These uncovered sites create new GameState objects via `{ ...state, field: newVa
 
 **Current scope**: `applyEffectsWithBudgetState` creates a mutable state and DraftTracker at the start of each effect execution batch. Multiple batches within a single `applyMove` each create their own draft.
 
-**New scope**: The `applyMoveInternal` function (the single entry point for all state transitions) creates ONE mutable state + DraftTracker at the top. All downstream code — effect execution, lifecycle phase transitions, turn order updates, hash computation — operates on this single draft. The draft is frozen to immutable GameState at the `applyMoveInternal` exit.
+**New scope**: The `applyMoveCore` function (the single entry point for all state transitions) creates ONE mutable state + DraftTracker at the top. All downstream code — effect execution, lifecycle phase transitions, turn order updates, hash computation — operates on this single draft. The draft is frozen to immutable GameState at the `applyMoveCore` exit.
 
 ```
 BEFORE (Spec 78):
-  applyMoveInternal(immutableState)
+  applyMoveCore(immutableState)
     → executeMoveAction(immutableState)
       → applyEffectsWithBudgetState(immutableState)  // creates draft #1
         → setVar (mutates draft #1)
@@ -65,28 +73,32 @@ BEFORE (Spec 78):
             → moveToken (mutates draft #2)
         → freeze draft #2, merge back
       → freeze draft #1
-    → advanceToDecisionPoint({...state, ...})        // SPREAD — new immutable state
-    → applyTurnFlowEligibility({...state, ...})      // SPREAD — another copy
-    → computeFullHash({...state, ...})               // SPREAD — final copy
+    → applyTurnFlowEligibilityAfterMove({...state})  // SPREAD — new immutable state
+    → applyReleasedDeferredEventEffects({...state})   // SPREAD — another copy
+    → applyBoundaryExpiry({...state})                 // SPREAD — another copy
+    → advanceToDecisionPoint({...state})              // SPREAD — another copy
+    → { ...progressedState, stateHash, _runningHash } // SPREAD — final copy
 
 AFTER (Spec 128):
-  applyMoveInternal(immutableState)
-    → createMutableState(immutableState)              // ONE draft for entire applyMove
+  applyMoveCore(immutableState)
+    → createMutableState(immutableState)              // ONE draft for entire applyMoveCore
     → executeMoveAction(mutableState, tracker)
       → applyEffectsWithBudgetState(mutableState, tracker)  // reuses existing draft
         → setVar (mutates in-place)
         → forEach
           → applyEffectsWithBudgetState(mutableState, tracker)  // reuses existing draft
             → moveToken (mutates in-place)
+    → applyTurnFlowEligibilityAfterMove(mutableState, tracker)  // mutates state in-place, returns non-state fields
+    → applyReleasedDeferredEventEffects(mutableState, tracker)  // mutates state in-place, returns non-state fields
+    → applyBoundaryExpiry(mutableState, tracker)      // mutates state in-place, returns non-state fields
     → advanceToDecisionPoint(mutableState, tracker)   // mutates in-place
-    → applyTurnFlowEligibility(mutableState, tracker) // mutates in-place
-    → computeFullHash(mutableState)                   // reads mutable state, writes stateHash
+    → mutableState.stateHash = reconciledHash         // direct assignment, no spread
     → freezeState(mutableState)                       // ONE freeze at exit
 ```
 
 ### 2. Convert Lifecycle State Updates to Draft Mutations
 
-Each of the 61 `...state` spread sites must be converted to direct property assignment on the mutable state. Examples:
+Each of the ~45-55 convertible `...state` spread sites must be converted to direct property assignment on the mutable state. Examples:
 
 **Before** (turn-flow-eligibility.ts):
 ```typescript
@@ -128,76 +140,36 @@ export interface DraftTracker {
   readonly activeLastingEffects: boolean;
   readonly interruptPhaseStack: boolean;
   readonly actionUsage: boolean;
-  readonly freeOperationGrants: boolean;
 }
 ```
 
 Each new boolean tracks whether the corresponding nested object/array has been shallow-cloned. The boolean pattern (vs Set) is appropriate for singleton nested objects (only one `turnOrderState`, not one per zone).
 
-### 4. Eliminate Conditional Spreads in createMutableState
-
-**Before**:
-```typescript
-export function createMutableState(state: GameState): MutableGameState {
-  return {
-    ...state,
-    globalVars: { ...state.globalVars },
-    // ...
-    ...(state.reveals !== undefined ? { reveals: { ...state.reveals } } : {}),
-    ...(state.globalMarkers !== undefined ? { globalMarkers: { ...state.globalMarkers } } : {}),
-    ...(state.activeLastingEffects !== undefined ? { activeLastingEffects: [...state.activeLastingEffects] } : {}),
-  };
-}
-```
-
-**After**: Clone eagerly (always present, use `undefined` as sentinel):
-```typescript
-export function createMutableState(state: GameState): MutableGameState {
-  return {
-    ...state,
-    globalVars: { ...state.globalVars },
-    perPlayerVars: { ...state.perPlayerVars },
-    zoneVars: { ...state.zoneVars },
-    zones: { ...state.zones },
-    actionUsage: { ...state.actionUsage },
-    markers: { ...state.markers },
-    turnOrderState: { ...state.turnOrderState },
-    reveals: state.reveals !== undefined ? { ...state.reveals } : undefined,
-    globalMarkers: state.globalMarkers !== undefined ? { ...state.globalMarkers } : undefined,
-    activeLastingEffects: state.activeLastingEffects !== undefined ? [...state.activeLastingEffects] : undefined,
-    interruptPhaseStack: state.interruptPhaseStack !== undefined ? [...state.interruptPhaseStack] : undefined,
-  };
-}
-```
-
-This eliminates conditional spread (`...(cond ? {} : {obj})`) which creates objects with different V8 hidden classes. The ternary `cond ? clone : undefined` produces a consistent property set.
-
-### 5. Thread Mutable State Through Lifecycle Functions
+### 4. Thread Mutable State Through Lifecycle Functions
 
 Functions that currently accept `GameState` and return a new `GameState` must be refactored to accept `MutableGameState` + `DraftTracker` and mutate in-place:
 
-| Function | File | Current signature | New signature |
-|----------|------|-------------------|---------------|
-| `advanceToDecisionPoint` | `apply-move.ts` | `(def, state, ...) -> state` | `(def, mutableState, tracker, ...) -> void` |
-| `applyTurnFlowEligibility` | `turn-flow-eligibility.ts` | `(def, state, ...) -> state` | `(def, mutableState, tracker, ...) -> void` |
-| `applyBoundaryExpiry` | `apply-move.ts` | `(def, state, ...) -> state` | `(def, mutableState, tracker, ...) -> void` |
-| `applyDeferredEventEffects` | `event-execution.ts` | `(def, state, ...) -> state` | `(def, mutableState, tracker, ...) -> void` |
-| `applyMarkerState` | `effects-markers.ts` | `(cursor, ...) -> cursor` | `(cursor, ...) -> void` (cursor.state already mutable) |
+| Function | File | Current return type | New signature notes |
+|----------|------|---------------------|---------------------|
+| `advanceToDecisionPoint` | `phase-advance.ts` | `GameState` | Accept `MutableGameState` + `DraftTracker`, mutate in-place, return `void` |
+| `applyTurnFlowEligibilityAfterMove` | `turn-flow-eligibility.ts` | `TurnFlowTransitionResult` (contains `.state: GameState` + trace entries + boundary durations) | Accept mutable state + tracker; still must return non-state fields (trace entries, boundary durations) |
+| `applyBoundaryExpiry` | `boundary-expiry.ts` | `BoundaryExpiryResult` (contains `.state: GameState` + trace entries) | Accept mutable state + tracker; still must return non-state fields (trace entries) |
+| `applyReleasedDeferredEventEffects` | `apply-move.ts` (internal) | `MoveActionExecutionResult` (contains `.stateWithRng: GameState`) | Accept mutable state + tracker; still must return non-state fields (trigger firings) |
 
-**Important**: Functions called from OUTSIDE `applyMove` (e.g., `legalMoves`, `terminalResult`, agent preview) continue to receive immutable `GameState`. The mutable path is ONLY within `applyMoveInternal`.
+**Important**: Functions called from OUTSIDE `applyMove` (e.g., `legalMoves`, `terminalResult`, agent preview) continue to receive immutable `GameState`. The mutable path is ONLY within `applyMoveCore`.
 
-### 6. Hash Computation at Draft Boundary
+### 5. Hash Computation at Draft Boundary
 
-`computeFullHash` currently receives immutable state and returns `{ ...state, stateHash }`. In the draft system:
-1. Compute the hash from the mutable state (read-only operation — safe)
-2. Assign `mutableState.stateHash = computedHash` directly
+`computeFullHash` (in `zobrist.ts`) returns a `bigint` hash value. Currently, `applyMoveCore` (lines 1517-1521) creates a final spread: `{ ...progressedState, stateHash: reconciledHash, _runningHash: reconciledHash }`. In the draft system:
+1. Compute the hash from the mutable state via `reconcileRunningHash` or `computeFullHash` (read-only operation — safe)
+2. Assign `mutableState.stateHash = reconciledHash` and `mutableState._runningHash = reconciledHash` directly
 3. Then `freezeState(mutableState)` produces the final immutable state with the correct hash
 
-### 7. Probe Path Isolation
+### 6. Probe Path Isolation
 
-`probeMoveViability` calls `applyMoveInternal` to test move validity. The probe MUST create its own draft scope (not share with the caller's draft). This is already the case since `probeMoveViability` calls `applyMove` which will create its own `createMutableState` at the top.
+`probeMoveViability` (at `apply-move.ts:1821`) is a pure read-only validation probe — it performs condition evaluation, parameter validation, and decision sequence resolution without any state mutation. It does NOT call `applyMoveCore` or `applyMove`. Therefore, it is **unaffected by this change** and requires no modification.
 
-The key invariant: probe drafts are independent of the game-loop draft. The game-loop creates a draft at `applyTrustedMove` → `applyMoveInternal`; probes create separate drafts within `probeMoveViability` → `applyMoveInternal`.
+The key invariant remains: `applyMove` and `applyTrustedMove` both call `applyMoveCore`, which will own the single draft scope. `probeMoveViability` operates on immutable state and never enters the draft path.
 
 ## Constraints
 
@@ -211,15 +183,16 @@ The key invariant: probe drafts are independent of the game-loop draft. The game
 
 ## Risk Assessment
 
-**High risk, high reward.** This change touches 61+ sites across 10+ kernel files. Incremental delivery is essential — convert one file at a time, verify determinism after each file.
+**High risk, high reward.** This change touches ~45-55 sites across 12+ kernel files. Incremental delivery is essential — convert one file at a time, verify determinism after each file.
 
 **Suggested implementation order**:
-1. Thread mutable state through `applyMoveInternal` (top-level plumbing)
-2. Convert `effects-markers.ts` (6 spread sites, self-contained)
-3. Convert `turn-flow-eligibility.ts` (4 spread sites)
-4. Convert `apply-move.ts` lifecycle helpers (4 spread sites)
-5. Convert remaining files
-6. Benchmark after each phase
+1. Thread mutable state through `applyMoveCore` (top-level plumbing)
+2. Ensure `effects-markers.ts` handlers always receive a tracker from the widened scope (they already have dual-path draft logic from Spec 78 — minimal conversion effort)
+3. Convert `turn-flow-lifecycle.ts` (7 spread sites — largest uncovered file)
+4. Convert `turn-flow-eligibility.ts` (4-6 spread sites)
+5. Convert `apply-move.ts` lifecycle helpers and hash boundary (~10 spread sites)
+6. Convert remaining files (`phase-advance.ts`, `action-usage.ts`, `effects-turn-flow.ts`, `effects-reveal.ts`, etc.)
+7. Benchmark after each phase
 
 ## Expected Impact
 

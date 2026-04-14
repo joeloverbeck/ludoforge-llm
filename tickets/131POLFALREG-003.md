@@ -4,13 +4,13 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — TBD based on audit findings
-**Deps**: `tickets/131POLFALREG-002.md`
+**Deps**: `archive/tickets/131POLFALREG-002.md`
 
 ## Problem
 
 If the fallback-threading removal (ticket 001) does not fully recover the benchmark regression to within noise of the `14a33c29` baseline, residual slowdown from Spec 130 commits remains. This ticket performs a bounded, evidence-driven audit of Spec 130 commits (`700bc128` through `fb2acad4`) to isolate any additional regression sources.
 
-**Gate condition**: Close this ticket without implementation if `tickets/131POLFALREG-002.md` profiling shows recovery to within ~2-3% of the `14a33c29` baseline (`14090.38ms`).
+**Gate condition**: Close this ticket without implementation if `archive/tickets/131POLFALREG-002.md` profiling shows recovery to within ~2-3% of the `14a33c29` baseline (`14090.38ms`).
 
 ## Assumption Reassessment (2026-04-14)
 

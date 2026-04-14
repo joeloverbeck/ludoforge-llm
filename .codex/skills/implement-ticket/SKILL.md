@@ -47,6 +47,13 @@ When the ticket is a **bounded local refactor**, keep the read phase lean after 
 3. Load only the optional reference files needed by the live boundary you actually found.
 4. Still emit the full working-notes checkpoint before coding.
 
+When the ticket is a **proof, benchmark, audit, or investigation ticket**, do this compact gate checklist before heavy commands:
+
+1. Identify the authoritative measurement or verdict surface (`harness`, saved report, trace, direct runner, etc.).
+2. Confirm which logs, reports, or other artifacts this ticket actually owns.
+3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
+4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
@@ -259,6 +266,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
+- for completed active tickets, use the explicit status spelling `**Status**: COMPLETED` unless the repo artifact already documents a different final status class such as `BLOCKED`, `DEFERRED`, or `REJECTED`
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
 - completion date or resulting status
@@ -274,6 +282,7 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - Execute implementation directly once the ticket is verified and no blocking discrepancy remains.
 - When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads.
 - When checking touched-file scope, remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.
+- For profiling or benchmark gate tickets, treat the ticket-owned harness/log/report surface as authoritative over exploratory single-run probes when the two differ.
 
 ## Example Prompts
 

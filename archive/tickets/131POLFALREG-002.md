@@ -1,6 +1,6 @@
 # 131POLFALREG-002: Benchmark recovery gate — verify regression recovery
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — benchmark measurement only
@@ -29,7 +29,7 @@ This is a profiling gate ticket. Its outcome determines whether ticket 003 (boun
 
 ### 1. Run pre-refactor baseline
 
-Before starting, record the current HEAD benchmark as the "before" measurement:
+Use the already-recorded pre-refactor and pre-ticket-001 benchmark evidence as the "before" measurement surface:
 
 ```bash
 node campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200
@@ -94,5 +94,28 @@ Update run log files with benchmark results. Determine gate outcome:
 
 1. `bash campaigns/fitl-perf-optimization/checks.sh`
 2. `pnpm -F @ludoforge/engine test`
+3. `node campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
+4. `bash campaigns/fitl-perf-optimization/harness.sh`
+
+## Outcome
+
+**Completed**: 2026-04-14
+
+- Ran the ticket-owned correctness and benchmark gate commands on current `HEAD` after the fallback-threading removal from archived ticket `131POLFALREG-001`.
+- Updated the campaign-owned benchmark logs: `campaigns/fitl-perf-optimization/run.log.gate` and `campaigns/fitl-perf-optimization/run.log.runner.{1,2,3}`.
+- Gate result: **FAIL**. The harness median was `15630.48ms`, which is `+10.93%` slower than the `14a33c29` baseline (`14090.38ms`) and `+4.43%` slower than the previously recorded post-refactor `fb2acad4` measurement (`14966.89ms`).
+- Determinism held in the harness-owned proof surface: all three runs produced the same `state_hash` fingerprint `dbca86daa0157586`, with `games_completed=3`, `errors=0`, and `total_moves=600`.
+- The dominant measured bucket remained `agentChooseMove_ms` (`9990.2ms` on the median harness run), which keeps the downstream investigation boundary with `tickets/131POLFALREG-003.md`.
+
+### Boundary Notes
+
+- Semantic correction: the ticket's original "run pre-refactor baseline before starting" wording was stale once `131POLFALREG-001` had already landed. The live gate compared current measurements against the recorded baseline evidence and fresh campaign logs instead.
+- No code changes were made in this ticket. No schema or generated artifact surfaces changed outside the owned campaign logs.
+- Downstream action: `tickets/131POLFALREG-003.md` remains required and now has the live benchmark gate result it was waiting on.
+
+### Verification Run
+
+1. `pnpm -F @ludoforge/engine test`
+2. `bash campaigns/fitl-perf-optimization/checks.sh`
 3. `node campaigns/fitl-perf-optimization/run-benchmark.mjs --seeds 3 --players 4 --max-turns 200`
 4. `bash campaigns/fitl-perf-optimization/harness.sh`

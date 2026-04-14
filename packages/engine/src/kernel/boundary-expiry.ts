@@ -11,6 +11,7 @@ import type {
 } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
 import type { DraftTracker } from './state-draft.js';
+import type { MutableGameState } from './state-draft.js';
 
 interface BoundaryExpiryResult {
   readonly state: GameState;
@@ -42,11 +43,19 @@ export const applyBoundaryExpiry = (
     boundaryDurations,
     policy,
     runtimeResources.collector,
+    tracker,
   );
-  let nextState: GameState = {
-    ...expiry.state,
-    rng: expiry.rng.state,
-  };
+  let nextState: GameState;
+  if (tracker === undefined) {
+    nextState = {
+      ...expiry.state,
+      rng: expiry.rng.state,
+    };
+  } else {
+    const mutableState = expiry.state as MutableGameState;
+    mutableState.rng = expiry.rng.state;
+    nextState = mutableState;
+  }
   const traceEntries: TriggerLogEntry[] = [];
   for (const emittedEvent of expiry.emittedEvents) {
     nextState = dispatchLifecycleEvent(

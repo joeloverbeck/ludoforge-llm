@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 import {
   asPhaseId,
   asPlayerId,
+  createDraftTracker,
+  createMutableState,
   resetTurnUsage,
   resetPhaseUsage,
   incrementActionUsage,
@@ -61,6 +63,18 @@ describe('resetTurnUsage', () => {
     assert.notEqual(result, state);
     assert.notEqual(result.actionUsage, state.actionUsage);
   });
+
+  it('mutates the provided draft when a tracker is supplied', () => {
+    const state = createMutableState(makeState({
+      attack: { turnCount: 3, phaseCount: 5, gameCount: 10 },
+    }));
+    const tracker = createDraftTracker();
+
+    const result = resetTurnUsage(state, tracker);
+
+    assert.equal(result, state);
+    assert.deepEqual(result.actionUsage.attack, { turnCount: 0, phaseCount: 5, gameCount: 10 });
+  });
 });
 
 describe('resetPhaseUsage', () => {
@@ -89,6 +103,18 @@ describe('resetPhaseUsage', () => {
     const result = resetPhaseUsage(state);
     assert.notEqual(result, state);
     assert.notEqual(result.actionUsage, state.actionUsage);
+  });
+
+  it('mutates the provided draft when a tracker is supplied', () => {
+    const state = createMutableState(makeState({
+      attack: { turnCount: 3, phaseCount: 5, gameCount: 10 },
+    }));
+    const tracker = createDraftTracker();
+
+    const result = resetPhaseUsage(state, tracker);
+
+    assert.equal(result, state);
+    assert.deepEqual(result.actionUsage.attack, { turnCount: 3, phaseCount: 0, gameCount: 10 });
   });
 });
 
@@ -140,6 +166,22 @@ describe('incrementActionUsage', () => {
       turnCount: 5,
       phaseCount: 5,
       gameCount: 5,
+    });
+  });
+
+  it('mutates the provided draft when a tracker is supplied', () => {
+    const state = createMutableState(makeState({
+      attack: { turnCount: 1, phaseCount: 2, gameCount: 3 },
+    }));
+    const tracker = createDraftTracker();
+
+    const result = incrementActionUsage(state, 'attack' as never, tracker);
+
+    assert.equal(result, state);
+    assert.deepEqual(result.actionUsage.attack, {
+      turnCount: 2,
+      phaseCount: 3,
+      gameCount: 4,
     });
   });
 });

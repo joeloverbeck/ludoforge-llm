@@ -14,7 +14,11 @@ import {
 import type { SeatResolutionContext } from './identity.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { omitOptionalStateKey } from './state-shape.js';
-import type { DraftTracker } from './state-draft.js';
+import {
+  ensureActiveLastingEffectsCloned,
+  type DraftTracker,
+  type MutableGameState,
+} from './state-draft.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
@@ -204,7 +208,20 @@ export const resolveBoundaryDurationsAtTurnEnd = (
 const withActiveLastingEffects = (
   state: GameState,
   activeLastingEffects: readonly ActiveLastingEffect[],
+  tracker?: DraftTracker,
 ): GameState => {
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    const mutableOptionalState =
+      mutableState as MutableGameState & { activeLastingEffects: readonly ActiveLastingEffect[] | undefined };
+    if (activeLastingEffects.length === 0) {
+      mutableOptionalState.activeLastingEffects = undefined;
+      return mutableState;
+    }
+    ensureActiveLastingEffectsCloned(mutableState, tracker);
+    mutableOptionalState.activeLastingEffects = activeLastingEffects;
+    return mutableState;
+  }
   if (activeLastingEffects.length === 0) {
     return omitOptionalStateKey(state, 'activeLastingEffects');
   }
@@ -628,6 +645,7 @@ export const executeEventMove = (
       actionId,
       `action:${actionId}.lasting:${lastingEffect.id}.setup`,
       policy,
+      tracker,
     );
     nextState = setupResult.state;
     nextRng = setupResult.rng;
@@ -644,7 +662,7 @@ export const executeEventMove = (
       ...durationCounters(lastingEffect.duration),
     });
   }
-  const finalState = withActiveLastingEffects(nextState, activeEffects);
+  const finalState = withActiveLastingEffects(nextState, activeEffects, tracker);
   const overrides = collectEligibilityOverrides(context).filter((override) =>
     evaluateEligibilityOverrideCondition(def, finalState, move, override)
   );
@@ -718,6 +736,7 @@ export const expireLastingEffectsAtBoundaries = (
   boundaries: readonly TurnFlowDuration[],
   policy?: MoveExecutionPolicy,
   collector?: ExecutionCollector,
+  tracker?: DraftTracker,
 ): ExecutionStateResult => {
   const activeEffects = state.activeLastingEffects;
   if (activeEffects === undefined || activeEffects.length === 0 || boundaries.length === 0) {
@@ -771,6 +790,7 @@ export const expireLastingEffectsAtBoundaries = (
       'system:lastingExpiry',
       `autoAdvance.lasting:${active.id}.teardown`,
       policy,
+      tracker,
     );
     nextState = teardownResult.state;
     nextRng = teardownResult.rng;
@@ -778,7 +798,7 @@ export const expireLastingEffectsAtBoundaries = (
   }
 
   return {
-    state: withActiveLastingEffects(nextState, retained),
+    state: withActiveLastingEffects(nextState, retained, tracker),
     rng: nextRng,
     emittedEvents,
   };

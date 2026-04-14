@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel test infrastructure
-**Deps**: `archive/tickets/128FULSCODRA-003.md`, `archive/tickets/128FULSCODRA-004.md`, `tickets/128FULSCODRA-005.md`
+**Deps**: `archive/tickets/128FULSCODRA-003.md`, `archive/tickets/128FULSCODRA-004.md`, `archive/tickets/128FULSCODRA-005.md`
 
 ## Problem
 

@@ -96,6 +96,7 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
    - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
    - When changing a shared callable type contract, grep both runtime callsites and their tests
+   - When changing helper signatures, argument threading, or call arity, also grep for source-guard, AST-policy, and contract-style tests that assert call shape or helper wiring
    - Shared state/object-shape migrations: explicitly inspect initializers, clone/draft builders, serialization/deserialization, and any runtime delete/unset/cleanup helpers that may silently reintroduce shape drift after your main type change
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates

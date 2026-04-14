@@ -9,7 +9,7 @@ import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveZoneWithNormalization, selectorResolutionFailurePolicyForMode } from './selector-resolution-normalization.js';
 import { findSpaceMarkerConstraintViolation, resolveSpaceMarkerShift } from './space-marker-rules.js';
-import { ensureMarkerCloned, type MutableGameState } from './state-draft.js';
+import { ensureGlobalMarkersCloned, ensureMarkerCloned, type MutableGameState } from './state-draft.js';
 import type { ZobristFeature } from './types-core.js';
 import type { EffectAST } from './types.js';
 import { addToRunningHash, updateRunningHash } from './zobrist.js';
@@ -249,17 +249,23 @@ export const applySetGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const mutableState = cursor.state as MutableGameState;
     const oldExplicit = cursor.state.globalMarkers?.[marker];
-    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = evaluatedState;
+    if (mutableState.globalMarkers === undefined) {
+      mutableState.globalMarkers = { [marker]: evaluatedState };
+      cursor.tracker.globalMarkers = true;
+    } else {
+      ensureGlobalMarkersCloned(mutableState, cursor.tracker);
+      (mutableState.globalMarkers as Record<string, string>)[marker] = evaluatedState;
+    }
     const table = env.cachedRuntime?.zobristTable;
     if (table) {
-      const ms = cursor.state as MutableGameState;
       const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: evaluatedState };
       if (oldExplicit !== undefined) {
         const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: oldExplicit };
-        updateRunningHash(ms, table, oldF, newF);
+        updateRunningHash(mutableState, table, oldF, newF);
       } else {
-        addToRunningHash(ms, table, newF);
+        addToRunningHash(mutableState, table, newF);
       }
     }
     return { state: cursor.state, rng: cursor.rng };
@@ -318,17 +324,23 @@ export const applyShiftGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const mutableState = cursor.state as MutableGameState;
     const oldExplicit = cursor.state.globalMarkers?.[marker];
-    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[marker] = newState;
+    if (mutableState.globalMarkers === undefined) {
+      mutableState.globalMarkers = { [marker]: newState };
+      cursor.tracker.globalMarkers = true;
+    } else {
+      ensureGlobalMarkersCloned(mutableState, cursor.tracker);
+      (mutableState.globalMarkers as Record<string, string>)[marker] = newState;
+    }
     const table = env.cachedRuntime?.zobristTable;
     if (table) {
-      const ms = cursor.state as MutableGameState;
       const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: newState };
       if (oldExplicit !== undefined) {
         const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: marker, state: oldExplicit };
-        updateRunningHash(ms, table, oldF, newF);
+        updateRunningHash(mutableState, table, oldF, newF);
       } else {
-        addToRunningHash(ms, table, newF);
+        addToRunningHash(mutableState, table, newF);
       }
     }
     return { state: cursor.state, rng: cursor.rng };
@@ -437,17 +449,23 @@ export const applyFlipGlobalMarker = (
   }
 
   if (cursor.tracker) {
+    const mutableState = cursor.state as MutableGameState;
     const oldExplicit = cursor.state.globalMarkers?.[evaluatedMarker];
-    ((cursor.state as { globalMarkers: Record<string, string> }).globalMarkers ??= {})[evaluatedMarker] = nextState;
+    if (mutableState.globalMarkers === undefined) {
+      mutableState.globalMarkers = { [evaluatedMarker]: nextState };
+      cursor.tracker.globalMarkers = true;
+    } else {
+      ensureGlobalMarkersCloned(mutableState, cursor.tracker);
+      (mutableState.globalMarkers as Record<string, string>)[evaluatedMarker] = nextState;
+    }
     const table = env.cachedRuntime?.zobristTable;
     if (table) {
-      const ms = cursor.state as MutableGameState;
       const newF: ZobristFeature = { kind: 'globalMarkerState', markerId: evaluatedMarker, state: nextState };
       if (oldExplicit !== undefined) {
         const oldF: ZobristFeature = { kind: 'globalMarkerState', markerId: evaluatedMarker, state: oldExplicit };
-        updateRunningHash(ms, table, oldF, newF);
+        updateRunningHash(mutableState, table, oldF, newF);
       } else {
-        addToRunningHash(ms, table, newF);
+        addToRunningHash(mutableState, table, newF);
       }
     }
     return { state: cursor.state, rng: cursor.rng };

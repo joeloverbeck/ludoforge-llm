@@ -44,6 +44,7 @@ const createRandomAgents = (count: number): readonly Agent[] =>
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
+const REPLAY_COUNT = 3;
 /**
  * Replay determinism is already exercised elsewhere in the test suite; this
  * file owns a curated production-scale replay parity proof. Keep FITL seed
@@ -85,38 +86,35 @@ const runOnce = (
   }
 };
 
-/**
- * Run a game twice with the same seed. If the engine is deterministic:
- * - Both runs succeed with identical final state hashes, OR
- * - Both runs fail with the same error message.
- */
 const assertDeterministic = (
   def: ValidatedGameDef,
   seed: number,
   playerCount: number,
   label: string,
 ): void => {
-  const run1 = runOnce(def, seed, playerCount);
-  const run2 = runOnce(def, seed, playerCount);
+  const baseline = runOnce(def, seed, playerCount);
 
-  assert.equal(
-    run1.kind,
-    run2.kind,
-    `${label} seed ${seed}: outcome kind diverged (${run1.kind} vs ${run2.kind})`,
-  );
+  for (let replay = 1; replay < REPLAY_COUNT; replay += 1) {
+    const candidate = runOnce(def, seed, playerCount);
+    assert.equal(
+      baseline.kind,
+      candidate.kind,
+      `${label} seed ${seed}: replay ${replay + 1} outcome kind diverged (${baseline.kind} vs ${candidate.kind})`,
+    );
 
-  if (run1.kind === 'ok' && run2.kind === 'ok') {
-    assert.equal(
-      run1.hash,
-      run2.hash,
-      `${label} seed ${seed}: final state hash diverged (${run1.hash.toString(16)} vs ${run2.hash.toString(16)})`,
-    );
-  } else if (run1.kind === 'error' && run2.kind === 'error') {
-    assert.equal(
-      run1.message,
-      run2.message,
-      `${label} seed ${seed}: error message diverged`,
-    );
+    if (baseline.kind === 'ok' && candidate.kind === 'ok') {
+      assert.equal(
+        baseline.hash,
+        candidate.hash,
+        `${label} seed ${seed}: replay ${replay + 1} final state hash diverged (${baseline.hash.toString(16)} vs ${candidate.hash.toString(16)})`,
+      );
+    } else if (baseline.kind === 'error' && candidate.kind === 'error') {
+      assert.equal(
+        baseline.message,
+        candidate.message,
+        `${label} seed ${seed}: replay ${replay + 1} error message diverged`,
+      );
+    }
   }
 };
 
@@ -125,7 +123,7 @@ const assertDeterministic = (
 // ---------------------------------------------------------------------------
 
 describe('draft-state determinism parity', () => {
-  describe(`FITL — ${FITL_SEEDS.length} curated seeds produce identical hashes on replay`, () => {
+  describe(`FITL — ${FITL_SEEDS.length} curated seeds produce identical replay outcomes across ${REPLAY_COUNT} runs`, () => {
     const def = compileFitlDef();
 
     for (const seed of FITL_SEEDS) {
@@ -135,7 +133,7 @@ describe('draft-state determinism parity', () => {
     }
   });
 
-  describe(`Texas Hold'em — ${TEXAS_SEEDS.length} seeds produce identical hashes on replay`, () => {
+  describe(`Texas Hold'em — ${TEXAS_SEEDS.length} seeds produce identical replay outcomes across ${REPLAY_COUNT} runs`, () => {
     const def = compileTexasDef();
 
     for (const seed of TEXAS_SEEDS) {

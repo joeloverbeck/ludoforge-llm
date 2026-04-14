@@ -154,8 +154,7 @@ export interface EvaluatePolicyMoveInput {
 }
 
 /**
- * Canonical shape: kind, move, rng, failure, fallbackMove,
- * fallbackStableMoveKey, fallbackScore, metadata.
+ * Canonical shape: kind, move, rng, failure, metadata.
  * All construction sites must materialize every property.
  */
 export type PolicyEvaluationCoreResult =
@@ -164,9 +163,6 @@ export type PolicyEvaluationCoreResult =
       readonly move: Move;
       readonly rng: Rng;
       readonly failure: undefined;
-      readonly fallbackMove: undefined;
-      readonly fallbackStableMoveKey: undefined;
-      readonly fallbackScore: undefined;
       readonly metadata: PolicyEvaluationMetadata;
     }
   | {
@@ -174,9 +170,6 @@ export type PolicyEvaluationCoreResult =
       readonly move: Move | undefined;
       readonly rng: Rng | undefined;
       readonly failure: PolicyEvaluationFailure;
-      readonly fallbackMove: Move | undefined;
-      readonly fallbackStableMoveKey: string | undefined;
-      readonly fallbackScore: number | null | undefined;
       readonly metadata: PolicyEvaluationMetadata;
     };
 
@@ -367,9 +360,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         code: 'EMPTY_LEGAL_MOVES',
         message: 'Policy evaluation requires at least one legal move.',
       },
-      fallbackMove: undefined,
-      fallbackStableMoveKey: undefined,
-      fallbackScore: undefined,
       metadata: {
         seatId: null,
         requestedProfileId,
@@ -626,9 +616,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       move: selected.move,
       rng,
       failure: undefined,
-      fallbackMove: undefined,
-      fallbackStableMoveKey: undefined,
-      fallbackScore: undefined,
       metadata: {
         seatId,
         requestedProfileId,
@@ -725,18 +712,18 @@ export function evaluatePolicyMove(input: EvaluatePolicyMoveInput): PolicyEvalua
     return core;
   }
 
-  const fallbackMove = core.fallbackMove;
-  if (fallbackMove === undefined || input.fallbackOnError === false) {
+  const fallbackCandidate = canonicalizeCandidates(input.def, input.legalMoves)[0];
+  if (fallbackCandidate === undefined || input.fallbackOnError === false) {
     throw new PolicyRuntimeError(core.failure);
   }
 
   return {
-    move: fallbackMove,
+    move: fallbackCandidate.move,
     rng: input.rng,
     metadata: {
       ...core.metadata,
-      selectedStableMoveKey: core.fallbackStableMoveKey ?? null,
-      finalScore: core.fallbackScore ?? null,
+      selectedStableMoveKey: fallbackCandidate.stableMoveKey,
+      finalScore: Number.isFinite(fallbackCandidate.score) ? fallbackCandidate.score : null,
       usedFallback: true,
     },
   };
@@ -752,17 +739,11 @@ function failureWithMetadata(
   completionStatistics?: PolicyCompletionStatistics,
   movePreparations?: readonly PolicyMovePreparationTrace[],
 ): PolicyEvaluationCoreResult {
-  const fallbackCandidate = candidates[0];
   return {
     kind: 'failure',
     move: undefined,
     rng: undefined,
     failure,
-    fallbackMove: fallbackCandidate?.move,
-    fallbackStableMoveKey: fallbackCandidate?.stableMoveKey,
-    fallbackScore: fallbackCandidate === undefined
-      ? undefined
-      : (Number.isFinite(fallbackCandidate.score) ? fallbackCandidate.score : null),
     metadata: {
       seatId,
       requestedProfileId,

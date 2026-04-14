@@ -8,6 +8,7 @@ import {
   asPlayerId,
   asZoneId,
   initialState,
+  serializeGameState,
   type GameDef,
   type Move,
   type GameState,
@@ -187,6 +188,23 @@ describe('FITL eligibility/pass-chain integration', () => {
     assert.equal(requireCardDrivenRuntime(second).currentCard.secondEligible, 'VC');
     assert.deepEqual(requireCardDrivenRuntime(second).eligibility, { US: false, ARVN: false, NVA: true, VC: true });
     assert.deepEqual(requireCardDrivenRuntime(second).currentCard.actedSeats, []);
+  });
+
+  it('keeps pass-chain resolution byte-identical across repeated runs', () => {
+    const def = createDef();
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const runPassChain = () => {
+      let state = initialState(def, 19, 4).state;
+      for (let i = 0; i < 4; i += 1) {
+        state = applyMove(def, state, passMove).state;
+      }
+      return serializeGameState(state);
+    };
+
+    const first = runPassChain();
+    const second = runPassChain();
+
+    assert.deepEqual(second, first);
   });
 
   it('promotes cards across successive rightmost-pass boundaries without stale boundary reuse', () => {

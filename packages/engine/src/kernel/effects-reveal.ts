@@ -20,6 +20,7 @@ import { toTraceProvenanceContext } from './effect-context.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
+import { ensureRevealsCloned, type MutableGameState } from './state-draft.js';
 import type { EffectAST, RevealGrant, TokenFilterExpr } from './types.js';
 
 const canonicalTokenFilterKeyForRuntime = (filter: TokenFilterExpr): string => {
@@ -105,14 +106,17 @@ export const applyConceal = (
   });
 
   if (cursor.tracker) {
-    const mutableReveals = cursor.state.reveals as Record<string, unknown>;
+    const mutableState = cursor.state as MutableGameState;
+    ensureRevealsCloned(mutableState, cursor.tracker);
+    const mutableReveals = mutableState.reveals as Record<string, unknown>;
     if (remainingZoneGrants.length === 0) {
       delete mutableReveals[zoneId];
     } else {
       mutableReveals[zoneId] = remainingZoneGrants;
     }
     if (Object.keys(mutableReveals).length === 0) {
-      return { state: omitOptionalStateKey(cursor.state, 'reveals'), rng: cursor.rng, emittedEvents: [] };
+      mutableState.reveals = undefined;
+      return { state: mutableState, rng: cursor.rng, emittedEvents: [] };
     }
     return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
   }
@@ -200,11 +204,13 @@ export const applyReveal = (
   });
 
   if (cursor.tracker) {
-    const mutableReveals = cursor.state.reveals as Record<string, unknown> | undefined;
-    if (mutableReveals !== undefined) {
-      (mutableReveals as Record<string, readonly RevealGrant[]>)[zoneId] = [...existingZoneGrants, grant];
+    const mutableState = cursor.state as MutableGameState;
+    if (mutableState.reveals === undefined) {
+      mutableState.reveals = { [zoneId]: [grant] };
+      cursor.tracker.reveals = true;
     } else {
-      (cursor.state as { reveals: Record<string, readonly RevealGrant[]> }).reveals = { [zoneId]: [grant] };
+      ensureRevealsCloned(mutableState, cursor.tracker);
+      (mutableState.reveals as Record<string, readonly RevealGrant[]>)[zoneId] = [...existingZoneGrants, grant];
     }
     return { state: cursor.state, rng: cursor.rng, emittedEvents: [] };
   }

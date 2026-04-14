@@ -9,6 +9,8 @@ import {
   advanceToDecisionPoint,
   buildAdvancePhaseRequest,
   asActionId,
+  createDraftTracker,
+  createMutableState,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -80,6 +82,23 @@ describe('phase advancement', () => {
     assert.equal(next.currentPhase, asPhaseId('p2'));
     assert.equal(next.turnCount, 0);
     assert.equal(next.activePlayer, asPlayerId(0));
+  });
+
+  it('mutates the provided draft while preserving the GameState return contract', () => {
+    const def = createBaseDef();
+    const state = createMutableState(createState({ currentPhase: asPhaseId('p1') }));
+    const tracker = createDraftTracker();
+
+    const next = advancePhase({
+      def,
+      state,
+      tracker,
+      evalRuntimeResources: createEvalRuntimeResources(),
+    });
+
+    assert.equal(next, state);
+    assert.equal(next.currentPhase, asPhaseId('p2'));
+    assert.equal(next.turnCount, 0);
   });
 
   it('advances from last phase to next turn and next player for roundRobin', () => {
@@ -1131,16 +1150,17 @@ describe('phase-advance seat-resolution lifecycle architecture guard', () => {
     const coupImplicitCalls = collectCallExpressionsByIdentifier(sourceFile, 'coupPhaseImplicitPass');
     assert.equal(
       coupImplicitCalls.some((call) =>
-        call.arguments.length === 3 &&
+        call.arguments.length === 4 &&
         isIdentifierArgument(call.arguments[0]!, 'def') &&
         isIdentifierArgument(call.arguments[1]!, 'nextState') &&
-        isIdentifierArgument(call.arguments[2]!, 'seatResolution'),
+        isIdentifierArgument(call.arguments[2]!, 'seatResolution') &&
+        isIdentifierArgument(call.arguments[3]!, 'tracker'),
       ),
       true,
-      'advanceToDecisionPoint must pass operation-scoped seatResolution to coupPhaseImplicitPass',
+      'advanceToDecisionPoint must pass operation-scoped seatResolution and tracker to coupPhaseImplicitPass',
     );
     assert.equal(
-      coupImplicitCalls.some((call) => call.arguments.length === 2),
+      coupImplicitCalls.some((call) => call.arguments.length <= 2),
       false,
       'advanceToDecisionPoint must not call coupPhaseImplicitPass without seatResolution',
     );

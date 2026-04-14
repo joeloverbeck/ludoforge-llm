@@ -93,6 +93,18 @@ const makeBaseState = (overrides?: Partial<GameState>): GameState => ({
   ...overrides,
 });
 
+const deepFreeze = <T>(value: T): T => {
+  if (typeof value !== 'object' || value === null || Object.isFrozen(value)) {
+    return value;
+  }
+
+  Object.freeze(value);
+  for (const nested of Object.values(value as Record<string, unknown>)) {
+    deepFreeze(nested);
+  }
+  return value;
+};
+
 /**
  * Resolution effect: conditionally deducts resources when __freeOperation is NOT true.
  *
@@ -735,6 +747,30 @@ describe('applyMove() maxPhaseTransitionsPerMove replay boundary', () => {
 
     const capped = applyMove(def, state, move, { maxPhaseTransitionsPerMove: 1, advanceToDecisionPoint: false });
     assert.equal(capped.state.currentPhase, 'street1');
+  });
+});
+
+describe('applyMove() input-state immutability across applyMoveCore draft scope', () => {
+  it('does not mutate a deeply frozen input state and returns a distinct output state', () => {
+    const action: ActionDef = {
+      id: asActionId('gain'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } })],
+      limits: [],
+    };
+    const def = makeBaseDef({ actions: [action] });
+    const frozenState = deepFreeze(makeBaseState());
+
+    const result = applyMove(def, frozenState, { actionId: asActionId('gain'), params: {} }, { advanceToDecisionPoint: false });
+
+    assert.notEqual(result.state, frozenState);
+    assert.equal(Number(frozenState.globalVars.resources), 10);
+    assert.equal(Number(result.state.globalVars.resources), 11);
   });
 });
 

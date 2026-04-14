@@ -3,10 +3,16 @@ import { describe, it } from 'node:test';
 
 import type { GameState, Token } from '../../../src/kernel/types.js';
 import {
+  ensureActionUsageCloned,
+  ensureActiveLastingEffectsCloned,
+  ensureGlobalMarkersCloned,
+  ensureInterruptPhaseStackCloned,
   createDraftTracker,
   createMutableState,
   ensureMarkerCloned,
   ensurePlayerVarCloned,
+  ensureRevealsCloned,
+  ensureTurnOrderStateCloned,
   ensureZoneCloned,
   ensureZoneVarCloned,
   freezeState,
@@ -122,12 +128,18 @@ describe('state-draft', () => {
   });
 
   describe('createDraftTracker', () => {
-    it('returns empty Sets', () => {
+    it('returns all tracker fields with initial values', () => {
       const tracker = createDraftTracker();
       assert.equal(tracker.playerVars.size, 0);
       assert.equal(tracker.zoneVars.size, 0);
       assert.equal(tracker.zones.size, 0);
       assert.equal(tracker.markers.size, 0);
+      assert.equal(tracker.globalMarkers, false);
+      assert.equal(tracker.turnOrderState, false);
+      assert.equal(tracker.reveals, false);
+      assert.equal(tracker.activeLastingEffects, false);
+      assert.equal(tracker.interruptPhaseStack, false);
+      assert.equal(tracker.actionUsage, false);
     });
   });
 
@@ -246,6 +258,150 @@ describe('state-draft', () => {
 
       ensureMarkerCloned(mutable, tracker, 'control');
       assert.equal(mutable.markers['control'], afterFirst);
+    });
+  });
+
+  describe('ensureGlobalMarkersCloned', () => {
+    it('clones the global marker map on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.globalMarkers;
+      assert.ok(before !== undefined);
+
+      ensureGlobalMarkersCloned(mutable, tracker);
+
+      assert.equal(tracker.globalMarkers, true);
+      assert.notEqual(mutable.globalMarkers, before);
+      assert.deepStrictEqual(mutable.globalMarkers, original.globalMarkers);
+
+      const afterFirst = mutable.globalMarkers;
+      ensureGlobalMarkersCloned(mutable, tracker);
+      assert.equal(mutable.globalMarkers, afterFirst);
+    });
+  });
+
+  describe('ensureTurnOrderStateCloned', () => {
+    it('clones the turn order state on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.turnOrderState;
+
+      ensureTurnOrderStateCloned(mutable, tracker);
+
+      assert.equal(tracker.turnOrderState, true);
+      assert.notEqual(mutable.turnOrderState, before);
+      assert.deepStrictEqual(mutable.turnOrderState, original.turnOrderState);
+
+      const afterFirst = mutable.turnOrderState;
+      ensureTurnOrderStateCloned(mutable, tracker);
+      assert.equal(mutable.turnOrderState, afterFirst);
+    });
+  });
+
+  describe('ensureRevealsCloned', () => {
+    it('clones reveals on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.reveals;
+      assert.ok(before !== undefined);
+
+      ensureRevealsCloned(mutable, tracker);
+
+      assert.equal(tracker.reveals, true);
+      assert.notEqual(mutable.reveals, before);
+      assert.deepStrictEqual(mutable.reveals, original.reveals);
+
+      const afterFirst = mutable.reveals;
+      ensureRevealsCloned(mutable, tracker);
+      assert.equal(mutable.reveals, afterFirst);
+    });
+
+    it('is a no-op when reveals is undefined', () => {
+      const mutable = createMutableState(makeStateWithoutOptionals());
+      const tracker = createDraftTracker();
+
+      ensureRevealsCloned(mutable, tracker);
+
+      assert.equal(mutable.reveals, undefined);
+      assert.equal(tracker.reveals, false);
+    });
+  });
+
+  describe('ensureActiveLastingEffectsCloned', () => {
+    it('clones active lasting effects on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.activeLastingEffects;
+      assert.ok(before !== undefined);
+
+      ensureActiveLastingEffectsCloned(mutable, tracker);
+
+      assert.equal(tracker.activeLastingEffects, true);
+      assert.notEqual(mutable.activeLastingEffects, before);
+      assert.deepStrictEqual(mutable.activeLastingEffects, original.activeLastingEffects);
+
+      const afterFirst = mutable.activeLastingEffects;
+      ensureActiveLastingEffectsCloned(mutable, tracker);
+      assert.equal(mutable.activeLastingEffects, afterFirst);
+    });
+
+    it('is a no-op when active lasting effects is undefined', () => {
+      const mutable = createMutableState(makeStateWithoutOptionals());
+      const tracker = createDraftTracker();
+
+      ensureActiveLastingEffectsCloned(mutable, tracker);
+
+      assert.equal(mutable.activeLastingEffects, undefined);
+      assert.equal(tracker.activeLastingEffects, false);
+    });
+  });
+
+  describe('ensureInterruptPhaseStackCloned', () => {
+    it('clones the interrupt phase stack on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.interruptPhaseStack;
+      assert.ok(before !== undefined);
+
+      ensureInterruptPhaseStackCloned(mutable, tracker);
+
+      assert.equal(tracker.interruptPhaseStack, true);
+      assert.notEqual(mutable.interruptPhaseStack, before);
+      assert.deepStrictEqual(mutable.interruptPhaseStack, original.interruptPhaseStack);
+
+      const afterFirst = mutable.interruptPhaseStack;
+      ensureInterruptPhaseStackCloned(mutable, tracker);
+      assert.equal(mutable.interruptPhaseStack, afterFirst);
+    });
+  });
+
+  describe('ensureActionUsageCloned', () => {
+    it('clones action usage on first call and is idempotent', () => {
+      const original = makeMinimalState();
+      const mutable = createMutableState(original);
+      const tracker = createDraftTracker();
+
+      const before = mutable.actionUsage;
+
+      ensureActionUsageCloned(mutable, tracker);
+
+      assert.equal(tracker.actionUsage, true);
+      assert.notEqual(mutable.actionUsage, before);
+      assert.deepStrictEqual(mutable.actionUsage, original.actionUsage);
+
+      const afterFirst = mutable.actionUsage;
+      ensureActionUsageCloned(mutable, tracker);
+      assert.equal(mutable.actionUsage, afterFirst);
     });
   });
 });

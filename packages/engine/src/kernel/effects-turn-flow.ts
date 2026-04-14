@@ -31,11 +31,17 @@ import { resolveFreeOperationExecutionContext } from './free-operation-execution
 import { toMoveExecutionPolicy, type MoveExecutionPolicy } from './execution-policy.js';
 import { updateReadScopeRaw } from './effect-context.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
+import {
+  ensureInterruptPhaseStackCloned,
+  ensureTurnOrderStateCloned,
+  type MutableGameState,
+} from './state-draft.js';
 import type {
   EffectAST,
   GameState,
   TurnFlowFreeOperationGrantContract,
   TurnFlowPendingFreeOperationGrant,
+  TurnFlowRuntimeState,
 } from './types.js';
 import { createSeatResolutionContext, resolveTurnFlowSeatForPlayerIndex } from './identity.js';
 import {
@@ -115,6 +121,29 @@ const resolveTemplateTree = <T>(value: T, bindings: Readonly<Record<string, unkn
     return Object.fromEntries(resolvedEntries) as T;
   }
   return value;
+};
+
+const withCardDrivenRuntime = (
+  state: GameState,
+  nextRuntime: TurnFlowRuntimeState,
+  tracker: EffectCursor['tracker'],
+): GameState => {
+  if (tracker === undefined) {
+    return {
+      ...state,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: nextRuntime,
+      },
+    };
+  }
+  const mutableState = state as MutableGameState;
+  ensureTurnOrderStateCloned(mutableState, tracker);
+  mutableState.turnOrderState = {
+    type: 'cardDriven',
+    runtime: nextRuntime,
+  };
+  return mutableState;
 };
 
 export const applyGrantFreeOperation = (
@@ -308,16 +337,10 @@ export const applyGrantFreeOperation = (
     return {
       state: nextSequenceContexts === runtime.freeOperationSequenceContexts
         ? cursor.state
-        : {
-          ...cursor.state,
-          turnOrderState: {
-            type: 'cardDriven',
-            runtime: {
-              ...runtime,
-              ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
-            },
-          },
-        },
+        : withCardDrivenRuntime(cursor.state, {
+          ...runtime,
+          ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
+        }, cursor.tracker),
       rng: cursor.rng,
     };
   }
@@ -342,17 +365,11 @@ export const applyGrantFreeOperation = (
       sequenceProgressionPolicy,
     );
   return {
-    state: {
-      ...cursor.state,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: {
-          ...runtime,
-          pendingFreeOperationGrants: nextPending,
-          ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
-        },
-      },
-    },
+    state: withCardDrivenRuntime(cursor.state, {
+      ...runtime,
+      pendingFreeOperationGrants: nextPending,
+      ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
+    }, cursor.tracker),
     rng: cursor.rng,
   };
 };
@@ -411,20 +428,30 @@ export const applyGotoPhaseExact = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker, env.profiler);
+  const priorPhase = exitedState.currentPhase;
   const table = env.cachedRuntime?.zobristTable;
-  const phaseChangedState = {
-    ...exitedState,
-    currentPhase: targetPhaseId,
-    ...(table ? { _runningHash: updatePhaseHash(exitedState._runningHash, table, exitedState.currentPhase, targetPhaseId) } : {}),
-  };
+  const phaseChangedState = cursor.tracker === undefined
+    ? {
+      ...exitedState,
+      currentPhase: targetPhaseId,
+      ...(table ? { _runningHash: updatePhaseHash(exitedState._runningHash, table, priorPhase, targetPhaseId) } : {}),
+    }
+    : (() => {
+      const mutableState = exitedState as MutableGameState;
+      mutableState.currentPhase = targetPhaseId;
+      if (table) {
+        mutableState._runningHash = updatePhaseHash(exitedState._runningHash, table, priorPhase, targetPhaseId);
+      }
+      return mutableState as GameState;
+    })();
   const enteredState = resetPhaseUsage(
     table ? { ...phaseChangedState, _runningHash: updatePhaseUsageResetHash(phaseChangedState._runningHash, table, phaseChangedState.actionUsage) } : phaseChangedState,
   );
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhaseId,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, env.profiler);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker, env.profiler);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -451,6 +478,7 @@ export const applyAdvancePhase = (
     }),
     {
       policy,
+      ...(cursor.tracker === undefined ? {} : { tracker: cursor.tracker }),
       ...(env.cachedRuntime === undefined ? {} : { cachedRuntime: env.cachedRuntime }),
     },
   ));
@@ -501,25 +529,44 @@ export const applyPushInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   const nextStack = [
     ...(exitedState.interruptPhaseStack ?? []),
     { phase: targetPhase, resumePhase },
   ] as const;
   const pushTable = env.cachedRuntime?.zobristTable;
-  const phaseChangedPush = {
-    ...exitedState,
-    currentPhase: targetPhase,
-    interruptPhaseStack: nextStack,
-    ...(pushTable ? { _runningHash: updatePhaseHash(exitedState._runningHash, pushTable, exitedState.currentPhase, targetPhase) } : {}),
-  };
+  const priorPhase = exitedState.currentPhase;
+  const phaseChangedPush = cursor.tracker === undefined
+    ? {
+      ...exitedState,
+      currentPhase: targetPhase,
+      interruptPhaseStack: nextStack,
+      ...(pushTable ? { _runningHash: updatePhaseHash(exitedState._runningHash, pushTable, priorPhase, targetPhase) } : {}),
+    }
+    : (() => {
+      const mutableState = exitedState as MutableGameState;
+      mutableState.currentPhase = targetPhase;
+      if (mutableState.interruptPhaseStack === undefined) {
+        mutableState.interruptPhaseStack = [];
+      } else {
+        ensureInterruptPhaseStackCloned(mutableState, cursor.tracker);
+      }
+      (mutableState.interruptPhaseStack as Array<{ phase: GameState['currentPhase']; resumePhase: GameState['currentPhase'] }>).push({
+        phase: targetPhase,
+        resumePhase,
+      });
+      if (pushTable) {
+        mutableState._runningHash = updatePhaseHash(exitedState._runningHash, pushTable, priorPhase, targetPhase);
+      }
+      return mutableState as GameState;
+    })();
   const enteredState = resetPhaseUsage(
     pushTable ? { ...phaseChangedPush, _runningHash: updatePhaseUsageResetHash(phaseChangedPush._runningHash, pushTable, phaseChangedPush.actionUsage) } : phaseChangedPush,
   );
   const finalState = dispatchLifecycleEvent(env.def, enteredState, {
     type: 'phaseEnter',
     phase: targetPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   return {
     state: finalState,
     rng: { state: finalState.rng },
@@ -550,7 +597,7 @@ export const applyPopInterruptPhase = (
   const exitedState = dispatchLifecycleEvent(env.def, cursor.state, {
     type: 'phaseExit',
     phase: cursor.state.currentPhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   const stackAfterExit = exitedState.interruptPhaseStack ?? [];
   const resumeFrame = stackAfterExit.at(-1);
   if (resumeFrame === undefined) {
@@ -564,12 +611,21 @@ export const applyPopInterruptPhase = (
   const phaseHashPop = popTable
     ? updatePhaseHash(exitedState._runningHash, popTable, exitedState.currentPhase, resumeFrame.resumePhase)
     : exitedState._runningHash;
-  const resumeBaseState: GameState = {
-    ...exitedState,
-    currentPhase: resumeFrame.resumePhase,
-    _runningHash: phaseHashPop,
-    interruptPhaseStack: nextStack.length === 0 ? undefined : nextStack,
-  };
+  const resumeBaseState: GameState = cursor.tracker === undefined
+    ? {
+      ...exitedState,
+      currentPhase: resumeFrame.resumePhase,
+      _runningHash: phaseHashPop,
+      interruptPhaseStack: nextStack.length === 0 ? undefined : nextStack,
+    }
+    : (() => {
+      const mutableState = exitedState as MutableGameState;
+      mutableState.currentPhase = resumeFrame.resumePhase;
+      mutableState._runningHash = phaseHashPop;
+      ensureInterruptPhaseStackCloned(mutableState, cursor.tracker);
+      mutableState.interruptPhaseStack = nextStack.length === 0 ? undefined : nextStack;
+      return mutableState as GameState;
+    })();
   const preResetState = resumeBaseState;
   const resumedState = resetPhaseUsage(
     popTable ? { ...preResetState, _runningHash: updatePhaseUsageResetHash(preResetState._runningHash, popTable, preResetState.actionUsage) } : preResetState,
@@ -577,7 +633,7 @@ export const applyPopInterruptPhase = (
   const finalState = dispatchLifecycleEvent(env.def, resumedState, {
     type: 'phaseEnter',
     phase: resumeFrame.resumePhase,
-  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime);
+  }, undefined, lifecycleBudgetOptions(env), lifecycleResources, 'lifecycle', env.cachedRuntime, cursor.tracker);
   return {
     state: finalState,
     rng: { state: finalState.rng },

@@ -31,6 +31,35 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 ## Workflow
 
+### Ticket-Type Triage
+
+Before loading every optional reference, classify the ticket into the smallest live category that preserves correctness:
+
+- **Bounded local refactor**: one main module or a tight cluster of same-domain files, no schema/serialized artifact ownership, no blocking discrepancies, and no verified sibling ownership drift beyond a lightweight sanity check
+- **Shared-contract or migration ticket**: exported types, schemas, generated artifacts, serialized surfaces, or broad fixture fallout are likely
+- **Proof, benchmark, audit, or investigation ticket**: the decisive deliverable is evidence, measurement, or a verdict rather than production code
+- **Mixed ticket**: more than one category applies; load the minimum extra references for each active category rather than defaulting to the whole skill body
+
+When the ticket is a **bounded local refactor**, keep the read phase lean after the mandatory `FOUNDATIONS.md`, ticket, `Deps`, repo-state, and `AGENTS.md` checks:
+
+1. Validate the named files, functions, and commands.
+2. Open sibling drafts only long enough to confirm the current ticket has not been absorbed or contradicted.
+3. Load only the optional reference files needed by the live boundary you actually found.
+4. Still emit the full working-notes checkpoint before coding.
+
+When the ticket is a **proof, benchmark, audit, or investigation ticket**, do this compact gate checklist before heavy commands:
+
+1. Identify the authoritative measurement or verdict surface (`harness`, saved report, trace, direct runner, etc.).
+2. Confirm which logs, reports, or other artifacts this ticket actually owns.
+3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
+4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
+
+When a profiling or investigation ticket may close on **contradictory live evidence** rather than on a code fix, use this quick contradiction checklist before widening scope:
+
+1. Rerun the named baseline in the same environment when the ticket depends on a relative performance claim.
+2. Rerun current `HEAD` in that same environment before treating an earlier recorded verdict as definitive.
+3. Reclassify the current ticket as `evidence-only closeout`, `still-live fix ticket`, or `needs 1-3-1 boundary reset` before profiling deeper or editing code.
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
@@ -39,6 +68,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
    - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
+   - When a draft or recently edited ticket names specific files, prefer a quick path-validation pass (`rg --files`, targeted `find`, or equivalent) before opening the file directly if there is any sign of path drift.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
@@ -65,8 +95,19 @@ When the active ticket or referenced artifacts are untracked drafts:
 4. Prefer correcting the active draft ticket over broad sibling/spec cleanup unless the live boundary truly requires wider edits.
 5. When live evidence proves a draft example snippet, helper sketch, or command block is semantically wrong but the owned boundary is still correct, update the active draft ticket so future turns do not inherit the stale example.
    - Timing: apply these nonblocking draft-ticket corrections either immediately after reassessment or during final closeout, but do not mark the ticket complete while the stale draft text remains.
+   - Preference: if the stale draft text could mislead the implementation itself (for example wrong type mutability, wrong owned file, wrong command shape, or wrong acceptance semantics), correct the active draft ticket before code edits. If it only affects future readability or closeout accuracy, correcting it during final closeout is acceptable.
+   - Acceptance-text rule: rewrite the active draft ticket before completion when the stale wording changes the meaning of an acceptance criterion, invariant, owned file list, or verification expectation a later turn could reasonably follow literally. A closeout-only semantic correction is sufficient only when the live boundary stayed correct and the stale text is clearly documented in the outcome without leaving the ticket’s forward-looking contract misleading.
 6. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
 7. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
+
+#### Draft Drift Preflight
+
+When the active ticket is an untracked draft, or when a tracked ticket appears stale, run this quick preflight before coding:
+
+1. Confirm ticket-named file paths still exist before opening them blindly.
+2. Confirm ticket-named commands still match the live repo tooling and output paths.
+3. Check example snippets for semantic drift that would mislead implementation (for example `readonly` vs mutable fields, stale return shapes, or wrong helper names).
+4. Check sibling draft ownership only far enough to confirm the current ticket has not already been absorbed, contradicted, or split differently.
 
 ### Phase 2: Reassess Assumptions
 
@@ -75,6 +116,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - Named exports, functions, types, and signatures
    - Module structure and required dependencies/scripts
    - Concrete callsites: check whether behavior is still owned there or has been centralized behind a shared helper; treat already-migrated sites as stale sub-claims.
+   - Claimed dead fallbacks: when a ticket says an immutable fallback, compatibility branch, or alternate path is now dead, enumerate remaining callers and classify the path as `dead`, `shared immutable authority`, or `must be migrated now` before accepting removal.
    - Widened compilation/optimization for an existing AST/expression family: compare live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
    - When a ticket depends on auto-synthesized or compiler-generated outputs, compare the pre-synthesis authored source, the post-synthesis compiled section, and every downstream consumer that relies on the generated ids or artifacts. Confirm they share the same live source of truth before accepting a YAML-only or caller-local fix.
 7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.
@@ -84,6 +126,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
    - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
    - When changing a shared callable type contract, grep both runtime callsites and their tests
+   - When changing helper signatures, argument threading, or call arity, also grep for source-guard, AST-policy, and contract-style tests that assert call shape or helper wiring
    - Shared state/object-shape migrations: explicitly inspect initializers, clone/draft builders, serialization/deserialization, and any runtime delete/unset/cleanup helpers that may silently reintroduce shape drift after your main type change
    - Foundation 14 atomic migrations for removals or renames
    - Required test, schema, or fixture updates
@@ -98,6 +141,11 @@ Load `references/triage-and-resolution.md`.
 If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
 
 9. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
+10. If stronger live evidence contradicts an archived sibling ticket's benchmark or investigation verdict, classify that contradiction explicitly before coding:
+   - `historical evidence only`: the archived sibling remains an accurate record of what was measured then, and the current ticket documents the stronger rerun plus the updated live boundary
+   - `active-series contract drift`: the contradiction changes how active dependent tickets should be interpreted, so rewrite the active current ticket before completion
+   - `blocking verdict conflict`: the contradiction changes the series decision boundary so materially that proceeding would violate ticket fidelity; stop via 1-3-1 before coding or closeout
+   Prefer `historical evidence only` when the archived ticket remains a truthful record of its own run and the current ticket can carry the stronger same-environment comparison without misleading future work.
 
 ### Phase 3: Resolve Before Coding
 
@@ -148,6 +196,12 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 
 When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
 
+For historical benchmark sweeps across commits, branches, or detached worktrees:
+- expect each isolated worktree to need its own dependency/bootstrap setup before the first measurement
+- treat measurement logs written inside those worktrees as evidence artifacts; do not overwrite or discard them just to reuse the same worktree for a different commit
+- if preserving those logs blocks further checkout movement, create a fresh isolated worktree for the next comparison rather than destroying the recorded evidence
+- record in working notes which measurements were temp-worktree evidence versus which logs were refreshed in the main repo as the ticket-owned final artifacts
+
 ## Verification
 
 Load `references/verification.md`.
@@ -168,6 +222,8 @@ If a verification lane fails immediately after overlapping output-contending com
 - In repositories where tests execute compiled files from `dist`, do not run build commands that rewrite `dist` in parallel with those tests. A build that starts with `rm -rf dist` can create false negative failures unrelated to the implementation.
 - Treat transitive task-graph builds as output contenders too: `turbo` lanes such as `turbo typecheck` or `turbo test` may invoke package `build` tasks that rewrite `dist`, so do not overlap them with compiled-file test runs unless you have confirmed the graph is output-safe.
 - If a broad verification failure appears immediately after overlapping build/test commands, rerun the affected checks sequentially before classifying the failure as code-caused.
+- When the ticket changes phase transitions, running hashes, turn/phase boundary accounting, or similarly sensitive shared invariants, grep for the nearest invariant-focused test file and run that focused lane before escalating to the full package or repo suite.
+- When a ticket's focused proof surface mixes a cheap new unit/integration lane with a heavier replay, campaign, or determinism lane, run the cheap independent lane first so local regressions surface before you pay the higher-cost proof run.
 - When a ticket names a broad scan, campaign, replay window, or other potentially expensive proof command, estimate feasibility early with one or two representative worst-case witnesses before committing to the literal full run. If those witnesses show the named proof surface is no longer proportionate to the live boundary, stop via 1-3-1 instead of discovering that drift deep into implementation.
 - For deterministic but seed-sensitive preparation flows, prefer bounded witness discovery over hardcoding an unverified seed. Keep the search bounded, deterministic, and aligned with the invariant being proven.
 - When a ticket names a simulator path, agent profile, campaign harness, replay harness, or other configuration-sensitive reproducer, preserve that authoritative setup in quick repro probes before classifying the witness as stale, fixed, or shifted. Do not treat a cheaper default-path probe as authoritative if profile wiring, RNG routing, or harness behavior can materially change the witness.
@@ -222,9 +278,12 @@ Load `references/closeout-and-followup.md`.
 Before declaring completion or updating the ticket status, run one final acceptance sweep against the ticket text and your final diff:
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
+- re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
+- compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
+- for completed active tickets, use the explicit status spelling `**Status**: COMPLETED` unless the repo artifact already documents a different final status class such as `BLOCKED`, `DEFERRED`, or `REJECTED`
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
 - completion date or resulting status
@@ -240,6 +299,7 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - Execute implementation directly once the ticket is verified and no blocking discrepancy remains.
 - When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads.
 - When checking touched-file scope, remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.
+- For profiling or benchmark gate tickets, treat the ticket-owned harness/log/report surface as authoritative over exploratory single-run probes when the two differ.
 
 ## Example Prompts
 

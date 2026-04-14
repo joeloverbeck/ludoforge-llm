@@ -32,6 +32,12 @@ export interface DraftTracker {
   readonly zoneVars: Set<string>;
   readonly zones: Set<string>;
   readonly markers: Set<string>;
+  globalMarkers: boolean;
+  turnOrderState: boolean;
+  reveals: boolean;
+  activeLastingEffects: boolean;
+  interruptPhaseStack: boolean;
+  actionUsage: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -67,6 +73,12 @@ export function createDraftTracker(): DraftTracker {
     zoneVars: new Set(),
     zones: new Set(),
     markers: new Set(),
+    globalMarkers: false,
+    turnOrderState: false,
+    reveals: false,
+    activeLastingEffects: false,
+    interruptPhaseStack: false,
+    actionUsage: false,
   };
 }
 
@@ -143,5 +155,71 @@ export function ensureMarkerCloned(
     (state.markers as Record<string, Record<string, string>>)[key] =
       { ...state.markers[key] };
     tracker.markers.add(key);
+  }
+}
+
+/** Ensure the global marker map is a fresh clone. */
+export function ensureGlobalMarkersCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.globalMarkers && state.globalMarkers !== undefined) {
+    state.globalMarkers = { ...state.globalMarkers };
+    tracker.globalMarkers = true;
+  }
+}
+
+/** Ensure the turn-order runtime state is a fresh clone. */
+export function ensureTurnOrderStateCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.turnOrderState) {
+    state.turnOrderState = { ...state.turnOrderState };
+    tracker.turnOrderState = true;
+  }
+}
+
+/** Ensure the reveal-grant map is a fresh clone when present. */
+export function ensureRevealsCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.reveals && state.reveals !== undefined) {
+    state.reveals = { ...state.reveals };
+    tracker.reveals = true;
+  }
+}
+
+/** Ensure the active lasting-effects array is a fresh clone when present. */
+export function ensureActiveLastingEffectsCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.activeLastingEffects && state.activeLastingEffects !== undefined) {
+    state.activeLastingEffects = [...state.activeLastingEffects];
+    tracker.activeLastingEffects = true;
+  }
+}
+
+/** Ensure the interrupt-phase stack is a fresh clone when present. */
+export function ensureInterruptPhaseStackCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.interruptPhaseStack && state.interruptPhaseStack !== undefined) {
+    state.interruptPhaseStack = [...state.interruptPhaseStack];
+    tracker.interruptPhaseStack = true;
+  }
+}
+
+/** Ensure the action-usage map is a fresh clone. */
+export function ensureActionUsageCloned(
+  state: MutableGameState,
+  tracker: DraftTracker,
+): void {
+  if (!tracker.actionUsage) {
+    state.actionUsage = { ...state.actionUsage };
+    tracker.actionUsage = true;
   }
 }

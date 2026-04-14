@@ -22,6 +22,7 @@ import {
 import { terminalResult } from './terminal.js';
 import type { GameDef, GameState, TriggerLogEntry } from './types.js';
 import type { MoveExecutionPolicy } from './execution-policy.js';
+import { ensureTurnOrderStateCloned, type DraftTracker, type MutableGameState } from './state-draft.js';
 
 const firstPhaseId = (def: GameDef): GameState['currentPhase'] => {
   const phaseId = def.turnStructure.phases.at(0)?.id;
@@ -108,6 +109,7 @@ const preSkipUncompletableGrants = (
   state: GameState,
   seatResolution: SeatResolutionContext,
   cachedRuntime?: GameDefRuntime,
+  tracker?: DraftTracker,
 ): GameState | null => {
   if (state.turnOrderState.type !== 'cardDriven') {
     return null;
@@ -166,7 +168,12 @@ const preSkipUncompletableGrants = (
   }
   // The grants were the SOLE source of legal moves.  Remove them so the
   // advanceToDecisionPoint loop treats this as "no legal moves" and advances.
-  return strippedState;
+  if (tracker === undefined) {
+    return strippedState;
+  }
+  const mutableState = state as MutableGameState;
+  mutableState.turnOrderState = strippedState.turnOrderState;
+  return mutableState;
 };
 
 const expireBlockingPendingFreeOperationGrants = (
@@ -174,6 +181,7 @@ const expireBlockingPendingFreeOperationGrants = (
   state: GameState,
   seatResolution: SeatResolutionContext,
   triggerLogCollector?: TriggerLogEntry[],
+  tracker?: DraftTracker,
 ): GameState | null => {
   if (state.turnOrderState.type !== 'cardDriven') {
     return null;
@@ -200,7 +208,7 @@ const expireBlockingPendingFreeOperationGrants = (
   const { pendingFreeOperationGrants, ...runtimeWithoutPendingGrants } = runtime;
   void pendingFreeOperationGrants;
 
-  return {
+  const nextState: GameState = {
     ...state,
     turnOrderState: {
       type: 'cardDriven',
@@ -211,9 +219,15 @@ const expireBlockingPendingFreeOperationGrants = (
         : {
             ...runtime,
             pendingFreeOperationGrants: remainingGrants,
-          },
+        },
     },
   };
+  if (tracker === undefined) {
+    return nextState;
+  }
+  const mutableState = state as MutableGameState;
+  mutableState.turnOrderState = nextState.turnOrderState;
+  return mutableState;
 };
 
 /**
@@ -229,6 +243,7 @@ const applyCoupPhaseEntryReset = (
   state: GameState,
   phaseId: GameState['currentPhase'],
   seatResolution: SeatResolutionContext,
+  tracker?: DraftTracker,
 ): GameState => {
   if (def.turnOrder?.type !== 'cardDriven' || state.turnOrderState.type !== 'cardDriven') {
     return state;
@@ -247,7 +262,7 @@ const applyCoupPhaseEntryReset = (
   validateCoupSeatOrderAtPhaseEntry(coupSeatOrder, seatResolution, state.playerCount);
   const resolvedFirstSeatPlayerIndex =
     firstSeat === null ? null : resolvePlayerIndexForTurnFlowSeat(firstSeat, seatResolution.index);
-  return {
+  const nextState: GameState = {
     ...state,
     activePlayer:
       resolvedFirstSeatPlayerIndex === null ? state.activePlayer : asPlayerId(resolvedFirstSeatPlayerIndex),
@@ -268,7 +283,35 @@ const applyCoupPhaseEntryReset = (
       },
     },
   };
+  if (tracker === undefined) {
+    return nextState;
+  }
+  const mutableState = state as MutableGameState;
+  mutableState.activePlayer = nextState.activePlayer;
+  mutableState.turnOrderState = nextState.turnOrderState;
+  return mutableState;
 };
+
+const assignRunningHash = (
+  previousState: GameState,
+  nextState: GameState,
+  cachedRuntime: GameDefRuntime | undefined,
+  tracker: DraftTracker | undefined,
+): GameState => {
+  const table = cachedRuntime?.zobristTable;
+  if (table === undefined) {
+    return nextState;
+  }
+  const reconciled = reconcileRunningHash(table, previousState, nextState);
+  if (tracker === undefined) {
+    return { ...nextState, _runningHash: reconciled };
+  }
+  (nextState as MutableGameState)._runningHash = reconciled;
+  return nextState;
+};
+
+const snapshotForHash = (state: GameState, tracker: DraftTracker | undefined): GameState =>
+  tracker === undefined ? state : { ...state };
 
 const resolveCardDrivenCoupContext = (
   def: GameDef,
@@ -389,6 +432,7 @@ export interface AdvancePhaseRequest {
   readonly triggerLogCollector?: TriggerLogEntry[];
   readonly policy?: MoveExecutionPolicy;
   readonly cachedRuntime?: GameDefRuntime;
+  readonly tracker?: DraftTracker;
 }
 
 export const buildAdvancePhaseRequest = (
@@ -399,6 +443,7 @@ export const buildAdvancePhaseRequest = (
     readonly triggerLogCollector?: TriggerLogEntry[] | undefined;
     readonly policy?: MoveExecutionPolicy | undefined;
     readonly cachedRuntime?: GameDefRuntime | undefined;
+    readonly tracker?: DraftTracker | undefined;
   },
 ): AdvancePhaseRequest => ({
   def,
@@ -407,6 +452,7 @@ export const buildAdvancePhaseRequest = (
   ...(options?.triggerLogCollector === undefined ? {} : { triggerLogCollector: options.triggerLogCollector }),
   ...(options?.policy === undefined ? {} : { policy: options.policy }),
   ...(options?.cachedRuntime === undefined ? {} : { cachedRuntime: options.cachedRuntime }),
+  ...(options?.tracker === undefined ? {} : { tracker: options.tracker }),
 });
 
 export const advancePhase = (request: AdvancePhaseRequest): GameState => {
@@ -417,6 +463,7 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     triggerLogCollector,
     policy,
     cachedRuntime,
+    tracker,
   } = request;
   assertEvalRuntimeResourcesContract(evalRuntimeResources, 'advancePhase evalRuntimeResources');
   const lifecycleResources = evalRuntimeResources;
@@ -436,20 +483,24 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
         { currentPhase: state.currentPhase },
       );
     }
-    let redirected = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
-    const beforeRedirect = redirected;
-    redirected = applyCoupPhaseEntryReset(def, resetPhaseUsage({
-      ...redirected,
-      currentPhase: targetPhase.id,
-    }), targetPhase.id, seatResolution);
-    const table = cachedRuntime?.zobristTable;
-    if (table) {
-      redirected = { ...redirected, _runningHash: reconcileRunningHash(table, beforeRedirect, redirected) };
+    let redirected = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
+    const beforeRedirect = snapshotForHash(redirected, tracker);
+    if (tracker === undefined) {
+      redirected = applyCoupPhaseEntryReset(def, resetPhaseUsage({
+        ...redirected,
+        currentPhase: targetPhase.id,
+      }), targetPhase.id, seatResolution);
+    } else {
+      const mutableRedirected = redirected as MutableGameState;
+      mutableRedirected.currentPhase = targetPhase.id;
+      redirected = resetPhaseUsage(mutableRedirected, tracker);
+      redirected = applyCoupPhaseEntryReset(def, redirected, targetPhase.id, seatResolution, tracker);
     }
-    return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+    redirected = assignRunningHash(beforeRedirect, redirected, cachedRuntime, tracker);
+    return dispatchLifecycleEvent(def, redirected, { type: 'phaseEnter', phase: targetPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   }
 
-  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  let nextState = dispatchLifecycleEvent(def, state, { type: 'phaseExit', phase: state.currentPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   const isLastPhase = currentPhaseIndex === phases.length - 1;
 
   if (!isLastPhase) {
@@ -462,20 +513,24 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
       );
     }
 
-    const beforeMidPhase = nextState;
-    nextState = applyCoupPhaseEntryReset(def, resetPhaseUsage({
-      ...nextState,
-      currentPhase: nextPhase.id,
-    }), nextPhase.id, seatResolution);
-    const tableMid = cachedRuntime?.zobristTable;
-    if (tableMid) {
-      nextState = { ...nextState, _runningHash: reconcileRunningHash(tableMid, beforeMidPhase, nextState) };
+    const beforeMidPhase = snapshotForHash(nextState, tracker);
+    if (tracker === undefined) {
+      nextState = applyCoupPhaseEntryReset(def, resetPhaseUsage({
+        ...nextState,
+        currentPhase: nextPhase.id,
+      }), nextPhase.id, seatResolution);
+    } else {
+      const mutableNextState = nextState as MutableGameState;
+      mutableNextState.currentPhase = nextPhase.id;
+      nextState = resetPhaseUsage(mutableNextState, tracker);
+      nextState = applyCoupPhaseEntryReset(def, nextState, nextPhase.id, seatResolution, tracker);
     }
+    nextState = assignRunningHash(beforeMidPhase, nextState, cachedRuntime, tracker);
 
-    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+    return dispatchLifecycleEvent(def, nextState, { type: 'phaseEnter', phase: nextPhase.id }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   }
 
-  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  nextState = dispatchLifecycleEvent(def, nextState, { type: 'turnEnd' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
   const turnFlowLifecycle = applyTurnFlowCardBoundary(def, nextState);
   nextState = turnFlowLifecycle.state;
   const boundaryDurations = resolveBoundaryDurationsAtTurnEnd(turnFlowLifecycle.traceEntries);
@@ -488,33 +543,50 @@ export const advancePhase = (request: AdvancePhaseRequest): GameState => {
     lifecycleResources,
     'boundaryExpiry',
     cachedRuntime,
+    tracker,
   );
   nextState = expiry.state;
   if (triggerLogCollector !== undefined) {
     triggerLogCollector.push(...turnFlowLifecycle.traceEntries);
   }
-  const beforeTurnRoll = nextState;
+  const beforeTurnRoll = snapshotForHash(nextState, tracker);
   const turnOrderAdvance = advanceTurnOrder(def, nextState);
-  const rolledForCoupCheck = {
-    ...nextState,
-    turnCount: nextState.turnCount + 1,
-    activePlayer: turnOrderAdvance.activePlayer,
-    turnOrderState: turnOrderAdvance.turnOrderState,
-  };
+  let rolledForCoupCheck: GameState;
+  if (tracker === undefined) {
+    rolledForCoupCheck = {
+      ...nextState,
+      turnCount: nextState.turnCount + 1,
+      activePlayer: turnOrderAdvance.activePlayer,
+      turnOrderState: turnOrderAdvance.turnOrderState,
+    };
+  } else {
+    const mutableNextState = nextState as MutableGameState;
+    mutableNextState.turnCount += 1;
+    mutableNextState.activePlayer = turnOrderAdvance.activePlayer;
+    ensureTurnOrderStateCloned(mutableNextState, tracker);
+    mutableNextState.turnOrderState = turnOrderAdvance.turnOrderState;
+    rolledForCoupCheck = mutableNextState;
+  }
   const effectivePhases = effectiveTurnPhases(def, rolledForCoupCheck);
   const initialPhase = effectivePhases.at(0)?.id ?? firstPhaseId(def);
-  let rolledState = applyCoupPhaseEntryReset(def, resetPhaseUsage(
-    resetTurnUsage({
-      ...rolledForCoupCheck,
-      currentPhase: initialPhase,
-    }),
-  ), initialPhase, seatResolution);
-  const tableTurn = cachedRuntime?.zobristTable;
-  if (tableTurn) {
-    rolledState = { ...rolledState, _runningHash: reconcileRunningHash(tableTurn, beforeTurnRoll, rolledState) };
+  let rolledState: GameState;
+  if (tracker === undefined) {
+    rolledState = applyCoupPhaseEntryReset(def, resetPhaseUsage(
+      resetTurnUsage({
+        ...rolledForCoupCheck,
+        currentPhase: initialPhase,
+      }),
+    ), initialPhase, seatResolution);
+  } else {
+    const mutableRolledForCoupCheck = rolledForCoupCheck as MutableGameState;
+    mutableRolledForCoupCheck.currentPhase = initialPhase;
+    rolledState = resetTurnUsage(mutableRolledForCoupCheck, tracker);
+    rolledState = resetPhaseUsage(rolledState, tracker);
+    rolledState = applyCoupPhaseEntryReset(def, rolledState, initialPhase, seatResolution, tracker);
   }
-  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
-  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime);
+  rolledState = assignRunningHash(beforeTurnRoll, rolledState, cachedRuntime, tracker);
+  const afterTurnStart = dispatchLifecycleEvent(def, rolledState, { type: 'turnStart' }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
+  return dispatchLifecycleEvent(def, afterTurnStart, { type: 'phaseEnter', phase: initialPhase }, triggerLogCollector, policy, lifecycleResources, 'lifecycle', cachedRuntime, tracker);
 };
 
 /**
@@ -526,6 +598,7 @@ const coupPhaseImplicitPass = (
   def: GameDef,
   state: GameState,
   seatResolution: SeatResolutionContext,
+  tracker?: DraftTracker,
 ): GameState | null => {
   if (!isInCoupPhase(def, state) || state.turnOrderState.type !== 'cardDriven') {
     return null;
@@ -551,7 +624,7 @@ const coupPhaseImplicitPass = (
       `Turn-flow runtime invariant failed: coupPhaseImplicitPass could not resolve next seat "${nextSeat}" for playerCount=${state.playerCount}`,
     );
   }
-  return {
+  const nextState: GameState = {
     ...state,
     activePlayer: asPlayerId(nextSeatPlayerIndex),
     turnOrderState: {
@@ -568,6 +641,13 @@ const coupPhaseImplicitPass = (
       },
     },
   };
+  if (tracker === undefined) {
+    return nextState;
+  }
+  const mutableState = state as MutableGameState;
+  mutableState.activePlayer = nextState.activePlayer;
+  mutableState.turnOrderState = nextState.turnOrderState;
+  return mutableState;
 };
 
 export const advanceToDecisionPoint = (
@@ -575,6 +655,7 @@ export const advanceToDecisionPoint = (
   state: GameState,
   triggerLogCollector?: TriggerLogEntry[],
   policy?: MoveExecutionPolicy,
+  tracker?: DraftTracker,
   evalRuntimeResources?: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
   profiler?: import('./perf-profiler.js').PerfProfiler,
@@ -611,12 +692,9 @@ export const advanceToDecisionPoint = (
     // would return true (the grant's free-op template passes pre-checks)
     // but the agent deadlocks because template completion fails.
     if (phaseValid) {
-      const preSkipped = preSkipUncompletableGrants(def, nextState, seatResolution, cachedRuntime);
+      const preSkipped = preSkipUncompletableGrants(def, nextState, seatResolution, cachedRuntime, tracker);
       if (preSkipped !== null) {
-        const tablePreSkip = cachedRuntime?.zobristTable;
-        nextState = tablePreSkip
-          ? { ...preSkipped, _runningHash: reconcileRunningHash(tablePreSkip, nextState, preSkipped) }
-          : preSkipped;
+        nextState = assignRunningHash(nextState, preSkipped, cachedRuntime, tracker);
         advances += 1;
         continue;
       }
@@ -631,10 +709,15 @@ export const advanceToDecisionPoint = (
     // If a blocking free-operation grant leaves the state with no legal moves,
     // expire it through the lifecycle transition and re-check legal moves.
     if (phaseValid) {
-      const expired = expireBlockingPendingFreeOperationGrants(def, nextState, seatResolution, triggerLogCollector);
+      const expired = expireBlockingPendingFreeOperationGrants(
+        def,
+        nextState,
+        seatResolution,
+        triggerLogCollector,
+        tracker,
+      );
       if (expired !== null) {
-        const tableExp = cachedRuntime?.zobristTable;
-        nextState = tableExp ? { ...expired, _runningHash: reconcileRunningHash(tableExp, nextState, expired) } : expired;
+        nextState = assignRunningHash(nextState, expired, cachedRuntime, tracker);
         advances += 1;
         continue;
       }
@@ -649,10 +732,9 @@ export const advanceToDecisionPoint = (
     }
 
     if (phaseValid) {
-      const coupCycled = coupPhaseImplicitPass(def, nextState, seatResolution);
+      const coupCycled = coupPhaseImplicitPass(def, nextState, seatResolution, tracker);
       if (coupCycled !== null) {
-        const tableAdp = cachedRuntime?.zobristTable;
-        nextState = tableAdp ? { ...coupCycled, _runningHash: reconcileRunningHash(tableAdp, nextState, coupCycled) } : coupCycled;
+        nextState = assignRunningHash(nextState, coupCycled, cachedRuntime, tracker);
         advances += 1;
         continue;
       }
@@ -663,6 +745,7 @@ export const advanceToDecisionPoint = (
       triggerLogCollector,
       policy,
       cachedRuntime,
+      tracker,
     }));
     perfDynEnd(profiler, 'adp:advancePhase', t0_adv);
     perfDynEnd(profiler, 'adp:iterations', 0); // count-only

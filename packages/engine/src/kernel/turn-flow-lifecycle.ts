@@ -1,4 +1,10 @@
 import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
+import {
+  ensureTurnOrderStateCloned,
+  ensureZoneCloned,
+  type DraftTracker,
+  type MutableGameState,
+} from './state-draft.js';
 import type { GameDef, GameState, Token, TriggerLogEntry, TurnFlowLifecycleStep } from './types.js';
 import { resolveTokenViewFieldValue } from './token-view.js';
 
@@ -78,6 +84,7 @@ const moveTopToken = (
   state: GameState,
   fromZoneId: string,
   toZoneId: string,
+  tracker?: DraftTracker,
 ): { readonly state: GameState; readonly moved: Token | null } => {
   const source = state.zones[fromZoneId];
   const destination = state.zones[toZoneId];
@@ -86,6 +93,15 @@ const moveTopToken = (
   }
 
   const moved = source[0]!;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureZoneCloned(mutableState, tracker, fromZoneId);
+    ensureZoneCloned(mutableState, tracker, toZoneId);
+    (mutableState.zones[fromZoneId] as Token[]).shift();
+    (mutableState.zones[toZoneId] as Token[]).unshift(moved);
+    return { state: mutableState, moved };
+  }
+
   const nextState: GameState = {
     ...state,
     zones: {
@@ -98,13 +114,24 @@ const moveTopToken = (
   return { state: nextState, moved };
 };
 
-const popTopToken = (state: GameState, zoneId: string): { readonly state: GameState; readonly popped: Token | null } => {
+const popTopToken = (
+  state: GameState,
+  zoneId: string,
+  tracker?: DraftTracker,
+): { readonly state: GameState; readonly popped: Token | null } => {
   const zoneTokens = state.zones[zoneId];
   if (zoneTokens === undefined || zoneTokens.length === 0) {
     return { state, popped: null };
   }
 
   const popped = zoneTokens[0]!;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureZoneCloned(mutableState, tracker, zoneId);
+    (mutableState.zones[zoneId] as Token[]).shift();
+    return { state: mutableState, popped };
+  }
+
   const nextState: GameState = {
     ...state,
     zones: {
@@ -116,10 +143,17 @@ const popTopToken = (state: GameState, zoneId: string): { readonly state: GameSt
   return { state: nextState, popped };
 };
 
-const prependToken = (state: GameState, zoneId: string, token: Token): GameState => {
+const prependToken = (state: GameState, zoneId: string, token: Token, tracker?: DraftTracker): GameState => {
   const zoneTokens = state.zones[zoneId];
   if (zoneTokens === undefined) {
     return state;
+  }
+
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureZoneCloned(mutableState, tracker, zoneId);
+    (mutableState.zones[zoneId] as Token[]).unshift(token);
+    return mutableState;
   }
 
   return {
@@ -133,10 +167,23 @@ const prependToken = (state: GameState, zoneId: string, token: Token): GameState
 
 const isCoupCard = (token: Token): boolean => resolveTokenViewFieldValue(token, 'isCoup') === true;
 
-const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState => {
+const withConsecutiveCoupRounds = (state: GameState, rounds: number, tracker?: DraftTracker): GameState => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null || runtime.consecutiveCoupRounds === rounds) {
     return state;
+  }
+
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: {
+        ...runtime,
+        consecutiveCoupRounds: rounds,
+      },
+    };
+    return mutableState;
   }
 
   return {
@@ -151,7 +198,11 @@ const withConsecutiveCoupRounds = (state: GameState, rounds: number): GameState 
   };
 };
 
-export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): LifecycleResult => {
+export const applyTurnFlowInitialReveal = (
+  def: GameDef,
+  state: GameState,
+  options?: { readonly tracker?: DraftTracker },
+): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
     return { state, traceEntries: [] };
@@ -167,7 +218,7 @@ export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): Life
 
   if ((nextState.zones[slots.played]?.length ?? 0) === 0) {
     const before = nextState;
-    const moved = moveTopToken(nextState, drawPileId, slots.played);
+    const moved = moveTopToken(nextState, drawPileId, slots.played, options?.tracker);
     nextState = moved.state;
     if (moved.moved !== null) {
       pushLifecycleEntry(traceEntries, 'initialRevealPlayed', slots, before, nextState);
@@ -176,7 +227,7 @@ export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): Life
 
   if ((nextState.zones[slots.lookahead]?.length ?? 0) === 0) {
     const before = nextState;
-    const moved = moveTopToken(nextState, drawPileId, slots.lookahead);
+    const moved = moveTopToken(nextState, drawPileId, slots.lookahead, options?.tracker);
     nextState = moved.state;
     if (moved.moved !== null) {
       pushLifecycleEntry(traceEntries, 'initialRevealLookahead', slots, before, nextState);
@@ -186,7 +237,11 @@ export const applyTurnFlowInitialReveal = (def: GameDef, state: GameState): Life
   return { state: nextState, traceEntries };
 };
 
-export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): LifecycleResult => {
+export const applyTurnFlowCardBoundary = (
+  def: GameDef,
+  state: GameState,
+  options?: { readonly tracker?: DraftTracker },
+): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
     return { state, traceEntries: [] };
@@ -194,7 +249,7 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
 
   const traceEntries: TriggerLogEntry[] = [];
   let nextState = state;
-  const removed = popTopToken(nextState, slots.played);
+  const removed = popTopToken(nextState, slots.played, options?.tracker);
   nextState = removed.state;
   const maxConsecutiveRounds = cardDrivenConfig(def)?.coupPlan?.maxConsecutiveRounds;
   const previousConsecutiveCoupRounds = cardDrivenRuntime(state)?.consecutiveCoupRounds ?? 0;
@@ -205,7 +260,7 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
 
   if (canRunCoupHandoff && removed.popped !== null) {
     const beforeLeaderMove = nextState;
-    nextState = prependToken(nextState, slots.leader, removed.popped);
+    nextState = prependToken(nextState, slots.leader, removed.popped, options?.tracker);
     pushLifecycleEntry(traceEntries, 'coupToLeader', slots, beforeLeaderMove, nextState);
     pushLifecycleEntry(traceEntries, 'coupHandoff', slots, nextState, nextState);
   }
@@ -215,14 +270,14 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
       const nextConsecutiveCoupRounds = canRunCoupHandoff
         ? previousConsecutiveCoupRounds + 1
         : previousConsecutiveCoupRounds;
-      nextState = withConsecutiveCoupRounds(nextState, nextConsecutiveCoupRounds);
+      nextState = withConsecutiveCoupRounds(nextState, nextConsecutiveCoupRounds, options?.tracker);
     } else {
-      nextState = withConsecutiveCoupRounds(nextState, 0);
+      nextState = withConsecutiveCoupRounds(nextState, 0, options?.tracker);
     }
   }
 
   const beforePromotion = nextState;
-  const promoted = moveTopToken(nextState, slots.lookahead, slots.played);
+  const promoted = moveTopToken(nextState, slots.lookahead, slots.played, options?.tracker);
   nextState = promoted.state;
   if (promoted.moved !== null) {
     pushLifecycleEntry(traceEntries, 'promoteLookaheadToPlayed', slots, beforePromotion, nextState);
@@ -231,7 +286,7 @@ export const applyTurnFlowCardBoundary = (def: GameDef, state: GameState): Lifec
   const drawPileId = resolveDrawPileId(def, slots);
   if (drawPileId !== null) {
     const beforeReveal = nextState;
-    const revealed = moveTopToken(nextState, drawPileId, slots.lookahead);
+    const revealed = moveTopToken(nextState, drawPileId, slots.lookahead, options?.tracker);
     nextState = revealed.state;
     if (revealed.moved !== null) {
       pushLifecycleEntry(traceEntries, 'revealLookahead', slots, beforeReveal, nextState);

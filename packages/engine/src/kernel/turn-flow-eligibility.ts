@@ -33,7 +33,11 @@ import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
-import type { DraftTracker } from './state-draft.js';
+import {
+  ensureTurnOrderStateCloned,
+  type DraftTracker,
+  type MutableGameState,
+} from './state-draft.js';
 import {
   assertCardMetadataSeatOrderRuntimeInvariant,
   requireCardDrivenActiveSeat,
@@ -553,6 +557,7 @@ const finalizeSuspendedOrEndedCard = (
   pendingDeferredEventEffects: readonly TurnFlowPendingDeferredEventEffect[],
   activeSeat: string,
   endedReason: 'rightmostPass' | 'twoNonPass',
+  tracker?: DraftTracker,
 ): TurnFlowTransitionResult => {
   let nextEligibility: Readonly<Record<string, boolean>>;
   let nextSeatOrder = runtime.seatOrder;
@@ -571,7 +576,9 @@ const finalizeSuspendedOrEndedCard = (
     ) as Readonly<Record<string, boolean>>;
   } else {
     nextEligibility = computePostCardEligibility(runtime.seatOrder, currentCard, pendingOverrides);
-    const lifecycle = applyTurnFlowCardBoundary(def, rewardState);
+    const lifecycle = tracker === undefined
+      ? applyTurnFlowCardBoundary(def, rewardState)
+      : applyTurnFlowCardBoundary(def, rewardState, { tracker });
     baseState = lifecycle.state;
     traceEntries.push(...lifecycle.traceEntries);
     boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
@@ -611,20 +618,33 @@ const finalizeSuspendedOrEndedCard = (
     currentCard: nextTurn,
     pendingEligibilityOverrides: [],
   };
-  return {
-    state: withActiveFromFirstEligible({
+  const nextRuntime = withPendingDeferredEventEffects(
+    withPendingFreeOperationGrants(
+      withSuspendedCardEnd(nextRuntimeBase, undefined),
+      normalizedPendingFreeOperationGrants,
+    ),
+    normalizedPendingDeferredEventEffects,
+  );
+  const stateWithTurnFlow: GameState = tracker === undefined
+    ? {
       ...baseState,
       turnOrderState: {
         type: 'cardDriven',
-        runtime: withPendingDeferredEventEffects(
-          withPendingFreeOperationGrants(
-            withSuspendedCardEnd(nextRuntimeBase, undefined),
-            normalizedPendingFreeOperationGrants,
-          ),
-          normalizedPendingDeferredEventEffects,
-        ),
+        runtime: nextRuntime,
       },
-    }, nextTurn.firstEligible, seatResolution),
+    }
+    : (() => {
+      const mutableState = baseState as MutableGameState;
+      ensureTurnOrderStateCloned(mutableState, tracker);
+      mutableState.turnOrderState = {
+        type: 'cardDriven',
+        runtime: nextRuntime,
+      };
+      return mutableState as GameState;
+    })();
+
+  return {
+    state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible, seatResolution, tracker),
     traceEntries,
     ...(boundaryDurations === undefined ? {} : { boundaryDurations }),
   };
@@ -634,6 +654,7 @@ const withActiveFromFirstEligible = (
   state: GameState,
   firstEligible: string | null,
   seatResolution: SeatResolutionContext,
+  tracker?: DraftTracker,
 ): GameState => {
   if (firstEligible === null) {
     return state;
@@ -645,6 +666,11 @@ const withActiveFromFirstEligible = (
       'RUNTIME_CONTRACT_INVALID',
       `Turn-flow runtime invariant failed: initializeTurnFlowEligibilityState could not resolve firstEligible=${firstEligible} from card/default seat order.`,
     );
+  }
+
+  if (tracker !== undefined) {
+    (state as MutableGameState).activePlayer = asPlayerId(playerId);
+    return state;
   }
 
   return {
@@ -955,17 +981,27 @@ export const applyTurnFlowEligibilityAfterMove = (
       ),
       toPendingDeferredEventEffects(deferredEventEffects),
     );
-    const stateWithTurnFlow: GameState = {
-      ...state,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: nextRuntime,
-      },
-    };
+    const stateWithTurnFlow: GameState = options?.tracker === undefined
+      ? {
+        ...state,
+        turnOrderState: {
+          type: 'cardDriven',
+          runtime: nextRuntime,
+        },
+      }
+      : (() => {
+        const mutableState = state as MutableGameState;
+        ensureTurnOrderStateCloned(mutableState, options.tracker);
+        mutableState.turnOrderState = {
+          type: 'cardDriven',
+          runtime: nextRuntime,
+        };
+        return mutableState as GameState;
+      })();
     return {
       state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
         ? stateWithTurnFlow
-        : withActiveFromFirstEligible(stateWithTurnFlow, nextRuntime.currentCard.firstEligible, seatResolution),
+        : withActiveFromFirstEligible(stateWithTurnFlow, nextRuntime.currentCard.firstEligible, seatResolution, options?.tracker),
       traceEntries,
       ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
     };
@@ -1022,7 +1058,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   const rewardState =
     rewards.length === 0
       ? state
-      : {
+      : options?.tracker === undefined
+        ? {
           ...state,
           globalVars: rewards.reduce<Readonly<Record<string, number | boolean>>>(
             (vars, reward) => ({
@@ -1031,7 +1068,15 @@ export const applyTurnFlowEligibilityAfterMove = (
             }),
             state.globalVars,
           ),
-        };
+        }
+        : (() => {
+          const mutableState = state as MutableGameState;
+          const mutableGlobalVars = mutableState.globalVars as Record<string, number | boolean>;
+          for (const reward of rewards) {
+            mutableGlobalVars[reward.resource] = readNumericResource(mutableGlobalVars, reward.resource) + reward.amount;
+          }
+          return mutableState as GameState;
+        })();
 
   const traceEntries: TriggerLogEntry[] = [
     ...sequenceAdvanced.traceEntries,
@@ -1106,6 +1151,7 @@ export const applyTurnFlowEligibilityAfterMove = (
       deferredEventEffects,
       activeSeat,
       endedReason,
+      options?.tracker,
     );
     return {
       state: finalized.state,
@@ -1136,18 +1182,28 @@ export const applyTurnFlowEligibilityAfterMove = (
     ),
     normalizedPendingDeferredEventEffects,
   );
-  const stateWithTurnFlow: GameState = {
-    ...rewardState,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: nextRuntime,
-    },
-  };
+  const finalState: GameState = options?.tracker === undefined
+    ? {
+      ...rewardState,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: nextRuntime,
+      },
+    }
+    : (() => {
+      const mutableState = rewardState as MutableGameState;
+      ensureTurnOrderStateCloned(mutableState, options.tracker);
+      mutableState.turnOrderState = {
+        type: 'cardDriven',
+        runtime: nextRuntime,
+      };
+      return mutableState as GameState;
+    })();
 
   return {
-    state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
-      ? stateWithTurnFlow
-      : withActiveFromFirstEligible(stateWithTurnFlow, currentCard.firstEligible, seatResolution),
+    state: isInterruptPhaseId(def, finalState.currentPhase)
+      ? finalState
+      : withActiveFromFirstEligible(finalState, currentCard.firstEligible, seatResolution, options?.tracker),
     traceEntries,
     ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
   };

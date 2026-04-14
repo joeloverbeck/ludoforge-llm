@@ -426,6 +426,23 @@ describe('FITL card-flow determinism integration', () => {
     }
   });
 
+  it('keeps repeated rightmost-pass card-boundary runs byte-identical', () => {
+    const def = createDef();
+    const passMove: Move = { actionId: asActionId('pass'), params: {} };
+    const runBoundarySequence = () => {
+      let state = initialState(def, 73, 4).state;
+      for (let i = 0; i < 4; i += 1) {
+        state = applyMove(def, state, passMove).state;
+      }
+      return serializeGameState(state);
+    };
+
+    const first = runBoundarySequence();
+    const second = runBoundarySequence();
+
+    assert.deepEqual(second, first);
+  });
+
   it('produces byte-identical operation-heavy traces across production spec operation profiles', () => {
     const { parsed, compiled } = compileProductionSpec();
     assertNoErrors(parsed);

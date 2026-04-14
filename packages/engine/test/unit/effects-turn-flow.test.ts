@@ -7,6 +7,8 @@ import {
   asPhaseId,
   asPlayerId,
   buildAdjacencyGraph,
+  createDraftTracker,
+  createMutableState,
   createCollector,
   createRng,
   isEffectErrorCode,
@@ -397,6 +399,23 @@ describe('applyGrantFreeOperation', () => {
     const grants = tos.runtime.pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 2);
     assert.notEqual(grants[0]!.grantId, grants[1]!.grantId);
+  });
+
+  it('mutates the provided draft state in place when tracker is present', () => {
+    const original = makeCardDrivenState();
+    const mutable = createMutableState(original);
+    const tracker = createDraftTracker();
+    const ctx = makeCtx({ state: mutable, tracker });
+    const effect = {
+      grantFreeOperation: { seat: 'self', operationClass: 'operation' },
+    } as unknown as Extract<EffectAST, { readonly grantFreeOperation: unknown }>;
+
+    const result = applyGrantFreeOperation(effect, ctx);
+
+    assert.equal(result.state, mutable);
+    const tos = result.state.turnOrderState;
+    if (tos.type !== 'cardDriven') throw new Error('Expected cardDriven');
+    assert.equal(tos.runtime.pendingFreeOperationGrants?.length, 1);
   });
 
   it('sets remainingUses from grant.uses', () => {
@@ -800,6 +819,19 @@ describe('applyGotoPhaseExact', () => {
     assert.equal(result.state.currentPhase, asPhaseId('cleanup'));
   });
 
+  it('supports tracker-backed phase jumps without changing behavior', () => {
+    const mutable = createMutableState(makeCardDrivenState({ currentPhase: asPhaseId('setup') }));
+    const tracker = createDraftTracker();
+    const ctx = makeCtx({ state: mutable, tracker });
+    const effect = {
+      gotoPhaseExact: { phase: 'cleanup' },
+    } as unknown as Extract<EffectAST, { readonly gotoPhaseExact: unknown }>;
+
+    const result = applyGotoPhaseExact(effect, ctx);
+
+    assert.equal(result.state.currentPhase, asPhaseId('cleanup'));
+  });
+
   it('respects phase transition budget exhaustion', () => {
     const ctx = makeCtx({
       state: makeCardDrivenState({ currentPhase: asPhaseId('setup') }),
@@ -854,6 +886,20 @@ describe('applyPushInterruptPhase', () => {
     assert.equal(stack.length, 1);
     assert.equal(stack[0]!.phase, asPhaseId('coup'));
     assert.equal(stack[0]!.resumePhase, asPhaseId('main'));
+  });
+
+  it('supports tracker-backed interrupt pushes without changing behavior', () => {
+    const mutable = createMutableState(makeCardDrivenState());
+    const tracker = createDraftTracker();
+    const ctx = makeCtx({ state: mutable, tracker });
+    const effect = {
+      pushInterruptPhase: { phase: 'coup', resumePhase: 'main' },
+    } as unknown as Extract<EffectAST, { readonly pushInterruptPhase: unknown }>;
+
+    const result = applyPushInterruptPhase(effect, ctx);
+
+    assert.equal(result.state.currentPhase, asPhaseId('coup'));
+    assert.equal(result.state.interruptPhaseStack?.length, 1);
   });
 
   it('throws for unknown phase', () => {
@@ -920,6 +966,25 @@ describe('applyPopInterruptPhase', () => {
     assert.equal(result.state.currentPhase, asPhaseId('main'));
     const stack = result.state.interruptPhaseStack;
     assert.ok(stack === undefined || stack.length === 0);
+  });
+
+  it('supports tracker-backed interrupt pops without changing behavior', () => {
+    const mutable = createMutableState(makeCardDrivenState({
+      currentPhase: asPhaseId('coup'),
+      interruptPhaseStack: [
+        { phase: asPhaseId('coup'), resumePhase: asPhaseId('main') },
+      ],
+    }));
+    const tracker = createDraftTracker();
+    const ctx = makeCtx({ state: mutable, tracker });
+    const effect = {
+      popInterruptPhase: {},
+    } as unknown as Extract<EffectAST, { readonly popInterruptPhase: unknown }>;
+
+    const result = applyPopInterruptPhase(effect, ctx);
+
+    assert.equal(result.state.currentPhase, asPhaseId('main'));
+    assert.ok(result.state.interruptPhaseStack === undefined || result.state.interruptPhaseStack.length === 0);
   });
 
   it('respects phase transition budget exhaustion', () => {

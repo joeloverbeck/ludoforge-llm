@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `tickets/132AGESTUVIA-004.md`
+**Deps**: `tickets/132AGESTUVIA-004.md`, `tickets/132AGESTUVIA-007.md`
 
 ## Problem
 
-Spec 132 exists to unblock the `fitl-arvn-agent-evolution` campaign, which currently cannot run because FITL seed 1000 (and four other campaign seeds: 1007, 1008, 1010, 1013) crash the tournament runner with `stopReason = 'agentStuck'`. After tickets 001–004 land, seed 1000 must play cleanly to a legitimate terminal state; the tournament runner must exit 0. Additionally, ticket 002 touches `move-completion.ts` — the file reverted in `14a33c29` for causing infinite loops on seed 1002. An end-to-end regression gate is required to prove both properties hold before the spec is considered complete.
+Spec 132 exists to unblock the `fitl-arvn-agent-evolution` campaign, which currently cannot run because FITL seed 1000 (and four other campaign seeds: 1007, 1008, 1010, 1013) crash the tournament runner with `stopReason = 'agentStuck'`. After tickets 001–004 land, plus the residual seed-2057 prerequisite in `132AGESTUVIA-007`, seed 1000 must play cleanly to a legitimate terminal state; the tournament runner must exit 0. Additionally, ticket 002 touches `move-completion.ts` — the file reverted in `14a33c29` for causing infinite loops on seed 1002. An end-to-end regression gate is required to prove both properties hold before the spec is considered complete.
 
 ## Assumption Reassessment (2026-04-16)
 
@@ -16,7 +16,7 @@ Spec 132 exists to unblock the `fitl-arvn-agent-evolution` campaign, which curre
 2. `campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs` reproduces the NVA move-140 failure deterministically — confirmed.
 3. Seed 1002 hung under the reverted `40a43ceb` (see `14a33c29`'s revert message) — historical repo fact.
 4. `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` is immutable per the campaign's `program.md` — this ticket does not modify it.
-5. Tickets 001–004 provide the fixes required for this gate to pass.
+5. Tickets 001–004 plus the residual seed-2057 prerequisite `132AGESTUVIA-007` provide the fixes required for this gate to pass.
 
 ## Architecture Check
 

@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — simulator catch removal, `SimulationStopReason` union + Zod schema cleanup, three test migrations
-**Deps**: `tickets/132AGESTUVIA-003.md`
+**Deps**: `archive/tickets/132AGESTUVIA-003.md`
 
 ## Problem
 
-After tickets 001 and 002 land, `NoPlayableMovesAfterPreparationError` no longer signals "the agent hit a bad draw" — every viable template yields a playable move, so reaching that throw indicates a genuine engine invariant violation. The simulator's current `isNoPlayableErr` catch at `packages/engine/src/sim/simulator.ts:128–140` converts that invariant violation into a silent `stopReason = 'agentStuck'`, masking bugs and letting broken states propagate into trace outputs and campaign statistics. Foundation #14 forbids leaving the unreachable `'agentStuck'` member in the `SimulationStopReason` union once its producing code path is removed. This ticket atomically: (a) deletes the catch, (b) removes `'agentStuck'` from the union and Zod schema, and (c) migrates the three existing tests that reference `'agentStuck'`. The Foundation #14 atomic-change rule requires all three in one commit — no migration deferred.
+After tickets 001, 002, and 003 land, `NoPlayableMovesAfterPreparationError` no longer represents the original spec-132 "bad draw hit the `agentStuck` soft-stop" incident. Ticket 003 proved the live post-002 contract is narrower than universal guaranteed completion: VIABLE templates may still exhaust the bounded retry budget on some RNG seeds, but that behavior is now explicitly covered by focused agent tests instead of being treated as a simulator stop reason. The simulator's current `isNoPlayableErr` catch at `packages/engine/src/sim/simulator.ts:128–140` still converts that thrown condition into `stopReason = 'agentStuck'`, masking whether the failure is a genuine invariant violation or stale defensive behavior and leaking a misleading legacy variant into trace outputs and campaign statistics. Foundation #14 forbids keeping the `'agentStuck'` union member and catch path once the series reclassifies this state away from a legitimate stop reason. This ticket therefore must re-justify the simulator behavior directly: (a) delete the catch, (b) remove `'agentStuck'` from the union and Zod schema, and (c) migrate the existing tests that reference `'agentStuck'`, all in one atomic change.
 
 ## Assumption Reassessment (2026-04-16)
 
@@ -17,15 +17,16 @@ After tickets 001 and 002 land, `NoPlayableMovesAfterPreparationError` no longer
 3. `packages/engine/src/kernel/schemas-core.ts` contains the Zod literal union for stop reasons, including an `'agentStuck'` entry — confirmed.
 4. `packages/engine/test/integration/fitl-seed-stability.test.ts:16` defines `ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'agentStuck'])` — confirmed.
 5. `packages/engine/test/integration/fitl-seed-2057-regression.test.ts:13` defines the identical set — confirmed.
-6. `packages/engine/test/integration/fitl-policy-agent.test.ts:1196` asserts the positive invariant `trace.stopReason === 'noLegalMoves' || 'maxTurns' || 'terminal'` for seed 17 — confirmed. This assertion already excludes `'agentStuck'`; the migration here is comment-only to document the new post-S3 invariant.
-7. `FORMER_CRASH_OR_HANG_SEEDS` at `fitl-seed-stability.test.ts:13–15` = `[1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1040, 1042, 1043, 1046, 1047, 1051, 1054]`. Seed 1010 overlaps with the current campaign failures. After this ticket + 001 + 002, every seed in this list MUST produce `'terminal'` or `'maxTurns'` (never throw, never `'agentStuck'`).
+6. Ticket `132AGESTUVIA-003` proved that the stronger claim "every VIABLE template yields a playable move" is false on current `HEAD`; bounded retry reduces `agentStuck` incidence but does not by itself prove `NoPlayableMovesAfterPreparationError` is unreachable. This ticket must therefore validate removal of `'agentStuck'` through direct simulator/seed evidence rather than that stronger contract assumption — confirmed.
+7. `packages/engine/test/integration/fitl-policy-agent.test.ts:1196` asserts the positive invariant `trace.stopReason === 'noLegalMoves' || 'maxTurns' || 'terminal'` for seed 17 — confirmed. This assertion already excludes `'agentStuck'`; the migration here is comment-only to document the new post-S3 invariant.
+8. `FORMER_CRASH_OR_HANG_SEEDS` at `fitl-seed-stability.test.ts:13–15` = `[1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1040, 1042, 1043, 1046, 1047, 1051, 1054]`. Seed 1010 overlaps with the current campaign failures. After this ticket + 001 + 002, every seed in this list MUST produce `'terminal'` or `'maxTurns'` (never throw, never `'agentStuck'`).
 
 ## Architecture Check
 
 1. Foundation #14 atomic cleanup: removing the catch, the union member, the schema entry, and the three test references in one ticket prevents any intermediate state where an unreachable literal lingers. The change is mechanically uniform across consumers (remove one literal across 6 files + any grep-found residuals).
 2. Foundation #15: the catch was a symptom-masking shim. Removing it forces genuine invariant violations to surface instead of being silently converted into a stop reason.
 3. No new game-specific code introduced (Foundation #1). No YAML or spec-data changes.
-4. After removal, the union contains only reachable stop reasons: `'terminal'`, `'maxTurns'`, `'noLegalMoves'` (or the current remaining set — verify during implementation).
+4. After removal, the union contains only reachable stop reasons: `'terminal'`, `'maxTurns'`, `'noLegalMoves'` (or the current remaining set — verify during implementation), and that reachability is justified by direct simulator/test evidence rather than by the disproven universal completion claim.
 
 ## What to Change
 

@@ -189,6 +189,10 @@ Every stop condition below requires resolution before implementation proceeds.
 14. Continue reassessment after each confirmation until no boundary-affecting discrepancies remain. Multiple 1-3-1 rounds are normal.
 15. If a **1-3-1** stop leads to a user-confirmed boundary change for an active draft ticket, immediately refresh the working-notes checkpoint and rewrite the active ticket before coding so the recorded contract matches the confirmed direction.
 16. If the confirmed resolution changes the active draft ticket's contract, rewrite the active ticket first so the implementation boundary matches the confirmed direction before coding.
+16a. After rewriting the active ticket from a user-confirmed boundary reset, sanity-check each newly rewritten acceptance clause against the narrowest live witness before coding when the rewrite introduced deterministic seeds, exact counts, exact file/artifact outputs, or other concrete proof-shape claims.
+   - If the rewritten clause is already directly witnessed, record that confirmation in working notes and proceed.
+   - If the rewritten clause is directionally right but still overclaims a specific witness detail, correct the active ticket again before coding rather than treating the first rewrite as settled.
+   - If the rewritten clause cannot be validated without wider probing than the ticket can tolerate, stop and resolve via another 1-3-1 round instead of silently weakening or assuming the proof shape.
 17. Restate the authoritative boundary in working notes and confirm no blocking discrepancies remain before coding.
     - If the ticket's acceptance depends on traces, harness output, campaign metrics, or another observability surface, classify the expected proof shape before coding:
       - `direct proof`: the current repo surface exposes the exact invariant or contribution path the ticket names

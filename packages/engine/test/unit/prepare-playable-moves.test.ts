@@ -389,10 +389,12 @@ describe('preparePlayableMoves', () => {
     /**
      * Regression test for a scenario where a free-operation template move
      * (e.g. VC Rally restricted to Cambodia via a zone filter from the
-     * Sihanouk shaded event) is rejected by probeMoveViability because the
-     * zone filter cannot be evaluated on a template with no target-zone
-     * selections.  preparePlayableMoves must fall through to the template
-     * completion path instead of discarding the move.
+     * Sihanouk shaded event) previously diverged between enumeration and
+     * direct probing because the zone filter could not be evaluated before
+     * target-zone selections were completed. The shared viability predicate
+     * must now preserve the template as a viable incomplete move so
+     * preparePlayableMoves reaches normal template completion without a
+     * downstream fallback.
      *
      * The test state is loaded from a snapshot fixture to decouple from
      * agent profile evolution (Foundation 2: Evolution-First Design).
@@ -423,13 +425,14 @@ describe('preparePlayableMoves', () => {
       const freeOpMove = legal1.find(({ move }) => move.freeOperation === true)?.move;
       assert.ok(freeOpMove, 'expected a free-operation move in legal moves');
 
-      // Verify that probeMoveViability rejects the template (this is the
-      // condition that previously caused the bug).
+      // Direct probing should now agree with enumerateLegalMoves.
       const viability = probeMoveViability(def, state, freeOpMove, runtime);
-      assert.equal(viability.viable, false, 'template should be non-viable via probeMoveViability (zone filter unevaluable)');
+      assert.equal(viability.viable, true, 'template should stay viable during direct probing');
+      if (viability.viable) {
+        assert.equal(viability.complete, false, 'template should remain incomplete until completion');
+      }
 
-      // Despite probeMoveViability rejecting the template, preparePlayableMoves
-      // must recover it through the template completion path.
+      // preparePlayableMoves should complete the viable template normally.
       const rng = createRng(42n);
       const prepared = preparePlayableMoves(
         { def, state, legalMoves: legal1, rng, runtime },

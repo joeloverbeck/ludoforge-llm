@@ -1566,7 +1566,6 @@ export interface PolicyMovePreparationTrace {
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
   readonly rejection?: 'completionUnsatisfiable' | 'notViable' | 'notDecisionComplete';
-  readonly fellThroughFromZoneFilterMismatch?: boolean;
 }
 
 export interface PolicyPruningStepTrace {

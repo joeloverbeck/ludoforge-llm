@@ -1465,7 +1465,6 @@ const PolicyMovePreparationTraceSchema = z
       z.literal('notViable'),
       z.literal('notDecisionComplete'),
     ]).optional(),
-    fellThroughFromZoneFilterMismatch: BooleanSchema.optional(),
   })
   .strict();
 

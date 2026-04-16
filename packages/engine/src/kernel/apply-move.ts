@@ -102,6 +102,7 @@ import type {
 } from './types.js';
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viability-predicate.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveMoveDecisionSequence, type DiscoveryCache } from './move-decision-sequence.js';
@@ -572,55 +573,7 @@ export type MoveLegalityProbeResult =
  * nextDecision, nextDecisionSet, stochasticDecision.
  * All construction sites must materialize every property.
  */
-export type MoveViabilityProbeResult =
-  | Readonly<{
-      readonly viable: true;
-      readonly complete: true;
-      readonly move: Move;
-      readonly warnings: readonly RuntimeWarning[];
-      readonly code: undefined;
-      readonly context: undefined;
-      readonly error: undefined;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>
-  | Readonly<{
-      readonly viable: true;
-      readonly complete: false;
-      readonly move: Move;
-      readonly warnings: readonly RuntimeWarning[];
-      readonly code: undefined;
-      readonly context: undefined;
-      readonly error: undefined;
-      readonly nextDecision: ChoicePendingRequest | undefined;
-      readonly nextDecisionSet: readonly ChoicePendingRequest[] | undefined;
-      readonly stochasticDecision: ChoiceStochasticPendingRequest | undefined;
-    }>
-  | Readonly<{
-      readonly viable: false;
-      readonly complete: undefined;
-      readonly move: undefined;
-      readonly warnings: undefined;
-      readonly code: 'ILLEGAL_MOVE';
-      readonly context: IllegalMoveContext;
-      readonly error: KernelRuntimeError<'ILLEGAL_MOVE'>;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>
-  | Readonly<{
-      readonly viable: false;
-      readonly complete: undefined;
-      readonly move: undefined;
-      readonly warnings: undefined;
-      readonly code: Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>;
-      readonly context: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>> | undefined;
-      readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>;
+export type MoveViabilityProbeResult = MoveViabilityResult;
 
 interface MovePreflightContext {
   readonly action: ActionDef;
@@ -1857,7 +1810,7 @@ export const probeMoveLegality = (
   }
 };
 
-export const probeMoveViability = (
+const probeMoveViabilityRaw = (
   def: GameDef,
   state: GameState,
   move: Move,
@@ -2027,3 +1980,12 @@ export const probeMoveViability = (
     throw error;
   }
 };
+
+export const probeMoveViability = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+  discoveryCache?: DiscoveryCache,
+): MoveViabilityProbeResult =>
+  deriveMoveViabilityVerdict(move, probeMoveViabilityRaw(def, state, move, runtime, discoveryCache));

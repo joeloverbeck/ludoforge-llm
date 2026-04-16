@@ -21,35 +21,6 @@ import type {
  */
 export const NOT_VIABLE_RETRY_CAP = 7;
 
-/**
- * Detect non-viable results that stem from premature zone-filter evaluation on
- * incomplete template moves.  `probeMoveViability` evaluates free-operation zone
- * filters eagerly, but template moves have no target-zone selections yet — so
- * the filter evaluation fails with `zoneFilterMismatch` even though the move
- * may become viable once zones are selected during template completion.
- *
- * These moves should fall through to `evaluatePlayableMoveCandidate` instead of
- * being discarded.
- */
-const isZoneFilterMismatchOnFreeOpTemplate = (
-  classified: ClassifiedMove,
-): boolean => {
-  const { move, viability } = classified;
-  if (viability.viable || move.freeOperation !== true) {
-    return false;
-  }
-  if (viability.code !== 'ILLEGAL_MOVE') {
-    return false;
-  }
-  const ctx = viability.context;
-  return (
-    ctx.reason === 'freeOperationNotGranted'
-    && 'freeOperationDenial' in ctx
-    && (ctx as { readonly freeOperationDenial: { readonly cause: string } })
-      .freeOperationDenial.cause === 'zoneFilterMismatch'
-  );
-};
-
 export interface PreparePlayableMovesOptions {
   readonly pendingTemplateCompletions?: number;
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
@@ -131,49 +102,15 @@ export function preparePlayableMoves(
     }
     seenMoveKeys.add(stableMoveKey);
     if (!viability.viable) {
-      // Zone-filter mismatches on free-operation templates are not definitive
-      // rejections — the zone filter cannot be evaluated until target zones are
-      // selected during template completion.  Fall through to the completion
-      // path so evaluatePlayableMoveCandidate can resolve zones and re-check.
-      if (isZoneFilterMismatchOnFreeOpTemplate(classified)) {
-        const completion = attemptTemplateCompletion(
-          input,
-          move,
-          rng,
-          pendingTemplateCompletions,
-          options.choose,
-          recordPlayableMove,
-          profiler,
-          completionsByActionId,
-        );
-        rng = completion.rng;
-        stochasticCount += completion.stochasticCount;
-        templateCompletionAttempts += completion.templateCompletionAttempts;
-        templateCompletionSuccesses += completion.templateCompletionSuccesses;
-        templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
-        movePreparations.push({
-          actionId: String(move.actionId),
-          stableMoveKey,
-          initialClassification: 'rejected',
-          finalClassification: completion.trace.finalClassification,
-          enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
-          ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
-          templateCompletionAttempts: completion.trace.templateCompletionAttempts,
-          templateCompletionOutcome: completion.trace.templateCompletionOutcome,
-          ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
-          fellThroughFromZoneFilterMismatch: true,
-        });
-      } else {
-        rejectedNotViable += 1;
-        movePreparations.push({
-          actionId: String(move.actionId),
-          stableMoveKey,
-          initialClassification: 'rejected',
-          finalClassification: 'rejected',
-          enteredTrustedMoveIndex: false,
-          rejection: 'notViable',
-        });
-      }
+      rejectedNotViable += 1;
+      movePreparations.push({
+        actionId: String(move.actionId),
+        stableMoveKey,
+        initialClassification: 'rejected',
+        finalClassification: 'rejected',
+        enteredTrustedMoveIndex: false,
+        rejection: 'notViable',
+      });
       continue;
     }
     if (viability.complete) {

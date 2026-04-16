@@ -249,21 +249,6 @@ const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: Acti
   return false;
 };
 
-const isDeferredFreeOperationTemplateProbeFailure = (
-  move: Move,
-  viability: ReturnType<typeof probeMoveViability>,
-): boolean => {
-  if (move.freeOperation !== true || viability.viable || viability.code !== 'ILLEGAL_MOVE') {
-    return false;
-  }
-  const ctx = viability.context;
-  return (
-    ctx.reason === 'freeOperationNotGranted'
-    && 'freeOperationDenial' in ctx
-    && (ctx as { readonly freeOperationDenial: { readonly cause: string } }).freeOperationDenial.cause === 'zoneFilterMismatch'
-  );
-};
-
 const classifyEnumeratedMoves = (
   def: GameDef,
   state: GameState,
@@ -308,26 +293,6 @@ const classifyEnumeratedMoves = (
             'enumerateLegalMoves',
           )
           : undefined,
-      });
-      continue;
-    }
-
-    if (isDeferredFreeOperationTemplateProbeFailure(move, viability)) {
-      classified.push({
-        move,
-        viability: {
-          viable: true,
-          complete: false,
-          move,
-          warnings: [],
-          code: undefined,
-          context: undefined,
-          error: undefined,
-          nextDecision: undefined,
-          nextDecisionSet: undefined,
-          stochasticDecision: undefined,
-        },
-        trustedMove: undefined,
       });
       continue;
     }

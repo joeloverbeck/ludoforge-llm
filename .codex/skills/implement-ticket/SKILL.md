@@ -47,6 +47,7 @@ When the ticket is a **bounded local refactor**, keep the read phase lean after 
 2. Open sibling drafts only long enough to confirm the current ticket has not been absorbed or contradicted.
 3. Load only the optional reference files needed by the live boundary you actually found.
 4. Still emit the full working-notes checkpoint before coding.
+5. Do not automatically load every later reference file named elsewhere in this skill. Treat those loads as conditional for bounded local refactors unless reassessment reveals blocking drift, migration/shared-contract fallout, or another concrete need.
 
 When the ticket is a **proof, benchmark, audit, or investigation ticket**, do this compact gate checklist before heavy commands:
 
@@ -113,6 +114,7 @@ When the active ticket or referenced artifacts are untracked drafts:
    - Acceptance-text rule: rewrite the active draft ticket before completion when the stale wording changes the meaning of an acceptance criterion, invariant, owned file list, or verification expectation a later turn could reasonably follow literally. A closeout-only semantic correction is sufficient only when the live boundary stayed correct and the stale text is clearly documented in the outcome without leaving the ticket’s forward-looking contract misleading.
 6. Prefer minimal sibling edits until live verification or authoritative evidence proves ownership drift. If live verification forces absorbed fallout, update the active ticket outcome first, then narrow or rewrite only the directly affected siblings.
 7. If a draft ticket's acceptance text or test description asserts the wrong value shape, output contract, or semantic expectation, distinguish that from a wrong implementation boundary. Wrong semantic expectations may still require a stop-and-confirm if satisfying the literal text would violate the live contract or `AGENTS.md` ticket fidelity.
+8. When an active untracked draft ticket completes, update it before closeout so it reflects the final status, actual touched-file scope, and repo-valid verification commands that ran. Do not leave a completed draft with stale forward-looking acceptance text or stale command examples.
 
 #### Draft Drift Preflight
 
@@ -152,7 +154,7 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
    - Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
 
-Load `references/triage-and-resolution.md`.
+Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
 If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
 
@@ -198,9 +200,10 @@ Every stop condition below requires resolution before implementation proceeds.
 
 ## Implementation Rules
 
-Load `references/implementation-general.md`.
+Load `references/implementation-general.md` by default for non-bounded tickets, and for bounded local refactors only when the ticket widens beyond a simple local change, exposes split ownership/follow-up handling, or otherwise needs the broader implementation guidance.
 
 - If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
+- Before inventing a brand-new synthetic failing test, check whether an existing nearby unit/integration fixture, regression, or focused failing lane already proves the same seam closely enough. Prefer extracting, tightening, or adapting the smallest existing repo-owned witness when it remains the narrowest valid proof.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
 - If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
@@ -244,7 +247,7 @@ For historical benchmark sweeps across commits, branches, or detached worktrees:
 
 ## Verification
 
-Load `references/verification.md`.
+Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. For straightforward bounded local refactors, the verification rules in this file may be applied directly without loading the extra reference.
 
 Before running any substantive verification, do a verification preflight for each planned lane:
 1. Confirm whether the command exercises source files, compiled artifacts, generated schemas, compiled JSON, or goldens.
@@ -255,7 +258,7 @@ Before running any substantive verification, do a verification preflight for eac
 
 Before running broader checks, identify whether any ticket-relevant commands clean or rewrite shared outputs such as `packages/*/dist`, generated schemas, compiled JSON, or goldens. If they do, run those lanes serially even when the surrounding Codex guidance favors parallel tool use.
 
-For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness.
+For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness. If the repo already contains a nearby passing or semantically adjacent regression that exercises the same seam, prefer adapting that witness before authoring a brand-new fixture from scratch.
 
 If a verification lane fails immediately after overlapping output-contending commands, treat the first result as inconclusive until you rerun it serially. Recovery order:
 1. Classify the failure as a possible ordering artifact rather than as code-caused.
@@ -343,7 +346,7 @@ pnpm turbo schema:artifacts
 
 ## Follow-Up
 
-Load `references/closeout-and-followup.md`.
+Load `references/closeout-and-followup.md` for non-bounded tickets, or for bounded local refactors when closeout needs follow-up classification, ticket blocking, sibling rewrites, or other nontrivial handoff work. A straightforward bounded local refactor may use the closeout checklist below directly without loading the extra reference.
 
 Before declaring completion or updating the ticket status, run one final acceptance sweep against the ticket text and your final diff:
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
@@ -362,6 +365,8 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - any boundary correction or semantic correction confirmed during reassessment
 - verification commands that actually ran
 - whether schema/artifact fallout was checked and whether it changed
+
+For active untracked draft tickets, prefer the same durable closeout pattern before finishing the turn: update the draft ticket status and outcome so later sessions inherit the corrected contract, touched-file scope, and repo-valid verification commands rather than the stale draft wording.
 
 ## Codex Adaptation Notes
 

@@ -1,6 +1,6 @@
 # 132AGESTUVIA-006: Reconstruct seed-1000 historical draw-space artifact for Spec 132 I2
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None required by default — investigation artifact and/or narrow diagnostic helper only if needed
@@ -55,7 +55,7 @@ If the exact historical state cannot be reconstructed from repo-owned artifacts 
 ## Files to Touch
 
 - `campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs` (modify only if a narrow deterministic helper is truly required)
-- `packages/engine/test/unit/` or `packages/engine/test/fixtures/` (new artifact/proof lane)
+- `packages/engine/test/integration/fitl-seed-1000-draw-space.test.ts` (new artifact/proof lane)
 - `tickets/132AGESTUVIA-006.md` (update outcome/verification)
 
 ## Out of Scope
@@ -82,9 +82,29 @@ If the exact historical state cannot be reconstructed from repo-owned artifacts 
 
 ### New/Modified Tests
 
-1. `<new focused proof or fixture-backed test>` — exhaustively characterizes the historical seed-1000 first-choice surface or proves the concrete reconstruction blocker.
+1. `packages/engine/test/integration/fitl-seed-1000-draw-space.test.ts` — reconstructs the historical seed-1000 NVA free-operation march witness from live repo state, enumerates the 29 first-choice options, and recursively classifies the downstream bounded decision space until each first choice has a single historical outcome bucket.
 
 ### Commands
 
-1. `<targeted repro / artifact generation command>`
-2. `pnpm -F @ludoforge/engine test`
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/integration/fitl-seed-1000-draw-space.test.js`
+3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Reconstructed the historical seed-1000 witness directly from repo-owned FITL production spec state via a focused integration proof at `packages/engine/test/integration/fitl-seed-1000-draw-space.test.ts`.
+- Confirmed the exact historical stuck state remains reconstructable on current `HEAD`: `stateHash=6539610714732013105`, NVA free-operation `march`, `legalMoves.length=2`, and the first pending request is `chooseN{min:1,max:1}` with 29 options.
+- Exhaustively classified the first-choice surface and recorded the exact counts inline in the proof:
+  - `completed`: 3 first choices
+  - `stochasticUnresolved`: 0
+  - downstream `illegal`: 26
+  - `CHOICE_RUNTIME_VALIDATION_FAILED`: 0
+  - budget `exceeded`: 0
+- Recorded the three completing first choices exactly: `an-loc:none`, `da-nang:none`, and `sihanoukville:none`.
+- No production engine code or FITL-specific kernel branching was added; the ticket closed as an evidence-only artifact delivery.
+
+## Verification
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/integration/fitl-seed-1000-draw-space.test.js`
+3. `pnpm -F @ludoforge/engine test`

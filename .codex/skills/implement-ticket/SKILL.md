@@ -24,6 +24,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
   - `authoritative boundary`: the final owned implementation slice after reassessment
   - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`
   - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
+  - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
   - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
   - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 - Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
@@ -60,6 +61,13 @@ When a profiling or investigation ticket may close on **contradictory live evide
 2. Rerun current `HEAD` in that same environment before treating an earlier recorded verdict as definitive.
 3. Reclassify the current ticket as `evidence-only closeout`, `still-live fix ticket`, or `needs 1-3-1 boundary reset` before profiling deeper or editing code.
 
+When the ticket is a **shared-contract or migration ticket**, do this compact downstream-consumer checkpoint before coding:
+
+1. List the repo-owned downstream packages or modules that consume the changed runtime surface.
+2. Classify each consumer as `runtime owner`, `serialized/display boundary`, `generated artifact consumer`, or `tests/fixtures only`.
+3. Record which verification lanes are intermediate local proofs versus final acceptance-proof lanes for the ticket.
+4. If any downstream consumer is outside the main package you are editing, plan at least one workspace-level build/typecheck lane before considering the ticket complete.
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
@@ -72,6 +80,7 @@ When a profiling or investigation ticket may close on **contradictory live evide
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - Prefer catching stale runner assumptions early (for example, Jest-style flags in a Node test-runner package) so the focused proof lane is valid before implementation starts.
    - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
+   - Determine whether each critical verification lane executes source files or compiled/generated outputs such as `dist`. If compiled/generated outputs are involved, identify the authoritative rebuild step before trusting runtime failures or green results.
    - Check whether any likely verification commands contend on generated output trees such as `dist`, schema artifacts, compiled JSON, or goldens. If they do, plan those lanes as sequential-only before you start running checks.
    - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
    - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
@@ -84,6 +93,11 @@ When a profiling or investigation ticket may close on **contradictory live evide
 - **Series slice discipline**: When a referenced spec is broader than the current ticket, treat the ticket as the implementation boundary unless verified evidence shows the slice is stale, internally inconsistent, or impossible without broader fallout. Confirm which broader spec work is deferred to siblings.
 - **Named fallout classification**: When a ticket names multiple fallout surfaces, explicitly classify each as `still failing`, `already green`, or `already absorbed by sibling` before coding. Treat already-green named artifacts as verified non-owners unless new evidence reopens them.
 - **Active draft series sanity check**: When the active draft ticket explicitly references sibling draft tickets by number, scope, or out-of-scope ownership, open those siblings long enough to confirm the current ticket has not already been absorbed, contradicted, or rendered stale. A lightweight sanity pass is enough unless reassessment reveals real ownership drift.
+- **Ticket re-entry after follow-up creation**: If the same area was previously split into a follow-up ticket and the user now reopens or explicitly points back to the original ticket, classify the relationship before coding as one of:
+  - `resume original`: the original ticket was never truly closed, and the follow-up is redundant or advisory
+  - `continue follow-up`: the original ticket remains complete enough, and the new work still belongs to the follow-up
+  - `user override of earlier split`: the user is intentionally putting the remaining work back under the original ticket
+  Record that classification in working notes and restate the authoritative boundary so the active ticket/follow-up ownership is explicit before implementation resumes.
 
 #### Draft Handling
 
@@ -121,7 +135,9 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - When a ticket depends on auto-synthesized or compiler-generated outputs, compare the pre-synthesis authored source, the post-synthesis compiled section, and every downstream consumer that relies on the generated ids or artifacts. Confirm they share the same live source of truth before accepting a YAML-only or caller-local fix.
 7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.
 8. Check constraints the ticket may have underspecified:
-   - Shared type or schema ripple effects
+  - Shared type or schema ripple effects
+  - Repo-owned downstream consumers of the changed contract, especially UI/display, trace/serialization, generated-fixture, and sibling-package boundaries
+  - Staged shared-contract ownership: when the current ticket introduces a new shared field/type surface and a downstream sibling owns population, migration, or full enforcement, explicitly decide whether the interim shape must be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
    - Shared contract migration fanout: estimate the likely blast radius early with targeted `rg` counts before coding so fixture fallout, helper updates, and broad touch points are visible up front
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
    - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
@@ -174,6 +190,11 @@ Every stop condition below requires resolution before implementation proceeds.
     - Mark the active ticket `BLOCKED` rather than `COMPLETE` when acceptance is still unmet.
     - Restate the remaining unmet acceptance or invariant as the new live boundary.
     - Stop before further implementation widens the ticket again unless the user confirms the broader boundary.
+20. When acceptance-lane failures persist after the original contract or boundary seam is repaired, explicitly classify whether the remaining red lane is:
+    - `same seam still incomplete`: the failures still share the original ticket-owned contract/boundary cause
+    - `adjacent fallout still required`: the failures are downstream but still part of the same narrowly coherent ticket-owned seam
+    - `new semantic/runtime blocker`: the failures now show broader gameplay, preview, or runtime behavior divergence beyond the original seam
+    If the classification is `new semantic/runtime blocker`, stop widening the active ticket by default. Record the completed owned work, mark the ticket `BLOCKED`, and create or update a follow-up ticket unless the user explicitly confirms a broader boundary.
 
 ## Implementation Rules
 
@@ -196,6 +217,25 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 
 When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
 
+For broad contract migrations, representation changes, or identifier migrations, add an explicit post-implementation sweep before broad verification:
+- grep for legacy comparisons, stringification, or serialization of the migrated field (`String(...)`, raw equality checks, hand-authored literals, trace/summary emitters, golden producers)
+- classify each surviving surface as `must migrate`, `intentional serialized boundary`, or `non-owner`
+- run one or two representative runtime proofs on user-facing or serialized surfaces before assuming typecheck-complete means ticket-complete
+- when a test file mixes authored `GameSpecDoc`/spec fixtures with compiled `GameDef`/`GameState` runtime fixtures, explicitly classify each edited block as `authored boundary` or `compiled runtime` before changing ids or expectations; keep string identifiers only on the authored side unless live code proves that surface was already compiled
+
+For identifier migrations specifically (`ActionId`, `ZoneId`, `Token.type`, variable ids, marker ids, and similar), use this compact consumer sweep:
+- runtime contract and compiler lowering
+- engine/runtime fixtures and helper builders
+- serialized or display-restoration boundaries (runner, traces, reports, visual-config validation, human-readable logs)
+- committed generated artifacts or compiled fixture consumers in sibling packages
+- at least one workspace-level build/typecheck lane before closeout when more than one package consumes the migrated identifiers
+
+When the ticket introduces a shared contract surface but a downstream sibling still owns population, migration, or full enforcement, make the interim contract state explicit before coding:
+- identify which ticket introduces the surface and which sibling owns the follow-through
+- decide whether the live boundary requires the new surface to be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
+- rewrite active draft acceptance text before completion if the original wording would misstate that interim contract
+- verify the interim shape with the narrowest build-safe proof lane instead of silently absorbing the downstream sibling's work
+
 For historical benchmark sweeps across commits, branches, or detached worktrees:
 - expect each isolated worktree to need its own dependency/bootstrap setup before the first measurement
 - treat measurement logs written inside those worktrees as evidence artifacts; do not overwrite or discard them just to reuse the same worktree for a different commit
@@ -205,6 +245,13 @@ For historical benchmark sweeps across commits, branches, or detached worktrees:
 ## Verification
 
 Load `references/verification.md`.
+
+Before running any substantive verification, do a verification preflight for each planned lane:
+1. Confirm whether the command exercises source files, compiled artifacts, generated schemas, compiled JSON, or goldens.
+2. Identify the authoritative rebuild/regeneration prerequisite, if any.
+3. Record whether the lane is safe to overlap with other commands that touch the same outputs.
+4. Decide what evidence level that lane can provide: focused proof, package-level proof, or full acceptance proof.
+5. For shared-contract or migration tickets, explicitly label each lane as `intermediate green` or `acceptance-proof`; do not treat an intermediate package-local green lane as ticket completion if downstream repo-owned consumers remain unverified.
 
 Before running broader checks, identify whether any ticket-relevant commands clean or rewrite shared outputs such as `packages/*/dist`, generated schemas, compiled JSON, or goldens. If they do, run those lanes serially even when the surrounding Codex guidance favors parallel tool use.
 
@@ -218,6 +265,8 @@ If a verification lane fails immediately after overlapping output-contending com
 ### Verification Safety
 
 - Keep bugfix/regression verification on a red-green path: when you add or expose a focused failing proof for the ticket, keep rerunning that focused lane until it passes before escalating to broader package or repo commands.
+- After a focused-front repair is green on a broad test or fixture migration, prefer package-level `typecheck` before the full package `test` lane when both are relevant. Residual mechanical fallout often appears there first and is cheaper to resolve before rerunning the full suite.
+- For shared-contract, migration, or identifier-change tickets, require at least one workspace-level build or typecheck lane before declaring completion whenever another repo-owned package consumes the changed surface.
 - Treat verification commands that delete or regenerate shared outputs as sequential-only unless the repo explicitly documents them as parallel-safe.
 - In repositories where tests execute compiled files from `dist`, do not run build commands that rewrite `dist` in parallel with those tests. A build that starts with `rm -rf dist` can create false negative failures unrelated to the implementation.
 - Treat transitive task-graph builds as output contenders too: `turbo` lanes such as `turbo typecheck` or `turbo test` may invoke package `build` tasks that rewrite `dist`, so do not overlap them with compiled-file test runs unless you have confirmed the graph is output-safe.
@@ -228,9 +277,28 @@ If a verification lane fails immediately after overlapping output-contending com
 - For deterministic but seed-sensitive preparation flows, prefer bounded witness discovery over hardcoding an unverified seed. Keep the search bounded, deterministic, and aligned with the invariant being proven.
 - When a ticket names a simulator path, agent profile, campaign harness, replay harness, or other configuration-sensitive reproducer, preserve that authoritative setup in quick repro probes before classifying the witness as stale, fixed, or shifted. Do not treat a cheaper default-path probe as authoritative if profile wiring, RNG routing, or harness behavior can materially change the witness.
 - If an initial bounded witness proves only part of the target invariant, keep searching for a stronger bounded witness before classifying the ticket as stale, contradictory, or blocked. Escalate only after bounded search aligned to the full invariant fails or reveals a true contract conflict.
-- Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution.
+- Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution. When the change is a shared contract or identifier migration, explicitly check for downstream committed fixture consumers in other packages as well, such as runner bootstrap `*-game-def.json`, compiled production snapshots, or other checked-in generated runtime artifacts that may need regeneration before runtime verification is trustworthy.
 - After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
+
+### Verification Evidence States
+
+When verification is partially blocked by environment behavior, flaky wrappers, or shell/session desynchronization, report the strongest honest evidence state instead of overstating the result:
+
+1. `focused proof green`: the narrow reproducer or owned acceptance witness is green
+2. `package lane green`: the relevant build/typecheck/test package lane is green with a confirmed exit code
+3. `full acceptance green`: the complete ticket-owned verification set is green with confirmed exit codes
+4. `partial clean evidence only`: logs or partial output show a clean run through a meaningful checkpoint, but the final exit code or tail segment is unconfirmed
+
+If you cannot reach `full acceptance green`, state exactly:
+- which lanes are confirmed green
+- which lane or exit code remains unconfirmed
+- whether the remaining gap is a code failure, an environment/tooling failure, or merely missing proof capture
+
+For long-running suites or flaky terminal sessions, prefer capturing authoritative evidence early:
+- use a stable log-capture wrapper from the start when feasible
+- preserve the exact command and the intended acceptance scope
+- if the environment still drops the final status, split the suite into smaller deterministic lanes rather than making an unqualified green claim
 - For campaign, tournament, or trace-inspection tickets, prefer the smallest bounded seed/run window that reaches the claimed scenario or reproducer before escalating to larger harness runs. If the first bounded run misses the target behavior, widen only enough to reach the intended trace slice.
 - When a ticket names a high-level reproducer but the setup proves too coupled or noisy, prefer the narrowest valid proof surface that still exercises the owned invariant: first the authority/helper that owns the behavior, then a production-data integration slice, then the broader end-to-end flow only if needed.
 - For shared contract or object-shape migrations, verify both sides of the boundary deliberately: the live runtime shape you intended to change, and any serialized/golden/fixture surface you intended to preserve. Do not assume one implies the other.
@@ -254,10 +322,12 @@ Use this after commands that regenerate fixtures, bootstrap JSON, schema artifac
 
 1. Run the narrowest authoritative generator for the owned surface.
 2. Inspect every regenerated file, not just the one the ticket named.
-3. Classify each regenerated artifact as `owned`, `already-owned sibling fallout`, or `unrelated churn`.
-4. Keep only the owned artifacts required to make the ticket true in live runtime.
-5. Revert unrelated churn before final closeout.
-6. Rerun the narrowest affected proof lane after artifact triage so the kept generated files are validated.
+3. For shared contract or identifier migrations, check whether another package consumes the regenerated surface through committed fixture artifacts rather than live source compilation.
+4. Classify each regenerated artifact as `owned`, `already-owned sibling fallout`, or `unrelated churn`.
+5. For owned metadata or summary artifacts, verify semantic ordering as well as freshness when the generated output exposes user-facing ordered lists such as factions, phases, seats, or action summaries.
+6. Keep only the owned artifacts required to make the ticket true in live runtime.
+7. Revert unrelated churn before final closeout.
+8. Rerun the narrowest affected proof lane after artifact triage so the kept generated files are validated.
 
 ### Standard Commands
 
@@ -280,6 +350,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
+- when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout

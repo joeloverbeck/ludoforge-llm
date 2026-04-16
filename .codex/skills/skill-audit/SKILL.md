@@ -66,6 +66,12 @@ Output the audit in the conversation, not in a file.
 - **AGENTS.md**: <aligned / N deviations found>
 [If violations exist, list the specific foundation number or AGENTS.md rule and the conflict]
 [Optional when helpful] **What worked well**: <1 short line on where the skill guided the session effectively>
+[Optional for `skill-audit` self-audits] **Self-audit rubric**:
+- `target resolution`: <pass / minor drift / material drift>
+- `scope selection`: <pass / minor drift / material drift>
+- `report structure`: <pass / minor drift / material drift>
+- `severity calibration`: <pass / minor drift / material drift>
+- `handoff clarity`: <pass / minor drift / material drift>
 
 ## Issues
 
@@ -152,6 +158,7 @@ If the current audit targets a different skill than any earlier audit in this se
   - `report structure`: did the audit follow the stated template and classification scheme?
   - `severity calibration`: were severities proportionate to the actual session evidence?
   - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
+- For `skill-audit` self-audits, report those five dimensions explicitly in the final audit under `Alignment Check` using the optional `Self-audit rubric` block. Do not leave the rubric implicit.
 - For self-audits, compare the immediately previous audit output against the report template before drafting findings. Explicitly check whether the required headings, summary fields, per-finding structure, and total-count summary were present.
 - Use this optional self-audit rubric when deciding whether each evidence dimension passed:
   - `pass`: the audit satisfied the requirement cleanly

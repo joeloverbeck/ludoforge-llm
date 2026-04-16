@@ -247,7 +247,7 @@ describe('template-completion chooseN bounds', () => {
     const templateMove: Move = { actionId: asActionId('insufficient-min-choose-n'), params: {} };
 
     const result = completeTemplateMove(def, baseState, templateMove, createRng(42n));
-    assert.equal(result.kind, 'unsatisfiable');
+    assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
   it('chooseN selections stay within the option domain across seeds', () => {
@@ -326,7 +326,7 @@ describe('template-completion chooseN bounds', () => {
       def, baseState, templateMove, createRng(1n), undefined,
       { budgets: { maxCompletionDecisions: 0 } },
     );
-    assert.equal(result.kind, 'unsatisfiable');
+    assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
   it('treats guided chooseN cardinality mismatches as unsatisfiable instead of throwing', () => {
@@ -339,7 +339,7 @@ describe('template-completion chooseN bounds', () => {
       choose: () => ['a', 'b'],
     });
 
-    assert.equal(result.kind, 'unsatisfiable');
+    assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
   it('default budget (256) allows actions that would exceed the old 50-decision limit', () => {

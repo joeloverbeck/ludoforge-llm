@@ -56,7 +56,7 @@ export function preparePlayableMoves(
   let rejectedNotViable = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
-  let templateCompletionUnsatisfiable = 0;
+  let templateCompletionStructuralFailures = 0;
   let duplicatesRemoved = 0;
   const completionsByActionId = new Map<string, number>();
   const movePreparations: PolicyMovePreparationTrace[] = [];
@@ -165,7 +165,7 @@ export function preparePlayableMoves(
     stochasticCount += completion.stochasticCount;
     templateCompletionAttempts += completion.templateCompletionAttempts;
     templateCompletionSuccesses += completion.templateCompletionSuccesses;
-    templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
+    templateCompletionStructuralFailures += completion.templateCompletionStructuralFailures;
     movePreparations.push({
       actionId: String(move.actionId),
       stableMoveKey,
@@ -191,7 +191,7 @@ export function preparePlayableMoves(
       rejectedNotViable,
       templateCompletionAttempts,
       templateCompletionSuccesses,
-      templateCompletionUnsatisfiable,
+      templateCompletionStructuralFailures,
       duplicatesRemoved,
       ...(completionsByActionId.size === 0
         ? {}
@@ -219,14 +219,14 @@ function attemptTemplateCompletion(
   readonly stochasticCount: number;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionSuccesses: number;
-  readonly templateCompletionUnsatisfiable: number;
+  readonly templateCompletionStructuralFailures: number;
   readonly trace: TemplateCompletionTrace;
 } {
   let currentRng = initialRng;
   let stochasticCount = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
-  let templateCompletionUnsatisfiable = 0;
+  let templateCompletionStructuralFailures = 0;
   let sawCompletedMove = false;
   let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
@@ -283,14 +283,19 @@ function attemptTemplateCompletion(
       break;
     }
     rejection = result.rejection;
-    if (result.rejection === 'completionUnsatisfiable') {
-      templateCompletionUnsatisfiable += 1;
+    if (result.rejection === 'structurallyUnsatisfiable') {
+      templateCompletionStructuralFailures += 1;
       break;
     }
-    // `notViable`: the random target draw was illegal but the template may be
-    // completable with a different draw.  Extend the budget if we have not yet
-    // found any viable completion and the retry cap has not been reached.
-    if (!sawCompletedMove && stochasticCount === 0 && notViableRetries < NOT_VIABLE_RETRY_CAP) {
+    // `notViable` and `drawDeadEnd` mean the current random path failed, but a
+    // different draw may still complete the same template. Extend the budget
+    // while we have not yet found any viable completion and the cap remains.
+    if (
+      (result.rejection === 'notViable' || result.rejection === 'drawDeadEnd')
+      && !sawCompletedMove
+      && stochasticCount === 0
+      && notViableRetries < NOT_VIABLE_RETRY_CAP
+    ) {
       notViableRetries += 1;
     }
   }
@@ -328,7 +333,7 @@ function attemptTemplateCompletion(
     stochasticCount,
     templateCompletionAttempts,
     templateCompletionSuccesses,
-    templateCompletionUnsatisfiable,
+    templateCompletionStructuralFailures,
     trace,
   };
 }

@@ -1077,7 +1077,7 @@ describe('PolicyAgent', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 2,
       completionsByActionId: {
         chooseTarget: 3,

@@ -48,7 +48,7 @@ function createMetadata(): PolicyEvaluationMetadata {
         previewRefIds: ['globalVar.usMargin'],
         unknownPreviewRefs: [{ refId: 'globalVar.usMargin', reason: 'unresolved' }],
         previewOutcome: 'unresolved',
-        previewFailureReason: 'completionUnsatisfiable',
+        previewFailureReason: 'structurallyUnsatisfiable',
       },
     ],
     pruningSteps: [{ ruleId: 'dropPass', remainingCandidateCount: 2, skippedBecauseEmpty: false }],
@@ -74,7 +74,7 @@ function createMetadata(): PolicyEvaluationMetadata {
       rejectedNotViable: 1,
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
-      templateCompletionUnsatisfiable: 1,
+      templateCompletionStructuralFailures: 1,
       duplicatesRemoved: 0,
       completionsByActionId: {
         advance: 1,
@@ -96,7 +96,7 @@ function createMetadata(): PolicyEvaluationMetadata {
         enteredTrustedMoveIndex: false,
         templateCompletionAttempts: 2,
         templateCompletionOutcome: 'failed',
-        rejection: 'completionUnsatisfiable',
+        rejection: 'structurallyUnsatisfiable',
       },
     ],
     selectedStableMoveKey: 'alpha',
@@ -139,7 +139,7 @@ describe('policy-diagnostics', () => {
       rejectedNotViable: 1,
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
-      templateCompletionUnsatisfiable: 1,
+      templateCompletionStructuralFailures: 1,
       duplicatesRemoved: 0,
       completionsByActionId: {
         advance: 1,
@@ -147,7 +147,7 @@ describe('policy-diagnostics', () => {
     });
     assert.equal(trace.movePreparations?.length, 2);
     assert.equal(trace.movePreparations?.[1]?.templateCompletionOutcome, 'failed');
-    assert.equal(trace.movePreparations?.[1]?.rejection, 'completionUnsatisfiable');
+    assert.equal(trace.movePreparations?.[1]?.rejection, 'structurallyUnsatisfiable');
     assert.equal(trace.candidates?.length, 3);
     assert.equal(trace.candidates?.[0]?.previewOutcome, 'ready');
     assert.equal(trace.candidates?.[0]?.grantedOperationSimulated, true);
@@ -160,7 +160,7 @@ describe('policy-diagnostics', () => {
     assert.equal(trace.candidates?.[1]?.grantedOperationSimulated, undefined);
     assert.equal(trace.candidates?.[0]?.previewFailureReason, undefined);
     assert.equal(trace.candidates?.[2]?.previewOutcome, 'unresolved');
-    assert.equal(trace.candidates?.[2]?.previewFailureReason, 'completionUnsatisfiable');
+    assert.equal(trace.candidates?.[2]?.previewFailureReason, 'structurallyUnsatisfiable');
   });
 
   it('omits phase fields when metadata does not provide them', () => {

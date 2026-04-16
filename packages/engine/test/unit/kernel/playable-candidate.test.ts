@@ -144,7 +144,7 @@ describe('playable-candidate evaluator', () => {
     if (evaluated.kind !== 'rejected') {
       assert.fail('expected unplayable template rejection');
     }
-    assert.equal(evaluated.rejection, 'completionUnsatisfiable');
+    assert.equal(evaluated.rejection, 'structurallyUnsatisfiable');
   });
 
   it('does not call choose for already-complete legal moves', () => {

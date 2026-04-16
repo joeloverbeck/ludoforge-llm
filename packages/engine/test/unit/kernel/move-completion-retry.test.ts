@@ -1,0 +1,179 @@
+import * as assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+
+import { PolicyAgent } from '../../../src/agents/policy-agent.js';
+import { completeTemplateMove } from '../../../src/kernel/move-completion.js';
+import {
+  asActionId,
+  asPhaseId,
+  assertValidatedGameDef,
+  createGameDefRuntime,
+  createRng,
+  initialState,
+  type ActionDef,
+  type ActionPipelineDef,
+  type GameDef,
+  type Move,
+} from '../../../src/kernel/index.js';
+import { runGame } from '../../../src/sim/simulator.js';
+import { compileProductionSpec } from '../../helpers/production-spec-helpers.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+
+const phaseId = asPhaseId('main');
+
+const createChooseNAction = (id: string): ActionDef => ({
+  id: asActionId(id),
+  actor: 'active',
+  executor: 'actor',
+  phase: [phaseId],
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [],
+  limits: [],
+});
+
+const createRetryProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['dead', 'safe'] },
+            min: 1,
+            max: 1,
+          },
+        }),
+        eff({
+          if: {
+            when: {
+              op: 'in',
+              item: 'dead',
+              set: { _t: 2, ref: 'binding', name: '$targets' },
+            },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
+const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['a', 'b'] },
+            min: 3,
+            max: 3,
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
+const createDef = (
+  actionId: string,
+  profile: ActionPipelineDef,
+): GameDef => ({
+  metadata: { id: `move-completion-retry-${actionId}`, players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: phaseId }] },
+  actions: [createChooseNAction(actionId)],
+  triggers: [],
+  terminal: { conditions: [] },
+  actionPipelines: [profile],
+});
+
+describe('move-completion retry classification', () => {
+  it('distinguishes draw dead ends from structural failure for chooseN{min:1,max:1} templates', () => {
+    const actionId = 'retry-template';
+    const def = createDef(actionId, createRetryProfile(actionId));
+    const state = initialState(def, 1, 2).state;
+    const templateMove: Move = { actionId: asActionId(actionId), params: {} };
+
+    let sawCompleted = false;
+    let sawDrawDeadEnd = false;
+    for (let seed = 0n; seed < 32n; seed += 1n) {
+      const result = completeTemplateMove(def, state, templateMove, createRng(seed));
+      if (result.kind === 'completed') {
+        sawCompleted = true;
+        assert.deepEqual(result.move.params.$targets, ['safe']);
+        assert.equal(result.move.params.$safe, 'done');
+      }
+      if (result.kind === 'drawDeadEnd') {
+        sawDrawDeadEnd = true;
+      }
+    }
+
+    assert.equal(sawCompleted, true, 'expected at least one successful draw');
+    assert.equal(sawDrawDeadEnd, true, 'expected at least one draw-specific dead end');
+  });
+
+  it('reports structural failure when chooseN min exceeds the selectable domain', () => {
+    const actionId = 'structural-template';
+    const def = createDef(actionId, createInsufficientProfile(actionId));
+    const state = initialState(def, 2, 2).state;
+    const templateMove: Move = { actionId: asActionId(actionId), params: {} };
+
+    const result = completeTemplateMove(def, state, templateMove, createRng(7n));
+    assert.equal(result.kind, 'structurallyUnsatisfiable');
+  });
+
+  it('plays five FITL seed-1002 moves within a bounded smoke window', { timeout: 5_000 }, () => {
+    const { compiled } = compileProductionSpec();
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const runtime = createGameDefRuntime(def);
+    const agents = Array.from({ length: 4 }, () => new PolicyAgent());
+
+    const trace = runGame(def, 1002, agents, 5, 4, undefined, runtime);
+
+    assert.ok(trace.moves.length > 0, 'expected seed 1002 smoke to advance');
+    assert.notEqual(trace.stopReason, 'agentStuck');
+  });
+});

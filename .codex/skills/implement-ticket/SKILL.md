@@ -56,6 +56,15 @@ When the ticket is a **proof, benchmark, audit, or investigation ticket**, do th
 3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
 4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
 
+When a **proof, benchmark, investigation, or mixed ticket** requires an exact historical reproduction artifact or incident characterization, do this historical-evidence sufficiency check before assuming the ticket can close on present-day proof alone:
+
+1. Classify the repo evidence as `reconstructable`, `summary-only`, or `missing` for the named historical state, trace slice, or benchmark incident.
+2. If the evidence is `summary-only` or `missing`, decide before closeout whether the ticket can:
+   - close on an equivalent bounded live proof plus an explicit ticket rewrite
+   - remain `BLOCKED` pending a reconstructable artifact or new instrumentation
+   - require a 1-3-1 boundary reset because the literal historical deliverable is not currently attainable from repo-owned evidence
+3. Record that classification in working notes so later implementation and closeout do not silently downgrade an exact historical deliverable into a looser modern proof.
+
 When a profiling or investigation ticket may close on **contradictory live evidence** rather than on a code fix, use this quick contradiction checklist before widening scope:
 
 1. Rerun the named baseline in the same environment when the ticket depends on a relative performance claim.
@@ -353,11 +362,14 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
+- for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 - for completed active tickets, use the explicit status spelling `**Status**: COMPLETED` unless the repo artifact already documents a different final status class such as `BLOCKED`, `DEFERRED`, or `REJECTED`
+
+When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
 - completion date or resulting status

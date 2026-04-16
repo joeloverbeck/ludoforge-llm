@@ -1,6 +1,6 @@
 # 132AGESTUVIA-002: Split completionUnsatisfiable into structural vs draw-dead-end (S2 + I2 + S4.2)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `TemplateCompletionResult` variant split, retry-loop extension, rejection type union updates
@@ -127,3 +127,20 @@ Because this ticket modifies `move-completion.ts` — the file that caused FITL 
 1. `pnpm -F @ludoforge/engine test test/unit/kernel/move-completion-retry.test.ts`
 2. `pnpm -F @ludoforge/engine test test/unit/kernel/playable-candidate.test.ts`
 3. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Split `TemplateCompletionResult` into `structurallyUnsatisfiable` vs `drawDeadEnd`, with `move-completion.ts` preserving structural classification for empty-domain / min-overflow / guided-invalid paths and using `drawDeadEnd` only for random-draw dead ends.
+- Extended `attemptTemplateCompletion(...)` so `drawDeadEnd` participates in the bounded retry budget alongside `notViable`, while structural failures still break immediately.
+- Renamed the trace statistics field from `templateCompletionUnsatisfiable` to `templateCompletionStructuralFailures` to keep the shared telemetry contract truthful under Foundations #9 and #14.
+- Added `packages/engine/test/unit/kernel/move-completion-retry.test.ts` for the chooseN retry witness plus the seed-1002 smoke guard, and migrated the owned policy diagnostics / schema fixtures / generated `Trace.schema.json` artifact to the new contract.
+- Deviation from original plan: the exact historical seed-1000 NVA march draw-space characterization from `What to Change` item 1 was not reconstructed in this ticket. That investigation remainder is split into follow-up `132AGESTUVIA-006` so this ticket stays closed around the delivered kernel/retry/schema contract work.
+
+## Verification
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/unit/kernel/move-completion-retry.test.js`
+3. `node --test dist/test/unit/kernel/playable-candidate.test.js`
+4. `node --test dist/test/unit/prepare-playable-moves.test.js`
+5. `node --test dist/test/unit/json-schema.test.js`
+6. `pnpm -F @ludoforge/engine test`

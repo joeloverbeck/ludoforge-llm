@@ -23,7 +23,7 @@ export type PlayableCandidateClassification =
   | Readonly<{
       readonly kind: 'rejected';
       readonly move: Move;
-      readonly rejection: 'completionUnsatisfiable' | 'notViable' | 'notDecisionComplete';
+      readonly rejection: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
       readonly viability?: Exclude<MoveViabilityProbeResult, { readonly viable: true }>;
     }>;
 
@@ -74,11 +74,11 @@ const classifyCompletedTemplateMove = (
   state: GameState,
   runtime?: GameDefRuntime,
 ): PlayableCandidateClassification => {
-  if (completed.kind === 'unsatisfiable') {
+  if (completed.kind === 'structurallyUnsatisfiable' || completed.kind === 'drawDeadEnd') {
     return {
       kind: 'rejected',
       move,
-      rejection: 'completionUnsatisfiable',
+      rejection: completed.kind,
     };
   }
   return classifyPlayableCandidateViability(
@@ -110,6 +110,6 @@ export const evaluatePlayableMoveCandidate = (
   const completed = completeTemplateMove(def, state, move, rng, runtime, options);
   return {
     ...classifyCompletedTemplateMove(move, completed, def, state, runtime),
-    rng: completed.kind === 'unsatisfiable' ? rng : completed.rng,
+    rng: completed.kind === 'structurallyUnsatisfiable' || completed.kind === 'drawDeadEnd' ? rng : completed.rng,
   };
 };

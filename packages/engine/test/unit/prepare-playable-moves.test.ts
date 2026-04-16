@@ -84,12 +84,12 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 0,
     });
   });
 
-  it('reports completion statistics across direct, rejected, completed-template, and unsatisfiable-template paths', () => {
+  it('reports completion statistics across direct, rejected, completed-template, and structurally-unsatisfiable-template paths', () => {
     const completeMove: Move = { actionId: asActionId('complete'), params: {} };
     const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
     const satisfiableTemplateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
@@ -159,7 +159,7 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 1,
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
-      templateCompletionUnsatisfiable: 1,
+      templateCompletionStructuralFailures: 1,
       duplicatesRemoved: 0,
       completionsByActionId: {
         chooseTarget: 1,
@@ -203,7 +203,7 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 1,
       completionsByActionId: {
         chooseTarget: 3,
@@ -251,7 +251,7 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 2,
     });
     assert.equal(prepared.movePreparations.length, 3);
@@ -488,7 +488,7 @@ describe('preparePlayableMoves', () => {
   });
 
   describe('notViable retry extension', () => {
-    it('completionUnsatisfiable still breaks immediately without retry extensions', () => {
+    it('structurallyUnsatisfiable still breaks immediately without retry extensions', () => {
       const def = assertValidatedGameDef({
         metadata: { id: 'prepare-unsatisfiable-no-retry', players: { min: 2, max: 2 } },
         constants: {},
@@ -516,9 +516,9 @@ describe('preparePlayableMoves', () => {
 
       assert.equal(prepared.completedMoves.length, 0);
       assert.equal(prepared.stochasticMoves.length, 0);
-      // completionUnsatisfiable should break after 1 attempt, not retry up to 10
+      // structurallyUnsatisfiable should break after 1 attempt, not retry up to 10
       assert.equal(prepared.statistics.templateCompletionAttempts, 1);
-      assert.equal(prepared.statistics.templateCompletionUnsatisfiable, 1);
+      assert.equal(prepared.statistics.templateCompletionStructuralFailures, 1);
     });
 
     it('exports NOT_VIABLE_RETRY_CAP as a bounded positive integer', () => {
@@ -581,7 +581,7 @@ describe('preparePlayableMoves', () => {
       // Verify the structural bound: even if retries extend indefinitely,
       // the cap prevents runaway iteration.  We test this by ensuring that
       // the cap is strictly less than any unreasonable upper bound and that
-      // completionUnsatisfiable (tested above) still exits at 1 attempt.
+      // structurallyUnsatisfiable (tested above) still exits at 1 attempt.
       assert.ok(
         NOT_VIABLE_RETRY_CAP <= 20,
         `NOT_VIABLE_RETRY_CAP (${NOT_VIABLE_RETRY_CAP}) should be a small bounded number`,

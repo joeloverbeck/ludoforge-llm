@@ -268,7 +268,7 @@ describe('policy trace events', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 0,
     });
     assert.equal(verboseDecision.completionStatistics?.completionsByActionId, undefined);

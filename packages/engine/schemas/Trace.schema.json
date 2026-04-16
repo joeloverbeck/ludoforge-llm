@@ -3067,7 +3067,7 @@
                       "templateCompletionSuccesses": {
                         "type": "number"
                       },
-                      "templateCompletionUnsatisfiable": {
+                      "templateCompletionStructuralFailures": {
                         "type": "number"
                       },
                       "duplicatesRemoved": {
@@ -3090,7 +3090,7 @@
                       "rejectedNotViable",
                       "templateCompletionAttempts",
                       "templateCompletionSuccesses",
-                      "templateCompletionUnsatisfiable",
+                      "templateCompletionStructuralFailures",
                       "duplicatesRemoved"
                     ],
                     "additionalProperties": false
@@ -3171,7 +3171,11 @@
                           "anyOf": [
                             {
                               "type": "string",
-                              "const": "completionUnsatisfiable"
+                              "const": "structurallyUnsatisfiable"
+                            },
+                            {
+                              "type": "string",
+                              "const": "drawDeadEnd"
                             },
                             {
                               "type": "string",
@@ -3182,9 +3186,6 @@
                               "const": "notDecisionComplete"
                             }
                           ]
-                        },
-                        "fellThroughFromZoneFilterMismatch": {
-                          "type": "boolean"
                         }
                       },
                       "required": [

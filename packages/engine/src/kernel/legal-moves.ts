@@ -1365,7 +1365,7 @@ const enumerateRawLegalMoves = (
       // queries), the probe was the costliest call in the pipeline enumeration
       // path — executing effects (applyChooseN, evalQuery, filterTokensByExpr)
       // just to verify satisfiability. The agent handles unsatisfiable templates
-      // gracefully via templateCompletionUnsatisfiable, making the enumeration-time
+      // gracefully via templateCompletionStructuralFailures, making the enumeration-time
       // probe redundant safety overhead.
 
       tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action);

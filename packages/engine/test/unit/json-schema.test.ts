@@ -364,7 +364,7 @@ describe('json schema artifacts', () => {
               rejectedNotViable: 1,
               templateCompletionAttempts: 2,
               templateCompletionSuccesses: 1,
-              templateCompletionUnsatisfiable: 1,
+              templateCompletionStructuralFailures: 1,
               duplicatesRemoved: 0,
               completionsByActionId: {
                 advance: 1,
@@ -401,7 +401,7 @@ describe('json schema artifacts', () => {
                   { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'unresolved' },
                 ],
                 previewOutcome: 'unresolved',
-                previewFailureReason: 'completionUnsatisfiable',
+                previewFailureReason: 'structurallyUnsatisfiable',
               },
             ],
           },

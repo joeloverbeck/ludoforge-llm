@@ -22,7 +22,8 @@ import type {
 
 export type TemplateCompletionResult =
   | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
-  | { readonly kind: 'unsatisfiable' }
+  | { readonly kind: 'structurallyUnsatisfiable' }
+  | { readonly kind: 'drawDeadEnd' }
   | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng };
 
 export interface TemplateMoveCompletionOptions {
@@ -66,7 +67,8 @@ const selectFromChooseN = (
  *
  * Returns a discriminated result:
  * - `completed`: all decisions filled, move is ready for `applyMove`
- * - `unsatisfiable`: empty options domain, min > selectable, or budget exceeded; move is unplayable
+ * - `structurallyUnsatisfiable`: empty options domain, min > selectable, or budget exceeded; move is unplayable
+ * - `drawDeadEnd`: a specific random draw reached an illegal downstream branch; another draw may still work
  * - `stochasticUnresolved`: decisions behind a `rollRandom` gate; move has all pre-stochastic decisions filled
  */
 export const completeTemplateMove = (
@@ -82,6 +84,7 @@ export const completeTemplateMove = (
   let cursor = rng;
   let iterations = 0;
   let exceeded = false;
+  let lastDecisionSource: 'guided' | 'random' | 'structural' | 'stochastic' | 'stochasticStructural' | undefined;
 
   const chooseAtRandom = (request: ChoicePendingRequest): MoveParamValue | undefined => {
     const options = request.type === 'chooseN'
@@ -90,26 +93,35 @@ export const completeTemplateMove = (
     const optionCount = options.length;
     if (request.type === 'chooseOne') {
       if (optionCount === 0) {
+        lastDecisionSource = 'structural';
         return undefined;
       }
       const selection = selectFromChooseOne(options, cursor);
       cursor = selection.rng;
+      lastDecisionSource = 'random';
       return selection.selected;
     }
 
     const min = request.min ?? 0;
     if (optionCount === 0) {
-      return min === 0 ? [] : undefined;
+      if (min === 0) {
+        lastDecisionSource = 'random';
+        return [];
+      }
+      lastDecisionSource = 'structural';
+      return undefined;
     }
 
     const declaredMax = request.max ?? optionCount;
     const max = Math.min(declaredMax, optionCount);
     if (optionCount < min || max < min) {
+      lastDecisionSource = 'structural';
       return undefined;
     }
 
     const selection = selectFromChooseN(options, min, max, cursor);
     cursor = selection.rng;
+    lastDecisionSource = 'random';
     return selection.selected;
   };
 
@@ -119,7 +131,11 @@ export const completeTemplateMove = (
       return undefined;
     }
     const selected = options?.choose?.(request);
-    return selected ?? chooseAtRandom(request);
+    if (selected !== undefined) {
+      lastDecisionSource = 'guided';
+      return selected;
+    }
+    return chooseAtRandom(request);
   };
 
   const chooseStochastic = (
@@ -130,10 +146,12 @@ export const completeTemplateMove = (
       return undefined;
     }
     if (request.outcomes.length === 0) {
+      lastDecisionSource = 'stochasticStructural';
       return undefined;
     }
     const [index, nextRng] = nextInt(cursor, 0, request.outcomes.length - 1);
     cursor = nextRng;
+    lastDecisionSource = 'stochastic';
     return request.outcomes[index]?.bindings;
   };
 
@@ -145,22 +163,30 @@ export const completeTemplateMove = (
     }, runtime);
   } catch (error) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      return { kind: 'unsatisfiable' };
+      return {
+        kind: lastDecisionSource === 'random' || lastDecisionSource === 'stochastic'
+          ? 'drawDeadEnd'
+          : 'structurallyUnsatisfiable',
+      };
     }
     throw error;
   }
 
   if (exceeded) {
-    return { kind: 'unsatisfiable' };
+    return { kind: 'structurallyUnsatisfiable' };
   }
   if (result.complete) {
     return { kind: 'completed', move: result.move, rng: cursor };
   }
   if (result.illegal !== undefined || result.nextDecision !== undefined) {
-    return { kind: 'unsatisfiable' };
+    return {
+      kind: lastDecisionSource === 'random' || lastDecisionSource === 'stochastic'
+        ? 'drawDeadEnd'
+        : 'structurallyUnsatisfiable',
+    };
   }
   if (result.stochasticDecision !== undefined) {
     return { kind: 'stochasticUnresolved', move: result.move, rng: cursor };
   }
-  return { kind: 'unsatisfiable' };
+  return { kind: 'structurallyUnsatisfiable' };
 };

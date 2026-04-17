@@ -12,7 +12,7 @@ Spec 132 exists to unblock the `fitl-arvn-agent-evolution` campaign. After ticke
 
 ## Assumption Reassessment (2026-04-17)
 
-1. On current HEAD, FITL seed 1000 still runs cleanly with the campaign's seat mapping (`us-baseline`, `arvn-evolved`, `nva-baseline`, `vc-baseline`) and reaches `stopReason = 'maxTurns'` with 200 moves; the automated regression proof in this ticket remains valid.
+1. On current HEAD, FITL seed 1000 still runs cleanly with the campaign's seat mapping (`us-baseline`, `arvn-evolved`, `nva-baseline`, `vc-baseline`) and remains bounded and non-throwing within the 200-move cap. After the later no-playable fixes landed, the current live witness now stops at `noLegalMoves` rather than the earlier `maxTurns` outcome.
 2. The dedicated automated lane `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-seed-1000-regression.test.js` passes on current HEAD, and `pnpm turbo test` remains green.
 3. The required manual campaign harness smoke `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200` exits 0 but reports `errors: 3`, with seeds `1005`, `1010`, and `1013` each throwing `policy agent could not derive a playable move from 1 classified legal move(s)`.
 4. Those fresh manual-lane failures are a substantive production bug, not a reason to downgrade or remove this ticket's closure gate. They must be tracked explicitly as a new prerequisite ticket rather than absorbed silently into this test-only gate.
@@ -34,6 +34,7 @@ Create `packages/engine/test/integration/fitl-seed-1000-regression.test.ts` that
 - **Seed 1000 gate**: runs FITL seed 1000 with the campaign's seat-to-profile mapping (`us-baseline`, `arvn-evolved`, `nva-baseline`, `vc-baseline`; match the current `bindings:` in `data/games/fire-in-the-lake/92-agents.md`, with `arvn-baseline` as the only acceptable fallback if the binding has since reverted). Asserts the resulting trace has `stopReason` equal to one of `'terminal'`, `'maxTurns'`, or `'noLegalMoves'`.
 - **No-throw invariant**: the `runGame(...)` call completes without throwing `NoPlayableMovesAfterPreparationError` or any other uncaught error.
 - **Bounded witness**: asserts the current live seed-1000 witness remains bounded at 200 moves under `maxTurns`, matching the campaign smoke used during reassessment.
+- **Bounded witness**: asserts the current live seed-1000 witness remains bounded within the 200-move cap under the campaign seat mapping.
 - **Determinism**: runs seed 1000 twice and asserts canonical trace equality (Foundation #8 end-to-end check). Use a stable serialized trace comparison if no dedicated trace hash exists.
 
 ### 2. Manual verification step (documented, not automated)
@@ -44,7 +45,7 @@ Document in the Test Plan that the full campaign runner smoke MUST be executed m
 node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200
 ```
 
-Expected: exit code 0 and JSON output containing `errors: 0`. On current `HEAD`, this step is still blocked by the fresh multi-seed no-playable failures now tracked in `archive/tickets/132AGESTUVIA-009.md`. The automated coverage in Section 1 is sufficient for the test-suite gate; the manual run remains the required closure proof that the campaign is actually unblocked once that prerequisite is green.
+Expected: exit code 0 and JSON output containing `errors: 0`. This closure proof is now satisfied on current `HEAD`; the former blocker from `archive/tickets/132AGESTUVIA-009.md` is resolved.
 
 ## Files to Touch
 
@@ -63,10 +64,10 @@ Expected: exit code 0 and JSON output containing `errors: 0`. On current `HEAD`,
 ### Tests That Must Pass
 
 1. Seed 1000 plays to `'terminal' | 'maxTurns' | 'noLegalMoves'` under the campaign seat mapping and never throws.
-2. Seed 1000 remains bounded at the current 200-move `maxTurns` witness under the test's explicit turn cap.
+2. Seed 1000 remains bounded within the explicit 200-move turn cap.
 3. Determinism: two runs of seed 1000 produce identical traces.
 4. Existing suite: `pnpm turbo test`.
-5. Manual campaign closure lane reports `errors: 0` once `archive/tickets/132AGESTUVIA-009.md` is complete.
+5. Manual campaign closure lane reports `errors: 0`.
 
 ### Invariants
 
@@ -86,16 +87,13 @@ Expected: exit code 0 and JSON output containing `errors: 0`. On current `HEAD`,
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-seed-1000-regression.test.js`
 3. `pnpm turbo test`
-4. **Manual verification (required before closing)**: `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200` — expect exit code 0 and `errors: 0` in the JSON output once `archive/tickets/132AGESTUVIA-009.md` is also complete. Current 2026-04-17 result: `errors: 3` with runtime failures on seeds `1005`, `1010`, and `1013`.
-
-## Outcome So Far
-
-1. `packages/engine/test/integration/fitl-seed-1000-regression.test.ts` is landed and passes on current `HEAD`.
-2. `pnpm -F @ludoforge/engine build`, the focused compiled integration test, and `pnpm turbo test` all pass on current `HEAD`.
-3. This ticket remains blocked only on the manual closure lane, which exposed the fresh no-playable witness cluster now tracked in `archive/tickets/132AGESTUVIA-009.md`.
+4. **Manual verification (required before closing)**: `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200` — expect exit code 0 and `errors: 0` in the JSON output. Current 2026-04-17 result after `archive/tickets/132AGESTUVIA-009.md`: `errors: 0`.
 
 ## Outcome
 
+Completed: 2026-04-17
+
 1. `packages/engine/test/integration/fitl-seed-1000-regression.test.ts` remains the landed automated proof for the seed-1000 witness under the real campaign seat mapping.
-2. The former manual closure blocker is now cleared by `archive/tickets/132AGESTUVIA-009.md`: the 15-seed campaign smoke `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200` now exits `0` and reports `errors: 0`.
-3. With the automated gate still green and the required manual closure lane now clean, this ticket's acceptance boundary is satisfied on current `HEAD`.
+2. The exact stop reason for the current seed-1000 witness has shifted since the ticket was first rewritten: on current `HEAD`, the bounded deterministic run now ends at `noLegalMoves` rather than `maxTurns`. The gate remains the same in architectural terms: bounded, deterministic, and non-throwing under the real campaign seat mapping.
+3. The former manual closure blocker is now cleared by `archive/tickets/132AGESTUVIA-009.md`: the 15-seed campaign smoke `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200` now exits `0` and reports `errors: 0`.
+4. With the automated gate and the required manual closure lane both clean, this ticket's acceptance boundary is satisfied on current `HEAD`.

@@ -1,6 +1,6 @@
 # Spec 132: Reconcile Viable-Move Enumeration With Template-Completion Outcomes
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: L
 **Dependencies**: none (touches `packages/engine/src/agents/*`, `packages/engine/src/kernel/playable-candidate.ts`, `packages/engine/src/kernel/move-completion.ts`, `packages/engine/src/kernel/legal-moves.ts`, `packages/engine/src/sim/simulator.ts`)
@@ -202,3 +202,13 @@ Decomposed 2026-04-16 via `/spec-to-tickets`:
 - `tickets/132AGESTUVIA-003.md` — Agent retry integration test (S4.3)
 - `tickets/132AGESTUVIA-004.md` — Remove `agentStuck` soft-stop + union cleanup + test migrations (S3 + S4.5 + S4.6)
 - `tickets/132AGESTUVIA-005.md` — FITL seed 1000 + seed 1002 regression gate (S4.4)
+
+## Outcome
+
+Completed: 2026-04-17
+
+1. The series landed the intended engine-agnostic fix set across tickets `132AGESTUVIA-001` through `132AGESTUVIA-005`. The shared outcome is that viability/admission and completion no longer disagree on the known FITL tournament witnesses in a way that can surface as `agentStuck`.
+2. `SimulationStopReason` no longer includes `'agentStuck'`, the simulator no longer soft-stops on `NoPlayableMovesAfterPreparationError`, and the relevant tests and schema surfaces were migrated in the same change series.
+3. The completion boundary now distinguishes structural impossibility from draw-specific dead ends, and legal-move classification filters incomplete free-operation templates that have no legal completed move under the required outcome policy.
+4. The original exact historical witness shifted during implementation: the live seed-1000 gate ended up as a bounded, deterministic, non-throwing regression proof with allowed stop reason in `'terminal' | 'maxTurns' | 'noLegalMoves'`, rather than preserving the earlier exact `maxTurns` outcome. This was recorded truthfully in archived ticket `132AGESTUVIA-005`.
+5. Verification for the landed series included the seed-specific regression lanes, `pnpm turbo test`, and the campaign closure smoke `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200`, which now reports `errors: 0`.

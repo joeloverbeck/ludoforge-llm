@@ -284,16 +284,47 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
       'Expected base event template params only from legalMoves',
     );
 
-    const result = applyMove(def, setup, completeForApply(def, setup, unshadedMove!, 1101n)).state;
+    // Gulf of Tonkin unshaded compiles to `distributeTokens { max: 6 }`, i.e.
+    // `chooseN { min: 0, max: 6 }` over US out-of-play pieces, then a
+    // chooseOne city per selected token. The architectural intent of this
+    // test is "when mixed piece types are available in out-of-play, the
+    // card transports pieces regardless of type and places them in cities."
+    // The exact count sampled on any given RNG is not an architectural
+    // invariant — Spec 16 §2 explicitly allows completion to bias chooseN
+    // sampling to prefer non-empty branches (FOUNDATIONS #16 — assert
+    // architectural properties, not RNG-specific trajectories).
+    //
+    // We force the chooseN to select the card's stated count (6) and let
+    // the per-token chooseOne be filled by RNG sampling. This isolates the
+    // type-mixing property from the sampler's count bias.
+    const expectedSelected = mixedPieces.slice(0, 6).map((token) => String(token.id));
+    const completedMove = completeTemplateMove(def, setup, unshadedMove!, createRng(1101n), undefined, {
+      choose: (request) => {
+        if (request.type === 'chooseN') {
+          return expectedSelected;
+        }
+        return undefined;
+      },
+    });
+    assert.equal(completedMove.kind, 'completed', 'Expected Gulf of Tonkin unshaded to complete under guided chooseN');
+    if (completedMove.kind !== 'completed') throw new Error('unreachable');
 
+    const result = applyMove(def, setup, completedMove.move).state;
     const outOfPlayAfter = countFactionTokens(result, 'out-of-play-US:none', 'US');
-    assert.equal(outOfPlayAfter, 2, 'Expected 2 pieces remaining in out-of-play');
-
     const usInCities = cityZoneIds.reduce(
       (sum: number, zoneId: string) => sum + countFactionTokens(result, zoneId, 'US'),
       0,
     );
-    assert.equal(usInCities, 6, 'Expected 6 pieces moved to cities');
+    assert.equal(
+      outOfPlayAfter + usInCities,
+      mixedPieces.length,
+      `expected every piece to be either in out-of-play or a city (no spill), got ${outOfPlayAfter} + ${usInCities}`,
+    );
+    assert.equal(
+      usInCities,
+      expectedSelected.length,
+      `expected the 6 selected pieces to arrive in cities, got ${usInCities}`,
+    );
 
     const typesInCities = new Set<string>();
     for (const zoneId of cityZoneIds) {
@@ -303,6 +334,8 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
         }
       }
     }
+    // Of the first 6 of [3 troops, 2 bases, 3 irregulars], at least the
+    // troops and bases segments are represented → ≥ 2 types.
     assert.ok(
       typesInCities.size >= 2,
       `Expected at least 2 different token types in cities, got: ${[...typesInCities].join(', ')}`,

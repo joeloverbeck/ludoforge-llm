@@ -106,6 +106,7 @@ import type {
 } from './types.js';
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { classifyMoveAdmissibility } from './move-admissibility.js';
 import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viability-predicate.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
@@ -2007,63 +2008,36 @@ const probeMoveViabilityRaw = (
   }
 };
 
-const deriveDeferredFreeOperationOutcomePolicyVerdict = (
-  def: GameDef,
-  state: GameState,
-  viability: MoveViabilityProbeResult,
-): MoveViabilityProbeResult => {
-  if (!viability.viable || viability.complete || viability.move.freeOperation !== true) {
-    return viability;
-  }
-  const seatResolution = createSeatResolutionContext(def, state.playerCount);
-  let strongestOutcomeGrant = resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
-    def,
-    state,
-    viability.move,
-    seatResolution,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-  );
-  try {
-    strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
-      def,
-      state,
-      viability.move,
-      seatResolution,
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-    ) ?? strongestOutcomeGrant;
-  } catch (error) {
-    if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-      throw error;
-    }
-  }
-  if (
-    strongestOutcomeGrant === null
-    || hasLegalCompletedFreeOperationMoveInCurrentState(def, state, viability.move, seatResolution)
-  ) {
-    return viability;
-  }
-  try {
-    illegalMoveError(viability.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-      grantId: strongestOutcomeGrant.grantId,
-      outcomePolicy: 'mustChangeGameplayState',
-    });
-  } catch (error) {
-    const illegalError = error as KernelRuntimeError<'ILLEGAL_MOVE'>;
-    return {
-      viable: false,
-      complete: undefined,
-      move: undefined,
-      warnings: undefined,
-      code: illegalError.code,
-      context: illegalError.context as IllegalMoveContext,
-      error: illegalError,
-      nextDecision: undefined,
-      nextDecisionSet: undefined,
-      stochasticDecision: undefined,
-    };
-  }
-  return viability;
-};
+/**
+ * Public viability probe — the single client-facing legality oracle.
+ *
+ * Spec 17 §4 (Deferred free-operation templates): the
+ * `deriveMoveViabilityVerdict` rewrite is internal-discovery only. Its output
+ * MUST pass through the shared admissibility classifier before reaching any
+ * client. Spec 17 Invariant #5: admissibility classification for a given
+ * `(GameDef, state, move)` is identical across all call sites.
+ *
+ * Implementation: raw probe → internal-discovery rewrite → admissibility
+ * classifier filter. When the rewrite transforms an illegal verdict into a
+ * "pending" shape but the classifier proves the move is inadmissible on a
+ * definitive ground — `floatingUnsatisfiable` (no decision assignment can
+ * complete it) or `freeOperationOutcomePolicyFailed` (no grant-legal
+ * completion exists in the current state) — we return the original raw
+ * illegal verdict so the client sees the authoritative illegal reason.
+ *
+ * When the classifier reports `floatingUnresolved` we keep the rewritten
+ * viable shape: the move MAY be a genuinely deferred free-operation
+ * template whose decisions, once bound, produce a legal completion. Per
+ * Spec 17 §4 this is the only case where the internal-discovery rewrite is
+ * allowed to reach the client; spec 17 §1 and enumeration both treat such
+ * templates as pending-admissible.
+ */
+const isDefinitivelyInadmissibleRewrittenVerdict = (
+  admissibility: ReturnType<typeof classifyMoveAdmissibility>,
+): boolean =>
+  admissibility.kind === 'inadmissible'
+  && (admissibility.reason === 'floatingUnsatisfiable'
+    || admissibility.reason === 'freeOperationOutcomePolicyFailed');
 
 export const probeMoveViability = (
   def: GameDef,
@@ -2071,9 +2045,15 @@ export const probeMoveViability = (
   move: Move,
   runtime?: GameDefRuntime,
   discoveryCache?: DiscoveryCache,
-): MoveViabilityProbeResult =>
-  deriveDeferredFreeOperationOutcomePolicyVerdict(
-    def,
-    state,
-    deriveMoveViabilityVerdict(move, probeMoveViabilityRaw(def, state, move, runtime, discoveryCache)),
-  );
+): MoveViabilityProbeResult => {
+  const raw = probeMoveViabilityRaw(def, state, move, runtime, discoveryCache);
+  const rewritten = deriveMoveViabilityVerdict(move, raw);
+  if (rewritten === raw) {
+    return rewritten;
+  }
+  const admissibility = classifyMoveAdmissibility(def, state, move, rewritten, runtime);
+  if (isDefinitivelyInadmissibleRewrittenVerdict(admissibility)) {
+    return raw;
+  }
+  return rewritten;
+};

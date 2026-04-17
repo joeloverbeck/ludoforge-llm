@@ -218,3 +218,20 @@ This spec prefers strengthening the shared admissibility boundary over adding mo
   - `pnpm turbo lint`
   - `pnpm turbo typecheck`
   - `pnpm turbo test`
+
+## Addendum — §4 "internal-discovery output routed through the shared classifier" completion
+
+- Addendum date: 2026-04-17
+- Context: the original 17PENMOVADM-001..004 ticket series introduced the shared classifier and migrated the enumeration and playable-candidate boundaries, but left `apply-move.ts`'s public `probeMoveViability` routing the internal-discovery rewrite (`deriveMoveViabilityVerdict`) directly to clients via a parallel `deriveDeferredFreeOperationOutcomePolicyVerdict` wrapper rather than through the shared classifier. This violated §4 ("the rewrite is internal discovery only; its output MUST pass through the shared admissibility classifier before reaching any client") and Invariant #5 (cross-site classifier agreement), manifesting as An Loc card-71 / Gulf of Tonkin / seed 2046 canary / seed 1012 enumeration-hang / seed 1000 draw-space regressions once the parallel wrapper drifted.
+- What changed:
+  - `packages/engine/src/kernel/move-admissibility.ts` — folded free-operation outcome-policy into the shared classifier as a first-class verdict (`{ kind: 'inadmissible', reason: 'freeOperationOutcomePolicyFailed', outcomePolicyGrantId }`). The `classifyFreeOperationOutcomePolicyAdmissibility` helper consumes the same grant resolution surface the apply-time gate uses, so probe-time and apply-time admissibility answers agree on a single ruling.
+  - `packages/engine/src/kernel/apply-move.ts` — `probeMoveViability` now routes the rewritten verdict through `classifyMoveAdmissibility`; a definitive inadmissible verdict (`floatingUnsatisfiable` or `freeOperationOutcomePolicyFailed`) causes the public probe to return the original raw illegal verdict so clients receive the authoritative illegal reason. `deriveDeferredFreeOperationOutcomePolicyVerdict` was deleted in the same change — no shim, no alias, per Foundations Alignment #14.
+  - `packages/engine/src/kernel/legal-moves.ts` — the scattered outcome-policy + admissibility checks at the former lines 292–351 were consolidated into a single `classifyMoveAdmissibility` call that maps verdict reasons onto warning codes uniformly.
+  - `packages/engine/test/integration/pending-move-admissibility-parity.test.ts` — extended with two new §3-proof fixtures (complete-executable grant-zone-filter-satisfying, complete-structurally grant-zone-filter-violating) and a new `admissibility/apply cross-pathway conformance` suite that directly proves the classifier verdict predicts `applyMove`'s outcome (complete ⇒ no throw; definitively-inadmissible ⇒ `ILLEGAL_MOVE`). The original Test #2 assertion set was tightened to the post-§4 contract (public probe now reports `viable: false` for floating-unsatisfiable templates); the `floatingUnsatisfiable` classifier reason is still proven by feeding the internal-discovery rewrite shape explicitly.
+- Deviations from original plan:
+  - The `floatingUnresolved` verdict path is preserved as a first-class carveout: a rewritten deferred free-operation template with a satisfiable decision sequence is genuinely "might complete legally," and rejecting it at probe would regress template enumeration (empirically observed in the canary). The probe filter only rejects when the classifier returns a definitive reason; enumeration makes the same distinction.
+- Foundations alignment:
+  - #5 One Rules Protocol — enumeration, probing, admissibility classification, and applyMove now converge on the same admissibility answer for any `(def, state, move)` without parallel legality code paths.
+  - #14 No Backwards Compatibility — the `deriveDeferredFreeOperationOutcomePolicyVerdict` parallel path was deleted in the same change as the classifier extension.
+  - #15 Architectural Completeness — the failure class is eliminated at the design level (single classifier) rather than patched at individual call sites.
+  - #16 Testing as Proof — new integration fixtures prove the cross-pathway conformance invariant as an automated regression guard.

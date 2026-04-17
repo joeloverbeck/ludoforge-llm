@@ -36,11 +36,9 @@ import {
 } from './free-operation-discovery-analysis.js';
 import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
-  hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
 import { createProbeOverlay, transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
 import {
-  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
   resolveStrongestRequiredFreeOperationOutcomeGrant,
 } from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
@@ -289,56 +287,28 @@ const classifyEnumeratedMoves = (
 
     const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
-      if (move.freeOperation === true && !viability.complete) {
-        const seatResolution = createSeatResolutionContext(def, state.playerCount);
-        let strongestOutcomeGrant = resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
-          def,
-          state,
-          viability.move,
-          seatResolution,
-        );
-        try {
-          strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
-            def,
-            state,
-            viability.move,
-            seatResolution,
-          ) ?? strongestOutcomeGrant;
-        } catch (error) {
-          if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-            throw error;
-          }
-        }
-        if (
-          strongestOutcomeGrant !== null
-          && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, viability.move, seatResolution)
-        ) {
+      // Spec 17 §1 / Foundations Alignment #14: admissibility is decided by
+      // the shared classifier. This consolidates the former scattered
+      // outcome-policy + decision-sequence-admission checks into a single
+      // call site. `floatingUnresolved` is retained — it represents a
+      // deferred free-operation template that may still complete legally.
+      const admissibility = classifyMoveAdmissibility(def, state, move, viability, runtime);
+      if (admissibility.kind === 'inadmissible') {
+        if (admissibility.reason === 'freeOperationOutcomePolicyFailed') {
           warnings.push({
             code: 'MOVE_ENUM_PROBE_REJECTED',
             message: 'Enumerated legal move was rejected by required free-operation outcome policy and removed.',
             context: {
               actionId: String(move.actionId),
               reason: 'freeOperationOutcomePolicyFailed',
-              grantId: strongestOutcomeGrant.grantId,
+              ...(admissibility.outcomePolicyGrantId === undefined
+                ? {}
+                : { grantId: admissibility.outcomePolicyGrantId }),
             },
           });
           continue;
         }
-      }
-      if (
-        !viability.complete
-        && viability.nextDecision === undefined
-        && viability.nextDecisionSet === undefined
-        && viability.stochasticDecision === undefined
-      ) {
-        const admissibility = classifyMoveAdmissibility(
-          def,
-          state,
-          move,
-          viability,
-          runtime,
-        );
-        if (admissibility.kind === 'inadmissible' && admissibility.reason === 'floatingUnsatisfiable') {
+        if (admissibility.reason === 'floatingUnsatisfiable') {
           warnings.push({
             code: 'MOVE_ENUM_PROBE_REJECTED',
             message: 'Enumerated legal move was rejected by decision-sequence admission and removed.',
@@ -349,6 +319,9 @@ const classifyEnumeratedMoves = (
           });
           continue;
         }
+        // `floatingUnresolved`, `illegalMove`, `runtimeError` fall through:
+        // illegal/runtime cases are unreachable under viable:true; floating
+        // unresolved is spec 17 §4's deferred-template carveout.
       }
       classified.push({
         move,

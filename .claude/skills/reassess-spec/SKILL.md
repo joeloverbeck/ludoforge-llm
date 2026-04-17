@@ -80,7 +80,7 @@ Use Explore agents to perform extraction and validation. Agent count decision ta
 
 A behavioral claim is "complex" if tracing it requires reading 3+ functions across 2+ files (e.g., control flow through a pipeline, failure mechanisms spanning multiple modules, multi-layer dispatch). Single-file claims are structurally simple regardless of function count — even 4+ functions within one file don't warrant a second agent.
 
-**Fresh-spec context scaling**: When the spec was authored earlier in the same session and prior turns already surfaced most references (e.g., Claude debugged a bug, then drafted the spec, then reassessed it minutes later), scale down by one agent — prior conversation context substitutes for one agent's reconnaissance pass. Blast radius coverage remains mandatory regardless; do not scale below one agent.
+**Fresh-spec context scaling**: When the spec's subject matter was substantially traced earlier in the same session — via spec authorship, in-session debugging of the same code paths, dependency completion, or other reconnaissance-equivalent work (e.g., Claude debugged a bug then drafted the spec, or completed a dependency spec moments before reassessing this one) — scale down by one agent. Prior conversation context substitutes for one agent's reconnaissance pass. Blast radius coverage remains mandatory regardless; do not scale below one agent.
 
 Provide each agent with either the full spec content or a comprehensive structured extraction of all references in its scope. If summarizing, ensure you capture every reference from every section — including those embedded in prose, code blocks, tables, and footnotes. The goal is completeness, not format. This is read-only — agent-based exploration is safe and significantly faster.
 
@@ -192,6 +192,8 @@ If a deferred question is rendered moot by another approved decision (e.g., the 
 
 If the user requests deeper analysis of a specific finding before deciding, perform the investigation using read-only tools (reading additional source files, tracing call chains, etc.) and present updated findings before re-asking for approval. This investigation round does not count toward the follow-up question limit — it is resolution of the original question, not a new question.
 
+If the user answers a question with uncertainty plus a request to investigate (e.g., "I don't know — investigate", "not sure, check the codebase"), treat it as a combined investigation-then-approval flow: perform the read-only investigation, present the result inline as an updated finding, and continue to the next pending question or the diff summary without re-asking the original question. Only re-ask the original question if the investigation surfaces new alternatives the user must choose between; otherwise, the investigation result IS the answer.
+
 ### Step 6: Write the Updated Spec
 
 **Plan mode**: All scenarios proceed to Step 6.4 after ExitPlanMode approval — the updated spec MUST be written before Step 7's verification can run. Concretely:
@@ -203,7 +205,7 @@ Do not conflate "plan file written" with "spec file written" — the plan file i
 **Non-plan mode**: After all findings are resolved and the user has approved the changes:
 
 1. **Draft the updated spec** incorporating all approved changes. Preserve the spec's existing structure and voice. Do not rewrite sections that have no findings — change only what was agreed upon.
-2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <one-line change description>`. Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition. For full or near-full rewrites (>60% of sections materially changed, common under Obsolescence → rewrite), replace the numbered diff list with a prose structural summary (2-4 sentences noting what was reframed, removed, or added) followed by the full draft inline — a numbered diff format implies surgical changes, which is misleading when the spec is being restructured.
+2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <brief change description>` (one line typical; sub-bullets permitted when a single section's change spans multiple coordinated artifacts, e.g., a new module plus its migration sites). Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition. For full or near-full rewrites (>60% of sections materially changed, common under Obsolescence → rewrite), replace the numbered diff list with a prose structural summary (2-4 sentences noting what was reframed, removed, or added) followed by the full draft inline — a numbered diff format implies surgical changes, which is misleading when the spec is being restructured.
 3. **Wait for final approval** before writing the file.
 4. **Write the updated spec** to the same path as the original, overwriting it.
 

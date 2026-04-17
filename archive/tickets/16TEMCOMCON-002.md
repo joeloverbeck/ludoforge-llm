@@ -1,6 +1,6 @@
 # 16TEMCOMCON-002: Add completion contract invariant tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new test file under `packages/engine/test/unit/kernel/`; no source changes
@@ -82,7 +82,7 @@ If `prepareePlayableMoves` does not expose an attempt counter, wire the test via
 
 ### Tests That Must Pass
 
-1. All six new tests pass: `pnpm -F @ludoforge/engine test --test-name-pattern "completion contract invariants"` (exact pattern depends on naming chosen in implementation).
+1. All six new tests pass in the focused built-file lane: `pnpm turbo build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`.
 2. Existing suite: `pnpm -F @ludoforge/engine test` — no regression in any existing unit or integration test.
 3. Referenced seed regressions continue to pass: seed 11 (`classified-move-parity.test.ts`), seed 17 (`fitl-policy-agent.test.ts`), seed 1009 (`fitl-events-sihanouk.test.ts` and `move-completion-retry.test.ts`).
 4. `agentStuck` rejection tests continue to pass: `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts`.
@@ -105,6 +105,22 @@ If `prepareePlayableMoves` does not expose an attempt counter, wire the test via
 ### Commands
 
 1. `pnpm turbo build` — compile engine TypeScript so `node --test` can execute against `packages/engine/dist/`.
-2. `pnpm -F @ludoforge/engine test` — run full engine unit suite including new invariants.
-3. `pnpm turbo lint typecheck` — confirm the new file passes lint and type-check.
-4. `pnpm turbo test` — root-level gate including `check:ticket-deps` and all workspace tests.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js` — focused invariant-file proof lane.
+3. `pnpm -F @ludoforge/engine test` — run full engine unit suite including the new invariants.
+4. `pnpm turbo lint` — confirm the new file passes lint.
+5. `pnpm turbo typecheck` — confirm the new file passes type-check.
+6. `pnpm turbo test` — root-level gate including `check:ticket-deps` and all workspace tests.
+
+## Outcome
+
+- 2026-04-17: Added `packages/engine/test/unit/kernel/completion-contract-invariants.test.ts` with six synthetic invariant tests covering Spec 16 Contract §§1-4 plus the determinism and client-boundary invariants.
+- Boundary correction from reassessment: the focused acceptance command in the draft ticket used an unsupported Jest-style filter for this repo's Node-based test workflow, so the repo-valid focused proof lane is `pnpm turbo build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`.
+- No source/runtime files changed. The client-boundary invariant was proven through the existing exported `preparePlayableMoves` statistics surface, so no test-only exports or helper seams were needed.
+- Verification run:
+  - `pnpm turbo build` ✅
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo test` ✅
+- Schema/artifact fallout checked: none required; this ticket added a new test file only.

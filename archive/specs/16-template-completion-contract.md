@@ -1,6 +1,6 @@
 # Spec 16: Template Completion Contract — Formalization & Invariant Tests
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: S
 **Dependencies**: Spec 132 (archived; COMPLETED 2026-04-17)
@@ -137,3 +137,18 @@ All work is in the `kernel` and `test` layers:
 - `packages/engine/test/unit/kernel/completion-contract-invariants.test.ts` — new file; six invariant tests above.
 
 No changes to `packages/engine/src/agents/prepare-playable-moves.ts`, `packages/runner/src/worker/game-worker-api.ts`, or any FITL data.
+
+## Outcome
+
+- Completed on 2026-04-17.
+- The spec landed in two bounded tickets:
+  - `16TEMCOMCON-001` added the canonical `TemplateCompletionResult` / `completeTemplateMove` contract documentation at the type site in `packages/engine/src/kernel/move-completion.ts`.
+  - `16TEMCOMCON-002` added `packages/engine/test/unit/kernel/completion-contract-invariants.test.ts` with six engine-agnostic invariant tests covering contract outcome classification, optional `chooseN` anti-bias, sampled dead-end classification, RNG progression, determinism, and the `preparePlayableMoves` client boundary.
+- Deviation from the original draft: the invariant proof used the existing exported `preparePlayableMoves` statistics surface to assert the no-retry-on-`structurallyUnsatisfiable` client boundary, so no test-only export seam was introduced.
+- Verification results:
+  - `pnpm turbo build` ✅
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js` ✅
+  - `pnpm -F @ludoforge/engine test` ✅
+  - `pnpm turbo lint` ✅
+  - `pnpm turbo typecheck` ✅
+  - `pnpm turbo test` ✅

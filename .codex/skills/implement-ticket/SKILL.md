@@ -36,7 +36,9 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - the ticket needs durable draft-ticket correction beyond the normal working-notes checkpoint and closeout
    Otherwise, it is sufficient to record draft status in working notes and correct the active draft ticket during closeout.
 6. Load the full `references/verification.md` only when verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or tooling ambiguity.
+   - For straightforward bounded local refactors, prefer a cheap proof order: local package build or compile check first, then the narrowest focused test/proof lane for the owned change, then the package-level suite, then workspace-wide lanes last.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
+8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
 
 ### Phase 1: Read and Understand
 
@@ -91,6 +93,13 @@ For evidence states, trace-heavy ticket inspection, and generated artifact triag
 ## Follow-Up
 
 Load `references/closeout-and-followup.md` for non-bounded tickets, or for bounded local refactors when closeout needs follow-up classification, ticket blocking, sibling rewrites, or other nontrivial handoff work. Covers the closeout summary, final acceptance sweep, acceptance-proof invalidation rules, tracked-ticket durable outcome block, durable state classification (`COMPLETED` / `BLOCKED by prerequisite` / `PENDING untouched`), optional state-transition ledger, and draft-ticket durable closeout.
+
+For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
+
+1. Update the draft ticket status truthfully (`COMPLETED`, `BLOCKED`, etc.).
+2. Record what landed, any boundary correction, and the verification set you intend to run.
+3. Make any needed ticket-scope or touched-file corrections before the final acceptance-proof pass.
+4. Run the final acceptance-proof set after those ticket edits so the last green run matches both code and ticket artifact.
 
 ### Post-Closeout Reopen
 

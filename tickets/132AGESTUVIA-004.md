@@ -1,14 +1,14 @@
 # 132AGESTUVIA-004: Remove agentStuck soft-stop + union cleanup + test migrations (S3 + S4.5 + S4.6)
 
-**Status**: BLOCKED
+**Status**: PENDING
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — simulator catch removal, `SimulationStopReason` union + Zod schema cleanup, three test migrations
-**Deps**: `archive/tickets/132AGESTUVIA-003.md`, `tickets/132AGESTUVIA-007.md`
+**Deps**: `archive/tickets/132AGESTUVIA-003.md`, `archive/tickets/132AGESTUVIA-007.md`
 
 ## Problem
 
-Ticket 003 corrected the post-002 contract: bounded retries reduce the original `agentStuck` class, but they do not prove `NoPlayableMovesAfterPreparationError` is unreachable. Live evidence on current `HEAD` shows one active regression witness still reaches the simulator soft-stop: FITL seed 2057 ends with `stopReason = 'agentStuck'` after 119 moves under the current baseline profiles. That means the mechanical cleanup originally assigned here is not yet safe to land. Removing the simulator catch now would simply surface an uncaught `NoPlayableMovesAfterPreparationError` for a still-live witness, while deleting the union member and tightening the existing tests would make the suite false. Foundation #14 still requires the eventual cleanup to be atomic, but Foundation #15 requires the remaining live witness to be eliminated first. This ticket is therefore blocked on a new prerequisite that removes the seed-2057 no-playable path; only after that lands may this ticket delete the catch, remove `'agentStuck'` from the stop-reason contract, and migrate the lingering tests.
+Ticket 003 corrected the post-002 contract: bounded retries reduce the original `agentStuck` class, but they do not prove `NoPlayableMovesAfterPreparationError` is unreachable. Ticket `132AGESTUVIA-007` then eliminated the remaining live seed-2057 witness by fixing template-completion retries that were replaying the same dead-end RNG path. With that blocker cleared, this ticket is now the remaining atomic cleanup: delete the simulator catch, remove `'agentStuck'` from the stop-reason contract, and migrate the lingering tests together.
 
 ## Assumption Reassessment (2026-04-17)
 
@@ -31,9 +31,9 @@ Ticket 003 corrected the post-002 contract: bounded retries reduce the original 
 
 ## What to Change
 
-### 0. Blocker precondition
+### 0. Cleared prerequisite
 
-Do not implement this ticket until `132AGESTUVIA-007` lands. That prerequisite owns the remaining live `NoPlayableMovesAfterPreparationError` / `agentStuck` witness on seed 2057. Reassess its outcome first and rerun the current 2057 witness before touching the simulator catch or stop-reason union here.
+`132AGESTUVIA-007` has landed and cleared the residual seed-2057 `agentStuck` witness. Reassess its outcome and rerun the tightened 2057 lane before touching the simulator catch or stop-reason union here so this ticket starts from the post-fix baseline rather than the old blocked state.
 
 ### 1. Delete the simulator catch
 
@@ -115,9 +115,9 @@ Search the rest of the test tree for any other `'agentStuck'` references and mig
 
 ## Outcome
 
-Blocked date: 2026-04-17
+2026-04-17 initial reassessment found this ticket blocked on a still-live residual witness outside the originally assumed mechanical cleanup boundary: FITL seed 2057 still resolved to `stopReason = 'agentStuck'` on then-current `HEAD`, and the illustrative `chooseN{min:3,max:3}` structural fixture from ticket 003 still enumerated as a VIABLE pending move rather than a zero-legal-move simulator witness. The cleanup/removal work in this ticket was therefore deferred behind new prerequisite ticket `132AGESTUVIA-007`.
 
-2026-04-17 reassessment found this ticket blocked on a still-live residual witness outside the originally assumed mechanical cleanup boundary: FITL seed 2057 still resolves to `stopReason = 'agentStuck'` on current `HEAD`, and the illustrative `chooseN{min:3,max:3}` structural fixture from ticket 003 still enumerates as a VIABLE pending move rather than a zero-legal-move simulator witness. The cleanup/removal work in this ticket was therefore deferred behind new prerequisite ticket `132AGESTUVIA-007`, and the active ticket contract was rewritten instead of landing a misleading partial implementation.
+2026-04-17 update: `132AGESTUVIA-007` cleared that blocker by fixing template-completion retries to use fresh child RNG streams per attempt. The tightened `fitl-seed-2057-regression` lane now passes without `'agentStuck'`, so this ticket is no longer blocked and is ready for the atomic simulator/union cleanup it already describes.
 
 ## Verification
 

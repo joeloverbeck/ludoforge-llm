@@ -1,6 +1,6 @@
 # 132AGESTUVIA-007: Eliminate residual seed-2057 no-playable witness before `agentStuck` removal
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent/simulator boundary diagnosis and root-cause fix in the residual `NoPlayableMovesAfterPreparationError` path
@@ -91,3 +91,21 @@ Once the residual witness is fixed, update `132AGESTUVIA-004.md` only as needed 
 1. `pnpm -F @ludoforge/engine build`
 2. `node --test dist/test/integration/fitl-seed-2057-regression.test.js`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed date: 2026-04-17
+
+The residual seed-2057 witness was not another viability mismatch. Reassessment showed the decisive `march` template still classified as viable, but `preparePlayableMoves(...)` retried `drawDeadEnd` completions against the same RNG state and therefore deterministically replayed the same bad random path until the bounded budget was exhausted. The fix now forks a fresh child RNG stream for each template-completion attempt while preserving bounded retries and structural short-circuiting. That removes the live `seed=2057 -> agentStuck` witness without adding any new simulator shim.
+
+Focused regression coverage now includes a retry proof in `packages/engine/test/unit/agents/prepare-playable-moves-retry.test.ts`, the tightened `packages/engine/test/integration/fitl-seed-2057-regression.test.ts` lane, and the downstream policy/golden expectations that changed because the FITL fixed-seed completion path is now drawn from the corrected retry stream.
+
+## Verification
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/integration/fitl-seed-2057-regression.test.js`
+3. `node dist/test/unit/agents/prepare-playable-moves-retry.test.js`
+4. `node dist/test/unit/agents/policy-agent.test.js`
+5. `node dist/test/unit/policy-production-golden.test.js`
+6. `node dist/test/integration/considerations-e2e.test.js`
+7. `pnpm -F @ludoforge/engine test`

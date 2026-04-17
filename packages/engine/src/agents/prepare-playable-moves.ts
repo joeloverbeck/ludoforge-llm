@@ -1,6 +1,7 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { fork } from '../kernel/prng.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -237,7 +238,9 @@ function attemptTemplateCompletion(
   let notViableRetries = 0;
   for (let attempt = 0; attempt < pendingTemplateCompletions + notViableRetries; attempt += 1) {
     templateCompletionAttempts += 1;
-    const attemptRng = currentRng;
+    // Derive an isolated child stream per attempt so retries do not replay the
+    // same dead-end completion path from an unchanged parent RNG state.
+    const [attemptRng, retryRng] = fork(currentRng);
     const t0_epc = perfStart(profiler);
     let result = evaluatePlayableMoveCandidate(
       input.def,
@@ -259,7 +262,7 @@ function attemptTemplateCompletion(
       );
     }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
-    currentRng = result.rng;
+    currentRng = result.kind === 'rejected' ? retryRng : result.rng;
     if (result.kind === 'playableComplete') {
       templateCompletionSuccesses += 1;
       completionsByActionId.set(

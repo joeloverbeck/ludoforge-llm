@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `tickets/132AGESTUVIA-004.md`, `tickets/132AGESTUVIA-007.md`
+**Deps**: `tickets/132AGESTUVIA-004.md`, `archive/tickets/132AGESTUVIA-007.md`
 
 ## Problem
 

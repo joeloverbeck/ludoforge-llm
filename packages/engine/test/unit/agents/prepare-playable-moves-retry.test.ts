@@ -83,6 +83,37 @@ const createRetryProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createAlwaysDeadEndProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['dead'] },
+          },
+        }),
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$dead',
+            bind: '$dead',
+            options: { query: 'enums', values: [] },
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
@@ -139,7 +170,7 @@ const getSinglePendingMove = (def: GameDef): {
   assert.equal(classifiedMove.viability.viable, true, 'template should stay viable before completion');
   if (classifiedMove.viability.viable) {
     assert.equal(classifiedMove.viability.complete, false, 'template should remain incomplete');
-    assert.equal(classifiedMove.viability.nextDecision?.type, 'chooseN');
+    assert.ok(classifiedMove.viability.nextDecision !== undefined, 'template should expose a pending decision');
   }
   return { state, classifiedMove };
 };
@@ -159,9 +190,35 @@ describe('preparePlayableMoves retry integration', () => {
       pendingTemplateCompletions: 3,
     });
 
-    assert.equal(prepared.completedMoves.length, 1);
+    assert.equal(prepared.completedMoves.length >= 1, true);
+    assert.equal(prepared.completedMoves.length <= 3, true);
     assert.equal(prepared.stochasticMoves.length, 0);
     assert.equal(prepared.statistics.templateCompletionAttempts, 3);
+    assert.equal(prepared.statistics.templateCompletionSuccesses >= 1, true);
+    assert.equal(prepared.statistics.templateCompletionSuccesses <= 3, true);
+    assert.equal(prepared.statistics.templateCompletionStructuralFailures, 0);
+    assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'complete');
+    assert.equal(prepared.movePreparations[0]?.rejection, undefined);
+  });
+
+  it('retries draw-dead-end completions on fresh child RNG streams', () => {
+    const actionId = 'retry-template';
+    const def = createDef(actionId, createRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(def);
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [classifiedMove],
+      rng: createRng(2n),
+    }, {
+      pendingTemplateCompletions: 3,
+    });
+
+    assert.equal(prepared.completedMoves.length, 1);
+    assert.equal(prepared.stochasticMoves.length, 0);
+    assert.equal(prepared.statistics.templateCompletionAttempts <= 3 + NOT_VIABLE_RETRY_CAP, true);
+    assert.equal(prepared.statistics.templateCompletionAttempts > 3, true);
     assert.equal(prepared.statistics.templateCompletionSuccesses, 1);
     assert.equal(prepared.statistics.templateCompletionStructuralFailures, 0);
     assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'complete');
@@ -169,8 +226,8 @@ describe('preparePlayableMoves retry integration', () => {
   });
 
   it('caps draw-dead-end retries at pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP', () => {
-    const actionId = 'retry-template';
-    const def = createDef(actionId, createRetryProfile(actionId));
+    const actionId = 'always-dead-end-template';
+    const def = createDef(actionId, createAlwaysDeadEndProfile(actionId));
     const { state, classifiedMove } = getSinglePendingMove(def);
 
     const prepared = preparePlayableMoves({

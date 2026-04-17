@@ -194,7 +194,7 @@ describe('preparePlayableMoves', () => {
       pendingTemplateCompletions: 3,
     });
 
-    assert.equal(prepared.completedMoves.length, 2);
+    assert.equal(prepared.completedMoves.length, 1);
     assert.equal(prepared.stochasticMoves.length, 0);
     assert.deepEqual(prepared.statistics, {
       totalClassifiedMoves: 1,
@@ -204,7 +204,7 @@ describe('preparePlayableMoves', () => {
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
       templateCompletionStructuralFailures: 0,
-      duplicatesRemoved: 1,
+      duplicatesRemoved: 2,
       completionsByActionId: {
         chooseTarget: 3,
       },
@@ -344,7 +344,7 @@ describe('preparePlayableMoves', () => {
 
     assert.deepEqual(
       prepared.completedMoves.map((move) => move.move.actionId),
-      [chooseTarget, chooseTarget],
+      [chooseTarget],
     );
     assert.deepEqual(prepared.stochasticMoves, []);
     assert.deepEqual(prepared.statistics.completionsByActionId, {

@@ -1,6 +1,6 @@
 # 17PENMOVADM-002: Migrate enumeration layer to shared admissibility classifier
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/legal-moves.ts`
@@ -123,3 +123,23 @@ Grep the file post-edit; ensure only the new classifier call exists.
 4. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-seed-stability.test.js`
 5. `pnpm -F @ludoforge/engine test`
 6. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Completed on 2026-04-17.
+- Replaced the inline floating-incomplete admission block in `packages/engine/src/kernel/legal-moves.ts` with a call to the shared `classifyMoveAdmissibility(def, state, move, viability, runtime)` classifier from ticket 001.
+- Preserved the enumeration-layer policy exactly: only `inadmissible/floatingUnsatisfiable` emits `MOVE_ENUM_PROBE_REJECTED` with `context.reason === 'decisionSequenceUnsatisfiable'`; all other verdicts continue through to the existing classified-move path.
+- Kept the remaining `legal-moves.ts` decision-sequence helpers intact because the file still has non-enumeration call sites that legitimately use them.
+- Updated the existing source-guard in `packages/engine/test/unit/kernel/legal-moves.test.ts` so it now asserts enumeration-layer classification delegates through `classifyMoveAdmissibility` on the root-state path.
+- Verification note: the standalone `dist/test/integration/fitl-seed-stability.test.js` invocation did not yield a final harness result during this session, but the package-local engine suite and final `pnpm turbo test` pass both completed cleanly and covered that lane.
+- No schema or generated-artifact changes were required.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/legal-moves.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

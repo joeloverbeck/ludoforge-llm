@@ -21,6 +21,7 @@ import {
   isMoveAllowedByTurnFlowOptionMatrix,
   resolveConstrainedSecondEligibleActionClasses,
 } from './legal-moves-turn-order.js';
+import { classifyMoveAdmissibility } from './move-admissibility.js';
 import {
   grantActionIds,
 } from './free-operation-grant-authorization.js';
@@ -330,17 +331,14 @@ const classifyEnumeratedMoves = (
         && viability.nextDecisionSet === undefined
         && viability.stochasticDecision === undefined
       ) {
-        const admission = classifyMoveDecisionSequenceAdmissionForLegalMove(
+        const admissibility = classifyMoveAdmissibility(
           def,
           state,
           move,
-          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
-          {
-            budgets: resolveMoveEnumerationBudgets(),
-          },
+          viability,
           runtime,
         );
-        if (admission === 'unsatisfiable') {
+        if (admissibility.kind === 'inadmissible' && admissibility.reason === 'floatingUnsatisfiable') {
           warnings.push({
             code: 'MOVE_ENUM_PROBE_REJECTED',
             message: 'Enumerated legal move was rejected by decision-sequence admission and removed.',

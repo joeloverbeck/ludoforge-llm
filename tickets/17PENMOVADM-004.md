@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `tickets/17PENMOVADM-002.md`, `tickets/17PENMOVADM-003.md`
+**Deps**: `archive/tickets/17PENMOVADM-002.md`, `tickets/17PENMOVADM-003.md`
 
 ## Problem
 

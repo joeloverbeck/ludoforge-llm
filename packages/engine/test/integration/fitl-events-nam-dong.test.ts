@@ -24,6 +24,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const CARD_ID = 'card-48';
 const QUANG_NAM = 'quang-nam:none';
 const QUANG_TIN = 'quang-tin-quang-ngai:none';
+const PHUOC_LONG = 'phuoc-long:none';
 
 const makeToken = (
   id: string,
@@ -108,6 +109,18 @@ describe('FITL card-48 Nam Dong', () => {
     );
     assert.equal(card?.unshaded?.targets?.[0]?.id, '$targetProvince');
     assert.equal(card?.shaded?.targets?.[0]?.id, '$targetProvince');
+    const unshadedSelector = card?.unshaded?.targets?.[0]?.selector as { filter?: Record<string, unknown> } | undefined;
+    const shadedSelector = card?.shaded?.targets?.[0]?.selector as { filter?: Record<string, unknown> } | undefined;
+    assert.match(
+      JSON.stringify(unshadedSelector?.filter),
+      /"op":"markerStateAllowed".*"state":"activeSupport"/,
+      'Unshaded province target must respect Active Support marker legality',
+    );
+    assert.match(
+      JSON.stringify(shadedSelector?.filter),
+      /"op":"markerStateAllowed".*"state":"activeOpposition"/,
+      'Shaded province target must respect Active Opposition marker legality',
+    );
   });
 
   it('unshaded lets the player choose up to 3 guerrillas in a province with a COIN base, removes only those, and sets Active Support', () => {
@@ -240,6 +253,46 @@ describe('FITL card-48 Nam Dong', () => {
 
     const move = findCard48Move(def, state, 'unshaded');
     assert.equal(move, undefined, 'Unshaded should be unavailable without a province containing a COIN base');
+  });
+
+  it('excludes population-0 provinces even when they contain a COIN base', () => {
+    const def = compileDef();
+    const state = setupNamDongState(def, {
+      markers: {
+        [PHUOC_LONG]: { supportOpposition: 'neutral' },
+        [QUANG_NAM]: { supportOpposition: 'neutral' },
+      },
+      zoneTokens: {
+        [PHUOC_LONG]: [makeToken('nam-dong-phuoc-long-us-base', 'base', 'US')],
+        [QUANG_NAM]: [makeToken('nam-dong-quang-nam-arvn-base', 'base', 'ARVN')],
+      },
+    });
+
+    const unshadedMove = findCard48Move(def, state, 'unshaded');
+    assert.notEqual(unshadedMove, undefined, 'Expected card-48 unshaded event move');
+    const unshadedPending = legalChoicesEvaluate(def, state, unshadedMove!);
+    assert.equal(unshadedPending.kind, 'pending');
+    if (unshadedPending.kind !== 'pending') {
+      throw new Error('Expected pending target selection for Nam Dong unshaded.');
+    }
+    assert.deepEqual(
+      unshadedPending.options.map((option) => String(option.value)),
+      [QUANG_NAM],
+      'Population-0 provinces must be excluded from Active Support targeting',
+    );
+
+    const shadedMove = findCard48Move(def, state, 'shaded');
+    assert.notEqual(shadedMove, undefined, 'Expected card-48 shaded event move');
+    const shadedPending = legalChoicesEvaluate(def, state, shadedMove!);
+    assert.equal(shadedPending.kind, 'pending');
+    if (shadedPending.kind !== 'pending') {
+      throw new Error('Expected pending target selection for Nam Dong shaded.');
+    }
+    assert.deepEqual(
+      shadedPending.options.map((option) => String(option.value)),
+      [QUANG_NAM],
+      'Population-0 provinces must be excluded from Active Opposition targeting',
+    );
   });
 
   it('shaded only targets provinces with 0-2 COIN cubes, lets the player choose the COIN base, routes US bases to Casualties, and sets Active Opposition', () => {

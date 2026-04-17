@@ -62,6 +62,19 @@ When the ticket is a **proof, benchmark, audit, or investigation ticket**, do th
 3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
 4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
 
+When a ticket depends on an **event-driven, card-driven, or action-identity-sensitive repro**, do this identity check before tracing deeper into a plausible candidate:
+
+1. Verify the exact currently resolved card, action, branch, or other runtime-owned identity from live state, trace, or authoritative harness output.
+2. Prefer that direct identity evidence over an inferred nearby candidate when multiple adjacent events or actions could explain the same symptom.
+3. Record the confirmed current witness identity in working notes before deeper implementation or TDD proof work.
+
+When a **gate, smoke, or regression ticket** depends on a named historical witness, classify that witness before preserving it literally in the active ticket:
+
+1. `same seam`: the witness still fails or passes for the same underlying contract the ticket names.
+2. `absorbed fix`: the witness is already green on current `HEAD`, so it is now a proof gate rather than a production-fix owner.
+3. `new prerequisite bug`: the witness now fails for a materially different live bug class, so it should move to a new prerequisite or follow-up ticket rather than remain mislabeled inside the current gate.
+4. Record that classification in working notes before coding or rewriting the active ticket.
+
 When a **proof, benchmark, investigation, or mixed ticket** requires an exact historical reproduction artifact or incident characterization, do this historical-evidence sufficiency check before assuming the ticket can close on present-day proof alone:
 
 1. Classify the repo evidence as `reconstructable`, `summary-only`, or `missing` for the named historical state, trace slice, or benchmark incident.
@@ -173,6 +186,7 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
    - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
    - Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
+   - Campaign/simulation repro reduction opportunity: whether a broad harness witness can be reduced to the earliest deterministic failing prefix and then replaced by a narrower direct proof surface without changing ticket ownership
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
@@ -230,6 +244,11 @@ Load `references/implementation-general.md` by default for non-bounded tickets, 
 - Before inventing a brand-new synthetic failing test, check whether an existing nearby unit/integration fixture, regression, or focused failing lane already proves the same seam closely enough. Prefer extracting, tightening, or adapting the smallest existing repo-owned witness when it remains the narrowest valid proof.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
+- When a ticket's authoritative witness is a long campaign, replay, or simulation harness, prefer a compact reduction before patching:
+  1. rerun the authoritative harness
+  2. locate the earliest deterministic failing move prefix or state slice
+  3. inspect the authoritative post-prefix runtime state or current action/card identity
+  4. replace the broad repro with the narrowest direct proof lane that still preserves the ticket invariant
 - If bounded reads, targeted probes, and narrow helper-level checks still cannot isolate the live hot path during reassessment, temporary diagnostic instrumentation is allowed. Keep it narrowly scoped, gate it behind an explicit env flag or similarly local switch, use it only long enough to confirm the boundary, and remove it before final verification.
 - If completed owned work remains valid but a newly exposed blocker is narrower and prerequisite to the original ticket acceptance, prefer creating a new prerequisite ticket and blocking the current active ticket rather than repeatedly widening the active ticket. Keep the current ticket focused on its delivered work plus the now-explicit dependency.
 - When a ticket is split after exploratory or partial code changes already exist in the worktree, explicitly classify those diffs before closeout:
@@ -397,6 +416,19 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - any boundary correction or semantic correction confirmed during reassessment
 - verification commands that actually ran
 - whether schema/artifact fallout was checked and whether it changed
+
+When the active tracked ticket was truthfully narrowed or rewritten and the owned slice lands while a newly created or newly recognized prerequisite remains open, classify the ticket's durable state explicitly before you stop:
+- `COMPLETED`: the rewritten active ticket's owned boundary is fully satisfied and no remaining blocker sits outside the ticket.
+- `BLOCKED by prerequisite`: the active ticket's owned work is done or partially done, but truthful closure still depends on another active ticket or unresolved external blocker. Record the landed slice and the blocker in the ticket outcome rather than leaving the state implicit.
+- `PENDING untouched`: reassessment showed the ticket should stay forward-looking because implementation did not yet land any owned deliverable.
+Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.
+
+For active-ticket rewrites that change the ticket graph itself, an optional final state-transition ledger can help keep the repo artifact honest:
+- `active ticket after rewrite`
+- `new/updated deps`
+- `owned slice landed`
+- `remaining blocker`
+- `recommended durable status`
 
 For active untracked draft tickets, prefer the same durable closeout pattern before finishing the turn: update the draft ticket status and outcome so later sessions inherit the corrected contract, touched-file scope, and repo-valid verification commands rather than the stale draft wording.
 

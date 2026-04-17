@@ -45,6 +45,12 @@ interface TemplateCompletionTrace {
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
 }
 
+const sameRngState = (left: Rng, right: Rng): boolean =>
+  left.state.algorithm === right.state.algorithm
+  && left.state.version === right.state.version
+  && left.state.state.length === right.state.state.length
+  && left.state.state.every((entry, index) => entry === right.state.state[index]);
+
 export function preparePlayableMoves(
   input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
   options: PreparePlayableMovesOptions = {},
@@ -262,7 +268,9 @@ function attemptTemplateCompletion(
       );
     }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
-    currentRng = result.kind === 'rejected' ? retryRng : result.rng;
+    currentRng = result.kind === 'rejected'
+      ? (sameRngState(result.rng, attemptRng) ? retryRng : result.rng)
+      : result.rng;
     if (result.kind === 'playableComplete') {
       templateCompletionSuccesses += 1;
       completionsByActionId.set(

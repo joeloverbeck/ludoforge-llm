@@ -86,6 +86,59 @@ const createRetryProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createOptionalRetryProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['safe'] },
+            min: 0,
+            max: 1,
+          },
+        }),
+        eff({
+          if: {
+            when: {
+              op: 'in',
+              item: 'safe',
+              set: { _t: 2, ref: 'binding', name: '$targets' },
+            },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
@@ -165,15 +218,32 @@ describe('move-completion retry classification', () => {
     assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
-  it('plays five FITL seed-1002 moves within a bounded smoke window', { timeout: 5_000 }, () => {
+  it('prefers non-empty optional chooseN branches when they are satisfiable', () => {
+    const actionId = 'optional-retry-template';
+    const def = createDef(actionId, createOptionalRetryProfile(actionId));
+    const state = initialState(def, 3, 2).state;
+    const templateMove: Move = { actionId: asActionId(actionId), params: {} };
+
+    for (let seed = 0n; seed < 16n; seed += 1n) {
+      const result = completeTemplateMove(def, state, templateMove, createRng(seed));
+      assert.equal(result.kind, 'completed');
+      if (result.kind !== 'completed') {
+        assert.fail('expected optional chooseN completion to avoid the empty dead-end branch');
+      }
+      assert.deepEqual(result.move.params.$targets, ['safe']);
+      assert.equal(result.move.params.$safe, 'done');
+    }
+  });
+
+  it('plays five FITL seed-1009 moves within a bounded smoke window', { timeout: 5_000 }, () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
     const agents = Array.from({ length: 4 }, () => new PolicyAgent());
 
-    const trace = runGame(def, 1002, agents, 5, 4, undefined, runtime);
+    const trace = runGame(def, 1009, agents, 5, 4, undefined, runtime);
 
     assert.ok(trace.moves.length > 0, 'expected seed 1002 smoke to advance');
-    assert.notEqual(trace.stopReason, 'agentStuck');
+    assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
   });
 });

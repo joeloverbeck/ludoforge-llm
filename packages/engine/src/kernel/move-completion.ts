@@ -23,7 +23,7 @@ import type {
 export type TemplateCompletionResult =
   | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
   | { readonly kind: 'structurallyUnsatisfiable' }
-  | { readonly kind: 'drawDeadEnd' }
+  | { readonly kind: 'drawDeadEnd'; readonly rng: Rng }
   | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng };
 
 export interface TemplateMoveCompletionOptions {
@@ -45,7 +45,8 @@ const selectFromChooseN = (
   max: number,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const [count, rng1] = nextInt(rng, min, max);
+  const sampledMin = min === 0 && max > 0 && options.length > 0 ? 1 : min;
+  const [count, rng1] = nextInt(rng, sampledMin, max);
 
   // Fisher-Yates partial shuffle to pick `count` items
   const pool = [...options];
@@ -163,11 +164,10 @@ export const completeTemplateMove = (
     }, runtime);
   } catch (error) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      return {
-        kind: lastDecisionSource === 'random' || lastDecisionSource === 'stochastic'
-          ? 'drawDeadEnd'
-          : 'structurallyUnsatisfiable',
-      };
+      if (lastDecisionSource === 'random' || lastDecisionSource === 'stochastic') {
+        return { kind: 'drawDeadEnd', rng: cursor };
+      }
+      return { kind: 'structurallyUnsatisfiable' };
     }
     throw error;
   }
@@ -179,11 +179,10 @@ export const completeTemplateMove = (
     return { kind: 'completed', move: result.move, rng: cursor };
   }
   if (result.illegal !== undefined || result.nextDecision !== undefined) {
-    return {
-      kind: lastDecisionSource === 'random' || lastDecisionSource === 'stochastic'
-        ? 'drawDeadEnd'
-        : 'structurallyUnsatisfiable',
-    };
+    if (lastDecisionSource === 'random' || lastDecisionSource === 'stochastic') {
+      return { kind: 'drawDeadEnd', rng: cursor };
+    }
+    return { kind: 'structurallyUnsatisfiable' };
   }
   if (result.stochasticDecision !== undefined) {
     return { kind: 'stochasticUnresolved', move: result.move, rng: cursor };

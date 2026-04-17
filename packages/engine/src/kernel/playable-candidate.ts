@@ -81,11 +81,15 @@ const classifyCompletedTemplateMove = (
       rejection: completed.kind,
     };
   }
-  return classifyPlayableCandidateViability(
-    completed.move,
-    state,
-    probeMoveViability(def, state, completed.move, runtime),
-  );
+  const viability = probeMoveViability(def, state, completed.move, runtime);
+  if (viability.viable && !viability.complete && viability.stochasticDecision === undefined) {
+    return {
+      kind: 'rejected',
+      move: viability.move,
+      rejection: 'drawDeadEnd',
+    };
+  }
+  return classifyPlayableCandidateViability(completed.move, state, viability);
 };
 
 export const classifyPlayableMoveCandidate = (
@@ -108,8 +112,23 @@ export const evaluatePlayableMoveCandidate = (
   options?: PlayableMoveCandidateOptions,
 ): PlayableCandidateEvaluation => {
   const completed = completeTemplateMove(def, state, move, rng, runtime, options);
+  const classification = classifyCompletedTemplateMove(move, completed, def, state, runtime);
+  let nextRng: Rng;
+  if (classification.kind === 'rejected') {
+    if (completed.kind === 'drawDeadEnd') {
+      nextRng = completed.rng;
+    } else if (completed.kind === 'completed' && classification.rejection === 'drawDeadEnd') {
+      nextRng = completed.rng;
+    } else {
+      nextRng = rng;
+    }
+  } else if (completed.kind === 'completed' || completed.kind === 'stochasticUnresolved') {
+    nextRng = completed.rng;
+  } else {
+    throw new Error('completed classification must carry rng when candidate is playable');
+  }
   return {
-    ...classifyCompletedTemplateMove(move, completed, def, state, runtime),
-    rng: completed.kind === 'structurallyUnsatisfiable' || completed.kind === 'drawDeadEnd' ? rng : completed.rng,
+    ...classification,
+    rng: nextRng,
   };
 };

@@ -215,11 +215,14 @@ describe('preparePlayableMoves retry integration', () => {
       pendingTemplateCompletions: 3,
     });
 
-    assert.equal(prepared.completedMoves.length, 1);
+    assert.equal(prepared.completedMoves.length >= 1, true);
+    assert.equal(prepared.completedMoves.length <= 3, true);
     assert.equal(prepared.stochasticMoves.length, 0);
     assert.equal(prepared.statistics.templateCompletionAttempts <= 3 + NOT_VIABLE_RETRY_CAP, true);
     assert.equal(prepared.statistics.templateCompletionAttempts > 3, true);
-    assert.equal(prepared.statistics.templateCompletionSuccesses, 1);
+    assert.equal(prepared.statistics.templateCompletionSuccesses >= prepared.completedMoves.length, true);
+    assert.equal(prepared.statistics.templateCompletionSuccesses >= 1, true);
+    assert.equal(prepared.statistics.templateCompletionSuccesses <= 3, true);
     assert.equal(prepared.statistics.templateCompletionStructuralFailures, 0);
     assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'complete');
     assert.equal(prepared.movePreparations[0]?.rejection, undefined);

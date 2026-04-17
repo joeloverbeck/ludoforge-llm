@@ -609,7 +609,7 @@ describe('createGameWorker', () => {
     const worker = createGameWorker();
     const nextStamp = createStampFactory();
     await worker.init(TEST_DEF, 53, undefined, nextStamp());
-    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ kind: 'unsatisfiable' });
+    vi.spyOn(runtime, 'completeTemplateMove').mockReturnValue({ kind: 'structurallyUnsatisfiable' });
 
     const outcome = await worker.applyTemplateMove(LEGAL_TICK_MOVE, undefined, nextStamp());
 

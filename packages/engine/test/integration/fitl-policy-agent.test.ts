@@ -1122,7 +1122,7 @@ describe('FITL policy agent integration', () => {
 
     assert.ok(completedKeys.length > 0, 'expected completed FITL candidates on the VC decision state');
     assert.equal(duplicateKeyCount(completedKeys), 0, 'expected completed playable outputs to be unique by stableMoveKey');
-    assert.equal(prepared.statistics.duplicatesRemoved, 10, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
+    assert.equal(prepared.statistics.duplicatesRemoved, 14, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
   });
 
   it('keeps non-event preview differentiation intact on a VC decision with rally, terror, and attack candidates', () => {
@@ -1193,6 +1193,7 @@ describe('FITL policy agent integration', () => {
     const trace = runGame(def, 17, agents, 5, 4);
 
     assert.equal(trace.moves.length > 0, true);
+    // Post-spec-132: 'agentStuck' is no longer a representable SimulationStopReason.
     assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
     for (const move of trace.moves) {
       assert.equal(move.agentDecision?.kind, 'policy');
@@ -1203,7 +1204,7 @@ describe('FITL policy agent integration', () => {
     }
   });
 
-  it('advances seed 1041 past the former phase-2 action-filter dead-end', () => {
+  it('advances seed 1041 past the former phase-2 action-filter dead-end without fallback', () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
@@ -1212,18 +1213,11 @@ describe('FITL policy agent integration', () => {
     const trace = runGame(def, 1041, agents, 20, 4, { skipDeltas: true }, runtime);
 
     assert.equal(trace.moves.length, 20);
-    assert.notEqual(trace.stopReason, 'agentStuck');
+    assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
     const fallbackMoves = trace.moves.filter(
       (move) => move.agentDecision?.kind === 'policy' && move.agentDecision.emergencyFallback === true,
     );
-    assert.equal(fallbackMoves.length > 0, true);
-    assert.equal(
-      fallbackMoves.some((move) => (
-        move.agentDecision?.kind === 'policy'
-        && move.agentDecision.failure?.code === 'PHASE1_ACTION_FILTER_EMPTY'
-      )),
-      true,
-    );
+    assert.equal(fallbackMoves.length, 0);
   });
 
   it('produces viable moves with and without VC completion guidance on seed-6 free Rally state', () => {

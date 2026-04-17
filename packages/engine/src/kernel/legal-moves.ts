@@ -48,7 +48,8 @@ import {
   decideDiscoveryLegalMovesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
+import { classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
@@ -283,6 +284,34 @@ const classifyEnumeratedMoves = (
 
     const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
+      if (
+        !viability.complete
+        && viability.nextDecision === undefined
+        && viability.nextDecisionSet === undefined
+        && viability.stochasticDecision === undefined
+      ) {
+        const admission = classifyMoveDecisionSequenceAdmissionForLegalMove(
+          def,
+          state,
+          move,
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
+          {
+            budgets: resolveMoveEnumerationBudgets(),
+          },
+          runtime,
+        );
+        if (admission === 'unsatisfiable') {
+          warnings.push({
+            code: 'MOVE_ENUM_PROBE_REJECTED',
+            message: 'Enumerated legal move was rejected by decision-sequence admission and removed.',
+            context: {
+              actionId: String(move.actionId),
+              reason: 'decisionSequenceUnsatisfiable',
+            },
+          });
+          continue;
+        }
+      }
       classified.push({
         move,
         viability,

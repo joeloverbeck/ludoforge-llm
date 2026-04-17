@@ -29,6 +29,12 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
   - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 - Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 - Do not create scratch files solely to satisfy this requirement.
+- When a ticket goes through repeated 1-3-1 boundary resets in the same session, prefer a compact authoritative-boundary ledger in working notes:
+  - `previous boundary`
+  - `new evidence`
+  - `new authoritative boundary`
+  - `invalidated proof lanes`
+  - `new acceptance-proof lanes`
 
 ## Workflow
 
@@ -145,12 +151,17 @@ When the active ticket is an untracked draft, or when a tracked ticket appears s
    - Widened compilation/optimization for an existing AST/expression family: compare live interpreter/evaluator semantics directly before accepting the ticket's claimed subset.
    - When a ticket depends on auto-synthesized or compiler-generated outputs, compare the pre-synthesis authored source, the post-synthesis compiled section, and every downstream consumer that relies on the generated ids or artifacts. Confirm they share the same live source of truth before accepting a YAML-only or caller-local fix.
 7. Build a discrepancy list. Classify each item per `references/triage-and-resolution.md`.
+8. When legality/admissibility and sampled completion disagree, run this contradiction playbook before widening retries, adding fallbacks, or rewriting the ticket boundary:
+   - compare the raw legality/viability surface, the admission/satisfiability surface, and the sampled completion result for the same `(def, state, move)` tuple
+   - if those surfaces still disagree, exhaustively classify the smallest bounded decision surface that can prove whether successful branches actually exist
+   - only after that proof should you decide whether the owning seam is legality/admissibility, completion policy, or retry progression
 8. Check constraints the ticket may have underspecified:
   - Shared type or schema ripple effects
   - Repo-owned downstream consumers of the changed contract, especially UI/display, trace/serialization, generated-fixture, and sibling-package boundaries
   - Staged shared-contract ownership: when the current ticket introduces a new shared field/type surface and a downstream sibling owns population, migration, or full enforcement, explicitly decide whether the interim shape must be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
    - Shared contract migration fanout: estimate the likely blast radius early with targeted `rg` counts before coding so fixture fallout, helper updates, and broad touch points are visible up front
    - Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
+   - Cross-package mocked-contract fallout for shared exported unions or result-shape changes: grep sibling-package tests, mocks, worker fixtures, and structured-clone fixtures for stale discriminants, mocked return kinds, and hand-authored payload shapes
    - Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
    - When changing a shared callable type contract, grep both runtime callsites and their tests
    - When changing helper signatures, argument threading, or call arity, also grep for source-guard, AST-policy, and contract-style tests that assert call shape or helper wiring
@@ -320,6 +331,7 @@ For long-running suites or flaky terminal sessions, prefer capturing authoritati
 - For campaign, tournament, or trace-inspection tickets, prefer the smallest bounded seed/run window that reaches the claimed scenario or reproducer before escalating to larger harness runs. If the first bounded run misses the target behavior, widen only enough to reach the intended trace slice.
 - When a ticket names a high-level reproducer but the setup proves too coupled or noisy, prefer the narrowest valid proof surface that still exercises the owned invariant: first the authority/helper that owns the behavior, then a production-data integration slice, then the broader end-to-end flow only if needed.
 - For shared contract or object-shape migrations, verify both sides of the boundary deliberately: the live runtime shape you intended to change, and any serialized/golden/fixture surface you intended to preserve. Do not assume one implies the other.
+- When one ticket-owned acceptance lane is known to be long-running but independent of other verification surfaces, it is acceptable to overlap that wait with non-contentious workspace checks such as downstream typecheck or unrelated package-local proof lanes, as long as the final closeout still waits for the long lane's result before claiming completion.
 
 ### Trace-Heavy Ticket Evidence
 

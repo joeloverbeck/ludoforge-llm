@@ -1722,7 +1722,7 @@ export type TerminalResult =
   | { readonly type: 'draw' }
   | { readonly type: 'score'; readonly ranking: readonly PlayerScore[] };
 
-export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves' | 'agentStuck';
+export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
 
 export interface GameTrace {
   readonly gameDefId: string;

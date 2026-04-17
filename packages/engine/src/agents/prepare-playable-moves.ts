@@ -5,7 +5,6 @@ import { fork } from '../kernel/prng.js';
 import type {
   Agent,
   ChoicePendingRequest,
-  ClassifiedMove,
   Move,
   MoveParamValue,
   PolicyCompletionStatistics,

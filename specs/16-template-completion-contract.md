@@ -1,99 +1,87 @@
-# Spec 16: Template Completion Contract
+# Spec 16: Template Completion Contract — Formalization & Invariant Tests
 
 **Status**: Draft
-**Priority**: P0
-**Complexity**: L
-**Dependencies**: Spec 132
-**Estimated effort**: 3-4 days
-**Source**: Post-ticket analysis from `132AGESTUVIA-004` implementation; shared engine completion/legality seams exposed by FITL seeds 11, 17, and 1009
+**Priority**: P1
+**Complexity**: S
+**Dependencies**: Spec 132 (archived; COMPLETED 2026-04-17)
+**Estimated effort**: 0.5-1 day
+**Source**: Post-ticket analysis from Spec 132 (`132AGESTUVIA-001`..`-009`); this spec formalizes the completion contract that series implicitly established.
 
 ## Overview
 
-Define the engine-wide contract for template move completion. The kernel currently has the right primitives, but the architecture still relies on several implicit assumptions:
+Spec 132 landed the engine-agnostic fix for the `agentStuck` / optional-`chooseN` completion mismatch: the four-outcome `TemplateCompletionResult` union, anti-bias in optional `chooseN` sampling, deterministic RNG progression on sampled dead-ends, and removal of `agentStuck` from the simulator stop-reason set. The implementation lives in `packages/engine/src/kernel/move-completion.ts` and is consumed uniformly by simulator, agents, and runner worker.
 
-- what it means for a template move to be "completable"
-- how random completion is allowed to explore optional branches
-- when a dead-end reflects a structural impossibility versus an unlucky sampled branch
-- how completion RNG progression interacts with determinism and replay guarantees
+This spec **does not change** the completion-layer implementation. It formalizes the contract Spec 132 established:
 
-This spec turns those assumptions into explicit rules. It does not add game-specific logic. It defines the generic completion semantics that every engine client must share.
+- Canonical in-code documentation of each outcome's meaning, at the type declaration site.
+- Invariant tests that prove the contract properties (outcome classification, anti-bias, RNG progression, determinism, client boundary) against isolated fixtures — independently of the FITL seed regressions.
+- A test-enforced version of the Foundation 5 client-boundary rule: no caller retries `structurallyUnsatisfiable`.
 
 ## Problem Statement
 
-Recent `agentStuck` removal work exposed a specific architectural weakness: a template move can be correctly classified as satisfiable in principle, yet repeated random completion can still fail to find any successful branch because the completion policy keeps preferring optional dead-end choices.
+Spec 132 fixed the concrete bug. The contract that emerged from that fix is currently **code-enforced but not test-enforced as an architectural property**:
 
-That is not merely a bug in one seed. It means the engine lacks an explicit contract for:
+- `TemplateCompletionResult` has no doc-comment explaining when each outcome is emitted or which are retryable.
+- Properties such as "optional `chooseN` with a satisfiable non-empty branch never samples the empty set" and "`drawDeadEnd` always carries the advanced RNG state" are exercised by FITL seed regressions but are not asserted as standalone invariants against isolated fixtures.
+- §5 (client boundary) is enforced only by the happy behavior of `prepare-playable-moves.ts:299` (break on `structurallyUnsatisfiable`) and the worker's binary handling in `game-worker-api.ts:446-452`. No test fails if a future client wrapper silently retries `structurallyUnsatisfiable` — a direct Foundation 5 regression.
 
-1. the meaning of `drawDeadEnd`
-2. the allowed behavior of optional `chooseN`
-3. the difference between "unsatisfiable template" and "sampled dead-end path"
-4. what deterministic completion is required to guarantee for agent-facing candidates
-
-Without this contract, legality, completion, and agent preparation can each be locally reasonable while the end-to-end system is still wrong.
+Without this formalization, a future refactor could weaken the contract while passing all existing regression tests.
 
 ## Goals
 
-- Define the canonical meanings of `completed`, `structurallyUnsatisfiable`, `drawDeadEnd`, and `stochasticUnresolved`.
-- Define deterministic completion behavior for optional `chooseN`.
-- Ensure completion semantics are engine-agnostic and independent of FITL.
-- Make completion outcomes composable with legality/admissibility rules.
-- Preserve bounded computation and deterministic replay.
+- Document the canonical meanings of `completed`, `structurallyUnsatisfiable`, `drawDeadEnd`, `stochasticUnresolved` at the type declaration site.
+- Assert each contract property (§§1-5 below) via isolated invariant tests, independent of FITL seed regressions.
+- Lock in the Foundation 5 client-boundary invariant: no caller re-classifies `structurallyUnsatisfiable` as retryable.
 
 ## Non-Goals
 
-- No game-specific heuristics.
-- No policy-driven search or rollout.
-- No new scripting surface.
-- No UI/simulator-specific completion logic.
+- No semantic changes to `packages/engine/src/kernel/move-completion.ts`.
+- No changes to agent retry budgets, guidance, or policy (caller prerogative per Contract §4).
+- No new DSL surface, completion options, or runtime flags.
+- No game-specific logic.
 
 ## Contract
 
 ### 1. Completion outcome meanings
 
-`completeTemplateMove(...)` MUST return exactly one of these semantic classes:
+`completeTemplateMove` returns exactly one of:
 
-- `completed`
-  The move is fully bound and can be executed through the normal trusted apply path.
-- `structurallyUnsatisfiable`
-  No valid completion exists under the current state and current completion contract.
-- `drawDeadEnd`
-  The current sampled path failed, but some other valid completion path may still exist.
-- `stochasticUnresolved`
-  The move is complete through all pre-stochastic decisions and only unresolved stochastic branches remain.
+- `completed` — move is fully bound; can be executed through the normal trusted apply path.
+- `structurallyUnsatisfiable` — no valid completion exists under the current state and contract. **Not retryable.**
+- `drawDeadEnd` — the sampled path failed; another valid path MAY exist under a different RNG state. Carries the advanced `rng` consumed by the failed sampled path.
+- `stochasticUnresolved` — all pre-stochastic decisions are bound; unresolved stochastic branches remain. Carries the partially-bound `move` and advanced `rng`.
 
-The engine MUST NOT use `structurallyUnsatisfiable` as a catch-all for sampled dead ends.
+`structurallyUnsatisfiable` MUST NOT be used as a catch-all for sampled dead-ends.
 
 ### 2. Optional `chooseN` semantics
 
 For `chooseN` with `min = 0`, `max > 0`, and at least one selectable option:
 
-- completion MAY choose the empty set only if the empty branch is semantically valid under the shared completion contract
-- completion MUST NOT systematically prefer the empty branch when at least one non-empty satisfiable branch exists
-- the completion policy MUST be deterministic with respect to the input RNG
-
-This does not require exhaustive global search. It does require the shared completion policy to avoid a known bad bias toward empty branches.
+- Completion MAY choose the empty set only if the empty branch is semantically valid under the contract.
+- Completion MUST NOT systematically prefer the empty branch when at least one non-empty satisfiable branch exists.
+- The completion policy MUST be deterministic with respect to the input RNG.
 
 ### 3. Draw-dead-end classification
 
 If a sampled branch:
 
-- trips `CHOICE_RUNTIME_VALIDATION_FAILED`, or
+- raises `CHOICE_RUNTIME_VALIDATION_FAILED`, or
 - resolves to `illegal`, or
 - reaches an incomplete state with no pending decision/stochastic continuation
 
-then the outcome MUST be classified as `drawDeadEnd` if the failure was caused by a sampled completion choice rather than a structural impossibility.
+then the outcome MUST be classified as `drawDeadEnd` when `lastDecisionSource ∈ { random, stochastic, guided }` (the failure was caused by a sampled choice) rather than `structural` (structural impossibility).
 
 ### 4. RNG progression
 
-When completion returns `drawDeadEnd`, it MUST also return the advanced RNG state produced by the failed sampled path. That advanced RNG state is part of the deterministic contract. Callers may choose how to continue retrying, but the completion layer must expose the actual consumed state.
+When completion returns `drawDeadEnd`, it MUST also return the advanced RNG state produced by the failed sampled path. Callers choose their own retry policy (budget, guidance, logging); the completion layer MUST expose the actual consumed RNG so caller retries remain deterministic.
 
 ### 5. Client boundary
 
-The simulator, agents, and worker/runtime surfaces MUST rely on the same completion contract. No client may redefine:
+The simulator, agents, and worker/runtime surfaces MUST share the same outcome semantics:
 
-- which completion outcomes are retryable
-- which optional branches are acceptable to prefer
-- what constitutes structural unsatisfiability
+- No client MAY redefine which outcomes admit retry. Specifically: `structurallyUnsatisfiable` MUST NOT be retried by any caller. `drawDeadEnd` MAY be retried; whether to do so, and how many times, is caller policy.
+- No client MAY redefine what constitutes structural unsatisfiability.
+- Clients MAY differ in retry budget, guidance policy, and logging, but MUST NOT reinterpret outcome meanings.
 
 ## Required Invariants
 
@@ -101,36 +89,51 @@ The simulator, agents, and worker/runtime surfaces MUST rely on the same complet
 2. Optional-branch sampling MUST NOT make a satisfiable template practically unreachable by repeatedly preferring a known dead-end empty branch.
 3. Completion outcomes MUST be stable for identical `(GameDef, state, move, rng)` inputs.
 4. The completion contract MUST remain engine-agnostic.
+5. No caller MAY retry a `structurallyUnsatisfiable` outcome.
 
 ## Foundations Alignment
 
-- **Foundation #1 Engine Agnosticism**: all rules are generic completion semantics, not FITL-specific exceptions.
-- **Foundation #5 One Rules Protocol**: completion semantics are shared by simulator, agents, and runner/worker surfaces.
-- **Foundation #8 Determinism**: RNG progression and completion outcomes are explicit and replayable.
-- **Foundation #10 Bounded Computation**: no unbounded search requirement is introduced.
-- **Foundation #14 No Backwards Compatibility**: this spec is the post-`agentStuck` canonical contract, not a compatibility layer.
-- **Foundation #15 Architectural Completeness**: fixes the completion boundary itself rather than adding client-local fallbacks.
-- **Foundation #16 Testing as Proof**: see required proof obligations below.
+- **Foundation #1 Engine Agnosticism**: contract is generic completion semantics, not FITL-specific.
+- **Foundation #5 One Rules Protocol, Many Clients**: client-boundary invariant test proves simulator/agent/worker share one completion protocol.
+- **Foundation #8 Determinism**: RNG progression and outcome determinism are asserted in isolated fixtures.
+- **Foundation #10 Bounded Computation**: no unbounded search introduced.
+- **Foundation #14 No Backwards Compatibility**: no shims; `agentStuck` removal stands.
+- **Foundation #15 Architectural Completeness**: addresses the contract boundary explicitly rather than relying on emergent behavior from regression tests.
+- **Foundation #16 Testing as Proof**: each contract property has an isolated invariant test that fails if the property is weakened.
 
 ## Required Proof
 
-### Unit Proof
+### Doc-comment additions
 
-1. Optional `chooseN` with a satisfiable non-empty branch and a dead-end empty branch MUST complete successfully under repeated deterministic seeds.
-2. Optional `chooseN` sampled dead-end branches MUST still be classifiable as `drawDeadEnd` in fixtures where both successful and dead-end branches exist.
-3. Structural insufficiency (`min > selectable`) MUST still classify as `structurallyUnsatisfiable`.
+1. `TemplateCompletionResult` at `packages/engine/src/kernel/move-completion.ts` MUST carry a doc-comment enumerating the semantic meaning of each outcome (mapping 1:1 to Contract §1) and referencing this spec.
+2. `completeTemplateMove` MUST carry a brief doc-comment pointing to the `TemplateCompletionResult` contract.
 
-### Integration Proof
+### Invariant tests
 
-1. The previously failing engine-owned replay witnesses for seeds 11, 17, and 1009 MUST stop throwing completion-related no-playable failures.
-2. Deterministic replay for the curated policy-agent seeds MUST remain stable.
-3. Former bounded crash/hang seeds MUST continue to terminate with reachable stop reasons only.
+New test file: `packages/engine/test/unit/kernel/completion-contract-invariants.test.ts`.
+
+1. **Outcome classification (Contract §1)** — a fixture with `min > selectable` produces `structurallyUnsatisfiable`, not `drawDeadEnd`.
+2. **Optional `chooseN` anti-bias (Contract §2)** — a fixture with a satisfiable non-empty branch and a dead-end empty branch completes successfully under a 32-seed sweep; every resulting move has a non-empty selection.
+3. **Sampled dead-end classification (Contract §3)** — a fixture where `CHOICE_RUNTIME_VALIDATION_FAILED` is raised from a sampled path classifies as `drawDeadEnd`; a fixture where the same error is raised from a structural path classifies as `structurallyUnsatisfiable`.
+4. **RNG progression (Contract §4)** — a `drawDeadEnd` result returns an `rng` that is strictly advanced from the input `rng` (canonical serialization differs).
+5. **Determinism (Invariant §3)** — identical `(GameDef, state, move, rng)` inputs across repeated calls return byte-identical `TemplateCompletionResult` payloads.
+6. **Client boundary (Invariant §5, Foundation #5)** — a fixture that forces `structurallyUnsatisfiable` and runs through `prepare-playable-moves.ts`'s retry loop asserts that the retry budget is NOT extended for that outcome (the loop breaks immediately and no additional attempts are consumed).
+
+### Existing regression coverage (referenced, not duplicated)
+
+The following tests, landed by Spec 132, already provide end-to-end regression coverage. This spec REFERENCES them but does not duplicate them:
+
+- `packages/engine/test/unit/kernel/move-completion-retry.test.ts` — optional `chooseN` preference under seed sweep; seed-1009 bounded smoke.
+- `packages/engine/test/integration/classified-move-parity.test.ts` — seed 11 FITL parity.
+- `packages/engine/test/integration/fitl-policy-agent.test.ts` — seed 17 outcome-policy dead-end recovery.
+- `packages/engine/test/integration/fitl-events-sihanouk.test.ts` — seed 1009 Rally/March continuation.
+- `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts` — `agentStuck` rejection at TypeScript and Zod layers.
 
 ## Implementation Direction
 
-The intended implementation boundary is the shared completion layer:
+All work is in the `kernel` and `test` layers:
 
-- `packages/engine/src/kernel/move-completion.ts`
-- adjacent completion-result classification surfaces
+- `packages/engine/src/kernel/move-completion.ts` — add doc-comments only; no semantic changes.
+- `packages/engine/test/unit/kernel/completion-contract-invariants.test.ts` — new file; six invariant tests above.
 
-Agent-local fallback logic is explicitly not the preferred architecture for this spec unless a later proof shows the completion layer alone cannot satisfy the contract.
+No changes to `packages/engine/src/agents/prepare-playable-moves.ts`, `packages/runner/src/worker/game-worker-api.ts`, or any FITL data.

@@ -158,7 +158,7 @@ Print the proposed plan in structured form before writing any files. Use this fo
 - Block "<summary>" : references/<source>.md → references/<destination>.md
 ```
 
-Wait for user approval before proceeding. If the user requests adjustments, revise the plan and re-present.
+In interactive sessions, wait for explicit approval; if the user requests adjustments, revise the plan and re-present. In autonomous sessions (auto mode, scheduled runs, background agents), present the plan and execute in the same turn — the user reviews the final diff via `git diff` before committing, and the no-commit guardrail preserves their veto.
 
 ---
 
@@ -170,6 +170,8 @@ For each planned re-extraction (executed first per Step 4d priority):
    - Unconditional: "Load `references/<name>.md`."
    - Conditional: "If <condition>, load `references/<name>.md`."
 3. Retain a 1–2 sentence framing before or after the load instruction when workflow context requires it.
+
+**Tool choice**: Prefer targeted `Edit` calls when re-extracting 1–3 blocks from SKILL.md, or when appending a small section to an existing reference. Prefer a full `Write` rewrite of SKILL.md when re-extracting many blocks at once (≥4) — the rewrite is cleaner than a long sequence of surgical edits. For references, default to `Edit` to append unless the destination is being restructured.
 
 ---
 
@@ -202,7 +204,7 @@ After Steps 6–8:
 ### Step 10: Verify Preservation and Emit Summary
 
 **Verify preservation**:
-- Spot-check 5 unique instructions from the "before" state (sampled across `SKILL.md` + all original references). Confirm each still exists somewhere in the final tree. If any instruction was lost, restore it before emitting the summary.
+- Spot-check 5 unique instructions sampled from files that lost content (re-extraction sources, move sources, split sources). Files that were not modified during rebalance are preserved by definition — no sampling needed there. Confirm each sampled instruction still exists somewhere in the final tree. If any instruction was lost, restore it before emitting the summary.
 
 **Cross-skill reference check**:
 - Grep `.claude/skills/*/SKILL.md` and `.codex/skills/*/SKILL.md` (excluding the target skill itself) for references to any renamed, split, or deleted reference paths. Report external pointers that may need manual updating.

@@ -253,7 +253,6 @@ describe('move-completion retry classification', () => {
     const templateMove: Move = { actionId: asActionId(actionId), params: {} };
 
     let sawCompleted = false;
-    let sawDrawDeadEnd = false;
     for (let seed = 0n; seed < 32n; seed += 1n) {
       const result = completeTemplateMove(def, state, templateMove, createRng(seed));
       if (result.kind === 'completed') {
@@ -271,10 +270,9 @@ describe('move-completion retry classification', () => {
         return undefined;
       },
     });
-    sawDrawDeadEnd = forcedDeadEnd.kind === 'drawDeadEnd';
 
     assert.equal(sawCompleted, true, 'expected at least one successful draw');
-    assert.equal(sawDrawDeadEnd, true, 'expected at least one draw-specific dead end');
+    assert.equal(forcedDeadEnd.kind, 'drawDeadEnd', 'expected at least one draw-specific dead end');
   });
 
   it('reports structural failure when chooseN min exceeds the selectable domain', () => {

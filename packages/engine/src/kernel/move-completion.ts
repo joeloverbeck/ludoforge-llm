@@ -20,6 +20,21 @@ import type {
   GameDef,
 } from './types.js';
 
+/**
+ * Completion outcomes for `completeTemplateMove`; see
+ * `specs/16-template-completion-contract.md` for the full contract.
+ *
+ * - `completed`: the move is fully bound and can be executed through the
+ *   normal trusted apply path.
+ * - `structurallyUnsatisfiable`: no valid completion exists under the current
+ *   state and contract. This outcome is not retryable by callers.
+ * - `drawDeadEnd`: the sampled path failed, but another valid path may still
+ *   exist under a different RNG state. Carries the advanced RNG consumed by the
+ *   failed sampled path so retries stay deterministic.
+ * - `stochasticUnresolved`: all pre-stochastic decisions are bound, but
+ *   stochastic branches remain unresolved. Carries the partially bound move and
+ *   advanced RNG.
+ */
 export type TemplateCompletionResult =
   | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
   | { readonly kind: 'structurallyUnsatisfiable' }
@@ -163,13 +178,10 @@ const completeWithMandatorySingleChoiceFallback = (
 };
 
 /**
- * Attempt to complete a template move using the legalChoicesEvaluate() loop with random selections.
- *
- * Returns a discriminated result:
- * - `completed`: all decisions filled, move is ready for `applyMove`
- * - `structurallyUnsatisfiable`: empty options domain, min > selectable, or budget exceeded; move is unplayable
- * - `drawDeadEnd`: a specific random draw reached an illegal downstream branch; another draw may still work
- * - `stochasticUnresolved`: decisions behind a `rollRandom` gate; move has all pre-stochastic decisions filled
+ * Complete a template move using the shared engine-agnostic completion
+ * contract consumed identically by the simulator, agents, and runner worker.
+ * See `TemplateCompletionResult` and
+ * `specs/16-template-completion-contract.md` for outcome semantics.
  */
 export const completeTemplateMove = (
   def: GameDef,

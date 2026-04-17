@@ -13,7 +13,6 @@ import {
   type ActionPipelineDef,
   type GameDef,
   type GameState,
-  type Move,
 } from '../../../src/kernel/index.js';
 import {
   MOVE_VIABILITY_VERDICT_CODES,

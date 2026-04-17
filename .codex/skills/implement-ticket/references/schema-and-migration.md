@@ -51,3 +51,63 @@ When a change alters compiled output, scoring, move selection, observability, or
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket owns a breaking schema redesign.
 - Probe nearby goldens that look like expected drift explicitly.
 - In this repo, compiled-agent contract changes often surface first in policy production goldens (`policy-production-golden.test.ts`, policy catalog fixtures, fixed-seed policy summaries); check those before assuming broader regression.
+
+## Reassessment Surfaces
+
+When reassessing whether a ticket has underspecified constraints, inspect these surfaces:
+
+- Shared type or schema ripple effects
+- Repo-owned downstream consumers of the changed contract, especially UI/display, trace/serialization, generated-fixture, and sibling-package boundaries
+- Staged shared-contract ownership: when the current ticket introduces a new shared field/type surface and a downstream sibling owns population, migration, or full enforcement, explicitly decide whether the interim shape must be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
+- Shared contract migration fanout: estimate the likely blast radius early with targeted `rg` counts before coding so fixture fallout, helper updates, and broad touch points are visible up front
+- Cross-package fallout for shared exported unions, serialized trace kinds, and exhaustiveness-based consumers
+- Cross-package mocked-contract fallout for shared exported unions or result-shape changes: grep sibling-package tests, mocks, worker fixtures, and structured-clone fixtures for stale discriminants, mocked return kinds, and hand-authored payload shapes
+- Same-package fallout for widened shared unions: grep local `switch` statements, discriminated-union helpers, exhaustiveness guards
+- When changing a shared callable type contract, grep both runtime callsites and their tests
+- When changing helper signatures, argument threading, or call arity, also grep for source-guard, AST-policy, and contract-style tests that assert call shape or helper wiring
+- Shared state/object-shape migrations: explicitly inspect initializers, clone/draft builders, serialization/deserialization, and any runtime delete/unset/cleanup helpers that may silently reintroduce shape drift after your main type change
+- Foundation 14 atomic migrations for removals or renames
+- Required test, schema, or fixture updates
+- Direct fixture fanout: when tests or helpers author runtime state inline, decide whether a shared builder/default can absorb the migration or whether a deliberate mechanical bulk update is the correct narrow move
+- Policy/catalog fallout for agent or scoring changes: check compiled policy catalogs, explicit consideration-list assertions, and fixed-seed policy goldens or summary traces when the repo owns them
+- Test harness / fixture-authoring invariants: when tests manually author or mutate runtime state, verify coupled invariants such as `stateHash` / `_runningHash`, trusted-move source hashes, branded-vs-serialized identifier domains, and any cache keys derived from state
+- When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
+- Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
+- Campaign/simulation repro reduction opportunity: whether a broad harness witness can be reduced to the earliest deterministic failing prefix and then replaced by a narrower direct proof surface without changing ticket ownership
+
+## In-Memory vs Serialized Decisions
+
+When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
+
+## Post-Implementation Sweep for Broad Contract Migrations
+
+For broad contract migrations, representation changes, or identifier migrations, add an explicit post-implementation sweep before broad verification:
+- grep for legacy comparisons, stringification, or serialization of the migrated field (`String(...)`, raw equality checks, hand-authored literals, trace/summary emitters, golden producers)
+- classify each surviving surface as `must migrate`, `intentional serialized boundary`, or `non-owner`
+- run one or two representative runtime proofs on user-facing or serialized surfaces before assuming typecheck-complete means ticket-complete
+- when a test file mixes authored `GameSpecDoc`/spec fixtures with compiled `GameDef`/`GameState` runtime fixtures, explicitly classify each edited block as `authored boundary` or `compiled runtime` before changing ids or expectations; keep string identifiers only on the authored side unless live code proves that surface was already compiled
+
+## Identifier Migration Consumer Sweep
+
+For identifier migrations specifically (`ActionId`, `ZoneId`, `Token.type`, variable ids, marker ids, and similar), use this compact consumer sweep:
+- runtime contract and compiler lowering
+- engine/runtime fixtures and helper builders
+- serialized or display-restoration boundaries (runner, traces, reports, visual-config validation, human-readable logs)
+- committed generated artifacts or compiled fixture consumers in sibling packages
+- at least one workspace-level build/typecheck lane before closeout when more than one package consumes the migrated identifiers
+
+## Interim Contract State for Staged Shared-Contract Tickets
+
+When the ticket introduces a shared contract surface but a downstream sibling still owns population, migration, or full enforcement, make the interim contract state explicit before coding:
+- identify which ticket introduces the surface and which sibling owns the follow-through
+- decide whether the live boundary requires the new surface to be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
+- rewrite active draft acceptance text before completion if the original wording would misstate that interim contract
+- verify the interim shape with the narrowest build-safe proof lane instead of silently absorbing the downstream sibling's work
+
+## Historical Benchmark Sweeps Across Worktrees
+
+For historical benchmark sweeps across commits, branches, or detached worktrees:
+- expect each isolated worktree to need its own dependency/bootstrap setup before the first measurement
+- treat measurement logs written inside those worktrees as evidence artifacts; do not overwrite or discard them just to reuse the same worktree for a different commit
+- if preserving those logs blocks further checkout movement, create a fresh isolated worktree for the next comparison rather than destroying the recorded evidence
+- record in working notes which measurements were temp-worktree evidence versus which logs were refreshed in the main repo as the ticket-owned final artifacts

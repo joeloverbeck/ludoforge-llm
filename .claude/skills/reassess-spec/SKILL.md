@@ -86,6 +86,8 @@ Provide each agent with either the full spec content or a comprehensive structur
 
 **Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. Instruct Explore agents to separate source-file consumers from test-file consumers in their blast radius analysis — test migration scope is frequently underestimated. This is the highest-value output from the Explore agent and must not be omitted.
 
+**Path verification is mandatory**: Instruct Explore agents to glob-verify every file path they report — especially test file paths, which commonly live under `test/unit/<subsystem>/`, `test/integration/`, or sibling subdirectories that look interchangeable but are not. Agents must either cite a path they have confirmed via glob OR explicitly label it as unverified (e.g., "glob returned no match — likely at X based on naming convention"). Agent-reported paths propagate directly into the draft spec; a wrong path survives until Step 7 and forces a post-write correction. Catching it at the agent boundary is cheaper.
+
 When multiple Explore agents return conflicting findings on the same factual claim (e.g., one agent says a parameter exists, the other says it doesn't), treat the conflict as unresolved. Verify the claim directly by reading the authoritative source file before classifying the finding. Do not prefer one agent's result over another without independent verification — agent conflicts are the highest-signal indicator that a claim needs manual tracing.
 
 For quantitative claims (file counts, call site counts), spot-check at least one agent-reported number against an independent grep before using it in findings — agent grep strategies may over- or under-count (e.g., counting all files importing a barrel re-export rather than files specifically using the target symbol).
@@ -201,7 +203,7 @@ Do not conflate "plan file written" with "spec file written" — the plan file i
 **Non-plan mode**: After all findings are resolved and the user has approved the changes:
 
 1. **Draft the updated spec** incorporating all approved changes. Preserve the spec's existing structure and voice. Do not rewrite sections that have no findings — change only what was agreed upon.
-2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <one-line change description>`. Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition.
+2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <one-line change description>`. Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition. For full or near-full rewrites (>60% of sections materially changed, common under Obsolescence → rewrite), replace the numbered diff list with a prose structural summary (2-4 sentences noting what was reframed, removed, or added) followed by the full draft inline — a numbered diff format implies surgical changes, which is misleading when the spec is being restructured.
 3. **Wait for final approval** before writing the file.
 4. **Write the updated spec** to the same path as the original, overwriting it.
 
@@ -216,6 +218,8 @@ After writing the updated spec, run three verifications:
 1. **Paths exist**: Glob each cited path in the updated spec — both original references and paths newly added during the reassessment. This catches stale references introduced during the rewrite.
 2. **Removed references gone**: Grep for each reference the reassessment removed, to confirm no stragglers survive in sections that weren't the primary edit target. This catches incomplete edits where a stale reference was removed in one section but persists in another.
 3. **Section headings preserved**: Grep for `^##` top-level headings (and `^###` sub-headings where relevant) to confirm no standard section was renamed or removed during editing. Downstream skills like `/spec-to-tickets` rely on stable headings — renames break ticket decomposition. The "Preserve downstream structure" guardrail is enforced here.
+
+If any verification fails, correct the spec via Edit and re-verify the specific item before presenting the final summary. Do not present the "suggested next step" until all three verifications pass.
 
 Then present:
 

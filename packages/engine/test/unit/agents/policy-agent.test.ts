@@ -6,7 +6,6 @@ import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { completeClassifiedMove, completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
-import { preparePlayableMoves } from '../../../src/agents/prepare-playable-moves.js';
 import {
   type ActionPipelineDef,
   asActionId,

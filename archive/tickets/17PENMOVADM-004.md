@@ -1,10 +1,10 @@
 # 17PENMOVADM-004: Cross-layer parity integration test + regression sweep
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/17PENMOVADM-002.md`, `tickets/17PENMOVADM-003.md`
+**Deps**: `archive/tickets/17PENMOVADM-002.md`, `archive/tickets/17PENMOVADM-003.md`
 
 ## Problem
 
@@ -19,6 +19,7 @@ This ticket introduces the cross-layer parity integration test and runs the fina
 3. `enumerateLegalMoves`, `probeMoveViability`, `classifyMoveDecisionSequenceAdmissionForLegalMove`, and `completeTemplateMove` are all exported from `packages/engine/src/kernel/index.ts`.
 4. `campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs` exists and documents seed-1000 as the canonical Spec 132 reproducer. Running it post-migration is a manual verification step, not an automated test.
 5. Spec 132's regression seeds (1000, 1007, 1008, 1013) pass today per archived-spec outcome notes and the untracked `completion-contract-invariants.test.ts`.
+6. Reassessment correction: the current kernel can filter unsatisfiable pending free-operation candidates before they reach the later `MOVE_ENUM_PROBE_REJECTED` surface and does not guarantee a raw `legalMoves` free-operation template for the canonical floating fixture. For this path, enumeration omission is the authoritative inadmissible signal; forcing a warning or a raw-template guarantee would require out-of-scope production changes.
 
 ## Architecture Check
 
@@ -47,7 +48,7 @@ A `GameDef` whose single action produces, when enumerated on the initial state, 
 
 A `GameDef` that triggers the `isDeferredFreeOperationTemplateZoneFilterMismatch` branch in `deriveMoveViabilityVerdict` (a free-operation move with zone-filter mismatch) AND whose decision-sequence admission returns `'unsatisfiable'`. Expected parity:
 
-- `enumerateLegalMoves` rejects the move with `MOVE_ENUM_PROBE_REJECTED` warning (`reason: 'decisionSequenceUnsatisfiable'`).
+- `enumerateLegalMoves` omits the move during the earlier free-operation admission filter and emits no `MOVE_ENUM_PROBE_REJECTED` warning for this path.
 - `probeMoveViability` returns the floating shape (`viable: true, complete: false`, all three pending refs `undefined`).
 - `classifyMoveDecisionSequenceAdmissionForLegalMove` returns `'unsatisfiable'`.
 - `classifyMoveAdmissibility` returns `{ kind: 'inadmissible', reason: 'floatingUnsatisfiable' }`.
@@ -102,7 +103,7 @@ No code changes — only test execution. Any regression in the listed commands i
 1. Four-layer parity: for every fixture in the new parity test, `enumerateLegalMoves`, `probeMoveViability`, `classifyMoveDecisionSequenceAdmissionForLegalMove`, and `completeTemplateMove` agree on the broad admissibility class via `classifyMoveAdmissibility`.
 2. Determinism: `classifyMoveAdmissibility` verdicts are byte-equal across 8-seed sweep for each fixture.
 3. Regression witnesses: every Spec 132 reproducer seed continues to resolve without `agentStuck` or `NoPlayableMovesAfterPreparationError`.
-4. No new `MOVE_ENUM_PROBE_REJECTED` warnings appear on fixtures that previously completed cleanly; conversely, inadmissible fixtures continue to emit the warning with the same context.
+4. No new `MOVE_ENUM_PROBE_REJECTED` warnings appear on fixtures that previously completed cleanly; inadmissible fixtures continue to use their existing rejection surface, which for the canonical deferred free-operation floating case is early enumeration omission rather than warning emission.
 
 ## Test Plan
 
@@ -118,3 +119,32 @@ No code changes — only test execution. Any regression in the listed commands i
 4. `pnpm -F @ludoforge/engine test:e2e`
 5. **Manual verification**: `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs` — expect no `probeMoveViability disagreement` line and no `completionUnsatisfiable` verdict for the previously-crashing seeds. Record the output in the commit message.
 6. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Added [packages/engine/test/integration/pending-move-admissibility-parity.test.ts](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/integration/pending-move-admissibility-parity.test.ts) as the Spec 17 Contract §3 proof file.
+- Locked two synthetic fixtures:
+  - admissible deferred free-operation template: enumeration keeps the move, direct probe returns a real pending decision, the shared classifier returns `pendingAdmissible`, and completion reaches `completed`.
+  - canonical floating-unsatisfiable deferred free-operation template: enumeration omits the move via the earlier free-operation admission filter, direct probe returns the floating shape, decision-sequence admission is `unsatisfiable`, the shared classifier returns `floatingUnsatisfiable`, and completion never yields an executable move across the seed sweep.
+- Corrected the draft ticket reassessment to match the live engine architecture under `docs/FOUNDATIONS.md`: the canonical floating fixture’s authoritative rejection surface is early enumeration omission, not `MOVE_ENUM_PROBE_REJECTED` warning emission.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/pending-move-admissibility-parity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-policy-agent.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-events-sihanouk.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator-no-playable-moves.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/move-admissibility.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm -F @ludoforge/engine test:e2e`
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs`
+  - output: `Running seed 1000 with max-turns=200`
+  - output: `Completed: stopReason=noLegalMoves turns=1 moves=144`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-seed-stability.test.js`
+  - direct standalone invocation continued to exhibit the existing silent-harness behavior and did not return a final summary in-terminal during the session; the encompassing `pnpm -F @ludoforge/engine test` and final `pnpm turbo test` sweeps both passed with the updated parity proof in place.

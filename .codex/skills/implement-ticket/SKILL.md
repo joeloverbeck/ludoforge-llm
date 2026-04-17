@@ -37,7 +37,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    Otherwise, it is sufficient to record draft status in working notes and correct the active draft ticket during closeout.
 6. Load the full `references/verification.md` only when verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or tooling ambiguity.
    - For straightforward bounded local refactors, prefer a cheap proof order: local package build or compile check first, then the narrowest focused test/proof lane for the owned change, then the package-level suite, then workspace-wide lanes last.
-   - When focused proof lanes consume freshly built `dist` output or another mutable package artifact, do not run them in parallel with the build step or with other commands that rebuild the same package. Finish the producing build first, then run the dependent proof lanes against that completed artifact set.
+   - When focused proof lanes, package suites, or workspace lanes consume freshly built `dist` output or another mutable package artifact, do not run them in parallel with the build step or with other commands that rebuild the same package. Finish the producing build first, then run the dependent proof lanes, package suite, and workspace lanes against that completed artifact set in sequence.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
 
@@ -64,6 +64,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 
 7. Verify every referenced artifact against the live codebase with targeted reads and `rg`. Load `references/triage-and-resolution.md` (Artifact Verification Checklist section) for what to validate — file existence, exports/signatures, callsite ownership, claimed dead fallbacks, widened compilation families, and auto-synthesized outputs.
 8. Build a discrepancy list and classify each item per `references/triage-and-resolution.md` (Stale-vs-Blocking Triage). When legality/admissibility and sampled completion surfaces disagree, follow the Legality/Admissibility Contradiction Playbook in that reference before widening retries, adding fallbacks, or rewriting the boundary.
+   - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
@@ -88,6 +89,8 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 ## Verification
 
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
+
+When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
 For evidence states, trace-heavy ticket inspection, and generated artifact triage, load `references/verification-evidence.md`.
 

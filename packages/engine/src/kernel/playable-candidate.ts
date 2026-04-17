@@ -5,6 +5,7 @@ import {
   type TemplateMoveCompletionOptions,
 } from './move-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { classifyMoveAdmissibility } from './move-admissibility.js';
 import { createTrustedExecutableMove } from './trusted-move.js';
 import type { GameDef, GameState, Move, Rng, RuntimeWarning, TrustedExecutableMove } from './types.js';
 
@@ -33,9 +34,11 @@ export type PlayableCandidateEvaluation =
 export type PlayableMoveCandidateOptions = TemplateMoveCompletionOptions;
 
 const classifyPlayableCandidateViability = (
+  def: GameDef,
   move: Move,
   state: GameState,
   viability: MoveViabilityProbeResult,
+  runtime?: GameDefRuntime,
 ): PlayableCandidateClassification => {
   if (!viability.viable) {
     return {
@@ -45,26 +48,38 @@ const classifyPlayableCandidateViability = (
       viability,
     };
   }
-  if (viability.complete) {
-    return {
-      kind: 'playableComplete',
-      move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
-      warnings: viability.warnings,
-    };
+  const admissibility = classifyMoveAdmissibility(def, state, move, viability, runtime);
+  switch (admissibility.kind) {
+    case 'complete':
+      return {
+        kind: 'playableComplete',
+        move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
+        warnings: viability.warnings,
+      };
+    case 'pendingAdmissible':
+      if (admissibility.continuation === 'stochastic') {
+        if (viability.complete || viability.stochasticDecision === undefined) {
+          throw new Error('pending stochastic admissibility requires an incomplete viability verdict with stochastic continuation');
+        }
+        return {
+          kind: 'playableStochastic',
+          move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
+          warnings: viability.warnings,
+          viability,
+        };
+      }
+      return {
+        kind: 'rejected',
+        move: viability.move,
+        rejection: 'notDecisionComplete',
+      };
+    case 'inadmissible':
+      return {
+        kind: 'rejected',
+        move: viability.move,
+        rejection: 'notDecisionComplete',
+      };
   }
-  if (viability.stochasticDecision !== undefined) {
-    return {
-      kind: 'playableStochastic',
-      move: createTrustedExecutableMove(viability.move, state.stateHash, 'templateCompletion'),
-      warnings: viability.warnings,
-      viability,
-    };
-  }
-  return {
-    kind: 'rejected',
-    move: viability.move,
-    rejection: 'notDecisionComplete',
-  };
 };
 
 const classifyCompletedTemplateMove = (
@@ -90,14 +105,18 @@ const classifyCompletedTemplateMove = (
       viability,
     };
   }
-  if (viability.viable && !viability.complete && viability.stochasticDecision === undefined) {
+  const admissibility = classifyMoveAdmissibility(def, state, completed.move, viability, runtime);
+  if (
+    admissibility.kind === 'inadmissible'
+    || (admissibility.kind === 'pendingAdmissible' && admissibility.continuation !== 'stochastic')
+  ) {
     return {
       kind: 'rejected',
       move: viability.move,
       rejection: 'drawDeadEnd',
     };
   }
-  return classifyPlayableCandidateViability(completed.move, state, viability);
+  return classifyPlayableCandidateViability(def, completed.move, state, viability, runtime);
 };
 
 export const classifyPlayableMoveCandidate = (
@@ -106,9 +125,11 @@ export const classifyPlayableMoveCandidate = (
   move: Move,
   runtime?: GameDefRuntime,
 ): PlayableCandidateClassification => classifyPlayableCandidateViability(
+  def,
   move,
   state,
   probeMoveViability(def, state, move, runtime),
+  runtime,
 );
 
 export const evaluatePlayableMoveCandidate = (

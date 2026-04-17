@@ -1,6 +1,6 @@
 # Spec 17: Pending Move Admissibility
 
-**Status**: Draft
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 16 (archived; COMPLETED 2026-04-17), Spec 132 (archived; COMPLETED 2026-04-17)
@@ -189,3 +189,32 @@ The intended implementation boundary is a new shared admissibility module plus m
 - `packages/engine/src/agents/prepare-playable-moves.ts` — already consumes the admissibility verdict indirectly via `evaluatePlayableMoveCandidate`. Verify retry-budget decisions at lines 295-310 remain correct (structurally-unsatisfiable → break; notViable/drawDeadEnd → retry within `NOT_VIABLE_RETRY_CAP`) under the shared classification. No code change expected; the verification is part of the integration proof.
 
 This spec prefers strengthening the shared admissibility boundary over adding more downstream retries or fallbacks.
+
+## Outcome
+
+- Completion date: 2026-04-17
+- What changed:
+  - ticket `17PENMOVADM-001` introduced the shared kernel admissibility classifier in `packages/engine/src/kernel/move-admissibility.ts` and its unit coverage
+  - ticket `17PENMOVADM-002` migrated the enumeration layer in `packages/engine/src/kernel/legal-moves.ts`
+  - ticket `17PENMOVADM-003` migrated the playable-candidate boundary in `packages/engine/src/kernel/playable-candidate.ts`
+  - ticket `17PENMOVADM-004` added `packages/engine/test/integration/pending-move-admissibility-parity.test.ts` as the explicit Spec 17 Contract §3 proof and completed the regression sweep
+- Deviations from original plan:
+  - the canonical floating deferred free-operation fixture proved the same inadmissible invariant through early enumeration omission rather than `MOVE_ENUM_PROBE_REJECTED` warning emission, so the final proof and ticket reassessment were corrected to match the live architecture under `docs/FOUNDATIONS.md`
+  - the direct standalone `fitl-seed-stability` invocation continued to show the repo's existing silent-harness behavior in-terminal, so final verification relied on the passing package and workspace sweeps to cover that lane while recording the direct-command behavior truthfully
+- Verification results:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/pending-move-admissibility-parity.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-policy-agent.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-events-sihanouk.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator-no-playable-moves.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/move-admissibility.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm -F @ludoforge/engine test:e2e`
+  - `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs`
+    - output: `Running seed 1000 with max-turns=200`
+    - output: `Completed: stopReason=noLegalMoves turns=1 moves=144`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`
+  - `pnpm turbo test`

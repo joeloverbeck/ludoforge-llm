@@ -1,6 +1,6 @@
 # 17PENMOVADM-003: Migrate playable-candidate client boundary to shared admissibility classifier
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/playable-candidate.ts`
@@ -147,3 +147,28 @@ Document the confirmation in the commit message or PR. Do not modify `prepare-pl
 5. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator-no-playable-moves.test.js`
 6. `pnpm -F @ludoforge/engine test`
 7. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+- Completed on 2026-04-17.
+- Replaced the two inline admissibility checks in `packages/engine/src/kernel/playable-candidate.ts` with calls to the shared `classifyMoveAdmissibility(def, state, move, viability, runtime?)` classifier from ticket 001.
+- Preserved the pre-completion client-boundary policy exactly: non-stochastic pending shapes still reject as `notDecisionComplete`, while non-viable probe failures still reject as `notViable`.
+- Preserved the post-completion retry policy exactly: any inadmissible or non-stochastic pending post-completion shape still maps to `drawDeadEnd`, keeping `prepare-playable-moves.ts` retry semantics unchanged without modifying that file.
+- Added one defensive runtime assertion for the `playableStochastic` branch so the declared return type remains aligned with the viable incomplete stochastic contract.
+- No schema, generated-artifact, or cross-package surface changes were required.
+
+## Verification Run
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-agent.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-eval.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator-no-playable-moves.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-policy-agent.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-events-sihanouk.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

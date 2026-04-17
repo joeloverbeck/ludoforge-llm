@@ -76,8 +76,15 @@ import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { doesCompletedProbeMoveChangeGameplayState } from './free-operation-viability.js';
-import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
+import {
+  doesCompletedProbeMoveChangeGameplayState,
+  hasLegalCompletedFreeOperationMoveInCurrentState,
+} from './free-operation-viability.js';
+import {
+  doesMaterialGameplayStateChange,
+  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
+  resolveStrongestRequiredFreeOperationOutcomeGrant,
+} from './free-operation-outcome-policy.js';
 import { createDraftTracker, createMutableState, freezeState, type DraftTracker, type MutableGameState } from './state-draft.js';
 import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
@@ -1934,6 +1941,28 @@ const probeMoveViabilityRaw = (
         stochasticDecision: undefined,
       };
     }
+    const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      sequence.move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    ) ?? resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      sequence.move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    );
+    if (
+      strongestOutcomeGrant !== null
+      && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, sequence.move, seatResolution)
+    ) {
+      throw illegalMoveError(sequence.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+        grantId: strongestOutcomeGrant.grantId,
+        outcomePolicy: 'mustChangeGameplayState',
+      });
+    }
     return {
       viable: true,
       complete: false,
@@ -1981,6 +2010,64 @@ const probeMoveViabilityRaw = (
   }
 };
 
+const deriveDeferredFreeOperationOutcomePolicyVerdict = (
+  def: GameDef,
+  state: GameState,
+  viability: MoveViabilityProbeResult,
+): MoveViabilityProbeResult => {
+  if (!viability.viable || viability.complete || viability.move.freeOperation !== true) {
+    return viability;
+  }
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
+  let strongestOutcomeGrant = resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
+    def,
+    state,
+    viability.move,
+    seatResolution,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+  );
+  try {
+    strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      viability.move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    ) ?? strongestOutcomeGrant;
+  } catch (error) {
+    if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+      throw error;
+    }
+  }
+  if (
+    strongestOutcomeGrant === null
+    || hasLegalCompletedFreeOperationMoveInCurrentState(def, state, viability.move, seatResolution)
+  ) {
+    return viability;
+  }
+  try {
+    illegalMoveError(viability.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+      grantId: strongestOutcomeGrant.grantId,
+      outcomePolicy: 'mustChangeGameplayState',
+    });
+  } catch (error) {
+    const illegalError = error as KernelRuntimeError<'ILLEGAL_MOVE'>;
+    return {
+      viable: false,
+      complete: undefined,
+      move: undefined,
+      warnings: undefined,
+      code: illegalError.code,
+      context: illegalError.context as IllegalMoveContext,
+      error: illegalError,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
+    };
+  }
+  return viability;
+};
+
 export const probeMoveViability = (
   def: GameDef,
   state: GameState,
@@ -1988,4 +2075,8 @@ export const probeMoveViability = (
   runtime?: GameDefRuntime,
   discoveryCache?: DiscoveryCache,
 ): MoveViabilityProbeResult =>
-  deriveMoveViabilityVerdict(move, probeMoveViabilityRaw(def, state, move, runtime, discoveryCache));
+  deriveDeferredFreeOperationOutcomePolicyVerdict(
+    def,
+    state,
+    deriveMoveViabilityVerdict(move, probeMoveViabilityRaw(def, state, move, runtime, discoveryCache)),
+  );

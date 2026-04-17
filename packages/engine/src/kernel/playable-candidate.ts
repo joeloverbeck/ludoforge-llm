@@ -82,6 +82,14 @@ const classifyCompletedTemplateMove = (
     };
   }
   const viability = probeMoveViability(def, state, completed.move, runtime);
+  if (!viability.viable) {
+    return {
+      kind: 'rejected',
+      move: completed.move,
+      rejection: 'drawDeadEnd',
+      viability,
+    };
+  }
   if (viability.viable && !viability.complete && viability.stochasticDecision === undefined) {
     return {
       kind: 'rejected',

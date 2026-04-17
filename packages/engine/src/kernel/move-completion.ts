@@ -31,6 +31,10 @@ export interface TemplateMoveCompletionOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
 }
 
+interface InternalTemplateMoveCompletionOptions extends TemplateMoveCompletionOptions {
+  readonly guidedMandatorySingleChoiceValues?: readonly MoveParamScalar[];
+}
+
 const selectFromChooseOne = (
   options: readonly MoveParamValue[],
   rng: Rng,
@@ -63,6 +67,101 @@ const selectFromChooseN = (
   return { selected: picked, rng: cursor };
 };
 
+const collectMandatorySingleChoiceCandidates = (
+  request: ChoicePendingRequest,
+): readonly MoveParamScalar[] => {
+  if (request.type === 'chooseOne') {
+    return selectChoiceOptionValuesByLegalityPrecedence(request)
+      .filter((value): value is MoveParamScalar => !Array.isArray(value));
+  }
+
+  const optionCount = request.options.length;
+  const min = request.min ?? 0;
+  if (min !== 1) {
+    return [];
+  }
+  const declaredMax = request.max ?? optionCount;
+  const max = Math.min(declaredMax, optionCount);
+  if (max !== 1) {
+    return [];
+  }
+  return selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
+    .filter((value): value is MoveParamScalar => !Array.isArray(value));
+};
+
+const discoverFirstUnguidedDecision = (
+  def: GameDef,
+  state: GameState,
+  templateMove: Move,
+  runtime: GameDefRuntime | undefined,
+  options: InternalTemplateMoveCompletionOptions | undefined,
+): ChoicePendingRequest | undefined => {
+  const choose = buildGuidedChoiceResolver(options);
+  try {
+    const sequence = completeMoveDecisionSequence(def, state, templateMove, {
+      choose,
+      chooseStochastic: () => undefined,
+    }, runtime);
+    return sequence.nextDecision;
+  } catch (error) {
+    if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
+      return undefined;
+    }
+    throw error;
+  }
+};
+
+const buildGuidedChoiceResolver = (
+  options: InternalTemplateMoveCompletionOptions | undefined,
+): ((request: ChoicePendingRequest) => MoveParamValue | undefined) => {
+  let guidedIndex = 0;
+  return (request) => {
+    const selected = options?.choose?.(request);
+    if (selected !== undefined) {
+      return selected;
+    }
+    const guidedValue = options?.guidedMandatorySingleChoiceValues?.[guidedIndex];
+    if (guidedValue === undefined) {
+      return undefined;
+    }
+    guidedIndex += 1;
+    return request.type === 'chooseOne' ? guidedValue : [guidedValue];
+  };
+};
+
+const completeWithMandatorySingleChoiceFallback = (
+  def: GameDef,
+  state: GameState,
+  templateMove: Move,
+  rng: Rng,
+  runtime: GameDefRuntime | undefined,
+  options: InternalTemplateMoveCompletionOptions | undefined,
+): TemplateCompletionResult | undefined => {
+  const request = discoverFirstUnguidedDecision(def, state, templateMove, runtime, options);
+  if (request === undefined) {
+    return undefined;
+  }
+  const candidates = collectMandatorySingleChoiceCandidates(request);
+  if (candidates.length <= 1) {
+    return undefined;
+  }
+
+  for (const candidate of candidates) {
+    const fallback = completeTemplateMoveInternal(def, state, templateMove, rng, runtime, {
+      ...(options?.choose === undefined ? {} : { choose: options.choose }),
+      guidedMandatorySingleChoiceValues: [
+        ...(options?.guidedMandatorySingleChoiceValues ?? []),
+        candidate,
+      ],
+      ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
+    });
+    if (fallback.kind === 'completed' || fallback.kind === 'stochasticUnresolved') {
+      return fallback;
+    }
+  }
+  return undefined;
+};
+
 /**
  * Attempt to complete a template move using the legalChoicesEvaluate() loop with random selections.
  *
@@ -79,9 +178,20 @@ export const completeTemplateMove = (
   rng: Rng,
   runtime?: GameDefRuntime,
   options?: TemplateMoveCompletionOptions,
+): TemplateCompletionResult => completeTemplateMoveInternal(def, state, templateMove, rng, runtime, options);
+
+const completeTemplateMoveInternal = (
+  def: GameDef,
+  state: GameState,
+  templateMove: Move,
+  rng: Rng,
+  runtime?: GameDefRuntime,
+  options?: InternalTemplateMoveCompletionOptions,
 ): TemplateCompletionResult => {
   const resolved = resolveMoveEnumerationBudgets(options?.budgets);
   const maxDecisions = resolved.maxCompletionDecisions;
+  const guidedMandatorySingleChoiceValues = options?.guidedMandatorySingleChoiceValues ?? [];
+  let guidedMandatorySingleChoiceIndex = 0;
   let cursor = rng;
   let iterations = 0;
   let exceeded = false;
@@ -131,10 +241,16 @@ export const completeTemplateMove = (
       exceeded = true;
       return undefined;
     }
-    const selected = options?.choose?.(request);
-    if (selected !== undefined) {
+    const guidedSelection = options?.choose?.(request);
+    if (guidedSelection !== undefined) {
       lastDecisionSource = 'guided';
-      return selected;
+      return guidedSelection;
+    }
+    const guidedMandatorySingleChoice = guidedMandatorySingleChoiceValues[guidedMandatorySingleChoiceIndex];
+    if (guidedMandatorySingleChoice !== undefined) {
+      guidedMandatorySingleChoiceIndex += 1;
+      lastDecisionSource = 'guided';
+      return request.type === 'chooseOne' ? guidedMandatorySingleChoice : [guidedMandatorySingleChoice];
     }
     return chooseAtRandom(request);
   };
@@ -164,7 +280,24 @@ export const completeTemplateMove = (
     }, runtime);
   } catch (error) {
     if (isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)) {
-      if (lastDecisionSource === 'random' || lastDecisionSource === 'stochastic') {
+      if (
+        lastDecisionSource === 'random'
+        || lastDecisionSource === 'stochastic'
+        || lastDecisionSource === 'guided'
+      ) {
+        if (options?.choose === undefined || (options?.guidedMandatorySingleChoiceValues?.length ?? 0) > 0) {
+          const fallback = completeWithMandatorySingleChoiceFallback(
+            def,
+            state,
+            templateMove,
+            rng,
+            runtime,
+            options,
+          );
+          if (fallback !== undefined) {
+            return fallback;
+          }
+        }
         return { kind: 'drawDeadEnd', rng: cursor };
       }
       return { kind: 'structurallyUnsatisfiable' };
@@ -179,7 +312,24 @@ export const completeTemplateMove = (
     return { kind: 'completed', move: result.move, rng: cursor };
   }
   if (result.illegal !== undefined || result.nextDecision !== undefined) {
-    if (lastDecisionSource === 'random' || lastDecisionSource === 'stochastic') {
+    if (
+      lastDecisionSource === 'random'
+      || lastDecisionSource === 'stochastic'
+      || lastDecisionSource === 'guided'
+    ) {
+      if (options?.choose === undefined || (options?.guidedMandatorySingleChoiceValues?.length ?? 0) > 0) {
+        const fallback = completeWithMandatorySingleChoiceFallback(
+          def,
+          state,
+          templateMove,
+          rng,
+          runtime,
+          options,
+        );
+        if (fallback !== undefined) {
+          return fallback;
+        }
+      }
       return { kind: 'drawDeadEnd', rng: cursor };
     }
     return { kind: 'structurallyUnsatisfiable' };

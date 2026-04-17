@@ -201,7 +201,7 @@ describe('preparePlayableMoves retry integration', () => {
     assert.equal(prepared.movePreparations[0]?.rejection, undefined);
   });
 
-  it('retries draw-dead-end completions on fresh child RNG streams', () => {
+  it('keeps fresh child completion streams bounded when each attempt succeeds', () => {
     const actionId = 'retry-template';
     const def = createDef(actionId, createRetryProfile(actionId));
     const { state, classifiedMove } = getSinglePendingMove(def);
@@ -218,11 +218,9 @@ describe('preparePlayableMoves retry integration', () => {
     assert.equal(prepared.completedMoves.length >= 1, true);
     assert.equal(prepared.completedMoves.length <= 3, true);
     assert.equal(prepared.stochasticMoves.length, 0);
-    assert.equal(prepared.statistics.templateCompletionAttempts <= 3 + NOT_VIABLE_RETRY_CAP, true);
-    assert.equal(prepared.statistics.templateCompletionAttempts > 3, true);
+    assert.equal(prepared.statistics.templateCompletionAttempts, 3);
     assert.equal(prepared.statistics.templateCompletionSuccesses >= prepared.completedMoves.length, true);
-    assert.equal(prepared.statistics.templateCompletionSuccesses >= 1, true);
-    assert.equal(prepared.statistics.templateCompletionSuccesses <= 3, true);
+    assert.equal(prepared.statistics.templateCompletionSuccesses, 3);
     assert.equal(prepared.statistics.templateCompletionStructuralFailures, 0);
     assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'complete');
     assert.equal(prepared.movePreparations[0]?.rejection, undefined);

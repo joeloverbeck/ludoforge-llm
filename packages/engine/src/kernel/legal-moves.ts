@@ -35,9 +35,13 @@ import {
 } from './free-operation-discovery-analysis.js';
 import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
+  hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
 import { createProbeOverlay, transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
-import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
+import {
+  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
+  resolveStrongestRequiredFreeOperationOutcomeGrant,
+} from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
@@ -284,6 +288,42 @@ const classifyEnumeratedMoves = (
 
     const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
+      if (move.freeOperation === true && !viability.complete) {
+        const seatResolution = createSeatResolutionContext(def, state.playerCount);
+        let strongestOutcomeGrant = resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
+          def,
+          state,
+          viability.move,
+          seatResolution,
+        );
+        try {
+          strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
+            def,
+            state,
+            viability.move,
+            seatResolution,
+          ) ?? strongestOutcomeGrant;
+        } catch (error) {
+          if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+            throw error;
+          }
+        }
+        if (
+          strongestOutcomeGrant !== null
+          && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, viability.move, seatResolution)
+        ) {
+          warnings.push({
+            code: 'MOVE_ENUM_PROBE_REJECTED',
+            message: 'Enumerated legal move was rejected by required free-operation outcome policy and removed.',
+            context: {
+              actionId: String(move.actionId),
+              reason: 'freeOperationOutcomePolicyFailed',
+              grantId: strongestOutcomeGrant.grantId,
+            },
+          });
+          continue;
+        }
+      }
       if (
         !viability.complete
         && viability.nextDecision === undefined

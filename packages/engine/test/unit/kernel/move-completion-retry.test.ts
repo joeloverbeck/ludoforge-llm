@@ -139,6 +139,68 @@ const createOptionalRetryProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createSparseRetryProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: {
+              query: 'enums',
+              values: [
+                'dead-01', 'dead-02', 'safe', 'dead-03', 'dead-04',
+                'dead-05', 'dead-06', 'dead-07', 'dead-08', 'dead-09',
+                'dead-10', 'dead-11', 'dead-12', 'dead-13', 'dead-14',
+                'dead-15', 'dead-16', 'dead-17', 'dead-18', 'dead-19',
+                'dead-20', 'dead-21', 'dead-22', 'dead-23', 'dead-24',
+              ],
+            },
+            min: 1,
+            max: 1,
+          },
+        }),
+        eff({
+          if: {
+            when: {
+              op: 'in',
+              item: 'safe',
+              set: { _t: 2, ref: 'binding', name: '$targets' },
+            },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
@@ -199,10 +261,17 @@ describe('move-completion retry classification', () => {
         assert.deepEqual(result.move.params.$targets, ['safe']);
         assert.equal(result.move.params.$safe, 'done');
       }
-      if (result.kind === 'drawDeadEnd') {
-        sawDrawDeadEnd = true;
-      }
     }
+
+    const forcedDeadEnd = completeTemplateMove(def, state, templateMove, createRng(1n), undefined, {
+      choose: (request) => {
+        if (request.type === 'chooseN' && request.min === 1 && request.max === 1) {
+          return ['dead'];
+        }
+        return undefined;
+      },
+    });
+    sawDrawDeadEnd = forcedDeadEnd.kind === 'drawDeadEnd';
 
     assert.equal(sawCompleted, true, 'expected at least one successful draw');
     assert.equal(sawDrawDeadEnd, true, 'expected at least one draw-specific dead end');
@@ -233,6 +302,22 @@ describe('move-completion retry classification', () => {
       assert.deepEqual(result.move.params.$targets, ['safe']);
       assert.equal(result.move.params.$safe, 'done');
     }
+  });
+
+  it('recovers sparse mandatory chooseN surfaces that have one satisfiable branch among many dead ends', () => {
+    const actionId = 'sparse-retry-template';
+    const def = createDef(actionId, createSparseRetryProfile(actionId));
+    const state = initialState(def, 4, 2).state;
+    const templateMove: Move = { actionId: asActionId(actionId), params: {} };
+
+    const result = completeTemplateMove(def, state, templateMove, createRng(1n));
+
+    assert.equal(result.kind, 'completed');
+    if (result.kind !== 'completed') {
+      assert.fail('expected sparse mandatory chooseN completion to find the satisfiable branch');
+    }
+    assert.deepEqual(result.move.params.$targets, ['safe']);
+    assert.equal(result.move.params.$safe, 'done');
   });
 
   it('plays five FITL seed-1009 moves within a bounded smoke window', { timeout: 5_000 }, () => {

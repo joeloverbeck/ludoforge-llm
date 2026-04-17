@@ -329,7 +329,7 @@ describe('template-completion chooseN bounds', () => {
     assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
-  it('treats guided chooseN cardinality mismatches as unsatisfiable instead of throwing', () => {
+  it('treats guided chooseN cardinality mismatches as draw-dead-end instead of throwing', () => {
     const action = createChooseNAction('guided-invalid-choose-n');
     const profile = createChooseNProfile('guided-invalid-choose-n', 1, 1, ['a', 'b', 'c']);
     const def = createDef(action, profile);
@@ -339,7 +339,7 @@ describe('template-completion chooseN bounds', () => {
       choose: () => ['a', 'b'],
     });
 
-    assert.equal(result.kind, 'structurallyUnsatisfiable');
+    assert.equal(result.kind, 'drawDeadEnd');
   });
 
   it('default budget (256) allows actions that would exceed the old 50-decision limit', () => {

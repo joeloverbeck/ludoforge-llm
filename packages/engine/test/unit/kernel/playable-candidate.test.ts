@@ -73,6 +73,59 @@ const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createOptionalChooseNTrapProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['safe'] },
+            min: 0,
+            max: 1,
+          },
+        }),
+        eff({
+          if: {
+            when: {
+              op: 'in',
+              item: 'safe',
+              set: { _t: 2, ref: 'binding', name: '$targets' },
+            },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 describe('playable-candidate evaluator', () => {
   it('classifies a concrete legal move as fully playable with apply parity', () => {
     const def = createDef([
@@ -144,7 +197,34 @@ describe('playable-candidate evaluator', () => {
     if (evaluated.kind !== 'rejected') {
       assert.fail('expected unplayable template rejection');
     }
-    assert.equal(evaluated.rejection, 'completionUnsatisfiable');
+    assert.equal(evaluated.rejection, 'structurallyUnsatisfiable');
+  });
+
+  it('prefers non-empty optional chooseN completions when satisfiable branches exist', () => {
+    const actionId = asActionId('optional-choose-n-trap');
+    const def = createDef(
+      [createAction('optional-choose-n-trap')],
+      [createOptionalChooseNTrapProfile('optional-choose-n-trap')],
+    );
+    const state = initialState(def, 23, 2).state;
+    const templateMove: Move = { actionId, params: {} };
+
+    for (let seed = 0n; seed < 16n; seed += 1n) {
+      const initialRng = createRng(seed);
+      const evaluated = evaluatePlayableMoveCandidate(def, state, templateMove, initialRng);
+
+      assert.equal(evaluated.kind, 'playableComplete');
+      if (evaluated.kind !== 'playableComplete') {
+        assert.fail('expected optional chooseN trap to choose a satisfiable non-empty branch');
+      }
+      assert.deepEqual(evaluated.move.params.$targets, ['safe']);
+      assert.equal(evaluated.move.params.$safe, 'done');
+      assert.notDeepEqual(
+        evaluated.rng.state.state,
+        initialRng.state.state,
+        'successful optional chooseN completion should still advance rng state',
+      );
+    }
   });
 
   it('does not call choose for already-complete legal moves', () => {

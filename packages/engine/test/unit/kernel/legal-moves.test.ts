@@ -4278,7 +4278,7 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
     const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
-    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceAdmissionForLegalMove');
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveAdmissibility');
 
     const hasRootStateDiscoverer = (contextName: string): boolean =>
       helperCalls.some((call) =>
@@ -4318,11 +4318,13 @@ describe('legalMoves plain-action feasibility probe', () => {
     assert.equal(
       classifyCalls.some((call) =>
         call.arguments.length >= 5
-        && expressionToText(sourceFile, call.arguments[1]!) === 'candidateState'
-        && hasDiscovererProperty(call.arguments[4]!),
+        && expressionToText(sourceFile, call.arguments[1]!) === 'state'
+        && expressionToText(sourceFile, call.arguments[2]!) === 'move'
+        && expressionToText(sourceFile, call.arguments[3]!) === 'viability'
+        && expressionToText(sourceFile, call.arguments[4]!) === 'runtime'
       ),
-      false,
-      'derived-state free-operation classification must not reuse cachedDiscover from the root state',
+      true,
+      'enumeration-layer classification should delegate to classifyMoveAdmissibility with the root state and current viability result',
     );
 
     const probeCalls = collectCallExpressionsByIdentifier(sourceFile, 'probeMoveViability');

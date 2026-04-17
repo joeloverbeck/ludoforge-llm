@@ -76,16 +76,21 @@ import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import { doesCompletedProbeMoveChangeGameplayState } from './free-operation-viability.js';
-import { doesMaterialGameplayStateChange, resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
+import {
+  doesCompletedProbeMoveChangeGameplayState,
+  hasLegalCompletedFreeOperationMoveInCurrentState,
+} from './free-operation-viability.js';
+import {
+  doesMaterialGameplayStateChange,
+  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
+  resolveStrongestRequiredFreeOperationOutcomeGrant,
+} from './free-operation-outcome-policy.js';
 import { createDraftTracker, createMutableState, freezeState, type DraftTracker, type MutableGameState } from './state-draft.js';
 import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
   ActionDef,
   ActionPipelineDef,
   ApplyMoveResult,
-  ChoicePendingRequest,
-  ChoiceStochasticPendingRequest,
   EventSideEffectManifest,
   ExecutionOptions,
   GameDef,
@@ -94,7 +99,6 @@ import type {
   MoveParamScalar,
   MoveParamValue,
   Rng,
-  RuntimeWarning,
   TrustedExecutableMove,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
@@ -102,6 +106,8 @@ import type {
 } from './types.js';
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { classifyMoveAdmissibility } from './move-admissibility.js';
+import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viability-predicate.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveMoveDecisionSequence, type DiscoveryCache } from './move-decision-sequence.js';
@@ -572,55 +578,7 @@ export type MoveLegalityProbeResult =
  * nextDecision, nextDecisionSet, stochasticDecision.
  * All construction sites must materialize every property.
  */
-export type MoveViabilityProbeResult =
-  | Readonly<{
-      readonly viable: true;
-      readonly complete: true;
-      readonly move: Move;
-      readonly warnings: readonly RuntimeWarning[];
-      readonly code: undefined;
-      readonly context: undefined;
-      readonly error: undefined;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>
-  | Readonly<{
-      readonly viable: true;
-      readonly complete: false;
-      readonly move: Move;
-      readonly warnings: readonly RuntimeWarning[];
-      readonly code: undefined;
-      readonly context: undefined;
-      readonly error: undefined;
-      readonly nextDecision: ChoicePendingRequest | undefined;
-      readonly nextDecisionSet: readonly ChoicePendingRequest[] | undefined;
-      readonly stochasticDecision: ChoiceStochasticPendingRequest | undefined;
-    }>
-  | Readonly<{
-      readonly viable: false;
-      readonly complete: undefined;
-      readonly move: undefined;
-      readonly warnings: undefined;
-      readonly code: 'ILLEGAL_MOVE';
-      readonly context: IllegalMoveContext;
-      readonly error: KernelRuntimeError<'ILLEGAL_MOVE'>;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>
-  | Readonly<{
-      readonly viable: false;
-      readonly complete: undefined;
-      readonly move: undefined;
-      readonly warnings: undefined;
-      readonly code: Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>;
-      readonly context: KernelRuntimeErrorContext<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>> | undefined;
-      readonly error: KernelRuntimeError<Exclude<KernelRuntimeErrorCode, 'ILLEGAL_MOVE'>>;
-      readonly nextDecision: undefined;
-      readonly nextDecisionSet: undefined;
-      readonly stochasticDecision: undefined;
-    }>;
+export type MoveViabilityProbeResult = MoveViabilityResult;
 
 interface MovePreflightContext {
   readonly action: ActionDef;
@@ -1857,7 +1815,7 @@ export const probeMoveLegality = (
   }
 };
 
-export const probeMoveViability = (
+const probeMoveViabilityRaw = (
   def: GameDef,
   state: GameState,
   move: Move,
@@ -1981,6 +1939,28 @@ export const probeMoveViability = (
         stochasticDecision: undefined,
       };
     }
+    const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      sequence.move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    ) ?? resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      sequence.move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    );
+    if (
+      strongestOutcomeGrant !== null
+      && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, sequence.move, seatResolution)
+    ) {
+      throw illegalMoveError(sequence.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
+        grantId: strongestOutcomeGrant.grantId,
+        outcomePolicy: 'mustChangeGameplayState',
+      });
+    }
     return {
       viable: true,
       complete: false,
@@ -2026,4 +2006,54 @@ export const probeMoveViability = (
     }
     throw error;
   }
+};
+
+/**
+ * Public viability probe — the single client-facing legality oracle.
+ *
+ * Spec 17 §4 (Deferred free-operation templates): the
+ * `deriveMoveViabilityVerdict` rewrite is internal-discovery only. Its output
+ * MUST pass through the shared admissibility classifier before reaching any
+ * client. Spec 17 Invariant #5: admissibility classification for a given
+ * `(GameDef, state, move)` is identical across all call sites.
+ *
+ * Implementation: raw probe → internal-discovery rewrite → admissibility
+ * classifier filter. When the rewrite transforms an illegal verdict into a
+ * "pending" shape but the classifier proves the move is inadmissible on a
+ * definitive ground — `floatingUnsatisfiable` (no decision assignment can
+ * complete it) or `freeOperationOutcomePolicyFailed` (no grant-legal
+ * completion exists in the current state) — we return the original raw
+ * illegal verdict so the client sees the authoritative illegal reason.
+ *
+ * When the classifier reports `floatingUnresolved` we keep the rewritten
+ * viable shape: the move MAY be a genuinely deferred free-operation
+ * template whose decisions, once bound, produce a legal completion. Per
+ * Spec 17 §4 this is the only case where the internal-discovery rewrite is
+ * allowed to reach the client; spec 17 §1 and enumeration both treat such
+ * templates as pending-admissible.
+ */
+const isDefinitivelyInadmissibleRewrittenVerdict = (
+  admissibility: ReturnType<typeof classifyMoveAdmissibility>,
+): boolean =>
+  admissibility.kind === 'inadmissible'
+  && (admissibility.reason === 'floatingUnsatisfiable'
+    || admissibility.reason === 'freeOperationOutcomePolicyFailed');
+
+export const probeMoveViability = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+  discoveryCache?: DiscoveryCache,
+): MoveViabilityProbeResult => {
+  const raw = probeMoveViabilityRaw(def, state, move, runtime, discoveryCache);
+  const rewritten = deriveMoveViabilityVerdict(move, raw);
+  if (rewritten === raw) {
+    return rewritten;
+  }
+  const admissibility = classifyMoveAdmissibility(def, state, move, rewritten, runtime);
+  if (isDefinitivelyInadmissibleRewrittenVerdict(admissibility)) {
+    return raw;
+  }
+  return rewritten;
 };

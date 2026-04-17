@@ -1,7 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
   applyMove,
   assertValidatedGameDef,
@@ -19,12 +18,10 @@ import {
   type ClassifiedMove,
   type GameDef,
   type Move,
-  type ActionPipelineDef,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 import { extractDecisionPointSnapshot } from '../../../src/sim/snapshot.js';
-import { createTemplateChooseOneAction } from '../../helpers/agent-template-fixtures.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -107,48 +104,6 @@ phase: [asPhaseId('main')],
           ? []
           : [{ when: { op: '>=', left: { _t: 2 as const, ref: 'gvar', var: 'score' }, right: terminalAtScore }, result: { type: 'draw' } }],
     },
-  } as const);
-};
-
-const createEmptyOptionsProfile = (actionId: string): ActionPipelineDef => ({
-  id: `profile-${actionId}`,
-  actionId: asActionId(actionId),
-  legality: null,
-  costValidation: null,
-  costEffects: [],
-  targeting: {},
-  stages: [
-    {
-      stage: 'resolve',
-      effects: [
-        eff({
-          chooseOne: {
-            internalDecisionId: 'decision:$target',
-            bind: '$target',
-            options: { query: 'enums', values: [] },
-          },
-        }),
-      ],
-    },
-  ],
-  atomicity: 'atomic',
-});
-
-const createUnsatisfiableTemplateDef = (): ValidatedGameDef => {
-  const actionId = asActionId('unplayable-template');
-  return assertValidatedGameDef({
-    metadata: { id: 'sim-unplayable-template', players: { min: 2, max: 2 }, maxTriggerDepth: 8 },
-    constants: {},
-    globalVars: [],
-    perPlayerVars: [],
-    zones: [],
-    tokenTypes: [],
-    setup: [],
-    turnStructure: { phases: [{ id: asPhaseId('main') }] },
-    actions: [createTemplateChooseOneAction(actionId, asPhaseId('main'))],
-    actionPipelines: [createEmptyOptionsProfile('unplayable-template')],
-    triggers: [],
-    terminal: { conditions: [] },
   } as const);
 };
 
@@ -277,15 +232,6 @@ describe('runGame', () => {
   it('ends on no legal moves without synthetic logs', () => {
     const def = createDef({ withAction: false });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 5);
-
-    assert.equal(trace.moves.length, 0);
-    assert.equal(trace.result, null);
-    assert.equal(trace.stopReason, 'noLegalMoves');
-  });
-
-  it('treats typed no-playable-move agent failures as noLegalMoves', () => {
-    const def = createUnsatisfiableTemplateDef();
-    const trace = runGame(def, 17, [new RandomAgent(), new RandomAgent()], 5);
 
     assert.equal(trace.moves.length, 0);
     assert.equal(trace.result, null);

@@ -10,7 +10,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const MAX_TURNS = 300;
 const PLAYER_COUNT = 4;
-const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'agentStuck']);
+const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns']);
 
 describe('FITL seed 2057 regression', () => {
   const { parsed, compiled } = compileProductionSpec();
@@ -33,7 +33,7 @@ describe('FITL seed 2057 regression', () => {
     assert.equal(
       ALLOWED_STOP_REASONS.has(trace.stopReason),
       true,
-      `seed 2057: expected terminal/maxTurns/agentStuck, got ${trace.stopReason} after ${trace.moves.length} moves`,
+      `seed 2057: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.moves.length} moves`,
     );
     assert.equal(trace.moves.length > 0, true, 'seed 2057 should advance at least one move');
   });

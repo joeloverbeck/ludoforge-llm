@@ -232,13 +232,13 @@ describe('free-operation completion with overlapping grants', () => {
     assert.equal(guided.move.params.$safe, 'done');
 
     // Random completion uses discovery-mode (not evaluation-mode), so it may
-    // walk into the "trap" branch whose empty domain makes the move unsatisfiable.
+    // walk into the "trap" branch whose empty domain makes the move structurally unsatisfiable.
     // The important invariant is that the $targetSpaces max clamp (tested above)
     // is correctly applied regardless of completion outcome.
     const random = completeTemplateMove(def, state, template, createRng(0n));
     assert.ok(
-      random.kind === 'completed' || random.kind === 'unsatisfiable',
-      `Expected completed or unsatisfiable, got ${random.kind}`,
+      random.kind === 'completed' || random.kind === 'structurallyUnsatisfiable',
+      `Expected completed or structurallyUnsatisfiable, got ${random.kind}`,
     );
     if (random.kind === 'completed') {
       assert.equal(random.move.params.$path, 'safe');

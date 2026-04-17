@@ -22,17 +22,19 @@ Do NOT write any code, scaffold any project, invoke any implementation skill, or
 ## Process Flow
 
 ```
-Read context (reference file + detect topic type)
+Read context (reference file + state inspection)
          |
          v
-[If reference has verification criteria] Run counter-evidence checks
+[If reference has verification criteria OR system state needs grounding] Pre-interview verification
          |
          v
-Classify: design | decision/triage
+Classify: design | decision/triage | operational
          |
          +--> DECISION MODE: short interview -> verify claims -> write specs/tickets directly
          |         +--> [If artifact needs design] transition to DESIGN Steps 3-4
          |         \--> [If no artifact warranted] confirm dismissal rationale -> end
+         |
+         +--> OPERATIONAL MODE: brief interview -> verify state -> write executable plan w/ verification
          |
          +--> DESIGN MODE (default):
               Confidence-driven interview loop (target: 95%)
@@ -51,6 +53,8 @@ Classify: design | decision/triage
                        |
                        v
               Next-steps menu (user chooses)
+
+(Under plan mode: artifact path is harness-specified; menu is replaced by ExitPlanMode.)
 ```
 
 ## Step 1: Read Context
@@ -60,6 +64,7 @@ Classify: design | decision/triage
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
    - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision.
+   - **Operational**: The goal is to safely execute a concrete destructive or system-affecting action (rollback, cleanup, repair, migration, dependency upgrade, environment reset). Triggered when the user requests a specific action with side effects, not a design or evaluation of analysis. Follow the shortened flow: brief interview to confirm scope and risk tolerance → verify current system state (git, fs, build, tests) → write an executable plan with explicit numbered steps, expected outputs, and verification checks. Skip Steps 3-4 (approaches, section-by-section design); the action is the request, the design is the step list. The artifact is a plan-style doc, not a spec or ticket. See Step 5 for output format. Operational tasks frequently run under plan mode — see "Plan Mode Interaction" below.
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
@@ -73,17 +78,34 @@ Classify: design | decision/triage
 
 7. **Existing artifact investigation**: When the brainstorm topic concerns existing codebase artifacts (skills, modules, configurations, files), read them during this step — before the first interview question. The interview is more productive when grounded in the actual artifact content rather than the user's summary of it.
 
-## Step 1.5: Counter-Evidence Verification (Optional)
+## Step 1.5: Pre-Interview Verification (Optional)
 
-If the reference file contains hypotheses with explicit counter-evidence checks, verification criteria (e.g., "check whether X is true before proceeding"), or factual claims about the codebase that can be verified by reading code (e.g., "the skill only traces 2-3 levels deep", "the engine uses discriminated unions extensively"), offer to run those checks before the interview. This grounds the brainstorm in verified facts rather than unvalidated claims.
+Before the interview, run targeted verification when either of these triggers applies:
 
-- **Design mode**: Present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them.
+**Trigger A — Reference file has verification criteria.** The reference file contains hypotheses with explicit counter-evidence checks, verification criteria (e.g., "check whether X is true before proceeding"), or factual claims about the codebase that can be verified by reading code (e.g., "the skill only traces 2-3 levels deep", "the engine uses discriminated unions extensively").
+
+**Trigger B — System/codebase state is part of the topic.** The brainstorm topic involves system state that can be queried directly (git status/log, filesystem layout, build state, test results, existing artifacts). Pre-checking state before the first user question makes interview questions more specific and reduces total question count.
+
+Mode-specific behavior:
+
+- **Design mode**: For Trigger A, present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them. For Trigger B, run inspections directly without asking — the cost is low and it shapes better questions.
 - **Triage mode**: Proceed directly to verification without asking. The user invoked triage specifically to act on the report — verification is an expected prerequisite, not an optional step.
+- **Operational mode**: Always run state verification (Trigger B). The plan's correctness depends on accurate observed state, not assumed state.
 - Run checks using Explore agents, grep, git log, file reads — whatever the checks require
 - Report results before proceeding to the interview
 - Adjust confidence and approach based on what the checks reveal
 
-Skip this step if the reference file has no explicit verification criteria.
+Skip this step only if neither trigger applies.
+
+## Plan Mode Interaction
+
+When Claude Code's plan mode is active, the harness mandates a specific plan file path and requires `ExitPlanMode` for approval. The skill's flow adapts as follows — these adaptations cut across every subsequent step:
+
+- **Step 5 output path**: Write to the harness-specified plan file path (e.g., `~/.claude/plans/<derived-name>.md`) instead of `docs/plans/...`, `specs/...`, or `tickets/...`. Include the same "Brainstorm Context" header content. Specs and tickets cannot be created during plan mode — defer their creation until after approval.
+- **Step 6 next steps**: Replace the menu with `ExitPlanMode`. The user's plan-mode approval IS the next-step decision. After approval and exit from plan mode, if the original goal was to produce a spec or ticket, write it then. If the user has already stated their next step, proceed directly.
+- **Hard gate**: Plan mode satisfies the hard gate automatically — execution cannot begin until the user approves via the plan-mode review UI.
+- **Triage mode artifacts**: If triage would normally produce specs/tickets directly, the plan file should describe which artifacts will be created and where. Create them after plan-mode approval, not during.
+- **Operational mode**: Operational tasks frequently run under plan mode because they have side effects. The plan file IS the executable plan; the menu is replaced by `ExitPlanMode`; execution begins after approval.
 
 ## Step 2: Confidence-Driven Interview
 
@@ -91,14 +113,14 @@ This is the core of the skill. Your goal is to reach **95% confidence** about wh
 
 ### The Protocol
 
-After each user answer, display a confidence block:
+After each user answer, communicate confidence and remaining gaps explicitly. The fenced block format is one option:
 
 ```
 Confidence: X%
 Gaps: [list of remaining unknowns]
 ```
 
-Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% confidence. Moving to approaches."
+Inline prose is acceptable when gaps are short (e.g., "Confidence: 85% — main gap is whether scope includes Y"). Either way, name the percentage and the specific gaps. Vague phrasings like "I need more information" are not acceptable. Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% confidence. Moving to approaches."
 
 ### Interview Rules
 
@@ -185,7 +207,9 @@ Sections to cover (skip irrelevant ones):
 
 ## Step 5: Write Output Artifacts
 
-**Numbering convention (applies to both modes)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. Follow established formatting conventions from existing specs.
+**Plan mode override**: If plan mode is active, the harness specifies the artifact path; write there instead of the per-mode default below. See "Plan Mode Interaction" earlier in this skill.
+
+**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. Follow established formatting conventions from existing specs.
 
 ### Design mode (default)
 
@@ -202,7 +226,23 @@ If the brainstorm's output is specs or tickets (not a design requiring further r
 - **Specs** go to `specs/<number>-<name>.md` following existing spec conventions
 - **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following the ticket template
 
+### Operational mode
+
+Write an executable plan with the following sections (scale each to its complexity):
+
+- **Context**: Why the action is being taken — the problem, prompt, or intended outcome
+- **Verified state**: Concrete observations from Step 1.5 (commit SHAs, file inventories, test results, etc.) so a reader can confirm the plan is grounded in current reality
+- **Decisions**: Scope and risk decisions made during the interview, with rationale
+- **Step-by-step execution**: Numbered steps with the exact commands or actions, expected outputs, and any conditional branches (e.g., "if dry-run reveals X, pause")
+- **Verification checklist**: How to confirm the action succeeded (commands and expected results)
+- **Recovery info**: How to undo if something goes wrong (where applicable — e.g., reflog, backup paths)
+- **Files NOT touched**: Explicit list of paths/state intentionally outside scope, to prevent accidental over-reach during execution
+
+Output to `docs/plans/YYYY-MM-DD-<action>.md` (or harness-specified plan path under plan mode). Do NOT execute. The plan is the artifact; execution is a separate user-approved step.
+
 ## Step 6: Next Steps Menu
+
+**Plan mode override**: If plan mode is active, replace the menu with `ExitPlanMode`. The plan-mode approval IS the next-step decision. See "Plan Mode Interaction" earlier in this skill.
 
 Present the user with options for what to do next. Adapt the menu to the output format:
 
@@ -231,6 +271,16 @@ What would you like to do next?
 3. Done for now — I'll review the artifacts later
 ```
 
+**If output was an operational plan** (`docs/plans/YYYY-MM-DD-<action>.md`):
+```
+What would you like to do next?
+1. Execute the plan now (proceed step-by-step with verification at each gate)
+2. Defer execution — I'll run it later or in a separate session
+3. Revise the plan first (re-enter brainstorm with corrections)
+```
+
+**Continual Learning prompt** (only when applicable): If the brainstorm surfaced a concrete gap in `CLAUDE.md`, `docs/FOUNDATIONS.md`, or an existing skill (conflicting instructions, missing guidance, outdated references), append an option: "Propose updates to <file>". Do not include this option speculatively — only when the brainstorm produced specific evidence of a gap. This implements CLAUDE.md's Continual Learning rule.
+
 If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. If the brainstorm was invoked mid-task (e.g., during active troubleshooting or implementation) and the design is a targeted fix, present a brief confirmation ("Ready to implement — proceeding unless you'd prefer a different path") rather than the full menu. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
 
 Use AskUserQuestion to present this as a proper choice. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
@@ -250,3 +300,4 @@ If the design has cross-repo implications (e.g., the same pattern needs to be ap
 - **Worktree discipline**: If working in a worktree, all file paths use the worktree root.
 - **No scope inflation**: The design covers what was asked for. Resist the urge to add "while we're at it" improvements.
 - **Respect early exit**: If the user wants to skip ahead, let them. List your assumptions clearly.
+- **Execution-time clarifications**: If post-approval execution surfaces a state that contradicts a plan assumption (e.g., a file that was supposed to disappear via reset turns out to predate the rollback target, or a command emits unexpected output), pause and ask via AskUserQuestion. Do not silently work around it. Brief the user on what changed and what the options are. This is consistent with CLAUDE.md's 1-3-1 rule.

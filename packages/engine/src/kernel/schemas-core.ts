@@ -1461,11 +1461,11 @@ const PolicyMovePreparationTraceSchema = z
       z.literal('failed'),
     ]).optional(),
     rejection: z.union([
-      z.literal('completionUnsatisfiable'),
+      z.literal('structurallyUnsatisfiable'),
+      z.literal('drawDeadEnd'),
       z.literal('notViable'),
       z.literal('notDecisionComplete'),
     ]).optional(),
-    fellThroughFromZoneFilterMismatch: BooleanSchema.optional(),
   })
   .strict();
 
@@ -1504,7 +1504,7 @@ const PolicyCompletionStatisticsSchema = z
     rejectedNotViable: NumberSchema,
     templateCompletionAttempts: NumberSchema,
     templateCompletionSuccesses: NumberSchema,
-    templateCompletionUnsatisfiable: NumberSchema,
+    templateCompletionStructuralFailures: NumberSchema,
     duplicatesRemoved: NumberSchema,
     completionsByActionId: z.record(StringSchema, NumberSchema).optional(),
   })
@@ -1600,7 +1600,6 @@ export const SimulationStopReasonSchema = z.union([
   z.literal('terminal'),
   z.literal('maxTurns'),
   z.literal('noLegalMoves'),
-  z.literal('agentStuck'),
 ]);
 
 export const GameTraceSchema = z

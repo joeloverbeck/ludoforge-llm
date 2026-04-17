@@ -80,9 +80,13 @@ Use Explore agents to perform extraction and validation. Agent count decision ta
 
 A behavioral claim is "complex" if tracing it requires reading 3+ functions across 2+ files (e.g., control flow through a pipeline, failure mechanisms spanning multiple modules, multi-layer dispatch). Single-file claims are structurally simple regardless of function count — even 4+ functions within one file don't warrant a second agent.
 
+**Fresh-spec context scaling**: When the spec's subject matter was substantially traced earlier in the same session — via spec authorship, in-session debugging of the same code paths, dependency completion, or other reconnaissance-equivalent work (e.g., Claude debugged a bug then drafted the spec, or completed a dependency spec moments before reassessing this one) — scale down by one agent. Prior conversation context substitutes for one agent's reconnaissance pass. Blast radius coverage remains mandatory regardless; do not scale below one agent.
+
 Provide each agent with either the full spec content or a comprehensive structured extraction of all references in its scope. If summarizing, ensure you capture every reference from every section — including those embedded in prose, code blocks, tables, and footnotes. The goal is completeness, not format. This is read-only — agent-based exploration is safe and significantly faster.
 
 **Blast radius is mandatory**: The agent prompt MUST explicitly request blast radius analysis — grep for all import sites and consumer files of any type or interface the spec proposes to modify. Instruct Explore agents to separate source-file consumers from test-file consumers in their blast radius analysis — test migration scope is frequently underestimated. This is the highest-value output from the Explore agent and must not be omitted.
+
+**Path verification is mandatory**: Instruct Explore agents to glob-verify every file path they report — especially test file paths, which commonly live under `test/unit/<subsystem>/`, `test/integration/`, or sibling subdirectories that look interchangeable but are not. Agents must either cite a path they have confirmed via glob OR explicitly label it as unverified (e.g., "glob returned no match — likely at X based on naming convention"). Agent-reported paths propagate directly into the draft spec; a wrong path survives until Step 7 and forces a post-write correction. Catching it at the agent boundary is cheaper.
 
 When multiple Explore agents return conflicting findings on the same factual claim (e.g., one agent says a parameter exists, the other says it doesn't), treat the conflict as unresolved. Verify the claim directly by reading the authoritative source file before classifying the finding. Do not prefer one agent's result over another without independent verification — agent conflicts are the highest-signal indicator that a claim needs manual tracing.
 
@@ -128,6 +132,8 @@ For each finding, record:
 
 **Scope-collapsing reframing**: When findings collectively reveal that the spec's proposed implementation approach is substantially wrong (e.g., engine changes proposed when only data/configuration changes are needed), recommend reframing the spec's Proposed Changes section entirely rather than patching individual claims. Flag the Complexity metadata field for re-evaluation — approach simplification often reduces complexity. Note the reframing in the diff summary so the user sees the full scope of the change.
 
+**Scope-expanding follow-up**: If the reassessment surfaces a related but independent concern that would expand this spec's scope (e.g., a downstream symptom visible in the same reproduction but driven by a different root cause), do not add it here. Record it as an Improvement that recommends a follow-up spec, preserving the insight without violating YAGNI. The current spec stays focused; the new concern becomes its own reassessable unit.
+
 ### Step 5: Present Findings
 
 Present all findings to the user in a structured report:
@@ -169,7 +175,7 @@ Present all findings to the user in a structured report:
 
 **Plan mode**: Present the full findings report as text first (the structured report from Steps 2-4), then handle questions based on the scenario:
 
-1. **All factual, no questions**: All findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts). Present findings inline → immediately write the plan file with the diff summary as "Approved Changes (Diff Summary)" → call ExitPlanMode. The plan file write happens here in Step 5 (not in Step 6) — this is the only place it is written for scenario 1. The ExitPlanMode approval gate subsumes the Step 5 wait. **Factual vs. design preference heuristic**: A finding is factual if only one correct answer exists (wrong file path, wrong type name, wrong count). A finding is also factual when the spec states a general rule (e.g., "intern all branded domain identifiers") but omits a concrete instance that clearly falls under that rule — the omission has one correct answer (include it). A finding is a design preference if multiple valid presentations exist (how much detail to include, which format, which ordering). Improvements that propose a different level of detail or documentation granularity are design preferences, even when one option is clearly better — present the default as "(Recommended)" in `AskUserQuestion` but let the user override. Design preferences belong in scenario 2 or 3, not scenario 1.
+1. **All factual, no questions**: All findings are unambiguous factual corrections (wrong names, wrong paths, wrong counts, or missing documentation of verified codebase facts). Present findings inline → immediately write the plan file with the diff summary as "Approved Changes (Diff Summary)" → call ExitPlanMode. The plan file write happens here in Step 5 (not in Step 6) — this is the only place it is written for scenario 1. The ExitPlanMode approval gate subsumes the Step 5 wait. **Factual vs. design preference heuristic**: A finding is factual if only one correct answer exists (wrong file path, wrong type name, wrong count). A finding is also factual when the spec states a general rule (e.g., "intern all branded domain identifiers") but omits a concrete instance that clearly falls under that rule — the omission has one correct answer (include it). A finding is a design preference if multiple valid presentations exist (how much detail to include, which format, which ordering). Improvements that propose a different level of detail or documentation granularity are design preferences, even when one option is clearly better — present the default as "(Recommended)" in `AskUserQuestion` but let the user override. Design preferences belong in scenario 2 or 3, not scenario 1. **Tiebreaker for blended cases**: When a finding is simultaneously "general rule + omitted concrete instance" and "more documentation granularity", prefer factual classification if the concrete instances are already knowable from the codebase at audit time (a deterministic glob/grep surfaces them). The instances are data, not design — the only judgment is whether to include them, and a general rule already in the spec settles that.
 2. **Mostly factual, 1-2 blocking questions**: Present findings inline → use `AskUserQuestion` for only the blocking questions. In the inline `### Questions` section, reference the AskUserQuestion call by number (e.g., "See questions below for selection") rather than duplicating the full question text.
 3. **Multiple questions (up to 3)**: Present findings inline → use a single `AskUserQuestion` call containing all questions (the tool supports up to 4 per invocation). This gives the user full context before being asked to decide.
 
@@ -186,14 +192,20 @@ If a deferred question is rendered moot by another approved decision (e.g., the 
 
 If the user requests deeper analysis of a specific finding before deciding, perform the investigation using read-only tools (reading additional source files, tracing call chains, etc.) and present updated findings before re-asking for approval. This investigation round does not count toward the follow-up question limit — it is resolution of the original question, not a new question.
 
+If the user answers a question with uncertainty plus a request to investigate (e.g., "I don't know — investigate", "not sure, check the codebase"), treat it as a combined investigation-then-approval flow: perform the read-only investigation, present the result inline as an updated finding, and continue to the next pending question or the diff summary without re-asking the original question. Only re-ask the original question if the investigation surfaces new alternatives the user must choose between; otherwise, the investigation result IS the answer.
+
 ### Step 6: Write the Updated Spec
 
-**Plan mode**: Scenario 1 skips directly to Step 7 (plan file already written in Step 5). Scenarios 2-3: skip Steps 6.1-6.3. The plan file's "Approved Changes (Diff Summary)" section (written in Step 5) serves as the draft and presentation. ExitPlanMode approval covers this gate — proceed directly to Step 6.4 after plan approval.
+**Plan mode**: All scenarios proceed to Step 6.4 after ExitPlanMode approval — the updated spec MUST be written before Step 7's verification can run. Concretely:
+- **Scenario 1**: the plan file was already written in Step 5 and approved via ExitPlanMode. Skip Steps 6.1–6.3 (draft/present/wait — all subsumed by the plan file and its approval). Proceed directly to Step 6.4 (write the updated spec), then Step 7.
+- **Scenarios 2-3**: Skip Steps 6.1-6.3. The plan file's "Approved Changes (Diff Summary)" section (written in Step 5) serves as the draft and presentation. ExitPlanMode approval covers this gate — proceed directly to Step 6.4 after plan approval, then Step 7.
+
+Do not conflate "plan file written" with "spec file written" — the plan file is a durable artifact recording the intent; the spec file is the deliverable that the user actually consumes.
 
 **Non-plan mode**: After all findings are resolved and the user has approved the changes:
 
 1. **Draft the updated spec** incorporating all approved changes. Preserve the spec's existing structure and voice. Do not rewrite sections that have no findings — change only what was agreed upon.
-2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <one-line change description>`. Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition.
+2. **Present the diff summary** to the user as a numbered list: `N. **<section name>**: <brief change description>` (one line typical; sub-bullets permitted when a single section's change spans multiple coordinated artifacts, e.g., a new module plus its migration sites). Include metadata field changes (Status, Priority, Complexity, Dependencies) in the diff summary when they change as a consequence of the reassessment findings — these affect downstream ticket decomposition. For full or near-full rewrites (>60% of sections materially changed, common under Obsolescence → rewrite), replace the numbered diff list with a prose structural summary (2-4 sentences noting what was reframed, removed, or added) followed by the full draft inline — a numbered diff format implies surgical changes, which is misleading when the spec is being restructured.
 3. **Wait for final approval** before writing the file.
 4. **Write the updated spec** to the same path as the original, overwriting it.
 
@@ -203,7 +215,13 @@ If the user requests changes to the draft, incorporate them and re-present befor
 
 ### Step 7: Post-Write Verification and Final Summary
 
-After writing the updated spec, verify that all file paths in the updated spec exist (quick glob per path) — both original references and paths newly added during the reassessment. This catches stale references introduced during the rewrite. Also verify that references removed by the reassessment do not persist in the updated spec (quick grep for each removed reference) — this catches incomplete edits where a stale reference was removed in one section but survives in another.
+After writing the updated spec, run three verifications:
+
+1. **Paths exist**: Glob each cited path in the updated spec — both original references and paths newly added during the reassessment. This catches stale references introduced during the rewrite.
+2. **Removed references gone**: Grep for each reference the reassessment removed, to confirm no stragglers survive in sections that weren't the primary edit target. This catches incomplete edits where a stale reference was removed in one section but persists in another.
+3. **Section headings preserved**: Grep for `^##` top-level headings (and `^###` sub-headings where relevant) to confirm no standard section was renamed or removed during editing. Downstream skills like `/spec-to-tickets` rely on stable headings — renames break ticket decomposition. The "Preserve downstream structure" guardrail is enforced here.
+
+If any verification fails, correct the spec via Edit and re-verify the specific item before presenting the final summary. Do not present the "suggested next step" until all three verifications pass.
 
 Then present:
 

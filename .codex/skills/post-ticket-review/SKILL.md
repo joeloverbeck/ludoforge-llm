@@ -91,6 +91,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - otherwise create a new ticket in `tickets/` from `tickets/_TEMPLATE.md`
    - choose the original ticket's prefix series when the work is logically derived from that series
    - otherwise invent a new mnemonic prefix
+   - if the implementation is acceptable but the original ticket still has a concrete named deliverable that did not land, split that remainder explicitly instead of silently treating the original ticket as fully satisfied
 9. When extending an existing active ticket:
    - edit the ticket directly
    - preserve or improve architectural clarity
@@ -100,7 +101,14 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - align the problem and architecture check with `docs/FOUNDATIONS.md`
    - add dependencies instead of overlapping scope with other active tickets
    - keep the scope specific and actionable
-11. If no unresolved `must-fix-now` cleanup remains, archive the implemented ticket per `docs/archival-workflow.md`.
+11. If review evidence shows the implementation can stand but the original ticket was not fully satisfied as written:
+   - amend the original ticket's closeout text so it truthfully records the deviation
+   - state what landed, what did not, and which active follow-up ticket now owns the remainder
+   - only archive after that rewrite and after confirming no unresolved `must-fix-now` cleanup remains
+12. Before archival, do a final contract check:
+   - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
+   - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
+13. If no unresolved `must-fix-now` cleanup remains, archive the implemented ticket per `docs/archival-workflow.md`.
 
 ## Ticket Authoring Rules
 
@@ -134,6 +142,7 @@ For any ticket you create or extend:
 - Do not reopen the finished ticket's scope except for truly small must-fix-now cleanup.
 - Do not create overlapping tickets.
 - Read active tickets before editing or creating follow-up work.
+- Do not archive a finished ticket until its written outcome matches what actually landed, especially when a missed original deliverable was split into follow-up work during review.
 - If uncertain whether a change is small enough to fix now or important enough to ticket, do nothing.
 
 ## Codex Adaptation Notes

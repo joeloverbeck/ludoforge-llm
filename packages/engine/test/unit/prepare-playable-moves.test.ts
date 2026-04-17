@@ -84,12 +84,12 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 0,
     });
   });
 
-  it('reports completion statistics across direct, rejected, completed-template, and unsatisfiable-template paths', () => {
+  it('reports completion statistics across direct, rejected, completed-template, and structurally-unsatisfiable-template paths', () => {
     const completeMove: Move = { actionId: asActionId('complete'), params: {} };
     const stochasticMove: Move = { actionId: asActionId('stochastic'), params: {} };
     const satisfiableTemplateMove: Move = { actionId: asActionId('chooseTarget'), params: {} };
@@ -159,7 +159,7 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 1,
       templateCompletionAttempts: 2,
       templateCompletionSuccesses: 1,
-      templateCompletionUnsatisfiable: 1,
+      templateCompletionStructuralFailures: 1,
       duplicatesRemoved: 0,
       completionsByActionId: {
         chooseTarget: 1,
@@ -194,7 +194,7 @@ describe('preparePlayableMoves', () => {
       pendingTemplateCompletions: 3,
     });
 
-    assert.equal(prepared.completedMoves.length, 2);
+    assert.equal(prepared.completedMoves.length, 1);
     assert.equal(prepared.stochasticMoves.length, 0);
     assert.deepEqual(prepared.statistics, {
       totalClassifiedMoves: 1,
@@ -203,8 +203,8 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 3,
       templateCompletionSuccesses: 3,
-      templateCompletionUnsatisfiable: 0,
-      duplicatesRemoved: 1,
+      templateCompletionStructuralFailures: 0,
+      duplicatesRemoved: 2,
       completionsByActionId: {
         chooseTarget: 3,
       },
@@ -251,7 +251,7 @@ describe('preparePlayableMoves', () => {
       rejectedNotViable: 0,
       templateCompletionAttempts: 0,
       templateCompletionSuccesses: 0,
-      templateCompletionUnsatisfiable: 0,
+      templateCompletionStructuralFailures: 0,
       duplicatesRemoved: 2,
     });
     assert.equal(prepared.movePreparations.length, 3);
@@ -344,7 +344,7 @@ describe('preparePlayableMoves', () => {
 
     assert.deepEqual(
       prepared.completedMoves.map((move) => move.move.actionId),
-      [chooseTarget, chooseTarget],
+      [chooseTarget],
     );
     assert.deepEqual(prepared.stochasticMoves, []);
     assert.deepEqual(prepared.statistics.completionsByActionId, {
@@ -389,10 +389,12 @@ describe('preparePlayableMoves', () => {
     /**
      * Regression test for a scenario where a free-operation template move
      * (e.g. VC Rally restricted to Cambodia via a zone filter from the
-     * Sihanouk shaded event) is rejected by probeMoveViability because the
-     * zone filter cannot be evaluated on a template with no target-zone
-     * selections.  preparePlayableMoves must fall through to the template
-     * completion path instead of discarding the move.
+     * Sihanouk shaded event) previously diverged between enumeration and
+     * direct probing because the zone filter could not be evaluated before
+     * target-zone selections were completed. The shared viability predicate
+     * must now preserve the template as a viable incomplete move so
+     * preparePlayableMoves reaches normal template completion without a
+     * downstream fallback.
      *
      * The test state is loaded from a snapshot fixture to decouple from
      * agent profile evolution (Foundation 2: Evolution-First Design).
@@ -423,13 +425,14 @@ describe('preparePlayableMoves', () => {
       const freeOpMove = legal1.find(({ move }) => move.freeOperation === true)?.move;
       assert.ok(freeOpMove, 'expected a free-operation move in legal moves');
 
-      // Verify that probeMoveViability rejects the template (this is the
-      // condition that previously caused the bug).
+      // Direct probing should now agree with enumerateLegalMoves.
       const viability = probeMoveViability(def, state, freeOpMove, runtime);
-      assert.equal(viability.viable, false, 'template should be non-viable via probeMoveViability (zone filter unevaluable)');
+      assert.equal(viability.viable, true, 'template should stay viable during direct probing');
+      if (viability.viable) {
+        assert.equal(viability.complete, false, 'template should remain incomplete until completion');
+      }
 
-      // Despite probeMoveViability rejecting the template, preparePlayableMoves
-      // must recover it through the template completion path.
+      // preparePlayableMoves should complete the viable template normally.
       const rng = createRng(42n);
       const prepared = preparePlayableMoves(
         { def, state, legalMoves: legal1, rng, runtime },
@@ -485,7 +488,7 @@ describe('preparePlayableMoves', () => {
   });
 
   describe('notViable retry extension', () => {
-    it('completionUnsatisfiable still breaks immediately without retry extensions', () => {
+    it('structurallyUnsatisfiable still breaks immediately without retry extensions', () => {
       const def = assertValidatedGameDef({
         metadata: { id: 'prepare-unsatisfiable-no-retry', players: { min: 2, max: 2 } },
         constants: {},
@@ -513,9 +516,9 @@ describe('preparePlayableMoves', () => {
 
       assert.equal(prepared.completedMoves.length, 0);
       assert.equal(prepared.stochasticMoves.length, 0);
-      // completionUnsatisfiable should break after 1 attempt, not retry up to 10
+      // structurallyUnsatisfiable should break after 1 attempt, not retry up to 10
       assert.equal(prepared.statistics.templateCompletionAttempts, 1);
-      assert.equal(prepared.statistics.templateCompletionUnsatisfiable, 1);
+      assert.equal(prepared.statistics.templateCompletionStructuralFailures, 1);
     });
 
     it('exports NOT_VIABLE_RETRY_CAP as a bounded positive integer', () => {
@@ -578,7 +581,7 @@ describe('preparePlayableMoves', () => {
       // Verify the structural bound: even if retries extend indefinitely,
       // the cap prevents runaway iteration.  We test this by ensuring that
       // the cap is strictly less than any unreasonable upper bound and that
-      // completionUnsatisfiable (tested above) still exits at 1 attempt.
+      // structurallyUnsatisfiable (tested above) still exits at 1 attempt.
       assert.ok(
         NOT_VIABLE_RETRY_CAP <= 20,
         `NOT_VIABLE_RETRY_CAP (${NOT_VIABLE_RETRY_CAP}) should be a small bounded number`,

@@ -16,6 +16,7 @@ import {
   asPlayerId,
   asTriggerId,
   asZoneId,
+  enumerateLegalMoves,
   legalMoves,
   probeMoveViability,
   type ActionDef,
@@ -1334,6 +1335,105 @@ describe('applyMove() required free-operation grant enforcement', () => {
     assert.equal(viability.context.reason, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED);
     assert.equal(viability.context.grantId, 'grant-required-outcome');
     assert.equal(viability.context.outcomePolicy, 'mustChangeGameplayState');
+  });
+
+  it('excludes incomplete free operations that only potentially match mustChangeGameplayState grants from legal-move classification', () => {
+    const action: ActionDef = {
+      id: asActionId('operation'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+    const profile: ActionPipelineDef = {
+      id: 'operation-pending-zone-profile',
+      actionId: action.id,
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            eff({
+              chooseOne: {
+                internalDecisionId: 'decision:$zone',
+                bind: '$zone',
+                options: { query: 'enums', values: ['board:none', 'city:none'] },
+              },
+            }),
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = asTaggedGameDef({
+      ...makeBaseDef({ actions: [action], actionPipelines: [profile], globalVars: [] }),
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            optionMatrix: [],
+            passRewards: [],
+            freeOperationActionIds: ['operation'],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+            actionClassByActionId: { operation: 'operation' },
+          },
+        },
+      },
+    });
+
+    const state = makeBaseState({
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingEligibilityOverrides: [],
+          pendingFreeOperationGrants: [
+            {
+              grantId: 'grant-required-outcome-potential',
+              phase: 'ready',
+              seat: '0',
+              operationClass: 'operation',
+              actionIds: ['operation'],
+              moveZoneBindings: ['$zone'],
+              zoneFilter: {
+                op: 'in',
+                item: { _t: 2 as const, ref: 'binding', name: '$zone' },
+                set: { _t: 1 as const, scalarArray: ['board:none', 'city:none'] },
+              },
+              completionPolicy: 'required',
+              outcomePolicy: 'mustChangeGameplayState',
+              postResolutionTurnFlow: 'resumeCardFlow',
+              remainingUses: 1,
+            },
+          ],
+        },
+      },
+      globalVars: {},
+    });
+
+    const classified = enumerateLegalMoves(def, state).moves.filter(
+      ({ move }) => move.actionId === asActionId('operation') && move.freeOperation === true,
+    );
+    assert.deepEqual(classified, []);
   });
 
   it('ignores non-material variable changes when enforcing mustChangeGameplayState outcome policy', () => {

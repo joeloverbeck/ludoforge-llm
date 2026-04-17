@@ -21,6 +21,7 @@ import {
   isMoveAllowedByTurnFlowOptionMatrix,
   resolveConstrainedSecondEligibleActionClasses,
 } from './legal-moves-turn-order.js';
+import { classifyMoveAdmissibility } from './move-admissibility.js';
 import {
   grantActionIds,
 } from './free-operation-grant-authorization.js';
@@ -37,7 +38,9 @@ import {
   canResolveAmbiguousFreeOperationOverlapInCurrentState,
 } from './free-operation-viability.js';
 import { createProbeOverlay, transitionReadyGrantForCandidateMove } from './grant-lifecycle.js';
-import { resolveStrongestRequiredFreeOperationOutcomeGrant } from './free-operation-outcome-policy.js';
+import {
+  resolveStrongestRequiredFreeOperationOutcomeGrant,
+} from './free-operation-outcome-policy.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
 import type { TurnFlowActionClass } from './types-turn-flow.js';
@@ -48,7 +51,8 @@ import {
   decideDiscoveryLegalMovesPipelineViability,
   evaluateDiscoveryPipelinePredicateStatus,
 } from './pipeline-viability-policy.js';
-import { MISSING_BINDING_POLICY_CONTEXTS, classifyMissingBindingProbeError } from './missing-binding-policy.js';
+import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
+import { classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
@@ -249,21 +253,6 @@ const consumeParamExpansionBudget = (state: MoveEnumerationState, actionId: Acti
   return false;
 };
 
-const isDeferredFreeOperationTemplateProbeFailure = (
-  move: Move,
-  viability: ReturnType<typeof probeMoveViability>,
-): boolean => {
-  if (move.freeOperation !== true || viability.viable || viability.code !== 'ILLEGAL_MOVE') {
-    return false;
-  }
-  const ctx = viability.context;
-  return (
-    ctx.reason === 'freeOperationNotGranted'
-    && 'freeOperationDenial' in ctx
-    && (ctx as { readonly freeOperationDenial: { readonly cause: string } }).freeOperationDenial.cause === 'zoneFilterMismatch'
-  );
-};
-
 const classifyEnumeratedMoves = (
   def: GameDef,
   state: GameState,
@@ -298,6 +287,42 @@ const classifyEnumeratedMoves = (
 
     const viability = probeMoveViability(def, state, move, runtime, discoveryCache);
     if (viability.viable) {
+      // Spec 17 §1 / Foundations Alignment #14: admissibility is decided by
+      // the shared classifier. This consolidates the former scattered
+      // outcome-policy + decision-sequence-admission checks into a single
+      // call site. `floatingUnresolved` is retained — it represents a
+      // deferred free-operation template that may still complete legally.
+      const admissibility = classifyMoveAdmissibility(def, state, move, viability, runtime);
+      if (admissibility.kind === 'inadmissible') {
+        if (admissibility.reason === 'freeOperationOutcomePolicyFailed') {
+          warnings.push({
+            code: 'MOVE_ENUM_PROBE_REJECTED',
+            message: 'Enumerated legal move was rejected by required free-operation outcome policy and removed.',
+            context: {
+              actionId: String(move.actionId),
+              reason: 'freeOperationOutcomePolicyFailed',
+              ...(admissibility.outcomePolicyGrantId === undefined
+                ? {}
+                : { grantId: admissibility.outcomePolicyGrantId }),
+            },
+          });
+          continue;
+        }
+        if (admissibility.reason === 'floatingUnsatisfiable') {
+          warnings.push({
+            code: 'MOVE_ENUM_PROBE_REJECTED',
+            message: 'Enumerated legal move was rejected by decision-sequence admission and removed.',
+            context: {
+              actionId: String(move.actionId),
+              reason: 'decisionSequenceUnsatisfiable',
+            },
+          });
+          continue;
+        }
+        // `floatingUnresolved`, `illegalMove`, `runtimeError` fall through:
+        // illegal/runtime cases are unreachable under viable:true; floating
+        // unresolved is spec 17 §4's deferred-template carveout.
+      }
       classified.push({
         move,
         viability,
@@ -308,26 +333,6 @@ const classifyEnumeratedMoves = (
             'enumerateLegalMoves',
           )
           : undefined,
-      });
-      continue;
-    }
-
-    if (isDeferredFreeOperationTemplateProbeFailure(move, viability)) {
-      classified.push({
-        move,
-        viability: {
-          viable: true,
-          complete: false,
-          move,
-          warnings: [],
-          code: undefined,
-          context: undefined,
-          error: undefined,
-          nextDecision: undefined,
-          nextDecisionSet: undefined,
-          stochasticDecision: undefined,
-        },
-        trustedMove: undefined,
       });
       continue;
     }
@@ -1400,7 +1405,7 @@ const enumerateRawLegalMoves = (
       // queries), the probe was the costliest call in the pipeline enumeration
       // path — executing effects (applyChooseN, evalQuery, filterTokensByExpr)
       // just to verify satisfiability. The agent handles unsatisfiable templates
-      // gracefully via templateCompletionUnsatisfiable, making the enumeration-time
+      // gracefully via templateCompletionStructuralFailures, making the enumeration-time
       // probe redundant safety overhead.
 
       tryPushOptionMatrixFilteredMove(enumeration, def, state, { actionId: action.id, params: {} }, action);

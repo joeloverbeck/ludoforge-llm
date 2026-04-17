@@ -1565,8 +1565,7 @@ export interface PolicyMovePreparationTrace {
   readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
-  readonly rejection?: 'completionUnsatisfiable' | 'notViable' | 'notDecisionComplete';
-  readonly fellThroughFromZoneFilterMismatch?: boolean;
+  readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
 }
 
 export interface PolicyPruningStepTrace {
@@ -1613,7 +1612,7 @@ export interface PolicyCompletionStatistics {
   readonly rejectedNotViable: number;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionSuccesses: number;
-  readonly templateCompletionUnsatisfiable: number;
+  readonly templateCompletionStructuralFailures: number;
   readonly duplicatesRemoved: number;
   readonly completionsByActionId?: Readonly<Record<string, number>>;
 }
@@ -1723,7 +1722,7 @@ export type TerminalResult =
   | { readonly type: 'draw' }
   | { readonly type: 'score'; readonly ranking: readonly PlayerScore[] };
 
-export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves' | 'agentStuck';
+export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
 
 export interface GameTrace {
   readonly gameDefId: string;

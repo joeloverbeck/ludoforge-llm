@@ -1,10 +1,10 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
+import { fork } from '../kernel/prng.js';
 import type {
   Agent,
   ChoicePendingRequest,
-  ClassifiedMove,
   Move,
   MoveParamValue,
   PolicyCompletionStatistics,
@@ -20,35 +20,6 @@ import type {
  * giving the RNG enough draws to find a viable completion.
  */
 export const NOT_VIABLE_RETRY_CAP = 7;
-
-/**
- * Detect non-viable results that stem from premature zone-filter evaluation on
- * incomplete template moves.  `probeMoveViability` evaluates free-operation zone
- * filters eagerly, but template moves have no target-zone selections yet — so
- * the filter evaluation fails with `zoneFilterMismatch` even though the move
- * may become viable once zones are selected during template completion.
- *
- * These moves should fall through to `evaluatePlayableMoveCandidate` instead of
- * being discarded.
- */
-const isZoneFilterMismatchOnFreeOpTemplate = (
-  classified: ClassifiedMove,
-): boolean => {
-  const { move, viability } = classified;
-  if (viability.viable || move.freeOperation !== true) {
-    return false;
-  }
-  if (viability.code !== 'ILLEGAL_MOVE') {
-    return false;
-  }
-  const ctx = viability.context;
-  return (
-    ctx.reason === 'freeOperationNotGranted'
-    && 'freeOperationDenial' in ctx
-    && (ctx as { readonly freeOperationDenial: { readonly cause: string } })
-      .freeOperationDenial.cause === 'zoneFilterMismatch'
-  );
-};
 
 export interface PreparePlayableMovesOptions {
   readonly pendingTemplateCompletions?: number;
@@ -73,6 +44,12 @@ interface TemplateCompletionTrace {
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
 }
 
+const sameRngState = (left: Rng, right: Rng): boolean =>
+  left.state.algorithm === right.state.algorithm
+  && left.state.version === right.state.version
+  && left.state.state.length === right.state.state.length
+  && left.state.state.every((entry, index) => entry === right.state.state[index]);
+
 export function preparePlayableMoves(
   input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
   options: PreparePlayableMovesOptions = {},
@@ -85,7 +62,7 @@ export function preparePlayableMoves(
   let rejectedNotViable = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
-  let templateCompletionUnsatisfiable = 0;
+  let templateCompletionStructuralFailures = 0;
   let duplicatesRemoved = 0;
   const completionsByActionId = new Map<string, number>();
   const movePreparations: PolicyMovePreparationTrace[] = [];
@@ -131,49 +108,15 @@ export function preparePlayableMoves(
     }
     seenMoveKeys.add(stableMoveKey);
     if (!viability.viable) {
-      // Zone-filter mismatches on free-operation templates are not definitive
-      // rejections — the zone filter cannot be evaluated until target zones are
-      // selected during template completion.  Fall through to the completion
-      // path so evaluatePlayableMoveCandidate can resolve zones and re-check.
-      if (isZoneFilterMismatchOnFreeOpTemplate(classified)) {
-        const completion = attemptTemplateCompletion(
-          input,
-          move,
-          rng,
-          pendingTemplateCompletions,
-          options.choose,
-          recordPlayableMove,
-          profiler,
-          completionsByActionId,
-        );
-        rng = completion.rng;
-        stochasticCount += completion.stochasticCount;
-        templateCompletionAttempts += completion.templateCompletionAttempts;
-        templateCompletionSuccesses += completion.templateCompletionSuccesses;
-        templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
-        movePreparations.push({
-          actionId: String(move.actionId),
-          stableMoveKey,
-          initialClassification: 'rejected',
-          finalClassification: completion.trace.finalClassification,
-          enteredTrustedMoveIndex: completion.trace.enteredTrustedMoveIndex,
-          ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
-          templateCompletionAttempts: completion.trace.templateCompletionAttempts,
-          templateCompletionOutcome: completion.trace.templateCompletionOutcome,
-          ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
-          fellThroughFromZoneFilterMismatch: true,
-        });
-      } else {
-        rejectedNotViable += 1;
-        movePreparations.push({
-          actionId: String(move.actionId),
-          stableMoveKey,
-          initialClassification: 'rejected',
-          finalClassification: 'rejected',
-          enteredTrustedMoveIndex: false,
-          rejection: 'notViable',
-        });
-      }
+      rejectedNotViable += 1;
+      movePreparations.push({
+        actionId: String(move.actionId),
+        stableMoveKey,
+        initialClassification: 'rejected',
+        finalClassification: 'rejected',
+        enteredTrustedMoveIndex: false,
+        rejection: 'notViable',
+      });
       continue;
     }
     if (viability.complete) {
@@ -228,7 +171,7 @@ export function preparePlayableMoves(
     stochasticCount += completion.stochasticCount;
     templateCompletionAttempts += completion.templateCompletionAttempts;
     templateCompletionSuccesses += completion.templateCompletionSuccesses;
-    templateCompletionUnsatisfiable += completion.templateCompletionUnsatisfiable;
+    templateCompletionStructuralFailures += completion.templateCompletionStructuralFailures;
     movePreparations.push({
       actionId: String(move.actionId),
       stableMoveKey,
@@ -254,7 +197,7 @@ export function preparePlayableMoves(
       rejectedNotViable,
       templateCompletionAttempts,
       templateCompletionSuccesses,
-      templateCompletionUnsatisfiable,
+      templateCompletionStructuralFailures,
       duplicatesRemoved,
       ...(completionsByActionId.size === 0
         ? {}
@@ -282,14 +225,14 @@ function attemptTemplateCompletion(
   readonly stochasticCount: number;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionSuccesses: number;
-  readonly templateCompletionUnsatisfiable: number;
+  readonly templateCompletionStructuralFailures: number;
   readonly trace: TemplateCompletionTrace;
 } {
   let currentRng = initialRng;
   let stochasticCount = 0;
   let templateCompletionAttempts = 0;
   let templateCompletionSuccesses = 0;
-  let templateCompletionUnsatisfiable = 0;
+  let templateCompletionStructuralFailures = 0;
   let sawCompletedMove = false;
   let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
@@ -300,7 +243,9 @@ function attemptTemplateCompletion(
   let notViableRetries = 0;
   for (let attempt = 0; attempt < pendingTemplateCompletions + notViableRetries; attempt += 1) {
     templateCompletionAttempts += 1;
-    const attemptRng = currentRng;
+    // Derive an isolated child stream per attempt so retries do not replay the
+    // same dead-end completion path from an unchanged parent RNG state.
+    const [attemptRng, retryRng] = fork(currentRng);
     const t0_epc = perfStart(profiler);
     let result = evaluatePlayableMoveCandidate(
       input.def,
@@ -322,7 +267,9 @@ function attemptTemplateCompletion(
       );
     }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
-    currentRng = result.rng;
+    currentRng = result.kind === 'rejected'
+      ? (sameRngState(result.rng, attemptRng) ? retryRng : result.rng)
+      : result.rng;
     if (result.kind === 'playableComplete') {
       templateCompletionSuccesses += 1;
       completionsByActionId.set(
@@ -346,14 +293,19 @@ function attemptTemplateCompletion(
       break;
     }
     rejection = result.rejection;
-    if (result.rejection === 'completionUnsatisfiable') {
-      templateCompletionUnsatisfiable += 1;
+    if (result.rejection === 'structurallyUnsatisfiable') {
+      templateCompletionStructuralFailures += 1;
       break;
     }
-    // `notViable`: the random target draw was illegal but the template may be
-    // completable with a different draw.  Extend the budget if we have not yet
-    // found any viable completion and the retry cap has not been reached.
-    if (!sawCompletedMove && stochasticCount === 0 && notViableRetries < NOT_VIABLE_RETRY_CAP) {
+    // `notViable` and `drawDeadEnd` mean the current random path failed, but a
+    // different draw may still complete the same template. Extend the budget
+    // while we have not yet found any viable completion and the cap remains.
+    if (
+      (result.rejection === 'notViable' || result.rejection === 'drawDeadEnd')
+      && !sawCompletedMove
+      && stochasticCount === 0
+      && notViableRetries < NOT_VIABLE_RETRY_CAP
+    ) {
       notViableRetries += 1;
     }
   }
@@ -391,7 +343,7 @@ function attemptTemplateCompletion(
     stochasticCount,
     templateCompletionAttempts,
     templateCompletionSuccesses,
-    templateCompletionUnsatisfiable,
+    templateCompletionStructuralFailures,
     trace,
   };
 }

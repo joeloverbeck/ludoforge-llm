@@ -152,6 +152,7 @@ If the current audit targets a different skill than any earlier audit in this se
 - Use the current Codex conversation and tool history as the session evidence source.
 - Use `AGENTS.md` rather than `CLAUDE.md` for repository-specific behavior.
 - When auditing `skill-audit` itself, evidence should come from the actual audit interaction in the current session: target-skill read/validation, audit-scope selection, report structure/template usage, severity calibration, and whether the resulting recommendations were concrete enough for the next user turn to act on.
+- For first-pass self-audits where no earlier audit of `skill-audit` exists in the same session, skip re-audit delta analysis and evaluate only the current audit interaction evidence plus the report you are producing now.
 - For `skill-audit` self-audits, explicitly sanity-check this evidence set before drafting findings:
   - `target resolution`: did the audit validate and open the intended target skill cleanly?
   - `scope selection`: did the audit clearly name the session slice being evaluated?
@@ -164,6 +165,11 @@ If the current audit targets a different skill than any earlier audit in this se
   - `pass`: the audit satisfied the requirement cleanly
   - `minor drift`: the audit was usable but omitted structure or precision the skill asked for
   - `material drift`: the audit missed enough of the requirement that findings or handoff quality were meaningfully weakened
+- For first-pass self-audits of `skill-audit`, use this mini-checklist before drafting findings:
+  - confirm the target resolves to `.codex/skills/skill-audit/SKILL.md` or the equivalent requested path
+  - identify the exact audit/report interaction slice being evaluated in the current session
+  - confirm that this is a first-pass self-audit rather than a same-target re-audit
+  - if it is first-pass, skip delta analysis and assess evidence use, structure, severity calibration, and handoff clarity directly
 
 ## Example Prompts
 

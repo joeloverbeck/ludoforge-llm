@@ -1,6 +1,6 @@
 # 137CONWITINV-004: Merge seed-regression tests into `fitl-canary-bounded-termination.test.ts`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test rewrite only
@@ -17,7 +17,7 @@
 3. `trace.finalState.markers[space]?.[lattice]` is the correct access path; markers are keyed by `{space}` with lattice IDs (e.g., `supportOpposition`) as inner keys — verified.
 4. Both pre-distillation files use `runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime)` with `MAX_TURNS = 200` and `PLAYER_COUNT = 4` — verified.
 5. Neither file is imported by any source module (zero-importer blast radius). Deletion has no ripple effects.
-6. Ticket 002 delivers `deriveFitlPopulationZeroSpaces(def)`, which this ticket consumes.
+6. Ticket 002 delivers `deriveFitlPopulationZeroSpaces()`, which this ticket consumes.
 
 ## Architecture Check
 
@@ -151,7 +151,7 @@ The pre-distillation files asserted `trace.moves.length > 0` as a "simulation ad
 
 1. New test `fitl-canary-bounded-termination.test.ts` passes across the full `CANARY_SEEDS × POLICY_PROFILE_VARIANTS` cartesian.
 2. `grep -n "@test-class: convergence-witness" packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` returns empty.
-3. `grep -n "phuoc-long:none" packages/engine/test/integration/fitl-*.test.ts` returns empty (the hardcoded space key is replaced by the derived set).
+3. `grep -n "phuoc-long:none" packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` returns empty (the merged canary test derives the population-0 set instead of pinning `phuoc-long:none`).
 4. Both pre-distillation files no longer exist in `packages/engine/test/integration/`.
 5. Existing suite: `pnpm -F @ludoforge/engine test`.
 
@@ -172,3 +172,41 @@ The pre-distillation files asserted `trace.moves.length > 0` as a "simulation ad
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint typecheck`
+
+## Outcome
+
+ticket corrections applied: `deriveFitlPopulationZeroSpaces(def)` -> `deriveFitlPopulationZeroSpaces()`; `grep -n "phuoc-long:none" packages/engine/test/integration/fitl-*.test.ts` -> `grep -n "phuoc-long:none" packages/engine/test/integration/fitl-canary-bounded-termination.test.ts`
+
+Completion date: 2026-04-18
+
+Merged the two FITL seed-regression convergence-witness files into the new
+architectural-invariant test
+`packages/engine/test/integration/fitl-canary-bounded-termination.test.ts`.
+
+The landed test iterates the full `CANARY_SEEDS × POLICY_PROFILE_VARIANTS`
+cartesian, asserts `runGame(...)` stops only with an allowed bounded stop
+reason, and checks that every population-0 space derived from the FITL
+production map remains `neutral` on the `supportOpposition` lattice in the
+final state.
+
+Deleted the pre-distillation files
+`packages/engine/test/integration/fitl-seed-1002-regression.test.ts` and
+`packages/engine/test/integration/fitl-seed-1005-1010-1013-regression.test.ts`
+atomically with the replacement file.
+
+Deviations from original plan: the ticket's acceptance grep was corrected to
+the owned merged test file after reassessment against the FITL production map
+and rulebook showed that `phuoc-long:none` remains a legitimate literal space
+identifier in unrelated FITL scenario and event tests. The owned invariant is
+\"derive population-0 spaces in the merged canary test\", not a repo-wide ban on
+that space ID.
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/fitl-canary-bounded-termination.test.js`
+- `rg -n "@test-class: convergence-witness" packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` returned no matches
+- `rg -n "phuoc-long:none" packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` returned no matches
+- confirmed both pre-distillation files no longer exist
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint typecheck`

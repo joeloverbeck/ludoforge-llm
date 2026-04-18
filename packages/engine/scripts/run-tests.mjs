@@ -5,6 +5,7 @@ import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
+const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];
 
 const laneConfigs = {
   default: {
@@ -127,7 +128,7 @@ export function runExecutionPlan(plan, options = {}) {
   const now = options.now ?? (() => Date.now());
 
   if (plan.execution === 'batched') {
-    const result = spawnSyncImpl(execPath, ['--test', ...plan.patterns], {
+    const result = spawnSyncImpl(execPath, ['--test', ...TEST_CLASS_REPORTER_ARGS, ...plan.patterns], {
       stdio: 'inherit',
       env,
     });
@@ -146,7 +147,7 @@ export function runExecutionPlan(plan, options = {}) {
   for (const pattern of plan.patterns) {
     const startedAt = now();
     logLine(stdout, `[run-tests] [${plan.lane}] start ${pattern}`);
-    const result = spawnSyncImpl(execPath, ['--test', pattern], {
+    const result = spawnSyncImpl(execPath, ['--test', ...TEST_CLASS_REPORTER_ARGS, pattern], {
       stdio: 'inherit',
       env,
       timeout: timeoutMs,

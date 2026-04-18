@@ -63,6 +63,7 @@ Output this structure to the conversation (do not write to a file):
 
 - **FOUNDATIONS.md**: <aligned / N violations found>
 - **CLAUDE.md**: <aligned / N deviations found>
+- **Cross-skill check**: <standalone — no partners / checked: <skill-names> — no findings / N issues reported below>
 [If violations: bullet list with specific foundation # or CLAUDE.md section + what conflicts]
 
 ## Issues

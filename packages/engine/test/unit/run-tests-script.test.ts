@@ -64,6 +64,41 @@ describe('run-tests script', () => {
     assert.equal(plan.timeoutMs !== undefined && plan.timeoutMs > 0, true);
   });
 
+  it('runs batched lanes with the test-class reporter attached', async () => {
+    const { runExecutionPlan } = await loadRunTestsModule();
+    const spawnCalls: Array<{ readonly command: string; readonly args: readonly string[]; readonly timeout: unknown }> = [];
+
+    const exitCode = runExecutionPlan(
+      {
+        lane: 'default',
+        execution: 'batched',
+        patterns: ['dist/test/unit/a.test.js', 'dist/test/integration/b.test.js'],
+      },
+      {
+        execPath: '/fake/node',
+        spawnSyncImpl: (command, args, options) => {
+          spawnCalls.push({ command, args, timeout: options.timeout });
+          return { status: 0, signal: null };
+        },
+      },
+    );
+
+    assert.equal(exitCode, 0);
+    assert.deepEqual(spawnCalls, [
+      {
+        command: '/fake/node',
+        args: [
+          '--test',
+          '--test-reporter=./scripts/test-class-reporter.mjs',
+          '--test-reporter-destination=stdout',
+          'dist/test/unit/a.test.js',
+          'dist/test/integration/b.test.js',
+        ],
+        timeout: undefined,
+      },
+    ]);
+  });
+
   it('runs determinism files sequentially and reports start/end markers', async () => {
     const { runExecutionPlan } = await loadRunTestsModule();
     const stdout = createLogSink();
@@ -99,12 +134,22 @@ describe('run-tests script', () => {
     assert.deepEqual(spawnCalls, [
       {
         command: '/fake/node',
-        args: ['--test', 'dist/test/determinism/a.test.js'],
+        args: [
+          '--test',
+          '--test-reporter=./scripts/test-class-reporter.mjs',
+          '--test-reporter-destination=stdout',
+          'dist/test/determinism/a.test.js',
+        ],
         timeout: 30_000,
       },
       {
         command: '/fake/node',
-        args: ['--test', 'dist/test/determinism/b.test.js'],
+        args: [
+          '--test',
+          '--test-reporter=./scripts/test-class-reporter.mjs',
+          '--test-reporter-destination=stdout',
+          'dist/test/determinism/b.test.js',
+        ],
         timeout: 30_000,
       },
     ]);

@@ -39,7 +39,12 @@ describe('FITL policy-agent enumeration hang regression', () => {
       const legal = enumerateLegalMoves(def, state, undefined, runtime);
       if (ply === 20) {
         assert.equal(state.activePlayer, 2);
-        assert.equal(legal.moves.length, 19);
+        // Re-blessed post-Spec-135 (chooseN sampler purity). Prior trajectory
+        // reached this checkpoint with 19 enumerated moves; the sampler bias
+        // relocation shifts one optional-chooseN sample and the ply-20 legal
+        // set now contains 18. The regression guard — that enumeration does
+        // not hang — is preserved; only the trajectory-pinned count changed.
+        assert.equal(legal.moves.length, 18);
         return;
       }
 

@@ -15,7 +15,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const POLICY_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;
-const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
+const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves', 'noPlayableMoveCompletion']);
 
 describe('FITL seed 1002 regression', () => {
   const { parsed, compiled } = compileProductionSpec();
@@ -38,7 +38,7 @@ describe('FITL seed 1002 regression', () => {
     assert.equal(
       ALLOWED_STOP_REASONS.has(trace.stopReason),
       true,
-      `seed 1002: expected terminal/maxTurns/noLegalMoves, got ${trace.stopReason} after ${trace.moves.length} moves`,
+      `seed 1002: expected terminal/maxTurns/noLegalMoves/noPlayableMoveCompletion, got ${trace.stopReason} after ${trace.moves.length} moves`,
     );
     assert.equal(
       trace.finalState.markers['phuoc-long:none']?.supportOpposition ?? 'neutral',

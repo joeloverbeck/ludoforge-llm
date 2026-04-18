@@ -241,6 +241,9 @@ const computeDegeneracyFlags = (
   if (trace.stopReason === 'noLegalMoves') {
     flags.push(DegeneracyFlag.NO_LEGAL_MOVES);
   }
+  if (trace.stopReason === 'noPlayableMoveCompletion') {
+    flags.push(DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION);
+  }
   if (metrics.dominantActionFreq > (config.dominantActionThreshold ?? DEFAULT_EVAL_CONFIG.dominantActionThreshold)) {
     flags.push(DegeneracyFlag.DOMINANT_ACTION);
   }

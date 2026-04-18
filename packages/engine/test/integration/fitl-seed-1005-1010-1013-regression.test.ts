@@ -13,7 +13,7 @@ const POLICY_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-base
 const REGRESSION_SEEDS = [1005, 1010, 1013] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;
-const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
+const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves', 'noPlayableMoveCompletion']);
 
 describe('FITL campaign no-playable regression seeds', () => {
   const { parsed, compiled } = compileProductionSpec();
@@ -37,7 +37,7 @@ describe('FITL campaign no-playable regression seeds', () => {
       assert.equal(
         ALLOWED_STOP_REASONS.has(trace.stopReason),
         true,
-        `seed ${seed}: expected terminal/maxTurns/noLegalMoves, got ${trace.stopReason} after ${trace.moves.length} moves`,
+        `seed ${seed}: expected terminal/maxTurns/noLegalMoves/noPlayableMoveCompletion, got ${trace.stopReason} after ${trace.moves.length} moves`,
       );
       assert.ok(trace.moves.length > 0, `seed ${seed}: expected the simulation to advance`);
     });

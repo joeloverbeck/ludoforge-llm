@@ -73,7 +73,12 @@ describe('simulator no-playable-move handling', () => {
     assert.equal(trace.stopReason, 'noLegalMoves');
   });
 
-  it('propagates NoPlayableMovesAfterPreparationError to the caller', () => {
+  it('surfaces NoPlayableMovesAfterPreparationError as noPlayableMoveCompletion stop reason', () => {
+    // The simulator owns replay / auditability (FOUNDATIONS #9): every game
+    // stop — including agent-layer retry exhaustion — MUST produce a
+    // well-formed trace. A thrown NoPlayableMovesAfterPreparationError is
+    // caught at the simulator boundary and surfaced as the
+    // `noPlayableMoveCompletion` stop reason.
     const def = createSingleActionDef();
     const throwingAgent: Agent = {
       chooseMove(input) {
@@ -84,9 +89,23 @@ describe('simulator no-playable-move handling', () => {
       },
     };
 
+    const trace = runGame(def, 17, [throwingAgent, throwingAgent], 5);
+    assert.equal(trace.stopReason, 'noPlayableMoveCompletion');
+    assert.equal(trace.result, null);
+    assert.equal(trace.moves.length, 0);
+  });
+
+  it('does not swallow non-NoPlayableMovesAfterPreparation errors', () => {
+    const def = createSingleActionDef();
+    const genericThrowingAgent: Agent = {
+      chooseMove() {
+        throw new Error('unrelated failure');
+      },
+    };
+
     assert.throws(
-      () => runGame(def, 17, [throwingAgent, throwingAgent], 5),
-      (error) => error instanceof NoPlayableMovesAfterPreparationError,
+      () => runGame(def, 17, [genericThrowingAgent, genericThrowingAgent], 5),
+      /unrelated failure/,
     );
   });
 

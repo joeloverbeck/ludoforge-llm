@@ -1,6 +1,6 @@
 # 133REGTESCLA-006: Meta-test enforcing `@test-class` marker discipline
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — new test file only
@@ -102,3 +102,31 @@ On failure, emit the list of offending files grouped by rule violated (missing m
 4. `pnpm turbo lint`.
 5. `pnpm turbo typecheck`.
 6. Negative verification (manual, reverted): temporarily delete a marker, confirm `test:unit` fails with the expected offending path in the meta-test output, then restore the marker.
+
+## Outcome (2026-04-18)
+
+- Added [`packages/engine/test/unit/infrastructure/test-class-markers.test.ts`](/home/joeloverbeck/projects/ludoforge-llm/packages/engine/test/unit/infrastructure/test-class-markers.test.ts) with file-top `@test-class: architectural-invariant`.
+- The meta-test walks the live engine test corpus with `node:fs/promises.readdir(..., { recursive: true, withFileTypes: true })`, excludes `helpers/`, `fixtures/`, and `dist/`, and enforces:
+  - exactly one valid `@test-class` marker per in-scope file
+  - adjacent `@witness:` markers for every `convergence-witness` file
+  - grouped failure reporting by rule bucket
+- Live reassessment correction: the ticket’s example mixed-shape heuristic was too broad for the current corpus because generic `.every(` and plain `trace.moves.length` literals appear in many clearly architectural tests. The landed best-effort rule set therefore keys only on move-legality quantifiers plus trajectory-pin assertions, which keeps the enforcement useful instead of noisy on current `HEAD`.
+- Corpus facts at implementation time:
+  - 727 in-scope engine test files under `packages/engine/test/**`
+  - 8 current `convergence-witness` files requiring adjacent `@witness:` ids
+- Schema/artifact fallout checked: none. This ticket added one source test file only.
+
+## Verification Record
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js`
+3. Negative verification (manual, reverted):
+   - temporarily removed the marker from `packages/engine/test/memory/draft-state-gc-measurement.test.ts`
+   - reran `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js`
+   - confirmed failure output named `test/memory/draft-state-gc-measurement.test.ts missing @test-class marker`
+   - restored the marker immediately
+4. `pnpm -F @ludoforge/engine test:unit`
+5. `pnpm -F @ludoforge/engine test`
+6. `pnpm turbo build`
+7. `pnpm turbo lint`
+8. `pnpm turbo typecheck`

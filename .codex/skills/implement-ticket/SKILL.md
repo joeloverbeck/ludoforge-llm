@@ -99,6 +99,8 @@ Load `references/verification.md` for non-bounded tickets, or for bounded local 
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
+When verification intentionally mutates a real repo file as a temporary negative/manual check, confirm that the file is restored exactly to its original contents and placement before running broader proof lanes. Treat any post-check restoration drift as proof-invalidating and rerun the affected acceptance set after the exact restore lands.
+
 Before escalating that behavior into a harness defect or widening the ticket around runner tooling, do one concrete progress-triage pass:
 
 1. inspect the relevant lane manifest / file list to see whether the command still had plausible slow tail files remaining after the last printed output

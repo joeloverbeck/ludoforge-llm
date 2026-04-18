@@ -1,6 +1,6 @@
 # Spec 133: Regression Test Classification Discipline
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: none
@@ -184,9 +184,26 @@ CI failures can be triaged in under 30 seconds by reading a class-grouped summar
 
 ## Tickets
 
-- `tickets/133REGTESCLA-001.md` — Custom `node --test` reporter and runner wiring (infrastructure)
-- `tickets/133REGTESCLA-002.md` — Extend `.claude/rules/testing.md` with test classification taxonomy (authoritative guidance)
-- `tickets/133REGTESCLA-003.md` — Classify `test/unit/` lane with `@test-class` markers
-- `tickets/133REGTESCLA-004.md` — Classify `test/integration/` lane with `@test-class` markers (includes Gulf of Tonkin split if warranted)
-- `tickets/133REGTESCLA-005.md` — Classify determinism/, e2e/, performance/, memory/ lanes
-- `tickets/133REGTESCLA-006.md` — Meta-test enforcing `@test-class` marker discipline (§1 + §2)
+- `archive/tickets/133REGTESCLA-001.md` — Custom `node --test` reporter and runner wiring (infrastructure)
+- `archive/tickets/133REGTESCLA-002.md` — Extend `.claude/rules/testing.md` with test classification taxonomy (authoritative guidance)
+- `archive/tickets/133REGTESCLA-003.md` — Classify `test/unit/` lane with `@test-class` markers
+- `archive/tickets/133REGTESCLA-004.md` — Classify `test/integration/` lane with `@test-class` markers (includes Gulf of Tonkin split if warranted)
+- `archive/tickets/133REGTESCLA-005.md` — Classify determinism/, e2e/, performance/, memory/ lanes
+- `archive/tickets/133REGTESCLA-006.md` — Meta-test enforcing `@test-class` marker discipline (§1 + §2)
+- `archive/tickets/133REGTESCLA-007.md` — Quiet-tail progress visibility for long-running `node --test` lanes
+
+## Outcome
+
+- Completed on 2026-04-18.
+- Landed the full Spec 133 deliverable set:
+  - custom class-grouping reporter wiring in engine test execution
+  - repo-tracked testing guidance for the three-class taxonomy
+  - retroactive classification across `unit/`, `integration/`, `determinism/`, `e2e/`, `performance/`, and `memory/`
+  - corpus-enforcement meta-test for marker presence, witness adjacency, and best-effort mixed-shape detection
+- Deviations from the original plan:
+  - the live corpus size was materially larger than the draft estimate and was corrected during ticket implementation
+  - the mixed-shape heuristic in the final meta-test was narrowed from the draft examples so it stayed useful on the real corpus instead of flagging broad generic patterns like plain `.every(` usage
+  - `133REGTESCLA-007` was added as a derived follow-up to improve observability for long-running quiet tails in the test runner; this completed the operational ergonomics around the new reporter output
+- Verification results:
+  - all Spec 133 tickets `133REGTESCLA-001` through `007` were implemented, reviewed, and archived
+  - the final enforcement ticket (`133REGTESCLA-006`) passed focused proof, full engine test execution, workspace build/lint/typecheck, and ticket dependency integrity checks

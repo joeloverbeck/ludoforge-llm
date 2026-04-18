@@ -38,6 +38,7 @@ describe('engine test lane taxonomy policy', () => {
       packageJson.scripts?.['test:integration:texas-cross-game'],
       'node scripts/run-tests.mjs --lane integration:texas-cross-game',
     );
+    assert.equal(packageJson.scripts?.['test:policy-profile-quality'], 'node scripts/run-tests.mjs --lane policy-profile-quality');
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {
@@ -158,6 +159,52 @@ describe('engine test lane taxonomy policy', () => {
     // They must NOT match the unit glob (dist/test/unit/**/*.test.js) since they're in test/determinism/
     for (const testPath of slowZobristTests) {
       assert.equal(testPath.startsWith('test/unit/'), false, `${testPath} must not be under test/unit/`);
+    }
+  });
+
+  it('keeps policy-profile-quality tests isolated from determinism and integration lanes while including them in explicit and default execution plans', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
+    const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly ALL_DETERMINISM_TESTS: readonly string[];
+      readonly ALL_INTEGRATION_TESTS: readonly string[];
+      readonly ALL_POLICY_PROFILE_QUALITY_TESTS: readonly string[];
+      readonly toDistTestPath: (sourcePath: string) => string;
+    };
+    const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
+      readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
+        readonly patterns: readonly string[];
+      };
+    };
+
+    assert.equal(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS.length, 2);
+    const policyProfileQualitySource = new Set(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS);
+
+    for (const testPath of manifest.ALL_POLICY_PROFILE_QUALITY_TESTS) {
+      assert.equal(testPath.startsWith('test/policy-profile-quality/'), true, `${testPath} must stay in the policy-profile-quality directory`);
+      assert.equal(existsSync(resolve(repoRoot, 'packages/engine', testPath)), true, `${testPath} must exist on disk`);
+    }
+
+    assert.equal(
+      manifest.ALL_DETERMINISM_TESTS.some((testPath) => policyProfileQualitySource.has(testPath)),
+      false,
+      'policy-profile-quality tests must not leak into determinism manifests',
+    );
+    assert.equal(
+      manifest.ALL_INTEGRATION_TESTS.some((testPath) => policyProfileQualitySource.has(testPath)),
+      false,
+      'policy-profile-quality tests must not leak into integration manifests',
+    );
+
+    const policyLanePlan = runTests.buildExecutionPlan(['--lane', 'policy-profile-quality'], {});
+    const defaultLanePlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+
+    for (const testPath of manifest.ALL_POLICY_PROFILE_QUALITY_TESTS) {
+      const distPath = manifest.toDistTestPath(testPath);
+      assert.equal(policyLanePlan.patterns.includes(distPath), true, `${distPath} must be in the explicit lane`);
+      assert.equal(defaultLanePlan.patterns.includes(distPath), true, `${distPath} must also be in the default lane`);
     }
   });
 

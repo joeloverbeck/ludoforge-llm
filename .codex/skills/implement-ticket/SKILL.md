@@ -21,6 +21,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
+- Before marking a ticket complete, compare the ticket's named verification commands against the final proof set. Either run each named command directly or record, in the active ticket outcome, the exact broader lane that subsumed it.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
 ## Workflow
@@ -50,6 +51,10 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - Even when commands do not rebuild shared artifacts, do not fan out multiple expensive acceptance lanes in parallel when they overlap the same large corpus. Prefer one broad lane or one focused lane at a time, especially in constrained environments such as WSL2 or other memory-limited sessions.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
+9. If live proof shows that a ticket-owned witness input (seed set, benchmark case list, pinned exemplar, historical repro id, etc.) is stale and the user approves a re-blessing path, keep the change narrow:
+   - Prefer the smallest credible candidate search first: already-curated nearby seeds/cases, the previous witness family, or explicitly referenced historical candidates before broad brute-force probing.
+   - Capture exact old-vs-new witness evidence during reassessment so the ticket correction can cite why the original witness drifted under the live code.
+   - Update the active ticket's correction ledger and witness description before the final acceptance-proof pass so the last green run matches the re-blessed artifact.
 
 ### Phase 1: Read and Understand
 
@@ -82,6 +87,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
    - When an upstream result can be reclassified downstream (for example `completed` becoming a rejected or dead-end candidate later in the pipeline), verify that the ticket-owned diagnostic payload or invariant survives that handoff before changing retry policy, adding fallbacks, or rewriting the ticket boundary. Do not assume the first result surface is the only place the owned invariant must remain observable.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
+   - When the contradiction is specifically a stale witness input rather than a production-code bug, classify that separately from ordinary scope drift. If the user authorizes re-blessing, prefer replacing the witness with the narrowest validated live witness instead of widening semantics just to preserve the old example.
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
@@ -109,6 +115,13 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 Before the final acceptance-proof pass, pause on this explicit checkpoint: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
+
+Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria` and `Test Plan` commands against the commands you actually ran:
+
+1. enumerate the exact named commands in the active ticket
+2. mark each one as `ran directly`, `subsumed by <broader lane>`, or `not yet proven`
+3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
+4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
@@ -150,6 +163,13 @@ When the active ticket absorbed ownership from sibling draft tickets in the same
 Suggested compact sibling ledger:
 
 - `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
+
+Suggested compact final-proof ledger:
+
+- `ticket corrections applied`: `<stale claim> -> <live contract>`
+- `verification set`: `<commands run directly in final proof order>`
+- `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
+- `proof gaps`: `none` or `<remaining blocker>`
 
 ### Post-Closeout Reopen
 

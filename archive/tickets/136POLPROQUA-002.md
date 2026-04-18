@@ -1,6 +1,6 @@
 # 136POLPROQUA-002: Author policy-profile-quality variant corpus + lane wiring
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test directory (`packages/engine/test/policy-profile-quality/`), `packages/engine/scripts/test-lane-manifest.mjs`, `packages/engine/scripts/run-tests.mjs`, `packages/engine/package.json`
@@ -151,3 +151,13 @@ Confirm via reading `run-tests.mjs` whether the `default` lane already globs `di
 3. `pnpm -F @ludoforge/engine test:determinism` — determinism lane unaffected.
 4. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` — full-suite verification.
 5. `pnpm run check:ticket-deps` — dependency integrity.
+
+## Outcome
+
+- Completion date: 2026-04-18
+- `ticket corrections applied`: Re-blessed `FITL_1964_CANARY_SEEDS` from `[1020, 1040, 1049, 1054, 2046]` to `[1020, 1049, 1054]` after live verification showed seeds `1040` and `2046` now stop at `maxTurns` under the current kernel for both variants; user approved the Spec 136 seed-set maintenance path.
+- Added the new `packages/engine/test/policy-profile-quality/` corpus with one convergence-witness file per FITL profile variant, each carrying the required `@profile-variant` marker and asserting `terminal` on the re-blessed seed set.
+- Added `ALL_POLICY_PROFILE_QUALITY_TESTS` to `packages/engine/scripts/test-lane-manifest.mjs`, added the `policy-profile-quality` lane plus `ENGINE_TEST_PROGRESS_LANE` propagation in `packages/engine/scripts/run-tests.mjs`, and added `test:policy-profile-quality` to `packages/engine/package.json`.
+- Confirmed the live `default` lane is a named subset rather than a global `dist/test/**/*.test.js` glob, then extended it to include the new `policy-profile-quality` corpus explicitly.
+- Added unit coverage proving the new lane shape and the corpus-isolation/default-inclusion taxonomy invariants.
+- Verification set: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:policy-profile-quality`, `pnpm -F @ludoforge/engine test:unit`, `pnpm -F @ludoforge/engine test:determinism`, `pnpm run check:ticket-deps`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`.

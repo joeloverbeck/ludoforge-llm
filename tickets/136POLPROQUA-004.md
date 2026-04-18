@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No — CI workflow only (`.github/workflows/engine-determinism.yml`)
-**Deps**: `tickets/136POLPROQUA-002.md`
+**Deps**: `archive/tickets/136POLPROQUA-002.md`
 
 ## Problem
 

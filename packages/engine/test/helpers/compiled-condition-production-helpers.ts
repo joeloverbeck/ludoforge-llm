@@ -45,6 +45,11 @@ export interface PredicateSample {
   readonly compiled: CompiledConditionPredicate;
 }
 
+export interface FitlStateCorpusOptions {
+  readonly seeds?: readonly number[];
+  readonly maxPly?: number;
+}
+
 const STATE_CORPUS_SEEDS = [11, 23, 37, 53] as const;
 const STATE_CORPUS_STEPS_PER_SEED = 4;
 const DEFAULT_BINDING_VALUES: readonly ScalarBindingValue[] = [true, false, 0, 1, 'sample'];
@@ -117,15 +122,27 @@ export const summarizePredicateCoverage = (def: GameDef): PredicateCoverageSumma
   };
 };
 
-export const buildDeterministicFitlStateCorpus = (def: GameDef): readonly GameState[] => {
+/**
+ * Generates a deterministic state corpus from the FITL production GameDef.
+ *
+ * For each seed, steps through legal moves using deterministic index selection
+ * (`moves[(seed + step) % moves.length]`). The corpus may include fewer than
+ * `maxPly + 1` states per seed if the game terminates or stalls earlier.
+ */
+export const buildDeterministicFitlStateCorpus = (
+  def: GameDef,
+  options?: FitlStateCorpusOptions,
+): readonly GameState[] => {
   const runtime = createGameDefRuntime(def);
   const states: GameState[] = [];
+  const seeds = options?.seeds ?? STATE_CORPUS_SEEDS;
+  const maxPly = options?.maxPly ?? STATE_CORPUS_STEPS_PER_SEED;
 
-  for (const seed of STATE_CORPUS_SEEDS) {
+  for (const seed of seeds) {
     let current = initialState(def, seed, undefined, undefined, runtime).state;
     states.push(current);
 
-    for (let step = 0; step < STATE_CORPUS_STEPS_PER_SEED; step += 1) {
+    for (let step = 0; step < maxPly; step += 1) {
       const moves = legalMoves(def, current, undefined, runtime);
       if (moves.length === 0) {
         break;

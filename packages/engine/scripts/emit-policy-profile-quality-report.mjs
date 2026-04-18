@@ -7,6 +7,7 @@ const STICKY_COMMENT_MARKER = '<!-- policy-profile-quality-report -->';
 
 function parseArgs(argv) {
   let inputPath = DEFAULT_INPUT_PATH;
+  let baselineInputPath = null;
   let prComment = process.env.GITHUB_EVENT_NAME === 'pull_request';
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -20,6 +21,15 @@ function parseArgs(argv) {
       inputPath = arg.slice('--input='.length);
       continue;
     }
+    if (arg === '--baseline-input') {
+      baselineInputPath = argv[index + 1] ?? baselineInputPath;
+      index += 1;
+      continue;
+    }
+    if (arg.startsWith('--baseline-input=')) {
+      baselineInputPath = arg.slice('--baseline-input='.length);
+      continue;
+    }
     if (arg === '--pr-comment') {
       prComment = true;
       continue;
@@ -30,7 +40,7 @@ function parseArgs(argv) {
     }
   }
 
-  return { inputPath, prComment };
+  return { inputPath, baselineInputPath, prComment };
 }
 
 export function parsePolicyProfileQualityReport(reportText) {
@@ -50,7 +60,7 @@ export function buildPolicyProfileQualityAnnotations(records) {
     );
 }
 
-function summarizeByVariant(records) {
+export function summarizeByVariant(records) {
   const summary = new Map();
   for (const record of records) {
     const bucket = summary.get(record.variantId) ?? { converged: 0, total: 0, failures: [] };
@@ -77,8 +87,19 @@ function formatFailureNotes(failures) {
     .join('; ');
 }
 
-export function buildPolicyProfileQualityComment(records) {
+function formatConvergenceCell(currentBucket, baselineBucket) {
+  const currentRate = `${currentBucket.converged}/${currentBucket.total}`;
+  if (baselineBucket === undefined) {
+    return currentRate;
+  }
+
+  return `${baselineBucket.converged}/${baselineBucket.total} -> ${currentRate}`;
+}
+
+export function buildPolicyProfileQualityComment(records, baselineRecords = []) {
   const summary = summarizeByVariant(records);
+  const baselineSummary = summarizeByVariant(baselineRecords);
+  const variantIds = new Set([...summary.keys(), ...baselineSummary.keys()]);
   const lines = [
     STICKY_COMMENT_MARKER,
     '## Policy-Profile Quality Report',
@@ -87,9 +108,15 @@ export function buildPolicyProfileQualityComment(records) {
     '|---|---|---|',
   ];
 
-  for (const variantId of [...summary.keys()].sort((left, right) => left.localeCompare(right))) {
+  for (const variantId of [...variantIds].sort((left, right) => left.localeCompare(right))) {
     const bucket = summary.get(variantId);
-    lines.push(`| ${variantId} | ${bucket.converged}/${bucket.total} | ${formatFailureNotes(bucket.failures)} |`);
+    const baselineBucket = baselineSummary.get(variantId);
+    if (bucket === undefined) {
+      continue;
+    }
+    lines.push(
+      `| ${variantId} | ${formatConvergenceCell(bucket, baselineBucket)} | ${formatFailureNotes(bucket.failures)} |`,
+    );
   }
 
   lines.push('');
@@ -110,15 +137,17 @@ function postStickyPullRequestComment(commentBody) {
 }
 
 export function main(argv = process.argv.slice(2), options = {}) {
-  const { inputPath, prComment } = parseArgs(argv);
+  const { inputPath, baselineInputPath, prComment } = parseArgs(argv);
   const readFileSyncImpl = options.readFileSyncImpl ?? readFileSync;
   const stdout = options.stdout ?? process.stdout;
   const commentPoster = options.commentPoster ?? postStickyPullRequestComment;
 
   const reportText = readFileSyncImpl(inputPath, 'utf8');
   const records = parsePolicyProfileQualityReport(reportText);
+  const baselineRecords =
+    baselineInputPath === null ? [] : parsePolicyProfileQualityReport(readFileSyncImpl(baselineInputPath, 'utf8'));
   const annotations = buildPolicyProfileQualityAnnotations(records);
-  const commentBody = buildPolicyProfileQualityComment(records);
+  const commentBody = buildPolicyProfileQualityComment(records, baselineRecords);
 
   for (const annotation of annotations) {
     stdout.write(`${annotation}\n`);

@@ -1,6 +1,6 @@
 # Spec 136: Policy-Profile Quality Corpus Separated From Determinism Corpus
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: Spec 133 [regression-test-classification-discipline] (archived), Spec 137 [convergence-witness-invariant-promotion] (archived, scope-narrowing)
@@ -170,15 +170,19 @@ This keeps the number of variant files equal to `(baselines) + (active evolved p
 
 Decomposed into `136POLPROQUA-*` on 2026-04-18. Implementation order follows the dependency waves below; see each ticket for detail.
 
-- `tickets/136POLPROQUA-001.md` — Extend marker infrastructure: `@profile-variant` marker + determinism lint rule
-- `tickets/136POLPROQUA-002.md` — Author policy-profile-quality variant corpus + lane wiring
-- `tickets/136POLPROQUA-003.md` — Rename canary to `fitl-policy-agent-canary-determinism.test.ts` (optional)
-- `tickets/136POLPROQUA-004.md` — CI: non-blocking `policy-profile-quality` job in `engine-determinism.yml`
-- `tickets/136POLPROQUA-005.md` — CI: `POLICY_PROFILE_QUALITY_REGRESSION` annotation + PR comment
-- `tickets/136POLPROQUA-006.md` — Docs: FOUNDATIONS note + `campaigns/README.md`
+- `archive/tickets/136POLPROQUA-001.md` — Extend marker infrastructure: `@profile-variant` marker + determinism lint rule
+- `archive/tickets/136POLPROQUA-002.md` — Author policy-profile-quality variant corpus + lane wiring
+- `archive/tickets/136POLPROQUA-003.md` — Rename canary to `fitl-policy-agent-canary-determinism.test.ts` (optional)
+- `archive/tickets/136POLPROQUA-004.md` — CI: non-blocking `policy-profile-quality` job in `engine-determinism.yml`
+- `archive/tickets/136POLPROQUA-005.md` — CI: `POLICY_PROFILE_QUALITY_REGRESSION` annotation + PR comment
+- `archive/tickets/136POLPROQUA-006.md` — Docs: FOUNDATIONS note + `campaigns/README.md`
+- `archive/tickets/136POLPROQUA-007.md` — CI: compare policy-profile-quality report against main-branch baseline
 
 Dependency graph: `001 → 002 → 004 → 005`; `003` and `006` are independent. Wave 1 (parallel): `001`, `003`, `006`. Wave 2: `002`. Wave 3: `004`. Wave 4: `005`.
 
 ## Outcome
 
-TBD.
+- Completion date: 2026-04-18
+- Landed the full corpus split described here: determinism assertions remain in `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts`, profile-quality witnesses live under `packages/engine/test/policy-profile-quality/`, marker enforcement and reporter support were added, and `engine-determinism.yml` now runs the non-blocking profile-quality lane with annotations and sticky PR-comment reporting.
+- Deviations from the original draft were recorded during implementation: the witness seed set was re-blessed from the original five-seed draft to the validated terminal set `[1020, 1049, 1054]`, and the PR reporting path uses structured NDJSON emitted by the witness tests rather than parsing the captured human-readable log.
+- Verification results across the ticket series included `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:policy-profile-quality`, `pnpm -F @ludoforge/engine test:determinism`, `pnpm -F @ludoforge/engine test:unit`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm run check:ticket-deps`.

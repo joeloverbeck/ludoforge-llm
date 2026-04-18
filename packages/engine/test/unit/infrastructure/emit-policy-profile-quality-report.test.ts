@@ -18,7 +18,10 @@ type ReportModule = {
   readonly DEFAULT_INPUT_PATH: string;
   readonly parsePolicyProfileQualityReport: (reportText: string) => PolicyProfileQualityRecord[];
   readonly buildPolicyProfileQualityAnnotations: (records: PolicyProfileQualityRecord[]) => string[];
-  readonly buildPolicyProfileQualityComment: (records: PolicyProfileQualityRecord[]) => string;
+  readonly buildPolicyProfileQualityComment: (
+    records: PolicyProfileQualityRecord[],
+    baselineRecords?: PolicyProfileQualityRecord[],
+  ) => string;
   readonly main: (
     argv?: readonly string[],
     options?: {
@@ -71,6 +74,41 @@ const SAMPLE_REPORT = [
   },
 ] satisfies PolicyProfileQualityRecord[];
 
+const BASELINE_REPORT = [
+  {
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts',
+    variantId: 'all-baselines',
+    seed: 1020,
+    passed: true,
+    stopReason: 'terminal',
+    moves: 287,
+  },
+  {
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts',
+    variantId: 'all-baselines',
+    seed: 1049,
+    passed: true,
+    stopReason: 'terminal',
+    moves: 290,
+  },
+  {
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
+    variantId: 'arvn-evolved',
+    seed: 1020,
+    passed: true,
+    stopReason: 'terminal',
+    moves: 285,
+  },
+  {
+    file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
+    variantId: 'arvn-evolved',
+    seed: 1049,
+    passed: true,
+    stopReason: 'terminal',
+    moves: 292,
+  },
+] satisfies PolicyProfileQualityRecord[];
+
 describe('emit-policy-profile-quality-report script', () => {
   it('parses captured report lines into structured records', async () => {
     const { parsePolicyProfileQualityReport } = await loadModule();
@@ -90,18 +128,27 @@ describe('emit-policy-profile-quality-report script', () => {
     ]);
   });
 
-  it('builds a markdown report grouped by variant', async () => {
+  it('builds a markdown report grouped by variant with baseline deltas when provided', async () => {
+    const { buildPolicyProfileQualityComment } = await loadModule();
+
+    const comment = buildPolicyProfileQualityComment(SAMPLE_REPORT, BASELINE_REPORT);
+
+    assert.match(comment, /## Policy-Profile Quality Report/u);
+    assert.match(comment, /\| all-baselines \| 2\/2 -> 2\/2 \| {2}\|/u);
+    assert.match(
+      comment,
+      /\| arvn-evolved \| 2\/2 -> 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, moves=300\) \|/u,
+    );
+    assert.match(comment, /Determinism corpus is the blocking gate\./u);
+  });
+
+  it('keeps current-run-only formatting when no baseline report is provided', async () => {
     const { buildPolicyProfileQualityComment } = await loadModule();
 
     const comment = buildPolicyProfileQualityComment(SAMPLE_REPORT);
 
-    assert.match(comment, /## Policy-Profile Quality Report/u);
     assert.match(comment, /\| all-baselines \| 2\/2 \| {2}\|/u);
-    assert.match(
-      comment,
-      /\| arvn-evolved \| 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, moves=300\) \|/u,
-    );
-    assert.match(comment, /Determinism corpus is the blocking gate\./u);
+    assert.doesNotMatch(comment, /\d+\/\d+ -> \d+\/\d+/u);
   });
 
   it('writes annotations and markdown to stdout and posts the sticky comment when enabled', async () => {
@@ -109,20 +156,27 @@ describe('emit-policy-profile-quality-report script', () => {
     let stdout = '';
     let postedComment = '';
 
-    const exitCode = main(['--input', DEFAULT_INPUT_PATH, '--pr-comment'], {
-      readFileSyncImpl: () => SAMPLE_REPORT.map((record) => JSON.stringify(record)).join('\n'),
-      stdout: {
-        write(chunk: string) {
-          stdout += chunk;
+    const exitCode = main(
+      ['--input', DEFAULT_INPUT_PATH, '--baseline-input', 'baseline.ndjson', '--pr-comment'],
+      {
+        readFileSyncImpl: (path: string) =>
+          path === 'baseline.ndjson'
+            ? BASELINE_REPORT.map((record) => JSON.stringify(record)).join('\n')
+            : SAMPLE_REPORT.map((record) => JSON.stringify(record)).join('\n'),
+        stdout: {
+          write(chunk: string) {
+            stdout += chunk;
+          },
+        },
+        commentPoster(commentBody: string) {
+          postedComment = commentBody;
         },
       },
-      commentPoster(commentBody: string) {
-        postedComment = commentBody;
-      },
-    });
+    );
 
     assert.equal(exitCode, 0);
     assert.match(stdout, /POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-evolved seed=1049/u);
+    assert.match(stdout, /2\/2 -> 1\/2/u);
     assert.match(stdout, /## Policy-Profile Quality Report/u);
     assert.equal(postedComment.includes('<!-- policy-profile-quality-report -->'), true);
   });

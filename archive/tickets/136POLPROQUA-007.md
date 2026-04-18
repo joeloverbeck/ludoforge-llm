@@ -1,6 +1,6 @@
 # 136POLPROQUA-007: CI — compare policy-profile-quality report against main-branch baseline
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — report script / workflow comparison logic
@@ -78,3 +78,12 @@ Add or extend unit coverage so the comment shape is stable for improved, unchang
 2. `pnpm -F @ludoforge/engine test:unit`
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint`
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- Completion date: 2026-04-18
+- Added baseline-input support to `packages/engine/scripts/emit-policy-profile-quality-report.mjs`, so the sticky PR comment now renders per-variant convergence deltas in `before -> after` form when a main-branch baseline report is available.
+- Extended `packages/engine/test/unit/infrastructure/emit-policy-profile-quality-report.test.ts` to lock the delta-comment contract for current-only, unchanged, and regressed-variant cases.
+- Updated `.github/workflows/engine-determinism.yml` so the `policy-profile-quality` job downloads the latest successful `main` artifact for the same workflow on repo PRs, and passes that baseline report into the comment-generation step when present.
+- verification set: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:unit`, local dual-input dry run of `node scripts/emit-policy-profile-quality-report.mjs --input <current> --baseline-input <baseline> --no-pr-comment`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, `pnpm run check:ticket-deps`
+- proof gaps: live GitHub Actions baseline-download behavior and PR-comment rendering remain first-run CI observations rather than local proof.

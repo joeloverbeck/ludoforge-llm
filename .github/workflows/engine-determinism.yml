@@ -26,6 +26,8 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v5
       - uses: actions/setup-node@v6
         with:
@@ -53,11 +55,27 @@ jobs:
         env:
           ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: policy-profile-quality-report.ndjson
         run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
+      - name: Download latest main-branch policy-profile-quality baseline
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          baseline_run_id="$(gh run list --workflow engine-determinism.yml --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
+          if [ -n "$baseline_run_id" ]; then
+            gh run download "$baseline_run_id" -n policy-profile-quality-log -D baseline-policy-profile-quality
+          else
+            echo "No successful main-branch baseline run found for engine-determinism.yml"
+          fi
       - name: Emit policy-profile-quality annotations and PR comment
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input policy-profile-quality-report.ndjson
+        run: |
+          args=(--input policy-profile-quality-report.ndjson)
+          if [ -f baseline-policy-profile-quality/policy-profile-quality-report.ndjson ]; then
+            args+=(--baseline-input baseline-policy-profile-quality/policy-profile-quality-report.ndjson)
+          fi
+          node packages/engine/scripts/emit-policy-profile-quality-report.mjs "${args[@]}"
       - name: Upload policy-profile-quality log for annotation job
         if: always()
         uses: actions/upload-artifact@v4

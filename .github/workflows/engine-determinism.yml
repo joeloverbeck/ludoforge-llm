@@ -53,7 +53,7 @@ jobs:
       - name: Run policy-profile-quality lane
         id: policy-profile-quality-run
         env:
-          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: policy-profile-quality-report.ndjson
+          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report.ndjson
         run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
       - name: Download latest main-branch policy-profile-quality baseline
         if: always() && github.event_name == 'pull_request'
@@ -62,7 +62,8 @@ jobs:
         run: |
           baseline_run_id="$(gh run list --workflow engine-determinism.yml --branch main --event push --status success --limit 1 --json databaseId --jq '.[0].databaseId')"
           if [ -n "$baseline_run_id" ]; then
-            gh run download "$baseline_run_id" -n policy-profile-quality-log -D baseline-policy-profile-quality
+            gh run download "$baseline_run_id" -n policy-profile-quality-log -D baseline-policy-profile-quality \
+              || echo "No policy-profile-quality-log artifact attached to main run $baseline_run_id (first run after spec 136 landing)"
           else
             echo "No successful main-branch baseline run found for engine-determinism.yml"
           fi

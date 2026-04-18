@@ -1,3 +1,5 @@
+// @test-class: convergence-witness
+// @witness: 126FREOPEBIN-004
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 

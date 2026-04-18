@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';

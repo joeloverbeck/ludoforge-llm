@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { normalizeEffect, type NormalizerContext } from '../../../src/kernel/tooltip-normalizer.js';

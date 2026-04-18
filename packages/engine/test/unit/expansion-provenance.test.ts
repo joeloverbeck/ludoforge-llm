@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { expandBatchMarkers } from '../../src/cnl/expand-batch-markers.js';

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — new test file only
-**Deps**: `tickets/133REGTESCLA-003.md`, `tickets/133REGTESCLA-004.md`, `tickets/133REGTESCLA-005.md`
+**Deps**: `archive/tickets/133REGTESCLA-003.md`, `archive/tickets/133REGTESCLA-004.md`, `tickets/133REGTESCLA-005.md`
 
 ## Problem
 

@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { collectSequenceContextLinkageGrantReference } from '../../../src/kernel/sequence-context-linkage-grant-reference.js';

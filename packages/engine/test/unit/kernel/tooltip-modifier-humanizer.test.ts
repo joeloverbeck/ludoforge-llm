@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { humanizeCondition, humanizeConditionWithLabels, resolveModifierEffect } from '../../../src/kernel/tooltip-modifier-humanizer.js';

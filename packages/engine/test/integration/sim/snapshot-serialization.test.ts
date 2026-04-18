@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { readFileSync, unlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';

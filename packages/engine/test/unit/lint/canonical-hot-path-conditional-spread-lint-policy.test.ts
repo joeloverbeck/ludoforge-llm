@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';

@@ -1,6 +1,6 @@
 # 133REGTESCLA-002: Extend `.claude/rules/testing.md` with test classification taxonomy
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — documentation only
@@ -107,3 +107,16 @@ Add a short advisory: operators who maintain `~/.claude/agents/code-reviewer.md`
 1. Manual: `cat .claude/rules/testing.md` and read top-to-bottom.
 2. `pnpm run check:ticket-deps` — repository-level dependency check passes.
 3. `pnpm turbo lint` — if any markdown lint rules exist, they pass.
+
+## Outcome
+
+- Completed: 2026-04-18
+- Landed a new `Test Classification` section in `.claude/rules/testing.md` covering the three classes, file-top marker syntax, authoring defaults, witness-id convention, update protocol, and the authoritative scope for engine tests under `packages/engine/test/**/*.{test.ts,test.mts}`.
+- Added the commit-anchored canary example from `git show 820072e3`, showing the shift from a trajectory-specific terminal pin to bounded-stop-reason plus deterministic-replay architectural invariants.
+- Added the advisory note that user-global `~/.claude/agents/code-reviewer.md` and `~/.claude/agents/tdd-guide.md` may mirror the taxonomy, while `.claude/rules/testing.md` remains the canonical repo-tracked source.
+- Boundary correction: this ticket remained docs-only. It did not update user-global agent prompts or land any corpus classification or enforcement work; those remain owned by sibling tickets `133REGTESCLA-003` through `133REGTESCLA-006`.
+- Schema/artifact fallout checked: none.
+- Verification run:
+  - manual read-through of `.claude/rules/testing.md`
+  - `pnpm run check:ticket-deps`
+  - `pnpm turbo lint`

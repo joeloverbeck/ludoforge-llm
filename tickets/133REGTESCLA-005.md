@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test source comment additions
-**Deps**: `tickets/133REGTESCLA-002.md`
+**Deps**: `archive/tickets/133REGTESCLA-002.md`
 
 ## Problem
 

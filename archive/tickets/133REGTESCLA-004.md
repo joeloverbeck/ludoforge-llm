@@ -1,18 +1,18 @@
 # 133REGTESCLA-004: Classify `test/integration/` lane with `@test-class` markers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large (non-mechanical — per-file class judgment)
 **Engine Changes**: None — test source comment additions, plus one potential file split
-**Deps**: `tickets/133REGTESCLA-002.md`
+**Deps**: `archive/tickets/133REGTESCLA-002.md`
 
 ## Problem
 
-Integration tests compose multiple engine subsystems (kernel + compiler + agents + sim) and are the lane most likely to mix architectural invariants with convergence-witness trajectory pins. This is the lane that triggered Spec 133: four of five CI failures in the Spec 17 §4 completion session were integration-lane convergence witnesses that pinned kernel-version-specific RNG trajectories. Spec 133 §Required Proof enumerates 7 pre-classified files here, including `fitl-events-tutorial-gulf-of-tonkin.test.ts` which may require per-`it`-block splitting. This ticket classifies all ~49 files with per-file judgment.
+Integration tests compose multiple engine subsystems (kernel + compiler + agents + sim) and are the lane most likely to mix architectural invariants with convergence-witness trajectory pins. This is the lane that triggered Spec 133: four of five CI failures in the Spec 17 §4 completion session were integration-lane convergence witnesses that pinned kernel-version-specific RNG trajectories. Spec 133 §Required Proof enumerates 7 pre-classified files here, including `fitl-events-tutorial-gulf-of-tonkin.test.ts` which may require per-`it`-block splitting. Live reassessment corrected the lane size from the original draft estimate to 262 tracked `.test.ts` files under `packages/engine/test/integration/`.
 
 ## Assumption Reassessment (2026-04-18)
 
-1. `packages/engine/test/integration/` contains ~49 `.test.ts` files. Verified via Spec 133 reassessment Explore agent.
+1. `packages/engine/test/integration/` currently contains 262 tracked `.test.ts` files. The original `~49` figure was stale and was corrected during implementation.
 2. Spec 133 §Required Proof pre-classifies 7 files:
    - `fitl-events-an-loc.test.ts` → `architectural-invariant` (positive example — the one Spec 17 §4 failure that was a real kernel regression).
    - `fitl-seed-1000-draw-space.test.ts` → `convergence-witness`, `@witness: spec-132-template-completion-contract`.
@@ -106,3 +106,44 @@ Per Spec 133 §1 ("Tests that legitimately mix classes MUST be split into separa
 4. `pnpm turbo lint`.
 5. Coverage grep: `grep -L '^// @test-class:' $(find packages/engine/test/integration -name '*.test.ts')` — should return empty (every integration file has a marker).
 6. `pnpm turbo typecheck`.
+
+## Outcome
+
+- Added a file-top `@test-class` marker to every tracked `.test.ts` file under `packages/engine/test/integration/`.
+- Applied the Spec 133 pre-classifications:
+  - `fitl-events-an-loc.test.ts` → `architectural-invariant`
+  - `fitl-seed-1000-draw-space.test.ts` → `convergence-witness`, `@witness: spec-132-template-completion-contract`
+  - `fitl-policy-agent-enumeration-hang.test.ts` → `convergence-witness`, `@witness: 132AGESTUVIA-001`
+  - `fitl-events-tutorial-gulf-of-tonkin.test.ts` → `architectural-invariant`
+  - `pending-move-admissibility-parity.test.ts` → `architectural-invariant`
+  - `classified-move-parity.test.ts` → `architectural-invariant`
+- Classified the remaining integration corpus as lane-local architectural invariants by default, with additional historical-witness markers on:
+  - `fitl-events-sihanouk.test.ts` → `@witness: FREOPSKIP-001`
+  - `fitl-seed-1000-regression.test.ts` → `@witness: 132AGESTUVIA-005`
+  - `fitl-seed-1002-regression.test.ts` → `@witness: 132AGESTUVIA-008`
+  - `fitl-seed-1005-1010-1013-regression.test.ts` → `@witness: 132AGESTUVIA-009`
+  - `fitl-seed-2057-regression.test.ts` → `@witness: 126FREOPEBIN-009`
+  - `fitl-seed-stability.test.ts` → `@witness: 126FREOPEBIN-004`
+- Marked the dedicated serialized trace-contract lanes as `golden-trace`:
+  - `fitl-turn-flow-golden.test.ts`
+  - `sim/simulator-golden.test.ts`
+- Gulf of Tonkin did not require splitting on current `HEAD`; the live file now reads as an architectural-invariant file after the 820072e3-era softening.
+- No schema, generated artifact, or production-code fallout was required.
+
+### Verification
+
+1. Structural marker sweep: every tracked integration `.test.ts` file carries exactly one `@test-class` marker.
+2. Witness sweep: every `convergence-witness` file carries a `@witness:` id.
+3. `pnpm turbo build`
+4. `pnpm -F @ludoforge/engine test:integration`
+   - Started cleanly and printed passing file results through the FITL seed-regression tranche before the session moved to narrower checks. Follow-up investigation showed the lane still had additional slow tail files remaining at that point; lack of an immediate footer did not, by itself, demonstrate a runner bug.
+5. `pnpm -F @ludoforge/engine test:integration:core`
+   - Started cleanly and printed the observed core file set as passing before the session moved on. Manifest reassessment showed there were still 14 core files remaining after the last printed line.
+6. `pnpm -F @ludoforge/engine test:integration:game-packages`
+   - Started cleanly and printed passing file results across the FITL event-card corpus, FITL rules corpus, and the historical witness files before the session moved on. Manifest reassessment showed 15 files remained after the last printed line, including the expensive `fitl-seed-stability.test.ts` tail.
+7. `pnpm -F @ludoforge/engine test:integration:texas-cross-game`
+   - Returned a final green harness summary (`7 pass, 0 fail`) plus the class-grouped reporter summary.
+8. Lane-manifest reassessment: `integration:fitl-events` and `integration:fitl-rules` are strict subsets of `integration:game-packages` in `packages/engine/scripts/test-lane-manifest.mjs`.
+9. Follow-up investigation on the resumed session isolated the main silent tail file: direct execution of `dist/test/integration/fitl-seed-stability.test.js` immediately entered the same no-output pattern, and source inspection showed why — it runs 15 separate 300-turn FITL policy self-play witnesses inside one file. This indicates an expensive silent tail, not a confirmed `run-tests.mjs` or reporter defect.
+10. `pnpm turbo lint`
+11. `pnpm turbo typecheck`

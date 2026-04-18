@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import { describe, it } from 'node:test';
 import {
   assertModuleExportContract,

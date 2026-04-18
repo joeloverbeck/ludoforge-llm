@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { realizeContentPlan } from '../../../src/kernel/tooltip-template-realizer.js';

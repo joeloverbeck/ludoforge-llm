@@ -43,6 +43,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 6. Load the full `references/verification.md` only when verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or tooling ambiguity.
    - For straightforward bounded local refactors, prefer a cheap proof order: local package build or compile check first, then the narrowest focused test/proof lane for the owned change, then the package-level suite, then workspace-wide lanes last.
    - When focused proof lanes, package suites, or workspace lanes consume freshly built `dist` output or another mutable package artifact, do not run them in parallel with the build step or with other commands that rebuild the same package. Finish the producing build first, then run the dependent proof lanes, package suite, and workspace lanes against that completed artifact set in sequence.
+   - Even when commands do not rebuild shared artifacts, do not fan out multiple expensive acceptance lanes in parallel when they overlap the same large corpus. Prefer one broad lane or one focused lane at a time, especially in constrained environments such as WSL2 or other memory-limited sessions.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
 
@@ -97,6 +98,12 @@ If the change touches schemas, contracts, goldens, or involves a migration, load
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
+
+Before escalating that behavior into a harness defect or widening the ticket around runner tooling, do one concrete progress-triage pass:
+
+1. inspect the relevant lane manifest / file list to see whether the command still had plausible slow tail files remaining after the last printed output
+2. identify the most likely expensive tail file and, if proportionate, probe it directly with a bounded single-file run or source inspection
+3. only treat the behavior as a likely runner defect once that triage no longer explains the silence
 
 For evidence states, trace-heavy ticket inspection, and generated artifact triage, load `references/verification-evidence.md`.
 

@@ -67,7 +67,12 @@ describe('run-tests script', () => {
 
   it('runs batched lanes with the test-class reporter attached', async () => {
     const { runExecutionPlan } = await loadRunTestsModule();
-    const spawnCalls: Array<{ readonly command: string; readonly args: readonly string[]; readonly timeout: unknown }> = [];
+    const spawnCalls: Array<{
+      readonly command: string;
+      readonly args: readonly string[];
+      readonly timeout: unknown;
+      readonly laneEnv: unknown;
+    }> = [];
 
     const exitCode = runExecutionPlan(
       {
@@ -78,7 +83,12 @@ describe('run-tests script', () => {
       {
         execPath: '/fake/node',
         spawnSyncImpl: (command, args, options) => {
-          spawnCalls.push({ command, args, timeout: options.timeout });
+          spawnCalls.push({
+            command,
+            args,
+            timeout: options.timeout,
+            laneEnv: (options.env as NodeJS.ProcessEnv | undefined)?.ENGINE_TEST_PROGRESS_LANE,
+          });
           return { status: 0, signal: null };
         },
       },
@@ -96,6 +106,7 @@ describe('run-tests script', () => {
           'dist/test/integration/b.test.js',
         ],
         timeout: undefined,
+        laneEnv: 'default',
       },
     ]);
   });

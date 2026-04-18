@@ -1,6 +1,6 @@
 # 133REGTESCLA-007: Improve progress visibility for long integration test tails
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — engine test runner / reporter observability only
@@ -93,3 +93,28 @@ When this ticket lands, its outcome should clearly distinguish:
 3. `pnpm turbo lint`
 4. `pnpm turbo typecheck`
 5. `pnpm run check:ticket-deps`
+
+## Outcome
+
+- `packages/engine/scripts/test-class-reporter.mjs` now emits bounded quiet-period progress lines of the form `[test-progress] [<lane>] still running <file> ...` after a configurable threshold, while preserving the existing deterministic class summary.
+- `packages/engine/scripts/run-tests.mjs` now passes the active lane name into child `node --test` runs so the reporter can label those progress lines without changing test semantics or lane ownership.
+- Focused unit coverage landed for both pieces:
+  - `packages/engine/test/unit/infrastructure/test-class-reporter.test.ts` proves a simulated long-running file emits progress output and still ends with the same class-grouped summary.
+  - `packages/engine/test/unit/run-tests-script.test.ts` proves the runner wires the lane label into batched reporter executions.
+- No integration lane was reclassified, split, or weakened. This ticket only improves operator visibility during quiet long-tail files.
+
+## Verification Record
+
+1. `pnpm -F @ludoforge/engine build`
+2. Focused built-file proof:
+   `pnpm -F @ludoforge/engine exec node --test dist/test/unit/run-tests-script.test.js dist/test/unit/infrastructure/test-class-reporter.test.js`
+3. `pnpm -F @ludoforge/engine test:unit`
+4. `pnpm turbo build`
+5. `pnpm turbo lint`
+6. `pnpm turbo typecheck`
+7. `pnpm run check:ticket-deps`
+
+### Verification Notes
+
+- The first focused proof attempt against raw `.ts` test paths was invalid for this package because engine unit tests run from built `dist/` output; the final focused proof was rerun against `dist/test/unit/**/*.js` after a successful package build.
+- The first reporter implementation left unresolved quiet timers alive until the default threshold elapsed. That was caught by the focused proof (the green run lingered for ~30 seconds), fixed by clearing the pending quiet timer after each `Promise.race`, and then re-verified in the final focused proof.

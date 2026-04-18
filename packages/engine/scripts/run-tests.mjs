@@ -6,6 +6,7 @@ import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
 const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];
+const TEST_PROGRESS_LANE_ENV = 'ENGINE_TEST_PROGRESS_LANE';
 
 const laneConfigs = {
   default: {
@@ -119,6 +120,13 @@ function logLine(stream, line) {
   stream.write(`${line}\n`);
 }
 
+function buildChildEnv(env, lane) {
+  return {
+    ...env,
+    [TEST_PROGRESS_LANE_ENV]: lane,
+  };
+}
+
 export function runExecutionPlan(plan, options = {}) {
   const spawnSyncImpl = options.spawnSyncImpl ?? spawnSync;
   const stdout = options.stdout ?? process.stdout;
@@ -128,9 +136,10 @@ export function runExecutionPlan(plan, options = {}) {
   const now = options.now ?? (() => Date.now());
 
   if (plan.execution === 'batched') {
+    const childEnv = buildChildEnv(env, plan.lane);
     const result = spawnSyncImpl(execPath, ['--test', ...TEST_CLASS_REPORTER_ARGS, ...plan.patterns], {
       stdio: 'inherit',
-      env,
+      env: childEnv,
     });
     if (result.error) {
       throw result.error;
@@ -146,10 +155,11 @@ export function runExecutionPlan(plan, options = {}) {
   let completed = 0;
   for (const pattern of plan.patterns) {
     const startedAt = now();
+    const childEnv = buildChildEnv(env, plan.lane);
     logLine(stdout, `[run-tests] [${plan.lane}] start ${pattern}`);
     const result = spawnSyncImpl(execPath, ['--test', ...TEST_CLASS_REPORTER_ARGS, pattern], {
       stdio: 'inherit',
-      env,
+      env: childEnv,
       timeout: timeoutMs,
       killSignal: KILL_SIGNAL,
     });

@@ -30,19 +30,26 @@ const loadReporterModule = async () =>
     readonly createTestClassReporter: (options?: {
       readonly readFileSyncImpl?: (filePath: string, encoding: string) => string;
       readonly createSpecReporterImpl?: () => SpecReporterStub;
+      readonly quietThresholdMs?: number;
+      readonly repeatQuietNoticeMs?: number;
+      readonly laneLabel?: string;
     }) => (source: AsyncIterable<ReporterEvent>) => AsyncGenerator<string, void, void>;
   }>;
 
 const collectReporterOutput = async (
   reporter: (source: AsyncIterable<ReporterEvent>) => AsyncGenerator<string, void, void>,
-  events: readonly ReporterEvent[],
+  events: AsyncIterable<ReporterEvent> | readonly ReporterEvent[],
 ) => {
   let output = '';
-  for await (const chunk of reporter((async function* emitEvents() {
-    for (const event of events) {
-      yield event;
-    }
-  })())) {
+  const source =
+    Symbol.asyncIterator in events
+      ? events
+      : (async function* emitEvents() {
+          for (const event of events) {
+            yield event;
+          }
+        })();
+  for await (const chunk of reporter(source)) {
     output += typeof chunk === 'string' ? chunk : String(chunk);
   }
   return output;
@@ -142,5 +149,32 @@ describe('test class reporter', () => {
     assert.equal(readCounts.get('/tmp/plain.test.js'), 1);
     assert.match(output, /architectural-invariant:\s+1 pass, 1 fail/u);
     assert.match(output, /unclassified:\s+1 pass, 1 fail/u);
+  });
+
+  it('emits a quiet-progress notice for a long-running file without disturbing the final summary', async () => {
+    const { createTestClassReporter } = await loadReporterModule();
+    const reporter = createTestClassReporter({
+      readFileSyncImpl: () => '// @test-class: architectural-invariant\n',
+      createSpecReporterImpl: createSpecReporterStub,
+      quietThresholdMs: 5,
+      repeatQuietNoticeMs: 5,
+      laneLabel: 'integration:game-packages',
+    });
+
+    const output = await collectReporterOutput(
+      reporter,
+      (async function* emitEvents() {
+        yield { type: 'test:start', data: { file: '/tmp/slow-tail.test.js', name: 'slow tail' } };
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        yield { type: 'test:pass', data: { file: '/tmp/slow-tail.test.js', name: 'slow tail' } };
+      })(),
+    );
+
+    assert.match(
+      output,
+      /\[test-progress\] \[integration:game-packages\] still running \/tmp\/slow-tail\.test\.js after \d+ms quiet \d+ms/u,
+    );
+    assert.match(output, /=== Test Class Summary ===/u);
+    assert.match(output, /architectural-invariant:\s+1 pass, 0 fail/u);
   });
 });

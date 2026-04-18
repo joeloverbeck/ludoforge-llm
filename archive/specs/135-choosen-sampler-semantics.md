@@ -1,6 +1,6 @@
 # Spec 135: chooseN Sampler Semantics and Caller-Retry Bias
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 16 [template-completion-contract] (archived; completed 2026-04-17)
@@ -149,12 +149,34 @@ Test fixtures that relied on the hidden first-attempt bias are migrated in the s
 
 ## Tickets
 
-- `tickets/135CHOSAMSEM-001.md` — Extend `drawDeadEnd` outcome with optional-chooseN diagnostic payload
-- `tickets/135CHOSAMSEM-002.md` — Add `retryBiasNonEmpty` option and thread through `completeTemplateMove` to `chooseAtRandom` clamp
-- `tickets/135CHOSAMSEM-003.md` — Wire retry caller: detect dead-end from count=0, set `retryBiasNonEmpty`, emit `MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY` warning
-- `tickets/135CHOSAMSEM-004.md` — Remove `sampledMin` from `selectFromChooseN`; migrate test fixtures
-- `tickets/135CHOSAMSEM-005.md` — Add `choose-n-sampler-purity.test.ts` proving uniform sampling
+- `archive/tickets/135CHOSAMSEM-001.md` — Extend `drawDeadEnd` outcome with optional-chooseN diagnostic payload and absorb the production relocation slices
+- `archive/tickets/135CHOSAMSEM-002.md` — Historical split record for `retryBiasNonEmpty` option threading
+- `archive/tickets/135CHOSAMSEM-003.md` — Historical split record for retry-caller bias wiring and warning emission
+- `archive/tickets/135CHOSAMSEM-004.md` — Historical split record for `sampledMin` removal and fixture migration
+- `archive/tickets/135CHOSAMSEM-005.md` — Add `choose-n-sampler-purity.test.ts` proving uniform sampling
 
 ## Outcome
 
-TBD.
+- 2026-04-18: Completed.
+- Landed:
+  - `selectFromChooseN` now samples directly over declared `[min, max]` with no hidden `sampledMin` rewrite.
+  - Retry-layer recovery bias moved to `prepare-playable-moves.ts` via `retryBiasNonEmpty`, with `MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY` warning emission on qualifying retries.
+  - `drawDeadEnd` now carries structured optional-chooseN diagnostics, and downstream playable-candidate rejection preserves that context when a completed move is later reclassified to a dead end.
+  - Dedicated sampler-purity proof landed in `packages/engine/test/unit/kernel/choose-n-sampler-purity.test.ts`.
+- Deviations from original ticket split:
+  - Archived `135CHOSAMSEM-001` absorbed the implementation scope originally planned for `135CHOSAMSEM-002` through `135CHOSAMSEM-004` to preserve `docs/FOUNDATIONS.md` architectural completeness.
+  - Archived `135CHOSAMSEM-002` through `135CHOSAMSEM-004` remain as historical split records only.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/move-completion-draw-dead-end-payload.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-contract-invariants.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/move-completion-retry.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/playable-candidate.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/prepare-playable-moves-retry.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/prepare-playable-moves.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-sampler-purity.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo build`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`

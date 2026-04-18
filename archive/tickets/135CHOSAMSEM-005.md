@@ -1,6 +1,6 @@
 # 135CHOSAMSEM-005: Add `choose-n-sampler-purity.test.ts` proving uniform sampling
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None (test-only)
@@ -95,3 +95,20 @@ Construct fixtures inline in the test file using the helpers already present in 
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo build test lint typecheck`
+
+## Outcome
+
+- 2026-04-18: Completed as the remaining Spec 135 proof slice after archived `135CHOSAMSEM-001` through `135CHOSAMSEM-004` landed the production sampler and retry-path changes.
+- Landed:
+  - Added `packages/engine/test/unit/kernel/choose-n-sampler-purity.test.ts` as an `architectural-invariant` test using exported completion fixtures rather than internal helper reach-through.
+  - The new proof covers declared chooseN ranges `0..4`, `1..3`, and `2..4`, asserting that optional chooseN can sample `0` while declared minimums above zero are respected exactly.
+  - The proof stays isolated from retry-path behavior by exercising completion fixtures that complete directly and never set `retryBiasNonEmpty`.
+- verification run:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-sampler-purity.test.js`
+  - `pnpm -F @ludoforge/engine test`
+  - `pnpm turbo build`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`
+- ticket corrections applied: `Deps: tickets/135CHOSAMSEM-004.md -> archive/tickets/135CHOSAMSEM-004.md`

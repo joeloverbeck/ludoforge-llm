@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname } from 'node:path';

@@ -16,6 +16,11 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 Load `references/working-notes.md` for the working-notes checklist, `commentary` usage, and the 1-3-1 boundary reset ledger format. Emit the compact working-notes checkpoint before coding.
 
+## High-Signal Reminders
+
+- If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
+- Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
+
 ## Workflow
 
 ### Ticket-Type Triage
@@ -38,6 +43,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 6. Load the full `references/verification.md` only when verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or tooling ambiguity.
    - For straightforward bounded local refactors, prefer a cheap proof order: local package build or compile check first, then the narrowest focused test/proof lane for the owned change, then the package-level suite, then workspace-wide lanes last.
    - When focused proof lanes, package suites, or workspace lanes consume freshly built `dist` output or another mutable package artifact, do not run them in parallel with the build step or with other commands that rebuild the same package. Finish the producing build first, then run the dependent proof lanes, package suite, and workspace lanes against that completed artifact set in sequence.
+   - Even when commands do not rebuild shared artifacts, do not fan out multiple expensive acceptance lanes in parallel when they overlap the same large corpus. Prefer one broad lane or one focused lane at a time, especially in constrained environments such as WSL2 or other memory-limited sessions.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
 
@@ -50,6 +56,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
    - When a draft or recently edited ticket names specific files, prefer a quick path-validation pass (`rg --files`, targeted `find`, or equivalent) before opening the file directly if there is any sign of path drift.
+   - When tests need to exercise package `scripts/*.mjs`, verify whether the repo build actually emits those files into `dist/` before writing dist-relative imports or assertions. In this repo, tests may need to resolve the source script from package root instead.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
    - Load `references/verification.md` now only when the command sanity check itself is nontrivial or already reveals output contention, stale-runner drift, or tracked-vs-draft correction work that needs the fuller guidance.
@@ -92,11 +99,21 @@ Load `references/verification.md` for non-bounded tickets, or for bounded local 
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
+When verification intentionally mutates a real repo file as a temporary negative/manual check, confirm that the file is restored exactly to its original contents and placement before running broader proof lanes. Treat any post-check restoration drift as proof-invalidating and rerun the affected acceptance set after the exact restore lands.
+
+Before escalating that behavior into a harness defect or widening the ticket around runner tooling, do one concrete progress-triage pass:
+
+1. inspect the relevant lane manifest / file list to see whether the command still had plausible slow tail files remaining after the last printed output
+2. identify the most likely expensive tail file and, if proportionate, probe it directly with a bounded single-file run or source inspection
+3. only treat the behavior as a likely runner defect once that triage no longer explains the silence
+
 For evidence states, trace-heavy ticket inspection, and generated artifact triage, load `references/verification-evidence.md`.
 
 ## Follow-Up
 
 Load `references/closeout-and-followup.md` for non-bounded tickets, or for bounded local refactors when closeout needs follow-up classification, ticket blocking, sibling rewrites, or other nontrivial handoff work. Covers the closeout summary, final acceptance sweep, acceptance-proof invalidation rules, tracked-ticket durable outcome block, durable state classification (`COMPLETED` / `BLOCKED by prerequisite` / `PENDING untouched`), optional state-transition ledger, and draft-ticket durable closeout.
+
+As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`.
 
 For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
 

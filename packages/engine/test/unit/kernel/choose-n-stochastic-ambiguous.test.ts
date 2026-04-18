@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 /**
  * Tests for stochastic and ambiguous probe classification in chooseN
  * option resolution (ticket 63CHOOPEROPT-006).

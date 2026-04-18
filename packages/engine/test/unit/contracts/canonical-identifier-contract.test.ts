@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -12,4 +13,3 @@ describe('canonical identifier contract', () => {
     assert.equal(canonicalizeIdentifier('cafe\u0301'), 'caf\u00e9');
   });
 });
-

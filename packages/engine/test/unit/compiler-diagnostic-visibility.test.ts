@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 /**
  * Proves that compiler-stage error diagnostics (especially cross-validation)
  * are visible and detectable — closing a gap where `requireSuccessfulProductionCompilation`

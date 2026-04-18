@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import path from 'node:path';
 import { describe, it } from 'node:test';

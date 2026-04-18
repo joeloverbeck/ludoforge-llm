@@ -1,3 +1,4 @@
+// @test-class: golden-trace
 import { describe, it } from 'node:test';
 
 import {

@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';

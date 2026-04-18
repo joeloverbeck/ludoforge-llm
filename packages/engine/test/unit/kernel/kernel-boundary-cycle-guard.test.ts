@@ -1,3 +1,4 @@
+// @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { hasImportWithModuleSubstring, parseTypeScriptSource } from '../../helpers/kernel-source-ast-guard.js';

@@ -94,6 +94,7 @@ Mode-specific behavior:
 - Run checks using Explore agents, grep, git log, file reads — whatever the checks require
 - Report results before proceeding to the interview
 - Adjust confidence and approach based on what the checks reveal
+- Verification artifacts created during this step (diagnostic scripts, probe fixtures, measurement logs) SHOULD be kept alongside existing reproducers when they cover a failure mode not otherwise reproducible, or removed when they duplicate existing tools. State the disposition explicitly in the Step 6 summary so the user knows what was left behind.
 
 Skip this step only if neither trigger applies.
 
@@ -113,14 +114,18 @@ This is the core of the skill. Your goal is to reach **95% confidence** about wh
 
 ### The Protocol
 
-After each user answer, communicate confidence and remaining gaps explicitly. The fenced block format is one option:
+After each user answer, communicate confidence and remaining gaps explicitly. Two display formats are acceptable — pick based on gap length.
+
+Fenced block (multi-gap or long list):
 
 ```
 Confidence: X%
 Gaps: [list of remaining unknowns]
 ```
 
-Inline prose is acceptable when gaps are short (e.g., "Confidence: 85% — main gap is whether scope includes Y"). Either way, name the percentage and the specific gaps. Vague phrasings like "I need more information" are not acceptable. Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% confidence. Moving to approaches."
+Inline prose (short gap statement): `Confidence: 85% — main gap is whether scope includes Y`.
+
+Either way, name the percentage and the specific gaps. Vague phrasings like "I need more information" are not acceptable. Keep asking questions until confidence reaches 95%. Then announce: "I'm at 95% confidence. Moving to approaches."
 
 ### Interview Rules
 
@@ -146,6 +151,8 @@ Inline prose is acceptable when gaps are short (e.g., "Confidence: 85% — main 
 | 80-95% | Clear picture, a few edge cases or preferences unknown | Ask targeted questions about specific gaps |
 | 95%+ | Ready to propose | Transition to Step 3 |
 
+**90–94% exception**: If the remaining gaps are user-intent questions that the Step 3 approach choice will resolve (e.g., scope preferences that map directly onto distinct approach options), advance after stating the gaps explicitly — the approach selection closes them. Do not use this exception to skip problem- or constraint-level gaps; those must reach 95% through interview or investigation first.
+
 ### Early Exit
 
 If the user says something like "just go" or "that's enough questions", respect it. Announce your current confidence, list remaining gaps as assumptions you'll make, and proceed to Step 3. Mark those assumptions explicitly in the design so the user can correct them.
@@ -163,6 +170,8 @@ When a confidence gap can only be resolved by codebase investigation — not by 
 - **Existing infrastructure**: "Does something like this already exist?" → search for prior art in the codebase
 
 Announce what you're investigating and why, present findings, then resume the interview with the new information incorporated into your confidence score. The user explicitly requesting investigation (e.g., "investigate the matter carefully") is a strong signal to use this path.
+
+In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the problem boundary shifts — an artifact read in Step 1 may surface a diagnostic worth running in Step 1.5, which in turn may surface a broader sweep worth running mid-Step 2. There is no cap on investigation stages as long as each is justified, announced, and proportionate to the decision at stake. Record the confidence delta each phase produces so the accumulated investigation is visible rather than implicit.
 
 ### Mid-Flow Investigation (Triage Mode)
 
@@ -204,6 +213,8 @@ Sections to cover (skip irrelevant ones):
 "Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md. Skill design, process changes, and tooling configurations are not implementation-related for this purpose, even if they indirectly influence implementation.
 
 **After each section**, ask: "Does this section look right?" Wait for confirmation before presenting the next section. If the user pushes back, revise that section before continuing.
+
+**Auto-mode adaptation**: When Claude Code's auto mode is active, section-by-section gating compresses to consolidated presentation with a single approval. Present the remaining sections together and proceed to Step 5 artifact writing unless the user has pushed back on a prior section. This matches auto mode's "prefer action over planning" posture while preserving substantive review — the user still sees every section before the artifact is written. If a user objection arises mid-consolidation, stop, revise the flagged section, and present the revision for approval before continuing.
 
 ## Step 5: Write Output Artifacts
 

@@ -50,11 +50,20 @@ jobs:
       - run: pnpm -F @ludoforge/engine build
       - name: Run policy-profile-quality lane
         id: policy-profile-quality-run
+        env:
+          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: policy-profile-quality-report.ndjson
         run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
+      - name: Emit policy-profile-quality annotations and PR comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input policy-profile-quality-report.ndjson
       - name: Upload policy-profile-quality log for annotation job
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: policy-profile-quality-log
-          path: policy-profile-quality.log
+          path: |
+            policy-profile-quality.log
+            policy-profile-quality-report.ndjson
           retention-days: 7

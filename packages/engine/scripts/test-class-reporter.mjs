@@ -2,22 +2,32 @@ import { readFileSync } from 'node:fs';
 import { spec } from 'node:test/reporters';
 
 const TEST_CLASS_MARKER_PATTERN = /^\/\/\s*@test-class:\s*(\S+)/mu;
+const PROFILE_VARIANT_MARKER_PATTERN = /^\/\/\s*@profile-variant:\s*(\S+)/mu;
 const HEADER_LINE_LIMIT = 20;
 const DEFAULT_QUIET_THRESHOLD_MS = 30_000;
 const SUMMARY_ORDER = ['architectural-invariant', 'convergence-witness', 'golden-trace', 'unclassified'];
 const SUMMARY_NOTES = {
   'convergence-witness': 'likely trajectory shift - evaluate',
   'golden-trace': 're-bless expected',
+  'policy-profile-quality': 'non-blocking - profile-level quality witness',
   unclassified: 'migrate to marker - Spec 133',
 };
 
 const createInitialCounts = () =>
   new Map(SUMMARY_ORDER.map((testClass) => [testClass, { pass: 0, fail: 0 }]));
 
+const createInitialVariantCounts = () => new Map();
+
 export function extractTestClassMarker(fileContents) {
   const header = fileContents.split(/\r?\n/u, HEADER_LINE_LIMIT).join('\n');
   const marker = TEST_CLASS_MARKER_PATTERN.exec(header);
   return marker?.[1] ?? 'unclassified';
+}
+
+export function extractProfileVariantMarker(fileContents) {
+  const header = fileContents.split(/\r?\n/u, HEADER_LINE_LIMIT).join('\n');
+  const marker = PROFILE_VARIANT_MARKER_PATTERN.exec(header);
+  return marker?.[1] ?? null;
 }
 
 function toPositiveInteger(value) {
@@ -49,19 +59,24 @@ export function createTestClassReporter(options = {}) {
   const repeatQuietNoticeMs =
     toPositiveInteger(options.repeatQuietNoticeMs ?? process.env.ENGINE_TEST_PROGRESS_REPEAT_MS) ?? quietThresholdMs;
   const laneLabel = options.laneLabel ?? process.env.ENGINE_TEST_PROGRESS_LANE ?? 'unknown-lane';
-  const fileClassCache = new Map();
+  const fileMetadataCache = new Map();
   const countsByClass = createInitialCounts();
+  const countsByVariant = createInitialVariantCounts();
 
-  const resolveTestClass = (filePath) => {
+  const resolveFileMetadata = (filePath) => {
     if (typeof filePath !== 'string' || filePath.length === 0) {
-      return 'unclassified';
+      return { testClass: 'unclassified', profileVariant: null };
     }
-    if (fileClassCache.has(filePath)) {
-      return fileClassCache.get(filePath);
+    if (fileMetadataCache.has(filePath)) {
+      return fileMetadataCache.get(filePath);
     }
-    const resolvedClass = extractTestClassMarker(readFileSyncImpl(filePath, 'utf8'));
-    fileClassCache.set(filePath, resolvedClass);
-    return resolvedClass;
+    const fileContents = readFileSyncImpl(filePath, 'utf8');
+    const resolvedMetadata = {
+      testClass: extractTestClassMarker(fileContents),
+      profileVariant: extractProfileVariantMarker(fileContents),
+    };
+    fileMetadataCache.set(filePath, resolvedMetadata);
+    return resolvedMetadata;
   };
 
   const recordResult = (event) => {
@@ -69,12 +84,18 @@ export function createTestClassReporter(options = {}) {
       return;
     }
 
-    const testClass = resolveTestClass(event?.data?.file);
+    const { testClass, profileVariant } = resolveFileMetadata(event?.data?.file);
     const bucket = countsByClass.get(testClass) ?? countsByClass.get('unclassified');
     if (bucket === undefined) {
       return;
     }
     bucket[event.type === 'test:pass' ? 'pass' : 'fail'] += 1;
+
+    if (laneLabel === 'policy-profile-quality' && profileVariant !== null) {
+      const variantBucket = countsByVariant.get(profileVariant) ?? { pass: 0, fail: 0 };
+      variantBucket[event.type === 'test:pass' ? 'pass' : 'fail'] += 1;
+      countsByVariant.set(profileVariant, variantBucket);
+    }
   };
 
   const formatBucketLine = (testClass) => {
@@ -86,6 +107,16 @@ export function createTestClassReporter(options = {}) {
     const countsText = `${counts.pass} pass, ${counts.fail} fail`;
     const note = SUMMARY_NOTES[testClass];
     return note ? `${label}${countsText} (${note})` : `${label}${countsText}`;
+  };
+
+  const formatVariantBucketLine = (variantId) => {
+    const counts = countsByVariant.get(variantId);
+    if (counts === undefined) {
+      return null;
+    }
+    const label = `${variantId}:`.padEnd(25, ' ');
+    const countsText = `${counts.pass} pass, ${counts.fail} fail`;
+    return `${label}${countsText}`;
   };
 
   const emitSpecChunks = function* (specReporter) {
@@ -178,6 +209,20 @@ export function createTestClassReporter(options = {}) {
       const line = formatBucketLine(testClass);
       if (line !== null) {
         yield `${line}\n`;
+      }
+    }
+
+    if (laneLabel === 'policy-profile-quality' && countsByVariant.size > 0) {
+      yield '=== Policy Profile Variant Summary ===\n';
+      const laneNote = SUMMARY_NOTES['policy-profile-quality'];
+      if (typeof laneNote === 'string') {
+        yield `${laneNote}\n`;
+      }
+      for (const variantId of [...countsByVariant.keys()].sort((left, right) => left.localeCompare(right))) {
+        const line = formatVariantBucketLine(variantId);
+        if (line !== null) {
+          yield `${line}\n`;
+        }
       }
     }
   };

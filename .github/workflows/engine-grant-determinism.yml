@@ -41,4 +41,4 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - run: pnpm -F @ludoforge/engine exec node --test dist/test/determinism/fitl-policy-agent-canary.test.js
+      - run: pnpm -F @ludoforge/engine exec node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js

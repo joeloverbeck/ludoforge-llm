@@ -107,3 +107,13 @@ Compiler determinism is proven by compiling the same GameSpecDoc twice and asser
 **Domain identifiers (ZoneId, PlayerId, ActionId, TokenTypeId, etc.) MUST be represented as distinct nominal types in implementation code, not interchangeable raw strings.**
 
 In TypeScript, this means branded types. The kernel validates identifier construction at runtime. Serialized YAML and JSON artifacts continue to use canonical string representations. This eliminates an entire class of bugs where identifiers from different domains are accidentally interchanged.
+
+---
+
+## Appendix: Determinism Proofs vs. Profile-Quality Witnesses
+
+The determinism commandment (#8) is proven by the `packages/engine/test/determinism/` corpus: every test there asserts only engine-level invariants such as replay identity and bounded execution. Failures in that corpus are engine bugs and block CI.
+
+Convergence claims tied to a specific policy-profile variant are not engine invariants. They are quality signals for the profile maintainer, and they live in `packages/engine/test/policy-profile-quality/`, not in `determinism/`. Failures there emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings and a non-blocking CI summary rather than a blocking determinism failure.
+
+The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 was written to eliminate.

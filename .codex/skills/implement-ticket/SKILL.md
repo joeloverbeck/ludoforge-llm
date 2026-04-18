@@ -18,8 +18,10 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 
 ## High-Signal Reminders
 
+- If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
+- Before marking a ticket complete, compare the ticket's named verification commands against the final proof set. Either run each named command directly or record, in the active ticket outcome, the exact broader lane that subsumed it.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
 ## Workflow
@@ -35,6 +37,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 1. Read `docs/FOUNDATIONS.md`, the ticket, referenced specs/docs/Deps, and `AGENTS.md`.
 2. Inspect repo state early and validate ticket-named files/functions/commands against the live codebase.
 3. Do a **command sanity pass** for ticket-named verification commands. You do not need the full `references/verification.md` load yet if the checks stay straightforward.
+   - Prefer reading `package.json`, runner scripts, or lane manifests before probing package-manager commands with flags such as `--help`; do not assume script-level `--help` is non-executing.
    - Distinguish `the command is repo-valid` from `the command is runnable right now in the current artifact state`. If a lane depends on generated `dist/` output or another mutable build artifact, verify that prerequisite state explicitly before using the lane as the first acceptance-proof run.
 4. Load `references/implementation-general.md` only if the ticket widens beyond the simple local slice, exposes sibling/follow-up ownership drift, or otherwise needs the broader series guidance.
 5. Load `references/draft-handling.md` for bounded local refactors only when draft status creates real boundary uncertainty:
@@ -45,14 +48,20 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 6. Load the full `references/verification.md` only when verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or tooling ambiguity.
    - For straightforward bounded local refactors, prefer a cheap proof order: local package build or compile check first, then the narrowest focused test/proof lane for the owned change, then the package-level suite, then workspace-wide lanes last.
    - When focused proof lanes, package suites, or workspace lanes consume freshly built `dist` output or another mutable package artifact, do not run them in parallel with the build step or with other commands that rebuild the same package. Finish the producing build first, then run the dependent proof lanes, package suite, and workspace lanes against that completed artifact set in sequence.
+   - If an acceptance command cleans or rebuilds a shared output tree that another acceptance command reads from, treat that subset as order-sensitive even if the commands would otherwise be parallelizable. Shared `dist/` consumers are the common case: build first, then read-only proof lanes afterward.
    - Even when commands do not rebuild shared artifacts, do not fan out multiple expensive acceptance lanes in parallel when they overlap the same large corpus. Prefer one broad lane or one focused lane at a time, especially in constrained environments such as WSL2 or other memory-limited sessions.
 7. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 8. If the active ticket is an untracked or draft ticket that you expect to mark `COMPLETED`, `BLOCKED`, or otherwise durably rewrite at closeout, load `references/closeout-and-followup.md` before the final acceptance-proof pass so the ticket update lands before the last green run rather than invalidating it afterward.
+9. If live proof shows that a ticket-owned witness input (seed set, benchmark case list, pinned exemplar, historical repro id, etc.) is stale and the user approves a re-blessing path, keep the change narrow:
+   - Prefer the smallest credible candidate search first: already-curated nearby seeds/cases, the previous witness family, or explicitly referenced historical candidates before broad brute-force probing.
+   - Capture exact old-vs-new witness evidence during reassessment so the ticket correction can cite why the original witness drifted under the live code.
+   - Update the active ticket's correction ledger and witness description before the final acceptance-proof pass so the last green run matches the re-blessed artifact.
 
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
+   - If the supplied path is missing, search for the nearest active ticket by normalized ticket id or stem before widening scope. If exactly one plausible replacement exists, use it and record `ticket entry correction: <requested path> -> <resolved ticket>` in working notes; if resolution is ambiguous, stop and clarify.
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`).
    - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
@@ -63,6 +72,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - When the ticket names wildcard acceptance checks or `returns empty` grep lanes, validate those patterns against the live repo early, especially if they span files outside the owned `Files to Touch` slice. Do not defer repo-wide empty-match assumptions until after coding.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
+   - When the command is a package-manager script target, prefer verifying the script definition and underlying runner entrypoint before using `--help` or ad hoc flags as a probe.
    - Load `references/verification.md` now only when the command sanity check itself is nontrivial or already reveals output contention, stale-runner drift, or tracked-vs-draft correction work that needs the fuller guidance.
 
 #### Session, Series, and Draft Context
@@ -78,6 +88,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
    - When an upstream result can be reclassified downstream (for example `completed` becoming a rejected or dead-end candidate later in the pipeline), verify that the ticket-owned diagnostic payload or invariant survives that handoff before changing retry policy, adding fallbacks, or rewriting the ticket boundary. Do not assume the first result surface is the only place the owned invariant must remain observable.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
+   - When the contradiction is specifically a stale witness input rather than a production-code bug, classify that separately from ordinary scope drift. If the user authorizes re-blessing, prefer replacing the witness with the narrowest validated live witness instead of widening semantics just to preserve the old example.
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
@@ -106,7 +117,16 @@ Before the final acceptance-proof pass, pause on this explicit checkpoint: `Will
 
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
 
+Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria` and `Test Plan` commands against the commands you actually ran:
+
+1. enumerate the exact named commands in the active ticket
+2. mark each one as `ran directly`, `subsumed by <broader lane>`, or `not yet proven`
+3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
+4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
+
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
+
+When rerunning proof commands that write append-only local artifacts (for example temp NDJSON, captured logs, or ad hoc report files), prefer a fresh temp path per rerun or clear the artifact first so the resulting evidence reflects a single proof pass rather than accumulated historical rows.
 
 When verification intentionally mutates a real repo file as a temporary negative/manual check, confirm that the file is restored exactly to its original contents and placement before running broader proof lanes. Treat any post-check restoration drift as proof-invalidating and rerun the affected acceptance set after the exact restore lands.
 
@@ -146,6 +166,13 @@ When the active ticket absorbed ownership from sibling draft tickets in the same
 Suggested compact sibling ledger:
 
 - `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
+
+Suggested compact final-proof ledger:
+
+- `ticket corrections applied`: `<stale claim> -> <live contract>`
+- `verification set`: `<commands run directly in final proof order>`
+- `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
+- `proof gaps`: `none` or `<remaining blocker>`
 
 ### Post-Closeout Reopen
 

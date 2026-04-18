@@ -5,28 +5,18 @@ import { readdir, readFile } from 'node:fs/promises';
 import { dirname, relative, resolve, sep } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
-
-type TestClass = 'architectural-invariant' | 'convergence-witness' | 'golden-trace';
-
-type MarkerCheck = {
-  readonly testClass: TestClass;
-  readonly markerLine: number;
-};
-
-type PatternHit = {
-  readonly label: string;
-  readonly line: number;
-};
-
-const VALID_TEST_CLASSES = new Set<TestClass>([
-  'architectural-invariant',
-  'convergence-witness',
-  'golden-trace',
-]);
+import {
+  assertNoDeterminismTerminalPin,
+  assertNoProfileVariantMarker,
+  assertProfileVariantAdjacency,
+  assertWitnessAdjacency,
+  collectPatternHits,
+  getMarkerCheck,
+  isPolicyProfileQualityPath,
+  type MarkerCheck,
+} from '../../helpers/test-class-marker-helpers.js';
 
 const TEST_FILE_PATTERN = /\.test\.m?ts$/u;
-const TEST_CLASS_PATTERN = /^\/\/\s*@test-class:\s*(\S+)\s*$/gmu;
-const WITNESS_PATTERN = /^\/\/\s*@witness:\s*(\S+)\s*$/gmu;
 
 const ARCHITECTURAL_SHAPE_PATTERNS: ReadonlyArray<readonly [string, RegExp]> = [
   [
@@ -62,8 +52,6 @@ const thisDir = dirname(fileURLToPath(import.meta.url));
 const engineRoot = resolve(thisDir, '..', '..', '..', '..');
 const sourceTestRoot = resolve(engineRoot, 'test');
 
-const toLineNumber = (text: string, index: number) => text.slice(0, index).split('\n').length;
-
 const formatFailureGroup = (title: string, details: readonly string[]) =>
   details.length === 0 ? '' : `${title}\n${details.map((detail) => `- ${detail}`).join('\n')}\n`;
 
@@ -84,57 +72,6 @@ const listCorpusFiles = async (): Promise<readonly string[]> => {
     .sort((left, right) => left.localeCompare(right));
 };
 
-const getMarkerCheck = (source: string, displayPath: string): MarkerCheck => {
-  const matches = [...source.matchAll(TEST_CLASS_PATTERN)];
-  if (matches.length !== 1) {
-    throw new Error(
-      matches.length === 0
-        ? `${displayPath} missing @test-class marker`
-        : `${displayPath} has ${matches.length} @test-class markers`,
-    );
-  }
-
-  const match = matches[0];
-  assert.ok(match !== undefined);
-  const rawClass = match[1];
-  if (!VALID_TEST_CLASSES.has(rawClass as TestClass)) {
-    throw new Error(`${displayPath} has invalid @test-class value "${rawClass}"`);
-  }
-
-  return {
-    testClass: rawClass as TestClass,
-    markerLine: toLineNumber(source, match.index ?? 0),
-  };
-};
-
-const assertWitnessAdjacency = (source: string, displayPath: string, markerLine: number) => {
-  const witnessMatches = [...source.matchAll(WITNESS_PATTERN)];
-  if (witnessMatches.length !== 1) {
-    throw new Error(
-      witnessMatches.length === 0
-        ? `${displayPath} missing @witness marker`
-        : `${displayPath} has ${witnessMatches.length} @witness markers`,
-    );
-  }
-
-  const witnessMatch = witnessMatches[0];
-  assert.ok(witnessMatch !== undefined);
-  const witnessLine = toLineNumber(source, witnessMatch.index ?? 0);
-  if (witnessLine < markerLine || witnessLine > markerLine + 3) {
-    throw new Error(
-      `${displayPath} has @witness on line ${witnessLine}, expected within 3 lines of @test-class on line ${markerLine}`,
-    );
-  }
-};
-
-const collectPatternHits = (source: string, patterns: ReadonlyArray<readonly [string, RegExp]>): readonly PatternHit[] =>
-  patterns.flatMap(([label, pattern]) =>
-    [...source.matchAll(pattern)].map((match) => ({
-      label,
-      line: toLineNumber(source, match.index ?? 0),
-    })),
-  );
-
 describe('test class markers', () => {
   it('enforces marker presence, witness adjacency, and best-effort mixed-shape discipline across the engine test corpus', async () => {
     const files = await listCorpusFiles();
@@ -142,6 +79,8 @@ describe('test class markers', () => {
     const missingMarkers: string[] = [];
     const invalidClasses: string[] = [];
     const missingWitnesses: string[] = [];
+    const missingProfileVariants: string[] = [];
+    const determinismTerminalPins: string[] = [];
     const mixedShapes: string[] = [];
 
     for (const filePath of files) {
@@ -161,11 +100,31 @@ describe('test class markers', () => {
         continue;
       }
 
-      if (markerCheck.testClass === 'convergence-witness') {
+      if (markerCheck.testClass === 'convergence-witness' && isPolicyProfileQualityPath(sourceTestRoot, filePath)) {
+        try {
+          assertProfileVariantAdjacency(source, displayPath, markerCheck.markerLine);
+        } catch (error) {
+          missingProfileVariants.push(error instanceof Error ? error.message : String(error));
+        }
+      } else if (markerCheck.testClass === 'convergence-witness') {
         try {
           assertWitnessAdjacency(source, displayPath, markerCheck.markerLine);
         } catch (error) {
           missingWitnesses.push(error instanceof Error ? error.message : String(error));
+        }
+      } else {
+        try {
+          assertNoProfileVariantMarker(source, displayPath);
+        } catch (error) {
+          missingProfileVariants.push(error instanceof Error ? error.message : String(error));
+        }
+      }
+
+      if (relative(sourceTestRoot, filePath).startsWith(`determinism${sep}`)) {
+        try {
+          assertNoDeterminismTerminalPin(source, displayPath);
+        } catch (error) {
+          determinismTerminalPins.push(error instanceof Error ? error.message : String(error));
         }
       }
 
@@ -183,6 +142,8 @@ describe('test class markers', () => {
       formatFailureGroup('missing or duplicate @test-class markers', missingMarkers),
       formatFailureGroup('invalid @test-class values', invalidClasses),
       formatFailureGroup('missing or misplaced @witness markers', missingWitnesses),
+      formatFailureGroup('missing or misplaced @profile-variant markers', missingProfileVariants),
+      formatFailureGroup('determinism corpus terminal pins', determinismTerminalPins),
       formatFailureGroup('mixed architectural/convergence assertion shapes', mixedShapes),
     ]
       .filter(Boolean)

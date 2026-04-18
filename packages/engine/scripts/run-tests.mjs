@@ -1,7 +1,13 @@
 import { spawnSync } from 'node:child_process';
 import { basename } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { ALL_DETERMINISM_TESTS, listE2eTestsForLane, listIntegrationTestsForLane, toDistTestPath } from './test-lane-manifest.mjs';
+import {
+  ALL_DETERMINISM_TESTS,
+  ALL_POLICY_PROFILE_QUALITY_TESTS,
+  listE2eTestsForLane,
+  listIntegrationTestsForLane,
+  toDistTestPath,
+} from './test-lane-manifest.mjs';
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
@@ -11,7 +17,11 @@ const TEST_PROGRESS_LANE_ENV = 'ENGINE_TEST_PROGRESS_LANE';
 const laneConfigs = {
   default: {
     execution: 'batched',
-    patterns: ['dist/test/unit/**/*.test.js', ...listIntegrationTestsForLane('integration:core').map(toDistTestPath)],
+    patterns: [
+      'dist/test/unit/**/*.test.js',
+      ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
+      ...ALL_POLICY_PROFILE_QUALITY_TESTS.map(toDistTestPath),
+    ],
   },
   e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },
   'e2e:slow': { execution: 'batched', patterns: listE2eTestsForLane('e2e:slow').map(toDistTestPath) },
@@ -29,6 +39,10 @@ const laneConfigs = {
     execution: 'sequential',
     patterns: ALL_DETERMINISM_TESTS.map(toDistTestPath),
     timeoutMs: DEFAULT_DETERMINISM_TIMEOUT_MS,
+  },
+  'policy-profile-quality': {
+    execution: 'batched',
+    patterns: ALL_POLICY_PROFILE_QUALITY_TESTS.map(toDistTestPath),
   },
 };
 

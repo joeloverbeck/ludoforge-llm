@@ -65,6 +65,17 @@ describe('run-tests script', () => {
     assert.equal(plan.timeoutMs !== undefined && plan.timeoutMs > 0, true);
   });
 
+  it('uses a dedicated batched lane for policy-profile-quality tests', async () => {
+    const { buildExecutionPlan } = await loadRunTestsModule();
+
+    const plan = buildExecutionPlan(['--lane', 'policy-profile-quality'], {});
+
+    assert.equal(plan.lane, 'policy-profile-quality');
+    assert.equal(plan.execution, 'batched');
+    assert.equal(plan.patterns.length > 0, true);
+    assert.equal(plan.patterns.every((pattern) => pattern.startsWith('dist/test/policy-profile-quality/')), true);
+  });
+
   it('runs batched lanes with the test-class reporter attached', async () => {
     const { runExecutionPlan } = await loadRunTestsModule();
     const spawnCalls: Array<{

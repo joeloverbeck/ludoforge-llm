@@ -1,6 +1,6 @@
 # 136POLPROQUA-006: Docs — FOUNDATIONS note + `campaigns/README.md`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: No — documentation only
@@ -20,10 +20,11 @@ Currently `campaigns/` has no top-level `README.md` (verified 2026-04-18); indiv
 ## Assumption Reassessment (2026-04-18)
 
 1. `docs/FOUNDATIONS.md` exists (verified; 109 lines). It has 17 numbered principles. A new note should be appended either under Foundation #8 (Determinism Is Sacred) as a clarification, or as a standalone section at the end titled "Determinism Proofs vs. Profile-Quality Witnesses" — the latter preserves the numbered-principle structure and avoids shifting downstream cross-references.
-2. No `campaigns/README.md` exists. Creating it is net-new. The README's audience is (a) a contributor looking at `campaigns/` for the first time who wants to understand what each subdirectory is, and (b) a policy-profile maintainer who needs to know where regressions surface (answer: the PR-comment mechanism from Ticket 005 plus the `@ludoforge/engine test:policy-profile-quality` lane).
+2. No `campaigns/README.md` exists. Creating it is net-new. The README's audience is (a) a contributor looking at `campaigns/` for the first time who wants to understand what each subdirectory is, and (b) a policy-profile maintainer who needs to know where regressions surface (answer: the non-blocking `policy-profile-quality` lane plus the current warning/comment reporting surface from Ticket 005).
 3. Ticket 002 authors the corpus files, Ticket 005 authors the annotation script. This ticket's docs reference both — but authorable from the spec alone since the spec fixes the file names and behaviors. The value-dependency on Tickets 002 and 005 is noted for session ordering but does not block ticket authorship.
 4. `docs/archival-workflow.md` exists as precedent for how FOUNDATIONS references sibling docs (`[…] governed by docs/FOUNDATIONS.md`). The new note can follow the same voice.
 5. Spec 136 is in `specs/` (DRAFT); once all tickets complete, the spec archives per repo archival policy. Docs must reference the archived path once that happens — but this ticket lands while the spec is still DRAFT, so references use `specs/136-policy-profile-quality-corpus.md`. An archival follow-up is out of scope here.
+6. Live repo correction: Ticket 005 did not ship baseline-delta comparison against main; it shipped current-run warning + sticky-comment reporting, and baseline-delta follow-up ownership now lives in `tickets/136POLPROQUA-007.md`. This ticket's docs must describe the live contract, not the still-open follow-up.
 
 ## Architecture Check
 
@@ -100,6 +101,15 @@ No automated tests — documentation only. Accuracy is verified manually against
 ### Commands
 
 1. Verify FOUNDATIONS.md section count unchanged before/after: `grep -c '^## ' docs/FOUNDATIONS.md` (should increase by 1 for the new "Appendix: ..." heading; no other heading changes).
-2. Verify all referenced paths in `campaigns/README.md` exist: manually, or via a one-shot `grep -oE '(packages|data|docs|campaigns|specs|tickets|\.github)/[^ )]+' campaigns/README.md | xargs -I{} sh -c '[ -e "{}" ] && echo OK {} || echo MISS {}'`.
+2. Verify all referenced paths in `campaigns/README.md` exist: manually, or via a one-shot markdown-target probe such as `rg -o '/home/joeloverbeck/projects/ludoforge-llm/[^)]+' campaigns/README.md | while read -r path; do [ -e "$path" ] && echo OK "$path" || echo MISS "$path"; done`.
 3. `pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test` — sanity.
 4. `pnpm run check:ticket-deps` — dependency integrity.
+
+## Outcome
+
+- Completion date: 2026-04-18
+- `ticket corrections applied`: `Ticket 005 already posts variant deltas against main` -> `Ticket 005 posts current-run warning/comment reporting only; baseline-delta comparison is deferred to tickets/136POLPROQUA-007.md`
+- Added a FOUNDATIONS appendix distinguishing blocking determinism proofs from non-blocking policy-profile-quality witnesses.
+- Added `campaigns/README.md` as the top-level campaign navigation and policy-profile regression entry point, linking contributors to the witness lane, workflow, and reporting script without duplicating rule-authoritative data.
+- verification set: `grep -c '^## ' docs/FOUNDATIONS.md`, `rg -o '/home/joeloverbeck/projects/ludoforge-llm/[^)]+' campaigns/README.md | while read -r path; do [ -e "$path" ] && echo OK "$path" || echo MISS "$path"; done`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, `pnpm run check:ticket-deps`
+- proof gaps: none

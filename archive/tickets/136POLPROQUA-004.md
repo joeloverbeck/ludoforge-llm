@@ -1,6 +1,6 @@
 # 136POLPROQUA-004: CI — non-blocking `policy-profile-quality` job in `engine-determinism.yml`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No — CI workflow only (`.github/workflows/engine-determinism.yml`)
@@ -18,7 +18,7 @@ Ticket 002 adds a `test:policy-profile-quality` script and a `policy-profile-qua
 2. The existing `determinism` job has no `continue-on-error` flag, so it blocks merges today. This ticket must not relax that behavior — it adds a second job with the non-blocking flag while leaving the first job's policy unchanged.
 3. `test:policy-profile-quality` (added by Ticket 002) will exist as a script in `packages/engine/package.json` before this ticket lands. The script invokes `node scripts/run-tests.mjs --lane policy-profile-quality`.
 4. GitHub's `continue-on-error: true` at the job level makes a failed job non-blocking for the required-checks gate but still displays a red check in the PR UI. That matches Spec 136's "CI annotates the PR with a quality delta but the check passes" semantics.
-5. Ticket 005 (next in chain) depends on this job existing and on its test output being captured — this ticket must upload test output as an artifact or stream it in a format Ticket 005 can parse.
+5. Ticket 005 (next in chain) depends on this job existing and on its test output being captured. Live runner check: `packages/engine/scripts/run-tests.mjs` hardcodes the custom test-class reporter to stdout and does not forward extra reporter flags, so this ticket must capture the existing lane log as an artifact rather than promising a TAP file.
 
 ## Architecture Check
 
@@ -51,18 +51,17 @@ Add a second job below `determinism`:
       - run: pnpm -F @ludoforge/engine build
       - name: Run policy-profile-quality lane
         id: policy-profile-quality-run
-        run: pnpm -F @ludoforge/engine test:policy-profile-quality --test-reporter=tap --test-reporter-destination=policy-profile-quality-tap.log
-        continue-on-error: true
-      - name: Upload TAP log for annotation job
+        run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
+      - name: Upload captured lane log for annotation job
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: policy-profile-quality-tap
-          path: policy-profile-quality-tap.log
+          name: policy-profile-quality-log
+          path: policy-profile-quality.log
           retention-days: 7
 ```
 
-Verify the `--test-reporter` flag syntax against the current Node version (v22). If the engine's `run-tests.mjs` does not already forward reporter flags, Ticket 005 may need to adjust that — capture the observation in the Ticket 005 prerequisites. For this ticket, logging to `policy-profile-quality-tap.log` via shell redirect (`| tee`) is an acceptable fallback.
+Live repo result: `run-tests.mjs` does not forward reporter flags. This ticket therefore captures the existing lane output in `policy-profile-quality.log` via `tee` and uploads that log for Ticket 005 to consume.
 
 ### 2. Update repo's required-checks configuration (advisory)
 
@@ -95,7 +94,7 @@ Document in the ticket outcome that the `policy-profile-quality` check should NO
 2. The `policy-profile-quality` job runs `pnpm -F @ludoforge/engine test:policy-profile-quality` and no other lane; it MUST NOT subsume or replace the determinism lane.
 3. The two jobs are siblings with no `needs` dependency between them.
 4. Path triggers are additive — all paths that previously triggered the `determinism` job still trigger the workflow; the new `policy-profile-quality/**` path additionally triggers it.
-5. TAP output artifact is retained for ≥7 days so Ticket 005's annotation step can consume it.
+5. The captured lane log artifact is retained for ≥7 days so Ticket 005's annotation step can consume it.
 
 ## Test Plan
 
@@ -110,5 +109,15 @@ No engine-code test changes. Workflow changes are verified via GitHub's Actions 
 3. `pnpm run check:ticket-deps` — dependency integrity.
 4. Push to a feature branch, open a PR, observe:
    - Both `determinism` and `policy-profile-quality` jobs run.
-   - `policy-profile-quality` job uploads `policy-profile-quality-tap` artifact.
+   - `policy-profile-quality` job uploads `policy-profile-quality-log` artifact.
    - Determinism stays blocking; policy-profile-quality is advisory.
+
+## Outcome
+
+- Completion date: 2026-04-18
+- `ticket corrections applied`: `TAP-file artifact via forwarded reporter flags` -> `captured lane log artifact via tee`, because `packages/engine/scripts/run-tests.mjs` hardcodes the custom reporter to stdout and does not forward extra reporter flags.
+- Extended `.github/workflows/engine-determinism.yml` with additive `packages/engine/test/policy-profile-quality/**` triggers and a sibling `policy-profile-quality` job that installs dependencies, builds the engine, runs `pnpm -F @ludoforge/engine test:policy-profile-quality`, and uploads `policy-profile-quality.log` as the `policy-profile-quality-log` artifact with 7-day retention.
+- Updated dependent active ticket `tickets/136POLPROQUA-005.md` so its annotation/parser contract consumes the captured lane log artifact rather than a nonexistent TAP file.
+- Advisory note retained: the new `policy-profile-quality` check should not be added to required branch-protection status checks; the existing blocking `determinism` check remains the required gate.
+- verification set: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:policy-profile-quality`, `pnpm run check:ticket-deps`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`
+- proof gaps: local repo verification is green; PR/Actions UI behavior and branch-protection settings were not exercised from this local session and remain first-run CI observations rather than local proof.

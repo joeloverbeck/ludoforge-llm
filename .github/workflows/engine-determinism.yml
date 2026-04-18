@@ -8,6 +8,7 @@ on:
       - 'packages/engine/src/sim/**'
       - 'packages/engine/src/agents/**'
       - 'packages/engine/test/determinism/**'
+      - 'packages/engine/test/policy-profile-quality/**'
       - 'data/games/**'
   pull_request:
     branches: [main]
@@ -16,6 +17,7 @@ on:
       - 'packages/engine/src/sim/**'
       - 'packages/engine/src/agents/**'
       - 'packages/engine/test/determinism/**'
+      - 'packages/engine/test/policy-profile-quality/**'
       - 'data/games/**'
 
 jobs:
@@ -32,3 +34,27 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
       - run: pnpm -F @ludoforge/engine test:determinism
+
+  policy-profile-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - name: Run policy-profile-quality lane
+        id: policy-profile-quality-run
+        run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
+      - name: Upload policy-profile-quality log for annotation job
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-profile-quality-log
+          path: policy-profile-quality.log
+          retention-days: 7

@@ -4,18 +4,18 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new script `packages/engine/scripts/emit-policy-profile-quality-report.mjs`; modify `.github/workflows/engine-determinism.yml`
-**Deps**: `tickets/136POLPROQUA-004.md`
+**Deps**: `archive/tickets/136POLPROQUA-004.md`
 
 ## Problem
 
 Spec 136 Contract §2 mandates that policy-profile-quality regressions "emit a `POLICY_PROFILE_QUALITY_REGRESSION` annotation" naming the profile variant, the seed, and the trajectory delta. Spec 136 Implementation Direction → Tooling goes further: "Add a CI annotation job that reads policy-profile-quality results and posts a PR comment summarizing variant deltas."
 
-Ticket 004 landed the non-blocking job and uploads TAP output as an artifact. This ticket consumes that TAP output, emits GitHub Actions annotations, and posts/updates a PR comment with variant-level convergence deltas. Without this ticket, a failing policy-profile-quality run is invisible to the PR reviewer beyond the red-check badge — the actionable signal ("which variant, which seed, what trajectory did it take?") stays buried in raw TAP logs.
+Ticket 004 landed the non-blocking job and uploads the captured lane log as an artifact. This ticket consumes that log, emits GitHub Actions annotations, and posts/updates a PR comment with variant-level convergence deltas. Without this ticket, a failing policy-profile-quality run is invisible to the PR reviewer beyond the red-check badge — the actionable signal ("which variant, which seed, what trajectory did it take?") stays buried in the raw job log.
 
 ## Assumption Reassessment (2026-04-18)
 
-1. Ticket 004 configured the `policy-profile-quality` job to emit TAP output to `policy-profile-quality-tap.log` and uploads it as the `policy-profile-quality-tap` artifact. This ticket's script consumes that TAP format.
-2. Node's built-in TAP output from `node --test` includes per-test pass/fail status, test names (which encode `seed N: variant X reaches terminal within Y moves`), and failure messages (which include `stopReason`, `moves.length`). The script can parse this without additional instrumentation.
+1. Ticket 004 captures the `policy-profile-quality` lane's stdout/stderr stream into `policy-profile-quality.log` and uploads it as the `policy-profile-quality-log` artifact. This ticket's script consumes that captured lane log.
+2. The captured lane log includes Node test output plus the repo's custom test-class reporter summary. Per-test pass/fail lines still include the test name and assertion failure text, which is sufficient for this ticket's parser without widening Ticket 004 into runner changes.
 3. GitHub Actions annotations are emitted via `::error file=<path>,line=<n>::<message>` or `::warning file=<path>,line=<n>::<message>` written to stdout during a workflow step. For policy-profile-quality regressions, warnings are appropriate (non-blocking).
 4. PR comment posting is idiomatic via `actions/github-script@v7` or `gh pr comment` with `--edit-last`. The latter avoids comment spam on repeat runs.
 5. The `github-token` available in PR workflows has `pull-requests: write` by default only on pull_request events originating from the same repository. For external-fork PRs, the token is read-only — the annotation emission works but PR comment posting fails gracefully. Handle this case in the script (try/catch; log and continue).
@@ -23,8 +23,8 @@ Ticket 004 landed the non-blocking job and uploads TAP output as an artifact. Th
 
 ## Architecture Check
 
-1. **Single-purpose script**. `emit-policy-profile-quality-report.mjs` parses TAP, emits annotations, and posts a comment. No coupling to the test runner, no coupling to engine internals. If the TAP format changes, only this script needs adjustment.
-2. **Engine-agnostic**. The script reads profile-variant IDs and seeds from test names and failure messages — it does not import FITL game definitions or profile data. The variant ID is carried in the test file's `@profile-variant` marker, which the script extracts from the source file path (recoverable from the TAP log's file-level metadata). No game-specific branching.
+1. **Single-purpose script**. `emit-policy-profile-quality-report.mjs` parses the captured lane log, emits annotations, and posts a comment. No coupling to the test runner, no coupling to engine internals. If the log format changes, only this script needs adjustment.
+2. **Engine-agnostic**. The script reads profile-variant IDs and seeds from test names and failure messages — it does not import FITL game definitions or profile data. The variant ID is carried in the test file's `@profile-variant` marker, which the script resolves from the failing/passing test record plus the repo-owned policy-profile-quality file set. No game-specific branching.
 3. **Graceful degradation**. If the `github-token` lacks `pull-requests: write`, the script logs a warning and continues — annotations still emit, only the comment is skipped. Forks stay supported without security relaxation.
 4. **FOUNDATIONS #15 (Architectural Completeness)**. Fixing the observability gap completes the non-blocking CI contract: the signal reaches the reviewer in a form they can act on, not just a raw log. Without this ticket, Ticket 004's non-blocking job is architecturally incomplete.
 5. **No new secrets**. Uses the default `GITHUB_TOKEN` provided by Actions; no external services.
@@ -35,8 +35,8 @@ Ticket 004 landed the non-blocking job and uploads TAP output as an artifact. Th
 
 Script responsibilities (single file, ~150 lines):
 
-- Read `policy-profile-quality-tap.log` from a path passed via CLI arg (default `./policy-profile-quality-tap.log`).
-- Parse TAP output into a structured list: `{ file, variantId, seed, passed, stopReason?, movesLength?, failureMessage? }`.
+- Read `policy-profile-quality.log` from a path passed via CLI arg (default `./policy-profile-quality.log`).
+- Parse the captured lane log into a structured list: `{ file, variantId, seed, passed, stopReason?, movesLength?, failureMessage? }`.
 - For each failed test, emit `::warning file=<test-file>::POLICY_PROFILE_QUALITY_REGRESSION variant=<id> seed=<n> stopReason=<s> moves=<n>` to stdout (GHA annotation format).
 - Compute per-variant pass/fail counts: `{ variantId: 'arvn-evolved', converged: 4, total: 5 }`.
 - Build a markdown comment body:
@@ -53,7 +53,7 @@ Script responsibilities (single file, ~150 lines):
 - If `process.env.GITHUB_EVENT_NAME === 'pull_request'`, attempt to post or update a sticky PR comment via `gh pr comment --edit-last` (installing/using the `gh` CLI that's preinstalled in `ubuntu-latest`). Catch errors and log; do not fail the step.
 
 Arguments:
-- `--input <path>` (default `./policy-profile-quality-tap.log`)
+- `--input <path>` (default `./policy-profile-quality.log`)
 - `--pr-comment` (boolean flag to enable comment posting; default true in PR context, false otherwise)
 
 ### 2. Wire the script into `engine-determinism.yml`
@@ -65,16 +65,16 @@ In the `policy-profile-quality` job from Ticket 004, add a step after the `test:
         if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input policy-profile-quality-tap.log
+        run: node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input policy-profile-quality.log
 ```
 
 The `if: always()` ensures annotations emit even when the test step exited non-zero.
 
-### 3. Unit test for the TAP parser
+### 3. Unit test for the log parser
 
 Add `packages/engine/test/unit/infrastructure/emit-policy-profile-quality-report.test.ts`:
 
-- Fixture TAP strings encoding (a) all-passing variant, (b) one-failing-seed variant, (c) both-variants-mixed results.
+- Fixture captured-log strings encoding (a) all-passing variant, (b) one-failing-seed variant, (c) both-variants-mixed results.
 - Assert the parser output shape per fixture.
 - Assert the annotation string format matches the `::warning file=...::POLICY_PROFILE_QUALITY_REGRESSION ...` shape.
 - Assert the markdown comment body per fixture.
@@ -115,17 +115,17 @@ The new infrastructure test carries `// @test-class: architectural-invariant` (n
 2. The annotation severity is `warning`, never `error` (errors block the PR; warnings do not).
 3. The PR comment uses `gh pr comment --edit-last` to avoid comment-spam on re-runs of the same PR.
 4. The script exits 0 even when policy-profile-quality tests failed — the non-blocking contract is preserved at the script level as well as the job level.
-5. No game-specific data, profile IDs, or seed lists are hardcoded in the script — all data flows from the TAP log.
+5. No game-specific data, profile IDs, or seed lists are hardcoded in the script — all data flows from the captured lane log plus repo-owned marker metadata.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/infrastructure/emit-policy-profile-quality-report.test.ts` — new. Rationale: locks the TAP-parse + annotation-format + comment-format contract as an architectural invariant. Changes to the output shape would break downstream consumers (reviewer expectations, potential future aggregators).
+1. `packages/engine/test/unit/infrastructure/emit-policy-profile-quality-report.test.ts` — new. Rationale: locks the log-parse + annotation-format + comment-format contract as an architectural invariant. Changes to the output shape would break downstream consumers (reviewer expectations, potential future aggregators).
 
 ### Commands
 
-1. Local dry-run with a fixture TAP log: `node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input test/fixtures/sample-policy-profile-quality-tap.log` — verify stdout contains annotations and a markdown body.
+1. Local dry-run with a fixture captured log: `node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input test/fixtures/sample-policy-profile-quality.log` — verify stdout contains annotations and a markdown body.
 2. `pnpm -F @ludoforge/engine test:unit` — includes parser test.
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` — full-suite.
 4. `pnpm run check:ticket-deps` — dependency integrity.

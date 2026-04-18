@@ -105,14 +105,14 @@ When a kernel change legitimately shifts variant convergence (e.g., Spec 17 §4'
 
 ### Determinism corpus
 
-Already implemented post-commit `820072e3`. The existing `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` asserts exactly the shape this spec prescribes:
+Already implemented post-commit `820072e3`. The existing `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` asserts exactly the shape this spec prescribes:
 
 1. Per seed, `trace.stopReason ∈ { terminal, maxTurns, noLegalMoves }`.
 2. Per seed, `trace.moves.length <= MAX_TURNS`.
 3. Per seed, replay across two independent runs produces identical `stateHash`.
 4. No profile-specific or convergence-specific assertion.
 
-Net-new work for the determinism half is limited to an optional rename to `fitl-policy-agent-canary-determinism.test.ts` for disambiguation against the new policy-profile-quality files. The file's content requires no assertion changes.
+The determinism half is now carried by `fitl-policy-agent-canary-determinism.test.ts` for disambiguation against the new policy-profile-quality files. The file's content requires no assertion changes.
 
 ### Policy-profile quality corpus (net-new)
 
@@ -133,7 +133,7 @@ Failure attribution: each non-all-baselines variant differs from the all-baselin
 
 Post-commit `820072e3`, no split of the existing canary is required — its determinism half is already single-purpose. The migration reduces to:
 
-- (Optional) Rename `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` to `fitl-policy-agent-canary-determinism.test.ts` to disambiguate against the new policy-profile-quality files. No assertion changes.
+- Rename `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` to `fitl-policy-agent-canary-determinism.test.ts` to disambiguate against the new policy-profile-quality files. No assertion changes.
 - Author net-new `policy-profile-quality/` variant files from scratch per the Required Proof list above.
 - Leave surviving `integration/` convergence-witnesses (`fitl-seed-1000-regression.test.ts`, `fitl-seed-2057-regression.test.ts`, `fitl-seed-stability.test.ts`, `fitl-seed-1000-draw-space.test.ts`) in place. Their assertions are property-form (bounded stop-reason, replay identity, population-0 neutrality) and match Spec 137's architectural-invariant distillation pattern rather than Spec 136's profile-specific convergence pattern. They are candidates for a future Spec-137-style distillation round, not for relocation here.
 - The two originally-cited regression files `fitl-seed-1002-regression.test.ts` and `fitl-seed-1005-1010-1013-regression.test.ts` were already consolidated by Spec 137 into `packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` (architectural-invariant); no further action is needed for them.

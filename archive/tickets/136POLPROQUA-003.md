@@ -1,6 +1,6 @@
 # 136POLPROQUA-003: Rename canary to `fitl-policy-agent-canary-determinism.test.ts`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — single-file rename in `packages/engine/test/determinism/`
@@ -14,8 +14,8 @@ This ticket is marked LOW priority and can be descoped during review if preferre
 
 ## Assumption Reassessment (2026-04-18)
 
-1. Current file: `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts`. Verified exists. Current `describe` string: `'FITL PolicyAgent determinism canary'` (line 22) — already contains the word "determinism", so a describe-name change is unnecessary. Only the filename rename is in scope.
-2. No source code outside the test file itself imports or references the filename (test files are discovered by glob under `packages/engine/test/determinism/**`, not by explicit import). Verified by grepping `fitl-policy-agent-canary` across the repo: the only live reference is the file itself. Historical references in `archive/` and git commit messages are immutable and out of scope.
+1. Current file: `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts`. Verified exists at ticket start. Current `describe` string: `'FITL PolicyAgent determinism canary'` (line 22) — already contains the word "determinism", so a describe-name change is unnecessary. Only the filename rename is in scope.
+2. No production code imports the filename directly; test discovery is still glob-based under `packages/engine/test/determinism/**`. Active draft artifacts (`tickets/136POLPROQUA-003.md`, `specs/136-policy-profile-quality-corpus.md`) do reference the old path and must be updated alongside the rename so live repo docs stay truthful. Historical references in `archive/` and git commit messages are immutable and out of scope.
 3. Lane manifest (`test-lane-manifest.mjs`) globs `packages/engine/test/determinism/` — renaming a file inside the directory does not require manifest changes.
 4. `.github/workflows/engine-determinism.yml` triggers on `packages/engine/test/determinism/**` — rename preserves the trigger.
 
@@ -72,7 +72,15 @@ No new tests. The existing canary file is the test surface; only its path change
 
 ### Commands
 
-1. `git mv packages/engine/test/determinism/fitl-policy-agent-canary.test.ts packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` — the rename itself.
+1. Rename `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` to `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` — the rename itself.
 2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:determinism` — targeted verification.
 3. `pnpm turbo test && pnpm turbo typecheck && pnpm turbo lint` — full-suite verification.
 4. `pnpm run check:ticket-deps` — dependency integrity.
+
+## Outcome
+
+- Completion date: 2026-04-18
+- `ticket corrections applied`: `only live reference is the file itself` -> active draft ticket/spec references to the old path were updated in the same change so the rename remained repo-truthful.
+- Renamed `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` to `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts` without changing the file contents or the existing `describe` string.
+- Updated active draft references in `tickets/136POLPROQUA-003.md` and `specs/136-policy-profile-quality-corpus.md` so current-state documentation points at the renamed file while archived historical references continue to use the old path.
+- Verification set: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:determinism`, `pnpm -F @ludoforge/engine test:unit`, `pnpm run check:ticket-deps`, `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`.

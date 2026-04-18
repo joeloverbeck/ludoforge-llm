@@ -102,6 +102,25 @@ export function getFitlProductionFixture(): ProductionGameFixture {
   return cachedFitlFixture;
 }
 
+export function deriveFitlPopulationZeroSpaces(): readonly string[] {
+  const parsed = parseProductionSpec();
+  const mapAsset = (parsed.doc.dataAssets ?? []).find((asset) => asset.kind === 'map' && asset.id === 'fitl-map-production');
+  if (mapAsset?.payload == null || typeof mapAsset.payload !== 'object') {
+    return [];
+  }
+
+  const payload = mapAsset.payload as {
+    readonly spaces?: readonly {
+      readonly id: string;
+      readonly attributes?: Readonly<Record<string, unknown>>;
+    }[];
+  };
+
+  return (payload.spaces ?? [])
+    .filter((space) => space.attributes?.population === 0)
+    .map((space) => space.id.replace(/:none$/, ''));
+}
+
 /**
  * Lazy-cached parse + validate + compile of the Texas production spec.
  * Cache invalidates when the file content hash changes.

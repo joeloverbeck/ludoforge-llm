@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test rewrite only
-**Deps**: `tickets/137CONWITINV-002.md`
+**Deps**: `archive/tickets/137CONWITINV-002.md`
 
 ## Problem
 
@@ -85,7 +85,7 @@ describe('FITL canary bounded termination', () => {
   }
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
-  const populationZeroSpaces = deriveFitlPopulationZeroSpaces(def);
+  const populationZeroSpaces = deriveFitlPopulationZeroSpaces();
 
   for (const profiles of POLICY_PROFILE_VARIANTS) {
     for (const seed of CANARY_SEEDS) {

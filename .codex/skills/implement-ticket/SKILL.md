@@ -84,6 +84,7 @@ If the change involves a mid-migration state or ticket rewrite, load `references
 
 10. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
     - If the active ticket absorbs work originally owned by sibling draft tickets, plan the sibling-ticket status rewrite as part of closeout, not as optional cleanup after acceptance. The series artifact should tell the same ownership story as the final code and proof set.
+    - If the active ticket's corrected live contract changes the interface, call shape, touched-file expectation, or verification assumption used by dependent active tickets in the same series, update those dependent tickets in the same turn before final proof so the active series remains internally consistent.
 11. If stronger live evidence contradicts an archived sibling ticket's benchmark or investigation verdict, load `references/triage-and-resolution.md` (Archived Sibling Contradiction section) and classify the contradiction explicitly before coding.
 
 ### Phase 3: Resolve Before Coding

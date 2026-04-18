@@ -1,6 +1,6 @@
 # 137CONWITINV-005: Append "Distillation over re-bless" subsection to `.claude/rules/testing.md`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — rule-file documentation only
@@ -83,3 +83,25 @@ No automated tests. The verification is a manual diff review of `.claude/rules/t
 
 1. `grep -n "Distillation over re-bless" .claude/rules/testing.md` (should return one match after the change)
 2. `grep -n "^##\|^###" .claude/rules/testing.md` (should show no renamed or removed existing headings)
+
+## Outcome
+
+Completion date: 2026-04-18
+
+Appended the `### Distillation over re-bless` subsection to
+`.claude/rules/testing.md` immediately after the existing canary example and
+before the advisory section, without renumbering or renaming any existing
+headings.
+
+The new subsection now states the general rule explicitly: when a
+`convergence-witness` can be distilled into a property-form
+`architectural-invariant` without losing defect-class coverage, distillation
+is preferred over re-blessing a shifted trajectory. It cites both the existing
+`820072e3` canary example and the Spec 137 FITL rewrites as worked examples.
+
+Deviations from original plan: none.
+
+Verification results:
+
+- `grep -n "Distillation over re-bless" .claude/rules/testing.md` returned exactly one match
+- `grep -n "^##\|^###" .claude/rules/testing.md` showed the existing headings unchanged with the new subsection inserted

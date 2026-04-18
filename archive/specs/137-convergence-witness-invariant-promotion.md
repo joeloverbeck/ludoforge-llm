@@ -1,6 +1,6 @@
 # Spec 137: Promote FITL Convergence-Witness Trajectory Tests to Architectural Invariants
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P2
 **Complexity**: M
 **Dependencies**: Spec 133 [regression-test-classification-discipline] (archived), Spec 135 [choosen-sampler-semantics] (archived)
@@ -219,4 +219,41 @@ The seed-specific assertions currently in the three pre-distillation files are d
 
 ## Outcome
 
-TBD.
+Completion date: 2026-04-18
+
+Implemented the full Spec 137 plan across tickets `137CONWITINV-001`
+through `137CONWITINV-005`.
+
+Landed changes:
+
+- parameterized `buildDeterministicFitlStateCorpus(def, { seeds, maxPly })`
+  in `packages/engine/test/helpers/compiled-condition-production-helpers.ts`
+- added `deriveFitlPopulationZeroSpaces()` in
+  `packages/engine/test/helpers/production-spec-helpers.ts`
+- replaced `fitl-policy-agent-enumeration-hang.test.ts` with
+  `fitl-enumeration-bounds.test.ts`
+- replaced `fitl-seed-1002-regression.test.ts` and
+  `fitl-seed-1005-1010-1013-regression.test.ts` with
+  `fitl-canary-bounded-termination.test.ts`
+- appended the `Distillation over re-bless` subsection to
+  `.claude/rules/testing.md`
+
+Deviations from original plan:
+
+- the population-zero helper landed as `deriveFitlPopulationZeroSpaces()`
+  deriving from the parsed FITL production spec surface rather than from a
+  `GameDef.dataAssets` contract, because the live codebase does not expose
+  `dataAssets` on compiled `GameDef`
+- the ticket-004 acceptance grep was narrowed to the owned merged canary test
+  after reassessment showed `phuoc-long:none` remains a legitimate literal
+  space identifier in unrelated FITL event and scenario tests
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/fitl-enumeration-bounds.test.js`
+- `node --test packages/engine/dist/test/integration/fitl-canary-bounded-termination.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint typecheck`
+- `grep -n "Distillation over re-bless" .claude/rules/testing.md`
+- `grep -n "^##\\|^###" .claude/rules/testing.md`

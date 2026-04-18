@@ -18,6 +18,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 
 ## High-Signal Reminders
 
+- If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
@@ -35,6 +36,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 1. Read `docs/FOUNDATIONS.md`, the ticket, referenced specs/docs/Deps, and `AGENTS.md`.
 2. Inspect repo state early and validate ticket-named files/functions/commands against the live codebase.
 3. Do a **command sanity pass** for ticket-named verification commands. You do not need the full `references/verification.md` load yet if the checks stay straightforward.
+   - Prefer reading `package.json`, runner scripts, or lane manifests before probing package-manager commands with flags such as `--help`; do not assume script-level `--help` is non-executing.
    - Distinguish `the command is repo-valid` from `the command is runnable right now in the current artifact state`. If a lane depends on generated `dist/` output or another mutable build artifact, verify that prerequisite state explicitly before using the lane as the first acceptance-proof run.
 4. Load `references/implementation-general.md` only if the ticket widens beyond the simple local slice, exposes sibling/follow-up ownership drift, or otherwise needs the broader series guidance.
 5. Load `references/draft-handling.md` for bounded local refactors only when draft status creates real boundary uncertainty:
@@ -53,6 +55,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.
 2. Read the ticket file(s) matching the provided path or glob.
+   - If the supplied path is missing, search for the nearest active ticket by normalized ticket id or stem before widening scope. If exactly one plausible replacement exists, use it and record `ticket entry correction: <requested path> -> <resolved ticket>` in working notes; if resolution is ambiguous, stop and clarify.
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`).
    - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
@@ -63,6 +66,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - When the ticket names wildcard acceptance checks or `returns empty` grep lanes, validate those patterns against the live repo early, especially if they span files outside the owned `Files to Touch` slice. Do not defer repo-wide empty-match assumptions until after coding.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
+   - When the command is a package-manager script target, prefer verifying the script definition and underlying runner entrypoint before using `--help` or ad hoc flags as a probe.
    - Load `references/verification.md` now only when the command sanity check itself is nontrivial or already reveals output contention, stale-runner drift, or tracked-vs-draft correction work that needs the fuller guidance.
 
 #### Session, Series, and Draft Context

@@ -34,6 +34,7 @@ const loadReporterModule = async () =>
       readonly repeatQuietNoticeMs?: number;
       readonly laneLabel?: string;
     }) => (source: AsyncIterable<ReporterEvent>) => AsyncGenerator<string, void, void>;
+    readonly extractProfileVariantMarker: (fileContents: string) => string | null;
   }>;
 
 const collectReporterOutput = async (
@@ -176,5 +177,43 @@ describe('test class reporter', () => {
     );
     assert.match(output, /=== Test Class Summary ===/u);
     assert.match(output, /architectural-invariant:\s+1 pass, 0 fail/u);
+  });
+
+  it('emits policy-profile-quality variant groupings when that lane is active', async () => {
+    const { createTestClassReporter, extractProfileVariantMarker } = await loadReporterModule();
+    assert.equal(
+      extractProfileVariantMarker('// @test-class: convergence-witness\n// @profile-variant: arvn-evolved\n'),
+      'arvn-evolved',
+    );
+
+    const fileContents = new Map([
+      [
+        '/tmp/arvn-quality.test.js',
+        '// @test-class: convergence-witness\n// @profile-variant: arvn-evolved\n',
+      ],
+      [
+        '/tmp/baseline-quality.test.js',
+        '// @test-class: convergence-witness\n// @profile-variant: all-baselines\n',
+      ],
+    ]);
+
+    const reporter = createTestClassReporter({
+      laneLabel: 'policy-profile-quality',
+      readFileSyncImpl: (filePath) => fileContents.get(filePath) ?? '',
+      createSpecReporterImpl: createSpecReporterStub,
+    });
+
+    const output = await collectReporterOutput(reporter, [
+      { type: 'test:pass', data: { file: '/tmp/arvn-quality.test.js', name: 'arvn-pass' } },
+      { type: 'test:fail', data: { file: '/tmp/arvn-quality.test.js', name: 'arvn-fail' } },
+      { type: 'test:pass', data: { file: '/tmp/baseline-quality.test.js', name: 'baseline-pass' } },
+    ]);
+
+    assert.match(output, /=== Test Class Summary ===/u);
+    assert.match(output, /convergence-witness:\s+2 pass, 1 fail \(likely trajectory shift - evaluate\)/u);
+    assert.match(output, /=== Policy Profile Variant Summary ===/u);
+    assert.match(output, /non-blocking - profile-level quality witness/u);
+    assert.match(output, /all-baselines:\s+1 pass, 0 fail/u);
+    assert.match(output, /arvn-evolved:\s+1 pass, 1 fail/u);
   });
 });

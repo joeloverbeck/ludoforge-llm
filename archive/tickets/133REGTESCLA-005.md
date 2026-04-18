@@ -1,6 +1,6 @@
 # 133REGTESCLA-005: Classify determinism/, e2e/, performance/, memory/ lanes
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test source comment additions
@@ -12,7 +12,7 @@ Spec 133 Phase 2 requires marker coverage of every `.test.ts`/`.test.mts` file u
 
 ## Assumption Reassessment (2026-04-18)
 
-1. Approximate file counts from the Spec 133 reassessment: `determinism/` = 6, `e2e/` = 7, `performance/` = 6, `memory/` = small (exact count unknown but verifiable via glob at implementation time). Total ~20 files.
+1. Approximate file counts from the Spec 133 reassessment were stale. Live corpus at implementation time is `determinism/` = 6, `e2e/` = 8, `performance/` = 7, `memory/` = 1. Total = 22 files.
 2. `packages/engine/test/determinism/fitl-policy-agent-canary.test.ts` is pre-classified by Spec 133 as `architectural-invariant` after commit 820072e3 softening. Verified against current source content (bounded stop reasons + deterministic replay).
 3. Determinism lane runs sequentially via `packages/engine/scripts/run-tests.mjs --lane determinism` with a 20-minute timeout. Classifying files does not alter execution semantics.
 4. E2E tests typically run full game scenarios and assert specific end-state outcomes — most default to convergence-witness unless the assertion is purely property-based (e.g., "game terminates in some valid stop reason" is architectural).
@@ -99,3 +99,31 @@ Before classifying, run a quick glob check to confirm the actual file counts and
 6. `pnpm turbo build && pnpm turbo typecheck`.
 7. `pnpm turbo lint`.
 8. Coverage grep: `grep -L '^// @test-class:' $(find packages/engine/test/determinism packages/engine/test/e2e packages/engine/test/performance packages/engine/test/memory -name '*.test.ts' -o -name '*.test.mts' 2>/dev/null)` — should return empty.
+
+## Outcome
+
+- Added `@test-class` markers to all 22 tracked test files under `packages/engine/test/determinism`, `e2e`, `performance`, and `memory`.
+- Final class split:
+  - `architectural-invariant`: all 6 determinism files, all 7 performance files, the 1 memory file, and 5 Texas e2e rule/invariant suites (`texas-holdem-betting-phases`, `texas-holdem-card-lifecycle`, `texas-holdem-real-edge-cases`, `texas-holdem-real-plays`, `texas-holdem-tournament`)
+  - `golden-trace`: 3 explicit golden/vector suites (`fitl-playbook-golden`, `fitl-tooltip-golden`, `texas-holdem-golden-vector`)
+- No file in this ticket’s boundary required `convergence-witness` classification after inspection, so no new `@witness:` lines were added.
+- No production code, lane semantics, or test assertions changed; this ticket remained comment-only.
+
+## Verification Record
+
+1. Structural marker sweep across the four owned lanes
+2. `pnpm -F @ludoforge/engine build`
+3. `pnpm -F @ludoforge/engine test:determinism`
+4. `pnpm -F @ludoforge/engine test:e2e`
+5. `pnpm -F @ludoforge/engine test:e2e:slow`
+6. `pnpm -F @ludoforge/engine test:performance`
+7. `pnpm -F @ludoforge/engine test:memory`
+8. `pnpm turbo build`
+9. `pnpm turbo lint`
+10. `pnpm turbo typecheck`
+
+### Verification Notes
+
+- The ticket’s original approximate lane counts were corrected before the final proof pass to match the live 22-file corpus.
+- `pnpm -F @ludoforge/engine test:e2e` covers only the non-slow 6-file subset; because this ticket also touched `texas-holdem-card-lifecycle.test.ts` and `texas-holdem-tournament.test.ts`, the final acceptance proof added `pnpm -F @ludoforge/engine test:e2e:slow` to cover the full owned e2e scope.
+- `pnpm -F @ludoforge/engine test:all` was not used as the decisive proof lane; the narrower per-lane commands plus workspace build/lint/typecheck provide the same owned acceptance evidence with less redundant overlap.

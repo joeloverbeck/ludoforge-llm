@@ -14,6 +14,7 @@ import {
   type ActionPipelineDef,
   type ClassifiedMove,
   type GameDef,
+  type RuntimeWarning,
 } from '../../../src/kernel/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -141,6 +142,59 @@ const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
+const createOptionalRetryProfile = (actionId: string): ActionPipelineDef => ({
+  id: `profile-${actionId}`,
+  actionId: asActionId(actionId),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      stage: 'resolve',
+      effects: [
+        eff({
+          chooseN: {
+            internalDecisionId: 'decision:$targets',
+            bind: '$targets',
+            options: { query: 'enums', values: ['safe'] },
+            min: 0,
+            max: 1,
+          },
+        }),
+        eff({
+          if: {
+            when: {
+              op: 'in',
+              item: 'safe',
+              set: { _t: 2, ref: 'binding', name: '$targets' },
+            },
+            then: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$safe',
+                  bind: '$safe',
+                  options: { query: 'enums', values: ['done'] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+            else: [
+              eff({
+                chooseOne: {
+                  internalDecisionId: 'decision:$dead',
+                  bind: '$dead',
+                  options: { query: 'enums', values: [] },
+                },
+              }) as ActionDef['effects'][number],
+            ],
+          },
+        }),
+      ],
+    },
+  ],
+  atomicity: 'atomic',
+});
+
 const createDef = (
   actionId: string,
   profile: ActionPipelineDef,
@@ -175,6 +229,11 @@ const getSinglePendingMove = (def: GameDef): {
   }
   return { state, classifiedMove };
 };
+
+const findWarning = (
+  warnings: readonly RuntimeWarning[] | undefined,
+  code: RuntimeWarning['code'],
+): RuntimeWarning | undefined => warnings?.find((warning) => warning.code === code);
 
 describe('preparePlayableMoves retry integration', () => {
   it('returns a playable move for a viable template on a representative success seed', () => {
@@ -248,6 +307,55 @@ describe('preparePlayableMoves retry integration', () => {
     assert.equal(prepared.statistics.templateCompletionStructuralFailures, 0);
     assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'failed');
     assert.equal(prepared.movePreparations[0]?.rejection, 'drawDeadEnd');
+  });
+
+  it('biases the retry after an optional chooseN empty dead-end and records the warning', () => {
+    const actionId = 'optional-retry-template';
+    const def = createDef(actionId, createOptionalRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(def);
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [classifiedMove],
+      rng: createRng(0n),
+    }, {
+      pendingTemplateCompletions: 1,
+    });
+
+    assert.equal(prepared.completedMoves.length, 1);
+    assert.deepEqual(prepared.completedMoves[0]?.move.params.$targets, ['safe']);
+    assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'complete');
+    const warning = findWarning(prepared.movePreparations[0]?.warnings, 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY');
+    assert.ok(warning, 'expected retry bias warning on the successful retry');
+    assert.deepEqual(warning?.context, {
+      attemptIndex: 1,
+      decisionKey: '$targets',
+      declaredMin: 0,
+      declaredMax: 1,
+      sampledCount: 0,
+      reason: 'optional-chooseN-empty-draw-dead-end',
+    });
+  });
+
+  it('does not emit the retry bias warning when drawDeadEnd lacked optional chooseN diagnostics', () => {
+    const actionId = 'always-dead-end-template';
+    const def = createDef(actionId, createAlwaysDeadEndProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(def);
+
+    const prepared = preparePlayableMoves({
+      def,
+      state,
+      legalMoves: [classifiedMove],
+      rng: createRng(2n),
+    }, {
+      pendingTemplateCompletions: 1,
+    });
+
+    assert.equal(
+      findWarning(prepared.movePreparations[0]?.warnings, 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY'),
+      undefined,
+    );
   });
 
   it('short-circuits structural failures without consuming retry extensions', () => {

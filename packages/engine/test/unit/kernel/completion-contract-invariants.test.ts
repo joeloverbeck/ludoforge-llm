@@ -37,6 +37,7 @@ const serializeCompletionResult = (result: TemplateCompletionResult): string => 
       return stringifyBigInt({
         kind: result.kind,
         rng: serialize(result.rng),
+        optionalChooseN: result.optionalChooseN,
       });
     case 'stochasticUnresolved':
       return stringifyBigInt({
@@ -274,21 +275,37 @@ describe('completion contract invariants', () => {
     assert.notEqual(result.kind, 'drawDeadEnd');
   });
 
-  it('Spec 16 Contract §2: avoids empty optional chooseN branches when a non-empty branch is satisfiable', () => {
+  it('Spec 16 Contract §2: first-attempt optional chooseN honors declared min=0 semantics', () => {
     const actionId = 'optional-retry-template';
     const def = createDef(actionId, createOptionalRetryProfile(actionId));
     const state = initialState(def, 3, 2).state;
     const templateMove = createPendingTemplateMove(actionId);
 
+    const forcedCompleted = completeTemplateMove(def, state, templateMove, createRng(0n), undefined, {
+      choose: (request) => request.type === 'chooseN' ? ['safe'] : undefined,
+    });
+    assert.equal(forcedCompleted.kind, 'completed');
+    if (forcedCompleted.kind !== 'completed') {
+      assert.fail('expected guided optional chooseN completion');
+    }
+    assert.deepEqual(forcedCompleted.move.params.$targets, ['safe']);
+    assert.equal(forcedCompleted.move.params.$safe, 'done');
+
+    let sawDrawDeadEnd = false;
     for (let seed = 0n; seed < 32n; seed += 1n) {
       const result = completeTemplateMove(def, state, templateMove, createRng(seed));
-      assert.equal(result.kind, 'completed', `seed ${seed} should complete`);
       if (result.kind !== 'completed') {
-        assert.fail('expected optional chooseN completion to avoid the empty dead-end branch');
+        assert.equal(result.kind, 'drawDeadEnd', `seed ${seed} should sample either the empty or non-empty branch`);
+        sawDrawDeadEnd = true;
+        assert.deepEqual(result.optionalChooseN, {
+          decisionKey: '$targets',
+          sampledCount: 0,
+          declaredMin: 0,
+          declaredMax: 1,
+        });
       }
-      assert.deepEqual(result.move.params.$targets, ['safe']);
-      assert.equal(result.move.params.$safe, 'done');
     }
+    assert.equal(sawDrawDeadEnd, true, 'expected at least one empty optional chooseN sample');
   });
 
   it('Spec 16 Contract §3: distinguishes sampled dead ends from structural impossibility', () => {

@@ -286,21 +286,37 @@ describe('move-completion retry classification', () => {
     assert.equal(result.kind, 'structurallyUnsatisfiable');
   });
 
-  it('prefers non-empty optional chooseN branches when they are satisfiable', () => {
+  it('allows empty first-attempt optional chooseN draws while honoring retryBiasNonEmpty when requested', () => {
     const actionId = 'optional-retry-template';
     const def = createDef(actionId, createOptionalRetryProfile(actionId));
     const state = initialState(def, 3, 2).state;
     const templateMove: Move = { actionId: asActionId(actionId), params: {} };
 
+    const biased = completeTemplateMove(def, state, templateMove, createRng(0n), undefined, {
+      retryBiasNonEmpty: true,
+    });
+    assert.equal(biased.kind, 'completed');
+    if (biased.kind !== 'completed') {
+      assert.fail('expected retryBiasNonEmpty to clamp optional chooseN to a non-empty draw');
+    }
+    assert.deepEqual(biased.move.params.$targets, ['safe']);
+    assert.equal(biased.move.params.$safe, 'done');
+
+    let sawDrawDeadEnd = false;
     for (let seed = 0n; seed < 16n; seed += 1n) {
       const result = completeTemplateMove(def, state, templateMove, createRng(seed));
-      assert.equal(result.kind, 'completed');
       if (result.kind !== 'completed') {
-        assert.fail('expected optional chooseN completion to avoid the empty dead-end branch');
+        assert.equal(result.kind, 'drawDeadEnd');
+        sawDrawDeadEnd = true;
+        assert.deepEqual(result.optionalChooseN, {
+          decisionKey: '$targets',
+          sampledCount: 0,
+          declaredMin: 0,
+          declaredMax: 1,
+        });
       }
-      assert.deepEqual(result.move.params.$targets, ['safe']);
-      assert.equal(result.move.params.$safe, 'done');
     }
+    assert.equal(sawDrawDeadEnd, true, 'expected at least one empty optional chooseN dead-end');
   });
 
   it('recovers sparse mandatory chooseN surfaces that have one satisfiable branch among many dead ends', () => {

@@ -1,5 +1,6 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
+import type { DrawDeadEndOptionalChooseN } from '../kernel/move-completion.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { fork } from '../kernel/prng.js';
 import type {
@@ -10,6 +11,7 @@ import type {
   PolicyCompletionStatistics,
   PolicyMovePreparationTrace,
   Rng,
+  RuntimeWarning,
   TrustedExecutableMove,
 } from '../kernel/types.js';
 
@@ -42,6 +44,7 @@ interface TemplateCompletionTrace {
   readonly templateCompletionAttempts: number;
   readonly templateCompletionOutcome: NonNullable<PolicyMovePreparationTrace['templateCompletionOutcome']>;
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
+  readonly warnings?: readonly RuntimeWarning[];
 }
 
 const sameRngState = (left: Rng, right: Rng): boolean =>
@@ -182,6 +185,7 @@ export function preparePlayableMoves(
       templateCompletionAttempts: completion.trace.templateCompletionAttempts,
       templateCompletionOutcome: completion.trace.templateCompletionOutcome,
       ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
+      ...(completion.trace.warnings === undefined ? {} : { warnings: completion.trace.warnings }),
     });
   }
 
@@ -236,24 +240,31 @@ function attemptTemplateCompletion(
   let sawCompletedMove = false;
   let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
+  const warnings: RuntimeWarning[] = [];
   // When every attempt so far returned `notViable` (bad random target draw,
   // not a structural impossibility), grant extra attempts so the RNG can find
   // a viable completion.  `notViableRetries` counts the granted extensions;
   // the hard cap keeps total attempts bounded.
   let notViableRetries = 0;
+  let priorDeadEndOptionalChooseN: DrawDeadEndOptionalChooseN | null = null;
   for (let attempt = 0; attempt < pendingTemplateCompletions + notViableRetries; attempt += 1) {
     templateCompletionAttempts += 1;
+    const shouldBias = priorDeadEndOptionalChooseN !== null && priorDeadEndOptionalChooseN.sampledCount === 0;
     // Derive an isolated child stream per attempt so retries do not replay the
     // same dead-end completion path from an unchanged parent RNG state.
     const [attemptRng, retryRng] = fork(currentRng);
     const t0_epc = perfStart(profiler);
+    const retryBiasNonEmpty = shouldBias;
     let result = evaluatePlayableMoveCandidate(
       input.def,
       input.state,
       move,
       attemptRng,
       input.runtime,
-      choose === undefined ? undefined : { choose },
+      {
+        ...(choose === undefined ? {} : { choose }),
+        ...(retryBiasNonEmpty ? { retryBiasNonEmpty: true } : {}),
+      },
     );
     if (choose !== undefined && result.kind === 'rejected') {
       // Completion guidance is advisory. If a guided completion path dead-ends,
@@ -264,13 +275,30 @@ function attemptTemplateCompletion(
         move,
         attemptRng,
         input.runtime,
+        retryBiasNonEmpty ? { retryBiasNonEmpty: true } : undefined,
       );
+    }
+    if (retryBiasNonEmpty) {
+      const priorDiagnostic = priorDeadEndOptionalChooseN;
+      warnings.push({
+        code: 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY',
+        message: 'Retrying template completion with non-empty bias after an optional chooseN empty draw dead-end.',
+        context: {
+          attemptIndex: attempt,
+          decisionKey: String(priorDiagnostic!.decisionKey),
+          declaredMin: priorDiagnostic!.declaredMin,
+          declaredMax: priorDiagnostic!.declaredMax,
+          sampledCount: priorDiagnostic!.sampledCount,
+          reason: 'optional-chooseN-empty-draw-dead-end',
+        },
+      });
     }
     perfDynEnd(profiler, 'agent:evaluatePlayableCandidate', t0_epc);
     currentRng = result.kind === 'rejected'
       ? (sameRngState(result.rng, attemptRng) ? retryRng : result.rng)
       : result.rng;
     if (result.kind === 'playableComplete') {
+      priorDeadEndOptionalChooseN = null;
       templateCompletionSuccesses += 1;
       completionsByActionId.set(
         String(move.actionId),
@@ -297,6 +325,16 @@ function attemptTemplateCompletion(
       templateCompletionStructuralFailures += 1;
       break;
     }
+    if (result.rejection === 'drawDeadEnd') {
+      const diagnostic = result.drawDeadEndOptionalChooseN;
+      if (diagnostic !== null && diagnostic !== undefined && diagnostic.sampledCount === 0) {
+        priorDeadEndOptionalChooseN = diagnostic;
+      } else {
+        priorDeadEndOptionalChooseN = null;
+      }
+    } else {
+      priorDeadEndOptionalChooseN = null;
+    }
     // `notViable` and `drawDeadEnd` mean the current random path failed, but a
     // different draw may still complete the same template. Extend the budget
     // while we have not yet found any viable completion and the cap remains.
@@ -315,6 +353,7 @@ function attemptTemplateCompletion(
         enteredTrustedMoveIndex: true,
         templateCompletionAttempts,
         templateCompletionOutcome: 'stochastic',
+        ...(warnings.length === 0 ? {} : { warnings }),
       }
     : sawCompletedMove
       ? {
@@ -322,6 +361,7 @@ function attemptTemplateCompletion(
         enteredTrustedMoveIndex: true,
         templateCompletionAttempts,
         templateCompletionOutcome: 'complete',
+        ...(warnings.length === 0 ? {} : { warnings }),
       }
       : duplicateOutputOutcome !== undefined
         ? {
@@ -330,6 +370,7 @@ function attemptTemplateCompletion(
             skippedAsDuplicate: true,
             templateCompletionAttempts,
             templateCompletionOutcome: duplicateOutputOutcome,
+            ...(warnings.length === 0 ? {} : { warnings }),
           }
       : {
           finalClassification: 'rejected',
@@ -337,6 +378,7 @@ function attemptTemplateCompletion(
           templateCompletionAttempts,
           templateCompletionOutcome: 'failed',
           ...(rejection === undefined ? {} : { rejection }),
+          ...(warnings.length === 0 ? {} : { warnings }),
         };
   return {
     rng: currentRng,

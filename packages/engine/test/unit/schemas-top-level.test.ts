@@ -1610,7 +1610,7 @@ describe('top-level runtime schemas', () => {
   });
 
   it('accepts all allowed stopReason literals', () => {
-    for (const stopReason of ['terminal', 'maxTurns', 'noLegalMoves'] as const) {
+    for (const stopReason of ['terminal', 'maxTurns', 'noLegalMoves', 'noPlayableMoveCompletion'] as const) {
       const result = GameTraceSchema.safeParse({
         ...validGameTrace,
         stopReason,

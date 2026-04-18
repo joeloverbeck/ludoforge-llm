@@ -2,6 +2,7 @@ import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from './choice-option-policy.js';
+import type { DecisionKey } from './decision-scope.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
@@ -36,14 +37,22 @@ import type {
  *   advanced RNG.
  */
 export type TemplateCompletionResult =
-  | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng }
+  | { readonly kind: 'completed'; readonly move: Move; readonly rng: Rng; readonly firstOptionalChooseN?: DrawDeadEndOptionalChooseN | null }
   | { readonly kind: 'structurallyUnsatisfiable' }
-  | { readonly kind: 'drawDeadEnd'; readonly rng: Rng }
-  | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng };
+  | { readonly kind: 'drawDeadEnd'; readonly rng: Rng; readonly optionalChooseN: DrawDeadEndOptionalChooseN | null }
+  | { readonly kind: 'stochasticUnresolved'; readonly move: Move; readonly rng: Rng; readonly firstOptionalChooseN?: DrawDeadEndOptionalChooseN | null };
+
+export interface DrawDeadEndOptionalChooseN {
+  readonly decisionKey: DecisionKey;
+  readonly sampledCount: number;
+  readonly declaredMin: number;
+  readonly declaredMax: number;
+}
 
 export interface TemplateMoveCompletionOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
+  readonly retryBiasNonEmpty?: boolean;
 }
 
 interface InternalTemplateMoveCompletionOptions extends TemplateMoveCompletionOptions {
@@ -64,8 +73,7 @@ const selectFromChooseN = (
   max: number,
   rng: Rng,
 ): { readonly selected: MoveParamValue; readonly rng: Rng } => {
-  const sampledMin = min === 0 && max > 0 && options.length > 0 ? 1 : min;
-  const [count, rng1] = nextInt(rng, sampledMin, max);
+  const [count, rng1] = nextInt(rng, min, max);
 
   // Fisher-Yates partial shuffle to pick `count` items
   const pool = [...options];
@@ -208,18 +216,19 @@ const completeTemplateMoveInternal = (
   let iterations = 0;
   let exceeded = false;
   let lastDecisionSource: 'guided' | 'random' | 'structural' | 'stochastic' | 'stochasticStructural' | undefined;
+  let firstOptionalChooseN: DrawDeadEndOptionalChooseN | null = null;
 
   const chooseAtRandom = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-    const options = request.type === 'chooseN'
+    const candidateOptions = request.type === 'chooseN'
       ? selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
       : selectChoiceOptionValuesByLegalityPrecedence(request);
-    const optionCount = options.length;
+    const optionCount = candidateOptions.length;
     if (request.type === 'chooseOne') {
       if (optionCount === 0) {
         lastDecisionSource = 'structural';
         return undefined;
       }
-      const selection = selectFromChooseOne(options, cursor);
+      const selection = selectFromChooseOne(candidateOptions, cursor);
       cursor = selection.rng;
       lastDecisionSource = 'random';
       return selection.selected;
@@ -242,8 +251,25 @@ const completeTemplateMoveInternal = (
       return undefined;
     }
 
-    const selection = selectFromChooseN(options, min, max, cursor);
+    const effectiveMin = options?.retryBiasNonEmpty === true && min === 0 && max > 0 && optionCount >= 1
+      ? 1
+      : min;
+    const selection = selectFromChooseN(candidateOptions, effectiveMin, max, cursor);
     cursor = selection.rng;
+    if (
+      firstOptionalChooseN === null
+      && min === 0
+      && max > 0
+      && optionCount >= 1
+      && Array.isArray(selection.selected)
+    ) {
+      firstOptionalChooseN = {
+        decisionKey: request.decisionKey,
+        sampledCount: selection.selected.length,
+        declaredMin: min,
+        declaredMax,
+      };
+    }
     lastDecisionSource = 'random';
     return selection.selected;
   };
@@ -310,7 +336,7 @@ const completeTemplateMoveInternal = (
             return fallback;
           }
         }
-        return { kind: 'drawDeadEnd', rng: cursor };
+        return { kind: 'drawDeadEnd', rng: cursor, optionalChooseN: firstOptionalChooseN };
       }
       return { kind: 'structurallyUnsatisfiable' };
     }
@@ -321,7 +347,12 @@ const completeTemplateMoveInternal = (
     return { kind: 'structurallyUnsatisfiable' };
   }
   if (result.complete) {
-    return { kind: 'completed', move: result.move, rng: cursor };
+    return {
+      kind: 'completed',
+      move: result.move,
+      rng: cursor,
+      ...(firstOptionalChooseN === null ? {} : { firstOptionalChooseN }),
+    };
   }
   if (result.illegal !== undefined || result.nextDecision !== undefined) {
     if (
@@ -342,12 +373,17 @@ const completeTemplateMoveInternal = (
           return fallback;
         }
       }
-      return { kind: 'drawDeadEnd', rng: cursor };
+      return { kind: 'drawDeadEnd', rng: cursor, optionalChooseN: firstOptionalChooseN };
     }
     return { kind: 'structurallyUnsatisfiable' };
   }
   if (result.stochasticDecision !== undefined) {
-    return { kind: 'stochasticUnresolved', move: result.move, rng: cursor };
+    return {
+      kind: 'stochasticUnresolved',
+      move: result.move,
+      rng: cursor,
+      ...(firstOptionalChooseN === null ? {} : { firstOptionalChooseN }),
+    };
   }
   return { kind: 'structurallyUnsatisfiable' };
 };

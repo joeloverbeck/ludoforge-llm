@@ -1291,7 +1291,8 @@ export type RuntimeWarningCode =
   | 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'
-  | 'MOVE_ENUM_PROBE_REJECTED';
+  | 'MOVE_ENUM_PROBE_REJECTED'
+  | 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY';
 
 export interface RuntimeWarning {
   readonly code: RuntimeWarningCode;
@@ -1566,6 +1567,7 @@ export interface PolicyMovePreparationTrace {
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
   readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
+  readonly warnings?: readonly RuntimeWarning[];
 }
 
 export interface PolicyPruningStepTrace {
@@ -1722,7 +1724,11 @@ export type TerminalResult =
   | { readonly type: 'draw' }
   | { readonly type: 'score'; readonly ranking: readonly PlayerScore[] };
 
-export type SimulationStopReason = 'terminal' | 'maxTurns' | 'noLegalMoves';
+export type SimulationStopReason =
+  | 'terminal'
+  | 'maxTurns'
+  | 'noLegalMoves'
+  | 'noPlayableMoveCompletion';
 
 export interface GameTrace {
   readonly gameDefId: string;

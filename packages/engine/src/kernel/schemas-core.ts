@@ -1176,6 +1176,7 @@ export const RuntimeWarningCodeSchema = z.union([
   z.literal('MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_PROBE_REJECTED'),
+  z.literal('MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY'),
 ]);
 
 export const RuntimeWarningSchema = z
@@ -1466,6 +1467,7 @@ const PolicyMovePreparationTraceSchema = z
       z.literal('notViable'),
       z.literal('notDecisionComplete'),
     ]).optional(),
+    warnings: z.array(RuntimeWarningSchema).optional(),
   })
   .strict();
 
@@ -1600,6 +1602,7 @@ export const SimulationStopReasonSchema = z.union([
   z.literal('terminal'),
   z.literal('maxTurns'),
   z.literal('noLegalMoves'),
+  z.literal('noPlayableMoveCompletion'),
 ]);
 
 export const GameTraceSchema = z

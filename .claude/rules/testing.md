@@ -112,6 +112,22 @@ it(`seed ${seed}: replay produces identical outcome`, () => {
 
 The reclassification is the point: a specific terminal trajectory is a convergence witness, while bounded termination plus deterministic replay are architectural invariants.
 
+### Distillation over re-bless
+
+When a `convergence-witness` test's trajectory-pinned assertion fails after an unrelated kernel evolution (sampler tweak, policy-profile update, legality-predicate adjustment, etc.), evaluate whether the underlying invariant can be restated as a property assertion **before** re-blessing the witness to the new trajectory. Re-blessing preserves the symptom-level observation but pays the same tax on the next trajectory shift. Distillation — rewriting the assertion into a property form that any legitimate trajectory must satisfy — eliminates the tax permanently.
+
+Apply this rule when:
+
+- The defect class being guarded (e.g., "enumeration does not hang", "population-0 spaces do not accrue support/opposition") can be stated as a property over any trajectory, not just the witness trajectory.
+- The property holds across a corpus of seeds or profile variants, not only the one the witness was authored for.
+
+Worked examples:
+
+1. Commit `820072e3` (above) — `fitl-policy-agent-canary` softened from "reaches `terminal`" to "has a bounded stop reason" + replay-identity.
+2. Spec 137 — three FITL regression tests merged into two architectural-invariant files (`fitl-enumeration-bounds.test.ts`, `fitl-canary-bounded-termination.test.ts`) with property-form assertions over `CANARY_SEEDS × POLICY_PROFILE_VARIANTS`.
+
+If distillation is attempted but loses defect-class coverage (i.e., a future regression in the guarded behavior would not fail the distilled test), re-bless the witness instead. Record the reason distillation was rejected in the commit body so the next author does not repeat the exploration.
+
 ### Advisory: User-Global Agent Prompts
 
 Operators who maintain `~/.claude/agents/code-reviewer.md` and `~/.claude/agents/tdd-guide.md` may mirror this taxonomy so those agents flag convergence-witness additions for review. The canonical guidance remains this repo-tracked file, `.claude/rules/testing.md`.

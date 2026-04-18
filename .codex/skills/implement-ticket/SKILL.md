@@ -20,6 +20,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
+- Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
 ## Workflow
 
@@ -34,6 +35,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 1. Read `docs/FOUNDATIONS.md`, the ticket, referenced specs/docs/Deps, and `AGENTS.md`.
 2. Inspect repo state early and validate ticket-named files/functions/commands against the live codebase.
 3. Do a **command sanity pass** for ticket-named verification commands. You do not need the full `references/verification.md` load yet if the checks stay straightforward.
+   - Distinguish `the command is repo-valid` from `the command is runnable right now in the current artifact state`. If a lane depends on generated `dist/` output or another mutable build artifact, verify that prerequisite state explicitly before using the lane as the first acceptance-proof run.
 4. Load `references/implementation-general.md` only if the ticket widens beyond the simple local slice, exposes sibling/follow-up ownership drift, or otherwise needs the broader series guidance.
 5. Load `references/draft-handling.md` for bounded local refactors only when draft status creates real boundary uncertainty:
    - the draft ticket/spec wording appears stale or contradictory
@@ -57,6 +59,8 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
    - When a draft or recently edited ticket names specific files, prefer a quick path-validation pass (`rg --files`, targeted `find`, or equivalent) before opening the file directly if there is any sign of path drift.
    - When tests need to exercise package `scripts/*.mjs`, verify whether the repo build actually emits those files into `dist/` before writing dist-relative imports or assertions. In this repo, tests may need to resolve the source script from package root instead.
+   - For every new module or test you expect to add, decide explicitly whether imports should come from the public package surface or an internal file path. Verify the required export surface before coding rather than discovering it during the first build.
+   - When the ticket names wildcard acceptance checks or `returns empty` grep lanes, validate those patterns against the live repo early, especially if they span files outside the owned `Files to Touch` slice. Do not defer repo-wide empty-match assumptions until after coding.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
    - Load `references/verification.md` now only when the command sanity check itself is nontrivial or already reveals output contention, stale-runner drift, or tracked-vs-draft correction work that needs the fuller guidance.
@@ -72,6 +76,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 7. Verify every referenced artifact against the live codebase with targeted reads and `rg`. Load `references/triage-and-resolution.md` (Artifact Verification Checklist section) for what to validate — file existence, exports/signatures, callsite ownership, claimed dead fallbacks, widened compilation families, and auto-synthesized outputs.
 8. Build a discrepancy list and classify each item per `references/triage-and-resolution.md` (Stale-vs-Blocking Triage). When legality/admissibility and sampled completion surfaces disagree, follow the Legality/Admissibility Contradiction Playbook in that reference before widening retries, adding fallbacks, or rewriting the boundary.
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
+   - When an upstream result can be reclassified downstream (for example `completed` becoming a rejected or dead-end candidate later in the pipeline), verify that the ticket-owned diagnostic payload or invariant survives that handoff before changing retry policy, adding fallbacks, or rewriting the ticket boundary. Do not assume the first result surface is the only place the owned invariant must remain observable.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
@@ -79,6 +84,8 @@ Load `references/triage-and-resolution.md` when discrepancy classification is no
 If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
 
 10. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
+    - If the active ticket absorbs work originally owned by sibling draft tickets, plan the sibling-ticket status rewrite as part of closeout, not as optional cleanup after acceptance. The series artifact should tell the same ownership story as the final code and proof set.
+    - If the active ticket's corrected live contract changes the interface, call shape, touched-file expectation, or verification assumption used by dependent active tickets in the same series, update those dependent tickets in the same turn before final proof so the active series remains internally consistent.
 11. If stronger live evidence contradicts an archived sibling ticket's benchmark or investigation verdict, load `references/triage-and-resolution.md` (Archived Sibling Contradiction section) and classify the contradiction explicitly before coding.
 
 ### Phase 3: Resolve Before Coding
@@ -94,6 +101,8 @@ If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, o
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`. Covers in-memory vs serialized decisions, post-migration sweeps, identifier consumer sweeps, interim shared-contract state for staged tickets, and historical benchmark worktree handling.
 
 ## Verification
+
+Before the final acceptance-proof pass, pause on this explicit checkpoint: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
 
@@ -115,12 +124,28 @@ Load `references/closeout-and-followup.md` for non-bounded tickets, or for bound
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`.
 
+When live implementation requires correcting stale ticket text, record a compact ledger in the active ticket before the final proof pass when proportionate:
+
+- `ticket corrections applied`: `<stale claim> -> <live contract>`
+
+Use this for concrete live-contract fixes such as helper signatures, export-surface ownership, touched-file scope, or verification command wording. Keep it short; do not turn it into a second narrative section when a one-line correction ledger is enough.
+
 For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
 
 1. Update the draft ticket status truthfully (`COMPLETED`, `BLOCKED`, etc.).
 2. Record what landed, any boundary correction, and the verification set you intend to run.
 3. Make any needed ticket-scope or touched-file corrections before the final acceptance-proof pass.
 4. Run the final acceptance-proof set after those ticket edits so the last green run matches both code and ticket artifact.
+
+When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
+
+1. Update each affected sibling draft to a truthful durable state before or alongside the final proof pass (`DEFERRED`, `BLOCKED`, or equivalent per repo convention).
+2. Add a compact historical-resolution note so the series remains inspectable without rereading the whole session.
+3. Treat stale sibling draft statuses after an ownership rewrite as acceptance-proof drift, not optional postscript cleanup.
+
+Suggested compact sibling ledger:
+
+- `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
 
 ### Post-Closeout Reopen
 

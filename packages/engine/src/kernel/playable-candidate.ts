@@ -1,6 +1,7 @@
 import { probeMoveViability, type MoveViabilityProbeResult } from './apply-move.js';
 import {
   completeTemplateMove,
+  type DrawDeadEndOptionalChooseN,
   type TemplateCompletionResult,
   type TemplateMoveCompletionOptions,
 } from './move-completion.js';
@@ -25,6 +26,7 @@ export type PlayableCandidateClassification =
       readonly kind: 'rejected';
       readonly move: Move;
       readonly rejection: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
+      readonly drawDeadEndOptionalChooseN?: DrawDeadEndOptionalChooseN | null;
       readonly viability?: Exclude<MoveViabilityProbeResult, { readonly viable: true }>;
     }>;
 
@@ -94,6 +96,7 @@ const classifyCompletedTemplateMove = (
       kind: 'rejected',
       move,
       rejection: completed.kind,
+      ...(completed.kind === 'drawDeadEnd' ? { drawDeadEndOptionalChooseN: completed.optionalChooseN } : {}),
     };
   }
   const viability = probeMoveViability(def, state, completed.move, runtime);
@@ -102,6 +105,7 @@ const classifyCompletedTemplateMove = (
       kind: 'rejected',
       move: completed.move,
       rejection: 'drawDeadEnd',
+      ...(completed.kind === 'completed' ? { drawDeadEndOptionalChooseN: completed.firstOptionalChooseN ?? null } : {}),
       viability,
     };
   }
@@ -114,6 +118,7 @@ const classifyCompletedTemplateMove = (
       kind: 'rejected',
       move: viability.move,
       rejection: 'drawDeadEnd',
+      ...(completed.kind === 'completed' ? { drawDeadEndOptionalChooseN: completed.firstOptionalChooseN ?? null } : {}),
     };
   }
   return classifyPlayableCandidateViability(def, completed.move, state, viability, runtime);

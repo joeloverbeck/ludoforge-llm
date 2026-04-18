@@ -742,7 +742,7 @@ function enumeratePendingFreeOperationMoves(
       throw error;
     }
     // Required grants must always be surfaced so the obligation is visible;
-    // apply-move.ts `validateFreeOperationOutcomePolicy` enforces outcome policy.
+      // apply-move.ts `evaluateMoveLegality` enforces outcome policy.
     if (strongestOutcomeGrant.completionPolicy === 'required') {
       return true;
     }

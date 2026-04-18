@@ -30,6 +30,7 @@ import { advanceToDecisionPoint } from './phase-advance.js';
 import { consumeGrantUse, withPendingFreeOperationGrants } from './grant-lifecycle.js';
 import {
   illegalMoveError,
+  IllegalMoveError,
   isKernelErrorCode,
   isKernelRuntimeError,
   kernelRuntimeError,
@@ -76,15 +77,6 @@ import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { createExecutionEffectContext, type PhaseTransitionBudget } from './effect-context.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
-import {
-  doesCompletedProbeMoveChangeGameplayState,
-  hasLegalCompletedFreeOperationMoveInCurrentState,
-} from './free-operation-viability.js';
-import {
-  doesMaterialGameplayStateChange,
-  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
-  resolveStrongestRequiredFreeOperationOutcomeGrant,
-} from './free-operation-outcome-policy.js';
 import { createDraftTracker, createMutableState, freezeState, type DraftTracker, type MutableGameState } from './state-draft.js';
 import type { SimultaneousMoveSubmission } from './types-turn-flow.js';
 import type {
@@ -106,6 +98,7 @@ import type {
 } from './types.js';
 import { asPlayerId } from './branded.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { evaluateMoveLegality } from './move-legality-predicate.js';
 import { classifyMoveAdmissibility } from './move-admissibility.js';
 import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viability-predicate.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
@@ -272,33 +265,6 @@ const canonicalTurnFlowMove = (
     ...move.params,
   },
 });
-
-/**
- * Enforcement half of the free-operation outcome-policy contract.
- *
- * `legal-moves.ts` surfaces required grants even when `mustChangeGameplayState`
- * cannot yet be proven, so the obligation stays visible during enumeration.
- * This apply-time check is the authoritative gate that rejects completed
- * free operations which still fail to materially change gameplay state.
- */
-const validateFreeOperationOutcomePolicy = (
-  def: GameDef,
-  beforeState: GameState,
-  afterActionState: GameState,
-  move: Move,
-  seatResolution: ReturnType<typeof createSeatResolutionContext>,
-): void => {
-  const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(def, beforeState, move, seatResolution);
-  if (strongestOutcomeGrant === null) {
-    return;
-  }
-  if (!doesMaterialGameplayStateChange(def, beforeState, afterActionState)) {
-    throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-      grantId: strongestOutcomeGrant.grantId,
-      outcomePolicy: 'mustChangeGameplayState',
-    });
-  }
-};
 
 const resolveMatchedPipelineForMove = (
   def: GameDef,
@@ -1418,15 +1384,21 @@ const applyMoveCore = (
   };
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
 
+  if (move.freeOperation === true) {
+    const t0_freeOp = perfStart(profiler);
+    // CONTRACT: Pair with legal-moves.ts `isFreeOperationCandidateAdmitted`.
+    // Required grants stay visible during enumeration; outcome policy is enforced here
+    // pre-apply via the unified evaluateMoveLegality predicate.
+    const legalityVerdict = evaluateMoveLegality(def, state, move, cachedRuntime);
+    perfEnd(profiler, 'evaluateMoveLegality', t0_freeOp);
+    if (legalityVerdict.kind === 'illegal') {
+      throw new IllegalMoveError(move, legalityVerdict.context);
+    }
+  }
+
   const t0_exec = perfStart(profiler);
   const executed = executeMoveAction(def, mutableState, move, seatResolution, options, coreOptions, shared, tracker, cachedRuntime);
   perfEnd(profiler, 'executeMoveAction', t0_exec);
-
-  const t0_freeOp = perfStart(profiler);
-  // CONTRACT: Pair with legal-moves.ts `isFreeOperationCandidateAdmitted`.
-  // Required grants stay visible during enumeration; outcome policy is enforced here.
-  validateFreeOperationOutcomePolicy(def, state, executed.stateWithRng, move, seatResolution);
-  perfEnd(profiler, 'validateFreeOperationOutcomePolicy', t0_freeOp);
 
   const t0_turnFlow = perfStart(profiler);
   const turnFlowResult = move.freeOperation === true
@@ -1909,23 +1881,11 @@ const probeMoveViabilityRaw = (
         detail: 'all pending decision alternatives have no legal options',
       });
     }
+    const legalityVerdict = evaluateMoveLegality(def, state, sequence.move, runtime);
+    if (legalityVerdict.kind === 'illegal') {
+      throw new IllegalMoveError(sequence.move, legalityVerdict.context);
+    }
     if (sequence.complete) {
-      const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
-        def,
-        state,
-        sequence.move,
-        seatResolution,
-        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-      );
-      if (
-        strongestOutcomeGrant !== null
-        && !doesCompletedProbeMoveChangeGameplayState(def, state, sequence.move, seatResolution)
-      ) {
-        throw illegalMoveError(sequence.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-          grantId: strongestOutcomeGrant.grantId,
-          outcomePolicy: 'mustChangeGameplayState',
-        });
-      }
       return {
         viable: true,
         complete: true,
@@ -1938,28 +1898,6 @@ const probeMoveViabilityRaw = (
         nextDecisionSet: undefined,
         stochasticDecision: undefined,
       };
-    }
-    const strongestOutcomeGrant = resolveStrongestRequiredFreeOperationOutcomeGrant(
-      def,
-      state,
-      sequence.move,
-      seatResolution,
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-    ) ?? resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
-      def,
-      state,
-      sequence.move,
-      seatResolution,
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-    );
-    if (
-      strongestOutcomeGrant !== null
-      && !hasLegalCompletedFreeOperationMoveInCurrentState(def, state, sequence.move, seatResolution)
-    ) {
-      throw illegalMoveError(sequence.move, ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED, {
-        grantId: strongestOutcomeGrant.grantId,
-        outcomePolicy: 'mustChangeGameplayState',
-      });
     }
     return {
       viable: true,

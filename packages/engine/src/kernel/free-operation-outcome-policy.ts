@@ -34,7 +34,9 @@ export const resolveStrongestRequiredFreeOperationOutcomeGrant = (
   }
   const activeSeat = requireCardDrivenActiveSeat(def, state, surfaceId, seatResolution);
   const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
-  return resolveAuthorizedPendingFreeOperationGrants(def, state, pending, activeSeat, move).strongestOutcomeGrant;
+  return resolveAuthorizedPendingFreeOperationGrants(def, state, pending, activeSeat, move, {
+    zoneFilterErrorSurface: surfaceId,
+  }).strongestOutcomeGrant;
 };
 
 export const resolveStrongestPotentialRequiredFreeOperationOutcomeGrant = (
@@ -54,7 +56,10 @@ export const resolveStrongestPotentialRequiredFreeOperationOutcomeGrant = (
       (grant) =>
         grant.seat === activeSeat
         && grant.outcomePolicy === 'mustChangeGameplayState'
-        && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move, { useProbeBindings: true }),
+        && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move, {
+          useProbeBindings: true,
+          zoneFilterErrorSurface: surfaceId,
+        }),
     ),
   );
 };

@@ -201,7 +201,7 @@ describe('playable-candidate evaluator', () => {
     assert.equal(evaluated.rejection, 'structurallyUnsatisfiable');
   });
 
-  it('prefers non-empty optional chooseN completions when satisfiable branches exist', () => {
+  it('surfaces both empty-branch dead ends and satisfiable non-empty completions for optional chooseN templates', () => {
     const actionId = asActionId('optional-choose-n-trap');
     const def = createDef(
       [createAction('optional-choose-n-trap')],
@@ -210,22 +210,39 @@ describe('playable-candidate evaluator', () => {
     const state = initialState(def, 23, 2).state;
     const templateMove: Move = { actionId, params: {} };
 
+    const guided = evaluatePlayableMoveCandidate(def, state, templateMove, createRng(0n), undefined, {
+      choose: (request) => request.type === 'chooseN' ? ['safe'] : undefined,
+    });
+    assert.equal(guided.kind, 'playableComplete');
+    if (guided.kind !== 'playableComplete') {
+      assert.fail('expected guided optional chooseN completion');
+    }
+    assert.deepEqual(guided.move.params.$targets, ['safe']);
+    assert.equal(guided.move.params.$safe, 'done');
+
+    let sawDrawDeadEnd = false;
     for (let seed = 0n; seed < 16n; seed += 1n) {
       const initialRng = createRng(seed);
       const evaluated = evaluatePlayableMoveCandidate(def, state, templateMove, initialRng);
 
-      assert.equal(evaluated.kind, 'playableComplete');
       if (evaluated.kind !== 'playableComplete') {
-        assert.fail('expected optional chooseN trap to choose a satisfiable non-empty branch');
+        assert.equal(evaluated.kind, 'rejected');
+        assert.equal(evaluated.rejection, 'drawDeadEnd');
+        sawDrawDeadEnd = true;
+        assert.deepEqual(evaluated.drawDeadEndOptionalChooseN, {
+          decisionKey: '$targets',
+          sampledCount: 0,
+          declaredMin: 0,
+          declaredMax: 1,
+        });
       }
-      assert.deepEqual(evaluated.move.params.$targets, ['safe']);
-      assert.equal(evaluated.move.params.$safe, 'done');
       assert.notDeepEqual(
         evaluated.rng.state.state,
         initialRng.state.state,
-        'successful optional chooseN completion should still advance rng state',
+        'optional chooseN evaluation should still advance rng state',
       );
     }
+    assert.equal(sawDrawDeadEnd, true, 'expected at least one empty-branch draw dead-end');
   });
 
   it('does not call choose for already-complete legal moves', () => {

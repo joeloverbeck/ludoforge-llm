@@ -36,6 +36,8 @@ Read ALL of these files before any analysis:
 3. **`tickets/README.md`** — the ticket authoring contract; understand the required sections and checks
 4. **`docs/FOUNDATIONS.md`** — architectural commandments; every ticket must align with these principles
 
+**Session context reuse**: If a file is already in conversation context from earlier in the same session (e.g., FOUNDATIONS.md loaded by a prior skill, the spec file just written by `/reassess-spec`), skip the redundant read — context freshness, not tool re-invocation, is the requirement.
+
 ### Step 2: Codebase Validation
 
 Before decomposing, validate the spec's assumptions against the actual codebase:
@@ -63,7 +65,7 @@ Analyze the spec and identify discrete work units. If the spec includes a Ticket
 - **Grouping pattern**: When multiple spec deliverables share significant consumer overlap (same files affected) and follow the same implementation pattern, consider grouping them into a single ticket. Note the grouping rationale in the ticket's Problem section. This avoids artificial ticket boundaries that split naturally cohesive changes.
 - **Lane-sharding pattern**: For corpus-wide migrations touching hundreds of files across distinct subdirectories or test lanes (e.g., classifying every test under `packages/engine/test/**`, applying a marker pattern across every campaign runner), shard tickets by lane boundary — one ticket per lane or lane-group. Each shard is a reviewable diff even when the aggregate is huge, because the scope per ticket is bounded by the lane's own file set. Pair with Foundation 14's mechanical-uniformity exception when the per-file change is a repeated pattern (e.g., single-line header addition). Distinct from Grouping (which merges related deliverables) and from Port-ticket (which uses an implement+port reference model) — lane-sharding decomposes one deliverable across disjoint corpus slices.
 - **Cross-cutting refactoring pattern**: For specs that modify function signatures or types across a call chain (e.g., threading a new parameter through 10+ files), separate signature plumbing (changing parameter types and call sites) into a dedicated ticket that all conversion tickets depend on. This enables parallel conversion of function bodies once the call-chain contract is established. Without this separation, conversion tickets have hidden dependencies on each other through shared call chains.
-- **Spec-level dependencies**: Dependencies from the spec's Dependencies field go in the Deps field of the earliest ticket(s) that directly implement the dependency's deliverables. Downstream tickets depend transitively through the ticket chain — do not duplicate spec dependencies in every ticket
+- **Spec-level dependencies**: Dependencies from the spec's Dependencies field go in the Deps field of the earliest ticket(s) that directly implement the dependency's deliverables. Downstream tickets depend transitively through the ticket chain — do not duplicate spec dependencies in every ticket. **Archived-and-completed dependencies**: If a spec-level dependency is archived AND its Status field reads as completed (confirmed via reassessment), treat it as a contract reference rather than an implementation prerequisite — do not cite it in ticket Deps. Root tickets in this case cite the current spec file instead, per the Root tickets guidance in Step 5.
 - **Gate tickets**: For specs with profiling gates or conditional phases, create explicit gate tickets. Downstream tickets that depend on the gate's outcome use a plain backtick-quoted path in their Deps field (e.g., `` `tickets/FOO-003.md` ``) — do NOT append annotations like `(gate — close if profiling fails)` inside Deps, as `check:ticket-deps` only accepts pure file paths. Instead, note the gate condition in the downstream ticket's Problem or What to Change section: "**Gate condition**: Close this ticket if `tickets/FOO-003.md` profiling shows no measurable improvement." In the Step 7 dependency graph, annotate gate edges to distinguish them from hard dependencies (e.g., `003 (gate) → 004`)
 
 ### Step 4: Present Summary for Approval
@@ -82,7 +84,7 @@ Include a 1-line scope description for each ticket as bullet text below the tabl
 
 If multiple tickets can be implemented in parallel, list parallelism groups as numbered waves below the summary table: `**Wave N**: tickets X, Y, Z (after <deps>)`. This helps the user plan implementation sessions. Example: "**Wave 1**: 001, 002, 005 (all independent). **Wave 2**: 003, 004 (after 001); 006 (after 005). **Wave 3**: 007 (after all)."
 
-**Wait for user approval or adjustments.** Do not write files until the user confirms.
+**Wait for user approval or adjustments.** Do not write files until the user confirms. **In auto mode**: present the summary and proceed to Step 5 in the same response without waiting — ticket writes are reversible, and auto mode explicitly prefers action over interruption. The user can redirect in a later turn if the decomposition needs adjusting. Retain the wait-gate when auto mode is inactive.
 
 ### Step 5: Write Ticket Files
 
@@ -125,7 +127,7 @@ Do NOT commit. Leave files for user review.
 
 ### Step 8: Spec Back-Link
 
-If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip. This may be combined with the Step 7 message for efficiency.
+If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip. This may be combined with the Step 7 message for efficiency. **In auto mode**: append the back-link proactively in the same response rather than waiting for confirmation — an additive `## Tickets` section is reversible, and auto mode explicitly prefers action over interruption.
 
 ## Constraints
 

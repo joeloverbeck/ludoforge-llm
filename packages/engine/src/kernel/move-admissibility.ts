@@ -1,19 +1,11 @@
-import {
-  hasLegalCompletedFreeOperationMoveInCurrentState,
-} from './free-operation-viability.js';
-import {
-  resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
-  resolveStrongestRequiredFreeOperationOutcomeGrant,
-} from './free-operation-outcome-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
-import { createSeatResolutionContext } from './identity.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
+import { evaluateMoveLegality } from './move-legality-predicate.js';
 import {
   classifyMoveDecisionSequenceAdmissionForLegalMove,
 } from './move-decision-sequence.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import { isTurnFlowErrorCode } from './turn-flow-error.js';
-import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
+import { ILLEGAL_MOVE_REASONS, type IllegalMoveReason } from './runtime-reasons.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from './types.js';
 import type { MoveViabilityResult } from './viability-predicate.js';
 
@@ -31,43 +23,14 @@ export type MoveAdmissibilityVerdict =
       readonly outcomePolicyGrantId?: TurnFlowPendingFreeOperationGrant['grantId'];
     }>;
 
-/**
- * Resolve the strongest required free-operation outcome grant that applies to
- * the move, tolerating the zone-filter evaluation failure surface used by the
- * match-evaluation grant resolver. The match-evaluation surface deliberately
- * throws when a grant zone-filter cannot be evaluated against the move's
- * current binding shape; for outcome-policy admissibility we treat that as
- * "no resolved grant" and fall back to the potential grant set.
- */
-const resolveOutcomePolicyGrantForAdmissibility = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  seatResolution: ReturnType<typeof createSeatResolutionContext>,
-): TurnFlowPendingFreeOperationGrant | null => {
-  const potential = resolveStrongestPotentialRequiredFreeOperationOutcomeGrant(
-    def,
-    state,
-    move,
-    seatResolution,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-  );
-  try {
-    const resolved = resolveStrongestRequiredFreeOperationOutcomeGrant(
-      def,
-      state,
-      move,
-      seatResolution,
-      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
-    );
-    return resolved ?? potential;
-  } catch (error) {
-    if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
-      throw error;
-    }
-    return potential;
-  }
-};
+type MoveAdmissibilityReason = Extract<MoveAdmissibilityVerdict, { kind: 'inadmissible' }>['reason'];
+
+const LEGALITY_TO_ADMISSIBILITY = Object.freeze({
+  [ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED]: 'freeOperationOutcomePolicyFailed',
+} satisfies Partial<Record<IllegalMoveReason, MoveAdmissibilityReason>>);
+
+const unmappedLegalityReasonError = (reason: IllegalMoveReason): Error =>
+  new Error(`unmapped legality reason for admissibility classification: ${reason}`);
 
 /**
  * The free-operation outcome-policy admissibility gate.
@@ -85,27 +48,23 @@ const classifyFreeOperationOutcomePolicyAdmissibility = (
   def: GameDef,
   state: GameState,
   viability: MoveViabilityResult,
+  runtime?: GameDefRuntime,
 ): MoveAdmissibilityVerdict | null => {
   if (!viability.viable || viability.move.freeOperation !== true) {
     return null;
   }
-  const seatResolution = createSeatResolutionContext(def, state.playerCount);
-  const strongestOutcomeGrant = resolveOutcomePolicyGrantForAdmissibility(
-    def,
-    state,
-    viability.move,
-    seatResolution,
-  );
-  if (strongestOutcomeGrant === null) {
+  const verdict = evaluateMoveLegality(def, state, viability.move, runtime);
+  if (verdict.kind === 'legal') {
     return null;
   }
-  if (hasLegalCompletedFreeOperationMoveInCurrentState(def, state, viability.move, seatResolution)) {
-    return null;
+  const admissibilityReason = LEGALITY_TO_ADMISSIBILITY[verdict.reason as keyof typeof LEGALITY_TO_ADMISSIBILITY];
+  if (admissibilityReason === undefined) {
+    throw unmappedLegalityReasonError(verdict.reason);
   }
   return {
     kind: 'inadmissible',
-    reason: 'freeOperationOutcomePolicyFailed',
-    outcomePolicyGrantId: strongestOutcomeGrant.grantId,
+    reason: admissibilityReason,
+    ...('grantId' in verdict.context ? { outcomePolicyGrantId: verdict.context.grantId } : {}),
   };
 };
 
@@ -122,7 +81,7 @@ export const classifyMoveAdmissibility = (
       : { kind: 'inadmissible', reason: 'runtimeError' };
   }
 
-  const outcomePolicyVerdict = classifyFreeOperationOutcomePolicyAdmissibility(def, state, viability);
+  const outcomePolicyVerdict = classifyFreeOperationOutcomePolicyAdmissibility(def, state, viability, runtime);
   if (outcomePolicyVerdict !== null) {
     return outcomePolicyVerdict;
   }

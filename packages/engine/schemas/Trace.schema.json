@@ -1248,6 +1248,10 @@
                     {
                       "type": "string",
                       "const": "MOVE_ENUM_PROBE_REJECTED"
+                    },
+                    {
+                      "type": "string",
+                      "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
                     }
                   ]
                 },
@@ -3186,6 +3190,73 @@
                               "const": "notDecisionComplete"
                             }
                           ]
+                        },
+                        "warnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "code": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "const": "TOKEN_NOT_IN_ZONE"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "BINDING_UNDEFINED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "EMPTY_ZONE_OPERATION"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_PROBE_REJECTED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
+                                  }
+                                ]
+                              },
+                              "message": {
+                                "type": "string"
+                              },
+                              "context": {
+                                "type": "object",
+                                "propertyNames": {
+                                  "type": "string"
+                                },
+                                "additionalProperties": {}
+                              },
+                              "hint": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "code",
+                              "message",
+                              "context"
+                            ],
+                            "additionalProperties": false
+                          }
                         }
                       },
                       "required": [
@@ -5059,6 +5130,10 @@
         {
           "type": "string",
           "const": "noLegalMoves"
+        },
+        {
+          "type": "string",
+          "const": "noPlayableMoveCompletion"
         }
       ]
     }

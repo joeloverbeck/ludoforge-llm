@@ -12,8 +12,12 @@ import {
   classifyMoveDecisionSequenceAdmissionForLegalMove,
   completeTemplateMove,
   createRng,
+  createSeatResolutionContext,
+  doesCompletedProbeMoveChangeGameplayState,
   enumerateLegalMoves,
+  evaluateMoveLegality,
   probeMoveViability,
+  TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS,
   type ActionDef,
   type ActionPipelineDef,
   type ConditionAST,
@@ -21,7 +25,10 @@ import {
   type GameState,
   type Move,
   type RuntimeWarning,
+  type TurnFlowPendingFreeOperationGrant,
 } from '../../src/kernel/index.js';
+import { resolveStrongestRequiredFreeOperationOutcomeGrant } from '../../src/kernel/free-operation-outcome-policy.js';
+import { doesMaterialGameplayStateChange } from '../../src/kernel/free-operation-outcome-policy.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from '../../src/kernel/missing-binding-policy.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
@@ -53,12 +60,15 @@ const makeOperationAction = (): ActionDef => ({
 const makeFreeOperationDef = (
   metadataId: string,
   effects: ActionPipelineDef['stages'][number]['effects'],
+  options?: {
+    globalVars?: GameDef['globalVars'];
+  },
 ): GameDef =>
   asTaggedGameDef({
     metadata: { id: metadataId, players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
-    globalVars: [],
+    globalVars: options?.globalVars ?? [],
     perPlayerVars: [],
     zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' }],
     tokenTypes: [],
@@ -96,7 +106,10 @@ const makeFreeOperationDef = (
     terminal: { conditions: [] },
   });
 
-const makeFreeOperationState = (zoneFilter?: ConditionAST): GameState => ({
+const makeFreeOperationState = (options: {
+  zoneFilter?: ConditionAST;
+  grantPatch?: Partial<TurnFlowPendingFreeOperationGrant>;
+} = {}): GameState => ({
   globalVars: {},
   perPlayerVars: {},
   zoneVars: {},
@@ -131,8 +144,9 @@ const makeFreeOperationState = (zoneFilter?: ConditionAST): GameState => ({
           seat: '0',
           operationClass: 'operation',
           actionIds: ['operation'],
-          ...(zoneFilter === undefined ? {} : { zoneFilter }),
+          ...(options.zoneFilter === undefined ? {} : { zoneFilter: options.zoneFilter }),
           remainingUses: 1,
+          ...(options.grantPatch ?? {}),
         },
       ],
     },
@@ -150,9 +164,11 @@ const makeFreeOperationTemplateMove = (): Move => ({
   freeOperation: true,
 });
 
-const makeZoneFilteredFloatingUnsatDef = (): GameDef =>
+const makeZoneFilteredFloatingUnsatDef = (
+  metadataId = 'pending-move-admissibility-floating-unsat',
+): GameDef =>
   asTaggedGameDef({
-    metadata: { id: 'pending-move-admissibility-floating-unsat', players: { min: 2, max: 2 } },
+    metadata: { id: metadataId, players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [],
@@ -670,6 +686,127 @@ describe('pending move admissibility parity', () => {
       );
     }
   });
+
+  it('keeps predicate / probe / classifier / apply aligned for complete must-change failures', () => {
+    const def = makeFreeOperationDef('pending-move-admissibility-complete-must-change-failure', []);
+    const state = makeFreeOperationState({
+      grantPatch: {
+        completionPolicy: 'required',
+        outcomePolicy: 'mustChangeGameplayState',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      },
+    });
+    const move = makeFreeOperationTemplateMove();
+
+    const legality = evaluateMoveLegality(def, state, move);
+    assert.deepEqual(legality, {
+      kind: 'illegal',
+      reason: 'freeOperationOutcomePolicyFailed',
+      context: {
+        actionId: move.actionId,
+        params: move.params,
+        reason: 'freeOperationOutcomePolicyFailed',
+        grantId: 'grant-0',
+        outcomePolicy: 'mustChangeGameplayState',
+      },
+    });
+
+    const viability = probeMoveViability(def, state, move);
+    assert.equal(viability.viable, false);
+    assert.equal(viability.code, 'ILLEGAL_MOVE');
+    assert.equal(viability.context.reason, 'freeOperationOutcomePolicyFailed');
+
+    const admissibility = classifyMoveAdmissibility(def, state, move, {
+      viable: true,
+      complete: true,
+      move,
+      warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
+    });
+    assert.deepEqual(admissibility, {
+      kind: 'inadmissible',
+      reason: 'freeOperationOutcomePolicyFailed',
+      outcomePolicyGrantId: 'grant-0',
+    });
+
+    assert.throws(
+      () => applyMove(def, state, move),
+      (error: unknown) => {
+        const details = error as { readonly code?: unknown; readonly context?: { readonly reason?: unknown } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.context?.reason, 'freeOperationOutcomePolicyFailed');
+        return true;
+      },
+    );
+  });
+
+  it('keeps predicate / probe / classifier / apply aligned for incomplete must-change failures', () => {
+    const def = makeFreeOperationDef(
+      'pending-move-admissibility-incomplete-must-change-failure',
+      [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: ['allowed'] },
+          },
+        }) as ActionDef['effects'][number],
+      ],
+    );
+    const state = makeFreeOperationState({
+      grantPatch: {
+        completionPolicy: 'required',
+        outcomePolicy: 'mustChangeGameplayState',
+        postResolutionTurnFlow: 'resumeCardFlow',
+      },
+    });
+    const move = makeFreeOperationTemplateMove();
+
+    const legality = evaluateMoveLegality(def, state, move);
+    if (legality.kind !== 'illegal') {
+      assert.fail('expected incomplete must-change witness to be illegal');
+    }
+    assert.equal(legality.reason, 'freeOperationOutcomePolicyFailed');
+    assert.equal('grantId' in legality.context && legality.context.grantId, 'grant-0');
+
+    const viability = probeMoveViability(def, state, move);
+    assert.equal(viability.viable, false);
+    assert.equal(viability.code, 'ILLEGAL_MOVE');
+    assert.equal(viability.context.reason, 'freeOperationOutcomePolicyFailed');
+
+    const admissibility = classifyMoveAdmissibility(def, state, move, {
+      viable: true,
+      complete: false,
+      move,
+      warnings: [],
+      code: undefined,
+      context: undefined,
+      error: undefined,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
+    });
+    assert.deepEqual(admissibility, {
+      kind: 'inadmissible',
+      reason: 'freeOperationOutcomePolicyFailed',
+      outcomePolicyGrantId: 'grant-0',
+    });
+
+    assert.throws(
+      () => applyMove(def, state, move),
+      (error: unknown) => {
+        const details = error as { readonly code?: unknown; readonly context?: { readonly reason?: unknown } };
+        assert.equal(details.code, 'ILLEGAL_MOVE');
+        assert.equal(details.context?.reason, 'freeOperationOutcomePolicyFailed');
+        return true;
+      },
+    );
+  });
 });
 
 /*
@@ -832,5 +969,94 @@ describe('admissibility/apply cross-pathway conformance', () => {
       applyThrowsIllegalMove(def, state, wrongZoneMove),
       true,
     );
+  });
+
+  it('preserves pre/post gameplay-state equivalence across the applicable corpus', () => {
+    const cases: readonly Readonly<{
+      name: string;
+      def: GameDef;
+      state: GameState;
+      move: Move;
+    }>[] = [
+      {
+        name: 'state-changing complete free operation',
+        def: makeFreeOperationDef(
+          'pending-move-admissibility-equivalence-changing',
+          [eff({ addVar: { scope: 'global', var: 'progress', delta: 1 } }) as ActionDef['effects'][number]],
+          {
+            globalVars: [{ name: 'progress', type: 'int', init: 0, min: 0, max: 10 }],
+          },
+        ),
+        state: {
+          ...makeFreeOperationState(),
+          globalVars: { progress: 0 },
+        },
+        move: makeFreeOperationTemplateMove(),
+      },
+      {
+        name: 'non-changing complete grant-zone-filter-satisfying free operation',
+        def: makeZoneFilteredAdmissibleDef(),
+        state: makeZoneFilteredAdmissibleState(),
+        move: {
+          actionId: OPERATION_ACTION_ID,
+          params: { $targetProvince: 'board:cambodia' },
+          freeOperation: true,
+        },
+      },
+    ];
+
+    for (const testCase of cases) {
+      const seatResolution = createSeatResolutionContext(testCase.def, testCase.state.playerCount);
+      const predicted = doesCompletedProbeMoveChangeGameplayState(
+        testCase.def,
+        testCase.state,
+        testCase.move,
+        seatResolution,
+      );
+      const applied = applyMove(testCase.def, testCase.state, testCase.move);
+      const observed = doesMaterialGameplayStateChange(testCase.def, testCase.state, applied.state);
+      assert.equal(
+        predicted,
+        observed,
+        `expected pre/post gameplay-state equivalence for ${testCase.name}`,
+      );
+    }
+  });
+
+  it('routes grant-match zone-filter evaluation failures through match evaluation', () => {
+    const def = makeZoneFilteredFloatingUnsatDef('pending-move-admissibility-surface-migration');
+    const state = makeZoneFilteredFloatingUnsatState();
+    const move = makeFreeOperationTemplateMove();
+
+    const captureFailure = (
+      fn: () => unknown,
+    ): { readonly code?: unknown; readonly context?: { readonly surface?: unknown } } => {
+      try {
+        fn();
+      } catch (error) {
+        return error as { readonly code?: unknown; readonly context?: { readonly surface?: unknown } };
+      }
+      assert.fail('expected FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+    };
+
+    const seatResolution = createSeatResolutionContext(def, state.playerCount);
+    const matchEvaluationFailure = captureFailure(() =>
+      resolveStrongestRequiredFreeOperationOutcomeGrant(
+        def,
+        state,
+        move,
+        seatResolution,
+        TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+      ));
+    assert.equal(matchEvaluationFailure.code, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED');
+    assert.equal(
+      matchEvaluationFailure.context?.surface,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    );
+    assert.notEqual(
+      matchEvaluationFailure.context?.surface,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_CONSUMPTION,
+    );
+
   });
 });

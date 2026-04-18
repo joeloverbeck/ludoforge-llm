@@ -1,6 +1,6 @@
 # Spec 134: Unified Move Legality Predicate
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1
 **Complexity**: M
 **Dependencies**: Spec 17 (archived; §4 completion landed 2026-04-17 in commit `fd4cc8b4`)
@@ -179,4 +179,18 @@ The verdict set and reason codes are the same surface the current three sites em
 
 ## Outcome
 
-TBD.
+- Completed: 2026-04-18
+- What changed:
+  - Ticket 001 added the standalone `evaluateMoveLegality` module and its predicate-focused unit coverage.
+  - Ticket 002 migrated the probe, apply, and admissibility sites to consume the predicate, deleted the old duplicated helpers, and propagated the grant-match diagnostic surface through the supporting grant-authorization path.
+  - The integration conformance work landed in `pending-move-admissibility-parity.test.ts`, including predicate/probe/classifier/apply agreement, pre/post gameplay-state equivalence, and the surface-migration regression.
+- Deviations from original plan:
+  - The migration required small supporting edits outside the originally emphasized three caller files so `FREE_OPERATION_GRANT_MATCH_EVALUATION` could propagate cleanly through grant authorization and outcome-policy resolution.
+  - The spec’s intended architectural outcome landed across two tickets (`134UNIMOVLEG-001` and `134UNIMOVLEG-002`) rather than one monolithic implementation change.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`
+  - `grep -rn "validateFreeOperationOutcomePolicy\|resolveOutcomePolicyGrantForAdmissibility" packages/engine/src/`
+  - `grep -rn "doesMaterialGameplayStateChange" packages/engine/src/kernel/apply-move.ts`

@@ -21,6 +21,16 @@ export type LegalityVerdict =
 
 const LEGAL_VERDICT: LegalityVerdict = Object.freeze({ kind: 'legal' });
 
+const isIndeterminateZoneFilterFailure = (error: unknown): boolean => {
+  if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+    return false;
+  }
+  const causeCode = typeof error.context === 'object' && error.context !== null
+    ? (error.context as { readonly causeCode?: unknown }).causeCode
+    : undefined;
+  return causeCode === 'MISSING_BINDING' || causeCode === 'MISSING_VAR';
+};
+
 const outcomePolicyFailureVerdict = (
   move: Move,
   grant: TurnFlowPendingFreeOperationGrant,
@@ -58,6 +68,29 @@ const resolveOutcomePolicyGrant = (
   }
 };
 
+const resolveDecisionSequenceZoneFilterFailure = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): LegalityVerdict => {
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
+  try {
+    void resolveStrongestRequiredFreeOperationOutcomeGrant(
+      def,
+      state,
+      move,
+      seatResolution,
+      TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    );
+    return LEGAL_VERDICT;
+  } catch (error) {
+    if (isIndeterminateZoneFilterFailure(error)) {
+      return LEGAL_VERDICT;
+    }
+    throw error;
+  }
+};
+
 export const evaluateMoveLegality = (
   def: GameDef,
   state: GameState,
@@ -74,10 +107,18 @@ export const evaluateMoveLegality = (
       runtime,
     );
   } catch (error) {
-    if (!isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')) {
+    if (
+      !isTurnFlowErrorCode(error, 'FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED')
+      || error.context?.surface !== 'legalChoices'
+    ) {
       throw error;
     }
-    return LEGAL_VERDICT;
+    return resolveDecisionSequenceZoneFilterFailure(def, state, move);
+  }
+  if (sequence.illegal !== undefined) {
+    return sequence.illegal.reason === 'freeOperationZoneFilterMismatch'
+      ? resolveDecisionSequenceZoneFilterFailure(def, state, sequence.move)
+      : LEGAL_VERDICT;
   }
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const outcomeGrant = resolveOutcomePolicyGrant(def, state, sequence.move, sequence.complete, seatResolution);

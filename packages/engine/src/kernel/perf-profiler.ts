@@ -29,7 +29,7 @@ export interface PerfProfilerData {
   readonly applyTurnFlowEligibility: PerfBucket;
   readonly applyBoundaryExpiry: PerfBucket;
   readonly applyDeferredEventEffects: PerfBucket;
-  readonly validateFreeOperationOutcomePolicy: PerfBucket;
+  readonly evaluateMoveLegality: PerfBucket;
   // executeMoveAction sub-phases
   readonly validateMove: PerfBucket;
   readonly resolvePreflight: PerfBucket;
@@ -76,7 +76,7 @@ export function createPerfProfiler(): PerfProfiler {
       evalCondition: createBucket(),
       evalValue: createBucket(),
       applyDeferredEventEffects: createBucket(),
-      validateFreeOperationOutcomePolicy: createBucket(),
+      evaluateMoveLegality: createBucket(),
       validateMove: createBucket(),
       resolvePreflight: createBucket(),
       actionEffects: createBucket(),

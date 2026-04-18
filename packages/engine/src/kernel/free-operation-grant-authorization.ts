@@ -259,13 +259,23 @@ export const doesGrantAuthorizeMove = (
   _pending: readonly TurnFlowPendingFreeOperationGrant[],
   grant: TurnFlowPendingFreeOperationGrant,
   move: Move,
+  options?: {
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
+  },
 ): boolean =>
   grant.phase !== 'sequenceWaiting' &&
   doesGrantApplyToMove(def, grant, move) &&
   doesGrantSatisfySequenceContext(def, state, grant, move) &&
   (
     grant.zoneFilter === undefined
-    || unwrapZoneFilterResult(evaluateZoneFilterForMove(def, state, move, grant, grant.zoneFilter, 'turnFlowEligibility'))
+    || unwrapZoneFilterResult(evaluateZoneFilterForMove(
+      def,
+      state,
+      move,
+      grant,
+      grant.zoneFilter,
+      options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
+    ))
   );
 
 export const doesGrantPotentiallyAuthorizeMove = (
@@ -276,6 +286,7 @@ export const doesGrantPotentiallyAuthorizeMove = (
   move: Move,
   options?: {
     readonly useProbeBindings?: boolean;
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): boolean =>
   grant.phase !== 'sequenceWaiting' &&
@@ -294,7 +305,7 @@ export const doesGrantPotentiallyAuthorizeMove = (
       move,
       grant,
       grant.zoneFilter,
-      'turnFlowEligibility',
+      options?.zoneFilterErrorSurface ?? 'turnFlowEligibility',
       options,
     ))
   );
@@ -387,10 +398,22 @@ export const resolveAuthorizedPendingFreeOperationGrants = (
   move: Move,
   options?: {
     readonly ambiguityMode?: 'throw' | 'report';
+    readonly zoneFilterErrorSurface?: FreeOperationZoneFilterSurface;
   },
 ): AuthorizedPendingFreeOperationGrantResolution => {
   const matchingGrants = pending.filter(
-    (grant) => grant.seat === activeSeat && doesGrantAuthorizeMove(def, state, pending, grant, move),
+    (grant) =>
+      grant.seat === activeSeat
+      && doesGrantAuthorizeMove(
+        def,
+        state,
+        pending,
+        grant,
+        move,
+        options?.zoneFilterErrorSurface === undefined
+          ? undefined
+          : { zoneFilterErrorSurface: options.zoneFilterErrorSurface },
+      ),
   );
   const ambiguity = resolveAuthorizedPendingFreeOperationGrantOverlapAmbiguity(def, state, matchingGrants);
   if (ambiguity !== null && options?.ambiguityMode !== 'report') {

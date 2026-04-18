@@ -1,6 +1,6 @@
 # 134UNIMOVLEG-002: Atomic migration of probe/classifier/apply sites to unified predicate
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — three kernel call sites + integration tests; diagnostic-surface shift at apply time
@@ -17,6 +17,7 @@ After ticket 001, the unified `evaluateMoveLegality` predicate exists as a pure 
 3. Existing integration test files verified at `packages/engine/test/integration/pending-move-admissibility-parity.test.ts` and `packages/engine/test/integration/classified-move-parity.test.ts`.
 4. Spec §Definitions — Surface-ID discipline documents the diagnostic shift: apply-time zone-filter-evaluation failures will surface through `FREE_OPERATION_GRANT_MATCH_EVALUATION` after this ticket (previously `FREE_OPERATION_GRANT_CONSUMPTION`). This is a one-time migration, not a regression.
 5. Exempt sites that keep their grant-resolution / completion-legality helper calls: `legal-moves.ts:729` (enumeration surfacing — comment at `legal-moves.ts:744–745` documents this already), `grant-lifecycle.ts:408` (grant state-machine transition), `free-operation-viability.ts:626` (primitive composition inside `hasLegalCompletedProbeMove`, which is itself a primitive the predicate consumes).
+6. Live reassessment after ticket 001 closeout shows `packages/engine/src/kernel/move-legality-predicate.ts` currently catches `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED` during decision-sequence resolution and returns `{ kind: 'legal' }`. That behavior prevents the apply-time surface-migration regression from being observable through the unified authority unless this ticket absorbs the minimum predicate fix.
 
 ## Architecture Check
 
@@ -132,23 +133,33 @@ Add three new test blocks. Use file-top marker `// @test-class: architectural-in
 2. **Pre/post-apply equivalence property test** — for every `(def, state, move)` in the cross-pathway fixture corpus where the move is applicable, assert `doesCompletedProbeMoveChangeGameplayState(def, S, M) === doesMaterialGameplayStateChange(S, applyMove(def, S, M).newState)`. Skip cases where the move throws on apply (those are illegal-verdict cases, not equivalence cases). This encodes spec Invariant #4.
 3. **Surface-migration regression** — construct a scenario where apply-time grant resolution encounters a zone-filter evaluation failure. Assert the failure is routed through `FREE_OPERATION_GRANT_MATCH_EVALUATION` (not `FREE_OPERATION_GRANT_CONSUMPTION` as before). Document the commit-time diagnostic shift.
 
-### 5. Regression witness preservation
+### 5. Predicate authority correction — `packages/engine/src/kernel/move-legality-predicate.ts`
+
+Absorb the minimum predicate change required to keep the migration Foundation-compliant and observable:
+
+- stop treating `FREE_OPERATION_ZONE_FILTER_EVALUATION_FAILED` as unconditional `{ kind: 'legal' }` when that error arises during the decision-sequence resolution path
+- preserve the ticket-001 tolerance behavior only where the grant-match authority itself is intentionally indeterminate, not where swallowing the error would hide the apply-time match-evaluation diagnostic required by this ticket
+- keep the predicate as the single legality authority; do not reintroduce caller-local special cases to route around the predicate
+
+This is a narrow authority-module correction, not a reopening of ticket 001. It is required by Foundations 5, 14, and 15 because the caller migration cannot truthfully deliver the apply-time surface contract while the unified predicate still masks that failure mode.
+
+### 6. Regression witness preservation
 
 The An Loc card-71, Gulf of Tonkin, and seed-1012 regression witnesses already in the integration suite must continue to pass unchanged. `classified-move-parity.test.ts` continues to pass with no per-site recomputation of outcome-policy.
 
-### 6. Commit message guidance
+### 7. Commit message guidance
 
 Commit body should explicitly note the surface-migration diagnostic shift (`FREE_OPERATION_GRANT_CONSUMPTION` → `FREE_OPERATION_GRANT_MATCH_EVALUATION` for apply-time zone-filter failures) so downstream log consumers are on notice.
 
 ## Files to Touch
 
 - `packages/engine/src/kernel/apply-move.ts` (modify — probe site replacement, delete `validateFreeOperationOutcomePolicy`, relocate apply-time call to pre-execute)
+- `packages/engine/src/kernel/move-legality-predicate.ts` (modify — minimum authority correction so zone-filter evaluation failures are surfaced consistently through the unified predicate)
 - `packages/engine/src/kernel/move-admissibility.ts` (modify — delete `resolveOutcomePolicyGrantForAdmissibility`, replace `classifyFreeOperationOutcomePolicyAdmissibility` body with predicate call + mapping table)
 - `packages/engine/test/integration/pending-move-admissibility-parity.test.ts` (modify — three-site agreement, pre/post-apply equivalence, surface-migration regression)
 
 ## Out of Scope
 
-- No changes to `packages/engine/src/kernel/move-legality-predicate.ts` — that is ticket 001.
 - No changes to `legal-moves.ts`, `grant-lifecycle.ts`, or `free-operation-viability.ts`. Their calls to grant-resolution / completion-legality helpers are exempt per spec §Touched but not migrated.
 - No changes to `packages/engine/src/agents/prepare-playable-moves.ts` — consumer at the agent layer, no code change expected.
 - No changes to `deriveMoveViabilityVerdict` (`viability-predicate.ts`) — rewrite layer operates on raw-probe output, not outcome-policy logic.
@@ -176,6 +187,8 @@ Commit body should explicitly note the surface-migration diagnostic shift (`FREE
 5. **Determinism preserved (Foundation 8)**: seed-1012 and other regression witnesses continue to pass; canonical serialized state remains bit-identical across replay.
 6. **Surface consistency**: apply-time zone-filter-evaluation failures surface through `FREE_OPERATION_GRANT_MATCH_EVALUATION` — consistent with probe-time and classifier-time failures.
 
+- `ticket corrections applied`: `move-legality-predicate.ts out of scope -> minimum predicate authority correction is in scope because caller-only migration cannot satisfy the match-evaluation surface contract`
+
 ## Test Plan
 
 ### New/Modified Tests
@@ -189,3 +202,22 @@ Commit body should explicitly note the surface-migration diagnostic shift (`FREE
 3. `pnpm turbo lint && pnpm turbo typecheck` — workspace lint and typecheck.
 4. Structural check: `grep -rn "validateFreeOperationOutcomePolicy\|resolveOutcomePolicyGrantForAdmissibility" packages/engine/src/` — must return zero matches.
 5. Structural check: `grep -rn "doesMaterialGameplayStateChange" packages/engine/src/kernel/apply-move.ts` — must return zero matches (import dropped; function still exists for `free-operation-viability.ts:564`).
+
+## Outcome
+
+- Completed: 2026-04-18
+- What changed:
+  - Migrated the probe, apply, and admissibility sites to consume `evaluateMoveLegality` as the shared free-operation outcome-policy authority.
+  - Deleted `validateFreeOperationOutcomePolicy` and `resolveOutcomePolicyGrantForAdmissibility`.
+  - Landed the minimum `move-legality-predicate.ts` authority correction so grant-zone-filter evaluation failures no longer disappear behind unconditional legal verdicts.
+  - Added integration coverage for predicate/probe/classifier/apply agreement, pre/post gameplay-state equivalence, and the grant-match surface migration regression.
+- Deviations from original plan:
+  - In addition to the originally named files, the migration required small supporting edits in `free-operation-grant-authorization.ts`, `free-operation-outcome-policy.ts`, and `free-operation-zone-filter-contract.ts` so the match-evaluation surface could propagate through grant authorization cleanly.
+  - The implementation also updated `perf-profiler.ts` and a `legal-moves.ts` comment to remove the deleted helper name from the remaining support surface.
+- Verification:
+  - `pnpm -F @ludoforge/engine build`
+  - `pnpm turbo test`
+  - `pnpm turbo lint`
+  - `pnpm turbo typecheck`
+  - `grep -rn "validateFreeOperationOutcomePolicy\|resolveOutcomePolicyGrantForAdmissibility" packages/engine/src/`
+  - `grep -rn "doesMaterialGameplayStateChange" packages/engine/src/kernel/apply-move.ts`

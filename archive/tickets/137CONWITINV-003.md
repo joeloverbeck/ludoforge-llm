@@ -1,6 +1,6 @@
 # 137CONWITINV-003: Rewrite enumeration-hang test as `fitl-enumeration-bounds.test.ts`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test rewrite only
@@ -138,3 +138,39 @@ Confirm the parameterized `buildDeterministicFitlStateCorpus(def, { seeds, maxPl
 
 1. `pnpm -F @ludoforge/engine test`
 2. `pnpm turbo lint typecheck`
+
+## Outcome
+
+Completion date: 2026-04-18
+
+Replaced the trajectory-pinned convergence-witness file
+`packages/engine/test/integration/fitl-policy-agent-enumeration-hang.test.ts`
+with the architectural-invariant test
+`packages/engine/test/integration/fitl-enumeration-bounds.test.ts`.
+
+The new test compiles the validated FITL production GameDef, builds a
+deterministic state corpus with canary seeds `1040` and `1012` up to `60`
+plies, and asserts that every sampled state's `enumerateLegalMoves(...)`
+result stays within a bounded move-count ceiling.
+
+Observed corpus measurement before setting the invariant bound:
+
+- seeds: `[1040, 1012]`
+- `maxPly`: `60`
+- sampled states: `79`
+- peak observed move count: `31`
+
+The landed bound is `MAX_REASONABLE_MOVE_COUNT = 64`, documented in the test
+as approximately 2x headroom over the observed peak while still catching
+meaningful growth.
+
+Deviations from original plan: none.
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/fitl-enumeration-bounds.test.js`
+- `rg -n "legal\.moves\.length === [0-9]" packages/engine/test/integration/fitl-*.test.ts` returned no matches
+- `rg -n "@test-class: convergence-witness" packages/engine/test/integration/fitl-enumeration-bounds.test.ts` returned no matches
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint typecheck`

@@ -1,6 +1,6 @@
 ## 139CCONLEGCONT-003: Classifier full-path certificate + memoization + explicitStochastic verdict (Foundation 14 atomic cut)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel classifier, wrapper helpers, runtime-warning schema, agent sampler consumer migrations
@@ -38,7 +38,7 @@ The diff exceeds a typical review size because the atomic cut touches every cons
 - **D2.1**: Change line 141's `if (request.kind === 'pendingStochastic') return 'unknown';` to `return 'explicitStochastic';`. Apply the same change inside any emit-certificate path (see D2.3).
 - **D2.2**: Delete the `emitCanonicalViableHeadSelection?: boolean` field from `DecisionSequenceSatisfiabilityOptions` (line 28). Delete the `canonicalViableHeadSelection?: MoveParamValue` field from `DecisionSequenceSatisfiabilityResult` (line 21). Add `emitCompletionCertificate?: boolean` to the options and `certificate?: CompletionCertificate` to the result.
 - **D2.2**: Delete the entire head-only emit-viable-head code path at lines 225-322. Replace with the new memoized DFS that emits full-path certificates.
-- **D2.3**: Implement the memoized DFS per spec D2 algorithm. Memo key shape: template-literal `` `${projectedStateHash}:${actionId}:${normalizedPartialBinding}:${pendingRequestFingerprint}` ``. `normalize(move.params)` sorts keys lexicographically and serializes values via the canonical state-hash encoding. `pending-request-fingerprint` includes request type, decision key, options-list hash, and `(min, max)` for `chooseN`.
+- **D2.3**: Implement the memoized DFS per spec D2 algorithm. The per-call memo key is invocation-local: `` `${actionId}:${normalizedPartialBinding}:${pendingRequestFingerprint}` ``. `normalize(move.params)` sorts keys lexicographically and serializes values canonically. `pending-request-fingerprint` includes request type, decision key, options-list hash, and `(min, max)` for `chooseN`.
 - **D2.3**: When a `chooseN` request is reached, call `propagateChooseNSetVariable` from ticket 002's module. If `kind === 'determined'`, the selection becomes the next assignment. If `kind === 'branching'`, recurse on each candidate in canonical order. If `kind === 'unsat'`, return `Unsat`.
 - **D2.3**: When a child recursion returns `'explicitStochastic'` (mid-sequence stochastic boundary via a specific binding), the parent returns `Sat` with a partial certificate containing only the pre-stochastic decisions — downstream stochastic resolution runs via `chooseStochastic` per spec Edge Cases.
 - **D2.3**: Nogood recording — when a child branch returns `Unsat`, record `(parent memo key, selection)` in the per-call memo so repeated subtrees short-circuit. Nogoods are discarded with the memo at end of call.
@@ -84,9 +84,12 @@ Assertions:
 ## Files to Touch
 
 - `packages/engine/src/kernel/decision-sequence-satisfiability.ts` (modify — large rewrite)
+- `packages/engine/src/kernel/choose-n-set-variable-propagation.ts` (modify — conservative bounded branching fix for multi-pick support)
 - `packages/engine/src/kernel/move-decision-sequence.ts` (modify — wrapper updates)
 - `packages/engine/src/agents/prepare-playable-moves.ts` (modify — delete buildCanonicalGuidedChoose, maybeActivateGuidance, GUIDED_COMPLETION_UNEXPECTED_MISS emission)
 - `packages/engine/src/kernel/types-core.ts` (modify — delete warning-schema entry)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — delete warning-schema entry)
+- `packages/engine/schemas/Trace.schema.json` (modify — regenerated warning schema artifact)
 - `packages/engine/test/unit/kernel/decision-sequence-satisfiability.test.ts` (modify — migrate)
 - `packages/engine/test/integration/fitl-seed-guided-classifier-coverage.test.ts` (delete)
 - `packages/engine/test/integration/prepare-playable-moves-guided-convergence.test.ts` (delete)
@@ -135,3 +138,10 @@ Assertions:
 2. `pnpm -F @ludoforge/engine test:integration` — integration layer (expect known failures on the three seeds until ticket 005).
 3. `pnpm turbo lint && pnpm turbo typecheck` — gates.
 4. `grep -rE 'canonicalViableHeadSelection|emitCanonicalViableHeadSelection|buildCanonicalGuidedChoose|GUIDED_COMPLETION_UNEXPECTED_MISS' packages/engine/` — must return zero matches (the Foundation #14 atomic-cut invariant).
+
+## Outcome (2026-04-19)
+
+- `ticket corrections applied`: invocation-local classifier memo key no longer claims `projectedStateHash`; wrapper admission remains conservative for `'unknown'` until ticket 004; touched-file scope expanded to include `choose-n-set-variable-propagation.ts`, `schemas-core.ts`, and regenerated `schemas/Trace.schema.json`.
+- `what landed`: classifier now emits full-path `CompletionCertificate`s with per-call memoization and nogoods, `pendingStochastic` classifies as `'explicitStochastic'`, head-guidance artifacts are deleted from the agent path, warning schemas were cleaned up, the named integration tests were deleted, and the memo-isolation regression test was added.
+- `verification set`: `pnpm -F @ludoforge/engine build`; focused `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/decision-sequence-satisfiability.test.js dist/test/unit/kernel/decision-sequence-satisfiability-memo-isolation.test.js dist/test/unit/agents/prepare-playable-moves-retry.test.js`; `pnpm -F @ludoforge/engine schema:artifacts`; `pnpm -F @ludoforge/engine test:unit`; `pnpm turbo lint`; `pnpm turbo typecheck`; `rg -n 'canonicalViableHeadSelection|emitCanonicalViableHeadSelection|buildCanonicalGuidedChoose|GUIDED_COMPLETION_UNEXPECTED_MISS' packages/engine`
+- `integration lane`: `pnpm -F @ludoforge/engine test:integration` started cleanly and printed a long series of passing files, then continued in the repo's existing silent-progress mode with heartbeat lines reporting active long-tail FITL files (`phase1-preview-differentiation.test.js`, `fitl-seed-1000-regression.test.js`, `fitl-policy-agent.test.js`, `fitl-seed-stability.test.js`). No failure summary was emitted during the session, so this lane is not claimed as directly green.

@@ -195,76 +195,6 @@ const createOptionalRetryProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
-const createGuidedMissProfile = (actionId: string): ActionPipelineDef => ({
-  id: `profile-${actionId}`,
-  actionId: asActionId(actionId),
-  legality: null,
-  costValidation: null,
-  costEffects: [],
-  targeting: {},
-  stages: [
-    {
-      stage: 'resolve',
-      effects: [
-        eff({
-          chooseN: {
-            internalDecisionId: 'decision:$targets',
-            bind: '$targets',
-            options: { query: 'enums', values: ['bad', 'good'] },
-            min: 1,
-            max: 1,
-          },
-        }),
-        eff({
-          chooseOne: {
-            internalDecisionId: 'decision:$path',
-            bind: '$path',
-            options: { query: 'enums', values: ['safe', 'trap'] },
-          },
-        }),
-        eff({
-          if: {
-            when: {
-              op: 'and',
-              args: [
-                {
-                  op: 'in',
-                  item: 'good',
-                  set: { _t: 2, ref: 'binding', name: '$targets' },
-                },
-                {
-                  op: '==',
-                  left: { _t: 2, ref: 'binding', name: '$path' },
-                  right: 'safe',
-                },
-              ],
-            },
-            then: [
-              eff({
-                chooseOne: {
-                  internalDecisionId: 'decision:$done',
-                  bind: '$done',
-                  options: { query: 'enums', values: ['done'] },
-                },
-              }) as ActionDef['effects'][number],
-            ],
-            else: [
-              eff({
-                chooseOne: {
-                  internalDecisionId: 'decision:$dead',
-                  bind: '$dead',
-                  options: { query: 'enums', values: [] },
-                },
-              }) as ActionDef['effects'][number],
-            ],
-          },
-        }),
-      ],
-    },
-  ],
-  atomicity: 'atomic',
-});
-
 const createDef = (
   actionId: string,
   profile: ActionPipelineDef,
@@ -449,34 +379,5 @@ describe('preparePlayableMoves retry integration', () => {
     assert.equal(prepared.statistics.templateCompletionStructuralFailures, 1);
     assert.equal(prepared.movePreparations[0]?.templateCompletionOutcome, 'failed');
     assert.equal(prepared.movePreparations[0]?.rejection, 'structurallyUnsatisfiable');
-  });
-
-  it('emits GUIDED_COMPLETION_UNEXPECTED_MISS when a guided head selection still dead-ends downstream', () => {
-    const actionId = 'guided-miss-template';
-    const def = createDef(actionId, createGuidedMissProfile(actionId));
-    const { state, classifiedMove } = getSinglePendingMove(def);
-
-    const prepared = preparePlayableMoves({
-      def,
-      state,
-      legalMoves: [classifiedMove],
-      rng: createRng(1n),
-    }, {
-      pendingTemplateCompletions: 2,
-      choose: (request) => {
-        if (request.type === 'chooseOne' && request.name === '$path') {
-          return 'trap';
-        }
-        return undefined;
-      },
-    });
-
-    assert.equal(prepared.completedMoves.length, 0);
-    assert.equal(prepared.stochasticMoves.length, 0);
-    const warning = findWarning(prepared.movePreparations[0]?.warnings, 'GUIDED_COMPLETION_UNEXPECTED_MISS');
-    assert.ok(warning, 'expected guided miss warning');
-    assert.equal(warning?.context.actionId, actionId);
-    assert.equal(warning?.context.stateHash, state.stateHash);
-    assert.equal(warning?.context.subsetSize, 1);
   });
 });

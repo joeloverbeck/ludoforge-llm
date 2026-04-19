@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel admission filter, `LegalMoveEnumerationResult` shape extension (internal-only), runtime-warning schema additions
-**Deps**: `tickets/139CCONLEGCONT-003.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-003.md`
 
 ## Problem
 

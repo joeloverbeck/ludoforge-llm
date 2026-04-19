@@ -1178,7 +1178,6 @@ export const RuntimeWarningCodeSchema = z.union([
   z.literal('MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'),
   z.literal('MOVE_ENUM_PROBE_REJECTED'),
   z.literal('MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY'),
-  z.literal('GUIDED_COMPLETION_UNEXPECTED_MISS'),
 ]);
 
 export const RuntimeWarningSchema = z

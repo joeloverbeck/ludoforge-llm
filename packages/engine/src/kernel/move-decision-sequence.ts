@@ -36,7 +36,7 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
-  readonly emitCanonicalViableHeadSelection?: boolean;
+  readonly emitCompletionCertificate?: boolean;
   readonly profiler?: PerfProfiler;
 }
 
@@ -174,7 +174,8 @@ export const isMoveDecisionSequenceSatisfiable = (
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
-  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
+  const classification = classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification;
+  return classification === 'satisfiable' || classification === 'explicitStochastic';
 };
 
 export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
@@ -207,14 +208,17 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   context: MissingBindingPolicyContext,
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
-): boolean => classifyMoveDecisionSequenceAdmissionForLegalMove(
-  def,
-  state,
-  baseMove,
-  context,
-  options,
-  runtime,
-) !== 'unsatisfiable';
+): boolean => {
+  const classification = classifyMoveDecisionSequenceAdmissionForLegalMove(
+    def,
+    state,
+    baseMove,
+    context,
+    options,
+    runtime,
+  );
+  return classification !== 'unsatisfiable';
+};
 
 export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,
@@ -231,7 +235,12 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       orderSelections: (_request, selectableValues) => orderMoveParamValuesByAscendingComplexity(state, selectableValues),
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
-      ...(options?.emitCanonicalViableHeadSelection === true ? { emitCanonicalViableHeadSelection: true } : {}),
+      ...(options?.emitCompletionCertificate === true
+        ? {
+          emitCompletionCertificate: true,
+          certificateFingerprintStateHash: state.stateHash,
+        }
+        : {}),
       ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
     },
   );

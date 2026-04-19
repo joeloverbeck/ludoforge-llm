@@ -228,16 +228,45 @@ const buildCandidateSelections = (
   lowerBound: readonly MoveParamScalar[],
   supportedIncludes: readonly MoveParamScalar[],
   min: number,
+  max: number,
 ): readonly (readonly MoveParamScalar[])[] => {
   const candidates = new Map<string, readonly MoveParamScalar[]>();
-  if (lowerBound.length >= min) {
+  if (lowerBound.length >= min && lowerBound.length <= max) {
     const normalized = sortCanonicalSelection(lowerBound);
     candidates.set(JSON.stringify(normalized), normalized);
   }
-  for (const option of supportedIncludes) {
-    const selection = dedupeCanonicalSelection([...lowerBound, option]);
-    candidates.set(JSON.stringify(selection), selection);
+
+  const additionsNeeded = lowerBound.length >= min ? 1 : min - lowerBound.length;
+  if (additionsNeeded <= 0) {
+    return [...candidates.values()];
   }
+
+  const enumerate = (
+    start: number,
+    current: readonly MoveParamScalar[],
+  ): void => {
+    if (current.length === additionsNeeded) {
+      const normalized = dedupeCanonicalSelection([...lowerBound, ...current]);
+      if (normalized.length >= min && normalized.length <= max) {
+        candidates.set(JSON.stringify(normalized), normalized);
+      }
+      return;
+    }
+
+    for (let index = start; index < supportedIncludes.length; index += 1) {
+      const next = supportedIncludes[index];
+      if (next === undefined) {
+        continue;
+      }
+      enumerate(index + 1, [...current, next]);
+    }
+  };
+
+  if (lowerBound.length + additionsNeeded > max) {
+    return [...candidates.values()];
+  }
+
+  enumerate(0, []);
   return [...candidates.values()];
 };
 
@@ -248,11 +277,12 @@ export const propagateChooseNSetVariable = (
 ): ChooseNPropagationResult => {
   const min = request.min ?? 0;
   const max = request.max ?? request.options.length;
+  const residualOptions = collectResidualOptions(request);
   const lowerBound = [...dedupeCanonicalSelection(request.selected)];
   const supportedIncludes: MoveParamScalar[] = [];
   const upperBoundKeys = new Set(lowerBound.map((value) => optionKey(value)));
 
-  for (const value of collectResidualOptions(request)) {
+  for (const value of residualOptions) {
     const includeVerdict = resolveSupportVerdict(buildForcedIncludeRequest(request, value), move, ctx);
     const excludeVerdict = resolveSupportVerdict(buildForcedExcludeRequest(request, value), move, ctx);
 
@@ -269,10 +299,10 @@ export const propagateChooseNSetVariable = (
   const normalizedLowerBound = dedupeCanonicalSelection(lowerBound);
   const normalizedUpperBound = dedupeCanonicalSelection([
     ...normalizedLowerBound,
-    ...collectResidualOptions(request).filter((value) => upperBoundKeys.has(optionKey(value))),
+    ...residualOptions.filter((value) => upperBoundKeys.has(optionKey(value))),
   ]);
 
-  if (normalizedLowerBound.length > max || normalizedUpperBound.length < min) {
+  if (normalizedLowerBound.length > max || normalizedLowerBound.length + residualOptions.length < min) {
     return { kind: 'unsat' };
   }
   if (normalizedLowerBound.length === max) {
@@ -284,8 +314,9 @@ export const propagateChooseNSetVariable = (
 
   const candidateSelections = buildCandidateSelections(
     normalizedLowerBound,
-    [...supportedIncludes].sort(compareScalarsCanonical),
+    [...(supportedIncludes.length === 0 ? residualOptions : supportedIncludes)].sort(compareScalarsCanonical),
     min,
+    max,
   );
   if (candidateSelections.length === 0) {
     return { kind: 'unsat' };

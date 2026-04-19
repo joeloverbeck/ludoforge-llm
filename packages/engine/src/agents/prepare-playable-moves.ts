@@ -2,7 +2,6 @@ import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profile
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
 import type { DrawDeadEndOptionalChooseN } from '../kernel/move-completion.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import { classifyMoveDecisionSequenceSatisfiability } from '../kernel/move-decision-sequence.js';
 import { fork } from '../kernel/prng.js';
 import type {
   Agent,
@@ -54,30 +53,6 @@ const sameRngState = (left: Rng, right: Rng): boolean =>
   && left.state.version === right.state.version
   && left.state.state.length === right.state.state.length
   && left.state.state.every((entry, index) => entry === right.state.state[index]);
-
-const moveParamValueKey = (value: MoveParamValue): string => JSON.stringify(value);
-
-const countSelectionMembers = (value: MoveParamValue): number => Array.isArray(value) ? value.length : 1;
-
-const buildCanonicalGuidedChoose = (
-  decisionKey: string,
-  canonicalViableHeadSelection: MoveParamValue,
-  choose: ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined,
-): ((request: ChoicePendingRequest) => MoveParamValue | undefined) => {
-  const canonicalKey = moveParamValueKey(canonicalViableHeadSelection);
-  let consumed = false;
-  return (request) => {
-    if (!consumed && request.type === 'chooseN' && String(request.decisionKey) === decisionKey) {
-      consumed = true;
-      const selected = choose?.(request);
-      if (selected !== undefined && moveParamValueKey(selected) === canonicalKey) {
-        return selected;
-      }
-      return canonicalViableHeadSelection;
-    }
-    return choose?.(request);
-  };
-};
 
 export function preparePlayableMoves(
   input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
@@ -189,11 +164,9 @@ export function preparePlayableMoves(
     const completion = attemptTemplateCompletion(
       input,
       move,
-      viability.nextDecision,
       rng,
       pendingTemplateCompletions,
       options.choose,
-      options.disableGuidedChooser ?? false,
       recordPlayableMove,
       profiler,
       completionsByActionId,
@@ -246,11 +219,9 @@ export function preparePlayableMoves(
 function attemptTemplateCompletion(
   input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
   move: Move,
-  headDecision: ChoicePendingRequest | undefined,
   initialRng: Rng,
   pendingTemplateCompletions: number,
   choose: ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined,
-  disableGuidedChooser: boolean,
   recordPlayableMove: (trustedMove: TrustedExecutableMove, classification: 'complete' | 'stochastic') => boolean,
   profiler: PerfProfiler | undefined,
   completionsByActionId: Map<string, number>,
@@ -277,30 +248,6 @@ function attemptTemplateCompletion(
   // the hard cap keeps total attempts bounded.
   let notViableRetries = 0;
   let priorDeadEndOptionalChooseN: DrawDeadEndOptionalChooseN | null = null;
-  let guidedDecisionKey: string | undefined;
-  let guidedSelection: MoveParamValue | undefined;
-  let guidedSelectionSize = 0;
-  const maybeActivateGuidance = (): void => {
-    if (disableGuidedChooser || guidedSelectionSize > 0 || headDecision?.type !== 'chooseN') {
-      return;
-    }
-    const guidance = classifyMoveDecisionSequenceSatisfiability(
-      input.def,
-      input.state,
-      move,
-      profiler === undefined
-        ? { emitCanonicalViableHeadSelection: true }
-        : { emitCanonicalViableHeadSelection: true, profiler },
-      input.runtime,
-    );
-    warnings.push(...guidance.warnings);
-    if (guidance.classification !== 'satisfiable' || guidance.canonicalViableHeadSelection === undefined) {
-      return;
-    }
-    guidedSelectionSize = countSelectionMembers(guidance.canonicalViableHeadSelection);
-    guidedDecisionKey = String(headDecision.decisionKey);
-    guidedSelection = guidance.canonicalViableHeadSelection;
-  };
   for (let attempt = 0; attempt < pendingTemplateCompletions + notViableRetries; attempt += 1) {
     templateCompletionAttempts += 1;
     const shouldBias = priorDeadEndOptionalChooseN !== null && priorDeadEndOptionalChooseN.sampledCount === 0;
@@ -309,37 +256,17 @@ function attemptTemplateCompletion(
     const [attemptRng, retryRng] = fork(currentRng);
     const t0_epc = perfStart(profiler);
     const retryBiasNonEmpty = shouldBias;
-    const attemptChoose = guidedSelection === undefined || guidedDecisionKey === undefined
-      ? choose
-      : buildCanonicalGuidedChoose(guidedDecisionKey, guidedSelection, choose);
-    let result = evaluatePlayableMoveCandidate(
+    const result = evaluatePlayableMoveCandidate(
       input.def,
       input.state,
       move,
       attemptRng,
       input.runtime,
       {
-        ...(attemptChoose === undefined ? {} : { choose: attemptChoose }),
+        ...(choose === undefined ? {} : { choose }),
         ...(retryBiasNonEmpty ? { retryBiasNonEmpty: true } : {}),
       },
     );
-    if (
-      choose !== undefined
-      && guidedSelectionSize === 0
-      && headDecision?.type !== 'chooseN'
-      && result.kind === 'rejected'
-    ) {
-      // Completion guidance is advisory. If a guided completion path dead-ends,
-      // retry the same template without guidance before discarding the move.
-      result = evaluatePlayableMoveCandidate(
-        input.def,
-        input.state,
-        move,
-        attemptRng,
-        input.runtime,
-        retryBiasNonEmpty ? { retryBiasNonEmpty: true } : undefined,
-      );
-    }
     if (retryBiasNonEmpty) {
       const priorDiagnostic = priorDeadEndOptionalChooseN;
       warnings.push({
@@ -383,12 +310,6 @@ function attemptTemplateCompletion(
       break;
     }
     rejection = result.rejection;
-    if (
-      guidedSelectionSize === 0
-      && (result.rejection === 'notViable' || result.rejection === 'drawDeadEnd')
-    ) {
-      maybeActivateGuidance();
-    }
     if (result.rejection === 'structurallyUnsatisfiable') {
       templateCompletionStructuralFailures += 1;
       break;
@@ -414,23 +335,6 @@ function attemptTemplateCompletion(
     ) {
       notViableRetries += 1;
     }
-  }
-  if (
-    guidedSelectionSize > 0
-    && !sawCompletedMove
-    && stochasticCount === 0
-    && duplicateOutputOutcome === undefined
-  ) {
-    warnings.push({
-      code: 'GUIDED_COMPLETION_UNEXPECTED_MISS',
-      message: 'Guided head selection was proven satisfiable but template completion still exhausted its retry budget.',
-      context: {
-        actionId: String(move.actionId),
-        stateHash: input.state.stateHash,
-        attemptCount: templateCompletionAttempts,
-        subsetSize: guidedSelectionSize,
-      },
-    });
   }
   const trace: TemplateCompletionTrace = stochasticCount > 0
     ? {

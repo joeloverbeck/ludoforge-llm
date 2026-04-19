@@ -1,5 +1,3 @@
-import { createHash } from 'node:crypto';
-
 import {
   deriveCompletionCertificateFingerprint,
   type CompletionCertificate,
@@ -14,6 +12,10 @@ import {
 import {
   propagateChooseNSetVariable,
 } from './choose-n-set-variable-propagation.js';
+import {
+  canonicalizeFingerprintValue,
+  stableFingerprintHex,
+} from './stable-fingerprint.js';
 import type {
   ChoicePendingChooseNRequest,
   ChoicePendingRequest,
@@ -66,33 +68,10 @@ const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly 
   return selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
 };
 
-const canonicalizeValue = (value: unknown): string => {
-  if (value === null) {
-    return 'null';
-  }
-  if (value === undefined) {
-    return 'undefined';
-  }
-  if (typeof value === 'bigint') {
-    return JSON.stringify(value.toString());
-  }
-  if (typeof value !== 'object') {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalizeValue(entry)).join(',')}]`;
-  }
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalizeValue(entryValue)}`);
-  return `{${entries.join(',')}}`;
-};
-
 const hashCanonical = (value: unknown): string =>
-  createHash('sha256').update(canonicalizeValue(value)).digest('hex');
+  stableFingerprintHex('decision-sequence-satisfiability-v1', value);
 
-const normalizeMoveBinding = (move: Move): string => canonicalizeValue({
+const normalizeMoveBinding = (move: Move): string => canonicalizeFingerprintValue({
   params: Object.fromEntries(
     Object.entries(move.params).sort(([left], [right]) => left.localeCompare(right)),
   ),
@@ -329,7 +308,7 @@ export const classifyDecisionSequenceSatisfiability = (
     const knownNogoods = nogoods.get(memoKey) ?? new Set<string>();
     let branchUnknown = false;
     for (const selection of candidateSelections) {
-      const selectionKey = canonicalizeValue(selection);
+      const selectionKey = canonicalizeFingerprintValue(selection);
       if (knownNogoods.has(selectionKey)) {
         continue;
       }

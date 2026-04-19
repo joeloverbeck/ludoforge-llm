@@ -68,6 +68,19 @@ const probeMoveDecisionSequenceAdmissionClassification = (
     (e) => classifyMissingBindingProbeError(e, context),
   );
 
+const probeMoveDecisionSequenceAdmissionResult = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  runtime?: GameDefRuntime,
+): ProbeResult<MoveDecisionSequenceSatisfiabilityResult> =>
+  probeWith(
+    () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime),
+    (e) => classifyMissingBindingProbeError(e, context),
+  );
+
 export const resolveMoveDecisionSequence = (
   def: GameDef,
   state: GameState,
@@ -201,6 +214,29 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   });
 };
 
+export const classifyMoveDecisionSequenceSatisfiabilityForLegalMove = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  runtime?: GameDefRuntime,
+): MoveDecisionSequenceSatisfiabilityResult => {
+  const result = probeMoveDecisionSequenceAdmissionResult(
+    def,
+    state,
+    baseMove,
+    context,
+    options,
+    runtime,
+  );
+  return resolveProbeResult(result, {
+    onLegal: (value) => value,
+    onIllegal: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
+    onInconclusive: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
+  });
+};
+
 export const isMoveDecisionSequenceAdmittedForLegalMove = (
   def: GameDef,
   state: GameState,
@@ -217,7 +253,7 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
     options,
     runtime,
   );
-  return classification !== 'unsatisfiable';
+  return classification === 'satisfiable' || classification === 'explicitStochastic';
 };
 
 export const classifyMoveDecisionSequenceSatisfiability = (

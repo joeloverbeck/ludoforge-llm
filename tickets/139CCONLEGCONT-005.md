@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent sampler, all three agent implementations, three new test files
-**Deps**: `tickets/139CCONLEGCONT-004.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-004.md`
 
 ## Problem
 

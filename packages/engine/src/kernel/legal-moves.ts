@@ -10,8 +10,9 @@ import { isRecoverableEvalResolutionError } from './eval-error-classification.js
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
-  classifyMoveDecisionSequenceAdmissionForLegalMove,
+  classifyMoveDecisionSequenceSatisfiabilityForLegalMove,
   isMoveDecisionSequenceAdmittedForLegalMove,
+  resolveMoveDecisionSequence,
   type DiscoveryCache,
   type MoveDecisionSequenceSatisfiabilityOptions,
 } from './move-decision-sequence.js';
@@ -56,6 +57,7 @@ import { classifyMissingBindingProbeError } from './missing-binding-policy.js';
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
+import type { CompletionCertificate } from './completion-certificate.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -110,6 +112,7 @@ export interface LegalMoveEnumerationOptions {
 export interface LegalMoveEnumerationResult {
   readonly moves: readonly ClassifiedMove[];
   readonly warnings: readonly RuntimeWarning[];
+  readonly certificateIndex?: ReadonlyMap<string, CompletionCertificate>;
 }
 
 interface RawLegalMoveEnumerationResult {
@@ -260,11 +263,16 @@ const classifyEnumeratedMoves = (
   state: GameState,
   moves: readonly Move[],
   warnings: RuntimeWarning[],
+  budgets: MoveEnumerationBudgets,
   runtime?: GameDefRuntime,
   discoveryCache?: DiscoveryCache,
-): readonly ClassifiedMove[] => {
+): {
+  readonly moves: readonly ClassifiedMove[];
+  readonly certificateIndex?: ReadonlyMap<string, CompletionCertificate>;
+} => {
   const alwaysCompleteActionIds = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
   const classified: ClassifiedMove[] = [];
+  const certificateIndex = new Map<string, CompletionCertificate>();
 
   for (const move of moves) {
     if (alwaysCompleteActionIds.has(move.actionId)) {
@@ -336,6 +344,45 @@ const classifyEnumeratedMoves = (
           )
           : undefined,
       });
+      if (!viability.complete && viability.stochasticDecision === undefined) {
+        const admission = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+          def,
+          state,
+          move,
+          MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+          {
+            budgets,
+            emitCompletionCertificate: true,
+          },
+          runtime,
+        );
+        if (admission.classification === 'satisfiable') {
+          if (admission.certificate === undefined) {
+            warnings.push({
+              code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
+              message: 'Admitted incomplete legal move classified as satisfiable without a completion certificate.',
+              context: {
+                actionId: String(move.actionId),
+                stateHash: state.stateHash,
+              },
+            });
+            classified.pop();
+            continue;
+          }
+          certificateIndex.set(toMoveIdentityKey(def, move), admission.certificate);
+        } else if (admission.classification === 'unknown') {
+          warnings.push({
+            code: 'CLASSIFIER_UNKNOWN_VERDICT_DROPPED',
+            message: 'Enumerated legal move was dropped because decision-sequence admission remained unknown.',
+            context: {
+              actionId: String(move.actionId),
+              stateHash: state.stateHash,
+            },
+          });
+          classified.pop();
+          continue;
+        }
+      }
       continue;
     }
 
@@ -349,7 +396,10 @@ const classifyEnumeratedMoves = (
     });
   }
 
-  return classified;
+  return {
+    moves: classified,
+    ...(certificateIndex.size === 0 ? {} : { certificateIndex }),
+  };
 };
 
 const finalizeEarlyExitMoves = (
@@ -707,7 +757,7 @@ function enumeratePendingFreeOperationMoves(
         return false;
       }
     }
-    const decisionSequenceClassification = classifyMoveDecisionSequenceAdmissionForLegalMove(
+    const decisionSequenceResult = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
       def,
       candidateState,
       candidateMove,
@@ -715,14 +765,42 @@ function enumeratePendingFreeOperationMoves(
       {
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+        emitCompletionCertificate: true,
         ...(profiler === undefined ? {} : { profiler }),
       },
     );
-    if (decisionSequenceClassification === 'unsatisfiable') {
-      return false;
-    }
-    if (decisionSequenceClassification !== 'satisfiable') {
-      return true;
+    switch (decisionSequenceResult.classification) {
+      case 'unsatisfiable':
+        return false;
+      case 'unknown':
+        emitEnumerationWarning(enumeration, {
+          code: 'CLASSIFIER_UNKNOWN_VERDICT_DROPPED',
+          message: 'Free-operation candidate was dropped because decision-sequence admission remained unknown.',
+          context: {
+            actionId: String(candidateMove.actionId),
+            stateHash: candidateState.stateHash,
+          },
+        });
+        return false;
+      case 'satisfiable':
+        if (decisionSequenceResult.certificate === undefined) {
+          const resolution = resolveMoveDecisionSequence(def, candidateState, candidateMove);
+          if (resolution.complete) {
+            break;
+          }
+          emitEnumerationWarning(enumeration, {
+            code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
+            message: 'Free-operation candidate classified as satisfiable without a completion certificate.',
+            context: {
+              actionId: String(candidateMove.actionId),
+              stateHash: candidateState.stateHash,
+            },
+          });
+          return false;
+        }
+        break;
+      case 'explicitStochastic':
+        break;
     }
     if (
       candidateState.turnOrderState.type !== 'cardDriven'
@@ -1447,9 +1525,20 @@ export const enumerateLegalMoves = (
 ): LegalMoveEnumerationResult => {
   const { moves, warnings: rawWarnings, discoveryCache } = enumerateRawLegalMoves(def, state, options, runtime);
   const warnings = [...rawWarnings];
-  return {
-    moves: classifyEnumeratedMoves(def, state, moves, warnings, runtime, discoveryCache),
+  const budgets = resolveMoveEnumerationBudgets(options?.budgets);
+  const classified = classifyEnumeratedMoves(
+    def,
+    state,
+    moves,
     warnings,
+    budgets,
+    runtime,
+    discoveryCache,
+  );
+  return {
+    moves: classified.moves,
+    warnings,
+    ...(classified.certificateIndex === undefined ? {} : { certificateIndex: classified.certificateIndex }),
   };
 };
 

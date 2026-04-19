@@ -373,8 +373,9 @@ describe('completion contract invariants', () => {
 
   it('Spec 16 Invariant §5 / Foundation 5: preparePlayableMoves does not retry structurallyUnsatisfiable templates', () => {
     const actionId = 'structural-template';
+    const seedDef = createDef(actionId, createRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(seedDef);
     const def = createDef(actionId, createInsufficientProfile(actionId));
-    const { state, classifiedMove } = getSinglePendingMove(def);
 
     const prepared = preparePlayableMoves({
       def,

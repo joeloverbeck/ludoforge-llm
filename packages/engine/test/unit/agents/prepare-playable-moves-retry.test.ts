@@ -116,7 +116,7 @@ const createAlwaysDeadEndProfile = (actionId: string): ActionPipelineDef => ({
   atomicity: 'atomic',
 });
 
-const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
+const createImmediateStructuralProfile = (actionId: string): ActionPipelineDef => ({
   id: `profile-${actionId}`,
   actionId: asActionId(actionId),
   legality: null,
@@ -128,12 +128,10 @@ const createInsufficientProfile = (actionId: string): ActionPipelineDef => ({
       stage: 'resolve',
       effects: [
         eff({
-          chooseN: {
-            internalDecisionId: 'decision:$targets',
-            bind: '$targets',
-            options: { query: 'enums', values: ['a', 'b'] },
-            min: 3,
-            max: 3,
+          chooseOne: {
+            internalDecisionId: 'decision:$target',
+            bind: '$target',
+            options: { query: 'enums', values: [] },
           },
         }),
       ],
@@ -360,8 +358,9 @@ describe('preparePlayableMoves retry integration', () => {
 
   it('short-circuits structural failures without consuming retry extensions', () => {
     const actionId = 'structural-template';
-    const def = createDef(actionId, createInsufficientProfile(actionId));
-    const { state, classifiedMove } = getSinglePendingMove(def);
+    const seedDef = createDef(actionId, createRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(seedDef);
+    const def = createDef(actionId, createImmediateStructuralProfile(actionId));
 
     const prepared = preparePlayableMoves({
       def,

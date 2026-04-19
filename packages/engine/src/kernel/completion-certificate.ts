@@ -1,10 +1,9 @@
-import { createHash } from 'node:crypto';
-
 import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { DecisionKey } from './decision-scope.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { evaluateMoveLegality } from './move-legality-predicate.js';
 import { kernelRuntimeError } from './runtime-error.js';
+import { stableFingerprintHex } from './stable-fingerprint.js';
 import type {
   ChoicePendingRequest,
   GameDef,
@@ -39,29 +38,6 @@ interface CompletionCertificateFingerprintInput {
   readonly assignments: readonly CompletionCertificateAssignment[];
 }
 
-const canonicalizeValue = (value: unknown): string => {
-  if (value === null) {
-    return 'null';
-  }
-  if (value === undefined) {
-    return 'undefined';
-  }
-  if (typeof value === 'bigint') {
-    return JSON.stringify(value.toString());
-  }
-  if (typeof value !== 'object') {
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalizeValue(entry)).join(',')}]`;
-  }
-
-  const entries = Object.entries(value as Record<string, unknown>)
-    .sort(([left], [right]) => left.localeCompare(right))
-    .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalizeValue(entryValue)}`);
-  return `{${entries.join(',')}}`;
-};
-
 const normalizeMoveParams = (params: Move['params']): Readonly<Record<string, MoveParamValue>> =>
   Object.fromEntries(
     Object.entries(params).sort(([left], [right]) => left.localeCompare(right)),
@@ -79,16 +55,12 @@ const normalizeAssignments = (
 export const deriveCompletionCertificateFingerprint = (
   input: CompletionCertificateFingerprintInput,
 ): string =>
-  createHash('sha256')
-    .update('completion-certificate-v1')
-    .update('\0')
-    .update(canonicalizeValue({
-      projectedStateHash: input.stateHash.toString(),
-      actionId: String(input.actionId),
-      baseParams: normalizeMoveParams(input.baseParams),
-      assignments: normalizeAssignments(input.assignments),
-    }))
-    .digest('hex');
+  stableFingerprintHex('completion-certificate-v1', {
+    projectedStateHash: input.stateHash.toString(),
+    actionId: String(input.actionId),
+    baseParams: normalizeMoveParams(input.baseParams),
+    assignments: normalizeAssignments(input.assignments),
+  });
 
 const consumeCertificateAssignment = (
   request: ChoicePendingRequest,

@@ -17,6 +17,7 @@ const expectedMoveDecisionSequenceExports = [
   'resolveMoveDecisionSequence',
   'isMoveDecisionSequenceSatisfiable',
   'classifyMoveDecisionSequenceAdmissionForLegalMove',
+  'classifyMoveDecisionSequenceSatisfiabilityForLegalMove',
   'isMoveDecisionSequenceAdmittedForLegalMove',
   'classifyMoveDecisionSequenceSatisfiability',
 ] as const;

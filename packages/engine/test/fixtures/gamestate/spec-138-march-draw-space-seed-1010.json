@@ -1,0 +1,164 @@
+{
+  "seed": 1010,
+  "stateHash": "0xf3718342adc88ca9",
+  "activePlayer": 2,
+  "moves": [
+    {
+      "actionId": "march",
+      "headDecisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+      "headOptionCount": 30,
+      "optionOutcomes": [
+        {
+          "index": 0,
+          "value": "an-loc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 1,
+          "value": "can-tho:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 2,
+          "value": "central-laos:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 3,
+          "value": "hue:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 4,
+          "value": "kien-giang-an-xuyen:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 5,
+          "value": "kien-hoa-vinh-binh:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 6,
+          "value": "kontum:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 7,
+          "value": "loc-can-tho-chau-doc:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 8,
+          "value": "loc-da-nang-dak-to:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 9,
+          "value": "loc-da-nang-qui-nhon:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 10,
+          "value": "loc-hue-da-nang:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 11,
+          "value": "loc-hue-khe-sanh:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 12,
+          "value": "loc-kontum-dak-to:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 13,
+          "value": "loc-kontum-qui-nhon:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 14,
+          "value": "loc-saigon-an-loc-ban-me-thuot:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 15,
+          "value": "loc-saigon-can-tho:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 16,
+          "value": "north-vietnam:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 17,
+          "value": "northeast-cambodia:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 18,
+          "value": "phu-bon-phu-yen:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 19,
+          "value": "phuoc-long:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 20,
+          "value": "pleiku-darlac:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 21,
+          "value": "quang-duc-long-khanh:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 22,
+          "value": "quang-nam:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 23,
+          "value": "quang-tin-quang-ngai:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 24,
+          "value": "quang-tri-thua-thien:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 25,
+          "value": "qui-nhon:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 26,
+          "value": "saigon:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 27,
+          "value": "southern-laos:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 28,
+          "value": "tay-ninh:none",
+          "outcome": "illegal"
+        },
+        {
+          "index": 29,
+          "value": "the-parrots-beak:none",
+          "outcome": "illegal"
+        }
+      ]
+    }
+  ]
+}

@@ -30,6 +30,8 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 
 Load `references/ticket-type-triage.md` to classify the ticket into the smallest live category before loading further references, and to run the category-specific preflights (bounded local refactor, proof/benchmark/audit/investigation, event/card/action-identity repro, gate/smoke/regression historical witness, historical-evidence sufficiency, contradictory live evidence, shared-contract downstream consumers).
 
+For **investigation / measurement / fixture-producing** tickets, do not default to the bounded-local-refactor fast path merely because the owned files are "just a script plus artifacts." If the ticket predicts an empirical outcome, witness distribution, or measured subset shape, prefer the investigation/proof path unless reassessment proves the evidence surface is trivial and contradiction risk is low.
+
 ### Bounded Local Refactor Fast Path
 
 When ticket triage confirms a **bounded local refactor**, use this lean path unless reassessment later proves the boundary wider:
@@ -87,8 +89,11 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 8. Build a discrepancy list and classify each item per `references/triage-and-resolution.md` (Stale-vs-Blocking Triage). When legality/admissibility and sampled completion surfaces disagree, follow the Legality/Admissibility Contradiction Playbook in that reference before widening retries, adding fallbacks, or rewriting the boundary.
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
    - When an upstream result can be reclassified downstream (for example `completed` becoming a rejected or dead-end candidate later in the pipeline), verify that the ticket-owned diagnostic payload or invariant survives that handoff before changing retry policy, adding fallbacks, or rewriting the ticket boundary. Do not assume the first result surface is the only place the owned invariant must remain observable.
+   - For investigation tickets that specify *how* to measure something, explicitly check whether the ticket's proposed probe method exercises the same live semantic seam as the subsystem being characterized. If the requested method and the live kernel/runner/agent seam differ, stop and reconcile that before generating durable evidence artifacts.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
    - When the contradiction is specifically a stale witness input rather than a production-code bug, classify that separately from ordinary scope drift. If the user authorizes re-blessing, prefer replacing the witness with the narrowest validated live witness instead of widening semantics just to preserve the old example.
+
+For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
 
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
@@ -150,6 +155,10 @@ When live implementation requires correcting stale ticket text, record a compact
 
 Use this for concrete live-contract fixes such as helper signatures, export-surface ownership, touched-file scope, or verification command wording. Keep it short; do not turn it into a second narrative section when a one-line correction ledger is enough.
 
+When the ticket lands successfully but the live investigation disproves part of the draft framing, still close the ticket truthfully if the owned evidence artifact was produced. In that case, keep the correction ledger explicit rather than quietly preserving the stale hypothesis. Typical shape:
+
+- `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
+
 For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
 
 1. Update the draft ticket status truthfully (`COMPLETED`, `BLOCKED`, etc.).
@@ -173,6 +182,12 @@ Suggested compact final-proof ledger:
 - `verification set`: `<commands run directly in final proof order>`
 - `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
 - `proof gaps`: `none` or `<remaining blocker>`
+
+Investigation-ticket example when the artifact landed but the hypothesis shifted:
+
+- `ticket corrections applied`: `expected small viable subset on both seeds -> measured 44/44 on seed A and 1/30 on seed B`
+- `verification set`: `<artifact-generation commands in final proof order>`
+- `proof gaps`: `none`
 
 ### Post-Closeout Reopen
 

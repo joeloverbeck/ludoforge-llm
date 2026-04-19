@@ -1,24 +1,27 @@
-# Spec 138: Enumerate-Time Template-Move Viability Classifier
+# Spec 138: Guided Completion From Enumerate-Time Satisfiability
 
 **Status**: DRAFT
 **Priority**: P0
-**Complexity**: L
-**Dependencies**: Spec 132 (retry-budget + probe unification, archived), Spec 134 (unified legality predicate, archived)
-**Source**: `campaigns/fitl-arvn-agent-evolution` and `campaigns/fitl-vc-agent-evolution` HEAD re-run on 2026-04-19. arvn seeds 1002 and 1010 terminate with `stopReason=noPlayableMoveCompletion` after the NVA `march` template's `completeTemplateMove` returns `drawDeadEnd` across the full 10-attempt retry budget. vc seeds show no degeneracy in 1000–1019.
+**Complexity**: M
+**Dependencies**: Spec 132 [agent-stuck-viable-template-completion-mismatch] (archived), Spec 134 [unified-move-legality-predicate] (archived)
+**Related**: Spec 87 [unified-viability-pipeline] (archived — established the shared probe path), Spec 91 [first-decision-domain-compilation] (archived — chooseN domain construction), Spec 135 [choosen-sampler-semantics] (archived — retry-bias and optional chooseN empty-draw handling), Spec 137 [convergence-witness-invariant-promotion] (archived — distillation protocol for T3)
+**Source**: `campaigns/fitl-arvn-agent-evolution` and `campaigns/fitl-vc-agent-evolution` HEAD re-run on 2026-04-19. arvn seeds 1002 and 1010 terminate with `stopReason=noPlayableMoveCompletion` after the NVA `march` free-operation template's `completeTemplateMove` returns `drawDeadEnd` across the full `pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP = 3 + 7 = 10` retry budget. vc seeds show no degeneracy in 1000–1019. Pre-implementation investigation I0 (see `campaigns/fitl-arvn-agent-evolution/diagnose-existing-classifier.mjs`, checked in with this spec) established the actual root cause, which reshapes the approach below.
 
 ## Brainstorm Context
 
 **Original request.** Investigate whether degenerate non-terminal / non-maxTurns endings still occur in the FITL evolution campaigns after the recent NVA March / Coup! encoding fixes, and — if so — research architectural solutions aligned with `docs/FOUNDATIONS.md` and produce specs.
 
-**Verified state.** Under HEAD, seeds 1000–1019 across both campaigns at `max-turns=200`: 38 `maxTurns`, 2 `noPlayableMoveCompletion` (arvn seeds 1002 and 1010), 0 `noLegalMoves`, 0 `terminal`. Degeneracy rate 5% (arvn only). Root-caused via `campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs` to the NVA `march` free-operation template's `completeTemplateMove` dead-ending across a `chooseN{min:1, max:1, options:30}` first-choice domain. `probeMoveViability` reports `viable=true, complete=false`, but 10 uniform random draws over the 30-option head never land on a completable option.
+**Verified state.** Under HEAD, seeds 1000–1019 across both campaigns at `max-turns=200`: 38 `maxTurns`, 2 `noPlayableMoveCompletion` (arvn seeds 1002 and 1010), 0 `noLegalMoves`, 0 `terminal`. Degeneracy rate 5% (arvn only). Root-caused via I0 (see Problem Statement below).
 
-**Prior art.** Spec 132 (archived) partially addressed this pattern by unifying enumerate/probe viability and extending the retry budget from 1 to 10. Spec 132's Investigation I2 — characterize the chooseN draw space and add an enumerate-time filter for dead-end draws — was never built. This spec operationalizes that deferred I2 as a first-class kernel component.
+**Prior art.** Spec 132 (archived) made `drawDeadEnd` outcomes retry-eligible up to `NOT_VIABLE_RETRY_CAP=7`, producing an effective per-template retry budget of `completionsPerTemplate + NOT_VIABLE_RETRY_CAP = 3 + 7 = 10` under PolicyAgent defaults. Spec 132's Investigation I2 — characterize the chooseN draw space — was never built. An earlier draft of Spec 138 proposed a new enumerate-time viability classifier as a parallel engine component. I0 refuted that approach's premise (see Problem Statement § Root Cause), and this spec operationalizes the simpler fix that Spec 132's I2 was pointing at: reuse the exhaustive satisfiability classifier that already runs at enumeration to guide the sampler onto the viable subset of the first chooseN head.
 
-**Alternatives considered during brainstorm.** (1) Enumerate-time classifier — chosen. (2) Backtracking template completion — preserves current shape but deferred; cheaper fix per template but weaker on Foundation #5 because enumerate still emits non-completable templates. (3) Hybrid — deferred as follow-up if Phase 1 uncovers cases the classifier cannot forecast cheaply. (4) FITL-side spec patch — rejected; violates Spec 132's Non-Goal and Foundation #1.
+**Alternatives considered.** (A) Head-viable-subset extraction guiding the sampler — chosen. (B) Exhaustive head fallback triggered only on retry-budget exhaustion — cheaper on the happy path but keeps sampler and classifier as two independent decisions, weaker on Foundation #5. (C) Enrich `ClassifiedMove.viability` with the subset so all consumers see the filtered head domain — cleanest Foundation #5 alignment but violates YAGNI (no consumer beyond the sampler needs it) and carries larger blast radius through the runner worker bridge. (D) A new parallel `classifyTemplateCompletionViability` module — rejected by I0: duplicates work the existing classifier already performs. (E) FITL-side spec patch — rejected; violates Spec 132's Non-Goal and Foundation #1.
 
 ## Overview
 
-Build Spec 132's deferred Investigation I2 as a first-class kernel component: an **enumerate-time viability classifier for template moves**. For every candidate template move whose decision sequence begins with a `chooseN`, the classifier decides — before the move is emitted to `legalMoves` — whether at least one downstream completion path is playable in the current state. Templates with zero viable completions are filtered out. The retry cap in `attemptTemplateCompletion` becomes a soft diagnostic rather than a gate: when it fires, it is a kernel bug, not an accepted degeneracy.
+The existing exhaustive decision-sequence satisfiability classifier at `packages/engine/src/kernel/decision-sequence-satisfiability.ts` already runs for every admitted free-operation template during enumeration (wired in `packages/engine/src/kernel/legal-moves.ts:545` and `:705` through `classifyMoveDecisionSequenceAdmissionForLegalMove`). Today it returns a scalar verdict `'satisfiable' | 'unsatisfiable' | 'unknown'` and then discards the per-option data it traversed.
+
+This spec extends that classifier with an opt-in subset-extraction mode that, for the first chooseN head of the decision tree, returns the set of options proven to lead to a legal completion. `preparePlayableMoves` consumes the subset as a guided `choose` callback, restricting random head-selection to verified-viable options while leaving downstream decisions under the current random/deterministic policy. The retry budget in `attemptTemplateCompletion` becomes a tripwire: once guided, any residual miss is a kernel bug, not an accepted degeneracy.
 
 ## Problem Statement
 
@@ -34,159 +37,214 @@ Build Spec 132's deferred Investigation I2 as a first-class kernel component: an
 Captured via `campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs`:
 
 - Active player: NVA baseline profile.
-- Legal moves: `[march(freeOp=true, params={})]` × N (N=1 on seed 1010, N=3 on seed 1002), all reporting `viability.viable=true`.
+- Legal moves: `[march(freeOp=true, params={})]` × N (N=1 on seed 1010, N=3 on seed 1002), all reporting `viability.viable=true, complete=false`.
 - `preparePlayableMoves` output: `completedMoves=0`, `stochasticMoves=0`, `templateCompletionAttempts=10`, `templateCompletionSuccesses=0`, outcome `"failed"`, rejection `"drawDeadEnd"`.
 - `probeMoveViability` (post-Spec 134 unified predicate): `viable=true, complete=false, stochasticDecision=false`.
-- `completeMoveDecisionSequence` with identity chooser: `complete=false, illegal=false, nextDecision={chooseN, min:1, max:1, optionCount:30}`.
-- `completeTemplateMove` with random chooser, 10 attempts: all 10 draws over the 30-option first-choice domain trip `CHOICE_RUNTIME_VALIDATION_FAILED` or resolve to `illegal` at a later decision step.
+- `completeMoveDecisionSequence` with identity chooser: `complete=false, illegal=false, nextDecision={type:'chooseN', min:1, max:1, optionCount:30 on seed 1010, 44 on seed 1002}`.
+- `completeTemplateMove` with random chooser, 10 attempts: all 10 draws over the first-choice domain trip `CHOICE_RUNTIME_VALIDATION_FAILED` or resolve to `illegal` at a later decision step.
+
+### I0 finding — existing classifier's verdict
+
+`campaigns/fitl-arvn-agent-evolution/diagnose-existing-classifier.mjs` calls `classifyMoveDecisionSequenceAdmissionForLegalMove` directly on each failing template at the captured pre-terminal state:
+
+| Seed | march templates | Existing-classifier verdict | Probe warnings | Head chooseN |
+|---|---|---|---|---|
+| 1002 | 3 | **satisfiable** × 3 | 0 | min:1, max:1, options:44 |
+| 1010 | 1 | **satisfiable** × 1 | 0 | min:1, max:1, options:30 |
+
+The existing exhaustive classifier ran within `DEFAULT_MOVE_ENUMERATION_BUDGETS.maxDecisionProbeSteps = 128` and confirmed that ≥1 option in the head chooseN leads to a legal completion. No `MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED` or related budget warnings were emitted. The move was correctly admitted by enumeration.
 
 ### Root cause
 
-The 30-option `chooseN` domain is **not uniformly completable**. Spec 132 assumed a widened retry budget would converge; in practice, the viable subset of the 30 options is either empty or small enough that 10 uniform random draws never land inside it. `probeMoveViability` cannot distinguish "template has ≥1 completable path" from "template has zero completable paths" because it only validates the head of the decision sequence, not the full tree. Enumeration therefore emits a move that looks legal at the head but is unplayable under any completion — a direct violation of Foundation #5 (one rules protocol, single source of truth for legality) and Foundation #10 (legal moves must be finitely listable and playable).
+The `noPlayableMoveCompletion` degeneracy is **not** an enumerate-emits-unreachable-templates bug. It is an **enumerate-vs-sampler mismatch**:
+
+1. `classifyDecisionSequenceSatisfiability` proves ≥1 of the 30–44 head options is completable, returning `'satisfiable'`.
+2. `enumerateLegalMoves` admits the move.
+3. `preparePlayableMoves` calls `completeTemplateMove` with a uniform random chooser over all 30–44 options. The viable subset is small enough that 10 uniform random draws never land inside it.
+4. The agent throws `NoPlayableMovesAfterPreparationError`; the simulator surfaces `stopReason='noPlayableMoveCompletion'`.
+
+This violates Foundation #5 (one rules protocol, single source of truth for legality): the exhaustive classifier and the random sampler disagree about which head options are playable, with no shared channel between them. The classifier's per-option data is computed and then discarded, leaving the sampler to rediscover it by chance.
 
 ### Why Spec 132's fix is insufficient
 
-Spec 132 extended the retry budget from 1 to 10 for `completionUnsatisfiable`/`drawDeadEnd` outcomes. It did not add an enumeration-time predicate that forecasts completability across the chooseN option domain. Under seeds where the viable subset is empty (or ≤2/30), retries never converge — we need the classifier, not more retries.
+Spec 132 made `drawDeadEnd` outcomes retry-eligible so the random sampler gets more tries. It did not address the underlying information asymmetry. When the viable subset is small enough (e.g., 1/30), even 10 uniform draws are insufficient. The architecturally complete fix is to guide the sampler using information the classifier already computes, not to extend the retry budget further (which would re-frame a Foundation #10 bounded-computation concern as a probabilistic one).
 
 ## Goals
 
-- **G1** — Introduce a pure, deterministic function `classifyTemplateCompletionViability(def, state, move, runtime) → TemplateViabilityVerdict` that, for any template move whose decision sequence begins with a `chooseN`, reports whether at least one option in the first-choice domain has a completable downstream tree under the current state. The function MUST be side-effect-free and MUST NOT mutate `state`, `def`, or `runtime`.
-- **G2** — `enumerateLegalMoves` routes template moves through this predicate before emission. Templates classified as having zero completable paths are filtered out; templates classified as having ≥1 completable path are emitted as today.
-- **G3** — When the predicate reports ≥1 completable path, the `attemptTemplateCompletion` retry budget in `prepare-playable-moves.ts` MUST converge to a completion within its existing cap. The retry budget transitions from "gate that can legitimately fail" to "diagnostic oracle that, when exhausted, indicates a kernel bug" — an assertion-style tripwire emitting a structured warning, not an accepted terminal state.
-- **G4** — The simulator stop reason `noPlayableMoveCompletion` becomes unreachable for any spec that passes compilation and validation. A new invariant test SHALL assert this over the FITL 1000–1019 seed corpus at HEAD and over the `convergence-witness` + `architectural-invariant` test corpora.
-- **G5** — The predicate's time complexity MUST be bounded and documented. For a chooseN with N options and decision-tree depth D, worst-case classification work is O(N × D_effective). Any branching within D MUST itself be bounded (no general recursion — Foundation #10).
+- **G1** — Extend `classifyDecisionSequenceSatisfiability` with an opt-in mode that, when the decision tree begins with a `chooseN`, returns the viable subset of head options alongside the scalar verdict. The extension MUST be pure and side-effect-free, MUST NOT mutate `state`, `def`, or `runtime`, and MUST stay within the existing `MoveEnumerationBudgets` family.
+- **G2** — `preparePlayableMoves` (and its callers in `policy-agent.ts` / `greedy-agent.ts`) route free-operation templates with incomplete viability through the subset-extraction mode and pass the result as a guided `choose` callback to `completeTemplateMove`. Downstream decisions retain the current random/deterministic policy.
+- **G3** — When the guided chooser is used, `attemptTemplateCompletion` converges within its existing retry budget for any template the exhaustive classifier has marked `'satisfiable'`. The retry budget transitions from "gate that can legitimately fail" to "diagnostic oracle that, when exhausted, indicates a kernel bug" — a `RuntimeWarning` with code `GUIDED_COMPLETION_UNEXPECTED_MISS`, not an accepted terminal state.
+- **G4** — The simulator stop reason `noPlayableMoveCompletion`, the `NoPlayableMovesAfterPreparationError` class, and the `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum value become unreachable for any spec that passes compilation and validation. Per Foundation #14 they are deleted in the same change.
+- **G5** — Subset-extraction cost MUST be bounded. For a decision tree with a head chooseN of N options and effective downstream depth D, cost is O(N × D) probe steps, reusing `MoveEnumerationBudgets.maxDecisionProbeSteps` and `maxParamExpansions`. No new budget constant is introduced.
+- **G6** — Final canonical serialized state MUST be bit-identical to the pre-spec trajectory for every seed where the guided sampler finds the same option the uniform sampler would have found. Seeds whose uniform sampler would have failed converge deterministically to the first viable head option in canonical order (the existing chooseN option emission order).
 
 ## Non-Goals
 
 - No change to FITL spec data (`data/games/fire-in-the-lake/*`). Spec 132's non-goal stands: the defect reproduces on engine-agnostic surface, so FITL-specific patches would violate Foundation #1.
-- No change to agent policy YAML (`92-agents.md`) or policy-profile weights. The fix is at the kernel/enumeration boundary, not at decision-scoring.
-- No change to probe semantics beyond adding the new classifier as a dependency. `probeMoveViability` remains the predicate used for single-move legality audits; the new classifier is strictly a *completability* forecaster for template moves with `chooseN` heads.
-- No change to `completeMoveDecisionSequence` or `completeTemplateMove` — they continue to produce concrete completions; the classifier only decides whether the template is emitted.
+- No change to agent policy YAML (`92-agents.md`) or policy-profile weights. The fix is at the kernel/agent-sampler boundary, not at decision-scoring.
+- No change to `probeMoveViability` semantics or the unified legality predicate from Spec 134.
+- No change to `completeMoveDecisionSequence` or `completeTemplateMove` control flow — they continue to produce concrete completions; the extension only enriches the decision space the guided chooser exposes.
 - No expansion of the campaign seed corpus. The 20-seed sweep is sufficient evidence.
-- No retry-budget increase. If the classifier is correct, 10 retries are vast overkill; if the classifier is wrong, more retries don't help.
-- No support for nested `chooseN` heads (chooseN whose options depend on the outcome of a prior chooseN within the same template). Phase 1 covers first-level chooseN only. Future work may extend if a real case surfaces.
+- No retry-budget increase. If the guided sampler is correct, 10 retries are vast overkill; if it is wrong, more retries don't help.
+- No new module under `kernel/`. The subset-extraction is a surgical extension to `decision-sequence-satisfiability.ts`.
+- No new `diagnostics` field on `LegalMoveEnumerationResult`. The existing `warnings: readonly RuntimeWarning[]` stream covers the observability need.
+- No support for nested-chooseN-aware head subsetting (where the head's viable subset depends on a later chooseN's viability). Phase 1 covers first-level chooseN only. Future work may extend if a real case surfaces.
 
 ## Required Investigation (Pre-Implementation)
 
-Each investigation MUST produce either a checked-in fixture, a test file, or a measurement report referenced from the spec's ticket(s). No implementation work begins until I1 and I2 complete.
+Each investigation MUST produce either a checked-in fixture, a test file, or a measurement report referenced from the spec's ticket(s). No implementation work begins until I1 and I2 complete. I0 is already complete — see Problem Statement § I0 finding and `campaigns/fitl-arvn-agent-evolution/diagnose-existing-classifier.mjs`.
 
 ### I1 — Characterize the seed-1002 and seed-1010 draw spaces
 
-For the failing NVA `march` template on each seed (at the pre-terminal state captured by `diagnose-agent-stuck.mjs`), enumerate the full 30-option `chooseN` first-choice domain. For every option, run `completeMoveDecisionSequence` with that option fixed and record the outcome: `completed`, `stochasticUnresolved`, `illegal`, `CHOICE_RUNTIME_VALIDATION_FAILED`, or `exceeded`. Output a table of the distribution per seed. This determines whether the viable subset is empty (classifier must reject the template) or non-empty (classifier narrows to the viable subset). Persist as a fixture under `packages/engine/test/fixtures/gamestate/` for reuse in invariant tests. *This is Spec 132's deferred I2.*
+For the failing NVA `march` template on each seed (at the pre-terminal state captured by `diagnose-agent-stuck.mjs`), enumerate the full head `chooseN` first-choice domain (44 options on seed 1002, 30 on seed 1010). For every option, run `completeMoveDecisionSequence` with that option fixed at the head and the current deterministic downstream chooser. Record the outcome: `completed`, `stochasticUnresolved`, `illegal`, `CHOICE_RUNTIME_VALIDATION_FAILED`, or budget-exceeded. Output a table of the distribution per seed. This confirms the size of the viable subset the guided chooser will see. Persist as a fixture under `packages/engine/test/fixtures/gamestate/` for reuse in the T1 unit test. *This is Spec 132's deferred I2, scoped to the new guided-completion design.*
 
-### I2 — Confirm the classifier does not miss cases on currently-passing seeds
+### I2 — Replay-identity over the passing corpus
 
-Run the FITL 1000–1019 corpus for both campaigns with a prototype classifier in two modes: permissive (emits all templates unchanged) and strict (only emits templates with ≥1 verified completable path). Compare per-move `legalMoves` sets. The strict version SHALL be a subset of the permissive version at every ply; any ply where the strict version *adds* a move is a classifier bug. For currently-passing seeds, final-state `stateHash` under the strict version MUST match the permissive version for every seed where no classifier filtering occurred — this is the Foundation #8 replay-identity obligation.
+Run the FITL 1000–1019 corpus for both campaigns twice: once with the guided sampler disabled (behind a test-only flag that routes `attemptTemplateCompletion` through the pre-spec uniform sampler), once enabled. For every seed where no guided filtering occurred on any move during the run, assert byte-identical canonical serialized final state. For seeds where guided filtering did occur but the uniform sampler would have found the same option first, also assert identity. For seeds that previously failed with `noPlayableMoveCompletion`, document the new trajectory's stop reason and its derivation from "first viable head option in canonical order."
 
-### I3 — Inventory all template-move emission sites
+### I3 — Inventory all free-operation template-move consumers
 
-Grep for every call into `enumerateLegalMoves` and for every downstream consumer of its output (simulator, runner worker bridge, agents, analytics). Confirm that the classifier change is transparent: consumers that just read `legalMoves` see a filtered list; consumers that inspect `viability.code` see a new code (`TEMPLATE_COMPLETION_UNREACHABLE`) that was previously impossible. Document this in the ticket and add migration notes for the runner side if any.
+Grep for every consumer of `enumerateLegalMoves` and every call site of `preparePlayableMoves`. Confirm the guided-chooser change is transparent at the type level: `LegalMoveEnumerationResult` shape is unchanged; `attemptTemplateCompletion` adds an internal guided-choose path. Document runner worker bridge impact (`packages/runner/src/worker/game-worker-api.ts`, `packages/runner/test/worker/clone-compat.test.ts`) — expect zero public-type changes, verify in the ticket.
 
 ### I4 — Decide caching strategy
 
-The classifier runs per enumeration call. For a decision-tree depth of D with N options at the head, worst-case cost is O(N × D). For FITL, N=30 and D ~3–5, so ~150 completion attempts per enumeration call on affected templates. Measure the wall-clock impact on the full 20-seed arvn sweep. If overhead is >25% of simulation time, design a memoization key — `(stateHash, actionId, relevantScopeHash)` — and add to the enumeration cache that already exists under `GameDefRuntime`. If overhead is ≤25%, defer caching as YAGNI.
+The subset-extraction pass runs per template per enumeration. For a head chooseN with N options and downstream depth D, worst-case cost is O(N × D) probe steps. For FITL, N ≤ 44 and D ~3–5, so ≤220 probes per call on affected templates (inside the existing 128 maxDecisionProbeSteps; budget may need a surgical raise to `maxDecisionProbeSteps=256` — to be validated against the broader corpus, not just FITL). Measure the wall-clock impact on the full 20-seed arvn sweep. If overhead is >25% of simulation time, add a memoization slot keyed by `(stateHash, actionId)` to `GameDefRuntime` storing `readonly MoveParamScalar[]` (the viable head subset). If overhead is ≤25%, defer caching as YAGNI.
 
 ## Design
 
-### D1 — Classifier location
+### D1 — Classifier extension location
 
-New module: `packages/engine/src/kernel/template-viability-classifier.ts`. Exports a single pure function `classifyTemplateCompletionViability(def, state, move, runtime) → TemplateViabilityVerdict`. Lives under `kernel/` (Foundation #12 — state-dependent semantics are kernel-owned). Imported by `kernel/legal-moves.ts` for enumeration-time routing.
+Modify `packages/engine/src/kernel/decision-sequence-satisfiability.ts` in-place. Add an opt-in options field `emitViableHeadSubset?: boolean` to `DecisionSequenceSatisfiabilityOptions`, and extend `DecisionSequenceSatisfiabilityResult` with an optional `viableHeadSubset?: readonly MoveParamScalar[]` populated only when the flag is set and the tree begins with a `chooseN`. No new module. No public-API change at call sites that don't opt in.
 
-### D2 — Verdict shape
+### D2 — Result shape
 
 ```ts
-type TemplateViabilityVerdict =
-  | { kind: 'viable'; viableOptionCount: number; totalOptionCount: number }
-  | { kind: 'unreachable'; totalOptionCount: number; rejectedReasons: Record<RejectionCode, number> };
+export interface DecisionSequenceSatisfiabilityResult {
+  readonly classification: DecisionSequenceSatisfiability; // unchanged
+  readonly warnings: readonly RuntimeWarning[];            // unchanged
+  readonly viableHeadSubset?: readonly MoveParamScalar[];  // NEW: present iff emitViableHeadSubset && head is chooseN
+}
 ```
 
-`RejectionCode` is the closed union drawn from Investigation I1's outcome taxonomy: `illegalDownstream`, `choiceValidationFailed`, `budgetExceeded`, `decisionTreeMalformed`. The viable verdict carries the count (not the set) to avoid leaking chooser state into the emission API. The unreachable verdict's `rejectedReasons` map powers the diagnostic warning at G3.
+`viableHeadSubset` is a list of head-chooseN option values (scalars; chooseN with scalar members is the Phase 1 scope) proven to lead to at least one legal completion under the current state. Canonical order matches `nextDecision.options` (the existing deterministic kernel emission order). An empty array means classification is `'unsatisfiable'` (no head option completes); a present array implies classification `'satisfiable'`.
 
 ### D3 — Algorithm
 
-1. Call `probeMoveViability(def, state, move, runtime)`. If `viable=false`, return short-circuit `kind: 'unreachable'` — no template-level work required. The existing Spec 134 unified legality predicate already handles this case.
-2. If `viable=true, complete=true`, return `kind: 'viable', viableOptionCount: 1, totalOptionCount: 1` — template already complete, no chooseN head.
-3. If `viable=true, complete=false`, call `completeMoveDecisionSequence` with an identity chooser that returns `undefined` from `choose`. Inspect the returned `nextDecision`. If `nextDecision.type !== 'chooseN'` or `min > max || options.length === 0`, return `kind: 'unreachable'` with code `decisionTreeMalformed`.
-4. For each option in `nextDecision.options`, invoke `completeMoveDecisionSequence` with a deterministic chooser that returns that option at the head and `undefined` for all downstream decisions. Classify the result per I1 taxonomy. Count viable and tally rejected reasons. Early-exit as soon as the first viable option is found — the classifier only needs to answer "≥1?" for G1.
-5. Return `kind: 'viable'` with counts, or `kind: 'unreachable'` with reason histogram.
+When `emitViableHeadSubset` is set:
 
-### D4 — Enumeration integration
+1. Perform the existing classification traversal. Disable the head-level early-exit on first `satisfiable` outcome so every head option is probed.
+2. For each head option, record its classification outcome (`satisfiable` / `unsatisfiable` / `unknown`). Collect `satisfiable`-option values into `viableHeadSubset`.
+3. If any option's sub-classification is `'unknown'` (budget-exhausted), include it in the subset conservatively (fail-open per existing policy in `isMoveDecisionSequenceAdmittedForLegalMove`) and emit an extended-warning code so the caller can detect coverage gaps.
+4. Return classification (`'satisfiable'` if subset non-empty, `'unsatisfiable'` if empty, `'unknown'` if budget exhausted before the full head was explored) alongside the subset.
+5. Downstream decisions below the head retain the existing exhaustive recursion and budget semantics.
 
-In `kernel/legal-moves.ts`, after a template move passes the existing `probeMoveViability`-based filter, route it through `classifyTemplateCompletionViability`. If verdict is `unreachable`, drop the move and record a diagnostic in the enumeration result's `diagnostics` field (new structured entry: `{ actionId, verdict: 'templateCompletionUnreachable', rejectedReasons }`). If `viable`, emit the move unchanged.
+When `emitViableHeadSubset` is not set, behavior is byte-identical to today: the existing early-exit on first satisfiable outcome stays.
 
-### D5 — Retry budget becomes a tripwire
+### D4 — Enumeration path unchanged
 
-`prepare-playable-moves.ts` keeps its current 10-attempt loop. On exhaustion, it throws a new structured error `KernelClassifierMissError` (extends `Error`, carries `{ actionId, stateHash, attemptCount, lastOutcome }`). The simulator catches this error and emits `stopReason='kernelClassifierMiss'` — a new, distinct stop reason that is a **bug signal**, not an accepted degeneracy. Foundation #14 requires the old `noPlayableMoveCompletion` stop reason to be **deleted in the same change**, along with `NoPlayableMovesAfterPreparationError` — no compatibility shim.
+`kernel/legal-moves.ts` continues to call `classifyMoveDecisionSequenceAdmissionForLegalMove` **without** `emitViableHeadSubset` for admission filtering. Enumeration stays fast (early-exit preserved). The subset is only computed on the sampler's request path.
 
-### D6 — Boundedness (Foundation #10)
+### D5 — Sampler-side guided chooser
 
-Classifier work is explicitly bounded per template: `N × D_effective` where N is the head chooseN's option count and D_effective is the residual decision-sequence length after one option selection. Neither is recursive; both are compile-time visible through the spec's macro-expansion artifacts. A hard ceiling constant `CLASSIFIER_MAX_PROBE_WORK = 1024` (product of N and D_effective) SHALL guard against pathological specs; exceeding it returns `kind: 'unreachable'` with code `budgetExceeded` and logs a structured warning. The ceiling is documented alongside `NOT_VIABLE_RETRY_CAP`.
+In `packages/engine/src/agents/prepare-playable-moves.ts`, when a legal move reaches the pending-template-completion branch (currently the fallback to `attemptTemplateCompletion`), the sampler first calls a thin helper that:
 
-### D7 — Determinism (Foundation #8)
+1. Invokes `classifyDecisionSequenceSatisfiability` with `emitViableHeadSubset: true`.
+2. If `viableHeadSubset` is present and non-empty, builds a `choose` callback that, on the first matching chooseN request (identified by `decisionKey`), restricts its returned option to the subset and defers to the caller-provided `choose` or random for all other decisions.
+3. Passes the guided callback into `evaluatePlayableMoveCandidate`.
 
-Classifier option iteration order matches the order in `nextDecision.options`, which is already the deterministic kernel emission order. The classifier uses no RNG. Golden replay tests over currently-passing seeds SHALL assert byte-identical final `stateHash` before and after the classifier lands — a hard release gate.
+The guided callback composes with the existing `choose` option on `TemplateMoveCompletionOptions` — the head restriction is additive, not replacing. If the classifier returns `'unknown'` (subset partial), the callback admits all head options as today; the retry budget behaves as today.
 
-### D8 — Caching (conditional on I4 measurement)
+### D6 — Retry budget becomes a tripwire
 
-If I4 shows >25% wall-clock overhead, a classifier cache keyed by `(stateHash, actionId)` is added to `GameDefRuntime`. The cache is deterministic (same key → same verdict across runs), bounded (LRU with 4096 entries), and cleared at simulation boundaries. If overhead is ≤25%, no cache lands in Phase 1.
+`attemptTemplateCompletion` keeps its current retry loop. When the guided chooser is active and the retry budget is nonetheless exhausted, emit a `RuntimeWarning` with code `GUIDED_COMPLETION_UNEXPECTED_MISS` carrying `{actionId, stateHash, attemptCount, subsetSize}` and proceed as today (template dropped from the playable set). The warning is a bug signal; it does not stop the simulation.
+
+With the guided sampler in place, `NoPlayableMovesAfterPreparationError` becomes unreachable. Per Foundation #14, delete it and `noPlayableMoveCompletion` in the same change. Deletion sites:
+
+- `packages/engine/src/kernel/types-core.ts:1731` (`SimulationStopReason` union — drop `'noPlayableMoveCompletion'`).
+- `packages/engine/src/kernel/schemas-core.ts:1605` (`SimulationStopReasonSchema`).
+- `packages/engine/src/kernel/diagnostics.ts:39` (`DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION`).
+- `packages/engine/src/sim/simulator.ts:130-135` (catch + stopReason assignment).
+- `packages/engine/src/sim/trace-eval.ts:244-245` (flag mapping).
+- `packages/engine/src/agents/no-playable-move.ts` (delete class `NoPlayableMovesAfterPreparationError` + helper `isNoPlayableMovesAfterPreparationError`; module becomes just `BuiltinAgentId` — fold into `agents/index.ts` or delete if the type can live closer to its consumers).
+- `packages/engine/schemas/Trace.schema.json:5136` and `packages/engine/schemas/EvalReport.schema.json:54, 89, 136`.
+- Tests: `packages/engine/test/integration/fitl-canary-bounded-termination.test.ts:14, 32`, `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts`, `packages/engine/test/unit/schemas-top-level.test.ts:1613`, `packages/engine/test/unit/types-foundation.test.ts:49`, and any `ALLOWED_STOP_REASONS` occurrences in FITL seed regression tests surfaced by I3 (e.g., `fitl-seed-1002-regression.test.ts`, `fitl-seed-1005-1010-1013-regression.test.ts`).
+
+Each site is migrated in the same change with no compatibility shim.
+
+### D7 — Boundedness and determinism
+
+**Boundedness (Foundation #10).** Subset-extraction reuses `MoveEnumerationBudgets.maxDecisionProbeSteps` and `maxParamExpansions`. I4 measures whether the existing 128-step default suffices or whether a surgical raise is required; no new constant is introduced. Downstream decisions below the head still early-exit on first satisfiable outcome — only the head level disables early-exit.
+
+**Determinism (Foundation #8).** Option iteration order matches the canonical `nextDecision.options` order emitted by the existing deterministic kernel. The guided callback consumes the subset in that order; when the random sampler would have chosen an option outside the subset, the guided callback re-draws from the subset using the same RNG stream. Seeds whose uniform sampler would have landed on a viable option first produce byte-identical final state; seeds that would have missed now converge to the first viable head option in canonical order (I2 replay-identity gate).
+
+**Optional caching (Foundation #13).** If I4 triggers caching, the cache key `(stateHash, actionId)` is deterministic because `stateHash` already incorporates all rule-authoritative state. The cache is LRU-bounded (target 4096 entries), lives on `GameDefRuntime`, and is cleared at simulation boundaries.
 
 ## Testing Strategy
 
 ### T1 — Minimal engine-agnostic fixture
 
-Under `packages/engine/test/unit/kernel/template-viability-classifier.test.ts`, exercise the classifier on a minimal hand-authored GameDef (no FITL dependency). The fixture has one action `marchMini` with a `chooseN{min:1, max:1, options:3}` head where option 0 leads to a completable path, option 1 raises `CHOICE_RUNTIME_VALIDATION_FAILED`, option 2 resolves to `illegal`. Assert `kind: 'viable', viableOptionCount: 1, totalOptionCount: 3` when option 0 is reachable, and `kind: 'unreachable'` with the expected `rejectedReasons` histogram when options 1 and 2 are the only reachable set.
+Under `packages/engine/test/unit/kernel/decision-sequence-satisfiability.test.ts` (extending the existing file), exercise `classifyDecisionSequenceSatisfiability` with `emitViableHeadSubset: true` on a minimal hand-authored GameDef. The fixture has one action `marchMini` with a head `chooseN{min:1, max:1, options:3}` where option 0 leads to a completable path, option 1 raises `CHOICE_RUNTIME_VALIDATION_FAILED` at a downstream step, and option 2 resolves to `illegal`. Assert `classification === 'satisfiable'` and `viableHeadSubset === [option0Value]`. Assert a second fixture where all three options are dead-ends returns `classification === 'unsatisfiable'` and `viableHeadSubset === []`.
 
 File-top marker: `// @test-class: architectural-invariant`.
 
-### T2 — Enumeration-integration invariant
+### T2 — Sampler convergence invariant
 
-Under `packages/engine/test/integration/legal-moves-template-filtering.test.ts`, assert the property: for every `(def, state)` pair in a representative corpus (minimal fixture + FITL turn-2 states across arvn/vc), `enumerateLegalMoves` emits no template whose `classifyTemplateCompletionViability` would return `unreachable`. This is the Foundation #5 invariant.
+Under `packages/engine/test/integration/prepare-playable-moves-guided-convergence.test.ts`, assert the property: for every `(def, state)` pair in a representative corpus (minimal fixture + FITL turn-2 states across arvn/vc), when `classifyDecisionSequenceSatisfiability(..., {emitViableHeadSubset: true})` returns a non-empty `viableHeadSubset`, `attemptTemplateCompletion` with the guided chooser reaches a `playableComplete` or `playableStochastic` outcome within the existing retry budget.
 
 File-top marker: `// @test-class: architectural-invariant`.
 
-### T3 — Seed-corpus regression
+### T3 — Seed-corpus bounded termination
 
-Under `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts`, run FITL arvn seeds 1002 and 1010 through `runGame` at max-turns=200. Assert `trace.stopReason !== 'kernelClassifierMiss'` and `trace.stopReason !== 'noPlayableMoveCompletion'` (the latter SHALL no longer exist in the union per D5). Document the expected stop reason per seed based on I1 findings.
+Under `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts`, run FITL arvn seeds 1002 and 1010 through `runGame` at max-turns=200. Assert `trace.stopReason ∈ {terminal, maxTurns, noLegalMoves}` (the post-deletion allowed set) and `trace.moves.length > 0`. Document the expected stop reason per seed based on I1 findings, but the assertion is property-form (any legitimate bounded stop reason).
 
-File-top marker: `// @test-class: convergence-witness`, `// @witness: spec-138-classifier-corpus`. Trajectory changes require Spec 137's distillation protocol before re-blessing.
+File-top marker: `// @test-class: architectural-invariant`. No `@witness:` — the assertion holds across any legitimate trajectory per Spec 137.
 
 ### T4 — Replay-identity over passing corpus
 
-A determinism test under `packages/engine/test/determinism/` runs each currently-passing seed in the FITL 1000–1019 corpus (arvn and vc) twice: once with the classifier disabled (behind a test-only flag that routes `enumerateLegalMoves` through the pre-classifier path), once enabled. For every seed where the classifier performs zero filtering during the run, assert byte-identical canonical serialized final state.
+A determinism test under `packages/engine/test/determinism/` runs each currently-passing seed in the FITL 1000–1019 corpus (arvn and vc) twice: once with the guided sampler disabled (behind a test-only flag that routes `attemptTemplateCompletion` through the pre-spec uniform sampler), once enabled. For every seed where the guided sampler performs zero head-restriction during the run (i.e., uniform sampler would have converged anyway), assert byte-identical canonical serialized final state.
 
 File-top marker: `// @test-class: architectural-invariant`.
 
-### T5 — Classifier miss tripwire
+### T5 — Guided-miss tripwire warning
 
-A test constructs a pathological state where the classifier *would* incorrectly emit a template but the completion would subsequently fail (simulated by mocking the classifier). Assert that `runGame` surfaces `stopReason='kernelClassifierMiss'` with structured context.
+Under `packages/engine/test/unit/agents/prepare-playable-moves-retry.test.ts` (extending the existing file), add a unit test that hand-constructs a `(def, state, move)` tuple where `viableHeadSubset` is non-empty but the guided callback is forced (via injection) to exhaust the retry budget without completing. Assert that `attemptTemplateCompletion` emits a `RuntimeWarning` with code `GUIDED_COMPLETION_UNEXPECTED_MISS` carrying the expected `{actionId, stateHash, attemptCount, subsetSize}` shape. Do not mock the kernel; the injection boundary is the `choose` callback seam already exposed by `TemplateMoveCompletionOptions`.
 
-### T6 — No FITL-specific logic in kernel
-
-A lint-style test under `packages/engine/test/integration/engine-agnosticism.test.ts` greps `packages/engine/src/kernel/template-viability-classifier.ts` for FITL-specific identifiers and fails if any are present. Foundation #1 proof-by-assertion.
+File-top marker: `// @test-class: architectural-invariant`.
 
 ### Performance gate
 
-CI runs the 20-seed arvn sweep and asserts classifier overhead < 25% of baseline sim time.
+CI runs the 20-seed arvn sweep and asserts subset-extraction overhead < 25% of baseline simulation time (the cutoff at which I4's caching would have landed). The gate validates the I4 decision in production conditions.
 
 ## Alignment With `docs/FOUNDATIONS.md`
 
 | Foundation | How Spec 138 respects it |
 |---|---|
-| **#1 Engine Agnosticism** | Classifier lives in `kernel/`, zero FITL-specific identifiers (proof: T6). Works on any GameDef. |
-| **#5 One Rules Protocol** | Enumerate, probe, and classifier converge on a single legality+completability verdict. `legalMoves` output is ground truth — no silent disagreement with downstream completion. |
-| **#7 Specs Are Data** | No `eval`, no runtime callbacks, no plugin hooks. Classifier is pure code over generic DSL. |
-| **#8 Determinism Is Sacred** | No RNG. Deterministic option iteration. Replay-identity gate (T4) over passing corpus. |
-| **#10 Bounded Computation** | Classifier work bounded by `CLASSIFIER_MAX_PROBE_WORK = 1024`. No recursion. |
-| **#11 Immutability** | Classifier signature `(def, state, move, runtime) → verdict`. No mutation; uses existing `completeMoveDecisionSequence`. |
-| **#12 Compiler-Kernel Boundary** | State-dependent completability is kernel-owned. Compiler continues to validate static shape only. |
-| **#14 No Backwards Compatibility** | `noPlayableMoveCompletion` stop reason and `NoPlayableMovesAfterPreparationError` class are **deleted** in the same change. `kernelClassifierMiss` replaces them. |
-| **#15 Architectural Completeness** | Root cause fixed: enumerate produces completable moves. Not a retry-budget band-aid. |
-| **#16 Testing as Proof** | Six test artifacts (T1–T6), covering invariants, regression, determinism, tripwire, and agnosticism. |
+| **#1 Engine Agnosticism** | Modification is surgical to `decision-sequence-satisfiability.ts` and `prepare-playable-moves.ts`. Zero FITL-specific identifiers. Works on any GameDef. |
+| **#5 One Rules Protocol** | Enumerate (admission filter), classifier (subset proof), and sampler (guided chooser) converge on a single legality verdict via the shared classifier output. The per-option data the classifier already computes is surfaced to the sampler instead of discarded. |
+| **#7 Specs Are Data** | No `eval`, no runtime callbacks, no plugin hooks. Extension is pure code over generic DSL. |
+| **#8 Determinism Is Sacred** | No RNG in the classifier. Canonical option iteration order preserved. Replay-identity gate (T4) over passing corpus. |
+| **#10 Bounded Computation** | Subset-extraction reuses `MoveEnumerationBudgets.maxDecisionProbeSteps` and `maxParamExpansions`. No new constant. I4 validates the existing 128-step default is sufficient for FITL. |
+| **#11 Immutability** | Extension signature `(def, state, move, runtime, options) → result`. No mutation; `GameDefRuntime` cache (if I4 triggers) uses the existing scoped-mutation pattern already accepted under Foundation #11's exception clause. |
+| **#12 Compiler-Kernel Boundary** | State-dependent completability is kernel-owned (already is). Compiler continues to validate static shape only. |
+| **#13 Artifact Identity** | `(stateHash, actionId)` cache key (if I4 triggers) is deterministic and reproducible. |
+| **#14 No Backwards Compatibility** | `noPlayableMoveCompletion` stop reason, `NoPlayableMovesAfterPreparationError` class, `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum, and all test fixtures referencing them are deleted in the same change. Full site list in D6. |
+| **#15 Architectural Completeness** | Root cause fixed: enumerate-vs-sampler information asymmetry is closed by sharing the classifier's per-option data. Not a retry-budget band-aid; not a parallel classifier. |
+| **#16 Testing as Proof** | Five test artifacts (T1–T5), covering invariants, regression, determinism, and tripwire. T3 distilled to property form per Spec 137. |
 
 ## Edge Cases & Open Questions
 
-- **Templates with nested `chooseN`.** Phase 1 validates only the head. If a real case surfaces where the head's viability depends on a nested chooseN's viability, a Phase-2 ticket extends the classifier to recurse the decision tree (still bounded by `CLASSIFIER_MAX_PROBE_WORK`).
-- **Stochastic-decision templates.** If `nextDecision.type === 'chooseStochastic'` (not `chooseN`), the classifier treats the template as viable without deeper inspection — stochastic resolution has its own completeness guarantees under Spec 17 §4. A comment in the classifier notes this explicitly.
-- **Empty-option chooseN.** If a template reaches a `chooseN` with `options.length === 0`, this is a compiler invariant violation (caught pre-kernel) — classifier returns `unreachable` with `decisionTreeMalformed` as belt-and-suspenders.
-- **Cache invalidation (D8).** If the classifier cache lands, it keys on `stateHash` which already incorporates all rule-authoritative state. Cross-run cache reuse is safe because `stateHash` is deterministic; per-run cache is cleared at simulation boundaries.
-- **Retry budget removal.** Out of scope for Phase 1. Once G3 and T3 land, the 10-attempt loop is proven vestigial. A follow-up cleanup ticket can delete it.
+- **Templates whose head is not a `chooseN`.** When the decision tree begins with a `chooseOne`, subset-extraction is a no-op; `viableHeadSubset` is not populated. The existing exhaustive satisfiability already covers `chooseOne` semantics via per-option recursion. Non-chooseN heads retain current behavior.
+- **Stochastic decisions.** `ChoiceStochasticPendingRequest` surfaces via the separate `stochasticDecision` field on `resolveMoveDecisionSequence` output, not via `nextDecision.type`. The guided chooser never restricts stochastic outcomes — they have their own completeness guarantees under Spec 17 §4. The head-subset extraction path is entered only when the first non-stochastic pending decision is a `chooseN`.
+- **Empty-option chooseN.** If the head is a `chooseN` with `options.length === 0`, this is a compiler invariant violation caught pre-kernel. The classifier returns `'unsatisfiable'` with empty `viableHeadSubset` as belt-and-suspenders; the template is filtered at enumeration (admission returns `'unsatisfiable'`).
+- **Partial `unknown` subsets.** When some head options' downstream classification returns `'unknown'` (budget-exhausted), the subset conservatively includes them (fail-open matches the existing admission policy that admits `'unknown'` verdicts). The extended warning `MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE` lets callers observe coverage gaps; no behavior change from today's `unknown`-admission policy.
+- **Cache invalidation (I4).** If the cache lands, it keys on `stateHash` which already incorporates all rule-authoritative state. Cross-run cache reuse is safe because `stateHash` is deterministic; per-run cache is cleared at simulation boundaries.
+- **Retry-budget removal.** Out of scope for this spec. Once G3 and T3 land, the `pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP` loop is proven vestigial on the guided path. A follow-up cleanup spec can reduce or delete it.
+- **Nested-chooseN head dependencies.** Phase 1 handles only the first chooseN. If a real case surfaces where the head's viable subset depends on a later chooseN's viability beyond what downstream-recursion already captures, a follow-up ticket extends the extraction to that nesting level (still bounded by `MoveEnumerationBudgets`).
+
+## Tickets
+
+- `tickets/138ENUTIMTEM-001.md` — Characterize failing-seed chooseN draw space and check in I1 fixture
+- `tickets/138ENUTIMTEM-002.md` — Extend decision-sequence classifier with emitViableHeadSubset mode
+- `tickets/138ENUTIMTEM-003.md` — Wire guided chooser into prepare-playable-moves with tripwire and replay-identity
+- `tickets/138ENUTIMTEM-004.md` — Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
+- `tickets/138ENUTIMTEM-005.md` — Caching gate and CI performance assertion for guided-classifier overhead

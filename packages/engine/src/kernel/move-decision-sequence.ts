@@ -35,6 +35,7 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
+  readonly emitViableHeadSubset?: boolean;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -228,6 +229,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       orderSelections: (_request, selectableValues) => orderMoveParamValuesByAscendingComplexity(state, selectableValues),
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      ...(options?.emitViableHeadSubset === true ? { emitViableHeadSubset: true } : {}),
     },
   );
 };

@@ -17,12 +17,14 @@ export type DecisionSequenceSatisfiability = 'satisfiable' | 'unsatisfiable' | '
 export interface DecisionSequenceSatisfiabilityResult {
   readonly classification: DecisionSequenceSatisfiability;
   readonly warnings: readonly RuntimeWarning[];
+  readonly viableHeadSubset?: readonly MoveParamScalar[];
 }
 
 export interface DecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly orderSelections?: (request: ChoicePendingRequest, selectableValues: readonly MoveParamValue[]) => readonly MoveParamValue[];
+  readonly emitViableHeadSubset?: boolean;
 }
 
 export type DecisionSequenceChoiceDiscoverer = (
@@ -31,6 +33,8 @@ export type DecisionSequenceChoiceDiscoverer = (
     readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   },
 ) => ChoiceRequest;
+
+const moveParamScalarKey = (value: MoveParamScalar): string => JSON.stringify([typeof value, value]);
 
 const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly MoveParamValue[] => {
   if (request.type === 'chooseOne') {
@@ -121,40 +125,10 @@ export const classifyDecisionSequenceSatisfiability = (
   let deferredPredicatesEvaluated = 0;
   let paramExpansions = 0;
 
-  const classifyFromMove = (move: Move): DecisionSequenceSatisfiability => {
-    if (decisionProbeSteps >= budgets.maxDecisionProbeSteps) {
-      emitWarning({
-        code: 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED',
-        message: 'Move decision probing exceeded maxDecisionProbeSteps budget; satisfiability classified as unknown.',
-        context: {
-          actionId: String(baseMove.actionId),
-          maxDecisionProbeSteps: budgets.maxDecisionProbeSteps,
-        },
-      });
-      return 'unknown';
-    }
-
-    decisionProbeSteps += 1;
-
-    const request = discoverChoices(move, {
-      onDeferredPredicatesEvaluated: (count) => {
-        deferredPredicatesEvaluated += count;
-      },
-    });
-
-    if (deferredPredicatesEvaluated > budgets.maxDeferredPredicates) {
-      emitWarning({
-        code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',
-        message: 'Move decision probing exceeded maxDeferredPredicates budget; satisfiability classified as unknown.',
-        context: {
-          actionId: String(baseMove.actionId),
-          maxDeferredPredicates: budgets.maxDeferredPredicates,
-          deferredPredicatesEvaluated,
-        },
-      });
-      return 'unknown';
-    }
-
+  const classifyFromRequest = (
+    move: Move,
+    request: ChoiceRequest,
+  ): DecisionSequenceSatisfiability => {
     if (request.kind === 'complete') {
       return 'satisfiable';
     }
@@ -209,5 +183,148 @@ export const classifyDecisionSequenceSatisfiability = (
     return 'unsatisfiable';
   };
 
-  return { classification: classifyFromMove(baseMove), warnings };
+  const classifyFromMove = (move: Move): DecisionSequenceSatisfiability => {
+    if (decisionProbeSteps >= budgets.maxDecisionProbeSteps) {
+      emitWarning({
+        code: 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED',
+        message: 'Move decision probing exceeded maxDecisionProbeSteps budget; satisfiability classified as unknown.',
+        context: {
+          actionId: String(baseMove.actionId),
+          maxDecisionProbeSteps: budgets.maxDecisionProbeSteps,
+        },
+      });
+      return 'unknown';
+    }
+
+    decisionProbeSteps += 1;
+
+    const request = discoverChoices(move, {
+      onDeferredPredicatesEvaluated: (count) => {
+        deferredPredicatesEvaluated += count;
+      },
+    });
+
+    if (deferredPredicatesEvaluated > budgets.maxDeferredPredicates) {
+      emitWarning({
+        code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',
+        message: 'Move decision probing exceeded maxDeferredPredicates budget; satisfiability classified as unknown.',
+        context: {
+          actionId: String(baseMove.actionId),
+          maxDeferredPredicates: budgets.maxDeferredPredicates,
+          deferredPredicatesEvaluated,
+        },
+      });
+      return 'unknown';
+    }
+
+    return classifyFromRequest(move, request);
+  };
+
+  if (options?.emitViableHeadSubset !== true) {
+    return { classification: classifyFromMove(baseMove), warnings };
+  }
+
+  if (decisionProbeSteps >= budgets.maxDecisionProbeSteps) {
+    emitWarning({
+      code: 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED',
+      message: 'Move decision probing exceeded maxDecisionProbeSteps budget; satisfiability classified as unknown.',
+      context: {
+        actionId: String(baseMove.actionId),
+        maxDecisionProbeSteps: budgets.maxDecisionProbeSteps,
+      },
+    });
+    return { classification: 'unknown', warnings };
+  }
+
+  decisionProbeSteps += 1;
+  const baseRequest = discoverChoices(baseMove, {
+    onDeferredPredicatesEvaluated: (count) => {
+      deferredPredicatesEvaluated += count;
+    },
+  });
+
+  if (deferredPredicatesEvaluated > budgets.maxDeferredPredicates) {
+    emitWarning({
+      code: 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED',
+      message: 'Move decision probing exceeded maxDeferredPredicates budget; satisfiability classified as unknown.',
+      context: {
+        actionId: String(baseMove.actionId),
+        maxDeferredPredicates: budgets.maxDeferredPredicates,
+        deferredPredicatesEvaluated,
+      },
+    });
+    return { classification: 'unknown', warnings };
+  }
+
+  if (baseRequest.kind !== 'pending' || baseRequest.type !== 'chooseN') {
+    return {
+      classification: classifyFromRequest(baseMove, baseRequest),
+      warnings,
+    };
+  }
+
+  const viableHeadKeys = new Set<string>();
+  let headSubsetIncomplete = false;
+  const exhausted = forEachDecisionSelection(baseRequest, (selection) => {
+    const selectionValues = Array.isArray(selection) ? selection : [selection];
+    paramExpansions += 1;
+    if (paramExpansions > budgets.maxParamExpansions) {
+      emitWarning({
+        code: 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED',
+        message: 'Move decision probing exceeded maxParamExpansions budget; satisfiability classified as unknown.',
+        context: {
+          actionId: String(baseMove.actionId),
+          maxParamExpansions: budgets.maxParamExpansions,
+          paramExpansions,
+        },
+      });
+      headSubsetIncomplete = true;
+      return false;
+    }
+    const outcome = classifyFromMove({
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [baseRequest.decisionKey]: selection,
+      },
+    });
+    if (outcome === 'satisfiable' || outcome === 'unknown') {
+      for (const value of selectionValues) {
+        viableHeadKeys.add(moveParamScalarKey(value as MoveParamScalar));
+      }
+    }
+    if (outcome === 'unknown') {
+      headSubsetIncomplete = true;
+    }
+    return true;
+  }, options);
+
+  if (headSubsetIncomplete || !exhausted) {
+    emitWarning({
+      code: 'MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE',
+      message: 'Move decision probing could not fully classify the head chooseN subset; returning partial viableHeadSubset.',
+      context: {
+        actionId: String(baseMove.actionId),
+        decisionKey: String(baseRequest.decisionKey),
+      },
+    });
+  }
+
+  const viableHeadSubset = baseRequest.options
+    .map((option) => option.value as MoveParamScalar)
+    .filter((value) => viableHeadKeys.has(moveParamScalarKey(value)));
+
+  if (headSubsetIncomplete || !exhausted) {
+    return {
+      classification: 'unknown',
+      warnings,
+      viableHeadSubset,
+    };
+  }
+
+  return {
+    classification: viableHeadSubset.length > 0 ? 'satisfiable' : 'unsatisfiable',
+    warnings,
+    viableHeadSubset,
+  };
 };

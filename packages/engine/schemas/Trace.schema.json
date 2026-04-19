@@ -1243,6 +1243,10 @@
                     },
                     {
                       "type": "string",
+                      "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
+                    },
+                    {
+                      "type": "string",
                       "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
                     },
                     {
@@ -3221,6 +3225,10 @@
                                   {
                                     "type": "string",
                                     "const": "MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
                                   },
                                   {
                                     "type": "string",

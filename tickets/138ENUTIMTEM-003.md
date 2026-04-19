@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/prepare-playable-moves.ts`, new runtime warning code
-**Deps**: `tickets/138ENUTIMTEM-002.md`
+**Deps**: `archive/tickets/138ENUTIMTEM-002.md`
 
 ## Problem
 

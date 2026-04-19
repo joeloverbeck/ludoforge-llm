@@ -41,6 +41,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
 3. Do a **command sanity pass** for ticket-named verification commands. You do not need the full `references/verification.md` load yet if the checks stay straightforward.
    - Prefer reading `package.json`, runner scripts, or lane manifests before probing package-manager commands with flags such as `--help`; do not assume script-level `--help` is non-executing.
    - Distinguish `the command is repo-valid` from `the command is runnable right now in the current artifact state`. If a lane depends on generated `dist/` output or another mutable build artifact, verify that prerequisite state explicitly before using the lane as the first acceptance-proof run.
+   - In this repo, if a ticket names a stale focused engine proof command, prefer replacing it with the concrete runner shape the package actually supports: build first, then run `node --test dist/<focused-test>.js` from the package root, and record the correction in the active ticket outcome before final proof.
 4. Load `references/implementation-general.md` only if the ticket widens beyond the simple local slice, exposes sibling/follow-up ownership drift, or otherwise needs the broader series guidance.
 5. Load `references/draft-handling.md` for bounded local refactors only when draft status creates real boundary uncertainty:
    - the draft ticket/spec wording appears stale or contradictory
@@ -92,6 +93,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
    - For investigation tickets that specify *how* to measure something, explicitly check whether the ticket's proposed probe method exercises the same live semantic seam as the subsystem being characterized. If the requested method and the live kernel/runner/agent seam differ, stop and reconcile that before generating durable evidence artifacts.
 9. Check constraints the ticket may have underspecified. Load `references/schema-and-migration.md` (Reassessment Surfaces section) for the full shared-contract / cross-package / fixture / test-harness / rulebook / repro-reduction checklist.
    - When the contradiction is specifically a stale witness input rather than a production-code bug, classify that separately from ordinary scope drift. If the user authorizes re-blessing, prefer replacing the witness with the narrowest validated live witness instead of widening semantics just to preserve the old example.
+   - For bounded local refactors in this repo, if you add or rename a warning/error/event/schema literal, immediately check shared type unions, `schemas-core` definitions, and generated schema artifacts before treating the change as purely local.
 
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
 

@@ -1,6 +1,6 @@
 # 138ENUTIMTEM-002: Extend decision-sequence classifier with emitViableHeadSubset mode
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/decision-sequence-satisfiability.ts` (extension + result shape)
@@ -79,6 +79,10 @@ File-top marker: `// @test-class: architectural-invariant` (this property holds 
 
 - `packages/engine/src/kernel/decision-sequence-satisfiability.ts` (modify)
 - `packages/engine/src/kernel/move-decision-sequence.ts` (modify — wrapper plumbing)
+- `packages/engine/src/kernel/types-core.ts` (modify — add new runtime warning code to shared contract)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — add new runtime warning code to schema source)
+- `packages/engine/schemas/Trace.schema.json` (regenerate)
+- `packages/engine/schemas/EvalReport.schema.json` (regenerate)
 - `packages/engine/test/unit/kernel/decision-sequence-satisfiability.test.ts` (modify — add T1 cases)
 
 ## Out of Scope
@@ -94,7 +98,7 @@ File-top marker: `// @test-class: architectural-invariant` (this property holds 
 
 1. T1 unit tests (new) all pass: three-option minimal fixture returns correct subset; three-dead-end fixture returns empty subset; chooseOne fixture returns undefined subset.
 2. All existing `classifyDecisionSequenceSatisfiability` callers continue to produce byte-identical verdicts (no opt-in, no behavior change).
-3. `pnpm -F @ludoforge/engine test:unit --test-name-pattern="decision-sequence-satisfiability"` passes.
+3. `pnpm -F @ludoforge/engine build` followed by `node --test dist/test/unit/kernel/decision-sequence-satisfiability.test.js` passes.
 4. `pnpm turbo build test lint typecheck` green.
 
 ### Invariants
@@ -112,5 +116,15 @@ File-top marker: `// @test-class: architectural-invariant` (this property holds 
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit`
-2. `pnpm turbo build test lint typecheck`
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/unit/kernel/decision-sequence-satisfiability.test.js`
+3. `pnpm turbo build test lint typecheck`
+
+## Outcome
+
+- Completed: 2026-04-19
+- Implemented opt-in `emitViableHeadSubset` support in `packages/engine/src/kernel/decision-sequence-satisfiability.ts` and plumbed the wrapper option through `packages/engine/src/kernel/move-decision-sequence.ts`.
+- Added T1 unit coverage in `packages/engine/test/unit/kernel/decision-sequence-satisfiability.test.ts` for satisfiable chooseN head capture, empty subset, and non-chooseN head behavior.
+- Added `MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE` to the shared runtime warning contract and regenerated the impacted engine schema artifacts.
+- ticket corrections applied: `pnpm -F @ludoforge/engine test:unit --test-name-pattern="decision-sequence-satisfiability" -> pnpm -F @ludoforge/engine build && node --test dist/test/unit/kernel/decision-sequence-satisfiability.test.js`; `owned file list limited to classifier/wrapper/test -> shared warning contract + generated schemas also updated for the new warning code`
+- verification set: `pnpm -F @ludoforge/engine build`, `node --test dist/test/unit/kernel/decision-sequence-satisfiability.test.js`, `pnpm turbo build test lint typecheck`

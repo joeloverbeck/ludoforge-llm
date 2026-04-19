@@ -1,6 +1,6 @@
 # 138ENUTIMTEM-003: Historical single-pick guided chooser draft for prepare-playable-moves
 
-**Status**: BLOCKED
+**Status**: NOT IMPLEMENTED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/prepare-playable-moves.ts`, new runtime warning code
@@ -64,9 +64,16 @@ Blocked. The single-pick invariants above are not sufficient for the live multi-
 
 1. `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs --seed 1010 --max-turns 200`
 
-## Blocker
+## Outcome
 
-- live evidence: `2026-04-19` rerun during implementation showed seed `1010` still ending with `stopReason=noPlayableMoveCompletion`
-- live head shape: first pending decision on the failing `march` template was `chooseN{min:1,max:27,optionCount:27}`
-- boundary correction: scalar `viableHeadSubset` guidance is insufficient; multi-pick head guidance moved to `138ENUTIMTEM-006`
-- historical resolution: stale single-pick-guided-chooser boundary invalidated on `2026-04-19`; retained as blocked draft-series record only
+- Completed: 2026-04-19
+- Changed:
+  - no standalone implementation was performed for this ticket
+- Deviations from original plan:
+  - the ticket's owned single-pick guided-chooser slice was invalidated by live evidence on 2026-04-19
+  - the real implementation boundary moved to `138ENUTIMTEM-006`, which landed and was archived at `archive/tickets/138ENUTIMTEM-006.md`
+  - this ticket is retained only as the archived historical record of the superseded split
+- Verification:
+  - live evidence: `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs --seed 1010 --max-turns 200` showed seed `1010` still ending with `stopReason=noPlayableMoveCompletion`
+  - live head shape: first pending decision on the failing `march` template was `chooseN{min:1,max:27,optionCount:27}`
+  - consistency proof: `pnpm run check:ticket-deps`

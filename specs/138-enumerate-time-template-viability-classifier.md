@@ -28,7 +28,7 @@ This spec extends that classifier with an opt-in canonical-head-selection mode t
 Live implementation of `138ENUTIMTEM-003` invalidated the draft's Phase 1 assumption that the failing heads could be modeled as true single-pick `chooseN` requests. On 2026-04-19, re-running `node campaigns/fitl-arvn-agent-evolution/diagnose-agent-stuck.mjs --seed 1010 --max-turns 200` showed the still-failing `march` template's first pending head as `chooseN{min:1,max:27,optionCount:27}`. That means the scalar `viableHeadSubset` contract from `138ENUTIMTEM-002` is sufficient only for genuine single-pick heads; it is not expressive enough for the live multi-pick witness.
 
 As a result:
-- `tickets/138ENUTIMTEM-003.md` is now a blocked historical draft record, not the active implementation path.
+- `archive/tickets/138ENUTIMTEM-003.md` is now the historical draft record for the invalidated single-pick boundary, not the active implementation path.
 - `tickets/138ENUTIMTEM-006.md` owns the corrected redesign of the classifier/sampler contract for multi-pick `chooseN` heads.
 - Any text below that still describes a flat scalar subset as the final architecture should be read as draft history, not the current active boundary.
 
@@ -254,7 +254,7 @@ CI runs the affected FITL sweep and asserts guided-classifier overhead < 25% of 
 
 - `tickets/138ENUTIMTEM-001.md` — Characterize failing-seed chooseN draw space and check in I1 fixture
 - `tickets/138ENUTIMTEM-002.md` — Extend decision-sequence classifier with opt-in head-guidance emission mode
-- `tickets/138ENUTIMTEM-003.md` — Blocked historical single-pick guided-chooser draft
+- `archive/tickets/138ENUTIMTEM-003.md` — Historical single-pick guided-chooser draft
 - `tickets/138ENUTIMTEM-006.md` — Redesign guided completion for multi-pick chooseN heads
 - `tickets/138ENUTIMTEM-004.md` — Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
 - `tickets/138ENUTIMTEM-005.md` — Caching gate and CI performance assertion for guided-classifier overhead

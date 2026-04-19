@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — one new determinism test; one Spec 138 determinism test deleted (superseded)
-**Deps**: `tickets/139CCONLEGCONT-005.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-005.md`
 
 ## Problem
 

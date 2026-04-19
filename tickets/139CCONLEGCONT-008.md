@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — two new tests, one new diagnostic script; one Spec 138 performance test deleted (superseded)
-**Deps**: `tickets/139CCONLEGCONT-005.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-005.md`
 
 ## Problem
 

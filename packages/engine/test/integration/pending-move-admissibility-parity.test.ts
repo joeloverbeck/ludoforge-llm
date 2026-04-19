@@ -505,11 +505,15 @@ describe('pending move admissibility parity', () => {
     const enumerated = enumerateLegalMoves(def, state);
     const classified = enumerated.moves.find(({ move: candidate }) => candidate.actionId === OPERATION_ACTION_ID && candidate.freeOperation === true);
     assert.equal(classified, undefined, 'expected enumeration to reject the floating unsatisfiable template');
-    assert.equal(
-      findProbeRejectedWarning(enumerated.warnings),
-      undefined,
-      'expected early free-operation admission filtering to omit the move before probe-rejection warning emission',
-    );
+    assert.deepEqual(findProbeRejectedWarning(enumerated.warnings), {
+      code: 'MOVE_ENUM_PROBE_REJECTED',
+      message: 'Enumerated legal move was rejected by decision-sequence admission and removed.',
+      context: {
+        actionId: String(OPERATION_ACTION_ID),
+        reason: 'decisionSequenceUnsatisfiable',
+        stateHash: state.stateHash,
+      },
+    });
 
     // Spec 17 §4: the public probe MUST NOT surface a floating unsatisfiable
     // move as viable — the internal-discovery rewrite is filtered through the

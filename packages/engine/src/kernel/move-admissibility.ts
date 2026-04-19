@@ -109,6 +109,7 @@ export const classifyMoveAdmissibility = (
     MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE,
     {
       budgets: resolveMoveEnumerationBudgets(),
+      validateSatisfiedMove: (candidateMove) => evaluateMoveLegality(def, state, candidateMove, runtime).kind === 'legal',
     },
     runtime,
   );

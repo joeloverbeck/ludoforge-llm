@@ -1845,6 +1845,7 @@ export interface Agent {
     readonly state: GameState;
     readonly playerId: PlayerId;
     readonly legalMoves: readonly ClassifiedMove[];
+    readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
     /** Opt-in profiler for agent sub-function timing. */

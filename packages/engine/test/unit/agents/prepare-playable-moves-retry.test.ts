@@ -286,8 +286,9 @@ describe('preparePlayableMoves retry integration', () => {
 
   it('caps draw-dead-end retries at pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP', () => {
     const actionId = 'always-dead-end-template';
+    const seedDef = createDef(actionId, createRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(seedDef);
     const def = createDef(actionId, createAlwaysDeadEndProfile(actionId));
-    const { state, classifiedMove } = getSinglePendingMove(def);
 
     const prepared = preparePlayableMoves({
       def,
@@ -338,8 +339,9 @@ describe('preparePlayableMoves retry integration', () => {
 
   it('does not emit the retry bias warning when drawDeadEnd lacked optional chooseN diagnostics', () => {
     const actionId = 'always-dead-end-template';
+    const seedDef = createDef(actionId, createRetryProfile(actionId));
+    const { state, classifiedMove } = getSinglePendingMove(seedDef);
     const def = createDef(actionId, createAlwaysDeadEndProfile(actionId));
-    const { state, classifiedMove } = getSinglePendingMove(def);
 
     const prepared = preparePlayableMoves({
       def,

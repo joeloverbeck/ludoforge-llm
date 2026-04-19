@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — docs + one integration test
-**Deps**: `tickets/139CCONLEGCONT-005.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-005.md`
 
 ## Problem
 

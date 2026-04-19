@@ -3,6 +3,7 @@ import { applyTrustedMove } from '../kernel/apply-move.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
+import { createNoPlayableMoveInvariantError } from './agent-move-selection.js';
 import {
   evaluatePolicyMove,
   type PolicyEvaluationFailure,
@@ -130,9 +131,7 @@ export class PolicyAgent implements Agent {
       }
     }
     if (playableMoves.length === 0) {
-      throw new Error(
-        `PolicyAgent could not derive a playable move from ${String(input.legalMoves.length)} classified legal move(s).`,
-      );
+      throw createNoPlayableMoveInvariantError('PolicyAgent', input.legalMoves.length);
     }
     const trustedMoveIndex = new Map(
       playableMoves.map((trustedMove) => [toMoveIdentityKey(input.def, trustedMove.move), trustedMove] as const),

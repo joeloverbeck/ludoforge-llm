@@ -1,6 +1,10 @@
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type { Agent } from '../kernel/types.js';
-import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
+import {
+  createNoPlayableMoveInvariantError,
+  pickRandom,
+  selectStochasticFallback,
+} from './agent-move-selection.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
 export class RandomAgent implements Agent {
@@ -26,9 +30,7 @@ export class RandomAgent implements Agent {
     }
 
     if (completedMoves.length === 0) {
-      throw new Error(
-        `RandomAgent could not derive a playable move from ${String(input.legalMoves.length)} classified legal move(s).`,
-      );
+      throw createNoPlayableMoveInvariantError('RandomAgent', input.legalMoves.length);
     }
 
     const { item: selected, rng: nextRng } = pickRandom(completedMoves, rng);

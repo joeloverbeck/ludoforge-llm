@@ -4336,8 +4336,8 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     assert.match(
       source,
-      /const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);/u,
-      'enumerateLegalMoves must destructure moves and discoveryCache directly from enumerateRawLegalMoves',
+      /(const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);)|(const\s+rawEnumeration\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);\s*const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*rawEnumeration;)/u,
+      'enumerateLegalMoves must take moves and discoveryCache from a single enumerateRawLegalMoves result',
     );
 
     const filterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
@@ -4356,7 +4356,7 @@ describe('legalMoves plain-action feasibility probe', () => {
     const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyEnumeratedMoves');
     assert.equal(
       classifyCalls.some((call) =>
-        call.arguments.length === 7
+        call.arguments.length >= 7
         && expressionToText(sourceFile, call.arguments[0]!) === 'def'
         && expressionToText(sourceFile, call.arguments[1]!) === 'state'
         && expressionToText(sourceFile, call.arguments[2]!) === 'moves'

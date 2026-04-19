@@ -1210,7 +1210,7 @@ describe('PolicyAgent', () => {
     assert.equal(chooseTargetCandidate?.score, 102);
   });
 
-  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+  it('throws an invariant error when every classified move is unsatisfiable', () => {
     const actionId = asActionId('unplayable');
     const def = createDef({
       metadata: { id: 'policy-agent-unplayable-template', players: { min: 2, max: 2 } },
@@ -1228,7 +1228,7 @@ describe('PolicyAgent', () => {
         legalMoves: [pendingClassifiedMove({ actionId, params: {} })],
         rng: createRng(42n),
       }),
-      /PolicyAgent could not derive a playable move from 1 classified legal move\(s\)\./,
+      /PolicyAgent invariant violation: no playable move remained after preparing 1 classified legal move\(s\)\./,
     );
   });
 

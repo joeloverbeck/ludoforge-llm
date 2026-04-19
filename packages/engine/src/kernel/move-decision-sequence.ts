@@ -37,6 +37,8 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
   readonly emitCompletionCertificate?: boolean;
+  readonly validateSatisfiedMove?: (move: Move) => boolean;
+  readonly onClassified?: (result: MoveDecisionSequenceSatisfiabilityResult) => void;
   readonly profiler?: PerfProfiler;
 }
 
@@ -245,7 +247,7 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
-  const classification = classifyMoveDecisionSequenceAdmissionForLegalMove(
+  const result = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
     def,
     state,
     baseMove,
@@ -253,7 +255,8 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
     options,
     runtime,
   );
-  return classification === 'satisfiable' || classification === 'explicitStochastic';
+  options?.onClassified?.(result);
+  return result.classification === 'satisfiable' || result.classification === 'explicitStochastic';
 };
 
 export const classifyMoveDecisionSequenceSatisfiability = (
@@ -271,6 +274,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       orderSelections: (_request, selectableValues) => orderMoveParamValuesByAscendingComplexity(state, selectableValues),
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      ...(options?.validateSatisfiedMove === undefined ? {} : { validateSatisfiedMove: options.validateSatisfiedMove }),
       ...(options?.emitCompletionCertificate === true
         ? {
           emitCompletionCertificate: true,

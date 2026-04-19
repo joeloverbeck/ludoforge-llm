@@ -395,7 +395,7 @@ describe('GreedyAgent core', () => {
     assert.equal(selected.includes('beta'), true);
   });
 
-  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+  it('throws an invariant error when every classified move is unsatisfiable', () => {
     const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
     const emptyProfile = createEmptyOptionsProfile('unplayable');
     const def = createDefWithProfile([action], [emptyProfile]);
@@ -410,7 +410,7 @@ describe('GreedyAgent core', () => {
         legalMoves: [pendingClassifiedMove(templateMove)],
         rng: createRng(42n),
       }),
-      /GreedyAgent could not derive a playable move from 1 classified legal move\(s\)\./,
+      /GreedyAgent invariant violation: no playable move remained after preparing 1 classified legal move\(s\)\./,
     );
   });
 

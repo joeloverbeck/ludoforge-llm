@@ -127,6 +127,9 @@ export const runGame = (
         state,
         playerId: player,
         legalMoves: legalMoveResult.moves,
+        ...(legalMoveResult.certificateIndex === undefined
+          ? {}
+          : { certificateIndex: legalMoveResult.certificateIndex }),
         rng: agentRng,
         runtime: resolvedRuntime,
       });

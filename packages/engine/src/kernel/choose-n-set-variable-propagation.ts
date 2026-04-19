@@ -279,6 +279,22 @@ export const propagateChooseNSetVariable = (
   const max = request.max ?? request.options.length;
   const residualOptions = collectResidualOptions(request);
   const lowerBound = [...dedupeCanonicalSelection(request.selected)];
+  const normalizedLowerBound = dedupeCanonicalSelection(lowerBound);
+  const immediateUpperBound = dedupeCanonicalSelection([
+    ...normalizedLowerBound,
+    ...residualOptions,
+  ]);
+
+  if (normalizedLowerBound.length > max || normalizedLowerBound.length + residualOptions.length < min) {
+    return { kind: 'unsat' };
+  }
+  if (normalizedLowerBound.length === max) {
+    return { kind: 'determined', selection: normalizedLowerBound };
+  }
+  if (immediateUpperBound.length === min) {
+    return { kind: 'determined', selection: immediateUpperBound };
+  }
+
   const supportedIncludes: MoveParamScalar[] = [];
   const upperBoundKeys = new Set(lowerBound.map((value) => optionKey(value)));
 
@@ -296,7 +312,6 @@ export const propagateChooseNSetVariable = (
     }
   }
 
-  const normalizedLowerBound = dedupeCanonicalSelection(lowerBound);
   const normalizedUpperBound = dedupeCanonicalSelection([
     ...normalizedLowerBound,
     ...residualOptions.filter((value) => upperBoundKeys.has(optionKey(value))),

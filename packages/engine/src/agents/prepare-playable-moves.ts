@@ -1,8 +1,10 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
+import { materializeCompletionCertificate } from '../kernel/completion-certificate.js';
 import type { DrawDeadEndOptionalChooseN } from '../kernel/move-completion.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { fork } from '../kernel/prng.js';
+import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -55,7 +57,7 @@ const sameRngState = (left: Rng, right: Rng): boolean =>
   && left.state.state.every((entry, index) => entry === right.state.state[index]);
 
 export function preparePlayableMoves(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
+  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
   options: PreparePlayableMovesOptions = {},
 ): PreparedPlayableMoves {
   const profiler: PerfProfiler | undefined = (input as { profiler?: PerfProfiler }).profiler;
@@ -217,7 +219,7 @@ export function preparePlayableMoves(
  * fallthrough path.
  */
 function attemptTemplateCompletion(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
+  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,
@@ -334,6 +336,30 @@ function attemptTemplateCompletion(
       && notViableRetries < NOT_VIABLE_RETRY_CAP
     ) {
       notViableRetries += 1;
+    }
+  }
+  if (!sawCompletedMove && stochasticCount === 0 && duplicateOutputOutcome === undefined) {
+    const certificate = input.certificateIndex?.get(toMoveIdentityKey(input.def, move));
+    if (certificate !== undefined) {
+      const certifiedMove = createTrustedExecutableMove(
+        materializeCompletionCertificate(input.def, input.state, move, certificate, input.runtime),
+        input.state.stateHash,
+        'templateCompletion',
+      );
+      if (recordPlayableMove(certifiedMove, 'complete')) {
+        sawCompletedMove = true;
+      } else {
+        duplicateOutputOutcome = 'complete';
+      }
+    } else {
+      warnings.push({
+        code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
+        message: 'Admitted incomplete legal move had no certificate at agent fallback time.',
+        context: {
+          actionId: String(move.actionId),
+          stateHash: input.state.stateHash,
+        },
+      });
     }
   }
   const trace: TemplateCompletionTrace = stochasticCount > 0

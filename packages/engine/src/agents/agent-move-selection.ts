@@ -27,3 +27,10 @@ export const selectStochasticFallback = (
   const { item: move, rng: nextRng } = pickRandom(stochasticMoves, rng);
   return { move, rng: nextRng };
 };
+
+export const createNoPlayableMoveInvariantError = (
+  agentName: string,
+  legalMoveCount: number,
+): Error => new Error(
+  `${agentName} invariant violation: no playable move remained after preparing ${String(legalMoveCount)} classified legal move(s).`,
+);

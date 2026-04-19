@@ -396,4 +396,43 @@ describe('decision sequence satisfiability', () => {
       },
     ]);
   });
+
+  it('rejects terminal branches that fail terminal legality validation and continues searching', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (move: Move): ChoiceRequest => {
+        const selected = move.params[asDecisionKey('decision:$pick')];
+        if (selected === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('decision:$pick'),
+            name: '$pick',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [
+              { value: 'no-op', legality: 'legal', illegalReason: null },
+              { value: 'real-change', legality: 'legal', illegalReason: null },
+            ],
+          };
+        }
+
+        return { kind: 'complete', complete: true };
+      },
+      {
+        emitCompletionCertificate: true,
+        certificateFingerprintStateHash: fingerprintStateHash,
+        validateSatisfiedMove: (move) => move.params[asDecisionKey('decision:$pick')] === 'real-change',
+      },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.deepEqual(result.certificate?.assignments, [
+      {
+        decisionKey: asDecisionKey('decision:$pick'),
+        requestType: 'chooseOne',
+        value: 'real-change',
+      },
+    ]);
+  });
 });

@@ -20,6 +20,7 @@ Spec 139 has three deferred validation deliverables that the admission contract 
 2. The Texas Hold'em game definition exposes hidden hole cards via the kernel's projected-state mechanism (Foundation #4). Hand-constructing states with identical unmasked bindings but differing masked bindings is supported by existing test helpers.
 3. `diagnose-existing-classifier.mjs` and `diagnose-agent-stuck.mjs` live under `campaigns/fitl-arvn-agent-evolution/` and import from `packages/engine/dist/` for zero-rebuild runs. The new `diagnose-certificate-search.mjs` follows the same pattern.
 4. The stable 17-seed comparable FITL corpus is established by Spec 138's gate — reuse the same seed set for T9 so the performance delta is apples-to-apples.
+5. Ticket 002's adversarial T2 proof established bounded completion on the synthetic `min:1, max:27, options:27` shape but did not persist a standalone probe-step artifact; this ticket owns the durable comparison story for that shape alongside the corpus-wide T9 gate.
 
 ## Architecture Check
 
@@ -77,6 +78,7 @@ Reuse Spec 138's methodology:
   - Once with `emitCompletionCertificate: true` (the new contract — baseline mode for the new gate).
   - Once with `emitCompletionCertificate: false` (disable-certificate baseline).
 - Record total probe steps consumed across the corpus in each mode.
+- Re-run or derive the same counted metric for the synthetic adversarial `min:1, max:27, options:27` fixture introduced in ticket 002 so the earlier T2 boundedness proof has an explicit comparison point in the final performance evidence.
 - Assert `probeSteps(withCertificate) / probeSteps(withoutCertificate) < 1.50`.
 
 Note the threshold is wider than Spec 138's `1.25x` to accommodate full-path search plus memoization overhead; tighter bounds may be set later if observed performance is better.

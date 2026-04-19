@@ -1,6 +1,6 @@
 ## 139CCONLEGCONT-002: chooseN set-variable propagation infrastructure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new kernel module (set-variable propagation) + reuse of existing `runWitnessSearch`
@@ -70,6 +70,7 @@ Assertions:
 
 - `packages/engine/src/kernel/choose-n-set-variable-propagation.ts` (new)
 - `packages/engine/test/unit/kernel/choose-n-set-variable-propagation.test.ts` (new)
+- `packages/engine/src/kernel/index.ts` (modify export surface)
 
 ## Out of Scope
 
@@ -105,3 +106,13 @@ Assertions:
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:unit` — targeted.
 2. `pnpm turbo test` — full suite.
 3. `pnpm turbo lint && pnpm turbo typecheck` — gates.
+
+## Outcome
+
+- Added `packages/engine/src/kernel/choose-n-set-variable-propagation.ts` with a standalone pure propagation surface over `ChoicePendingChooseNRequest`, reusing the existing singleton-probe and witness-search infrastructure from `choose-n-option-resolution.ts`.
+- Added `packages/engine/test/unit/kernel/choose-n-set-variable-propagation.test.ts` covering the four D3 cardinality reductions, supported-union branching behavior, the adversarial 27-option shape, and the canonical-order invariant.
+- Added the public export wiring in `packages/engine/src/kernel/index.ts` so the new propagation surface is reachable through the kernel barrel.
+- `ticket corrections applied`: `runWitnessSearch-only wording -> live implementation reuses both runSingletonProbePass and runWitnessSearch through a local propagation context built on the real probe/classification seam`
+- `ticket deviation`: the adversarial T2 proof bounds the synthetic 27-option shape via counted classifier invocations and warning absence, but it does not persist a standalone probe-step artifact; the durable cross-ticket comparison remains owned by `tickets/139CCONLEGCONT-008.md`.
+- `verification set`: `pnpm -F @ludoforge/engine build` -> `pnpm -F @ludoforge/engine test:unit` -> `pnpm turbo lint` -> `pnpm turbo typecheck` -> `pnpm turbo test`
+- `proof gaps`: `none`

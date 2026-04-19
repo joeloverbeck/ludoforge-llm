@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel classifier, wrapper helpers, runtime-warning schema, agent sampler consumer migrations
-**Deps**: `archive/tickets/139CCONLEGCONT-001.md`, `tickets/139CCONLEGCONT-002.md`
+**Deps**: `archive/tickets/139CCONLEGCONT-001.md`, `archive/tickets/139CCONLEGCONT-002.md`
 
 ## Problem
 

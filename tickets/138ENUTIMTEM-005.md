@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Conditional — cache slot on `GameDefRuntime` iff profiling gate triggers
-**Deps**: `archive/tickets/138ENUTIMTEM-006.md`, `tickets/138ENUTIMTEM-004.md`
+**Deps**: `archive/tickets/138ENUTIMTEM-006.md`, `archive/tickets/138ENUTIMTEM-004.md`
 
 ## Problem
 

@@ -19,7 +19,6 @@ import type {
   TerminalResult,
   ValidatedGameDef,
 } from '../kernel/index.js';
-import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
 import type { SimulationOptions } from './sim-options.js';
 import { extractDecisionPointSnapshot } from './snapshot.js';
@@ -127,12 +126,8 @@ export const runGame = (
         runtime: resolvedRuntime,
       });
     } catch (error) {
-      if (!isNoPlayableMovesAfterPreparationError(error)) {
-        throw error;
-      }
       perfEnd(profiler, 'simAgentChooseMove', t0_agent);
-      stopReason = 'noPlayableMoveCompletion';
-      break;
+      throw error;
     }
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;

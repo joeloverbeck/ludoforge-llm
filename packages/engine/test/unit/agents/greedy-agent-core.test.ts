@@ -4,7 +4,6 @@ import { describe, it } from 'node:test';
 
 import { pickRandom } from '../../../src/agents/agent-move-selection.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import {
   completeClassifiedMove,
   completeClassifiedMoves,
@@ -411,11 +410,7 @@ describe('GreedyAgent core', () => {
         legalMoves: [pendingClassifiedMove(templateMove)],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'greedy'
-        && error.legalMoveCount === 1
-      ),
+      /GreedyAgent could not derive a playable move from 1 classified legal move\(s\)\./,
     );
   });
 

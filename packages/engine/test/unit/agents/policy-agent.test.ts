@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { completeClassifiedMove, completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
@@ -1229,11 +1228,7 @@ describe('PolicyAgent', () => {
         legalMoves: [pendingClassifiedMove({ actionId, params: {} })],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'policy'
-        && error.legalMoveCount === 1
-      ),
+      /PolicyAgent could not derive a playable move from 1 classified legal move\(s\)\./,
     );
   });
 

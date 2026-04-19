@@ -3,7 +3,6 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type { Agent, TrustedExecutableMove } from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import { pickRandom, selectStochasticFallback } from './agent-move-selection.js';
-import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 import { selectCandidatesDeterministically } from './select-candidates.js';
 
@@ -60,7 +59,9 @@ export class GreedyAgent implements Agent {
     }
 
     if (expandedMoves.length === 0) {
-      throw new NoPlayableMovesAfterPreparationError('greedy', input.legalMoves.length);
+      throw new Error(
+        `GreedyAgent could not derive a playable move from ${String(input.legalMoves.length)} classified legal move(s).`,
+      );
     }
 
     // Apply maxMovesToEvaluate cap

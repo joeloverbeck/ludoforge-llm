@@ -1604,7 +1604,6 @@ export const SimulationStopReasonSchema = z.union([
   z.literal('terminal'),
   z.literal('maxTurns'),
   z.literal('noLegalMoves'),
-  z.literal('noPlayableMoveCompletion'),
 ]);
 
 export const GameTraceSchema = z

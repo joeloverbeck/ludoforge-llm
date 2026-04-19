@@ -29,7 +29,7 @@ Live implementation of `138ENUTIMTEM-003` invalidated the draft's Phase 1 assump
 
 As a result:
 - `archive/tickets/138ENUTIMTEM-003.md` is now the historical draft record for the invalidated single-pick boundary, not the active implementation path.
-- `tickets/138ENUTIMTEM-006.md` owns the corrected redesign of the classifier/sampler contract for multi-pick `chooseN` heads.
+- `archive/tickets/138ENUTIMTEM-006.md` owns the corrected redesign of the classifier/sampler contract for multi-pick `chooseN` heads.
 - Any text below that still describes a flat scalar subset as the final architecture should be read as draft history, not the current active boundary.
 
 ## Problem Statement
@@ -255,6 +255,6 @@ CI runs the affected FITL sweep and asserts guided-classifier overhead < 25% of 
 - `tickets/138ENUTIMTEM-001.md` — Characterize failing-seed chooseN draw space and check in I1 fixture
 - `tickets/138ENUTIMTEM-002.md` — Extend decision-sequence classifier with opt-in head-guidance emission mode
 - `archive/tickets/138ENUTIMTEM-003.md` — Historical single-pick guided-chooser draft
-- `tickets/138ENUTIMTEM-006.md` — Redesign guided completion for multi-pick chooseN heads
+- `archive/tickets/138ENUTIMTEM-006.md` — Redesign guided completion for multi-pick chooseN heads
 - `tickets/138ENUTIMTEM-004.md` — Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
 - `tickets/138ENUTIMTEM-005.md` — Caching gate and CI performance assertion for guided-classifier overhead

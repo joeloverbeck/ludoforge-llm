@@ -177,6 +177,12 @@ For active draft tickets that are likely to change durable status in the same tu
 3. Make any needed ticket-scope or touched-file corrections before the final acceptance-proof pass.
 4. Run the final acceptance-proof set after those ticket edits so the last green run matches both code and ticket artifact.
 
+If those ticket edits include path, dependency, archival, or ticket-id corrections, do one immediate narrow integrity pass before treating closeout as done:
+
+1. Run a cheap self-reference check for the corrected literal/path when proportionate (for example `rg` on the active ticket for the old ticket id/path).
+2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
+3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
+
 When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
 
 1. Update each affected sibling draft to a truthful durable state before or alongside the final proof pass (`DEFERRED`, `BLOCKED`, or equivalent per repo convention).

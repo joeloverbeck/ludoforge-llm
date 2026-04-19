@@ -1729,8 +1729,7 @@ export type TerminalResult =
 export type SimulationStopReason =
   | 'terminal'
   | 'maxTurns'
-  | 'noLegalMoves'
-  | 'noPlayableMoveCompletion';
+  | 'noLegalMoves';
 
 export interface GameTrace {
   readonly gameDefId: string;

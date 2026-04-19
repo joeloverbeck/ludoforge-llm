@@ -1,6 +1,6 @@
 # 138ENUTIMTEM-004: Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `SimulationStopReason` union, simulator, trace-eval, degeneracy flags, schemas, agent error class, test fixtures
@@ -8,7 +8,7 @@
 
 ## Problem
 
-Per Spec 138 Goal G4 and Design §D6, once the corrected guided completion contract lands in 138ENUTIMTEM-006 the `noPlayableMoveCompletion` stop reason, the `NoPlayableMovesAfterPreparationError` error class, and the `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum value become unreachable for any spec that passes compilation and validation. Foundation #14 (No Backwards Compatibility) requires deleting these symbols in the same change — no compatibility shims, no deprecated fallbacks. This ticket performs the atomic cut across engine types, schemas, simulator, trace-eval, the agent error module, and all test consumers, then proves the deletion with T3 seed-corpus bounded termination.
+Per Spec 138 Goal G4 and Design §D6, once the corrected guided completion contract lands in `archive/tickets/138ENUTIMTEM-006.md` the `noPlayableMoveCompletion` stop reason, the `NoPlayableMovesAfterPreparationError` error class, and the `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum value become unreachable for any spec that passes compilation and validation. Foundation #14 (No Backwards Compatibility) requires deleting these symbols in the same change — no compatibility shims, no deprecated fallbacks. This ticket performs the atomic cut across engine types, schemas, simulator, trace-eval, the agent error module, and all test consumers, then proves the deletion with T3 seed-corpus bounded termination.
 
 ## Assumption Reassessment (2026-04-19)
 
@@ -24,9 +24,9 @@ Per Spec 138 Goal G4 and Design §D6, once the corrected guided completion contr
    - `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts` — entire file tests the deleted behavior; delete the file (Foundation #14).
    - `packages/engine/test/unit/schemas-top-level.test.ts:1613` — stop-reason enumeration.
    - `packages/engine/test/unit/types-foundation.test.ts:49` — degeneracy flag enumeration.
-   - `packages/engine/test/integration/fitl-seed-1002-regression.test.ts` — `ALLOWED_STOP_REASONS` includes `noPlayableMoveCompletion` per Spec 137's distillation (confirm via Grep during implementation; may need update).
-   - `packages/engine/test/integration/fitl-seed-1005-1010-1013-regression.test.ts` — same pattern.
-9. `PolicyAgent.chooseMove` at `packages/engine/src/agents/policy-agent.ts:128` throws `NoPlayableMovesAfterPreparationError`. With 138ENUTIMTEM-006's corrected guided completion in place this throw is unreachable — replace it with `throw new Error(...)` with a kernel-bug-signal message, since per Foundation #14 the named class must go.
+   - live regression surface is `packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` plus `packages/engine/test/integration/fitl-seed-guided-classifier-coverage.test.ts`; the older draft regression filenames are no longer part of the live proof set.
+9. `PolicyAgent.chooseMove` at `packages/engine/src/agents/policy-agent.ts` throws `NoPlayableMovesAfterPreparationError`. With `archive/tickets/138ENUTIMTEM-006.md`'s corrected guided completion in place this throw is unreachable — replace it with `throw new Error(...)` with a kernel-bug-signal message, since per Foundation #14 the named class must go.
+10. The live deletion fallout also includes agent unit tests (`policy-agent.test.ts`, `random-agent.test.ts`, `greedy-agent-core.test.ts`) that assert the old error class directly. They must migrate in the same change.
 
 ## Architecture Check
 
@@ -114,8 +114,8 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 - `packages/engine/src/kernel/diagnostics.ts` (modify — remove enum member)
 - `packages/engine/src/sim/simulator.ts` (modify — simplify catch)
 - `packages/engine/src/sim/trace-eval.ts` (modify — remove flag mapping)
-- `packages/engine/src/agents/no-playable-move.ts` (delete — after folding `BuiltinAgentId`)
-- `packages/engine/src/agents/index.ts` (modify — absorb `BuiltinAgentId` if needed)
+- `packages/engine/src/agents/no-playable-move.ts` (delete)
+- `packages/engine/src/agents/index.ts` (modify — remove dead export)
 - `packages/engine/src/agents/policy-agent.ts` (modify — replace throw class)
 - `packages/engine/src/agents/greedy-agent.ts` (modify if uses the class)
 - `packages/engine/src/agents/random-agent.ts` (modify if uses the class)
@@ -125,9 +125,10 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 - `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts` (delete)
 - `packages/engine/test/unit/schemas-top-level.test.ts` (modify)
 - `packages/engine/test/unit/types-foundation.test.ts` (modify)
-- `packages/engine/test/integration/fitl-seed-1002-regression.test.ts` (modify if applicable)
-- `packages/engine/test/integration/fitl-seed-1005-1010-1013-regression.test.ts` (modify if applicable)
-- `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts` (new — T3)
+- `packages/engine/test/integration/fitl-seed-guided-classifier-coverage.test.ts` (existing — T3)
+- `packages/engine/test/unit/agents/policy-agent.test.ts` (modify)
+- `packages/engine/test/unit/agents/random-agent.test.ts` (modify)
+- `packages/engine/test/unit/agents/greedy-agent-core.test.ts` (modify)
 
 ## Out of Scope
 
@@ -145,7 +146,7 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 3. `pnpm turbo schema:artifacts` produces updated JSON schemas with no `noPlayableMoveCompletion` literal.
 4. FITL canary bounded termination test passes with the reduced `ALLOWED_STOP_REASONS` set.
 5. All existing simulator, trace-eval, schema, and types-foundation tests pass under the reduced stop-reason union.
-6. No grep hits for `noPlayableMoveCompletion`, `NoPlayableMovesAfterPreparationError`, `NO_PLAYABLE_MOVE_COMPLETION` outside `archive/` and `specs/138*` / `archive/specs/132*` / `archive/tickets/` historical references.
+6. No grep hits for `noPlayableMoveCompletion`, `NoPlayableMovesAfterPreparationError`, `NO_PLAYABLE_MOVE_COMPLETION` in live `packages/engine/src`, `packages/engine/test`, or generated engine schemas.
 
 ### Invariants
 
@@ -159,13 +160,14 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts` (new) — T3 post-deletion seed-corpus verification.
+1. `packages/engine/test/integration/fitl-seed-guided-classifier-coverage.test.ts` (existing) — T3 post-deletion seed-corpus verification.
 2. `packages/engine/test/integration/fitl-canary-bounded-termination.test.ts` (modify) — update `ALLOWED_STOP_REASONS`.
 3. `packages/engine/test/unit/sim/simulator-no-playable-moves.test.ts` (delete).
 4. `packages/engine/test/unit/schemas-top-level.test.ts` (modify) — update enumerated stop-reason list.
 5. `packages/engine/test/unit/types-foundation.test.ts` (modify) — update degeneracy flag list.
-6. `packages/engine/test/integration/fitl-seed-1002-regression.test.ts` (modify if applicable).
-7. `packages/engine/test/integration/fitl-seed-1005-1010-1013-regression.test.ts` (modify if applicable).
+6. `packages/engine/test/unit/agents/policy-agent.test.ts` (modify) — replace typed error-class assertion with kernel-bug error assertion.
+7. `packages/engine/test/unit/agents/random-agent.test.ts` (modify) — replace typed error-class assertion with kernel-bug error assertion.
+8. `packages/engine/test/unit/agents/greedy-agent-core.test.ts` (modify) — replace typed error-class assertion with kernel-bug error assertion.
 
 ### Commands
 
@@ -173,3 +175,12 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 2. `pnpm turbo schema:artifacts` (regenerate schema JSON)
 3. `pnpm turbo test lint typecheck`
 4. Manual post-implementation grep: `grep -r "noPlayableMoveCompletion\|NoPlayableMovesAfterPreparationError\|NO_PLAYABLE_MOVE_COMPLETION" packages/ --include="*.ts" --include="*.json"` — expect zero hits outside schemas generated from source.
+
+## Outcome
+
+- Completed: 2026-04-19
+- Deleted `noPlayableMoveCompletion` from the engine stop-reason contract, removed `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION`, removed the simulator/trace-eval acceptance path for the deleted condition, and deleted the dedicated `no-playable-move` agent error module.
+- Replaced the old typed agent throws with plain kernel-bug `Error(...)` throws in `policy-agent.ts`, `greedy-agent.ts`, and `random-agent.ts`, then updated the affected agent unit tests to assert the new failure surface.
+- Removed the deleted stop reason from the FITL bounded-termination/property tests, schema/type enumeration tests, and regenerated the affected engine schema artifacts so the JSON contract matches the source-of-truth types.
+- ticket corrections applied: `tickets/138ENUTIMTEM-004.md` dependency and problem text updated from the formerly active `006` ticket path to archived `archive/tickets/138ENUTIMTEM-006.md`; stale T3 regression filename references updated to the live `fitl-seed-guided-classifier-coverage.test.ts`; live fallout notes expanded to include the three agent unit suites touched by the deletion.
+- verification set: `pnpm -F @ludoforge/engine build`, `pnpm turbo schema:artifacts`, `rg -n "noPlayableMoveCompletion|NoPlayableMovesAfterPreparationError|NO_PLAYABLE_MOVE_COMPLETION|isNoPlayableMovesAfterPreparationError" packages/engine/src packages/engine/test packages/engine/schemas --glob '!packages/engine/schemas/GameDef.schema.json'`, `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-agent.test.js dist/test/unit/agents/random-agent.test.js dist/test/unit/agents/greedy-agent-core.test.js dist/test/unit/schemas-top-level.test.js dist/test/unit/types-foundation.test.js`, `pnpm turbo build test lint typecheck`, `pnpm run check:ticket-deps`

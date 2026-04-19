@@ -11,7 +11,7 @@ import { compileProductionSpec, deriveFitlPopulationZeroSpaces } from '../helper
 /**
  * Architectural invariants for FITL canary simulation:
  *   (a) `runGame` produces a trace whose stopReason is in the canonical
- *       allowed set {terminal, maxTurns, noLegalMoves, noPlayableMoveCompletion};
+ *       allowed set {terminal, maxTurns, noLegalMoves};
  *   (b) every population-0 space stays `neutral` on `supportOpposition`
  *       in the final state;
  *   (c) `runGame` does not throw (an uncaught exception would fail the test
@@ -29,7 +29,7 @@ const POLICY_PROFILE_VARIANTS = [
 ] as const;
 const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;
-const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves', 'noPlayableMoveCompletion']);
+const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
 
 describe('FITL canary bounded termination', () => {
   const { parsed, compiled } = compileProductionSpec();

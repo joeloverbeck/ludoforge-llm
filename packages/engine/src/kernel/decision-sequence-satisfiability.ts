@@ -1,4 +1,5 @@
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import { perfCount, type PerfProfiler } from './perf-profiler.js';
 import {
   selectChoiceOptionValuesByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
@@ -25,6 +26,7 @@ export interface DecisionSequenceSatisfiabilityOptions {
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly orderSelections?: (request: ChoicePendingRequest, selectableValues: readonly MoveParamValue[]) => readonly MoveParamValue[];
   readonly emitCanonicalViableHeadSelection?: boolean;
+  readonly profiler?: PerfProfiler;
 }
 
 export type DecisionSequenceChoiceDiscoverer = (
@@ -113,6 +115,7 @@ export const classifyDecisionSequenceSatisfiability = (
   options?: DecisionSequenceSatisfiabilityOptions,
 ): DecisionSequenceSatisfiabilityResult => {
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
+  const profiler = options?.profiler;
   const warnings: RuntimeWarning[] = [];
   const emitWarning = (warning: RuntimeWarning): void => {
     warnings.push(warning);
@@ -195,6 +198,7 @@ export const classifyDecisionSequenceSatisfiability = (
     }
 
     decisionProbeSteps += 1;
+    perfCount(profiler, 'decisionSequenceSatisfiability:probeStep');
 
     const request = discoverChoices(move, {
       onDeferredPredicatesEvaluated: (count) => {
@@ -235,6 +239,7 @@ export const classifyDecisionSequenceSatisfiability = (
   }
 
   decisionProbeSteps += 1;
+  perfCount(profiler, 'decisionSequenceSatisfiability:probeStep');
   const baseRequest = discoverChoices(baseMove, {
     onDeferredPredicatesEvaluated: (count) => {
       deferredPredicatesEvaluated += count;

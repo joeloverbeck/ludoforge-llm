@@ -97,7 +97,12 @@ export const runGame = (
     }
 
     const t0_legal = perfStart(profiler);
-    const legalMoveResult = enumerateLegalMoves(validatedDef, state, undefined, resolvedRuntime);
+    const legalMoveResult = enumerateLegalMoves(
+      validatedDef,
+      state,
+      profiler === undefined ? undefined : { profiler },
+      resolvedRuntime,
+    );
     perfEnd(profiler, 'simLegalMoves', t0_legal);
     if (legalMoveResult.moves.length === 0) {
       stopReason = 'noLegalMoves';

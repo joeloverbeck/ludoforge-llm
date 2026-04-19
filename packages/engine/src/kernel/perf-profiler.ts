@@ -112,3 +112,15 @@ export function perfDynEnd(profiler: PerfProfiler | undefined, key: string, star
     bucket.count += 1;
   }
 }
+
+/** Dynamic count-only bucket helper for deterministic workload counters. */
+export function perfCount(profiler: PerfProfiler | undefined, key: string, increment = 1): void {
+  if (profiler !== undefined) {
+    let bucket = profiler.dynamic.get(key);
+    if (bucket === undefined) {
+      bucket = { count: 0, totalMs: 0 };
+      profiler.dynamic.set(key, bucket);
+    }
+    bucket.count += increment;
+  }
+}

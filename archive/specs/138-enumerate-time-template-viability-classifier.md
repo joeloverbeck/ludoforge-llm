@@ -1,6 +1,6 @@
 # Spec 138: Guided Completion From Enumerate-Time Satisfiability
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P0
 **Complexity**: M
 **Dependencies**: Spec 132 [agent-stuck-viable-template-completion-mismatch] (archived), Spec 134 [unified-move-legality-predicate] (archived)
@@ -117,7 +117,7 @@ Grep for every consumer of `enumerateLegalMoves` and every call site of `prepare
 
 ### I4 — Decide caching strategy
 
-The canonical-head-selection pass runs on the sampler retry path rather than every enumeration. Measure the wall-clock impact on the affected FITL sweep. If overhead is >25% of simulation time, add a memoization slot keyed by `(stateHash, actionId)` to `GameDefRuntime` storing the canonical head-selection payload. If overhead is ≤25%, defer caching as YAGNI.
+Completed on 2026-04-19. The authoritative FITL arvn 20-seed tournament runner measured `332.87s` on pre-guidance commit `6653d9ea7f54cb443b47f763c8279a955b8634a1` and `301.60s` on current `HEAD`, so the guided path did not justify a cache on overhead grounds (`-9.39%`). Current `HEAD` still reports `errors=3` on the named runner surface, so the durable regression gate uses a deterministic probe-step proxy over the stable comparable 17-seed corpus instead of a raw wall-clock CI assertion. No cache landed; `138ENUTIMTEM-005` owns the deterministic gate.
 
 ## Design
 
@@ -186,7 +186,7 @@ Each site is migrated in the same change with no compatibility shim.
 
 **Determinism (Foundation #8).** Option iteration order matches the canonical `nextDecision.options` order emitted by the existing deterministic kernel. Guided completion activates only after an unguided miss on a `chooseN` head, then forces the canonical satisfiable head selection while leaving downstream choices alone. Seeds whose unguided path never activates guidance produce byte-identical final state; seeds that would have missed now converge on the canonical guided head selection (I2 replay-identity gate).
 
-**Optional caching (Foundation #13).** If I4 triggers caching, the cache key `(stateHash, actionId)` is deterministic because `stateHash` already incorporates all rule-authoritative state. The cache is LRU-bounded (target 4096 entries), lives on `GameDefRuntime`, and is cleared at simulation boundaries.
+**Optional caching (Foundation #13).** I4 did not trigger caching. If a future regression reopens the gate, the cache key `(stateHash, actionId)` remains the correct deterministic design because `stateHash` already incorporates all rule-authoritative state.
 
 ## Testing Strategy
 
@@ -222,7 +222,7 @@ File-top marker: `// @test-class: architectural-invariant`.
 
 ### Performance gate
 
-CI runs the affected FITL sweep and asserts guided-classifier overhead < 25% of baseline simulation time (the cutoff at which I4's caching would have landed). The gate validates the I4 decision in production conditions.
+CI runs the deterministic probe-step gate from `packages/engine/test/performance/spec-138-guided-classifier-overhead.test.ts` and asserts guided-classifier overhead on the stable 17-seed comparable FITL corpus stays below `1.25x` of the disable-guided baseline. The gate validates the I4 no-cache decision in a reproducible way even though the authoritative 20-seed runner remains error-bearing on current `HEAD`.
 
 ## Alignment With `docs/FOUNDATIONS.md`
 
@@ -233,9 +233,9 @@ CI runs the affected FITL sweep and asserts guided-classifier overhead < 25% of 
 | **#7 Specs Are Data** | No `eval`, no runtime callbacks, no plugin hooks. Extension is pure code over generic DSL. |
 | **#8 Determinism Is Sacred** | No RNG in the classifier. Canonical option iteration order preserved. Replay-identity gate (T4) over passing corpus. |
 | **#10 Bounded Computation** | Canonical-head-selection extraction reuses `MoveEnumerationBudgets.maxDecisionProbeSteps` and `maxParamExpansions`. No new constant. The implementation avoids exhaustive viable-combination enumeration for multi-pick heads. |
-| **#11 Immutability** | Extension signature `(def, state, move, runtime, options) → result`. No mutation; `GameDefRuntime` cache (if I4 triggers) uses the existing scoped-mutation pattern already accepted under Foundation #11's exception clause. |
+| **#11 Immutability** | Extension signature `(def, state, move, runtime, options) → result`. No mutation; the landed I4 work is profiler-side instrumentation plus a deterministic gate, with no runtime cache state added. |
 | **#12 Compiler-Kernel Boundary** | State-dependent completability is kernel-owned (already is). Compiler continues to validate static shape only. |
-| **#13 Artifact Identity** | `(stateHash, actionId)` cache key (if I4 triggers) is deterministic and reproducible. |
+| **#13 Artifact Identity** | I4's deciding measurement is tied to an exact historical commit and exact live `HEAD`, and the landed deterministic gate reuses fixed seeds plus the compiled production GameDef. If caching ever lands later, `(stateHash, actionId)` remains the deterministic key. |
 | **#14 No Backwards Compatibility** | `noPlayableMoveCompletion` stop reason, `NoPlayableMovesAfterPreparationError` class, `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum, and all test fixtures referencing them are deleted in the same change. Full site list in D6. |
 | **#15 Architectural Completeness** | Root cause fixed: enumerate-vs-sampler information asymmetry is closed by sharing the classifier's head-proof result. Not a retry-budget band-aid; not a parallel classifier. |
 | **#16 Testing as Proof** | Five test artifacts (T1–T5), covering invariants, regression, determinism, and tripwire. T3 distilled to property form per Spec 137. |
@@ -246,15 +246,22 @@ CI runs the affected FITL sweep and asserts guided-classifier overhead < 25% of 
 - **Stochastic decisions.** `ChoiceStochasticPendingRequest` surfaces via the separate `stochasticDecision` field on `resolveMoveDecisionSequence` output, not via `nextDecision.type`. The guided chooser never restricts stochastic outcomes — they have their own completeness guarantees under Spec 17 §4. The canonical-head-selection path is entered only when the first non-stochastic pending decision is a `chooseN`.
 - **Empty-option chooseN.** If the head is a `chooseN` with `options.length === 0`, this is a compiler invariant violation caught pre-kernel. The classifier returns `'unsatisfiable'` as belt-and-suspenders; the template is filtered at enumeration.
 - **No emitted head selection.** When the bounded pass cannot prove a canonical head selection, the guided path is skipped and behavior remains the same as today's fail-open admission policy.
-- **Cache invalidation (I4).** If the cache lands, it keys on `stateHash` which already incorporates all rule-authoritative state. Cross-run cache reuse is safe because `stateHash` is deterministic; per-run cache is cleared at simulation boundaries.
+- **Cache invalidation (I4).** Deferred. No cache landed because the measured overhead stayed below threshold.
 - **Retry-budget removal.** Out of scope for this spec. Once G3 and T3 land, the `pendingTemplateCompletions + NOT_VIABLE_RETRY_CAP` loop is proven vestigial on the guided path. A follow-up cleanup spec can reduce or delete it.
 - **Nested-chooseN head dependencies.** The landed contract handles only the first `chooseN` head. If a real case surfaces where the head's legal surface depends on a later `chooseN` beyond what downstream recursion already captures, a follow-up ticket extends the extraction to that nesting level.
 
 ## Tickets
 
-- `tickets/138ENUTIMTEM-001.md` — Characterize failing-seed chooseN draw space and check in I1 fixture
-- `tickets/138ENUTIMTEM-002.md` — Extend decision-sequence classifier with opt-in head-guidance emission mode
+- `archive/tickets/138ENUTIMTEM-001.md` — Characterize failing-seed chooseN draw space and check in I1 fixture
+- `archive/tickets/138ENUTIMTEM-002.md` — Extend decision-sequence classifier with opt-in head-guidance emission mode
 - `archive/tickets/138ENUTIMTEM-003.md` — Historical single-pick guided-chooser draft
 - `archive/tickets/138ENUTIMTEM-006.md` — Redesign guided completion for multi-pick chooseN heads
-- `tickets/138ENUTIMTEM-004.md` — Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
-- `tickets/138ENUTIMTEM-005.md` — Caching gate and CI performance assertion for guided-classifier overhead
+- `archive/tickets/138ENUTIMTEM-004.md` — Delete noPlayableMoveCompletion stop reason and error class (Foundation 14 atomic cut)
+- `archive/tickets/138ENUTIMTEM-005.md` — Caching gate and CI performance assertion for guided-classifier overhead
+
+## Outcome
+
+- Completed: 2026-04-19
+- Landed the bounded guided-completion design around canonical satisfiable head selection for `chooseN` heads, plus the investigation artifacts, classifier/sampler plumbing, deterministic replay and convergence coverage, and the no-cache performance gate described by this spec.
+- Deviations from the original draft were captured in-series before closeout: the single-pick `viableHeadSubset` path was invalidated by the live multi-pick `chooseN{min:1,max:27}` witness on seed `1010`, so `138ENUTIMTEM-003` became historical draft-only state and `138ENUTIMTEM-006` owned the corrected redesign.
+- Verification/results reflected by the archived ticket series: investigation fixture generation and ticket-dependency integrity for `001`; classifier/build/test/lint/typecheck proof for `002`; full redesign proof and spec parity update for `006`; atomic deletion and schema/test fallout proof for `004`; and the final deterministic probe-step performance gate for `005` with `legacy=4315`, `guided=4358`, `ratio=1.0100`, plus workspace-wide `pnpm turbo build test lint typecheck` and `pnpm run check:ticket-deps`.

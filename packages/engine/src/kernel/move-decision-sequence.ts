@@ -9,6 +9,7 @@ import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import type { PerfProfiler } from './perf-profiler.js';
 import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type {
   ChoiceIllegalRequest,
@@ -36,6 +37,7 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
   readonly emitCanonicalViableHeadSelection?: boolean;
+  readonly profiler?: PerfProfiler;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -230,6 +232,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
       ...(options?.emitCanonicalViableHeadSelection === true ? { emitCanonicalViableHeadSelection: true } : {}),
+      ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
     },
   );
 };

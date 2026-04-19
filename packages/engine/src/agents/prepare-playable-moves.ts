@@ -288,7 +288,9 @@ function attemptTemplateCompletion(
       input.def,
       input.state,
       move,
-      { emitCanonicalViableHeadSelection: true },
+      profiler === undefined
+        ? { emitCanonicalViableHeadSelection: true }
+        : { emitCanonicalViableHeadSelection: true, profiler },
       input.runtime,
     );
     warnings.push(...guidance.warnings);

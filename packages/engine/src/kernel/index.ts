@@ -45,6 +45,7 @@ export * from './move-legality-predicate.js';
 export * from './move-decision-sequence.js';
 export * from './move-admissibility.js';
 export * from './move-decision-completion.js';
+export * from './completion-certificate.js';
 export * from './move-completion.js';
 export * from './playable-candidate.js';
 export * from './move-equivalence.js';

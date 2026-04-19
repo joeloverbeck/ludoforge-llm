@@ -1256,6 +1256,10 @@
                     {
                       "type": "string",
                       "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
+                    },
+                    {
+                      "type": "string",
+                      "const": "GUIDED_COMPLETION_UNEXPECTED_MISS"
                     }
                   ]
                 },
@@ -3241,6 +3245,10 @@
                                   {
                                     "type": "string",
                                     "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "GUIDED_COMPLETION_UNEXPECTED_MISS"
                                   }
                                 ]
                               },

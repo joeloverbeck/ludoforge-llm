@@ -17,14 +17,14 @@ export type DecisionSequenceSatisfiability = 'satisfiable' | 'unsatisfiable' | '
 export interface DecisionSequenceSatisfiabilityResult {
   readonly classification: DecisionSequenceSatisfiability;
   readonly warnings: readonly RuntimeWarning[];
-  readonly viableHeadSubset?: readonly MoveParamScalar[];
+  readonly canonicalViableHeadSelection?: MoveParamValue;
 }
 
 export interface DecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly orderSelections?: (request: ChoicePendingRequest, selectableValues: readonly MoveParamValue[]) => readonly MoveParamValue[];
-  readonly emitViableHeadSubset?: boolean;
+  readonly emitCanonicalViableHeadSelection?: boolean;
 }
 
 export type DecisionSequenceChoiceDiscoverer = (
@@ -33,8 +33,6 @@ export type DecisionSequenceChoiceDiscoverer = (
     readonly onDeferredPredicatesEvaluated?: (count: number) => void;
   },
 ) => ChoiceRequest;
-
-const moveParamScalarKey = (value: MoveParamScalar): string => JSON.stringify([typeof value, value]);
 
 const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly MoveParamValue[] => {
   if (request.type === 'chooseOne') {
@@ -220,7 +218,7 @@ export const classifyDecisionSequenceSatisfiability = (
     return classifyFromRequest(move, request);
   };
 
-  if (options?.emitViableHeadSubset !== true) {
+  if (options?.emitCanonicalViableHeadSelection !== true) {
     return { classification: classifyFromMove(baseMove), warnings };
   }
 
@@ -263,10 +261,9 @@ export const classifyDecisionSequenceSatisfiability = (
     };
   }
 
-  const viableHeadKeys = new Set<string>();
-  let headSubsetIncomplete = false;
+  let canonicalViableHeadSelection: MoveParamValue | undefined;
+  let headGuidanceIncomplete = false;
   const exhausted = forEachDecisionSelection(baseRequest, (selection) => {
-    const selectionValues = Array.isArray(selection) ? selection : [selection];
     paramExpansions += 1;
     if (paramExpansions > budgets.maxParamExpansions) {
       emitWarning({
@@ -278,7 +275,7 @@ export const classifyDecisionSequenceSatisfiability = (
           paramExpansions,
         },
       });
-      headSubsetIncomplete = true;
+      headGuidanceIncomplete = true;
       return false;
     }
     const outcome = classifyFromMove({
@@ -288,43 +285,34 @@ export const classifyDecisionSequenceSatisfiability = (
         [baseRequest.decisionKey]: selection,
       },
     });
-    if (outcome === 'satisfiable' || outcome === 'unknown') {
-      for (const value of selectionValues) {
-        viableHeadKeys.add(moveParamScalarKey(value as MoveParamScalar));
-      }
+    if (outcome === 'satisfiable') {
+      canonicalViableHeadSelection = selection;
+      return false;
     }
     if (outcome === 'unknown') {
-      headSubsetIncomplete = true;
+      headGuidanceIncomplete = true;
+      return false;
     }
     return true;
   }, options);
 
-  if (headSubsetIncomplete || !exhausted) {
-    emitWarning({
-      code: 'MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE',
-      message: 'Move decision probing could not fully classify the head chooseN subset; returning partial viableHeadSubset.',
-      context: {
-        actionId: String(baseMove.actionId),
-        decisionKey: String(baseRequest.decisionKey),
-      },
-    });
+  if (canonicalViableHeadSelection !== undefined) {
+    return {
+      classification: 'satisfiable',
+      warnings,
+      canonicalViableHeadSelection,
+    };
   }
 
-  const viableHeadSubset = baseRequest.options
-    .map((option) => option.value as MoveParamScalar)
-    .filter((value) => viableHeadKeys.has(moveParamScalarKey(value)));
-
-  if (headSubsetIncomplete || !exhausted) {
+  if (headGuidanceIncomplete || !exhausted) {
     return {
       classification: 'unknown',
       warnings,
-      viableHeadSubset,
     };
   }
 
   return {
-    classification: viableHeadSubset.length > 0 ? 'satisfiable' : 'unsatisfiable',
+    classification: 'unsatisfiable',
     warnings,
-    viableHeadSubset,
   };
 };

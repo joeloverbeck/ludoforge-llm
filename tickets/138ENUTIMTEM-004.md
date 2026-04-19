@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `SimulationStopReason` union, simulator, trace-eval, degeneracy flags, schemas, agent error class, test fixtures
-**Deps**: `tickets/138ENUTIMTEM-003.md`
+**Deps**: `archive/tickets/138ENUTIMTEM-006.md`
 
 ## Problem
 
-Per Spec 138 Goal G4 and Design §D6, once the guided chooser lands in 138ENUTIMTEM-003 the `noPlayableMoveCompletion` stop reason, the `NoPlayableMovesAfterPreparationError` error class, and the `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum value become unreachable for any spec that passes compilation and validation. Foundation #14 (No Backwards Compatibility) requires deleting these symbols in the same change — no compatibility shims, no deprecated fallbacks. This ticket performs the atomic cut across engine types, schemas, simulator, trace-eval, the agent error module, and all test consumers, then proves the deletion with T3 seed-corpus bounded termination.
+Per Spec 138 Goal G4 and Design §D6, once the corrected guided completion contract lands in 138ENUTIMTEM-006 the `noPlayableMoveCompletion` stop reason, the `NoPlayableMovesAfterPreparationError` error class, and the `DegeneracyFlag.NO_PLAYABLE_MOVE_COMPLETION` enum value become unreachable for any spec that passes compilation and validation. Foundation #14 (No Backwards Compatibility) requires deleting these symbols in the same change — no compatibility shims, no deprecated fallbacks. This ticket performs the atomic cut across engine types, schemas, simulator, trace-eval, the agent error module, and all test consumers, then proves the deletion with T3 seed-corpus bounded termination.
 
 ## Assumption Reassessment (2026-04-19)
 
@@ -26,13 +26,13 @@ Per Spec 138 Goal G4 and Design §D6, once the guided chooser lands in 138ENUTIM
    - `packages/engine/test/unit/types-foundation.test.ts:49` — degeneracy flag enumeration.
    - `packages/engine/test/integration/fitl-seed-1002-regression.test.ts` — `ALLOWED_STOP_REASONS` includes `noPlayableMoveCompletion` per Spec 137's distillation (confirm via Grep during implementation; may need update).
    - `packages/engine/test/integration/fitl-seed-1005-1010-1013-regression.test.ts` — same pattern.
-9. `PolicyAgent.chooseMove` at `packages/engine/src/agents/policy-agent.ts:128` throws `NoPlayableMovesAfterPreparationError`. With 138ENUTIMTEM-003's guided chooser in place this throw is unreachable — replace it with `throw new Error(...)` with a kernel-bug-signal message, since per Foundation #14 the named class must go.
+9. `PolicyAgent.chooseMove` at `packages/engine/src/agents/policy-agent.ts:128` throws `NoPlayableMovesAfterPreparationError`. With 138ENUTIMTEM-006's corrected guided completion in place this throw is unreachable — replace it with `throw new Error(...)` with a kernel-bug-signal message, since per Foundation #14 the named class must go.
 
 ## Architecture Check
 
 1. Foundation #14 atomic-cut: the deletion is mechanically uniform across ~12 sites — the same symbol removed from every reference. Large effort rating is justified by site count; reviewable-as-one-diff justification is the uniformity (Foundation 14 exception per ticket authoring guidance).
 2. Foundation #15 architectural completeness: the deletion closes the enumerate-vs-sampler design gap at the type level — with the stop reason gone, no future regression can "legitimately" surface it as an outcome.
-3. Foundation #5 one rules protocol: after the cut, the simulator has exactly three bounded stop reasons: `terminal` (game ended under rules), `maxTurns` (session bound), `noLegalMoves` (deterministic dead-end). No "agent couldn't prepare" path exists as a legitimate terminal — that's now a kernel bug surfaced via the warning introduced in 138ENUTIMTEM-003.
+3. Foundation #5 one rules protocol: after the cut, the simulator has exactly three bounded stop reasons: `terminal` (game ended under rules), `maxTurns` (session bound), `noLegalMoves` (deterministic dead-end). No "agent couldn't prepare" path exists as a legitimate terminal — that's now a kernel bug surfaced via the guided-completion tripwire introduced by 138ENUTIMTEM-006.
 4. The simulator's `try/catch` around `agent.chooseMove` becomes simpler: any throw is a genuine error (kernel bug, contract violation), not an accepted stop condition. This is an architectural improvement: the catch previously conflated "agent couldn't find a playable move" (a legitimate but rare corner) with "kernel bug". Post-ticket these cannot be conflated.
 5. No runner worker bridge impact — the runner does not introspect `SimulationStopReason` members; it accepts any string from the engine via the structured-clone contract. Verified via grep during Step 2 reassessment.
 
@@ -132,9 +132,9 @@ New file `packages/engine/test/integration/fitl-seed-classifier-coverage.test.ts
 ## Out of Scope
 
 - No caching changes (deferred to 138ENUTIMTEM-005).
-- No new runtime warnings beyond what 138ENUTIMTEM-003 introduced.
+- No new runtime warnings beyond what 138ENUTIMTEM-006 introduces.
 - No changes to `classifyDecisionSequenceSatisfiability` or `preparePlayableMoves` behavior beyond deleting the error-class throw sites.
-- No runner worker bridge updates — confirmed zero-touch by 138ENUTIMTEM-003 I3 verification.
+- No runner worker bridge updates — confirmed zero-touch by the 138ENUTIMTEM-006 reassessment.
 
 ## Acceptance Criteria
 

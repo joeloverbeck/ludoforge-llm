@@ -1290,9 +1290,11 @@ export type RuntimeWarningCode =
   | 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'
+  | 'MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE'
   | 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PROBE_REJECTED'
-  | 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY';
+  | 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY'
+  | 'GUIDED_COMPLETION_UNEXPECTED_MISS';
 
 export interface RuntimeWarning {
   readonly code: RuntimeWarningCode;
@@ -1727,8 +1729,7 @@ export type TerminalResult =
 export type SimulationStopReason =
   | 'terminal'
   | 'maxTurns'
-  | 'noLegalMoves'
-  | 'noPlayableMoveCompletion';
+  | 'noLegalMoves';
 
 export interface GameTrace {
   readonly gameDefId: string;

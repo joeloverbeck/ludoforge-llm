@@ -197,4 +197,141 @@ describe('decision sequence satisfiability', () => {
 
     assert.equal(result.classification, 'unknown');
   });
+
+  it('emits canonicalViableHeadSelection for a satisfiable chooseN head', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (move: Move): ChoiceRequest => {
+        const selected = move.params[asDecisionKey('decision:$pickMany')];
+        if (selected === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('decision:$pickMany'),
+            name: '$pickMany',
+            type: 'chooseN',
+            min: 1,
+            max: 1,
+            selected: [],
+            canConfirm: false,
+            targetKinds: [],
+            options: [
+              { value: 'option-bad', legality: 'unknown', illegalReason: null },
+              { value: 'option-good', legality: 'unknown', illegalReason: null },
+              { value: 'option-dead', legality: 'unknown', illegalReason: null },
+            ],
+          };
+        }
+
+        const [choice] = selected as readonly string[];
+        if (choice === 'option-good') {
+          return { kind: 'complete', complete: true };
+        }
+        return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      },
+      { emitCanonicalViableHeadSelection: true },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.deepEqual(result.canonicalViableHeadSelection, ['option-good']);
+  });
+
+  it('omits canonicalViableHeadSelection when all chooseN head options are dead-ends', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (move: Move): ChoiceRequest => {
+        const selected = move.params[asDecisionKey('decision:$pickMany')];
+        if (selected === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('decision:$pickMany'),
+            name: '$pickMany',
+            type: 'chooseN',
+            min: 1,
+            max: 1,
+            selected: [],
+            canConfirm: false,
+            targetKinds: [],
+            options: [
+              { value: 'option-a', legality: 'unknown', illegalReason: null },
+              { value: 'option-b', legality: 'unknown', illegalReason: null },
+              { value: 'option-c', legality: 'unknown', illegalReason: null },
+            ],
+          };
+        }
+        return { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      },
+      { emitCanonicalViableHeadSelection: true },
+    );
+
+    assert.equal(result.classification, 'unsatisfiable');
+    assert.equal(result.canonicalViableHeadSelection, undefined);
+  });
+
+  it('does not emit canonicalViableHeadSelection when the head decision is not chooseN', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (move: Move): ChoiceRequest => {
+        const selected = move.params[asDecisionKey('decision:$pick')];
+        if (selected === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('decision:$pick'),
+            name: '$pick',
+            type: 'chooseOne',
+            targetKinds: [],
+            options: [
+              { value: 'option-a', legality: 'unknown', illegalReason: null },
+              { value: 'option-b', legality: 'unknown', illegalReason: null },
+            ],
+          };
+        }
+        return selected === 'option-a'
+          ? { kind: 'complete', complete: true }
+          : { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      },
+      { emitCanonicalViableHeadSelection: true },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.equal(result.canonicalViableHeadSelection, undefined);
+  });
+
+  it('emits a full canonical viable selection for a multi-pick chooseN head', () => {
+    const result = classifyDecisionSequenceSatisfiability(
+      makeMove(),
+      (move: Move): ChoiceRequest => {
+        const selected = move.params[asDecisionKey('decision:$pickMany')] as readonly string[] | undefined;
+        if (selected === undefined) {
+          return {
+            kind: 'pending',
+            complete: false,
+            decisionKey: asDecisionKey('decision:$pickMany'),
+            name: '$pickMany',
+            type: 'chooseN',
+            min: 2,
+            max: 2,
+            selected: [],
+            canConfirm: false,
+            targetKinds: [],
+            options: [
+              { value: 'alpha', legality: 'unknown', illegalReason: null },
+              { value: 'beta', legality: 'unknown', illegalReason: null },
+              { value: 'gamma', legality: 'unknown', illegalReason: null },
+            ],
+          };
+        }
+
+        return selected.includes('alpha') && selected.includes('beta')
+          ? { kind: 'complete', complete: true }
+          : { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' };
+      },
+      { emitCanonicalViableHeadSelection: true },
+    );
+
+    assert.equal(result.classification, 'satisfiable');
+    assert.deepEqual(result.canonicalViableHeadSelection, ['alpha', 'beta']);
+  });
 });

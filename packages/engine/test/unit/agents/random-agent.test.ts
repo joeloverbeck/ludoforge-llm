@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
   completeClassifiedMove,
@@ -332,11 +331,7 @@ describe('RandomAgent', () => {
         legalMoves: [pendingClassifiedMove(templateMove)],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'random'
-        && error.legalMoveCount === 1
-      ),
+      /RandomAgent could not derive a playable move from 1 classified legal move\(s\)\./,
     );
   });
 

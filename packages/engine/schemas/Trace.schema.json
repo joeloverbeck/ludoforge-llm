@@ -1243,6 +1243,10 @@
                     },
                     {
                       "type": "string",
+                      "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
+                    },
+                    {
+                      "type": "string",
                       "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
                     },
                     {
@@ -1252,6 +1256,10 @@
                     {
                       "type": "string",
                       "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
+                    },
+                    {
+                      "type": "string",
+                      "const": "GUIDED_COMPLETION_UNEXPECTED_MISS"
                     }
                   ]
                 },
@@ -3224,6 +3232,10 @@
                                   },
                                   {
                                     "type": "string",
+                                    "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
+                                  },
+                                  {
+                                    "type": "string",
                                     "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
                                   },
                                   {
@@ -3233,6 +3245,10 @@
                                   {
                                     "type": "string",
                                     "const": "MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "GUIDED_COMPLETION_UNEXPECTED_MISS"
                                   }
                                 ]
                               },
@@ -5130,10 +5146,6 @@
         {
           "type": "string",
           "const": "noLegalMoves"
-        },
-        {
-          "type": "string",
-          "const": "noPlayableMoveCompletion"
         }
       ]
     }

@@ -67,6 +67,7 @@ import { buildRuntimeTableIndex, type RuntimeTableIndex } from './runtime-table-
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
+import type { PerfProfiler } from './perf-profiler.js';
 import { probeMoveViability } from './apply-move.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './identity.js';
@@ -103,6 +104,7 @@ export interface LegalMoveEnumerationOptions {
    * any legal move exists, not what they all are.
    */
   readonly earlyExitAfterFirst?: boolean;
+  readonly profiler?: PerfProfiler;
 }
 
 export interface LegalMoveEnumerationResult {
@@ -439,6 +441,7 @@ function enumerateParams(
     readonly runtime?: GameDefRuntime;
     readonly firstDecisionDomains?: FirstDecisionRuntimeCompilation;
     readonly snapshot?: EnumerationStateSnapshot;
+    readonly profiler?: PerfProfiler;
   },
   scope?: MutableEnumerationReadContext,
 ): void {
@@ -551,6 +554,7 @@ function enumerateParams(
               budgets: enumeration.budgets,
               onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
               ...(options?.discoverer === undefined ? {} : { discoverer: options.discoverer }),
+              ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
             },
             options?.runtime,
           )
@@ -638,6 +642,7 @@ function enumeratePendingFreeOperationMoves(
   currentPhaseDef: PhaseDef | undefined,
   seatResolution: ReturnType<typeof createSeatResolutionContext>,
   snapshot: EnumerationStateSnapshot,
+  profiler?: PerfProfiler,
 ): void {
   if (state.turnOrderState.type !== 'cardDriven') {
     return;
@@ -710,6 +715,7 @@ function enumeratePendingFreeOperationMoves(
       {
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
+        ...(profiler === undefined ? {} : { profiler }),
       },
     );
     if (decisionSequenceClassification === 'unsatisfiable') {
@@ -1286,6 +1292,7 @@ const enumerateRawLegalMoves = (
           firstDecisionDomains,
           discoverer: cachedDiscover,
           snapshot,
+          ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
         },
       );
       if (enumeration.moves.length > 0) {
@@ -1367,6 +1374,7 @@ const enumerateRawLegalMoves = (
           firstDecisionDomains,
           discoverer: cachedDiscover,
           snapshot,
+          ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
         },
       );
       continue;
@@ -1424,6 +1432,7 @@ const enumerateRawLegalMoves = (
     currentPhaseDef,
     seatResolution,
     snapshot,
+    options?.profiler,
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);

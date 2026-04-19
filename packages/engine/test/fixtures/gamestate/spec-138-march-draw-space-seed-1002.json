@@ -1,0 +1,688 @@
+{
+  "seed": 1002,
+  "stateHash": "0x88067b92547ac123",
+  "activePlayer": 2,
+  "moves": [
+    {
+      "actionId": "march",
+      "headDecisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+      "headOptionCount": 44,
+      "optionOutcomes": [
+        {
+          "index": 0,
+          "value": "an-loc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 1,
+          "value": "ba-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 2,
+          "value": "binh-dinh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 3,
+          "value": "binh-tuy-binh-thuan:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 4,
+          "value": "cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 5,
+          "value": "can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 6,
+          "value": "central-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 7,
+          "value": "da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 8,
+          "value": "khanh-hoa:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 9,
+          "value": "kien-giang-an-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 10,
+          "value": "kien-hoa-vinh-binh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 11,
+          "value": "kien-phong:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 12,
+          "value": "kontum:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 13,
+          "value": "loc-ban-me-thuot-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 14,
+          "value": "loc-cam-ranh-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 15,
+          "value": "loc-can-tho-bac-lieu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 16,
+          "value": "loc-can-tho-chau-doc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 17,
+          "value": "loc-can-tho-long-phu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 18,
+          "value": "loc-da-nang-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 19,
+          "value": "loc-hue-da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 20,
+          "value": "loc-hue-khe-sanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 21,
+          "value": "loc-kontum-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 22,
+          "value": "loc-kontum-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 23,
+          "value": "loc-kontum-qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 24,
+          "value": "loc-qui-nhon-cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 25,
+          "value": "loc-saigon-an-loc-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 26,
+          "value": "loc-saigon-can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 27,
+          "value": "loc-saigon-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 28,
+          "value": "north-vietnam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 29,
+          "value": "northeast-cambodia:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 30,
+          "value": "phu-bon-phu-yen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 31,
+          "value": "phuoc-long:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 32,
+          "value": "pleiku-darlac:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 33,
+          "value": "quang-duc-long-khanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 34,
+          "value": "quang-nam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 35,
+          "value": "quang-tin-quang-ngai:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 36,
+          "value": "quang-tri-thua-thien:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 37,
+          "value": "qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 38,
+          "value": "saigon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 39,
+          "value": "sihanoukville:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 40,
+          "value": "southern-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 41,
+          "value": "tay-ninh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 42,
+          "value": "the-fishhook:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 43,
+          "value": "the-parrots-beak:none",
+          "outcome": "completed"
+        }
+      ]
+    },
+    {
+      "actionId": "march",
+      "headDecisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+      "headOptionCount": 44,
+      "optionOutcomes": [
+        {
+          "index": 0,
+          "value": "an-loc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 1,
+          "value": "ba-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 2,
+          "value": "binh-dinh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 3,
+          "value": "binh-tuy-binh-thuan:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 4,
+          "value": "cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 5,
+          "value": "can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 6,
+          "value": "central-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 7,
+          "value": "da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 8,
+          "value": "khanh-hoa:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 9,
+          "value": "kien-giang-an-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 10,
+          "value": "kien-hoa-vinh-binh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 11,
+          "value": "kien-phong:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 12,
+          "value": "kontum:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 13,
+          "value": "loc-ban-me-thuot-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 14,
+          "value": "loc-cam-ranh-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 15,
+          "value": "loc-can-tho-bac-lieu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 16,
+          "value": "loc-can-tho-chau-doc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 17,
+          "value": "loc-can-tho-long-phu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 18,
+          "value": "loc-da-nang-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 19,
+          "value": "loc-hue-da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 20,
+          "value": "loc-hue-khe-sanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 21,
+          "value": "loc-kontum-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 22,
+          "value": "loc-kontum-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 23,
+          "value": "loc-kontum-qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 24,
+          "value": "loc-qui-nhon-cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 25,
+          "value": "loc-saigon-an-loc-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 26,
+          "value": "loc-saigon-can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 27,
+          "value": "loc-saigon-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 28,
+          "value": "north-vietnam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 29,
+          "value": "northeast-cambodia:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 30,
+          "value": "phu-bon-phu-yen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 31,
+          "value": "phuoc-long:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 32,
+          "value": "pleiku-darlac:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 33,
+          "value": "quang-duc-long-khanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 34,
+          "value": "quang-nam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 35,
+          "value": "quang-tin-quang-ngai:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 36,
+          "value": "quang-tri-thua-thien:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 37,
+          "value": "qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 38,
+          "value": "saigon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 39,
+          "value": "sihanoukville:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 40,
+          "value": "southern-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 41,
+          "value": "tay-ninh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 42,
+          "value": "the-fishhook:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 43,
+          "value": "the-parrots-beak:none",
+          "outcome": "completed"
+        }
+      ]
+    },
+    {
+      "actionId": "march",
+      "headDecisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+      "headOptionCount": 44,
+      "optionOutcomes": [
+        {
+          "index": 0,
+          "value": "an-loc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 1,
+          "value": "ba-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 2,
+          "value": "binh-dinh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 3,
+          "value": "binh-tuy-binh-thuan:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 4,
+          "value": "cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 5,
+          "value": "can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 6,
+          "value": "central-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 7,
+          "value": "da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 8,
+          "value": "khanh-hoa:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 9,
+          "value": "kien-giang-an-xuyen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 10,
+          "value": "kien-hoa-vinh-binh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 11,
+          "value": "kien-phong:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 12,
+          "value": "kontum:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 13,
+          "value": "loc-ban-me-thuot-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 14,
+          "value": "loc-cam-ranh-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 15,
+          "value": "loc-can-tho-bac-lieu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 16,
+          "value": "loc-can-tho-chau-doc:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 17,
+          "value": "loc-can-tho-long-phu:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 18,
+          "value": "loc-da-nang-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 19,
+          "value": "loc-hue-da-nang:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 20,
+          "value": "loc-hue-khe-sanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 21,
+          "value": "loc-kontum-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 22,
+          "value": "loc-kontum-dak-to:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 23,
+          "value": "loc-kontum-qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 24,
+          "value": "loc-qui-nhon-cam-ranh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 25,
+          "value": "loc-saigon-an-loc-ban-me-thuot:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 26,
+          "value": "loc-saigon-can-tho:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 27,
+          "value": "loc-saigon-da-lat:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 28,
+          "value": "north-vietnam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 29,
+          "value": "northeast-cambodia:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 30,
+          "value": "phu-bon-phu-yen:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 31,
+          "value": "phuoc-long:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 32,
+          "value": "pleiku-darlac:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 33,
+          "value": "quang-duc-long-khanh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 34,
+          "value": "quang-nam:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 35,
+          "value": "quang-tin-quang-ngai:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 36,
+          "value": "quang-tri-thua-thien:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 37,
+          "value": "qui-nhon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 38,
+          "value": "saigon:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 39,
+          "value": "sihanoukville:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 40,
+          "value": "southern-laos:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 41,
+          "value": "tay-ninh:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 42,
+          "value": "the-fishhook:none",
+          "outcome": "completed"
+        },
+        {
+          "index": 43,
+          "value": "the-parrots-beak:none",
+          "outcome": "completed"
+        }
+      ]
+    }
+  ]
+}

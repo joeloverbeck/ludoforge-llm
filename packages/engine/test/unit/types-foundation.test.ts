@@ -46,7 +46,6 @@ describe('kernel type foundations', () => {
     assert.deepEqual(Object.values(DegeneracyFlag), [
       'LOOP_DETECTED',
       'NO_LEGAL_MOVES',
-      'NO_PLAYABLE_MOVE_COMPLETION',
       'DOMINANT_ACTION',
       'TRIVIAL_WIN',
       'STALL',

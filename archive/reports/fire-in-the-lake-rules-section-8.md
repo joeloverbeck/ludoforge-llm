@@ -1,5 +1,7 @@
 # Fire in the Lake - Section Rules 8
 
+**Status**: COMPLETED
+
 8.0 NON-PLAYER FACTIONS
 This section governs actions by any Factions beyond those represented by a player, for solitaire or as an alternative to the No Non-Player
 option for 2 or 3 players (1.5). See also the Playbook’s Non-Player
@@ -191,3 +193,13 @@ NOTE: When a Non-player plays a Pivotal Event, further instructions (8.4.1) guid
 choose randomly among the possibilities. EXAMPLE: Non-player
 execution of “RAND” chooses a candidate US Capability to flip
 with an equal chance die roll.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved this FITL source-reference extract and archived it because it is historical reference material rather than an active report
+- Deviations from original plan:
+  - none; the content remains intact for archive lookup
+- Verification results:
+  - current-reference scan found no active workflow dependency on this file

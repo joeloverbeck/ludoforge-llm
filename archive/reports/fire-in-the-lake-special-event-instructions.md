@@ -1,5 +1,7 @@
 # Fire in the Lake - Special Event Instructions
 
+**Status**: COMPLETED
+
 1. Gulf of Tonkin. ARVN: If US a human player, choose Op & Special Activity instead. VC: If NVA a human player, choose Op & Special Activity instead.
 2. Kissinger. ARVN & VC: Same as #1. US: If "JFK" or "LBJ", choose Op & Special Activity instead.
 3. Peace Talks. US: if Short Scenario or Linebacker II already played, choose Op & Special Activity instead.
@@ -63,3 +65,13 @@
 91. Bob Hope. US: Add as many total US pieces to Available as possible.
 92. SEALORDS. NVA: 2 Bases and other NVA evenly to 2 spaces, no Base without Guerrillas. If not possible, choose Op & Special Activity instead. VC: Move all VC pieces possible to 1 Support space. If 3 or fewer would move, choose Op & Special Activity instead.
 93. Senator Fulbright. US: Same as #22.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved this FITL source-reference extract and archived it because it is historical reference material rather than an active report
+- Deviations from original plan:
+  - none; the content remains intact for archive lookup
+- Verification results:
+  - current-reference scan found no active workflow dependency on this file

@@ -1,5 +1,7 @@
 # 118PROBOUCAT-006: Viability Heuristic Investigation
 
+**Status**: COMPLETED
+
 **Date**: 2026-04-07
 **Ticket**: `archive/tickets/118PROBOUCAT-006.md` (after archival)
 
@@ -66,3 +68,13 @@ The architectural strain on F15 is real but acceptable given:
 3. The heuristic is only triggered when choice validation fails, which is an edge case during viability probing
 
 **No follow-up spec or ticket is recommended at this time.** The heuristic should be revisited if/when the Group C migration (making `evalCondition` result-returning) lands — at that point, `CHOICE_RUNTIME_VALIDATION_FAILED` would become a result type rather than a thrown error, and the catch + heuristic fallback can be eliminated naturally.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the completed ticket investigation and archived the report because its conclusion is already captured in the historical ticket trail and it no longer functions as an active report
+- Deviations from original plan:
+  - none; the report already concluded with a no-action recommendation
+- Verification results:
+  - archival classification reviewed against current active references before moving the file

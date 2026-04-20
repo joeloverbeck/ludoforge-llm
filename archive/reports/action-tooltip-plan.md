@@ -1,5 +1,7 @@
 # Action Tooltip Plan — Iteration 8
 
+**Status**: COMPLETED
+
 **Date**: 2026-04-04
 **Based on**: EVALUATION #7 (average score: 5.8)
 **Problems targeted**: MEDIUM #1 ("Place From Available Or Map" noise), MEDIUM #2 (arithmetic expressions visible), MEDIUM #3 ("Sub Space" jargon)
@@ -187,3 +189,13 @@ This is a `realizeSummary()` output from a summary-kind message with `macroClass
 ## Research Sources
 
 - No external research needed
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the single-iteration action-tooltip plan and archived it because the active tooltip workflow now lives in the evaluation files and design docs rather than this stale iteration-specific plan
+- Deviations from original plan:
+  - none; the plan is being retired as historical planning context
+- Verification results:
+  - reference scan showed only historical planning-doc mentions, not an active runtime workflow dependency

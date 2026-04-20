@@ -1,7 +1,8 @@
 # Architectural Gap: Enumeration Admits Moves the Sampler Cannot Complete
 
+**Status**: COMPLETED
 **Date**: 2026-04-19
-**Status**: Active CI blocker on PR #221 (branch `implemented-spec-138`)
+**Historical status**: Active CI blocker on PR #221 (branch `implemented-spec-138`)
 **Audience**: External LLM (ChatGPT Pro) for online research / prior-art survey
 **Repository**: `joeloverbeck/ludoforge-llm` (TypeScript, GPL-3.0)
 
@@ -625,3 +626,13 @@ Engine FITL Rules / engine-fitl-rules / Run pnpm -F @ludoforge/engine test:integ
 ```
 
 — end of report —
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the completed architectural-gap brief and archived it because it was a research/input document for the Spec 139 work that has since landed and been archived
+- Deviations from original plan:
+  - the original blocker status is retained as `Historical status` so the report still reflects the moment it was written
+- Verification results:
+  - current-relevance review confirmed the report is no longer referenced by active specs, tickets, or skills

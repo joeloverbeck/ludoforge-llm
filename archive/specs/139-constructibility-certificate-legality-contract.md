@@ -1,6 +1,6 @@
 # Spec 139: Constructibility-Certificate Legality Contract
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P0 (active CI blocker on PR #221)
 **Complexity**: L
 **Dependencies**: Spec 138 [enumerate-time-template-viability-classifier] (archived — partial implementation that this spec completes), Spec 132 [agent-stuck-viable-template-completion-mismatch] (archived — established the unified viability predicate this spec composes with), Spec 134 [unified-move-legality-predicate] (archived), Spec 137 [convergence-witness-invariant-promotion] (archived — distillation protocol used in T-series tests below)
@@ -673,4 +673,15 @@ Key deviation from the spec's earlier suggested decomposition: ticket 003 absorb
 
 ## Outcome
 
-To be filled in on completion.
+- Completion date: 2026-04-20
+- What actually changed:
+  - implemented the certificate-carrying legality contract across the kernel and agents, including `CompletionCertificate`, full-path certificate emission, constructible admission, and deterministic agent fallback
+  - landed the `docs/FOUNDATIONS.md` amendments and the matching `docs/architecture.md` admission-flow documentation required by the spec
+  - completed and archived all eight implementation tickets: `139CCONLEGCONT-001` through `139CCONLEGCONT-008`
+  - checked in the planned validation artifacts, including the failing-seed regressions, replay-identity proof, Foundation #18 conformance coverage, hidden-information safety coverage, performance gate, and I2 diagnostic transcripts
+- Deviations from original plan:
+  - the implementation widened beyond the initially proposed seams where needed to make the live admission/publication contract correct end-to-end, including classifier/admission fixes and a few supporting test/fixture updates discovered during acceptance
+  - replay-identity verification was updated to the live contract boundary rather than comparing against a stale pre-Spec-139 compatibility path
+- Verification results:
+  - broad gates recorded across the archived ticket outcomes include `pnpm turbo lint`, `pnpm turbo typecheck`, and `pnpm turbo test`
+  - targeted engine verification recorded across the archived ticket outcomes includes `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test:unit`, `pnpm -F @ludoforge/engine test:determinism`, focused `node --test` runs for the Spec 139 proof files, and the required I2 diagnostic transcript generation for seeds `123`, `1002`, and `1010`

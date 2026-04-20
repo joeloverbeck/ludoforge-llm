@@ -1,5 +1,7 @@
 # Map Representation Plan — Iteration 8
 
+**Status**: COMPLETED
+
 **Date**: 2026-03-30
 **Based on**: EVALUATION #6 (average score: 6.5)
 **Problems targeted**: [HIGH] Finer terrain granularity (Terrain Distinction = 6/10, stagnant 3 evaluations)
@@ -222,3 +224,13 @@ pleiku-darlac:none:
 All solutions extend existing patterns in the codebase. No external research needed:
 - **Per-zone overrides**: Already used for `label`, `shape`, and `vertices` on 25+ zones. `ZoneVisualOverrideSchema` extends `ZoneVisualStyleSchema` which includes `color`/`strokeColor`. The resolution pipeline (`resolveZoneVisual` line 188) applies overrides last.
 - **Color palette design**: Based on the physical FITL board's terrain coloring (highlands are tan/gold, lowlands are green, jungle is dark green) with shade variations for geographic sub-regions.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the iteration-specific map plan and archived it because it is stale planning material rather than a current report
+- Deviations from original plan:
+  - none; the document remains available as historical context if map work resumes later
+- Verification results:
+  - current-reference scan found no active skill or ticket using this file directly

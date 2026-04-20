@@ -1,4 +1,5 @@
 # Golden Test Vector — Tournament NLHE (3-max → Heads-up)
+**Status**: COMPLETED
 Deterministic, card-complete, zone-complete.
 
 ## Conventions
@@ -615,3 +616,13 @@ MOVE CARD GROUP: HAND[Alice], HAND[Carol], BOARD, BURN, DECK stub -> MUCK
 ASSERT: MUCK count == 52
 
 TOURNAMENT WINNER: Carol
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the historical golden vector and archived it because it has already served its original purpose and is no longer part of an active reports workflow
+- Deviations from original plan:
+  - none; the content remains available in the archive for historical reconstruction if needed
+- Verification results:
+  - user confirmed this artifact was exploited long ago and can leave the active `reports/` folder

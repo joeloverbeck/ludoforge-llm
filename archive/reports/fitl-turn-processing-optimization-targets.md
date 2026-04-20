@@ -1,5 +1,7 @@
 # FITL Turn-Processing Optimization Targets
 
+**Status**: COMPLETED
+
 ## Purpose
 
 This report identifies existing tests that are good optimization-loop targets for Fire in the Lake policy evaluation and turn processing.
@@ -176,3 +178,13 @@ If I had to choose only three tests for the first optimization pass, I would sta
 3. `packages/engine/test/integration/fitl-card-flow-determinism.test.ts`
 
 That set gives one direct timing gate, one production policy correctness gate, and one broader turn-processing determinism gate.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the optimization-target shortlist and archived it because it is a historical guidance note for a specific optimization loop, not an active report with ongoing updates
+- Deviations from original plan:
+  - none; the document remains intact as archive context
+- Verification results:
+  - current-reference scan found no active skills, specs, or tickets depending on this file

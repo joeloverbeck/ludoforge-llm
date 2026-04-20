@@ -1,5 +1,7 @@
 # Tecnologías para un motor de juegos de mesa en el navegador en 2026
 
+**Status**: COMPLETED
+
 ## Resumen ejecutivo y recomendación principal
 
 Tu lista de requisitos describe, en la práctica, una **UI tipo “mesa”** (tabletop) con **muchos elementos interactivos** (cartas, fichas, pilas, tableros), **pan/zoom**, **drag & drop**, **animaciones** y **explicaciones contextualizadas** (por qué una acción es legal/ilegal). Eso se parece más a un “editor/escenario 2D” que a una página web clásica.
@@ -198,3 +200,13 @@ Elegiría **Phaser 3** si tu prioridad fuese “quiero un framework que me resue
 Elegiría **Konva** si tu prioridad fuese un **editor visual** o una experiencia más cercana a “dibujo/diagramación interactiva”, aprovechando su Stage/Layers y su técnica de hit detection con canvas oculto. citeturn2search26turn2search1turn2search5  
 
 Y evitaría “DOM para todo” como base de un motor universal por el riesgo de techo de rendimiento/interactividad asociado a DOM grande y altamente dinámico. citeturn9search13turn9search16
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the completed architecture research note and archived it because it is historical background material rather than an active report
+- Deviations from original plan:
+  - none; the report remains available for historical reference in the archive
+- Verification results:
+  - active-reference scan found no current spec, ticket, or skill depending on this file

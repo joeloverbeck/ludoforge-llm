@@ -1,5 +1,7 @@
 # Missing Abstraction Analysis: fitl-policy-agent
 
+**Status**: COMPLETED
+
 **Date**: 2026-04-10
 **Input**: packages/engine/test/integration/fitl-policy-agent.test.ts
 **Engine modules analyzed**: ~288 (22 agents/ + 254 kernel/ + 12 sim/ — short-circuit rule applied)
@@ -171,3 +173,13 @@ Falsification: If all 3 co-change commits involve only type import additions (ne
 **NI-1 dismissal rationale**: `stateFeatureCacheByState` (state-level), `candidateFeatureCache` (move-level), and `aggregateCache` (completion-level) serve disjoint scopes. `setCurrentCandidates()` correctly invalidates only `aggregateCache`. No separation warranted.
 
 **NI-2 dismissal rationale**: All 3 co-change commits (`f00eedec`, `18ce7663`, `233bf316`) involve type extensions (new union variants, data carrier fields, trace schema updates) with zero behavioral coupling in agents.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the completed missing-abstraction analysis and archived the report because its open items were already triaged in the document itself and the remaining spec-worthy outcome landed as Spec 125
+- Deviations from original plan:
+  - none; the report's own triage coverage closes out the investigation
+- Verification results:
+  - active-reference scan confirmed the report is no longer part of a live workflow

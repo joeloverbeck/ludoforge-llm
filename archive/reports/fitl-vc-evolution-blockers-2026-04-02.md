@@ -1,5 +1,7 @@
 # FITL VC Agent Evolution — Blocker Report (2026-04-02)
 
+**Status**: COMPLETED
+
 ## Context
 
 The `fitl-vc-agent-evolution` campaign attempted to evolve the VC PolicyAgent for FITL using the improve-loop skill. After specs 102-106 (shared observer model, action tags, unified considerations, explicit preview contracts, zone-token observer integration) landed, the prior campaign's optimized compositeScore of 10.5333 (14/15 wins) regressed to approximately -4.0 (0/15 wins, all games hitting maxTurns at 500 moves).
@@ -157,3 +159,13 @@ The new compiled GameDef from specs 102-106 changed the PRNG stream (different i
 - `packages/engine/test/integration/considerations-e2e.test.ts` — Made vc-evolved consideration list assertion resilient to evolution changes (no longer hardcodes exact list, checks library membership instead). This is a permanent improvement.
 - `campaigns/fitl-vc-agent-evolution/diagnose-seed.mjs` — Diagnostic tool for single-seed analysis (campaign file, not committed).
 - `campaigns/fitl-vc-agent-evolution/musings.md` — Campaign musings with investigation notes.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the blocker investigation and archived it because it is a dated campaign-specific report rather than an active working document
+- Deviations from original plan:
+  - none; the report remains useful as historical context but not as a live report
+- Verification results:
+  - active-reference scan found no current workflow depending on this file

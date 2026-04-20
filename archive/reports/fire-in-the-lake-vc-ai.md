@@ -1,5 +1,7 @@
 # Fire in the Lake - VC AI
 
+**Status**: COMPLETED
+
 8.5 Non-Player VC Actions
 NOTE: It is not necessary to read through the lengthy stipulations below before playing because they are summarized
 on the Non-player flowcharts. Refer to these rules as needed to
@@ -140,3 +142,13 @@ any Support, then where there is no Terror marker, then randomly.
 Remove Terror only if a shift would be achieved (because the VC
 will have Resources after removing the Terror and the space is not
 yet at Active Opposition).
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved this FITL source-reference extract and archived it because it is historical reference material rather than an active report
+- Deviations from original plan:
+  - none; the content remains intact for archive lookup
+- Verification results:
+  - current-reference scan found no active workflow dependency on this file

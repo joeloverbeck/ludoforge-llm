@@ -1,5 +1,7 @@
 # Complex Game With Betting Phases
 
+**Status**: COMPLETED
+
 ## Hand A — betting on flop + turn + river (goes to showdown)
 
 (Full Tilt FTOPS hand history; great for proving all 3 postflop betting rounds exist.)
@@ -127,4 +129,13 @@ FLOP: [Qc 5d 7d]
   CHASE52OUTS calls 6,152 and is all-in
   Uncalled 213 returned to arvan1985
   => Runout to showdown
-  
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the historical Texas Hold'em hand examples and archived the file because it is no longer an active working report
+- Deviations from original plan:
+  - none; this content is being kept as archive reference only
+- Verification results:
+  - current-reference scan found no active workflow dependency on this file

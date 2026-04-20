@@ -1,5 +1,7 @@
 # 109 Agent Preview Audit
 
+**Status**: COMPLETED
+
 Date: 2026-04-05
 Ticket: `tickets/109AGEPREAUD-001.md`
 Spec: `specs/109-agent-preview-audit.md`
@@ -102,3 +104,13 @@ It is **not** the broad “event moves never enter `trustedMoveIndex`” failure
 ## Implication For Ticket 002
 
 `109AGEPREAUD-002.md` should be reassessed before implementation. Its current problem statement assumes event moves fail completion and never enter `trustedMoveIndex`, but this audit found counterexamples in production FITL seeds.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the completed audit findings and archived the report because it is a point-in-time investigation tied to the Spec 109 ticket series rather than a live working report
+- Deviations from original plan:
+  - none; the document served as an investigation artifact and is now moving out of the active `reports/` folder
+- Verification results:
+  - archival classification reviewed against current spec and ticket references before moving the file

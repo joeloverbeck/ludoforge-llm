@@ -1,5 +1,7 @@
 # Map Representation Evaluation
 
+**Status**: COMPLETED
+
 Iterative evaluation of the FITL game map rendering quality. Each evaluation scores the current state from screenshots against 4 metrics and tracks progress across iterations.
 
 ## Screenshot Reference
@@ -528,3 +530,13 @@ Game canvas and editor views are consistent — same organic rounded blob shapes
 6. **[MEDIUM]** Increase token size and add faction-specific visual markers so pieces are identifiable at default zoom. *(Recurring: 6 consecutive evaluations)*
 7. **[MEDIUM]** Reduce visual congestion in the southern Mekong Delta area where many small bright green provinces overlap with route lines.
 8. **[LOW]** Refine the overall map layout to more closely match Vietnam's S-curve geography. *(Recurring: 5 consecutive evaluations)*
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the dormant map evaluation series and archived it because there is no active map-representation loop currently using this file
+- Deviations from original plan:
+  - none; the report is being retired from the live `reports/` folder due to inactivity
+- Verification results:
+  - current-reference scan found no active workflow dependency on this evaluation file

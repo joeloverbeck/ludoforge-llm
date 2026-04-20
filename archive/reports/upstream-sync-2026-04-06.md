@@ -1,5 +1,7 @@
 # Upstream Sync Report — 2026-04-06
 
+**Status**: COMPLETED
+
 ## Summary
 - **Upstream**: karpathy/autoresearch
 - **Forks analyzed**: 8 (of ~170+ total forks)
@@ -133,3 +135,13 @@ These have stars but no code changes — just bookmarked mirrors.
 The autoresearch fork ecosystem is currently dominated by hardware platform ports (Blackwell, Intel XPU, Windows RTX, Apple MLX). No fork has modified the core iteration logic, accept/reject patterns, or research strategy in ways that would benefit our enhanced improve-loop skill. Our version — with UCB1 category selection, MAD confidence scoring, Goodhart's Law defenses, tiered mutability, lesson stores, and structured reflection — remains significantly ahead of all fork implementations in terms of process sophistication.
 
 **Next sync recommended**: 2-4 weeks, or when the upstream repo itself receives updates.
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the dated upstream-sync run and archived it because it is a historical sync snapshot rather than a standing report
+- Deviations from original plan:
+  - none; future syncs should create new dated reports rather than extend this one
+- Verification results:
+  - current-reference scan found no active workflow consuming this dated sync report

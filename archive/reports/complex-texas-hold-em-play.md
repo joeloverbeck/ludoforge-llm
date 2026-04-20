@@ -1,5 +1,7 @@
 # Complex Texas Hold Em Play
 
+**Status**: COMPLETED
+
 Hand setup
 
 - Tournament: NLHE (no rake)
@@ -189,3 +191,13 @@ Ending stacks (after payouts)
 - Seat 8: 51,100
 
 - Seat 9: 0
+
+## Outcome
+
+- Completion date: 2026-04-20
+- What actually changed:
+  - preserved the historical complex Hold'em scenario and archived the file because it is no longer a live report and has already served its purpose
+- Deviations from original plan:
+  - none; the content is being retained as archive-only context
+- Verification results:
+  - current-reference scan found no active workflow dependency on this file

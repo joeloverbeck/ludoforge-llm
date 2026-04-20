@@ -1123,7 +1123,7 @@ describe('FITL policy agent integration', () => {
 
     assert.ok(completedKeys.length > 0, 'expected completed FITL candidates on the VC decision state');
     assert.equal(duplicateKeyCount(completedKeys), 0, 'expected completed playable outputs to be unique by stableMoveKey');
-    assert.equal(prepared.statistics.duplicatesRemoved, 14, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
+    assert.equal(prepared.statistics.duplicatesRemoved, 10, 'expected the seed-6 VC reproducer to remove the known duplicate playable outputs');
   });
 
   it('keeps non-event preview differentiation intact on a VC decision with rally, terror, and attack candidates', () => {

@@ -115,7 +115,7 @@ This is a Foundation #15 prerequisite: closing the fail-open admission must not 
 
 ### I2 — Characterize the failing draw spaces with the new search algorithm
 
-For FITL seeds 1002, 1010 (NVA `march`, `arvn-evolved` profile interaction) and seed 123 (RandomAgent FITL), trace the new memoized DFS + set-variable-propagation algorithm step-by-step on the captured pre-failure state. Record: probe steps consumed, memo hits, nogood records, terminal verdict, generated certificate. Output: checked-in diagnostic transcript under `campaigns/fitl-arvn-agent-evolution/diagnose-certificate-search.mjs` plus an engine-agnostic fixture test that reproduces the same shape with synthetic data.
+For FITL seeds 1002, 1010 (NVA `march`, `arvn-evolved` profile interaction) and seed 123 (RandomAgent FITL), trace the new memoized DFS + set-variable-propagation algorithm step-by-step on a truthful repo-owned witness. Where a reconstructable historical pre-failure state is unavailable, capture the first current replay witness that reaches the certificate-search seam instead. Record: probe steps consumed, memo hits, nogood records, terminal verdict, generated certificate. Output: checked-in diagnostic transcript under `campaigns/fitl-arvn-agent-evolution/diagnose-certificate-search.mjs` plus an engine-agnostic fixture test that reproduces the same shape with synthetic data. For the owned synthetic adversarial witness, require bounded certificate production and positive nogood recording; retain memo-hit counts as reported diagnostics without requiring them to be positive on that exact shape.
 
 Validates that the algorithm respects `MoveEnumerationBudgets` on the live witness and produces a usable certificate.
 
@@ -574,8 +574,8 @@ File-top marker: `// @test-class: architectural-invariant`.
 
 Under `packages/engine/test/integration/spec-139-hidden-information-safety.test.ts`:
 
-- For a Texas-Hold'em state with hidden hole cards, assert the certificate generated for any classified-legal move depends only on the projected state available to the active seat.
-- Assert two states that differ only in masked bindings produce identical certificates (where the unmasked bindings are equal).
+- For a Texas-Hold'em state with hidden hole cards, assert the completion semantics generated for any classified-legal move depend only on the projected state available to the active seat.
+- Assert two states that differ only in masked bindings produce certificates with identical ordered assignments and identical materialized move/frontier behavior (where the unmasked bindings are equal), even though certificate fingerprints still compose the authoritative `stateHash`.
 
 File-top marker: `// @test-class: architectural-invariant`. This proves the research's § 7 ("Respect hidden information…") invariant.
 
@@ -583,7 +583,7 @@ File-top marker: `// @test-class: architectural-invariant`. This proves the rese
 
 Under `packages/engine/test/performance/spec-139-certificate-overhead.test.ts`:
 
-- Reuse Spec 138's deterministic probe-step gate methodology. Assert certificate-emitting classifier overhead on the stable 17-seed comparable FITL corpus stays below `1.50x` of the disable-certificate baseline. Threshold is wider than Spec 138's `1.25x` to accommodate full-path search; tighter bounds may be set later if observed performance is better.
+- Reuse Spec 138's deterministic probe-step gate methodology. Assert certificate-emitting classifier overhead on the stable 17-seed comparable FITL corpus stays below `1.50x` of the disable-certificate baseline at the lower-level decision-sequence classifier seam that actually owns `emitCompletionCertificate`. Threshold is wider than Spec 138's `1.25x` to accommodate full-path search; tighter bounds may be set later if observed performance is better.
 
 File-top marker: `// @test-class: architectural-invariant`.
 

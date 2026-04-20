@@ -177,6 +177,8 @@ Load `references/closeout-and-followup.md` for non-bounded tickets, or for bound
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`.
 
+When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
+
 When live implementation requires correcting stale ticket text, record a compact ledger in the active ticket before the final proof pass when proportionate:
 
 - `ticket corrections applied`: `<stale claim> -> <live contract>`

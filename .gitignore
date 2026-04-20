@@ -20,6 +20,7 @@ coverage/
 
 # Logs
 *.log
+!campaigns/fitl-arvn-agent-evolution/transcripts/*.log
 
 # OS
 .DS_Store

@@ -1,0 +1,14 @@
+# Spec 139 I2 certificate-search diagnostic
+seed=123
+profile=random
+witnessMode=live replay witness capture
+stateHash=10272897683706985670
+playerId=0
+actionId=event
+terminalVerdict=satisfiable
+witnessWarnings=[]
+probeStepsConsumed=2
+paramExpansionsConsumed=1
+memoHits=0
+nogoodsRecorded=0
+generatedCertificate={"assignments":[{"decisionKey":"decision:doc.eventDecks.0.cards.28.unshaded.effects.0.chooseN::$insurgentPiecesToRemove","requestType":"chooseN","value":["tok_vc-guerrillas_43","tok_vc-guerrillas_42","tok_vc-bases_41","tok_vc-guerrillas_51"]}],"fingerprint":"f378768e6f886bf1","diagnostics":{"probeStepsConsumed":2,"paramExpansionsConsumed":1,"memoHits":0,"nogoodsRecorded":0}}

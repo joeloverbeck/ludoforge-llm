@@ -155,6 +155,10 @@ describe('plain-action feasibility probe integration', () => {
     const state = makeMinimalState();
 
     const result = enumerateLegalMoves(def, state, { probePlainActionFeasibility: true, budgets: { maxDecisionProbeSteps: 0 } });
-    assert.equal(result.moves.length, 1, 'move should be kept when budget forces unknown classification');
+    assert.equal(result.moves.length, 0, 'move should be dropped when budget forces unknown classification');
+    assert.deepEqual(
+      result.warnings.map((warning) => warning.code),
+      ['MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'],
+    );
   });
 });

@@ -1569,6 +1569,7 @@ export interface PolicyMovePreparationTrace {
   readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
+  readonly templateCompletionSource?: 'certificateFallback';
   readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
   readonly warnings?: readonly RuntimeWarning[];
 }

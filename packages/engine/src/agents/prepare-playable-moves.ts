@@ -46,6 +46,7 @@ interface TemplateCompletionTrace {
   readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionOutcome: NonNullable<PolicyMovePreparationTrace['templateCompletionOutcome']>;
+  readonly templateCompletionSource?: PolicyMovePreparationTrace['templateCompletionSource'];
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
   readonly warnings?: readonly RuntimeWarning[];
 }
@@ -187,6 +188,9 @@ export function preparePlayableMoves(
       ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
       templateCompletionAttempts: completion.trace.templateCompletionAttempts,
       templateCompletionOutcome: completion.trace.templateCompletionOutcome,
+      ...(completion.trace.templateCompletionSource === undefined
+        ? {}
+        : { templateCompletionSource: completion.trace.templateCompletionSource }),
       ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
       ...(completion.trace.warnings === undefined ? {} : { warnings: completion.trace.warnings }),
     });
@@ -242,6 +246,7 @@ function attemptTemplateCompletion(
   let templateCompletionStructuralFailures = 0;
   let sawCompletedMove = false;
   let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
+  let usedCertificateFallback = false;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   const warnings: RuntimeWarning[] = [];
   // When every attempt so far returned `notViable` (bad random target draw,
@@ -341,6 +346,7 @@ function attemptTemplateCompletion(
   if (!sawCompletedMove && stochasticCount === 0 && duplicateOutputOutcome === undefined) {
     const certificate = input.certificateIndex?.get(toMoveIdentityKey(input.def, move));
     if (certificate !== undefined) {
+      usedCertificateFallback = true;
       const certifiedMove = createTrustedExecutableMove(
         materializeCompletionCertificate(input.def, input.state, move, certificate, input.runtime),
         input.state.stateHash,
@@ -372,10 +378,11 @@ function attemptTemplateCompletion(
       }
     : sawCompletedMove
       ? {
-          finalClassification: 'complete',
+        finalClassification: 'complete',
         enteredTrustedMoveIndex: true,
         templateCompletionAttempts,
         templateCompletionOutcome: 'complete',
+        ...(usedCertificateFallback ? { templateCompletionSource: 'certificateFallback' } : {}),
         ...(warnings.length === 0 ? {} : { warnings }),
       }
       : duplicateOutputOutcome !== undefined
@@ -385,6 +392,7 @@ function attemptTemplateCompletion(
             skippedAsDuplicate: true,
             templateCompletionAttempts,
             templateCompletionOutcome: duplicateOutputOutcome,
+            ...(usedCertificateFallback ? { templateCompletionSource: 'certificateFallback' } : {}),
             ...(warnings.length === 0 ? {} : { warnings }),
           }
       : {

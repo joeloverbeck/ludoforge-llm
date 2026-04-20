@@ -1,71 +1,166 @@
 // @test-class: architectural-invariant
 
 import * as assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
 import test from 'node:test';
 
+import {
+  applyDecision,
+  asActionId,
+  asDecisionFrameId,
+  asPhaseId,
+  asPlayerId,
+  asTurnId,
+  createGameDefRuntime,
+  deserializeGameState,
+  publishMicroturn,
+  resolveActiveDeciderSeatIdForPlayer,
+  serializeGameState,
+  type ActionDef,
+  type Decision,
+  type GameDef,
+  type GameState,
+  type MicroturnState,
+} from '../../../src/kernel/index.js';
+import { eff } from '../../helpers/effect-tag-helper.js';
+import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 import { validateCompoundTurnInventory } from '../../fixtures/spec-140-compound-turn-shapes/validate.js';
 
-type ZoneSetId = 'highlands' | 'delta';
-type DecisionKind = 'chooseOne' | 'chooseN';
-type Choice = 'confirm';
+const makeBaseDef = (actions: readonly ActionDef[]): GameDef =>
+  asTaggedGameDef({
+    metadata: { id: 'microturn-suspend-resume-prototype', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }],
+    constants: {},
+    globalVars: [
+      { name: 'kontumCount', type: 'int', init: 0, min: 0, max: 10 },
+      { name: 'pleikuCount', type: 'int', init: 0, min: 0, max: 10 },
+      { name: 'postSelectionEffect', type: 'int', init: 0, min: 0, max: 10 },
+    ],
+    perPlayerVars: [],
+    zones: [{ id: 'board:none', owner: 'none', visibility: 'public', ordering: 'set' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions,
+    triggers: [],
+    terminal: { conditions: [] },
+  });
 
-interface ChooseOneFrame {
-  readonly kind: 'chooseOne';
-  readonly frameId: string;
-  readonly decisionKey: '$zoneSet';
-  readonly options: readonly ZoneSetId[];
-}
+const makeBaseState = (def: GameDef): GameState => ({
+  globalVars: { kontumCount: 0, pleikuCount: 0, postSelectionEffect: 0 },
+  perPlayerVars: {},
+  zoneVars: {},
+  playerCount: 2,
+  zones: { 'board:none': [] },
+  nextTokenOrdinal: 0,
+  currentPhase: asPhaseId('main'),
+  activePlayer: asPlayerId(0),
+  turnCount: 0,
+  rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+  stateHash: 0n,
+  _runningHash: 0n,
+  actionUsage: {},
+  turnOrderState: { type: 'roundRobin' },
+  markers: {},
+  reveals: undefined,
+  globalMarkers: undefined,
+  activeLastingEffects: undefined,
+  interruptPhaseStack: undefined,
+  decisionStack: [],
+  nextFrameId: asDecisionFrameId(0),
+  nextTurnId: asTurnId(0),
+  activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, 0),
+});
 
-interface EffectFrame {
-  readonly kind: 'effect';
-  readonly frameId: string;
-  readonly cursor: 'awaitOuterChoice' | 'forEach';
-  readonly selectedZoneSet: ZoneSetId | null;
-  readonly pendingZones: readonly string[];
-  readonly zoneIndex: number;
-}
+const chooseNSteps = (microturn: ReturnType<typeof publishMicroturn>): readonly Extract<Decision, { readonly kind: 'chooseNStep' }>[] =>
+  microturn.legalActions.filter((action): action is Extract<Decision, { readonly kind: 'chooseNStep' }> => action.kind === 'chooseNStep');
 
-interface ChooseNFrame {
-  readonly kind: 'chooseN';
-  readonly frameId: string;
-  readonly decisionKey: string;
-  readonly zoneId: string;
-  readonly options: readonly string[];
-  readonly min: number;
-  readonly max: number;
-  readonly selected: readonly string[];
-}
-
-type PrototypeFrame = ChooseOneFrame | EffectFrame | ChooseNFrame;
-
-interface PrototypeState {
-  readonly decisionStack: readonly PrototypeFrame[];
-  readonly selectionsByZone: Readonly<Record<string, readonly string[]>>;
-  readonly executionLog: readonly string[];
-  readonly nextFrameId: number;
-  readonly stateHash: string;
-}
-
-interface PublishedMicroturn {
-  readonly kind: DecisionKind;
-  readonly frameId: string;
-  readonly decisionKey: string;
-  readonly zoneId?: string;
-  readonly options: readonly string[];
-}
-
-const ZONE_SETS: Readonly<Record<ZoneSetId, readonly string[]>> = {
-  highlands: ['kontum', 'pleiku'],
-  delta: ['can-tho', 'my-tho'],
+const requireChooseNStepMicroturn = (microturn: MicroturnState): MicroturnState & {
+  readonly kind: 'chooseNStep';
+  readonly decisionContext: Extract<MicroturnState['decisionContext'], { readonly kind: 'chooseNStep' }>;
+} => {
+  assert.equal(microturn.kind, 'chooseNStep');
+  return microturn as MicroturnState & {
+    readonly kind: 'chooseNStep';
+    readonly decisionContext: Extract<MicroturnState['decisionContext'], { readonly kind: 'chooseNStep' }>;
+  };
 };
 
-const TOKENS_BY_ZONE: Readonly<Record<string, readonly string[]>> = {
-  kontum: ['k-guerrilla-a', 'k-guerrilla-b', 'k-guerrilla-c'],
-  pleiku: ['p-guerrilla-a', 'p-guerrilla-b', 'p-guerrilla-c'],
-  'can-tho': ['c-guerrilla-a', 'c-guerrilla-b', 'c-guerrilla-c'],
-  'my-tho': ['m-guerrilla-a', 'm-guerrilla-b', 'm-guerrilla-c'],
+const requireDecision = (
+  microturn: ReturnType<typeof publishMicroturn>,
+  predicate: (decision: Decision) => boolean,
+): Decision => {
+  const decision = microturn.legalActions.find(predicate);
+  assert.ok(decision, 'expected matching published decision');
+  return decision;
 };
+
+const makePrototypeAction = (): ActionDef => ({
+  id: asActionId('outer-zone-choice'),
+  actor: 'active',
+  executor: 'actor',
+  phase: [asPhaseId('main')],
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [
+    eff({
+      chooseOne: {
+        internalDecisionId: 'decision:$zoneSet',
+        bind: '$zoneSet',
+        options: { query: 'enums', values: ['highlands', 'delta'] },
+      },
+    }),
+    eff({
+      if: {
+        when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$zoneSet' }, right: 'highlands' },
+        then: [
+          eff({
+            forEach: {
+              bind: '$zone',
+              over: { query: 'enums', values: ['kontum', 'pleiku'] },
+              effects: [
+                eff({
+                  if: {
+                    when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$zone' }, right: 'kontum' },
+                    then: [
+                      eff({
+                        chooseN: {
+                          internalDecisionId: 'decision:$selectedKontum',
+                          bind: '$selectedKontum',
+                          options: { query: 'enums', values: ['k-guerrilla-a', 'k-guerrilla-b', 'k-guerrilla-c'] },
+                          min: 1,
+                          max: 3,
+                        },
+                      }),
+                      eff({ addVar: { scope: 'global', var: 'kontumCount', delta: 1 } }),
+                    ],
+                    else: [
+                      eff({
+                        chooseN: {
+                          internalDecisionId: 'decision:$selectedPleiku',
+                          bind: '$selectedPleiku',
+                          options: { query: 'enums', values: ['p-guerrilla-a', 'p-guerrilla-b', 'p-guerrilla-c'] },
+                          min: 1,
+                          max: 3,
+                        },
+                      }),
+                      eff({ addVar: { scope: 'global', var: 'pleikuCount', delta: 1 } }),
+                    ],
+                  },
+                }),
+              ],
+            },
+          }),
+        ],
+        else: [
+          eff({ addVar: { scope: 'global', var: 'postSelectionEffect', delta: 9 } }),
+        ],
+      },
+    }),
+    eff({ addVar: { scope: 'global', var: 'postSelectionEffect', delta: 1 } }),
+  ],
+  limits: [],
+});
 
 test('validates the spec-140 FITL compound-turn inventory fixture', () => {
   const entries = validateCompoundTurnInventory();
@@ -73,211 +168,77 @@ test('validates the spec-140 FITL compound-turn inventory fixture', () => {
 });
 
 test('prototypes effect-frame suspend/resume across outer chooseOne and nested chooseN frames', () => {
-  let state = createPrototypeState();
+  const def = makeBaseDef([makePrototypeAction()]);
+  const runtime = createGameDefRuntime(def);
+  let state = makeBaseState(def);
 
-  const initialMicroturn = requirePublishedMicroturn(state);
-  assert.equal(initialMicroturn.kind, 'chooseOne');
-  assert.equal(initialMicroturn.decisionKey, '$zoneSet');
-  assert.equal(state.decisionStack[0]?.kind, 'effect');
-  assert.equal(state.decisionStack[1]?.kind, 'chooseOne');
+  const initialActionSelection = publishMicroturn(def, state, runtime);
+  assert.equal(initialActionSelection.kind, 'actionSelection');
 
-  state = applyChooseOne(state, 'highlands');
-  const afterOuterBind = requirePublishedMicroturn(state);
-  assert.equal(afterOuterBind.kind, 'chooseN');
-  assert.equal(afterOuterBind.zoneId, 'kontum');
-  assert.deepEqual(currentEffectFrame(state)?.pendingZones, ['kontum', 'pleiku']);
-  assert.equal(currentEffectFrame(state)?.zoneIndex, 0);
+  state = applyDecision(def, state, initialActionSelection.legalActions[0]!, undefined, runtime).state;
+  const outerChoice = publishMicroturn(def, state, runtime);
+  assert.equal(outerChoice.kind, 'chooseOne');
+  assert.equal(state.decisionStack?.[0]?.context.kind, 'actionSelection');
+  assert.equal(state.decisionStack?.[1]?.context.kind, 'chooseOne');
 
-  const roundTripped = deserializePrototypeState(serializePrototypeState(state));
+  const chooseHighlands = requireDecision(
+    outerChoice,
+    (decision) => decision.kind === 'chooseOne' && decision.value === 'highlands',
+  );
+  state = applyDecision(def, state, chooseHighlands, undefined, runtime).state;
+
+  let firstChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
+  assert.match(String(firstChooseN.decisionContext.decisionKey), /\$selectedKontum/);
+  assert.deepEqual(firstChooseN.decisionContext.selectedSoFar, []);
+
+  const roundTripped = deserializeGameState(serializeGameState(state));
   assert.deepEqual(roundTripped, state);
   assert.equal(roundTripped.stateHash, state.stateHash);
 
-  state = applyChooseN(state, ['k-guerrilla-a', 'k-guerrilla-b'], 'confirm');
-  const secondZone = requirePublishedMicroturn(state);
-  assert.equal(secondZone.kind, 'chooseN');
-  assert.equal(secondZone.zoneId, 'pleiku');
-  assert.deepEqual(state.selectionsByZone.kontum, ['k-guerrilla-a', 'k-guerrilla-b']);
-  assert.equal(currentEffectFrame(state)?.zoneIndex, 1);
+  const kontumAddA = requireDecision(
+    firstChooseN,
+    (decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'k-guerrilla-a',
+  );
+  state = applyDecision(def, state, kontumAddA, undefined, runtime).state;
+  firstChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
+  assert.deepEqual(firstChooseN.decisionContext.selectedSoFar, ['k-guerrilla-a']);
 
-  state = applyChooseN(state, ['p-guerrilla-a'], 'confirm');
-  assert.equal(publishMicroturn(state), null);
-  assert.deepEqual(state.selectionsByZone, {
-    kontum: ['k-guerrilla-a', 'k-guerrilla-b'],
-    pleiku: ['p-guerrilla-a'],
+  const kontumAddB = requireDecision(
+    firstChooseN,
+    (decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'k-guerrilla-b',
+  );
+  state = applyDecision(def, state, kontumAddB, undefined, runtime).state;
+  firstChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
+  assert.deepEqual(firstChooseN.decisionContext.selectedSoFar, ['k-guerrilla-a', 'k-guerrilla-b']);
+  assert.ok(chooseNSteps(firstChooseN).some((decision) => decision.command === 'confirm'));
+
+  const kontumConfirm = requireDecision(
+    firstChooseN,
+    (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+  );
+  state = applyDecision(def, state, kontumConfirm, undefined, runtime).state;
+
+  const pleikuChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
+  assert.match(String(pleikuChooseN.decisionContext.decisionKey), /\$selectedPleiku/);
+  assert.deepEqual(state.globalVars, { kontumCount: 0, pleikuCount: 0, postSelectionEffect: 0 });
+
+  const pleikuAdd = requireDecision(
+    pleikuChooseN,
+    (decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'p-guerrilla-a',
+  );
+  state = applyDecision(def, state, pleikuAdd, undefined, runtime).state;
+  const pleikuAfterAdd = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
+  const pleikuConfirm = requireDecision(
+    pleikuAfterAdd,
+    (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+  );
+  state = applyDecision(def, state, pleikuConfirm, undefined, runtime).state;
+
+  assert.equal(state.turnCount, 1);
+  assert.deepEqual(state.decisionStack, []);
+  assert.deepEqual(state.globalVars, {
+    kontumCount: 1,
+    pleikuCount: 1,
+    postSelectionEffect: 1,
   });
-  assert.deepEqual(state.executionLog, [
-    'selected-zone-set:highlands',
-    'entered-forEach:kontum',
-    'confirmed:kontum:k-guerrilla-a,k-guerrilla-b',
-    'entered-forEach:pleiku',
-    'confirmed:pleiku:p-guerrilla-a',
-    'post-selection-effect',
-  ]);
-  assert.equal(state.decisionStack.length, 0);
 });
-
-function createPrototypeState(): PrototypeState {
-  return withStateHash({
-    decisionStack: [
-      {
-        kind: 'effect',
-        frameId: 'frame-1',
-        cursor: 'awaitOuterChoice',
-        selectedZoneSet: null,
-        pendingZones: [],
-        zoneIndex: 0,
-      },
-      {
-        kind: 'chooseOne',
-        frameId: 'frame-2',
-        decisionKey: '$zoneSet',
-        options: ['highlands', 'delta'],
-      },
-    ],
-    selectionsByZone: {},
-    executionLog: [],
-    nextFrameId: 3,
-  });
-}
-
-function publishMicroturn(state: PrototypeState): PublishedMicroturn | null {
-  const top = state.decisionStack.at(-1);
-  if (top == null) {
-    return null;
-  }
-  if (top.kind === 'chooseOne') {
-    return {
-      kind: 'chooseOne',
-      frameId: top.frameId,
-      decisionKey: top.decisionKey,
-      options: top.options,
-    };
-  }
-  if (top.kind === 'chooseN') {
-    return {
-      kind: 'chooseN',
-      frameId: top.frameId,
-      decisionKey: top.decisionKey,
-      zoneId: top.zoneId,
-      options: top.options,
-    };
-  }
-  return null;
-}
-
-function requirePublishedMicroturn(state: PrototypeState): PublishedMicroturn {
-  const microturn = publishMicroturn(state);
-  assert.ok(microturn, 'expected a published microturn');
-  return microturn;
-}
-
-function applyChooseOne(state: PrototypeState, zoneSet: ZoneSetId): PrototypeState {
-  const top = state.decisionStack.at(-1);
-  assert.equal(top?.kind, 'chooseOne');
-  assert.ok(top.options.includes(zoneSet), `unknown zone-set selection ${zoneSet}`);
-
-  const effectFrame = currentEffectFrame(state);
-  assert.ok(effectFrame, 'outer effect frame must be present before the first bind');
-
-  const selectedZones = ZONE_SETS[zoneSet];
-  const resumedEffect: EffectFrame = {
-    ...effectFrame,
-    cursor: 'forEach',
-    selectedZoneSet: zoneSet,
-    pendingZones: selectedZones,
-    zoneIndex: 0,
-  };
-  const chooseNFrame = createChooseNFrame(state.nextFrameId, selectedZones[0]!);
-
-  return withStateHash({
-    ...state,
-    decisionStack: [resumedEffect, chooseNFrame],
-    executionLog: [...state.executionLog, `selected-zone-set:${zoneSet}`, `entered-forEach:${selectedZones[0]}`],
-    nextFrameId: state.nextFrameId + 1,
-  });
-}
-
-function applyChooseN(state: PrototypeState, selected: readonly string[], choice: Choice): PrototypeState {
-  assert.equal(choice, 'confirm');
-  const top = state.decisionStack.at(-1);
-  assert.equal(top?.kind, 'chooseN');
-  assert.ok(selected.length >= top.min, `selection for ${top.zoneId} must satisfy minimum cardinality`);
-  assert.ok(selected.length <= top.max, `selection for ${top.zoneId} must satisfy maximum cardinality`);
-  assert.ok(selected.every((token) => top.options.includes(token)), `selection for ${top.zoneId} must stay within published options`);
-
-  const effectFrame = currentEffectFrame(state);
-  assert.ok(effectFrame, 'effect frame must remain suspended while chooseN is active');
-
-  const nextSelections = {
-    ...state.selectionsByZone,
-    [top.zoneId]: [...selected],
-  };
-  const nextZoneIndex = effectFrame.zoneIndex + 1;
-  const baseLog = [...state.executionLog, `confirmed:${top.zoneId}:${selected.join(',')}`];
-
-  if (nextZoneIndex >= effectFrame.pendingZones.length) {
-    return withStateHash({
-      ...state,
-      decisionStack: [],
-      selectionsByZone: nextSelections,
-      executionLog: [...baseLog, 'post-selection-effect'],
-    });
-  }
-
-  const nextZone = effectFrame.pendingZones[nextZoneIndex]!;
-  const resumedEffect: EffectFrame = {
-    ...effectFrame,
-    zoneIndex: nextZoneIndex,
-  };
-  const nextChooseN = createChooseNFrame(state.nextFrameId, nextZone);
-
-  return withStateHash({
-    ...state,
-    decisionStack: [resumedEffect, nextChooseN],
-    selectionsByZone: nextSelections,
-    executionLog: [...baseLog, `entered-forEach:${nextZone}`],
-    nextFrameId: state.nextFrameId + 1,
-  });
-}
-
-function currentEffectFrame(state: PrototypeState): EffectFrame | null {
-  const effectFrame = state.decisionStack.find((frame): frame is EffectFrame => frame.kind === 'effect');
-  return effectFrame ?? null;
-}
-
-function createChooseNFrame(nextFrameId: number, zoneId: string): ChooseNFrame {
-  return {
-    kind: 'chooseN',
-    frameId: `frame-${nextFrameId}`,
-    decisionKey: `$selectedTokens@${zoneId}`,
-    zoneId,
-    options: TOKENS_BY_ZONE[zoneId] ?? [],
-    min: 1,
-    max: 3,
-    selected: [],
-  };
-}
-
-function serializePrototypeState(state: PrototypeState): string {
-  return JSON.stringify(state);
-}
-
-function deserializePrototypeState(serialized: string): PrototypeState {
-  const parsed = JSON.parse(serialized) as Omit<PrototypeState, 'stateHash'> & { readonly stateHash: string };
-  return withStateHash({
-    decisionStack: parsed.decisionStack,
-    selectionsByZone: parsed.selectionsByZone,
-    executionLog: parsed.executionLog,
-    nextFrameId: parsed.nextFrameId,
-  });
-}
-
-function withStateHash(stateLike: Omit<PrototypeState, 'stateHash'> | PrototypeState): PrototypeState {
-  const { stateHash, ...state } = stateLike as PrototypeState;
-  void stateHash;
-  const canonical = JSON.stringify(state);
-  return {
-    ...state,
-    stateHash: createHash('sha256').update(canonical).digest('hex'),
-  };
-}

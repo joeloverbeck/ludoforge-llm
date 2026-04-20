@@ -1,6 +1,6 @@
 # 140MICRODECPRO-005: D3 (full) — effect-frame suspend/resume across nested chooseN / chooseOne / chooseStochastic
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — full effect-frame suspend/resume implementation in `microturn/apply.ts` + relocates stochastic resolution logic from `move-completion.ts`
@@ -21,6 +21,7 @@ Additionally: `move-completion.ts` (389 lines today, 7 src + 9 test consumers) i
 3. `move-completion.ts` currently contains both template-completion logic AND stochastic resolution logic — confirmed by reassessment (389 lines, 7 src + 9 test consumers). The stochastic-resolve hoist is a surgical extraction, not a full file deletion (the deletion is ticket 012).
 4. `ChooseNStepCommand` (add / remove / confirm) is part of the D1 type surface from ticket 003.
 5. `FreeOperationGrant` already exists in the kernel — spec preserves the Spec 139 outcome-grant resolution path and simply relocates its invocation into the microturn pipeline.
+6. Live boundary correction: the current production kernel still lacks a standalone resumable effect-VM seam. The landed implementation therefore realizes suspend/resume through canonical microturn recomputation plus serialized root-frame bindings, not a new interpreter/program-counter subsystem. This still preserves the ticket-owned publication/apply protocol and mid-boundary serialization invariant.
 
 ## Architecture Check
 
@@ -29,6 +30,7 @@ Additionally: `move-completion.ts` (389 lines today, 7 src + 9 test consumers) i
 3. Determinism (F8): suspend/resume must be bit-identical across runs. The `effectFrame` snapshot captures every dimension of the execution frontier (program counter, cursor positions, locals, pending trigger queue). Canonical serialization round-trip at any mid-execution point preserves state-hash equality.
 4. Bounded computation (F10, amended): `advanceAutoresolvable` chain is bounded by `MAX_AUTO_RESOLVE_CHAIN`; effect execution uses existing trigger-depth bounds; no unbounded recursion introduced.
 5. F14 compliant: the stochastic-resolve relocation is a same-change hoist — the source file `move-completion.ts` loses stochastic-resolve code in the same commit that `microturn/apply.ts` gains it. No transitional aliasing.
+6. Simulator boundary correction: ticket `005` only stages deterministic chance-RNG derivation in `simulator.ts`; the simulator still executes through legacy `applyMove` until ticket `006`.
 
 ## What to Change
 
@@ -115,5 +117,30 @@ Ensure the expanded `effectFrame` snapshot serializes canonically per F8. Update
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
-3. `node --test packages/engine/dist/test/unit/kernel/effect-frame-suspend-resume-prototype.test.js` (targeted)
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/effect-frame-suspend-resume-prototype.test.js` (targeted)
 4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Implemented the D3 bridge extension across the current production kernel boundary:
+
+- `packages/engine/src/kernel/microturn/publish.ts` now publishes `chooseNStep` and `stochasticResolve` contexts, rebuilds continuation moves from serialized root-frame history plus accumulated bindings, and keeps `chooseOne` publication compatible with prior ticket-004 flows.
+- `packages/engine/src/kernel/microturn/apply.ts` now applies `chooseNStep`, `stochasticResolve`, `outcomeGrantResolve`, and `turnRetirement`, persists confirmed `chooseN` subsets in the root frame, and resumes continuations through canonical recomputation from serialized microturn state.
+- `packages/engine/src/kernel/microturn/advance.ts` now auto-resolves `stochasticResolve`, `outcomeGrantResolve`, and `turnRetirement` under `MAX_AUTO_RESOLVE_CHAIN`.
+- `packages/engine/src/kernel/move-completion.ts` now consumes the hoisted `resolveStochasticDistribution` helper from the microturn module, preserving the legacy template-completion path until ticket `012`.
+- `packages/engine/test/unit/kernel/effect-frame-suspend-resume-prototype.test.ts` now uses real `publishMicroturn` / `applyDecision` calls against a synthetic GameDef instead of its former hand-rolled scaffold, and it still proves serialize/deserialize replay identity mid-compound-turn.
+- `packages/engine/src/sim/simulator.ts` now derives the chance RNG with `CHANCE_RNG_MIX` in preparation for the ticket-`006` simulator rewrite; the current simulator loop remains legacy by design.
+
+No schema or serde expansion was required in the live implementation because the existing `decisionStack` / `effectFrame` shape from ticket `003` was sufficient for the landed recomputation-based suspend/resume path.
+
+## Proof
+
+Completed and green on the post-closeout tree:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/effect-frame-suspend-resume-prototype.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo build`
+5. `pnpm turbo test`
+6. `pnpm turbo lint`
+7. `pnpm turbo typecheck`

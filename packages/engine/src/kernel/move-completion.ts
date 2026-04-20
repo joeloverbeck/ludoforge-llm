@@ -6,6 +6,7 @@ import type { DecisionKey } from './decision-scope.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import { completeMoveDecisionSequence } from './move-decision-completion.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { resolveStochasticDistribution } from './microturn/apply.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { nextInt } from './prng.js';
@@ -304,10 +305,16 @@ const completeTemplateMoveInternal = (
       lastDecisionSource = 'stochasticStructural';
       return undefined;
     }
-    const [index, nextRng] = nextInt(cursor, 0, request.outcomes.length - 1);
-    cursor = nextRng;
+    const distribution = {
+      outcomes: request.outcomes.map((outcome, index) => ({
+        value: index,
+        weight: 1,
+      })),
+    };
+    const selection = resolveStochasticDistribution(cursor, distribution);
+    cursor = selection.rng;
     lastDecisionSource = 'stochastic';
-    return request.outcomes[index]?.bindings;
+    return request.outcomes[selection.value as number]?.bindings;
   };
 
   let result: ReturnType<typeof completeMoveDecisionSequence>;

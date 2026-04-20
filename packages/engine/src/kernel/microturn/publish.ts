@@ -1,5 +1,6 @@
 import { asPlayerId, type SeatId } from '../branded.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
+import type { DecisionKey } from '../decision-scope.js';
 import { enumerateLegalMoves } from '../legal-moves.js';
 import { resolveMoveDecisionSequence } from '../move-decision-sequence.js';
 import { derivePlayerObservation } from '../observation.js';
@@ -16,12 +17,17 @@ import {
   resolveActiveDeciderSeatIdForPlayer,
   type ActionSelectionContext,
   type ActionSelectionDecision,
+  type ChooseNStepContext,
+  type ChooseNStepDecision,
   type ChooseOneContext,
   type ChooseOneDecision,
   type CompoundTurnTraceEntry,
   type DecisionStackFrame,
   type EffectExecutionFrameSnapshot,
   type MicroturnState,
+  type StochasticDistribution,
+  type StochasticResolveContext,
+  type StochasticResolveDecision,
   type TurnRetirementContext,
   type TurnRetirementDecision,
 } from './types.js';
@@ -53,8 +59,38 @@ const actionSelectionTurnId = (state: GameState): ReturnType<typeof asTurnId> =>
 const actionSelectionFrameId = (state: GameState): ReturnType<typeof asDecisionFrameId> =>
   state.nextFrameId ?? asDecisionFrameId(0);
 
-const isSupportedChoiceRequest = (request: ChoicePendingRequest): request is ChoicePendingRequest & { readonly type: 'chooseOne' } =>
-  request.type === 'chooseOne';
+const isSupportedChoiceRequest = (request: ChoicePendingRequest): boolean =>
+  request.type === 'chooseOne' || request.type === 'chooseN';
+
+const toStochasticDistribution = (
+  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+): { readonly decisionKey: DecisionKey; readonly distribution: StochasticDistribution } | null => {
+  const stochasticDecision = continuation.stochasticDecision;
+  if (stochasticDecision === undefined) {
+    return null;
+  }
+
+  const decisionKeys = new Set(
+    stochasticDecision.outcomes.flatMap((outcome) => Object.keys(outcome.bindings)),
+  );
+  if (decisionKeys.size !== 1) {
+    return null;
+  }
+
+  const decisionKey = [...decisionKeys][0]!;
+  const outcomes = stochasticDecision.outcomes
+    .map((outcome) => outcome.bindings[decisionKey])
+    .filter((value): value is string | number | boolean => value !== undefined)
+    .map((value) => ({ value, weight: 1 }));
+  if (outcomes.length === 0) {
+    return null;
+  }
+
+  return {
+    decisionKey: decisionKey as unknown as DecisionKey,
+    distribution: { outcomes },
+  };
+};
 
 const resolveContinuationForMove = (
   def: GameDef,
@@ -77,8 +113,11 @@ const isSupportedActionMove = (
   runtime?: GameDefRuntime,
 ): boolean => {
   const continuation = resolveContinuationForMove(def, state, move, runtime);
-  if (continuation.illegal !== undefined || continuation.stochasticDecision !== undefined || continuation.nextDecisionSet !== undefined) {
+  if (continuation.illegal !== undefined) {
     return false;
+  }
+  if (continuation.stochasticDecision !== undefined) {
+    return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
     return continuation.complete;
@@ -110,18 +149,47 @@ export const rebuildMoveFromTrace = (trace: readonly CompoundTurnTraceEntry[]): 
   }
   const selectedMove = root.decision.move ?? { actionId: root.decision.actionId, params: {} };
   return trace.slice(1).reduce<Move>((move, entry) => {
-    if (entry.decision.kind !== 'chooseOne') {
-      return move;
+    switch (entry.decision.kind) {
+      case 'chooseOne':
+        return {
+          ...move,
+          params: {
+            ...move.params,
+            [entry.decision.decisionKey]: entry.decision.value,
+          },
+        };
+      case 'chooseNStep':
+        if (entry.decision.command !== 'confirm' || entry.decision.value === undefined) {
+          return move;
+        }
+        return {
+          ...move,
+          params: {
+            ...move.params,
+            [entry.decision.decisionKey]: entry.decision.value,
+          },
+        };
+      case 'stochasticResolve':
+        return {
+          ...move,
+          params: {
+            ...move.params,
+            [entry.decision.decisionKey]: entry.decision.value,
+          },
+        };
+      default:
+        return move;
     }
-    return {
-      ...move,
-      params: {
-        ...move.params,
-        [entry.decision.decisionKey]: entry.decision.value,
-      },
-    };
   }, selectedMove);
 };
+
+export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => ({
+  ...rebuildMoveFromTrace(rootDecisionHistory(frame)),
+  params: {
+    ...rebuildMoveFromTrace(rootDecisionHistory(frame)).params,
+    ...frame.accumulatedBindings,
+  },
+});
 
 const buildProjectedState = (
   def: GameDef,
@@ -157,6 +225,70 @@ const toTurnRetirementDecision = (
   kind: 'turnRetirement',
   retiringTurnId: context.retiringTurnId,
 }];
+
+const toChooseNStepContext = (
+  request: ChoicePendingRequest & { readonly type: 'chooseN' },
+  seatId: SeatId,
+): ChooseNStepContext => ({
+  kind: 'chooseNStep',
+  seatId,
+  decisionKey: request.decisionKey,
+  options: request.options,
+  selectedSoFar: request.selected,
+  cardinality: {
+    min: request.min ?? 0,
+    max: request.max ?? request.options.length,
+  },
+  stepCommands: request.canConfirm ? ['add', 'remove', 'confirm'] : ['add', 'remove'],
+});
+
+const toChooseNStepDecisions = (
+  context: ChooseNStepContext,
+): readonly ChooseNStepDecision[] => {
+  const selectedKeys = new Set(context.selectedSoFar.map((value) => JSON.stringify([typeof value, value])));
+  const additions = context.options
+    .filter((option) => option.legality !== 'illegal')
+    .filter((option) => !Array.isArray(option.value))
+    .filter((option) => !selectedKeys.has(JSON.stringify([typeof option.value, option.value])))
+    .map<ChooseNStepDecision>((option) => ({
+      kind: 'chooseNStep',
+      decisionKey: context.decisionKey,
+      command: 'add',
+      value: option.value as string | number | boolean,
+    }));
+  const removals = context.selectedSoFar.map<ChooseNStepDecision>((value) => ({
+    kind: 'chooseNStep',
+    decisionKey: context.decisionKey,
+    command: 'remove',
+    value,
+  }));
+  return context.stepCommands.includes('confirm')
+    ? [...additions, ...removals, {
+      kind: 'chooseNStep',
+      decisionKey: context.decisionKey,
+      command: 'confirm',
+    }]
+    : [...additions, ...removals];
+};
+
+const toStochasticResolveContext = (
+  decisionKey: DecisionKey,
+  distribution: StochasticDistribution,
+): StochasticResolveContext => ({
+  kind: 'stochasticResolve',
+  seatId: '__chance',
+  decisionKey,
+  distribution,
+});
+
+const toStochasticResolveDecisions = (
+  context: StochasticResolveContext,
+): readonly StochasticResolveDecision[] =>
+  context.distribution.outcomes.map((outcome) => ({
+    kind: 'stochasticResolve',
+    decisionKey: context.decisionKey,
+    value: outcome.value,
+  }));
 
 const toChooseOneContext = (
   request: ChoicePendingRequest & { readonly type: 'chooseOne' },
@@ -250,7 +382,7 @@ const publishStackTop = (
   }
   if (top.context.kind === 'chooseOne') {
     const context = top.context;
-    const baseMove = rebuildMoveFromTrace(compoundTurnTrace);
+    const baseMove = rebuildMoveFromFrame(root);
     const legalActions = context.options
       .filter((option) => option.legality !== 'illegal')
       .filter((option) => {
@@ -261,10 +393,12 @@ const publishStackTop = (
             [context.decisionKey]: option.value,
           },
         }, runtime);
-        if (continuation.illegal !== undefined || continuation.stochasticDecision !== undefined || continuation.nextDecisionSet !== undefined) {
+        if (continuation.illegal !== undefined) {
           return false;
         }
-        return continuation.nextDecision === undefined || isSupportedChoiceRequest(continuation.nextDecision);
+        return continuation.stochasticDecision !== undefined
+          ? toStochasticDistribution(continuation) !== null
+          : continuation.nextDecision === undefined || isSupportedChoiceRequest(continuation.nextDecision);
       })
       .map<ChooseOneDecision>((option) => ({
         kind: 'chooseOne',
@@ -279,6 +413,32 @@ const publishStackTop = (
       seatId,
       decisionContext: context,
       legalActions,
+      projectedState: buildProjectedState(def, state, seatId),
+      turnId: top.turnId,
+      frameId: top.frameId,
+      compoundTurnTrace,
+    };
+  }
+  if (top.context.kind === 'chooseNStep') {
+    const context = top.context;
+    return {
+      kind: 'chooseNStep',
+      seatId,
+      decisionContext: context,
+      legalActions: toChooseNStepDecisions(context),
+      projectedState: buildProjectedState(def, state, seatId),
+      turnId: top.turnId,
+      frameId: top.frameId,
+      compoundTurnTrace,
+    };
+  }
+  if (top.context.kind === 'stochasticResolve') {
+    const context = top.context;
+    return {
+      kind: 'stochasticResolve',
+      seatId,
+      decisionContext: context,
+      legalActions: toStochasticResolveDecisions(context),
       projectedState: buildProjectedState(def, state, seatId),
       turnId: top.turnId,
       frameId: top.frameId,
@@ -338,3 +498,21 @@ export const createChooseOneFrame = (
   accumulatedBindings: {},
   effectFrame: createRootFrameSnapshot(history),
 });
+
+export const toDecisionStackContext = (
+  request: ChoicePendingRequest,
+  seatId: SeatId,
+): ChooseOneContext | ChooseNStepContext =>
+  request.type === 'chooseOne'
+    ? toChooseOneContext(request, seatId)
+    : toChooseNStepContext(request, seatId);
+
+export const toStochasticDecisionStackContext = (
+  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+): StochasticResolveContext => {
+  const stochastic = toStochasticDistribution(continuation);
+  if (stochastic === null) {
+    throw new Error('UNSUPPORTED_CONTEXT_KIND_THIS_TICKET: stochastic continuation does not expose a single-bind distribution');
+  }
+  return toStochasticResolveContext(stochastic.decisionKey, stochastic.distribution);
+};

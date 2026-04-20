@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — rewrites `sim/simulator.ts`, replaces `MoveLog` with `DecisionLog`, extends `GameTrace`, migrates ~183 test files
-**Deps**: `tickets/140MICRODECPRO-005.md`
+**Deps**: `archive/tickets/140MICRODECPRO-005.md`
 
 ## Problem
 

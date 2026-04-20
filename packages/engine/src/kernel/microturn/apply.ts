@@ -1,13 +1,28 @@
-import { asDecisionFrameId, asTurnId, resolveActiveDeciderSeatIdForPlayer, type ApplyDecisionResult, type CompoundTurnTraceEntry, type Decision, type DecisionLog, type DecisionStackFrame } from './types.js';
+import {
+  asDecisionFrameId,
+  asTurnId,
+  resolveActiveDeciderSeatIdForPlayer,
+  type ApplyDecisionResult,
+  type CompoundTurnTraceEntry,
+  type Decision,
+  type DecisionLog,
+  type DecisionStackFrame,
+  type EffectExecutionFrameSnapshot,
+  type StochasticDistribution,
+} from './types.js';
 import { applyMove } from '../apply-move.js';
-import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
+import { advanceChooseN } from '../advance-choose-n.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
+import { markOffered, withPendingFreeOperationGrants } from '../grant-lifecycle.js';
 import { resolveMoveDecisionSequence } from '../move-decision-sequence.js';
+import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
+import { nextInt } from '../prng.js';
 import type { DecisionKey } from '../decision-scope.js';
-import type { ExecutionOptions, GameDef, GameState, Move, TriggerLogEntry } from '../types-core.js';
+import type { ExecutionOptions, GameDef, GameState, Move, Rng, TriggerLogEntry } from '../types-core.js';
+import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
-import { publishMicroturn, rebuildMoveFromTrace, withResolvedHash } from './publish.js';
+import { publishMicroturn, rebuildMoveFromFrame, toDecisionStackContext, toStochasticDecisionStackContext, withResolvedHash } from './publish.js';
 
 const rootHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -47,6 +62,13 @@ const clearMicroturnState = (
   decisionStack: [],
   activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(state.activePlayer)),
 }, runtime);
+
+const emptyEffectFrame = (): EffectExecutionFrameSnapshot => ({
+  programCounter: 0,
+  boundedIterationCursors: {},
+  localBindings: {},
+  pendingTriggerQueue: [],
+});
 
 const decisionContextKey = (microturn: ReturnType<typeof publishMicroturn>): DecisionKey | null => {
   switch (microturn.decisionContext.kind) {
@@ -114,6 +136,18 @@ const isMatchingDecision = (candidate: Decision, decision: Decision): boolean =>
   if (candidate.kind === 'chooseOne' && decision.kind === 'chooseOne') {
     return candidate.decisionKey === decision.decisionKey
       && JSON.stringify(candidate.value) === JSON.stringify(decision.value);
+  }
+  if (candidate.kind === 'chooseNStep' && decision.kind === 'chooseNStep') {
+    return candidate.decisionKey === decision.decisionKey
+      && candidate.command === decision.command
+      && JSON.stringify(candidate.value ?? null) === JSON.stringify(decision.value ?? null);
+  }
+  if (candidate.kind === 'stochasticResolve' && decision.kind === 'stochasticResolve') {
+    return candidate.decisionKey === decision.decisionKey
+      && JSON.stringify(candidate.value) === JSON.stringify(decision.value);
+  }
+  if (candidate.kind === 'outcomeGrantResolve' && decision.kind === 'outcomeGrantResolve') {
+    return candidate.grantId === decision.grantId;
   }
   if (candidate.kind === 'turnRetirement' && decision.kind === 'turnRetirement') {
     return candidate.retiringTurnId === decision.retiringTurnId;
@@ -187,6 +221,92 @@ const applyChosenMove = (
   };
 };
 
+const spawnPendingFrame = (
+  def: GameDef,
+  canonicalState: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+  runtime: GameDefRuntime,
+): ApplyDecisionResult => {
+  const rootFrame = rootFrameFor(canonicalState);
+  if (rootFrame === undefined) {
+    throw new Error('MICROTURN_ROOT_FRAME_MISSING');
+  }
+  const updatedRoot = appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
+  const frameId = canonicalState.nextFrameId ?? asDecisionFrameId(0);
+  const nextFrame: DecisionStackFrame = continuation.stochasticDecision !== undefined
+    ? {
+      frameId,
+      parentFrameId: updatedRoot.frameId,
+      turnId: updatedRoot.turnId,
+      context: toStochasticDecisionStackContext(continuation),
+      accumulatedBindings: updatedRoot.accumulatedBindings,
+      effectFrame: emptyEffectFrame(),
+    }
+    : {
+      frameId,
+      parentFrameId: updatedRoot.frameId,
+      turnId: updatedRoot.turnId,
+      context: toDecisionStackContext(
+        continuation.nextDecision!,
+        pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
+      ),
+      accumulatedBindings: updatedRoot.accumulatedBindings,
+      effectFrame: emptyEffectFrame(),
+    };
+  const nextState = updateHash(def, {
+    ...canonicalState,
+    decisionStack: [updatedRoot, nextFrame],
+    nextFrameId: asDecisionFrameId(Number(frameId) + 1),
+    activeDeciderSeatId: nextFrame.context.seatId,
+  }, runtime);
+  return {
+    state: nextState,
+    log: createDecisionLog(nextState, microturn, decision, false, [], []),
+    triggerFirings: [],
+    warnings: [],
+  };
+};
+
+const continueResolvedMove = (
+  def: GameDef,
+  canonicalState: GameState,
+  move: Move,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options: ExecutionOptions | undefined,
+  runtime: GameDefRuntime,
+): ApplyDecisionResult => {
+  const continuation = resolveMoveDecisionSequence(def, canonicalState, move, { choose: () => undefined }, runtime);
+  if (continuation.illegal !== undefined) {
+    throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
+  }
+  if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
+    return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, runtime);
+  }
+  return spawnPendingFrame(def, canonicalState, microturn, decision, continuation, runtime);
+};
+
+export const resolveStochasticDistribution = (
+  rng: Rng,
+  distribution: StochasticDistribution,
+): { readonly value: MoveParamScalar; readonly rng: Rng } => {
+  if (distribution.outcomes.length === 0) {
+    throw new Error('resolveStochasticDistribution requires at least one outcome');
+  }
+  const totalWeight = distribution.outcomes.reduce((sum, outcome) => sum + outcome.weight, 0);
+  const [roll, nextRng] = nextInt(rng, 0, Math.max(0, totalWeight - 1));
+  let cursor = 0;
+  for (const outcome of distribution.outcomes) {
+    cursor += outcome.weight;
+    if (roll < cursor) {
+      return { value: outcome.value as MoveParamScalar, rng: nextRng };
+    }
+  }
+  return { value: distribution.outcomes.at(-1)!.value as MoveParamScalar, rng: nextRng };
+};
+
 export const applyDecision = (
   def: GameDef,
   state: GameState,
@@ -201,17 +321,15 @@ export const applyDecision = (
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
     const continuation = resolveMoveDecisionSequence(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
-    if (continuation.illegal !== undefined || continuation.stochasticDecision !== undefined || continuation.nextDecisionSet !== undefined) {
+    if (continuation.illegal !== undefined) {
       throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
     }
-    if (continuation.nextDecision === undefined) {
+    if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
       return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
     }
-    if (continuation.nextDecision.type !== 'chooseOne') {
-      throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${continuation.nextDecision.type}`);
-    }
+
     const rootFrameId = canonicalState.nextFrameId ?? asDecisionFrameId(0);
-    const childFrameId = asDecisionFrameId(rootFrameId + 1);
+    const childFrameId = asDecisionFrameId(Number(rootFrameId) + 1);
     const turnId = canonicalState.nextTurnId ?? asTurnId(0);
     const rootEntry = entryForDecision(microturn, decision);
     const rootFrame: DecisionStackFrame = {
@@ -221,35 +339,34 @@ export const applyDecision = (
       context: microturn.decisionContext,
       accumulatedBindings: {},
       effectFrame: {
-        programCounter: 0,
-        boundedIterationCursors: {},
-        localBindings: {},
-        pendingTriggerQueue: [],
+        ...emptyEffectFrame(),
         decisionHistory: [rootEntry],
       },
     };
-    const childFrame: DecisionStackFrame = {
-      frameId: childFrameId,
-      parentFrameId: rootFrame.frameId,
-      turnId,
-      context: {
-        kind: 'chooseOne',
-        seatId: pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision.decisionPlayer),
-        decisionKey: continuation.nextDecision.decisionKey,
-        options: continuation.nextDecision.options,
-      },
-      accumulatedBindings: {},
-      effectFrame: {
-        programCounter: 0,
-        boundedIterationCursors: {},
-        localBindings: {},
-        pendingTriggerQueue: [],
-      },
-    };
+    const childFrame: DecisionStackFrame = continuation.stochasticDecision !== undefined
+      ? {
+        frameId: childFrameId,
+        parentFrameId: rootFrame.frameId,
+        turnId,
+        context: toStochasticDecisionStackContext(continuation),
+        accumulatedBindings: {},
+        effectFrame: emptyEffectFrame(),
+      }
+      : {
+        frameId: childFrameId,
+        parentFrameId: rootFrame.frameId,
+        turnId,
+        context: toDecisionStackContext(
+          continuation.nextDecision!,
+          pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
+        ),
+        accumulatedBindings: {},
+        effectFrame: emptyEffectFrame(),
+      };
     const nextState = updateHash(def, {
       ...canonicalState,
       decisionStack: [rootFrame, childFrame],
-      nextFrameId: asDecisionFrameId(childFrameId + 1),
+      nextFrameId: asDecisionFrameId(Number(childFrameId) + 1),
       activeDeciderSeatId: childFrame.context.seatId,
     }, resolvedRuntime);
     return {
@@ -265,45 +382,110 @@ export const applyDecision = (
     if (rootFrame === undefined) {
       throw new Error('MICROTURN_ROOT_FRAME_MISSING');
     }
-    const history = [...rootHistory(rootFrame), entryForDecision(microturn, decision)];
-    const move = rebuildMoveFromTrace(history);
-    const continuation = resolveMoveDecisionSequence(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
-    if (continuation.illegal !== undefined || continuation.stochasticDecision !== undefined || continuation.nextDecisionSet !== undefined) {
-      throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
-    }
-    if (continuation.nextDecision === undefined) {
-      return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
-    }
-    if (continuation.nextDecision.type !== 'chooseOne') {
-      throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${continuation.nextDecision.type}`);
-    }
-    const updatedRoot = appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
-    const nextChildFrame: DecisionStackFrame = {
-      frameId: canonicalState.nextFrameId ?? asDecisionFrameId(0),
-      parentFrameId: updatedRoot.frameId,
-      turnId: updatedRoot.turnId,
-      context: {
-        kind: 'chooseOne',
-        seatId: pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision.decisionPlayer),
-        decisionKey: continuation.nextDecision.decisionKey,
-        options: continuation.nextDecision.options,
-      },
-      accumulatedBindings: {
-        ...rootFrame.accumulatedBindings,
+    const move = {
+      ...rebuildMoveFromFrame(rootFrame),
+      params: {
+        ...rebuildMoveFromFrame(rootFrame).params,
         [decision.decisionKey]: decision.value,
       },
-      effectFrame: {
-        programCounter: 0,
-        boundedIterationCursors: {},
-        localBindings: {},
-        pendingTriggerQueue: [],
+    };
+    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+  }
+
+  if (decision.kind === 'chooseNStep') {
+    const rootFrame = rootFrameFor(canonicalState);
+    const top = canonicalState.decisionStack?.at(-1);
+    if (rootFrame === undefined || top?.context.kind !== 'chooseNStep') {
+      throw new Error('MICROTURN_CHOOSE_N_FRAME_MISSING');
+    }
+    const baseMove = rebuildMoveFromFrame(rootFrame);
+    const advanced = advanceChooseN(
+      def,
+      canonicalState,
+      baseMove,
+      top.context.decisionKey,
+      top.context.selectedSoFar,
+      decision.command === 'confirm'
+        ? { type: 'confirm' }
+        : { type: decision.command, value: decision.value! },
+      resolvedRuntime,
+    );
+    const updatedRoot = advanced.done
+      ? {
+        ...appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
+        accumulatedBindings: {
+          ...rootFrame.accumulatedBindings,
+          [decision.decisionKey]: advanced.value,
+        },
+      }
+      : appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
+    if (!advanced.done) {
+      const nextTop: DecisionStackFrame = {
+        ...top,
+        context: toDecisionStackContext(advanced.pending, top.context.seatId),
+      };
+      const nextState = updateHash(def, {
+        ...canonicalState,
+        decisionStack: [updatedRoot, nextTop],
+        activeDeciderSeatId: nextTop.context.seatId,
+      }, resolvedRuntime);
+      return {
+        state: nextState,
+        log: createDecisionLog(nextState, microturn, decision, false, [], []),
+        triggerFirings: [],
+        warnings: [],
+      };
+    }
+    const move: Move = {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [decision.decisionKey]: advanced.value,
       },
     };
+    const nextState = {
+      ...canonicalState,
+      decisionStack: [updatedRoot, top],
+    };
+    return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime);
+  }
+
+  if (decision.kind === 'stochasticResolve') {
+    const rootFrame = rootFrameFor(canonicalState);
+    if (rootFrame === undefined) {
+      throw new Error('MICROTURN_ROOT_FRAME_MISSING');
+    }
+    const baseMove = rebuildMoveFromFrame(rootFrame);
+    const move: Move = {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [decision.decisionKey]: decision.value,
+      },
+    };
+    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+  }
+
+  if (decision.kind === 'outcomeGrantResolve') {
+    if (canonicalState.turnOrderState.type !== 'cardDriven') {
+      throw new Error('MICROTURN_OUTCOME_GRANT_REQUIRES_CARD_DRIVEN_TURN_FLOW');
+    }
+    const pending = canonicalState.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+    const grantIndex = pending.findIndex((grant) => grant.grantId === decision.grantId);
+    if (grantIndex < 0) {
+      throw new Error(`MICROTURN_OUTCOME_GRANT_NOT_FOUND:${decision.grantId}`);
+    }
+    const transitioned = markOffered(pending[grantIndex]!);
+    const nextPending = [...pending];
+    nextPending[grantIndex] = transitioned.grant;
     const nextState = updateHash(def, {
       ...canonicalState,
-      decisionStack: [updatedRoot, nextChildFrame],
-      nextFrameId: asDecisionFrameId((canonicalState.nextFrameId ?? asDecisionFrameId(0)) + 1),
-      activeDeciderSeatId: nextChildFrame.context.seatId,
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: withPendingFreeOperationGrants(canonicalState.turnOrderState.runtime, nextPending),
+      },
+      decisionStack: canonicalState.decisionStack?.slice(0, -1) ?? [],
+      activeDeciderSeatId: '__kernel',
     }, resolvedRuntime);
     return {
       state: nextState,
@@ -334,5 +516,5 @@ export const applyDecision = (
     };
   }
 
-  throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
+  throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${JSON.stringify(decision)}`);
 };

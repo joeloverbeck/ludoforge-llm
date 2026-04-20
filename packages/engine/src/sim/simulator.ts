@@ -8,6 +8,7 @@ import {
   terminalResult,
 } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
+import { CHANCE_RNG_MIX } from '../kernel/microturn/constants.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
@@ -63,6 +64,8 @@ export const runGame = (
   const snapshotDepth = options?.snapshotDepth ?? 'none';
   const kernelOptions = options?.kernel;
   const profiler = options?.profiler;
+  const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
+  void chanceRng;
 
   // initialState receives the profiler so lifecycle events during init are captured.
   // applyTrustedMove does NOT receive the profiler to avoid 30%+ deep instrumentation overhead.

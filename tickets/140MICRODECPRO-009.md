@@ -1,113 +1,105 @@
-# 140MICRODECPRO-009: D9 — Re-evolution campaign (Category C) — gate ticket
+# 140MICRODECPRO-009: D9 — Re-evolution campaign (Category C) — blocked pending truthful profile-migration prerequisite
 
-**Status**: DEFERRED
+**Status**: BLOCKED
 **Priority**: LOW
 **Effort**: Large
-**Engine Changes**: None — MAP-Elites campaign execution only; profile YAML updates
-**Deps**: `tickets/140MICRODECPRO-008.md`
+**Engine Changes**: None — future MAP-Elites campaign execution only; current turn is ticket-boundary correction
+**Deps**: `archive/tickets/140MICRODECPRO-007.md`, `archive/tickets/140MICRODECPRO-002.md`
 
 ## Problem
 
-Historical draft retained for series traceability only. On 2026-04-20 the user-approved boundary rewrite moved the live profile-capability cut into `140MICRODECPRO-007`. Any future policy-quality campaign now depends on the post-cut microturn-native profiles rather than this original split.
+This ticket cannot run the intended re-evolution campaign yet because the live repo is not in the prerequisite state the draft assumed. The current profile corpus is still partly on the legacy completion/preview-era policy surface preserved by ticket 007's live boundary correction, so there are no truthful microturn-native Category `C` placeholders to replace with re-evolved expressions.
 
-## Historical Resolution
+The future campaign remains valid in principle: once the live profile corpus is actually migrated onto the microturn-native surface, any remaining Category `C` heuristics should be re-evolved rather than force-ported. But that prerequisite migration boundary is not currently implemented in the repo.
 
-Original re-evolution slice superseded by the merged boundary in `140MICRODECPRO-007` on 2026-04-20. Retained as a historical draft-series record only.
+## Blocking Condition (2026-04-20)
 
-Profiles whose expressions depend on the retired two-phase scoring shape (Category C from I2) have no 1:1 microturn equivalent. Ticket 008 marks them with `# spec-140-category-c: requires re-evolution` YAML comments and preserves their pre-migration form.
+The re-evolution campaign is blocked until the live profile corpus satisfies all of the following:
 
-This ticket runs a MAP-Elites re-evolution campaign against the new microturn-native policy evaluator to produce replacement expressions that meet baseline win-rate parity on the canary corpus.
+1. FITL and Texas profile YAML no longer depend on legacy completion/preview-era inputs such as `scopes: [completion]`, `candidate.param.*`, and preview-only decision metadata.
+2. Any truly non-portable heuristics are represented as explicit microturn-era replacement targets in the live YAML corpus or in an equivalent authoritative migration artifact.
+3. The baseline comparison surface is defined against the post-migration microturn-native profiles, not against the current hybrid legacy-support path preserved by ticket 007.
 
-**Gate condition**: Close this ticket with `Declined — no Category C expressions present` if ticket 002's I2 audit and ticket 008's refresh both report zero Category C classifications. This is the spec's own descope path for specs where the two-phase dependency does not materialize.
+Until that prerequisite lands, this ticket would be forced to invent a campaign input surface that the repo does not actually own yet.
 
 ## Assumption Reassessment (2026-04-20)
 
-1. MAP-Elites evolution pipeline exists — confirmed (referenced by spec 140 D9 and the broader roadmap).
-2. Ticket 008 has landed and the Category C set is known.
-3. Baseline win rates for each pre-migration profile are preserved as historical fixtures for comparison against re-evolved profiles.
-4. Re-evolution may take multi-hour to multi-day depending on fitness landscape — spec explicitly documents this in Edge Cases.
+1. Ticket 007 did **not** complete the profile corpus migration. Its archived outcome explicitly says the public `chooseDecision` cut landed while legacy policy-eval / completion-guidance helpers remained as private support code because the live FITL witnesses still depended on them.
+2. Live profile YAML is still on the pre-migration surface. `data/games/fire-in-the-lake/92-agents.md` still contains `scopes: [completion]`, `candidate.param.targetSpace`, and `preview.phase1`; `data/games/texas-holdem/92-agents.md` still contains `candidate.param.raiseAmount`.
+3. There are zero live `spec-140-category-c` comment blocks and zero `microturnMigration: 'spec-140'` metadata markers in the profile files, so the draft ticket's replacement target does not yet exist in repo-owned artifacts.
+4. Ticket 002's audit remains useful evidence, but it is an investigation artifact, not proof that the migration prerequisite has landed. Its non-zero Category `C` result still stands, but against a corpus that remains unmigrated.
 
 ## Architecture Check
 
-1. Evolution-first (F2): this is exactly the use case the evolution pipeline was built for — data-driven expression improvement via YAML mutation.
-2. Engine-agnostic: the re-evolution campaign runs the existing MAP-Elites tooling; no engine changes.
-3. F14 compliant: re-evolved profiles *replace* the Category C comment blocks from ticket 008 in the same commit. No dual-profile coexistence.
-4. Success criterion: each re-evolved profile meets or exceeds its pre-migration baseline win rate on the canary corpus. Below-baseline profiles remain commented-out until the campaign produces a working variant.
+1. Evolution-first (F2): the eventual re-evolution still belongs in YAML/profile space, not engine code.
+2. Ticket fidelity: the repo does not currently own the microturn-native profile corpus this campaign would need. Marking the ticket blocked is cleaner than fabricating campaign artifacts against a state that does not exist.
+3. F14 / architectural completeness: a truthful boundary requires the migration prerequisite to land first. Running the campaign now would either mutate the wrong profile surface or silently absorb a broader migration ticket.
+4. The future success condition remains the same once unblocked: replace genuinely non-portable heuristics with re-evolved microturn-native expressions that meet the agreed baseline on the canary corpus.
 
 ## What to Change
 
-### 1. Re-evolution campaign setup
+### 1. Preserve this ticket as the future campaign owner
 
-Create `campaigns/phase3-microturn/re-evolution/` subdirectory with:
+Keep ticket 009 as the owner of the eventual Category `C` re-evolution campaign.
 
-- `campaign-plan.md` — lists each Category C profile, its pre-migration expression, its baseline canary win rate, and the evolution budget (max generations, max wall-clock).
-- `seeds.json` — reproducible MAP-Elites seeds for the campaign.
-- `harness.sh` — invokes the evolution pipeline per profile.
+### 2. Block on the real prerequisite
 
-### 2. Execute MAP-Elites per Category C profile
+Do not create campaign artifacts or edit profile YAML in this ticket until the profile corpus is truthfully migrated onto the microturn-native surface.
 
-For each profile, run the evolution campaign until one of:
-- A candidate meets or exceeds baseline win rate on the canary corpus (success).
-- The budget is exhausted without success (escalate — this ticket may require follow-up).
+### 3. Reopen only after the prerequisite lands
 
-### 3. Commit winning expressions
+When the prerequisite migration exists in repo-owned artifacts, this ticket should be rewritten back into an active campaign ticket with:
 
-Replace the `# spec-140-category-c: …` comment blocks in `data/games/fire-in-the-lake/92-agents.md` (and `data/games/texas-holdem/92-agents.md` if applicable) with the winning re-evolved expressions. Add the `microturnMigration: 'spec-140'` metadata flag to each newly-migrated profile.
-
-### 4. Campaign report
-
-Produce `campaigns/phase3-microturn/re-evolution/report.md` documenting:
-- Per-profile evolution trajectory (generations, best-of-generation fitness, final winning expression).
-- Canary-corpus win-rate comparison (pre-migration vs. re-evolved).
-- Any profiles that failed to reach baseline — flag for follow-up spec.
+- a concrete post-migration Category `C` target set
+- reproducible campaign seeds and budget
+- baseline comparison runs against the migrated corpus
+- replacement expressions committed back into the live YAML files
 
 ## Files to Touch
 
-- `campaigns/phase3-microturn/re-evolution/campaign-plan.md` (new)
-- `campaigns/phase3-microturn/re-evolution/seeds.json` (new)
-- `campaigns/phase3-microturn/re-evolution/harness.sh` (new)
-- `campaigns/phase3-microturn/re-evolution/report.md` (new, end-of-campaign)
-- `data/games/fire-in-the-lake/92-agents.md` (modify — replace Category C blocks with winning expressions)
-- `data/games/texas-holdem/92-agents.md` (modify if applicable)
+- `tickets/140MICRODECPRO-009.md` (modify — durable blocked-state rewrite)
 
 ## Out of Scope
 
-- Engine code changes.
-- Any Category A or B profile — ticket 008 handles those.
-- Improving pre-spec quality — the spec explicitly scopes this ticket to meeting baseline, not beating pre-spec (Edge Cases: "Re-evolved Category C profiles").
-- T12 (profile migration correctness) — ticket 014.
+- Running MAP-Elites in the current repo state.
+- Editing `data/games/fire-in-the-lake/92-agents.md` or `data/games/texas-holdem/92-agents.md` in this ticket.
+- Recreating the archived ticket 008 split automatically.
+- Engine/runtime code changes.
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. For every re-evolved profile, the canary corpus (FITL seeds 123, 1002, 1010 at minimum) produces a win rate ≥ baseline.
-2. `runGame` does not throw for any re-evolved profile on the canary corpus.
-3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` all green.
-4. If the gate condition (zero Category C profiles) was hit at ticket start, all assertions reduce to "no Category C blocks exist" — verifiable by grep.
+1. `grep -rn "spec-140-category-c|microturnMigration" data/games/` confirms the draft campaign input surface does not yet exist in live YAML.
+2. `grep -rn "candidate\\.param|scopes: \\[completion\\]" data/games/fire-in-the-lake/92-agents.md data/games/texas-holdem/92-agents.md` confirms the prerequisite migration gap still exists.
+3. `pnpm run check:ticket-deps` passes after the blocked-state rewrite.
 
 ### Invariants
 
-1. No Category C YAML comment block survives in any `*-agents.md` file after the ticket completes (if the gate did not close).
-2. Every re-evolved profile has `microturnMigration: 'spec-140'` metadata.
-3. The campaign report documents each re-evolution decisively.
+1. This ticket does not claim campaign artifacts or re-evolved expressions landed when the prerequisite corpus does not exist.
+2. The active series remains honest: ticket 009 is a blocked future campaign, not a currently implementable migration slice.
+3. No production code or profile YAML changes are made in this ticket turn.
 
-### Descope path
+## Outcome
 
-If no Category C expressions exist at ticket start:
-- Update ticket Outcome to `Declined — no Category C expressions present after I2/ticket 008 audit`.
-- Skip all file creations.
-- Close without archival via the gate pathway described in `docs/archival-workflow.md`.
+**Blocked**: 2026-04-20
+
+The original draft assumed ticket 008 had already converted the live profile corpus into a microturn-native form with explicit Category `C` placeholders. Reassessment showed that assumption was false: the live FITL and Texas profile YAML still contain completion/preview-era policy expressions, and ticket 007 explicitly preserved the legacy policy-eval substrate because the live witness set still depended on it.
+
+This turn therefore rewrote ticket 009 to a truthful blocked state instead of fabricating a re-evolution campaign against a non-existent migrated corpus.
+
+- `ticket corrections applied`: `campaign against already-migrated microturn-native profiles -> blocked pending the actual profile-migration prerequisite`
+- `verification set`: `grep -rn "spec-140-category-c|microturnMigration" data/games/`, `grep -rn "candidate\\.param|scopes: \\[completion\\]" data/games/fire-in-the-lake/92-agents.md data/games/texas-holdem/92-agents.md`, `pnpm run check:ticket-deps`
+- `proof gaps`: `future campaign execution remains blocked until the live profile corpus is actually migrated`
 
 ## Test Plan
 
 ### New/Modified Tests
 
-- No new unit tests; verification is campaign-report + canary-corpus win-rate comparison.
+None — this turn is a ticket-boundary correction only.
 
 ### Commands
 
-1. `campaigns/phase3-microturn/re-evolution/harness.sh` (per profile, iterative).
-2. `pnpm -F @ludoforge/engine test:e2e` — canary corpus runs.
-3. `grep -rn "spec-140-category-c" data/games/` — must return zero after campaign, or zero at start (gate close).
-4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+1. `grep -rn "spec-140-category-c|microturnMigration" data/games/`
+2. `grep -rn "candidate\\.param|scopes: \\[completion\\]" data/games/fire-in-the-lake/92-agents.md data/games/texas-holdem/92-agents.md`
+3. `pnpm run check:ticket-deps`

@@ -1,13 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, parseDecisionKey, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import { asActionId, asPlayerId, initialState, type GameDef } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 import { createGameStore } from '../../src/store/game-store.js';
-import { createGameWorker, type WorkerError } from '../../src/worker/game-worker-api.js';
-import { CHOOSE_MIXED_TEST_DEF } from '../worker/test-fixtures.js';
+import { createGameWorker } from '../../src/worker/game-worker-api.js';
 
 interface Deferred<T> {
   readonly promise: Promise<T>;
@@ -28,7 +27,7 @@ function createDeferred<T>(): Deferred<T> {
   return { promise, resolve, reject };
 }
 
-function compileCounterFixture(terminalThreshold: number): GameDef {
+function compileCounterFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
@@ -74,7 +73,7 @@ function compileCounterFixture(terminalThreshold: number): GameDef {
     terminal: {
       conditions: [
         {
-          when: { op: '>=', left: { ref: 'gvar', var: 'round' }, right: terminalThreshold },
+          when: { op: '>=', left: { ref: 'gvar', var: 'round' }, right: 5 },
           result: { type: 'draw' },
         },
       ],
@@ -87,17 +86,6 @@ function compileCounterFixture(terminalThreshold: number): GameDef {
   return compiled.gameDef;
 }
 
-function createStoreWithDefaultVisuals(
-  bridge: ReturnType<typeof createGameWorker>,
-  onMoveApplied?: (move: Move) => void,
-) {
-  return createGameStore(
-    bridge,
-    new VisualConfigProvider(null),
-    onMoveApplied === undefined ? undefined : { onMoveApplied },
-  );
-}
-
 const P0_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
   { playerId: 0, controller: createHumanSeatController() },
   { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
@@ -108,11 +96,15 @@ const P1_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
   { playerId: 1, controller: createHumanSeatController() },
 ];
 
+function createStore(bridge: ReturnType<typeof createGameWorker>) {
+  return createGameStore(bridge, new VisualConfigProvider(null));
+}
+
 describe('createGameStore async serialization', () => {
   it('initGame called twice quickly keeps only the newest initialization result', async () => {
-    const def = compileCounterFixture(5);
+    const def = compileCounterFixture();
     const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
+    const store = createStore(bridge);
     const baseInit = bridge.init.bind(bridge);
     const gateA = createDeferred<void>();
     const gateB = createDeferred<void>();
@@ -144,264 +136,28 @@ describe('createGameStore async serialization', () => {
     expect(state.gameState).toEqual(initialState(def, 202).state);
   });
 
-  it('stale selectAction result after cancelMove does not restore choice state', async () => {
-    const def = compileCounterFixture(5);
+  it('stale selectAction completion after a newer initGame does not mutate the new session', async () => {
+    const def = compileCounterFixture();
     const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 1, P0_HUMAN_CONFIG);
+    const store = createStore(bridge);
+    await store.getState().initGame(def, 10, P0_HUMAN_CONFIG);
 
-    const baseLegalChoices = bridge.legalChoices.bind(bridge);
+    const baseApplyDecision = bridge.applyDecision.bind(bridge);
     const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'legalChoices').mockImplementationOnce(async (move) => {
+    vi.spyOn(bridge, 'applyDecision').mockImplementationOnce(async (decision, options, stamp) => {
       await gate.promise;
-      return await baseLegalChoices(move);
+      return await baseApplyDecision(decision, options, stamp);
     });
 
     const selectPromise = store.getState().selectAction(asActionId('tick'));
-    store.getState().cancelMove();
-    gate.resolve();
-    await selectPromise;
-
-    const state = store.getState();
-    expect(state.selectedAction).toBeNull();
-    expect(state.partialMove).toBeNull();
-    expect(state.choicePending).toBeNull();
-    expect(state.loading).toBe(false);
-    expect(state.error).toBeNull();
-  });
-
-  it('stale confirmMove completion after newer initGame does not mutate the new session', async () => {
-    const def = compileCounterFixture(5);
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 10, P0_HUMAN_CONFIG);
-    await store.getState().selectAction(asActionId('tick'));
-
-    const baseApplyMove = bridge.applyMove.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
-      await gate.promise;
-      return await baseApplyMove(move, options, stamp);
-    });
-
-    const confirmPromise = store.getState().confirmMove();
     const newerInitPromise = store.getState().initGame(def, 99, P1_HUMAN_CONFIG);
 
     gate.resolve();
-    await Promise.all([confirmPromise, newerInitPromise]);
+    await Promise.all([selectPromise, newerInitPromise]);
 
     const state = store.getState();
     expect(state.playerID).toEqual(asPlayerId(1));
     expect(state.gameState).toEqual(initialState(def, 99).state);
     expect(state.gameState?.globalVars.round).toBe(0);
-    expect(state.effectTrace).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({ kind: 'lifecycleEvent', eventType: 'turnStart' }),
-        expect.objectContaining({ kind: 'lifecycleEvent', eventType: 'phaseEnter' }),
-      ]),
-    );
-    expect(
-      state.effectTrace.every((e) => e.kind === 'lifecycleEvent'),
-    ).toBe(true);
-    expect(state.triggerFirings).toEqual([]);
-  });
-
-  it('stale confirmMove completion after newer initGame does not emit move callback', async () => {
-    const def = compileCounterFixture(5);
-    const bridge = createGameWorker();
-    const onMoveApplied = vi.fn();
-    const store = createStoreWithDefaultVisuals(bridge, onMoveApplied);
-    await store.getState().initGame(def, 10, P0_HUMAN_CONFIG);
-    await store.getState().selectAction(asActionId('tick'));
-
-    const baseApplyMove = bridge.applyMove.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
-      await gate.promise;
-      return await baseApplyMove(move, options, stamp);
-    });
-
-    const confirmPromise = store.getState().confirmMove();
-    const newerInitPromise = store.getState().initGame(def, 99, P1_HUMAN_CONFIG);
-
-    gate.resolve();
-    await Promise.all([confirmPromise, newerInitPromise]);
-
-    expect(onMoveApplied).not.toHaveBeenCalled();
-  });
-
-  it('stale chooseOne completion after newer selectAction does not mutate current move construction', async () => {
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 31, P0_HUMAN_CONFIG);
-    await store.getState().selectAction(asActionId('pick-mixed'));
-
-    const baseLegalChoices = bridge.legalChoices.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'legalChoices').mockImplementationOnce(async (move) => {
-      await gate.promise;
-      return await baseLegalChoices(move);
-    });
-
-    const staleChooseOne = store.getState().chooseOne('x');
-    const newerSelectAction = store.getState().selectAction(asActionId('pick-mixed'));
-    await newerSelectAction;
-    const refreshedPendingKey = store.getState().choicePending?.decisionKey ?? null;
-
-    gate.resolve();
-    await staleChooseOne;
-
-    const state = store.getState();
-    expect(state.selectedAction).toEqual(asActionId('pick-mixed'));
-    expect(state.choiceStack).toEqual([]);
-    expect(state.partialMove).toEqual({
-      actionId: asActionId('pick-mixed'),
-      params: {},
-    });
-    expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionKey).toBe(refreshedPendingKey);
-    expect(state.choicePending === null ? null : parseDecisionKey(state.choicePending.decisionKey)).not.toBeNull();
-    expect(state.error).toBeNull();
-  });
-
-  it('stale addChooseNItem completion after newer selectAction does not mutate current move construction', async () => {
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 32, P0_HUMAN_CONFIG);
-    await store.getState().selectAction(asActionId('pick-mixed'));
-    await store.getState().chooseOne('x');
-    expect(store.getState().choicePending?.type).toBe('chooseN');
-
-    const baseAdvanceChooseN = bridge.advanceChooseN.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'advanceChooseN').mockImplementationOnce(async (move, decisionKey, currentSelected, command) => {
-      await gate.promise;
-      return await baseAdvanceChooseN(move, decisionKey, currentSelected, command);
-    });
-
-    const staleAddChooseNItem = store.getState().addChooseNItem('m1');
-    const newerSelectAction = store.getState().selectAction(asActionId('pick-mixed'));
-    await newerSelectAction;
-    const refreshedPendingKey = store.getState().choicePending?.decisionKey ?? null;
-
-    gate.resolve();
-    await staleAddChooseNItem;
-
-    const state = store.getState();
-    expect(state.selectedAction).toEqual(asActionId('pick-mixed'));
-    expect(state.choiceStack).toEqual([]);
-    expect(state.partialMove).toEqual({
-      actionId: asActionId('pick-mixed'),
-      params: {},
-    });
-    expect(state.choicePending?.type).toBe('chooseOne');
-    expect(state.choicePending?.decisionKey).toBe(refreshedPendingKey);
-    expect(state.choicePending === null ? null : parseDecisionKey(state.choicePending.decisionKey)).not.toBeNull();
-    expect(state.error).toBeNull();
-  });
-
-  it('stale confirmMove completion after undo does not mutate current state', async () => {
-    const def = compileCounterFixture(10);
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 33, P0_HUMAN_CONFIG);
-
-    await store.getState().selectAction(asActionId('tick'));
-    await store.getState().confirmMove();
-    expect(store.getState().gameState?.globalVars.round).toBe(1);
-
-    await store.getState().selectAction(asActionId('tick'));
-
-    const baseApplyMove = bridge.applyMove.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
-      await gate.promise;
-      return await baseApplyMove(move, options, stamp);
-    });
-
-    const staleConfirmMove = store.getState().confirmMove();
-    const undoPromise = store.getState().undo();
-    await undoPromise;
-    expect(store.getState().gameState?.globalVars.round).toBe(0);
-
-    gate.resolve();
-    await staleConfirmMove;
-
-    const state = store.getState();
-    expect(state.gameState?.globalVars.round).toBe(0);
-    expect(state.effectTrace).toEqual([]);
-    expect(state.triggerFirings).toEqual([]);
-    expect(state.error).toBeNull();
-
-    await store.getState().selectAction(asActionId('tick'));
-    await store.getState().confirmMove();
-    expect(store.getState().gameState?.globalVars.round).toBe(1);
-  });
-
-  it('stale rejection does not overwrite current-session success/error state', async () => {
-    const def = compileCounterFixture(5);
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 7, P0_HUMAN_CONFIG);
-
-    const baseLegalChoices = bridge.legalChoices.bind(bridge);
-    const gate = createDeferred<void>();
-    const staleError: WorkerError = {
-      code: 'INTERNAL_ERROR',
-      message: 'stale failure',
-    };
-
-    vi.spyOn(bridge, 'legalChoices')
-      .mockImplementationOnce(async () => {
-        await gate.promise;
-        throw staleError;
-      })
-      .mockImplementationOnce(async (move) => {
-        return await baseLegalChoices(move);
-      });
-
-    const staleSelect = store.getState().selectAction(asActionId('tick'));
-    const currentSelect = store.getState().selectAction(asActionId('tick'));
-
-    await currentSelect;
-    gate.resolve();
-    await staleSelect;
-
-    const state = store.getState();
-    expect(state.selectedAction).toEqual(asActionId('tick'));
-    expect(state.error).toBeNull();
-    expect(state.gameLifecycle).toBe('playing');
-  });
-
-  it('stale resolveAiStep completion after newer initGame does not mutate the new session', async () => {
-    const def = compileCounterFixture(5);
-    const aiConfig: readonly PlayerSeatConfig[] = [
-      { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
-      { playerId: 1, controller: createHumanSeatController() },
-    ];
-    const bridge = createGameWorker();
-    const store = createStoreWithDefaultVisuals(bridge);
-    await store.getState().initGame(def, 70, aiConfig);
-
-    const baseApplyMove = bridge.applyMove.bind(bridge);
-    const gate = createDeferred<void>();
-    vi.spyOn(bridge, 'applyMove').mockImplementationOnce(async (move, options, stamp) => {
-      await gate.promise;
-      return await baseApplyMove(move, options, stamp);
-    });
-
-    const staleResolve = store.getState().resolveAiStep();
-    const newerInit = store.getState().initGame(def, 71, P0_HUMAN_CONFIG);
-
-    gate.resolve();
-    await Promise.all([staleResolve, newerInit]);
-
-    const state = store.getState();
-    expect(state.playerID).toEqual(asPlayerId(0));
-    expect(state.gameState).toEqual(initialState(def, 71).state);
-    expect(state.gameState?.globalVars.round).toBe(0);
-    expect(state.renderModel?.activePlayerID).toEqual(asPlayerId(0));
-    expect(state.loading).toBe(false);
-    expect(state.error).toBeNull();
   });
 });

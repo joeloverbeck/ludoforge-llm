@@ -2,14 +2,12 @@ import { createAgent, normalizeAgentDescriptor } from '@ludoforge/engine/agents'
 import type {
   AgentDecisionTrace,
   AgentDescriptor,
-  ClassifiedMove,
   GameDef,
   GameDefRuntime,
   GameState,
-  PlayerId,
   Rng,
-  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
+import type { Decision, MicroturnState } from '../../../engine/src/kernel/microturn/types.js';
 
 import {
   isAgentSeatController,
@@ -19,18 +17,17 @@ import {
 
 export type AiPlaybackSpeed = '1x' | '2x' | '4x';
 
-export interface AgentMoveSelectionResult {
-  readonly move: TrustedExecutableMove;
+export interface AgentDecisionSelectionResult {
+  readonly decision: Decision;
   readonly rng: Rng;
   readonly agentDecision?: AgentDecisionTrace;
 }
 
-export interface SelectAgentMoveInput {
+export interface SelectAgentDecisionInput {
   readonly controller: SeatController;
   readonly def: GameDef;
   readonly state: GameState;
-  readonly playerId: PlayerId;
-  readonly legalMoves: readonly ClassifiedMove[];
+  readonly microturn: MicroturnState;
   readonly rng: Rng;
   readonly runtime: GameDefRuntime;
 }
@@ -58,25 +55,20 @@ export function resolveAgentDescriptor(controller: SeatController | undefined): 
   return normalizeAgentDescriptor(normalized.agent);
 }
 
-export function selectAgentMove(input: SelectAgentMoveInput): AgentMoveSelectionResult | null {
-  if (input.legalMoves.length === 0) {
+export function selectAgentDecision(input: SelectAgentDecisionInput): AgentDecisionSelectionResult | null {
+  if (input.microturn.legalActions.length === 0) {
     return null;
   }
 
   const descriptor = resolveAgentDescriptor(input.controller);
   const agent = createAgent(descriptor);
-  const selection = agent.chooseDecision({
+  return agent.chooseDecision({
     def: input.def,
     state: input.state,
-    playerId: input.playerId,
-    legalMoves: input.legalMoves,
+    microturn: input.microturn,
     rng: input.rng,
     runtime: input.runtime,
   });
-  if (!('move' in selection)) {
-    throw new Error('Runner AI move policy expected a completed legacy move selection.');
-  }
-  return selection;
 }
 
 export function selectRandomIndex(length: number, random: () => number = Math.random): number {

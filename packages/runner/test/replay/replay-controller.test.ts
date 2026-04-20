@@ -7,7 +7,7 @@ import { createReplayController } from '../../src/replay/replay-controller.js';
 interface BridgeMock {
   readonly bridge: GameBridge;
   readonly init: ReturnType<typeof vi.fn>;
-  readonly applyMove: ReturnType<typeof vi.fn>;
+  readonly applyReplayMove: ReturnType<typeof vi.fn>;
   readonly playSequence: ReturnType<typeof vi.fn>;
 }
 
@@ -24,19 +24,19 @@ function makeMove(index: number): Move {
 
 function createBridgeMock(): BridgeMock {
   const init = vi.fn(async () => ({}) as unknown);
-  const applyMove = vi.fn(async () => ({ state: {} }) as unknown);
+  const applyReplayMove = vi.fn(async () => ({ state: {}, triggerFirings: [] }) as unknown);
   const playSequence = vi.fn(async () => [] as unknown);
 
   const bridge = {
     init,
-    applyMove,
+    applyReplayMove,
     playSequence,
   } as unknown as GameBridge;
 
   return {
     bridge,
     init,
-    applyMove,
+    applyReplayMove,
     playSequence,
   };
 }
@@ -78,8 +78,8 @@ describe('createReplayController', () => {
     await controller.stepForward();
 
     expect(controller.currentMoveIndex).toBe(0);
-    expect(bridgeMock.applyMove).toHaveBeenCalledTimes(1);
-    expect(bridgeMock.applyMove.mock.calls[0]?.[1]).toEqual({ trace: true });
+    expect(bridgeMock.applyReplayMove).toHaveBeenCalledTimes(1);
+    expect(bridgeMock.applyReplayMove.mock.calls[0]?.[1]).toEqual({ trace: true });
     expect(onStateChange).toHaveBeenCalledTimes(1);
   });
 
@@ -94,12 +94,12 @@ describe('createReplayController', () => {
     );
 
     await controller.stepForward();
-    bridgeMock.applyMove.mockClear();
+    bridgeMock.applyReplayMove.mockClear();
 
     await controller.stepForward();
 
     expect(controller.currentMoveIndex).toBe(0);
-    expect(bridgeMock.applyMove).not.toHaveBeenCalled();
+    expect(bridgeMock.applyReplayMove).not.toHaveBeenCalled();
   });
 
   it('steps backward by deterministic reset and trace-disabled prefix replay', async () => {
@@ -115,7 +115,7 @@ describe('createReplayController', () => {
 
     await controller.jumpToMove(2);
     bridgeMock.init.mockClear();
-    bridgeMock.applyMove.mockClear();
+    bridgeMock.applyReplayMove.mockClear();
     bridgeMock.playSequence.mockClear();
 
     await controller.stepBackward();
@@ -125,7 +125,7 @@ describe('createReplayController', () => {
     expect(bridgeMock.init.mock.calls[0]?.[2]).toEqual({ enableTrace: false });
     expect(bridgeMock.playSequence).toHaveBeenCalledTimes(1);
     expect(bridgeMock.playSequence.mock.calls[0]?.[1]).toEqual({ trace: false });
-    expect(bridgeMock.applyMove).not.toHaveBeenCalled();
+    expect(bridgeMock.applyReplayMove).not.toHaveBeenCalled();
   });
 
   it('is a no-op when stepping backward from the initial state', async () => {
@@ -142,7 +142,7 @@ describe('createReplayController', () => {
 
     expect(controller.currentMoveIndex).toBe(-1);
     expect(bridgeMock.init).not.toHaveBeenCalled();
-    expect(bridgeMock.applyMove).not.toHaveBeenCalled();
+    expect(bridgeMock.applyReplayMove).not.toHaveBeenCalled();
     expect(bridgeMock.playSequence).not.toHaveBeenCalled();
   });
 
@@ -164,8 +164,8 @@ describe('createReplayController', () => {
     expect(bridgeMock.playSequence).toHaveBeenCalledTimes(1);
     expect(bridgeMock.playSequence.mock.calls[0]?.[0]).toHaveLength(5);
     expect(bridgeMock.playSequence.mock.calls[0]?.[1]).toEqual({ trace: false });
-    expect(bridgeMock.applyMove).toHaveBeenCalledTimes(1);
-    expect(bridgeMock.applyMove.mock.calls[0]?.[1]).toEqual({ trace: true });
+    expect(bridgeMock.applyReplayMove).toHaveBeenCalledTimes(1);
+    expect(bridgeMock.applyReplayMove.mock.calls[0]?.[1]).toEqual({ trace: true });
   });
 
   it('supports jumpToMove(0) and jumpToMove(-1)', async () => {
@@ -180,17 +180,17 @@ describe('createReplayController', () => {
 
     await controller.jumpToMove(0);
     expect(controller.currentMoveIndex).toBe(0);
-    expect(bridgeMock.applyMove).toHaveBeenCalledTimes(1);
-    expect(bridgeMock.applyMove.mock.calls[0]?.[1]).toEqual({ trace: true });
+    expect(bridgeMock.applyReplayMove).toHaveBeenCalledTimes(1);
+    expect(bridgeMock.applyReplayMove.mock.calls[0]?.[1]).toEqual({ trace: true });
 
     bridgeMock.init.mockClear();
-    bridgeMock.applyMove.mockClear();
+    bridgeMock.applyReplayMove.mockClear();
     bridgeMock.playSequence.mockClear();
 
     await controller.jumpToMove(-1);
     expect(controller.currentMoveIndex).toBe(-1);
     expect(bridgeMock.init).toHaveBeenCalledTimes(1);
-    expect(bridgeMock.applyMove).not.toHaveBeenCalled();
+    expect(bridgeMock.applyReplayMove).not.toHaveBeenCalled();
     expect(bridgeMock.playSequence).not.toHaveBeenCalled();
   });
 
@@ -234,11 +234,11 @@ describe('createReplayController', () => {
 
     controller.pause();
     expect(controller.isPlaying).toBe(false);
-    const callsAfterPause = bridgeMock.applyMove.mock.calls.length;
+    const callsAfterPause = bridgeMock.applyReplayMove.mock.calls.length;
 
     await vi.advanceTimersByTimeAsync(1000);
     await flushAsync();
-    expect(bridgeMock.applyMove.mock.calls.length).toBe(callsAfterPause);
+    expect(bridgeMock.applyReplayMove.mock.calls.length).toBe(callsAfterPause);
 
     controller.play();
     await vi.advanceTimersByTimeAsync(500);
@@ -269,7 +269,7 @@ describe('createReplayController', () => {
 
     expect(controller.isPlaying).toBe(false);
     expect(controller.currentMoveIndex).toBe(-1);
-    expect(bridgeMock.applyMove).not.toHaveBeenCalled();
+    expect(bridgeMock.applyReplayMove).not.toHaveBeenCalled();
 
     vi.useRealTimers();
   });
@@ -288,7 +288,7 @@ describe('createReplayController', () => {
 
     const initStamp = bridgeMock.init.mock.calls[0]?.[3] as { epoch: number; token: number };
     const playSequenceStamp = bridgeMock.playSequence.mock.calls[0]?.[2] as { epoch: number; token: number };
-    const applyStamp = bridgeMock.applyMove.mock.calls[0]?.[2] as { epoch: number; token: number };
+    const applyStamp = bridgeMock.applyReplayMove.mock.calls[0]?.[2] as { epoch: number; token: number };
 
     expect(initStamp.epoch).toBe(1);
     expect(playSequenceStamp.epoch).toBe(1);

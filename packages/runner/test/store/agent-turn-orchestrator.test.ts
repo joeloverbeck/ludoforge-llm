@@ -1,32 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, createTrustedExecutableMove, initialState, type ClassifiedMove, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import {
+  asPlayerId,
+  createGameDefRuntime,
+  initialState,
+  type GameDef,
+} from '@ludoforge/engine/runtime';
+import { publishMicroturn } from '../../../engine/src/kernel/microturn/publish.js';
 
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import { createAgentTurnOrchestrator } from '../../src/store/agent-turn-orchestrator.js';
-
-const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
-const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
-const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
-
-function toClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
-  return {
-    move,
-    viability: {
-      viable: true,
-      complete: true,
-      move,
-      warnings: [],
-      code: undefined,
-      context: undefined,
-      error: undefined,
-      nextDecision: undefined,
-      nextDecisionSet: undefined,
-      stochasticDecision: undefined,
-    },
-    trustedMove: createTrustedExecutableMove(move, sourceStateHash, 'enumerateLegalMoves'),
-  };
-}
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
@@ -57,20 +40,21 @@ describe('agent-turn-orchestrator', () => {
   it('returns no-session before initialization', () => {
     const def = compileFixture();
     const state = initialState(def, 7, 2).state;
+    const runtime = createGameDefRuntime(def);
     const orchestrator = createAgentTurnOrchestrator();
 
     expect(orchestrator.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: state.activePlayer,
+      microturn: publishMicroturn(def, state, runtime),
       state,
     })).toEqual({ kind: 'no-session' });
   });
 
   it('resets deterministically and preserves per-player RNG ownership', () => {
     const def = compileFixture();
-    const state = initialState(def, 17, 2).state;
+    const runtime = createGameDefRuntime(def);
+    const baseState = initialState(def, 17, 2).state;
     const player0 = asPlayerId(0);
     const player1 = asPlayerId(1);
 
@@ -79,23 +63,20 @@ describe('agent-turn-orchestrator', () => {
     const p0First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player0,
-      state: { ...state, activePlayer: player0 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
+      state: { ...baseState, activePlayer: player0 },
     });
     const p1First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player1,
-      state: { ...state, activePlayer: player1 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player1 }, runtime),
+      state: { ...baseState, activePlayer: player1 },
     });
     const p0Second = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player0,
-      state: { ...state, activePlayer: player0 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
+      state: { ...baseState, activePlayer: player0 },
     });
 
     const isolated = createAgentTurnOrchestrator();
@@ -103,89 +84,90 @@ describe('agent-turn-orchestrator', () => {
     const isolatedP0First = isolated.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player0,
-      state: { ...state, activePlayer: player0 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
+      state: { ...baseState, activePlayer: player0 },
     });
     const isolatedP0Second = isolated.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player0,
-      state: { ...state, activePlayer: player0 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
+      state: { ...baseState, activePlayer: player0 },
     });
 
-    expect(p0First).toMatchObject({ kind: 'selected-move' });
-    expect(p1First).toMatchObject({ kind: 'selected-move' });
-    expect(p0Second).toMatchObject({ kind: 'selected-move' });
-    expect(isolatedP0First).toMatchObject({ kind: 'selected-move' });
-    expect(isolatedP0Second).toMatchObject({ kind: 'selected-move' });
+    expect(p0First).toMatchObject({ kind: 'selected-decision' });
+    expect(p1First).toMatchObject({ kind: 'selected-decision' });
+    expect(p0Second).toMatchObject({ kind: 'selected-decision' });
+    expect(isolatedP0First).toMatchObject({ kind: 'selected-decision' });
+    expect(isolatedP0Second).toMatchObject({ kind: 'selected-decision' });
     if (
-      p0First.kind !== 'selected-move'
-      || p0Second.kind !== 'selected-move'
-      || isolatedP0First.kind !== 'selected-move'
-      || isolatedP0Second.kind !== 'selected-move'
+      p0First.kind !== 'selected-decision'
+      || p0Second.kind !== 'selected-decision'
+      || isolatedP0First.kind !== 'selected-decision'
+      || isolatedP0Second.kind !== 'selected-decision'
     ) {
       throw new Error('Expected random agent selections.');
     }
 
-    expect(p0First.move).toEqual(isolatedP0First.move);
-    expect(p0Second.move).toEqual(isolatedP0Second.move);
+    expect(p0First.decision).toEqual(isolatedP0First.decision);
+    expect(p0Second.decision).toEqual(isolatedP0Second.decision);
 
     interleaved.resetSession();
     interleaved.initializeSession({ def, seed: 17, playerCount: 2 });
     const resetP0First = interleaved.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: player0,
-      state: { ...state, activePlayer: player0 },
+      microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
+      state: { ...baseState, activePlayer: player0 },
     });
 
-    expect(resetP0First).toMatchObject({ kind: 'selected-move' });
-    if (resetP0First.kind !== 'selected-move') {
+    expect(resetP0First).toMatchObject({ kind: 'selected-decision' });
+    if (resetP0First.kind !== 'selected-decision') {
       throw new Error('Expected random agent selection after reset.');
     }
-    expect(resetP0First.move).toEqual(p0First.move);
+    expect(resetP0First.decision).toEqual(p0First.decision);
   });
 
   it('does not execute human-controlled seats through the agent path', () => {
     const def = compileFixture();
     const state = initialState(def, 9, 2).state;
+    const runtime = createGameDefRuntime(def);
     const orchestrator = createAgentTurnOrchestrator();
     orchestrator.initializeSession({ def, seed: 9, playerCount: 2 });
 
     expect(orchestrator.resolveStep({
       controller: createHumanSeatController(),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: state.activePlayer,
+      microturn: publishMicroturn(def, state, runtime),
       state,
     })).toEqual({ kind: 'human-turn' });
   });
 
-  it('uses structured agent descriptors to choose moves and surface decision metadata', () => {
+  it('uses structured agent descriptors to choose decisions and surface decision metadata', () => {
     const def = compileFixture();
     const state = initialState(def, 11, 2).state;
+    const runtime = createGameDefRuntime(def);
+    const microturn = publishMicroturn(def, state, runtime);
     const orchestrator = createAgentTurnOrchestrator();
     orchestrator.initializeSession({ def, seed: 11, playerCount: 2 });
 
     const result = orchestrator.resolveStep({
       controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
       def,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
-      playerId: state.activePlayer,
+      microturn,
       state,
     });
 
     expect(result).toMatchObject({
-      kind: 'selected-move',
-      move: MOVE_A,
+      kind: 'selected-decision',
       agentDecision: {
         kind: 'builtin',
         agent: { kind: 'builtin', builtinId: 'greedy' },
         candidateCount: 3,
       },
     });
+    if (result.kind !== 'selected-decision') {
+      throw new Error('Expected selected decision.');
+    }
+    expect(microturn.legalActions).toContainEqual(result.decision);
   });
 });

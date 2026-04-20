@@ -36,7 +36,7 @@ describe('policy agent performance regression', () => {
     const samples = corpus.map((entry) => {
       const candidateMoves = enumerateLegalMoves(entry.def, entry.state, undefined, entry.runtime).moves;
       const start = performance.now();
-      const result = agent.chooseMove({
+      const result = agent.chooseDecision({
         def: entry.def,
         state: entry.state,
         playerId: entry.state.activePlayer,

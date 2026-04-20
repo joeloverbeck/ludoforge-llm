@@ -788,7 +788,7 @@ function createEmptyOptionsProfile(actionId: string): ActionPipelineDef {
   };
 }
 
-function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
+function createInput(def: GameDef): Parameters<PolicyAgent['chooseDecision']>[0] {
   const state = initialState(def, 7, 2).state;
   const legalMoves: readonly Move[] = [
     { actionId: asActionId('pass'), params: {} },
@@ -815,7 +815,7 @@ describe('PolicyAgent', () => {
     const def = createDef();
     const agent = new PolicyAgent();
 
-    const result = agent.chooseMove(createInput(def));
+    const result = agent.chooseDecision(createInput(def));
 
     assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
@@ -832,7 +832,7 @@ describe('PolicyAgent', () => {
     const def = createDef();
     const agent = new PolicyAgent({ profileId: 'aggressive' });
 
-    const result = agent.chooseMove(createInput(def));
+    const result = agent.chooseDecision(createInput(def));
 
     assert.deepEqual(result.move.move, { actionId: asActionId('event'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
@@ -857,7 +857,7 @@ describe('PolicyAgent', () => {
     const agent = new PolicyAgent();
     const state = initialState(def, 7, 2).state;
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(1),
@@ -882,7 +882,7 @@ describe('PolicyAgent', () => {
     const def = createDef();
     const agent = new PolicyAgent({ profileId: 'missing-profile' });
 
-    const result = agent.chooseMove(createInput(def));
+    const result = agent.chooseDecision(createInput(def));
 
     assert.equal(
       result.move.actionId === asActionId('pass') || result.move.actionId === asActionId('event'),
@@ -902,7 +902,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -937,7 +937,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -963,7 +963,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -991,8 +991,8 @@ describe('PolicyAgent', () => {
       rng: createRng(42n),
     } as const;
 
-    const first = new PolicyAgent().chooseMove(input);
-    const second = new PolicyAgent().chooseMove(input);
+    const first = new PolicyAgent().chooseDecision(input);
+    const second = new PolicyAgent().chooseDecision(input);
 
     assert.deepEqual(first.move.move, second.move.move);
     assert.equal(first.move.move.params['$target'], 'gamma');
@@ -1003,7 +1003,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -1070,7 +1070,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -1116,7 +1116,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -1142,7 +1142,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -1177,8 +1177,8 @@ describe('PolicyAgent', () => {
       rng: createRng(42n),
     } as const;
 
-    const first = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
-    const second = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
+    const first = new PolicyAgent({ traceLevel: 'verbose' }).chooseDecision(input);
+    const second = new PolicyAgent({ traceLevel: 'verbose' }).chooseDecision(input);
 
     assert.deepEqual(first.move.move, second.move.move);
     assert.deepEqual(first.agentDecision, second.agentDecision);
@@ -1189,7 +1189,7 @@ describe('PolicyAgent', () => {
     const state = initialState(def, 7, 2).state;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -1221,7 +1221,7 @@ describe('PolicyAgent', () => {
     const agent = new PolicyAgent();
 
     assert.throws(
-      () => agent.chooseMove({
+      () => agent.chooseDecision({
         def,
         state,
         playerId: asPlayerId(0),
@@ -1244,14 +1244,14 @@ describe('PolicyAgent', () => {
     const syntheticSinglePassUpperBound = legalMoves.length * 3;
     const agent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const guided = agent.chooseMove({
+    const guided = agent.chooseDecision({
       def: guidedDef,
       state: guidedState,
       playerId: asPlayerId(0),
       legalMoves,
       rng: createRng(42n),
     });
-    const unguided = agent.chooseMove({
+    const unguided = agent.chooseDecision({
       def: unguidedDef,
       state: unguidedState,
       playerId: asPlayerId(0),

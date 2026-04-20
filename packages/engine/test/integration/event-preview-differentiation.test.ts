@@ -14,7 +14,7 @@ import {
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 type VerbosePolicyCandidate = NonNullable<
-  NonNullable<Extract<ReturnType<PolicyAgent['chooseMove']>['agentDecision'], { kind: 'policy' }>['candidates']>[number]
+  NonNullable<Extract<ReturnType<PolicyAgent['chooseDecision']>['agentDecision'], { kind: 'policy' }>['candidates']>[number]
 >;
 
 const WITNESS_MAX_SEED = 20;
@@ -22,7 +22,7 @@ const WITNESS_MAX_PLY = 30;
 
 interface CardWitness {
   readonly def: ReturnType<typeof assertValidatedGameDef>;
-  readonly result: ReturnType<PolicyAgent['chooseMove']>;
+  readonly result: ReturnType<PolicyAgent['chooseDecision']>;
   readonly seed: number;
   readonly ply: number;
 }
@@ -45,7 +45,7 @@ function findCardWitness(
 
     for (let ply = 0; ply <= WITNESS_MAX_PLY; ply += 1) {
       const legalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-      const result = agents[Number(state.activePlayer)]!.chooseMove({
+      const result = agents[Number(state.activePlayer)]!.chooseDecision({
         def,
         state,
         playerId: state.activePlayer,
@@ -72,7 +72,7 @@ function findCardWitness(
   );
 }
 
-function requireVerboseCandidates(result: ReturnType<PolicyAgent['chooseMove']>): readonly VerbosePolicyCandidate[] {
+function requireVerboseCandidates(result: ReturnType<PolicyAgent['chooseDecision']>): readonly VerbosePolicyCandidate[] {
   assert.equal(result.agentDecision?.kind, 'policy');
   if (result.agentDecision?.kind !== 'policy') {
     assert.fail('expected policy trace metadata');

@@ -40,7 +40,7 @@ describe('Texas Hold\'em policy agent integration', () => {
     const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
     const agent = new PolicyAgent();
 
-    const selected = agent.chooseMove({
+    const selected = agent.chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -88,7 +88,7 @@ describe('Texas Hold\'em policy agent integration', () => {
     const baseMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
     const swappedMoves = enumerateLegalMoves(def, swappedState, undefined, runtime).moves;
 
-    const left = agent.chooseMove({
+    const left = agent.chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -96,7 +96,7 @@ describe('Texas Hold\'em policy agent integration', () => {
       rng: createRng(29n),
       runtime,
     });
-    const right = agent.chooseMove({
+    const right = agent.chooseDecision({
       def,
       state: swappedState,
       playerId: swappedState.activePlayer,
@@ -132,7 +132,7 @@ describe('Texas Hold\'em policy agent integration', () => {
     const seeded = initialState(def, 23, 4).state;
     const state = advanceToDecisionPoint(def, seeded);
     const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
+    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
       def,
       state,
       playerId: state.activePlayer,

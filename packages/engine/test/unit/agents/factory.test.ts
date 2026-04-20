@@ -193,7 +193,7 @@ function createDef(): GameDef {
   };
 }
 
-function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
+function createInput(def: GameDef): Parameters<PolicyAgent['chooseDecision']>[0] {
   const state = initialState(def, 7, 2).state;
   const legalMoves: readonly Move[] = [
     { actionId: asActionId('pass'), params: {} },
@@ -268,7 +268,7 @@ describe('createAgent', () => {
   it('uses authored seat bindings by default for policy descriptors', () => {
     const def = createDef();
     const agent = createAgent({ kind: 'policy' });
-    const result = agent.chooseMove(createInput(def));
+    const result = agent.chooseDecision(createInput(def));
 
     assert.deepEqual(result.move.move, { actionId: asActionId('pass'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');
@@ -282,7 +282,7 @@ describe('createAgent', () => {
   it('forces an explicit authored profile when the descriptor supplies one', () => {
     const def = createDef();
     const agent = createAgent({ kind: 'policy', profileId: 'aggressive' });
-    const result = agent.chooseMove(createInput(def));
+    const result = agent.chooseDecision(createInput(def));
 
     assert.deepEqual(result.move.move, { actionId: asActionId('event'), params: {} });
     assert.equal(result.agentDecision?.kind, 'policy');

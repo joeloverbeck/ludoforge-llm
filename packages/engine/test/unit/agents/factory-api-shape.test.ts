@@ -67,14 +67,14 @@ const stateStub: GameState = {
 const moveStub: Move = { actionId: asActionId('only'), params: {} };
 
 describe('agents factory API shape', () => {
-  it("createAgent({ kind: 'builtin', builtinId: 'random' }) returns an object with chooseMove", () => {
+  it("createAgent({ kind: 'builtin', builtinId: 'random' }) returns an object with chooseDecision", () => {
     const agent = createAgent({ kind: 'builtin', builtinId: 'random' });
-    assert.equal(typeof agent.chooseMove, 'function');
+    assert.equal(typeof agent.chooseDecision, 'function');
   });
 
-  it("createAgent({ kind: 'builtin', builtinId: 'random' }) chooseMove returns the only legal move", () => {
+  it("createAgent({ kind: 'builtin', builtinId: 'random' }) chooseDecision returns the only legal move", () => {
     const agent = createAgent({ kind: 'builtin', builtinId: 'random' });
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def: defStub,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -84,18 +84,18 @@ describe('agents factory API shape', () => {
     assert.deepEqual(result.move.move, moveStub);
   });
 
-  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) returns an object with chooseMove", () => {
+  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) returns an object with chooseDecision", () => {
     const agent = createAgent({ kind: 'builtin', builtinId: 'greedy' });
-    assert.equal(typeof agent.chooseMove, 'function');
+    assert.equal(typeof agent.chooseDecision, 'function');
   });
 
-  it("createAgent({ kind: 'policy' }) returns an object with chooseMove", () => {
+  it("createAgent({ kind: 'policy' }) returns an object with chooseDecision", () => {
     const agent = createAgent({ kind: 'policy' });
-    assert.equal(typeof agent.chooseMove, 'function');
+    assert.equal(typeof agent.chooseDecision, 'function');
     assert.equal(agent instanceof PolicyAgent, true);
   });
 
-  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) chooseMove works for a simple legal move", () => {
+  it("createAgent({ kind: 'builtin', builtinId: 'greedy' }) chooseDecision works for a simple legal move", () => {
     const def: GameDef = {
       ...defStub,
       actions: [
@@ -115,7 +115,7 @@ phase: [asPhaseId('main')],
     const state = initialState(def, 1, 2).state;
     const moves = legalMoves(def, state);
     const agent = createAgent({ kind: 'builtin', builtinId: 'greedy' });
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),

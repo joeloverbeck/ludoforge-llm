@@ -197,7 +197,7 @@ function createSoftmaxDef(): GameDef {
   };
 }
 
-function createInput(def: GameDef): Parameters<PolicyAgent['chooseMove']>[0] {
+function createInput(def: GameDef): Parameters<PolicyAgent['chooseDecision']>[0] {
   const state = initialState(def, 5, 2).state;
   const legalMoves: readonly Move[] = [
     { actionId: asActionId('pass'), params: {} },
@@ -218,8 +218,8 @@ describe('policy trace events', () => {
     const summaryAgent = new PolicyAgent({ traceLevel: 'summary' });
     const verboseAgent = new PolicyAgent({ traceLevel: 'verbose' });
 
-    const summaryResult = summaryAgent.chooseMove(createInput(def));
-    const verboseResult = verboseAgent.chooseMove(createInput(def));
+    const summaryResult = summaryAgent.chooseDecision(createInput(def));
+    const verboseResult = verboseAgent.chooseDecision(createInput(def));
 
     assert.equal(summaryResult.agentDecision?.kind, 'policy');
     assert.equal(verboseResult.agentDecision?.kind, 'policy');
@@ -282,7 +282,7 @@ describe('policy trace events', () => {
 
   it('records stochastic selection details in policy decision traces', () => {
     const def = createSoftmaxDef();
-    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove(createInput(def));
+    const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision(createInput(def));
 
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {

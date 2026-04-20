@@ -65,7 +65,7 @@ export function selectAgentMove(input: SelectAgentMoveInput): AgentMoveSelection
 
   const descriptor = resolveAgentDescriptor(input.controller);
   const agent = createAgent(descriptor);
-  return agent.chooseMove({
+  const selection = agent.chooseDecision({
     def: input.def,
     state: input.state,
     playerId: input.playerId,
@@ -73,6 +73,10 @@ export function selectAgentMove(input: SelectAgentMoveInput): AgentMoveSelection
     rng: input.rng,
     runtime: input.runtime,
   });
+  if (!('move' in selection)) {
+    throw new Error('Runner AI move policy expected a completed legacy move selection.');
+  }
+  return selection;
 }
 
 export function selectRandomIndex(length: number, random: () => number = Math.random): number {

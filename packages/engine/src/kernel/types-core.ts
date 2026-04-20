@@ -1854,16 +1854,41 @@ export interface MechanicBundle {
   readonly mutationPoints?: readonly string[];
 }
 
+export interface AgentMicroturnDecisionInput {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly microturn: import('./microturn/types.js').MicroturnState;
+  readonly rng: Rng;
+  readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
+  /** Opt-in profiler for agent sub-function timing. */
+  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
+}
+
+export interface AgentMicroturnDecisionResult {
+  readonly decision: import('./microturn/types.js').Decision;
+  readonly rng: Rng;
+  readonly agentDecision?: AgentDecisionTrace;
+}
+
+export interface AgentLegacyDecisionInput {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly playerId: PlayerId;
+  readonly legalMoves: readonly ClassifiedMove[];
+  readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
+  readonly rng: Rng;
+  readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
+  /** Opt-in profiler for agent sub-function timing. */
+  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
+}
+
+export interface AgentLegacyDecisionResult {
+  readonly move: TrustedExecutableMove;
+  readonly rng: Rng;
+  readonly agentDecision?: AgentDecisionTrace;
+}
+
 export interface Agent {
-  chooseMove(input: {
-    readonly def: GameDef;
-    readonly state: GameState;
-    readonly playerId: PlayerId;
-    readonly legalMoves: readonly ClassifiedMove[];
-    readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
-    readonly rng: Rng;
-    readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
-    /** Opt-in profiler for agent sub-function timing. */
-    readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-  }): { readonly move: TrustedExecutableMove; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult;
+  chooseDecision(input: AgentLegacyDecisionInput): AgentLegacyDecisionResult;
 }

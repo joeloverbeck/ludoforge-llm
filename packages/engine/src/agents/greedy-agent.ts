@@ -1,6 +1,15 @@
 import { applyTrustedMove } from '../kernel/apply-move.js';
+import { applyDecision } from '../kernel/microturn/apply.js';
+import type { Decision } from '../kernel/microturn/types.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import type { Agent, TrustedExecutableMove } from '../kernel/types.js';
+import type {
+  Agent,
+  AgentLegacyDecisionInput,
+  AgentLegacyDecisionResult,
+  AgentMicroturnDecisionInput,
+  AgentMicroturnDecisionResult,
+  TrustedExecutableMove,
+} from '../kernel/types.js';
 import { evaluateState } from './evaluate-state.js';
 import {
   createNoPlayableMoveInvariantError,
@@ -39,9 +48,71 @@ export class GreedyAgent implements Agent {
     this.completionsPerTemplate = completionsPerTemplate ?? DEFAULT_COMPLETIONS_PER_TEMPLATE;
   }
 
-  chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult;
+  chooseDecision(input: AgentLegacyDecisionInput): AgentLegacyDecisionResult;
+  chooseDecision(input: AgentMicroturnDecisionInput | AgentLegacyDecisionInput): AgentMicroturnDecisionResult | AgentLegacyDecisionResult {
+    if ('microturn' in input) {
+      if (input.microturn.legalActions.length === 0) {
+        throw new Error('GreedyAgent.chooseDecision called with empty legalActions');
+      }
+
+      const candidates = input.microturn.legalActions.slice(0, this.maxMovesToEvaluate);
+
+      let bestDecision = candidates[0];
+      let bestScore = Number.NEGATIVE_INFINITY;
+      const tiedBestDecisions: Decision[] = [];
+
+      for (const decision of candidates) {
+        const nextState = applyDecision(input.def, input.state, decision, undefined, input.runtime).state;
+        const score = evaluateState(input.def, nextState, input.state.activePlayer, input.runtime);
+        if (score > bestScore) {
+          bestScore = score;
+          bestDecision = decision;
+          tiedBestDecisions.length = 0;
+          tiedBestDecisions.push(decision);
+        } else if (score === bestScore) {
+          tiedBestDecisions.push(decision);
+        }
+      }
+
+      if (bestDecision === undefined) {
+        throw new Error('GreedyAgent.chooseDecision could not select a decision');
+      }
+
+      if (tiedBestDecisions.length <= 1) {
+        return {
+          decision: bestDecision,
+          rng: input.rng,
+          agentDecision: {
+            kind: 'builtin',
+            agent: { kind: 'builtin', builtinId: 'greedy' },
+            candidateCount: candidates.length,
+            selectedIndex: candidates.findIndex((decision) => decision === bestDecision),
+            ...(bestDecision.kind !== 'actionSelection' || bestDecision.move === undefined
+              ? {}
+              : { selectedStableMoveKey: toMoveIdentityKey(input.def, bestDecision.move) }),
+          },
+        };
+      }
+
+      const { item: selectedDecision, rng: nextRng } = pickRandom(tiedBestDecisions, input.rng);
+      return {
+        decision: selectedDecision,
+        rng: nextRng,
+        agentDecision: {
+          kind: 'builtin',
+          agent: { kind: 'builtin', builtinId: 'greedy' },
+          candidateCount: candidates.length,
+          selectedIndex: candidates.findIndex((decision) => decision === selectedDecision),
+          ...(selectedDecision.kind !== 'actionSelection' || selectedDecision.move === undefined
+            ? {}
+            : { selectedStableMoveKey: toMoveIdentityKey(input.def, selectedDecision.move) }),
+        },
+      };
+    }
+
     if (input.legalMoves.length === 0) {
-      throw new Error('GreedyAgent.chooseMove called with empty legalMoves');
+      throw new Error('GreedyAgent.chooseDecision called with empty legalMoves');
     }
 
     const { completedMoves: expandedMoves, stochasticMoves, rng } = preparePlayableMoves(input, {
@@ -66,7 +137,6 @@ export class GreedyAgent implements Agent {
       throw createNoPlayableMoveInvariantError('GreedyAgent', input.legalMoves.length);
     }
 
-    // Apply maxMovesToEvaluate cap
     const candidates = selectCandidatesDeterministically(
       expandedMoves,
       rng,
@@ -91,7 +161,7 @@ export class GreedyAgent implements Agent {
     }
 
     if (bestMove === undefined) {
-      throw new Error('GreedyAgent.chooseMove could not select a move');
+      throw new Error('GreedyAgent.chooseDecision could not select a move');
     }
 
     if (tiedBestMoves.length <= 1) {

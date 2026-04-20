@@ -136,8 +136,8 @@ describe('RandomAgent', () => {
   it('throws descriptive error when legalMoves is empty', () => {
     const agent = new RandomAgent();
     assert.throws(
-      () => agent.chooseMove(createInput([])),
-      /RandomAgent\.chooseMove called with empty legalMoves/,
+      () => agent.chooseDecision(createInput([])),
+      /RandomAgent\.chooseDecision called with empty legalMoves/,
     );
   });
 
@@ -145,7 +145,7 @@ describe('RandomAgent', () => {
     const agent = new RandomAgent();
     const move = createMoves(1)[0] as Move;
     const input = createInput([move], 19n);
-    const result = agent.chooseMove(input);
+    const result = agent.chooseDecision(input);
 
     assert.deepEqual(result.move.move, move);
     assert.equal(result.rng, input.rng);
@@ -156,7 +156,7 @@ describe('RandomAgent', () => {
     const legalMoves = createMoves(5);
     const input = createInput(legalMoves, 42n);
     const [expectedIndex, expectedRng] = nextInt(input.rng, 0, legalMoves.length - 1);
-    const result = agent.chooseMove(input);
+    const result = agent.chooseDecision(input);
 
     assert.deepEqual(result.move.move, legalMoves[expectedIndex]);
     assert.deepEqual(result.rng, expectedRng);
@@ -165,8 +165,8 @@ describe('RandomAgent', () => {
   it('with known seed and 2 legal moves is deterministic', () => {
     const agent = new RandomAgent();
     const legalMoves = createMoves(2);
-    const first = agent.chooseMove(createInput(legalMoves, 7n));
-    const second = agent.chooseMove(createInput(legalMoves, 7n));
+    const first = agent.chooseDecision(createInput(legalMoves, 7n));
+    const second = agent.chooseDecision(createInput(legalMoves, 7n));
 
     assert.deepEqual(first, second);
   });
@@ -174,8 +174,8 @@ describe('RandomAgent', () => {
   it('same input state plus same rng returns identical move and rng', () => {
     const agent = new RandomAgent();
     const legalMoves = createMoves(4);
-    const first = agent.chooseMove(createInput(legalMoves, 99n));
-    const second = agent.chooseMove(createInput(legalMoves, 99n));
+    const first = agent.chooseDecision(createInput(legalMoves, 99n));
+    const second = agent.chooseDecision(createInput(legalMoves, 99n));
 
     assert.deepEqual(first, second);
   });
@@ -187,7 +187,7 @@ describe('RandomAgent', () => {
     let rng = createRng(123n);
 
     for (let i = 0; i < 100; i += 1) {
-      const result = agent.chooseMove({
+      const result = agent.chooseDecision({
         def: createDefForMoves(legalMoves),
         state: stateStub,
         playerId: asPlayerId(0),
@@ -210,7 +210,7 @@ describe('RandomAgent', () => {
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
     const agent = new RandomAgent();
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -230,7 +230,7 @@ describe('RandomAgent', () => {
   it('still works with simple (non-template) moves as before', () => {
     const agent = new RandomAgent();
     const legalMoves = createMoves(3);
-    const first = agent.chooseMove(createInput(legalMoves, 42n));
+    const first = agent.chooseDecision(createInput(legalMoves, 42n));
     const [expectedIndex] = nextInt(createRng(42n), 0, legalMoves.length - 1);
 
     assert.deepEqual(first.move.move, legalMoves[expectedIndex]);
@@ -252,8 +252,8 @@ describe('RandomAgent', () => {
       rng: createRng(77n),
     });
 
-    const first = agent.chooseMove(makeInput());
-    const second = agent.chooseMove(makeInput());
+    const first = agent.chooseDecision(makeInput());
+    const second = agent.chooseDecision(makeInput());
 
     assert.deepEqual(first, second);
   });
@@ -265,7 +265,7 @@ describe('RandomAgent', () => {
 
     const templateMove: Move = { actionId: asActionId('op-choose-n'), params: {} };
     const agent = new RandomAgent();
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -304,7 +304,7 @@ describe('RandomAgent', () => {
     const simpleMove: Move = { actionId: asActionId('simple'), params: { x: 1 } };
     const agent = new RandomAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -324,7 +324,7 @@ describe('RandomAgent', () => {
     const agent = new RandomAgent();
 
     assert.throws(
-      () => agent.chooseMove({
+      () => agent.chooseDecision({
         def,
         state: stateStub,
         playerId: asPlayerId(0),
@@ -388,7 +388,7 @@ describe('RandomAgent', () => {
     const agent = new RandomAgent();
 
     // Should not throw — should return the partially-completed stochastic move
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -460,7 +460,7 @@ describe('RandomAgent', () => {
     const simpleMove: Move = { actionId: asActionId('simple'), params: {} };
     const agent = new RandomAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -545,8 +545,8 @@ describe('RandomAgent', () => {
       rng: createRng(77n),
     });
 
-    const first = agent.chooseMove(makeInput());
-    const second = agent.chooseMove(makeInput());
+    const first = agent.chooseDecision(makeInput());
+    const second = agent.chooseDecision(makeInput());
 
     assert.deepEqual(first, second);
   });

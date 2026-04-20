@@ -102,7 +102,7 @@ const resolveCurrentCoupSeat = (
  * current state are free-op moves from such grants AND removing those grants
  * leaves zero legal moves, the grants are effectively uncompletable by the
  * agent.  Remove them so the main advanceToDecisionPoint loop can advance
- * past the grant instead of breaking into agent.chooseMove which would throw.
+ * past the grant instead of breaking into agent.chooseDecision which would throw.
  */
 const preSkipUncompletableGrants = (
   def: GameDef,

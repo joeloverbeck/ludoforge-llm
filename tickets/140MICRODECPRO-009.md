@@ -1,12 +1,18 @@
 # 140MICRODECPRO-009: D9 — Re-evolution campaign (Category C) — gate ticket
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: LOW
 **Effort**: Large
 **Engine Changes**: None — MAP-Elites campaign execution only; profile YAML updates
 **Deps**: `tickets/140MICRODECPRO-008.md`
 
 ## Problem
+
+Historical draft retained for series traceability only. On 2026-04-20 the user-approved boundary rewrite moved the live profile-capability cut into `140MICRODECPRO-007`. Any future policy-quality campaign now depends on the post-cut microturn-native profiles rather than this original split.
+
+## Historical Resolution
+
+Original re-evolution slice superseded by the merged boundary in `140MICRODECPRO-007` on 2026-04-20. Retained as a historical draft-series record only.
 
 Profiles whose expressions depend on the retired two-phase scoring shape (Category C from I2) have no 1:1 microturn equivalent. Ticket 008 marks them with `# spec-140-category-c: requires re-evolution` YAML comments and preserves their pre-migration form.
 

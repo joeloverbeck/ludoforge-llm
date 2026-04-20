@@ -166,7 +166,7 @@ const runRandomAgentTurn = (
   const agent = new RandomAgent();
   const moves = enumerateLegalMoves(def, state).moves;
   const rng = createRng(BigInt(seed));
-  const { move } = agent.chooseMove({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
+  const { move } = agent.chooseDecision({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
   const result = applyMove(def, state, move);
   return { state: result.state, move };
 };
@@ -179,7 +179,7 @@ const runGreedyAgentTurn = (
   const agent = new GreedyAgent({ completionsPerTemplate: 3 });
   const moves = enumerateLegalMoves(def, state).moves;
   const rng = createRng(BigInt(seed));
-  const { move } = agent.chooseMove({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
+  const { move } = agent.chooseDecision({ def, state, playerId: state.activePlayer, legalMoves: moves, rng });
   const result = applyMove(def, state, move);
   return { state: result.state, move };
 };

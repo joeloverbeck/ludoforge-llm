@@ -117,7 +117,7 @@ function choosePolicyDecision(
   label: string,
 ): PolicyDecisionGolden {
   const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
+  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
     def,
     state,
     playerId: state.activePlayer,

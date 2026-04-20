@@ -3,6 +3,8 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   createGameDefRuntime,
   createPerfProfiler,
@@ -11,18 +13,17 @@ import {
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
-import { trustedMove } from '../helpers/classified-move-fixtures.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
+const firstLegalAgent = {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+    const decision = input.microturn.legalActions[0];
+    if (decision === undefined) {
+      throw new Error('firstLegalAgent requires at least one legal action');
     }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+    return { decision, rng: input.rng };
   },
-};
+} as Agent;
 
 const TEXAS_DEF = assertValidatedGameDef(compileTexasProductionSpec().compiled.gameDef) as ValidatedGameDef;
 

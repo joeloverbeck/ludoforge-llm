@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 
 import {
   applyDecision,
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
@@ -17,25 +19,23 @@ import {
   publishMicroturn,
   terminalResult,
   type Agent,
-  type ClassifiedMove,
   type GameDef,
   type Move,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 import { extractMicroturnSnapshot } from '../../../src/sim/snapshot.js';
-import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
+const firstLegalAgent = {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+    const decision = input.microturn.legalActions[0];
+    if (decision === undefined) {
+      throw new Error('firstLegalAgent requires at least one legal action');
     }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+    return { decision, rng: input.rng };
   },
-};
+} as Agent;
 
 const createDef = (options?: {
   readonly withAction?: boolean;
@@ -289,23 +289,23 @@ describe('runGame', () => {
   });
 
   it('does not bypass kernel legality checks when an agent selects an illegal move', () => {
-    const illegalMoveAgent: Agent = {
-      chooseMove(input) {
+    const illegalMoveAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
         const move: Move = { actionId: asActionId('unknown-action'), params: {} };
-        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+        return { decision: { kind: 'actionSelection', actionId: move.actionId, move }, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const def = createDef();
     assert.throws(
       () => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1),
-      /MICROTURN_LEGACY_AGENT_ADAPTER_SELECTED_OUT_OF_FRONTIER:unknown-action/,
+      /MICROTURN_DECISION_NOT_PUBLISHED:actionSelection/,
     );
   });
 
   it('does not swallow unrelated agent failures', () => {
     const explodingAgent: Agent = {
-      chooseMove() {
+      chooseDecision() {
         throw new Error('unexpected agent failure');
       },
     };
@@ -316,27 +316,23 @@ describe('runGame', () => {
 
   it('passes classified enumerated moves into the agent boundary', () => {
     const def = createDef();
-    let observedLegalMoves: readonly ClassifiedMove[] | null = null;
+    let observedLegalActionCount: number | null = null;
 
-    const inspectingAgent: Agent = {
-      chooseMove(input) {
-        observedLegalMoves = input.legalMoves;
-        assert.ok(input.legalMoves.length > 0);
-        assert.ok('move' in input.legalMoves[0]!);
-        assert.ok('viability' in input.legalMoves[0]!);
-        assert.deepEqual(input.legalMoves, enumerateLegalMoves(input.def, input.state, undefined, input.runtime).moves);
-        return { move: input.legalMoves[0]!.trustedMove ?? trustedMove(input.legalMoves[0]!.move, input.state.stateHash), rng: input.rng };
+    const inspectingAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+        observedLegalActionCount = input.microturn.legalActions.length;
+        assert.ok(input.microturn.legalActions.length > 0);
+        assert.deepEqual(input.microturn.legalActions.length, publishMicroturn(input.def, input.state, input.runtime).legalActions.length);
+        return { decision: input.microturn.legalActions[0]!, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 13, [inspectingAgent, inspectingAgent], 1);
 
-    let classifiedMoves: readonly ClassifiedMove[];
-    if (observedLegalMoves === null) {
-      throw new Error('expected simulator to provide classified legal moves to agent');
+    if (observedLegalActionCount === null) {
+      throw new Error('expected simulator to provide published legal actions to agent');
     }
-    classifiedMoves = observedLegalMoves;
-    assert.equal(trace.decisions[0]?.legalActionCount, classifiedMoves.length);
+    assert.equal(trace.decisions[0]?.legalActionCount, observedLegalActionCount);
   });
 
   it('captures a standard snapshot from the same pre-decision state the agent receives', () => {
@@ -344,18 +340,18 @@ describe('runGame', () => {
     const runtime = createGameDefRuntime(def);
     const observedSnapshots: unknown[] = [];
 
-    const snapshotAgent: Agent = {
-      chooseMove(input) {
+    const snapshotAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
         observedSnapshots.push(
           extractMicroturnSnapshot(def, input.state, publishMicroturn(def, input.state, runtime), runtime, 'standard'),
         );
-        const move = input.legalMoves[0]?.move;
-        if (move === undefined) {
-          throw new Error('snapshotAgent requires at least one legal move');
+        const decision = input.microturn.legalActions[0];
+        if (decision === undefined) {
+          throw new Error('snapshotAgent requires at least one legal action');
         }
-        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+        return { decision, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 17, [snapshotAgent, snapshotAgent], 1, 2, { snapshotDepth: 'standard' }, runtime);
     const snapshot = trace.decisions[0]?.snapshot;
@@ -480,17 +476,17 @@ phase: [asPhaseId('main')],
       ],
     } as const);
 
-    const sideBranchAgent: Agent = {
-      chooseMove(input) {
-        const selected = input.legalMoves.find(
-          ({ move }) => move.params.side === 'shaded' && move.params.branch === 'b',
+    const sideBranchAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+        const selected = input.microturn.legalActions.find(
+          (decision) => decision.kind === 'actionSelection' && decision.move?.params.side === 'shaded' && decision.move?.params.branch === 'b',
         );
         if (selected === undefined) {
           throw new Error('expected shaded/b event move to be legal');
         }
-        return { move: selected.trustedMove ?? trustedMove(selected.move, input.state.stateHash), rng: input.rng };
+        return { decision: selected, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 31, [sideBranchAgent, sideBranchAgent], 1);
     assert.equal(trace.decisions[0]?.decision.kind, 'actionSelection');

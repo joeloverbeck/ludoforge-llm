@@ -5,14 +5,15 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
   applyDecision,
-  applyTrustedMove,
   applyMove,
+  applyTrustedMove,
   areMovesEquivalent,
   assertValidatedGameDef,
   createGameDefRuntime,
   enumerateLegalMoves,
   initialState,
   legalMoves,
+  publishMicroturn,
   probeMoveViability,
   type Move,
   type ValidatedGameDef,
@@ -93,69 +94,81 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
   let replayState = initialState(def, seed, playerCount, undefined, runtime).state;
 
   for (const [stepIndex, moveLog] of firstTrace.decisions.entries()) {
-    const rawMoves = legalMoves(def, replayState, undefined, runtime);
-    const classifiedResult = enumerateLegalMoves(def, replayState, undefined, runtime);
-    const classifiedMoves = classifiedResult.moves.map(({ move }) => move);
-    const omittedRawMoves = rawMoves.filter((rawMove) =>
-      !includesEquivalentMove(classifiedMoves, rawMove),
-    );
-
-    assert.deepEqual(
-      rawMoves.filter((rawMove) => includesEquivalentMove(classifiedMoves, rawMove)),
-      classifiedMoves,
-      `${label} step=${stepIndex} classified moves should preserve raw move order`,
-    );
-    assert.equal(
-      classifiedResult.moves.every(({ viability }) => viability.viable),
-      true,
-      `${label} step=${stepIndex} classified moves must all remain viable`,
-    );
-    for (const omittedMove of omittedRawMoves) {
-      const viability = probeMoveViability(def, replayState, omittedMove, runtime);
-      assert.equal(
-        viability.viable,
-        false,
-        `${label} step=${stepIndex} omitted raw move ${String(omittedMove.actionId)} must be probe-non-viable`,
-      );
-      assert.equal(
-        classifiedResult.warnings.some((warning) =>
-          warning.code === 'MOVE_ENUM_PROBE_REJECTED'
-          && warning.context['actionId'] === String(omittedMove.actionId)
-          && warning.context['reason'] === viability.code,
-        ),
-        true,
-        `${label} step=${stepIndex} omitted raw move ${String(omittedMove.actionId)} must emit a probe-rejection warning`,
-      );
-    }
+    const microturn = publishMicroturn(def, replayState, runtime);
     assert.equal(
       moveLog.legalActionCount,
-      classifiedResult.moves.length,
-      `${label} step=${stepIndex} trace legalActionCount should match classified enumeration`,
+      microturn.legalActions.length,
+      `${label} step=${stepIndex} trace legalActionCount should match the published frontier`,
     );
 
-    assertCompleteMoveTrustedParity(label, def, replayState, stepIndex, runtime);
+    if (moveLog.decision.kind === 'actionSelection') {
+      const rawMoves = legalMoves(def, replayState, undefined, runtime);
+      const classifiedResult = enumerateLegalMoves(def, replayState, undefined, runtime);
+      const classifiedMoves = classifiedResult.moves.map(({ move }) => move);
+      const classifiedMovesWithRawEquivalent = classifiedMoves.filter((classifiedMove) =>
+        includesEquivalentMove(rawMoves, classifiedMove),
+      );
+      const omittedRawMoves = rawMoves.filter((rawMove) =>
+        !includesEquivalentMove(classifiedMoves, rawMove),
+      );
 
-    assert.equal(moveLog.decision.kind, 'actionSelection');
-    assert.ok(moveLog.decision.move);
-    const baseline = applyMove(def, replayState, moveLog.decision.move, undefined, runtime);
-    const trusted = applyTrustedMove(
-      def,
-      replayState,
-      {
-        ...moveLog.decision.move,
-        move: moveLog.decision.move,
-        sourceStateHash: replayState.stateHash,
-        provenance: 'enumerateLegalMoves',
-      },
-      undefined,
-      runtime,
-    );
+      assert.deepEqual(
+        rawMoves.filter((rawMove) => includesEquivalentMove(classifiedMoves, rawMove)),
+        classifiedMovesWithRawEquivalent,
+        `${label} step=${stepIndex} classified moves should preserve raw move order where the surfaces overlap`,
+      );
+      assert.equal(
+        classifiedResult.moves.every(({ viability }) => viability.viable),
+        true,
+        `${label} step=${stepIndex} classified moves must all remain viable`,
+      );
+      for (const omittedMove of omittedRawMoves) {
+        const viability = probeMoveViability(def, replayState, omittedMove, runtime);
+        const completedVariantExists = classifiedResult.moves.some(({ move }) =>
+          String(move.actionId) === String(omittedMove.actionId),
+        );
+        if (!viability.viable) {
+          assert.equal(
+            classifiedResult.warnings.some((warning) =>
+              warning.code === 'MOVE_ENUM_PROBE_REJECTED'
+              && warning.context['actionId'] === String(omittedMove.actionId)
+              && warning.context['reason'] === viability.code,
+            ),
+            true,
+            `${label} step=${stepIndex} omitted raw move ${String(omittedMove.actionId)} must emit a probe-rejection warning`,
+          );
+          continue;
+        }
+        assert.equal(
+          completedVariantExists,
+          true,
+          `${label} step=${stepIndex} viable omitted raw move ${String(omittedMove.actionId)} must be represented by a completed classified variant`,
+        );
+      }
 
-    assert.deepEqual(
-      trusted,
-      baseline,
-      `${label} step=${stepIndex} selected move diverged under trusted execution`,
-    );
+      assertCompleteMoveTrustedParity(label, def, replayState, stepIndex, runtime);
+
+      const selectedDecision = moveLog.decision;
+      assert.equal(
+        microturn.legalActions.some((candidate) =>
+          candidate.kind === 'actionSelection' && String(candidate.actionId) === String(selectedDecision.actionId),
+        ),
+        true,
+        `${label} step=${stepIndex} selected action must remain present in the published frontier`,
+      );
+      assert.equal(
+        classifiedResult.moves.some(({ move }) => String(move.actionId) === String(selectedDecision.actionId)),
+        true,
+        `${label} step=${stepIndex} selected action must remain present in classified enumeration`,
+      );
+      if (selectedDecision.move !== undefined) {
+        assert.equal(
+          String(selectedDecision.move.actionId),
+          String(selectedDecision.actionId),
+          `${label} step=${stepIndex} published move payload must match the selected action id`,
+        );
+      }
+    }
     const appliedDecision = applyDecision(def, replayState, moveLog.decision, undefined, runtime);
     assert.deepEqual(
       appliedDecision.triggerFirings,

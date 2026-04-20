@@ -116,7 +116,7 @@ function compileFitlPreviewFeatureOverlay(seat: 'vc'): GameDef {
 function advanceSeed6ToVcDecision(def: GameDef) {
   const runtime = createGameDefRuntime(def);
     const initial = initialState(def, 6, 4).state;
-  const openingChoice = new PolicyAgent().chooseMove({
+  const openingChoice = new PolicyAgent().chooseDecision({
     def,
     state: initial,
     playerId: initial.activePlayer,
@@ -324,7 +324,7 @@ describe('coalesce-wrapped preview surface refs do not contaminate previewOutcom
     const def = compileFitlCoalescePreviewOverlay('arvn');
     const runtime = createGameDefRuntime(def);
     const initial = initialState(def, 6, 4).state;
-    const openingChoice = new PolicyAgent().chooseMove({
+    const openingChoice = new PolicyAgent().chooseDecision({
       def,
       state: initial,
       playerId: initial.activePlayer,

@@ -6,6 +6,8 @@ import { resolve } from 'node:path';
 
 import {
   DegeneracyFlag,
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
@@ -14,19 +16,18 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { aggregateEvals, evaluateTrace, generateEvalReport, runGame, runGames } from '../../../src/sim/index.js';
-import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
-const rngDrivenAgent: Agent = {
-  chooseMove(input) {
-    const [index, nextRng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
-    const move = input.legalMoves[index]?.move;
-    if (move === undefined) {
-      throw new Error('rngDrivenAgent requires at least one legal move');
+const rngDrivenAgent = {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+    const [index, nextRng] = nextInt(input.rng, 0, input.microturn.legalActions.length - 1);
+    const decision = input.microturn.legalActions[index];
+    if (decision === undefined) {
+      throw new Error('rngDrivenAgent requires at least one legal action');
     }
-    return { move: trustedMove(move, input.state.stateHash), rng: nextRng };
+    return { decision, rng: nextRng };
   },
-};
+} as Agent;
 
 const createEvaluatedDef = (): ValidatedGameDef =>
   assertValidatedGameDef({

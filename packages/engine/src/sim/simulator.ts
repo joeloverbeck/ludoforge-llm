@@ -25,7 +25,6 @@ import { computeDeltas } from './delta.js';
 import { synthesizeCompoundTurnSummaries } from './compound-turns.js';
 import type { SimulationOptions } from './sim-options.js';
 import { extractMicroturnSnapshot } from './snapshot.js';
-import { adaptLegacyAgentChooseMove } from './adapt-legacy-agent.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -150,11 +149,12 @@ export const runGame = (
     let selected;
     const t0_agent = perfStart(profiler);
     try {
-      selected = adaptLegacyAgentChooseMove(agent, {
+      selected = agent.chooseDecision({
         def: validatedDef,
         state,
         microturn,
         rng: agentRng,
+        ...(profiler === undefined ? {} : { profiler }),
         runtime: resolvedRuntime,
       });
     } catch (error) {

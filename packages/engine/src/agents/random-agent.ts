@@ -1,5 +1,11 @@
-import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type { Agent } from '../kernel/types.js';
+import type {
+  AgentLegacyDecisionInput,
+  AgentLegacyDecisionResult,
+  AgentMicroturnDecisionInput,
+  AgentMicroturnDecisionResult,
+} from '../kernel/types.js';
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import {
   createNoPlayableMoveInvariantError,
   pickRandom,
@@ -8,9 +14,32 @@ import {
 import { preparePlayableMoves } from './prepare-playable-moves.js';
 
 export class RandomAgent implements Agent {
-  chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult;
+  chooseDecision(input: AgentLegacyDecisionInput): AgentLegacyDecisionResult;
+  chooseDecision(input: AgentMicroturnDecisionInput | AgentLegacyDecisionInput): AgentMicroturnDecisionResult | AgentLegacyDecisionResult {
+    if ('microturn' in input) {
+      if (input.microturn.legalActions.length === 0) {
+        throw new Error('RandomAgent.chooseDecision called with empty legalActions');
+      }
+
+      const { item: selected, rng: nextRng } = pickRandom(input.microturn.legalActions, input.rng);
+      return {
+        decision: selected,
+        rng: nextRng,
+        agentDecision: {
+          kind: 'builtin',
+          agent: { kind: 'builtin', builtinId: 'random' },
+          candidateCount: input.microturn.legalActions.length,
+          selectedIndex: input.microturn.legalActions.findIndex((decision) => decision === selected),
+          ...(selected.kind !== 'actionSelection' || selected.move === undefined
+            ? {}
+            : { selectedStableMoveKey: toMoveIdentityKey(input.def, selected.move) }),
+        },
+      };
+    }
+
     if (input.legalMoves.length === 0) {
-      throw new Error('RandomAgent.chooseMove called with empty legalMoves');
+      throw new Error('RandomAgent.chooseDecision called with empty legalMoves');
     }
 
     const { completedMoves, stochasticMoves, rng } = preparePlayableMoves(input);

@@ -4,9 +4,12 @@ import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/index.js';
 import {
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   classifyMoveDecisionSequenceSatisfiability,
   createGameDefRuntime,
+  enumerateLegalMoves,
   type Agent,
   type ClassifiedMove,
   type ValidatedGameDef,
@@ -33,7 +36,7 @@ interface CorpusMeasurement {
 }
 
 interface CapturedTemplate {
-  readonly state: Parameters<Agent['chooseMove']>[0]['state'];
+  readonly state: Parameters<Agent['chooseDecision']>[0]['state'];
   readonly move: ClassifiedMove['move'];
 }
 
@@ -47,8 +50,8 @@ const captureCorpusTemplates = (
     const agents: Agent[] = POLICY_PROFILES.map((profileId) => {
       const inner = new PolicyAgent({ profileId, traceLevel: 'summary' });
       return {
-        chooseMove(input) {
-          for (const classified of input.legalMoves) {
+        chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+          for (const classified of enumerateLegalMoves(input.def, input.state, undefined, input.runtime).moves) {
             if (classified.viability.complete || classified.viability.stochasticDecision !== undefined) {
               continue;
             }
@@ -57,9 +60,9 @@ const captureCorpusTemplates = (
               move: classified.move,
             });
           }
-          return inner.chooseMove(input);
+          return inner.chooseDecision(input);
         },
-      };
+      } as Agent;
     });
     runGame(
       def,

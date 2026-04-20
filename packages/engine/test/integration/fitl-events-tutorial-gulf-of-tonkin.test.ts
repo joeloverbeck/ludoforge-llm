@@ -848,7 +848,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.notEqual(classifiedTemplate, undefined, 'Expected classified unshaded event template move');
 
     const agent = new RandomAgent();
-    const selected = agent.chooseMove({
+    const selected = agent.chooseDecision({
       def,
       state: setup,
       playerId: setup.activePlayer,
@@ -905,7 +905,7 @@ describe('FITL tutorial Gulf of Tonkin event-card production spec', () => {
     assert.notEqual(classifiedTemplate, undefined, 'Expected classified unshaded event template move');
 
     const agent = new GreedyAgent({ completionsPerTemplate: 2 });
-    const selected = agent.chooseMove({
+    const selected = agent.chooseDecision({
       def,
       state: setup,
       playerId: setup.activePlayer,

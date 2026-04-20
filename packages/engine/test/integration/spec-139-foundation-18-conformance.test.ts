@@ -4,8 +4,11 @@ import { describe, it } from 'node:test';
 
 import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
 import {
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   createGameDefRuntime,
+  enumerateLegalMoves,
   type Agent,
   type ClassifiedMove,
   type ValidatedGameDef,
@@ -89,16 +92,17 @@ const wrapAgentWithConformanceAudit = (
   inner: Agent,
   counters: ConformanceCounters,
 ): Agent => ({
-  chooseMove(input) {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+    const enumerated = enumerateLegalMoves(def, input.state, undefined, input.runtime);
     assertFoundation18Conformance(
       def,
-      input.legalMoves,
-      input.certificateIndex as ReadonlyMap<string, unknown> | undefined,
+      enumerated.moves,
+      enumerated.certificateIndex as ReadonlyMap<string, unknown> | undefined,
       counters,
     );
-    return inner.chooseMove(input);
+    return inner.chooseDecision(input);
   },
-});
+} as Agent);
 
 const createFitlAgents = (
   def: ValidatedGameDef,

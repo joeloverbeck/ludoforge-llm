@@ -232,7 +232,7 @@ describe('policy determinism', () => {
     ];
     const agent = new PolicyAgent({ profileId: 'missing-profile' });
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),

@@ -186,7 +186,7 @@ describe('agents never throw with non-empty legal moves', () => {
         const legalMoveResult = enumerateLegalMoves(testCase.def, state);
         assert.ok(legalMoveResult.moves.length > 0, 'expected non-empty legal move surface');
 
-        const selected = entry.agent.chooseMove({
+        const selected = entry.agent.chooseDecision({
           def: testCase.def,
           state,
           playerId: asPlayerId(0),

@@ -6,8 +6,8 @@ import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { fork } from '../kernel/prng.js';
 import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type {
-  Agent,
   ChoicePendingRequest,
+  ClassifiedMove,
   Move,
   MoveParamValue,
   PolicyCompletionStatistics,
@@ -16,6 +16,17 @@ import type {
   RuntimeWarning,
   TrustedExecutableMove,
 } from '../kernel/types.js';
+import type { CompletionCertificate } from '../kernel/completion-certificate.js';
+
+interface PreparePlayableMovesInput {
+  readonly def: Move extends never ? never : import('../kernel/types.js').GameDef;
+  readonly state: import('../kernel/types.js').GameState;
+  readonly legalMoves: readonly ClassifiedMove[];
+  readonly certificateIndex?: ReadonlyMap<string, CompletionCertificate>;
+  readonly rng: Rng;
+  readonly runtime?: import('../kernel/gamedef-runtime.js').GameDefRuntime;
+  readonly profiler?: PerfProfiler;
+}
 
 /**
  * Maximum additional attempts granted when every template completion so far
@@ -58,10 +69,10 @@ const sameRngState = (left: Rng, right: Rng): boolean =>
   && left.state.state.every((entry, index) => entry === right.state.state[index]);
 
 export function preparePlayableMoves(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
+  input: PreparePlayableMovesInput,
   options: PreparePlayableMovesOptions = {},
 ): PreparedPlayableMoves {
-  const profiler: PerfProfiler | undefined = (input as { profiler?: PerfProfiler }).profiler;
+  const profiler: PerfProfiler | undefined = input.profiler;
   const completedMoves: TrustedExecutableMove[] = [];
   const stochasticMoves: TrustedExecutableMove[] = [];
   let completedCount = 0;
@@ -223,7 +234,7 @@ export function preparePlayableMoves(
  * fallthrough path.
  */
 function attemptTemplateCompletion(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
+  input: PreparePlayableMovesInput,
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,

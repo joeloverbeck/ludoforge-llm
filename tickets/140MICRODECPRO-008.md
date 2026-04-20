@@ -1,12 +1,18 @@
 # 140MICRODECPRO-008: D9 — Policy profile migration (Categories A + B mechanical, FITL + Texas)
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game-data YAML only
-**Deps**: `tickets/140MICRODECPRO-007.md`, `archive/tickets/140MICRODECPRO-002.md`
+**Deps**: `archive/tickets/140MICRODECPRO-007.md`, `archive/tickets/140MICRODECPRO-002.md`
 
 ## Problem
+
+Historical draft retained for series traceability only. On 2026-04-20 the user-approved boundary rewrite moved the live profile migration work into `140MICRODECPRO-007` because the repo still depended on move-level policy expressions at the moment of the agent API cut.
+
+## Historical Resolution
+
+Owned slice absorbed by `140MICRODECPRO-007` on 2026-04-20 so the F14 agent/profile migration could land without a temporary compatibility layer. Retained as a historical draft-series record only.
 
 Ticket 007 deletes the Phase 1 / Phase 2 two-phase scoring machinery and reshapes `evaluatePolicyExpression` to take a `microturnContext` instead of a move + completion pair. Every existing policy-profile expression must be either:
 

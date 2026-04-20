@@ -59,7 +59,7 @@ function chooseFitlSummaryDecision(): PolicyDecisionGolden {
   const runtime = createGameDefRuntime(def);
   const state = initialState(def, 7, 4).state;
   const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
+  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
     def,
     state,
     playerId: state.activePlayer,
@@ -84,7 +84,7 @@ function chooseTexasSummaryDecision(): PolicyDecisionGolden {
   const seeded = initialState(def, 23, 4).state;
   const state = advanceToDecisionPoint(def, seeded);
   const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
+  const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
     def,
     state,
     playerId: state.activePlayer,

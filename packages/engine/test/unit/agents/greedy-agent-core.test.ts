@@ -70,7 +70,7 @@ const choose = (def: GameDef, seed = 5n) => {
   const state = initialState(def, Number(seed), 2).state;
   const moves = legalMoves(def, state);
   const agent = new GreedyAgent();
-  return agent.chooseMove({
+  return agent.chooseDecision({
     def,
     state,
     playerId: asPlayerId(0),
@@ -177,14 +177,14 @@ describe('GreedyAgent core', () => {
 
     assert.throws(
       () =>
-        agent.chooseMove({
+        agent.chooseDecision({
           def,
           state,
           playerId: asPlayerId(0),
           legalMoves: [],
           rng: createRng(1n),
         }),
-      /GreedyAgent\.chooseMove called with empty legalMoves/,
+      /GreedyAgent\.chooseDecision called with empty legalMoves/,
     );
   });
 
@@ -232,14 +232,14 @@ describe('GreedyAgent core', () => {
     const state = initialState(def, 6, 2).state;
     const moves = legalMoves(def, state);
     const agent = new GreedyAgent();
-    const first = agent.chooseMove({
+    const first = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
       legalMoves: completeClassifiedMoves(moves, state.stateHash),
       rng: createRng(99n),
     });
-    const second = agent.chooseMove({
+    const second = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -260,7 +260,7 @@ describe('GreedyAgent core', () => {
     const rng = createRng(123n);
     const expected = pickRandom(moves, rng);
     const agent = new GreedyAgent();
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -281,7 +281,7 @@ describe('GreedyAgent core', () => {
     const moves = legalMoves(def, state);
     const rng = createRng(77n);
     const agent = new GreedyAgent();
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state,
       playerId: asPlayerId(0),
@@ -302,7 +302,7 @@ describe('GreedyAgent core', () => {
 
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
     const agent = new GreedyAgent();
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -345,8 +345,8 @@ describe('GreedyAgent core', () => {
       rng: createRng(77n),
     });
 
-    const first = agent.chooseMove(makeInput());
-    const second = agent.chooseMove(makeInput());
+    const first = agent.chooseDecision(makeInput());
+    const second = agent.chooseDecision(makeInput());
 
     assert.deepEqual(first, second);
   });
@@ -359,7 +359,7 @@ describe('GreedyAgent core', () => {
     const templateMove: Move = { actionId: asActionId('op1'), params: {} };
     // With completionsPerTemplate=5 we get 5 candidates, cap at 2
     const agent = new GreedyAgent({ maxMovesToEvaluate: 2 });
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -379,7 +379,7 @@ describe('GreedyAgent core', () => {
 
     const templateMove: Move = { actionId: asActionId('op-choose-n'), params: {} };
     const agent = new GreedyAgent({ completionsPerTemplate: 1 });
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -403,7 +403,7 @@ describe('GreedyAgent core', () => {
     const agent = new GreedyAgent();
 
     assert.throws(
-      () => agent.chooseMove({
+      () => agent.chooseDecision({
         def,
         state: stateStub,
         playerId: asPlayerId(0),
@@ -465,7 +465,7 @@ describe('GreedyAgent core', () => {
     const agent = new GreedyAgent();
 
     // Should not throw — should return the partially-completed stochastic move
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),
@@ -549,8 +549,8 @@ describe('GreedyAgent core', () => {
       rng: createRng(77n),
     });
 
-    const first = agent.chooseMove(makeInput());
-    const second = agent.chooseMove(makeInput());
+    const first = agent.chooseDecision(makeInput());
+    const second = agent.chooseDecision(makeInput());
 
     assert.deepEqual(first, second);
   });
@@ -609,7 +609,7 @@ describe('GreedyAgent core', () => {
     const simpleMove: Move = { actionId: asActionId('simple'), params: {} };
     const agent = new GreedyAgent();
 
-    const result = agent.chooseMove({
+    const result = agent.chooseDecision({
       def,
       state: stateStub,
       playerId: asPlayerId(0),

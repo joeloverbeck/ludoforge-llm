@@ -77,7 +77,7 @@ function advanceSeed6ToVcFreeRally() {
   let state = initialState(def, 6, 4).state;
   const openingAgent = new PolicyAgent();
   const openingLegalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-  const openingMove = openingAgent.chooseMove({
+  const openingMove = openingAgent.chooseDecision({
     def,
     state,
     playerId: state.activePlayer,
@@ -497,7 +497,7 @@ function advanceSeed6ToVcDecision() {
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
   const initial = initialState(def, 6, 4).state;
-  const openingChoice = new PolicyAgent().chooseMove({
+  const openingChoice = new PolicyAgent().chooseDecision({
     def,
     state: initial,
     playerId: initial.activePlayer,
@@ -526,7 +526,7 @@ function traceSeedDecision(seed: number, targetPly: number) {
 
   for (let ply = 0; ply <= targetPly; ply += 1) {
     const legalMoveCandidates = enumerateLegalMoves(def, state, undefined, runtime).moves;
-    const result = agents[Number(state.activePlayer)]!.chooseMove({
+    const result = agents[Number(state.activePlayer)]!.chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -959,7 +959,7 @@ describe('FITL policy agent integration', () => {
     const base = advanceSeed6ToVcDecision();
     const state = base.state;
     const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove({
+    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -1015,7 +1015,7 @@ describe('FITL policy agent integration', () => {
     );
 
     const agent = new PolicyAgent();
-    const selected = agent.chooseMove({
+    const selected = agent.chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -1071,7 +1071,7 @@ describe('FITL policy agent integration', () => {
     assert.equal(rngStatesEqual(previewState.rng, state.rng), true);
     assert.equal(observation.hiddenSamplingZones.length > 0, true);
 
-    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseMove(input);
+    const result = new PolicyAgent({ traceLevel: 'verbose' }).chooseDecision(input);
 
     assert.equal(result.agentDecision?.kind, 'policy');
     if (result.agentDecision?.kind !== 'policy') {
@@ -1234,7 +1234,7 @@ describe('FITL policy agent integration', () => {
     const guidedAgent = new PolicyAgent();
     const unguidedAgent = new PolicyAgent();
 
-    const guidedMove = guidedAgent.chooseMove({
+    const guidedMove = guidedAgent.chooseDecision({
       def: guided.def,
       state: guided.state,
       playerId: guided.state.activePlayer,
@@ -1242,7 +1242,7 @@ describe('FITL policy agent integration', () => {
       rng: createRng(12n),
       runtime: guided.runtime,
     });
-    const unguidedMove = unguidedAgent.chooseMove({
+    const unguidedMove = unguidedAgent.chooseDecision({
       def: unguidedDef,
       state: guided.state,
       playerId: guided.state.activePlayer,
@@ -1317,7 +1317,7 @@ describe('FITL policy agent integration', () => {
     const unguidedMoves = enumerateLegalMoves(unguidedDef, base.state, undefined, unguidedRuntime).moves;
     const agent = new PolicyAgent({ traceLevel: 'summary' });
 
-    const guidedResult = agent.chooseMove({
+    const guidedResult = agent.chooseDecision({
       def: guidedDef,
       state: base.state,
       playerId: base.state.activePlayer,
@@ -1325,7 +1325,7 @@ describe('FITL policy agent integration', () => {
       rng: createRng(12n),
       runtime: guidedRuntime,
     });
-    const unguidedResult = agent.chooseMove({
+    const unguidedResult = agent.chooseDecision({
       def: unguidedDef,
       state: base.state,
       playerId: base.state.activePlayer,
@@ -1405,7 +1405,7 @@ describe('FITL policy agent integration', () => {
     const guided = advanceSeed6ToVcFreeRally();
     const snapshot = structuredClone(guided.state);
 
-    void new PolicyAgent().chooseMove({
+    void new PolicyAgent().chooseDecision({
       def: guided.def,
       state: guided.state,
       playerId: guided.state.activePlayer,

@@ -16,7 +16,7 @@ import {
 } from '../../src/kernel/index.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-type PolicyDecision = Extract<ReturnType<PolicyAgent['chooseMove']>['agentDecision'], { kind: 'policy' }>;
+type PolicyDecision = Extract<ReturnType<PolicyAgent['chooseDecision']>['agentDecision'], { kind: 'policy' }>;
 type VerbosePolicyCandidate = NonNullable<NonNullable<PolicyDecision['candidates']>[number]>;
 
 interface ArvnDecisionTrace {
@@ -24,7 +24,7 @@ interface ArvnDecisionTrace {
   readonly ply: number;
   readonly state: GameState;
   readonly legalMoves: readonly ClassifiedMove[];
-  readonly result: ReturnType<PolicyAgent['chooseMove']>;
+  readonly result: ReturnType<PolicyAgent['chooseDecision']>;
 }
 
 interface Phase1Witness extends ArvnDecisionTrace {
@@ -70,7 +70,7 @@ function createFitlDef(phase1CompletionsPerAction?: number): GameDef {
   };
 }
 
-function requirePolicyDecision(result: ReturnType<PolicyAgent['chooseMove']>): PolicyDecision {
+function requirePolicyDecision(result: ReturnType<PolicyAgent['chooseDecision']>): PolicyDecision {
   assert.equal(result.agentDecision?.kind, 'policy');
   if (result.agentDecision?.kind !== 'policy') {
     assert.fail('expected policy decision trace');
@@ -78,7 +78,7 @@ function requirePolicyDecision(result: ReturnType<PolicyAgent['chooseMove']>): P
   return result.agentDecision;
 }
 
-function requireVerboseCandidates(result: ReturnType<PolicyAgent['chooseMove']>): readonly VerbosePolicyCandidate[] {
+function requireVerboseCandidates(result: ReturnType<PolicyAgent['chooseDecision']>): readonly VerbosePolicyCandidate[] {
   const decision = requirePolicyDecision(result);
   if (decision.candidates === undefined) {
     assert.fail('expected verbose policy candidates');
@@ -149,7 +149,7 @@ function traceArvnDecisionAtPly(
 
   for (let ply = 0; ply <= targetPly; ply += 1) {
     const legalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-    const result = agents[Number(state.activePlayer)]!.chooseMove({
+    const result = agents[Number(state.activePlayer)]!.chooseDecision({
       def,
       state,
       playerId: state.activePlayer,
@@ -176,7 +176,7 @@ function findArvnPhase1Witness(def: GameDef): Phase1Witness {
 
     for (let ply = 0; ply <= PHASE1_WITNESS_MAX_PLY; ply += 1) {
       const legalMoves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-      const result = agents[Number(state.activePlayer)]!.chooseMove({
+      const result = agents[Number(state.activePlayer)]!.chooseDecision({
         def,
         state,
         playerId: state.activePlayer,
@@ -265,7 +265,7 @@ function findComparableArvnPhase1Witness(
   );
 }
 
-function canonicalPhase1Snapshot(result: ReturnType<PolicyAgent['chooseMove']>) {
+function canonicalPhase1Snapshot(result: ReturnType<PolicyAgent['chooseDecision']>) {
   const decision = requirePolicyDecision(result);
   const candidates = requireVerboseCandidates(result).map((candidate) => ({
     actionId: candidate.actionId,

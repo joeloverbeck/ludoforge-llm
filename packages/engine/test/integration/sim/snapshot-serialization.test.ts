@@ -81,14 +81,14 @@ describe('snapshot serialization round-trip', () => {
     const trace = runGame(def, 42, agents, 20, 2, { snapshotDepth: 'standard' });
 
     // Trace must have moves with snapshots
-    assert.ok(trace.moves.length > 0, 'trace should have at least one move');
-    for (const moveLog of trace.moves) {
+    assert.ok(trace.decisions.length > 0, 'trace should have at least one move');
+    for (const moveLog of trace.decisions) {
       assert.notEqual(moveLog.snapshot, undefined, 'every move should have a snapshot at standard depth');
     }
 
     // Enrich trace
     const enriched = enrichTrace(trace, def);
-    for (const enrichedMove of enriched.moves) {
+    for (const enrichedMove of enriched.decisions) {
       assert.notEqual(enrichedMove.snapshot, undefined, 'enriched moves should retain snapshot via spread');
     }
 
@@ -97,10 +97,10 @@ describe('snapshot serialization round-trip', () => {
     try {
       writeEnrichedTrace(enriched, tmpPath);
       const raw = readFileSync(tmpPath, 'utf-8');
-      const parsed = JSON.parse(raw) as { readonly moves: readonly Record<string, unknown>[] };
+      const parsed = JSON.parse(raw) as { readonly decisions: readonly Record<string, unknown>[] };
 
-      assert.ok(parsed.moves.length > 0, 'parsed trace should have moves');
-      for (const move of parsed.moves) {
+      assert.ok(parsed.decisions.length > 0, 'parsed trace should have moves');
+      for (const move of parsed.decisions) {
         const snapshot = move['snapshot'] as Record<string, unknown> | undefined;
         assert.notEqual(snapshot, undefined, 'serialized move should retain snapshot field');
         assert.equal(typeof snapshot!['turnCount'], 'number', 'turnCount should be a number');
@@ -119,7 +119,7 @@ describe('snapshot serialization round-trip', () => {
     const agents = [new RandomAgent(), new RandomAgent()];
 
     const trace = runGame(def, 99, agents, 20, 2, { snapshotDepth: 'standard' });
-    const firstMove = trace.moves[0];
+    const firstMove = trace.decisions[0];
     assert.ok(firstMove !== undefined);
 
     const snapshot = firstMove.snapshot as StandardDecisionPointSnapshot;
@@ -143,7 +143,7 @@ describe('snapshot serialization round-trip', () => {
     const agents = [new RandomAgent(), new RandomAgent()];
 
     const trace = runGame(def, 77, agents, 20, 2, { snapshotDepth: 'verbose' });
-    for (const moveLog of trace.moves) {
+    for (const moveLog of trace.decisions) {
       assert.ok(moveLog.snapshot !== undefined);
       // JSON.stringify would throw on BigInt — if this succeeds, no BigInt present
       const serialized = JSON.stringify(moveLog.snapshot);
@@ -177,21 +177,21 @@ describe('snapshot property tests', () => {
     assert.equal(hashAfter, hashBefore, 'state hash must not change after snapshot extraction');
   });
 
-  it('snapshotDepth "none" produces MoveLog entries where snapshot is strictly undefined', () => {
+  it('snapshotDepth "none" produces DecisionLog entries where snapshot is strictly undefined', () => {
     const def = makeDef();
     const agents = [new RandomAgent(), new RandomAgent()];
 
     // Default options (no snapshotDepth = 'none')
     const traceDefault = runGame(def, 55, agents, 20, 2);
-    assert.ok(traceDefault.moves.length > 0);
-    for (const moveLog of traceDefault.moves) {
+    assert.ok(traceDefault.decisions.length > 0);
+    for (const moveLog of traceDefault.decisions) {
       assert.equal(moveLog.snapshot, undefined, 'default (none) should have no snapshot');
       assert.ok(!('snapshot' in moveLog), 'snapshot key should be absent, not just undefined');
     }
 
     // Explicit 'none'
     const traceExplicit = runGame(def, 55, agents, 20, 2, { snapshotDepth: 'none' });
-    for (const moveLog of traceExplicit.moves) {
+    for (const moveLog of traceExplicit.decisions) {
       assert.equal(moveLog.snapshot, undefined, 'explicit none should have no snapshot');
       assert.ok(!('snapshot' in moveLog), 'snapshot key should be absent with explicit none');
     }
@@ -212,9 +212,9 @@ describe('FITL snapshot golden test', () => {
 
     const trace = runGame(def, 2024, agents, 10, seatCount, { snapshotDepth: 'standard' }, runtime);
 
-    assert.ok(trace.moves.length > 0, 'FITL trace should have at least one move');
+    assert.ok(trace.decisions.length > 0, 'FITL trace should have at least one move');
 
-    const firstSnapshot = trace.moves[0]!.snapshot as StandardDecisionPointSnapshot;
+    const firstSnapshot = trace.decisions[0]!.snapshot as StandardDecisionPointSnapshot;
     assert.ok(firstSnapshot !== undefined, 'first move should have a snapshot');
 
     // FITL has 4 seats: vc, nva, us, arvn — check margins exist

@@ -41,7 +41,7 @@ describe('FITL former crash/hang seeds stay bounded', () => {
       assert.equal(
         ALLOWED_STOP_REASONS.has(trace.stopReason),
         true,
-        `seed ${seed}: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.moves.length} moves`,
+        `seed ${seed}: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.decisions.length} moves`,
       );
     });
   }

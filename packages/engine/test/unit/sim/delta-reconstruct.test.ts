@@ -2,9 +2,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { asActionId, asPhaseId, asPlayerId } from '../../../src/kernel/index.js';
+import { asActionId, asPhaseId, asPlayerId, asSeatId, asTurnId } from '../../../src/kernel/index.js';
 import { computeDeltas, reconstructPerPlayerVarTrajectory } from '../../../src/sim/index.js';
-import type { GameState, MoveLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
+import type { CompoundTurnSummary, GameState, DecisionLog, StateDelta, VariableValue } from '../../../src/kernel/index.js';
 
 type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
 
@@ -31,18 +31,36 @@ const makeState = (perPlayerVars: PerPlayerVars, overrides: Partial<GameState> =
   ...overrides,
 });
 
-const makeMoveLog = (index: number, player: number, deltas: readonly StateDelta[]): MoveLog => ({
+const makeMoveLog = (index: number, player: number, deltas: readonly StateDelta[]): DecisionLog => ({
   stateHash: BigInt(index + 1),
-  player: asPlayerId(player),
-  move: {
+  seatId: asSeatId(String(player)),
+  playerId: asPlayerId(player),
+  decisionContextKind: 'actionSelection',
+  decisionKey: null,
+  decision: {
+    kind: 'actionSelection',
     actionId: asActionId(`action-${index}`),
-    params: {},
+    move: {
+      actionId: asActionId(`action-${index}`),
+      params: {},
+    },
   },
-  legalMoveCount: 1,
+  turnId: asTurnId(index + 1),
+  turnRetired: true,
+  legalActionCount: 1,
   deltas,
   triggerFirings: [],
   warnings: [],
 });
+
+const makeCompoundTurns = (decisions: readonly DecisionLog[]): readonly CompoundTurnSummary[] =>
+  decisions.map((decision, index) => ({
+    turnId: decision.turnId,
+    seatId: decision.seatId,
+    decisionIndexRange: { start: index, end: index + 1 },
+    microturnCount: 1,
+    turnStopReason: index === decisions.length - 1 ? 'terminal' : 'retired',
+  }));
 
 describe('reconstructPerPlayerVarTrajectory', () => {
   it('reconstructs the initial snapshot and replays forward across multiple players and variables', () => {
@@ -75,7 +93,7 @@ describe('reconstructPerPlayerVarTrajectory', () => {
       ),
     );
 
-    const trajectory = reconstructPerPlayerVarTrajectory(finalSnapshot, moves);
+    const trajectory = reconstructPerPlayerVarTrajectory(finalSnapshot, moves, makeCompoundTurns(moves));
 
     assert.deepEqual(trajectory, snapshots);
   });
@@ -96,7 +114,7 @@ describe('reconstructPerPlayerVarTrajectory', () => {
       { path: 'perPlayerVars.0.coins', before: 1, after: 3 },
     ]);
 
-    const trajectory = reconstructPerPlayerVarTrajectory(final, [move]);
+    const trajectory = reconstructPerPlayerVarTrajectory(final, [move], makeCompoundTurns([move]));
 
     assert.deepEqual(trajectory, [initial, final]);
   });
@@ -107,7 +125,7 @@ describe('reconstructPerPlayerVarTrajectory', () => {
       '1': { coins: 4, shield: false },
     };
 
-    const trajectory = reconstructPerPlayerVarTrajectory(finalPerPlayerVars, []);
+    const trajectory = reconstructPerPlayerVarTrajectory(finalPerPlayerVars, [], []);
 
     assert.deepEqual(trajectory, [finalPerPlayerVars]);
   });
@@ -131,7 +149,7 @@ describe('reconstructPerPlayerVarTrajectory', () => {
       makeMoveLog(0, 0, computeDeltas(makeState(initialSnapshot), makeState(finalPerPlayerVars))),
     ];
 
-    const trajectory = reconstructPerPlayerVarTrajectory(finalPerPlayerVars, moves) as Array<
+    const trajectory = reconstructPerPlayerVarTrajectory(finalPerPlayerVars, moves, makeCompoundTurns(moves)) as Array<
       Record<number, Record<string, VariableValue>>
     >;
     const firstSnapshot = trajectory[0];

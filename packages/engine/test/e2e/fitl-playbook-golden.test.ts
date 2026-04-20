@@ -466,7 +466,7 @@ const engineerPlaybookDeck = (state: GameState): GameState => {
 // Move 3: ARVN Train+Govern (Op+SA)
 const TURN_1: PlaybookTurn = {
   label: 'Turn 1 — Burning Bonze',
-  moves: [
+  decisions: [
     {
       kind: 'simple',
       label: 'VC shaded Burning Bonze',
@@ -620,7 +620,7 @@ const TURN_1: PlaybookTurn = {
 //   - Cost: 0
 const TURN_2: PlaybookTurn = {
   label: 'Turn 2 — Trucks',
-  moves: [
+  decisions: [
     {
       kind: 'resolved',
       label: 'NVA Rally (Op Only)',
@@ -797,7 +797,7 @@ const TURN_2: PlaybookTurn = {
 //   - Tax shifts: activeOpposition → passiveOpposition in all 3 spaces
 const TURN_3: PlaybookTurn = {
   label: 'Turn 3 — Green Berets',
-  moves: [
+  decisions: [
     {
       kind: 'resolved',
       label: 'ARVN unshaded Green Berets (place irregulars in Binh Dinh)',
@@ -1006,7 +1006,7 @@ const TURN_3: PlaybookTurn = {
 //     Quang Tri + Kien Phong + Kien Giang March, then Southern Laos + Kien Giang Infiltrate
 const TURN_4: PlaybookTurn = {
   label: 'Turn 4 — Gulf of Tonkin',
-  moves: [
+  decisions: [
     {
       kind: 'resolved',
       label: 'US unshaded Gulf of Tonkin',
@@ -1308,7 +1308,7 @@ const TURN_4: PlaybookTurn = {
 // Move 2: ARVN passes (+3 arvnResources → 24 → 27)
 const TURN_5: PlaybookTurn = {
   label: 'Turn 5 — Brinks Hotel',
-  moves: [
+  decisions: [
     {
       kind: 'resolved',
       label: 'VC shaded Brinks Hotel',
@@ -1525,7 +1525,7 @@ const createTurn6ArvnDecisionOverrides = (): readonly DecisionOverrideRule[] => 
 
 const TURN_6: PlaybookTurn = {
   label: 'Turn 6 — Henry Cabot Lodge',
-  moves: [
+  decisions: [
     {
       kind: 'resolved',
       label: 'ARVN Sweep + Raid (raid before)',
@@ -1782,7 +1782,7 @@ const TURN_6: PlaybookTurn = {
 //     - Removes 1 US troop to casualties-US:none (US non-base first)
 const TURN_7: PlaybookTurn = {
   label: 'Turn 7 — Booby Traps',
-  moves: [
+  decisions: [
     {
       kind: 'simple',
       label: 'VC shaded Booby Traps',
@@ -2036,7 +2036,7 @@ const TURN_7: PlaybookTurn = {
 // Phase 6.6 — Reset: Auto-effects (flip guerrillas, mark eligible, advance cards)
 const TURN_8: PlaybookTurn = {
   label: 'Turn 8 — Coup! Nguyen Khanh',
-  moves: [
+  decisions: [
     // -----------------------------------------------------------------------
     // Phase 6.1 — Victory Check
     // -----------------------------------------------------------------------

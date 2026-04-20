@@ -146,7 +146,7 @@ describe('evaluator integration', () => {
     const trace = runGame(def, 13, [rngDrivenAgent, rngDrivenAgent], 5);
     const evaluation = evaluateTrace(trace);
 
-    assert.equal(trace.moves.length, 0);
+    assert.equal(trace.decisions.length, 0);
     assert.equal(trace.stopReason, 'noLegalMoves');
     assert.deepEqual(evaluation.degeneracyFlags, [DegeneracyFlag.NO_LEGAL_MOVES]);
 

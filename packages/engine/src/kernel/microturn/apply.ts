@@ -14,6 +14,7 @@ import { applyMove } from '../apply-move.js';
 import { advanceChooseN } from '../advance-choose-n.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
+import { deepEqual } from '../deep-equal.js';
 import { markOffered, withPendingFreeOperationGrants } from '../grant-lifecycle.js';
 import { resolveMoveDecisionSequence } from '../move-decision-sequence.js';
 import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
@@ -102,6 +103,25 @@ const optionalLogExtras = (
   ...(result.selectorTrace === undefined ? {} : { selectorTrace: result.selectorTrace }),
 });
 
+const isTemplateActionSelectionMatch = (
+  candidate: Extract<Decision, { readonly kind: 'actionSelection' }>,
+  decision: Extract<Decision, { readonly kind: 'actionSelection' }>,
+): boolean => {
+  if (
+    candidate.actionId !== decision.actionId
+    || candidate.move === undefined
+    || decision.move === undefined
+    || candidate.move.freeOperation !== decision.move.freeOperation
+    || candidate.move.actionClass !== decision.move.actionClass
+  ) {
+    return false;
+  }
+
+  return Object.entries(candidate.move.params).every(([key, value]) =>
+    deepEqual(decision.move?.params[key], value),
+  );
+};
+
 const createDecisionLog = (
   state: GameState,
   microturn: ReturnType<typeof publishMicroturn>,
@@ -131,20 +151,23 @@ const isMatchingDecision = (candidate: Decision, decision: Decision): boolean =>
   }
   if (candidate.kind === 'actionSelection' && decision.kind === 'actionSelection') {
     return candidate.actionId === decision.actionId
-      && JSON.stringify(candidate.move ?? null) === JSON.stringify(decision.move ?? null);
+      && (
+        deepEqual(candidate.move ?? null, decision.move ?? null)
+        || isTemplateActionSelectionMatch(candidate, decision)
+      );
   }
   if (candidate.kind === 'chooseOne' && decision.kind === 'chooseOne') {
     return candidate.decisionKey === decision.decisionKey
-      && JSON.stringify(candidate.value) === JSON.stringify(decision.value);
+      && deepEqual(candidate.value, decision.value);
   }
   if (candidate.kind === 'chooseNStep' && decision.kind === 'chooseNStep') {
     return candidate.decisionKey === decision.decisionKey
       && candidate.command === decision.command
-      && JSON.stringify(candidate.value ?? null) === JSON.stringify(decision.value ?? null);
+      && deepEqual(candidate.value ?? null, decision.value ?? null);
   }
   if (candidate.kind === 'stochasticResolve' && decision.kind === 'stochasticResolve') {
     return candidate.decisionKey === decision.decisionKey
-      && JSON.stringify(candidate.value) === JSON.stringify(decision.value);
+      && deepEqual(candidate.value, decision.value);
   }
   if (candidate.kind === 'outcomeGrantResolve' && decision.kind === 'outcomeGrantResolve') {
     return candidate.grantId === decision.grantId;

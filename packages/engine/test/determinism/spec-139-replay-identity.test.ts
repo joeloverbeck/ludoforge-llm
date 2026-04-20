@@ -137,7 +137,7 @@ describe('Spec 139 replay identity', () => {
 
   it('does not use certificate fallback on the representative FITL passing seed while template completion still occurs', () => {
     const trace = runFitlPolicyRepresentative(FITL_FALLBACK_INERT_REPRESENTATIVE_SEED);
-    const decisions = trace.moves.map((move) => move.agentDecision);
+    const decisions = trace.decisions.map((move) => move.agentDecision);
     const templatePreparationCount = decisions
       .flatMap(policyMovePreparations)
       .filter((entry) => entry.templateCompletionAttempts !== undefined)
@@ -156,9 +156,9 @@ describe('Spec 139 replay identity', () => {
 
   it('does not use certificate fallback on a representative Texas policy run', () => {
     const trace = runTexasPolicyRepresentative(TEXAS_POLICY_REPRESENTATIVE_SEED);
-    const decisions = trace.moves.map((move) => move.agentDecision);
+    const decisions = trace.decisions.map((move) => move.agentDecision);
 
-    assert.equal(trace.moves.length > 0, true, 'expected Texas representative run to emit moves');
+    assert.equal(trace.decisions.length > 0, true, 'expected Texas representative run to emit moves');
     assert.equal(
       countCertificateFallbackUses(decisions),
       0,

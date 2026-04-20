@@ -69,7 +69,7 @@ describe('compiled effect verification integration', () => {
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 3, 2, {
       kernel: { verifyCompiledEffects: true },
     });
-    assert.equal(trace.moves.length, 3);
+    assert.equal(trace.decisions.length, 3);
     const finalScore = trace.finalState.globalVars.score;
     assert.ok(typeof finalScore === 'number');
     assert.ok(finalScore >= 4);
@@ -82,6 +82,6 @@ describe('compiled effect verification integration', () => {
       kernel: { verifyCompiledEffects: true },
     });
 
-    assert.ok(trace.moves.length > 0);
+    assert.ok(trace.decisions.length > 0);
   });
 });

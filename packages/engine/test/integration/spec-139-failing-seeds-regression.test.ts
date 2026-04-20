@@ -30,7 +30,7 @@ describe('Spec 139 failing seeds regression', () => {
     const trace = runGame(def, 123, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
 
     assert.ok(ALLOWED_STOP_REASONS.has(trace.stopReason));
-    assert.ok(trace.moves.length > 0);
+    assert.ok(trace.decisions.length > 0);
   });
 
   for (const seed of [1002, 1010] as const) {
@@ -39,7 +39,7 @@ describe('Spec 139 failing seeds regression', () => {
       const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
 
       assert.ok(ALLOWED_STOP_REASONS.has(trace.stopReason));
-      assert.ok(trace.moves.length > 0);
+      assert.ok(trace.decisions.length > 0);
     });
   }
 });

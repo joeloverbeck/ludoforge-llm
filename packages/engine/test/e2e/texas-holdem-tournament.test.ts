@@ -97,8 +97,12 @@ const replayTrace = (
   replayScript({
     def,
     initialState: initialState(def, trace.seed, playerCount).state,
-    script: trace.moves.map((entry) => ({
-      move: entry.move,
+    script: trace.decisions.map((entry) => ({
+      move: (() => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      })(),
       expectedStateHash: entry.stateHash,
     })),
     keyVars: ['pot', 'blindLevel', 'handsPlayed', 'activePlayers'],
@@ -125,7 +129,7 @@ const formatRunawayDiagnostics = (trace: GameTrace): string =>
   JSON.stringify({
     stopReason: trace.stopReason,
     turnsCount: trace.turnsCount,
-    moves: trace.moves.length,
+    moves: trace.decisions.length,
     currentPhase: trace.finalState.currentPhase,
     activePlayers: Number(trace.finalState.globalVars.activePlayers ?? -1),
     handsPlayed: Number(trace.finalState.globalVars.handsPlayed ?? -1),
@@ -202,8 +206,16 @@ describe('texas hold\'em tournament e2e', () => {
     const second = loadTrace(def, 77, agentsB, playerCount);
 
     assert.deepEqual(
-      first.moves.map((entry) => entry.move),
-      second.moves.map((entry) => entry.move),
+      first.decisions.map((entry) => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      }),
+      second.decisions.map((entry) => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      }),
     );
     assert.equal(first.finalState.stateHash, second.finalState.stateHash);
     assert.deepEqual(serializeTrace(first), serializeTrace(second));

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: No — runner worker bridge only; but affects engine-exposed types through runner consumers
-**Deps**: `tickets/140MICRODECPRO-006.md`, `archive/tickets/140MICRODECPRO-002.md`
+**Deps**: `archive/tickets/140MICRODECPRO-006.md`, `archive/tickets/140MICRODECPRO-002.md`
 
 ## Problem
 

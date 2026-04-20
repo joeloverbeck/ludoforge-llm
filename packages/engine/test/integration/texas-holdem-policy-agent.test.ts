@@ -48,14 +48,14 @@ describe('Texas Hold\'em policy agent integration', () => {
       rng: createRng(23n),
       runtime,
     });
-    const viability = probeMoveViability(def, state, selected.move, runtime);
+    const viability = probeMoveViability(def, state, selected.move.move, runtime);
 
     assert.equal(viability.viable, true);
     if (!viability.viable) {
       assert.fail('expected selected Texas move to remain viable');
     }
     assert.equal(viability.complete, true);
-    assert.doesNotThrow(() => applyMove(def, state, selected.move, undefined, runtime));
+    assert.doesNotThrow(() => applyMove(def, state, selected.move.move, undefined, runtime));
     assert.equal(selected.agentDecision?.kind, 'policy');
     if (selected.agentDecision?.kind !== 'policy') {
       assert.fail('expected policy trace metadata');
@@ -105,7 +105,7 @@ describe('Texas Hold\'em policy agent integration', () => {
       runtime,
     });
 
-    assert.deepEqual(right.move, left.move);
+    assert.deepEqual(right.move.move, left.move.move);
     assert.equal(left.agentDecision?.kind, 'policy');
     assert.equal(right.agentDecision?.kind, 'policy');
     if (left.agentDecision?.kind !== 'policy' || right.agentDecision?.kind !== 'policy') {
@@ -159,8 +159,8 @@ describe('Texas Hold\'em policy agent integration', () => {
 
     const trace = runGame(def, 31, agents, 12, 4);
 
-    assert.equal(trace.moves.length > 0, true);
-    for (const move of trace.moves) {
+    assert.equal(trace.decisions.length > 0, true);
+    for (const move of trace.decisions) {
       assert.equal(move.agentDecision?.kind, 'policy');
       if (move.agentDecision?.kind !== 'policy') {
         assert.fail('expected policy trace metadata');
@@ -185,8 +185,10 @@ describe('Texas Hold\'em policy agent integration', () => {
         4,
       );
 
-      for (const move of trace.moves) {
-        counts.set(String(move.move.actionId), (counts.get(String(move.move.actionId)) ?? 0) + 1);
+      for (const move of trace.decisions) {
+        assert.equal(move.decision.kind, 'actionSelection');
+        assert.ok(move.decision.move);
+        counts.set(String(move.decision.move.actionId), (counts.get(String(move.decision.move.actionId)) ?? 0) + 1);
       }
     }
 

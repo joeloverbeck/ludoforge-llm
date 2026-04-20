@@ -9,9 +9,9 @@ import type { EnrichedGameTrace } from './enriched-trace-types.js';
 export const writeEnrichedTrace = (trace: EnrichedGameTrace, outputPath: string): void => {
   const serializable = {
     ...trace,
-    moves: trace.moves.map((move) => ({
-      ...move,
-      stateHash: `0x${move.stateHash.toString(16)}`,
+    decisions: trace.decisions.map((decision) => ({
+      ...decision,
+      stateHash: `0x${decision.stateHash.toString(16)}`,
     })),
     finalState: serializeGameState(trace.finalState),
   };

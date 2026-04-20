@@ -236,21 +236,40 @@ const validGameState = {
 const validGameTrace = {
   gameDefId: 'full-game',
   seed: 1234,
-  moves: [
+  decisions: [
     {
       stateHash: 43n,
-      player: 0,
-      move: { actionId: 'playCard', params: { amount: 1, target: 'deck:none', legal: true } },
-      legalMoveCount: 3,
+      seatId: '0',
+      playerId: 0,
+      decisionContextKind: 'actionSelection',
+      decisionKey: null,
+      decision: {
+        kind: 'actionSelection',
+        actionId: 'playCard',
+        move: { actionId: 'playCard', params: { amount: 1, target: 'deck:none', legal: true } },
+      },
+      turnId: 0,
+      turnRetired: true,
+      legalActionCount: 3,
       deltas: [{ path: 'globalVars.round', before: 1, after: 2 }],
       triggerFirings: [{ kind: 'fired', triggerId: 'onMainEnter', event: { type: 'turnStart' }, depth: 0 }],
       warnings: [],
+    },
+  ],
+  compoundTurns: [
+    {
+      turnId: 0,
+      seatId: '0',
+      decisionIndexRange: { start: 0, end: 0 },
+      microturnCount: 1,
+      turnStopReason: 'terminal',
     },
   ],
   finalState: validGameState,
   result: { type: 'draw' },
   turnsCount: 1,
   stopReason: 'terminal',
+  traceProtocolVersion: 'spec-140',
 } as const;
 
 const validTraceEval = {

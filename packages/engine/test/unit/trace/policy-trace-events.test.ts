@@ -302,7 +302,7 @@ describe('policy trace events', () => {
   it('threads policy agent decision metadata into simulator move logs', () => {
     const def = assertValidatedGameDef(createDef());
     const trace = runGame(def, 11, [new PolicyAgent(), new PolicyAgent()], 1);
-    const firstMove = trace.moves[0];
+    const firstMove = trace.decisions[0];
 
     assert.ok(firstMove);
     assert.equal(firstMove.agentDecision?.kind, 'policy');

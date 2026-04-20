@@ -35,8 +35,8 @@ describe('FITL seed 2057 regression', () => {
     assert.equal(
       ALLOWED_STOP_REASONS.has(trace.stopReason),
       true,
-      `seed 2057: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.moves.length} moves`,
+      `seed 2057: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.decisions.length} moves`,
     );
-    assert.equal(trace.moves.length > 0, true, 'seed 2057 should advance at least one move');
+    assert.equal(trace.decisions.length > 0, true, 'seed 2057 should advance at least one move');
   });
 });

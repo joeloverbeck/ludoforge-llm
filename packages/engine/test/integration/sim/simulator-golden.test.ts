@@ -73,8 +73,8 @@ describe('simulator golden trace stability', () => {
     const serialized = serializeTrace(trace);
 
     assert.deepEqual(
-      serialized.moves.map((move) => move.stateHash),
-      fixture.moves.map((move) => move.stateHash),
+      serialized.decisions.map((move) => move.stateHash),
+      fixture.decisions.map((move) => move.stateHash),
     );
     assert.deepEqual(serialized, fixture);
   });

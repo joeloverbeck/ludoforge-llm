@@ -1,10 +1,11 @@
 import {
-  applyTrustedMove,
+  advanceAutoresolvable,
+  applyDecision,
+  asPlayerId,
   createGameDefRuntime,
   createRng,
-  enumerateLegalMoves,
-  extractMoveContext,
   initialState,
+  publishMicroturn,
   terminalResult,
 } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
@@ -12,17 +13,19 @@ import { CHANCE_RNG_MIX } from '../kernel/microturn/constants.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
 import type {
   Agent,
+  DecisionLog,
   GameDefRuntime,
   GameTrace,
-  MoveLog,
   Rng,
   SimulationStopReason,
   TerminalResult,
   ValidatedGameDef,
 } from '../kernel/index.js';
 import { computeDeltas } from './delta.js';
+import { synthesizeCompoundTurnSummaries } from './compound-turns.js';
 import type { SimulationOptions } from './sim-options.js';
-import { extractDecisionPointSnapshot } from './snapshot.js';
+import { extractMicroturnSnapshot } from './snapshot.js';
+import { adaptLegacyAgentChooseMove } from './adapt-legacy-agent.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -48,6 +51,19 @@ const createAgentRngByPlayer = (seed: number, playerCount: number): readonly Rng
     (_, playerIndex) => createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX)),
   );
 
+const resolvePlayerIndexForSeat = (
+  def: ValidatedGameDef,
+  seatId: string,
+): number => {
+  const explicitIndex = (def.seats ?? []).findIndex((seat) => seat.id === seatId);
+  if (explicitIndex >= 0) {
+    return explicitIndex;
+  }
+
+  const parsed = Number(seatId);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : -1;
+};
+
 export const runGame = (
   def: ValidatedGameDef,
   seed: number,
@@ -65,10 +81,9 @@ export const runGame = (
   const kernelOptions = options?.kernel;
   const profiler = options?.profiler;
   const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
-  void chanceRng;
 
   // initialState receives the profiler so lifecycle events during init are captured.
-  // applyTrustedMove does NOT receive the profiler to avoid 30%+ deep instrumentation overhead.
+  // Simulator-side profiling remains opt-in; kernel execution still uses the existing bucket contract.
   const initOptions = profiler !== undefined
     ? (kernelOptions !== undefined ? { ...kernelOptions, profiler } : { profiler })
     : kernelOptions;
@@ -79,12 +94,20 @@ export const runGame = (
       `agents length must equal resolved player count ${state.playerCount}, received ${agents.length}`,
     );
   }
-  const moveLogs: MoveLog[] = [];
+  const decisionLogs: DecisionLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
   let stopReason: SimulationStopReason;
+  let currentChanceRng = chanceRng;
 
   while (true) {
+    const t0_auto = perfStart(profiler);
+    const autoResult = advanceAutoresolvable(validatedDef, state, currentChanceRng, resolvedRuntime);
+    perfEnd(profiler, 'simLegalMoves', t0_auto);
+    state = autoResult.state;
+    currentChanceRng = autoResult.rng;
+    decisionLogs.push(...autoResult.autoResolvedLogs);
+
     const t0_term = perfStart(profiler);
     const terminal = terminalResult(validatedDef, state, resolvedRuntime);
     perfEnd(profiler, 'simTerminalResult', t0_term);
@@ -94,45 +117,43 @@ export const runGame = (
       break;
     }
 
-    if (moveLogs.length >= maxTurns) {
+    if (state.turnCount >= maxTurns) {
       stopReason = 'maxTurns';
       break;
     }
 
-    const t0_legal = perfStart(profiler);
-    const legalMoveResult = enumerateLegalMoves(
-      validatedDef,
-      state,
-      profiler === undefined ? undefined : { profiler },
-      resolvedRuntime,
-    );
-    perfEnd(profiler, 'simLegalMoves', t0_legal);
-    if (legalMoveResult.moves.length === 0) {
-      stopReason = 'noLegalMoves';
-      break;
+    let microturn;
+    try {
+      microturn = publishMicroturn(validatedDef, state, resolvedRuntime);
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('no simple actionSelection moves are currently bridgeable')) {
+        stopReason = 'noLegalMoves';
+        break;
+      }
+      throw error;
     }
 
-    const player = state.activePlayer;
-    const agent = agents[player];
-    const agentRng = agentRngByPlayer[player];
-    if (agent === undefined || agentRng === undefined) {
-      throw new Error(`missing agent or agent RNG for player ${String(player)}`);
+    if (microturn.seatId === '__chance' || microturn.seatId === '__kernel') {
+      throw new Error(`Expected player microturn after auto-resolution, received ${microturn.seatId}`);
     }
 
-    let selected;
+    const player = resolvePlayerIndexForSeat(validatedDef, microturn.seatId);
+    const agent = player < 0 ? undefined : agents[player];
+    const agentRng = player < 0 ? undefined : agentRngByPlayer[player];
+    if (agent === undefined || agentRng === undefined || player < 0) {
+      throw new Error(`missing agent or agent RNG for player seat ${String(microturn.seatId)}`);
+    }
+
     const snapshot = snapshotDepth === 'none'
       ? undefined
-      : extractDecisionPointSnapshot(validatedDef, state, resolvedRuntime, snapshotDepth);
+      : extractMicroturnSnapshot(validatedDef, state, microturn, resolvedRuntime, snapshotDepth);
+    let selected;
     const t0_agent = perfStart(profiler);
     try {
-      selected = agent.chooseMove({
+      selected = adaptLegacyAgentChooseMove(agent, {
         def: validatedDef,
         state,
-        playerId: player,
-        legalMoves: legalMoveResult.moves,
-        ...(legalMoveResult.certificateIndex === undefined
-          ? {}
-          : { certificateIndex: legalMoveResult.certificateIndex }),
+        microturn,
         rng: agentRng,
         runtime: resolvedRuntime,
       });
@@ -144,9 +165,8 @@ export const runGame = (
     agentRngByPlayer[player] = selected.rng;
 
     const preState = state;
-    const moveContext = extractMoveContext(selected.move.move);
     const t0_apply = perfStart(profiler);
-    const applied = applyTrustedMove(validatedDef, state, selected.move, kernelOptions, resolvedRuntime);
+    const applied = applyDecision(validatedDef, state, selected.decision, kernelOptions, resolvedRuntime);
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
@@ -154,32 +174,25 @@ export const runGame = (
     const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);
     perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
-    moveLogs.push({
-      stateHash: state.stateHash,
-      player,
-      move: selected.move.move,
-      legalMoveCount: legalMoveResult.moves.length,
+    decisionLogs.push({
+      ...applied.log,
+      playerId: asPlayerId(player),
       deltas,
-      triggerFirings: applied.triggerFirings,
-      warnings: applied.warnings,
-      ...(applied.effectTrace !== undefined ? { effectTrace: applied.effectTrace } : {}),
-      ...(applied.conditionTrace !== undefined ? { conditionTrace: applied.conditionTrace } : {}),
-      ...(applied.decisionTrace !== undefined ? { decisionTrace: applied.decisionTrace } : {}),
-      ...(applied.selectorTrace !== undefined ? { selectorTrace: applied.selectorTrace } : {}),
-      ...(moveContext !== undefined ? { moveContext } : {}),
-      ...(selected.agentDecision !== undefined ? { agentDecision: selected.agentDecision } : {}),
-      ...(snapshot !== undefined ? { snapshot } : {}),
+      ...(snapshot === undefined ? {} : { snapshot }),
+      ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
     });
   }
 
   return {
     gameDefId: validatedDef.metadata.id,
     seed,
-    moves: moveLogs,
+    decisions: decisionLogs,
+    compoundTurns: synthesizeCompoundTurnSummaries(decisionLogs, stopReason),
     finalState: state,
     result,
     turnsCount: state.turnCount,
     stopReason,
+    traceProtocolVersion: 'spec-140',
   };
 };
 

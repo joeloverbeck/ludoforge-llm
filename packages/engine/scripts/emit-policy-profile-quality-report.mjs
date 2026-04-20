@@ -56,7 +56,7 @@ export function buildPolicyProfileQualityAnnotations(records) {
     .filter((record) => record.passed === false)
     .map(
       (record) =>
-        `::warning file=${record.file}::POLICY_PROFILE_QUALITY_REGRESSION variant=${record.variantId} seed=${record.seed} stopReason=${record.stopReason} moves=${record.moves}`,
+        `::warning file=${record.file}::POLICY_PROFILE_QUALITY_REGRESSION variant=${record.variantId} seed=${record.seed} stopReason=${record.stopReason} decisions=${record.decisions}`,
     );
 }
 
@@ -82,7 +82,7 @@ function formatFailureNotes(failures) {
   return failures
     .map(
       (failure) =>
-        `seed ${failure.seed} did not converge (stopReason=${failure.stopReason}, moves=${failure.moves})`,
+        `seed ${failure.seed} did not converge (stopReason=${failure.stopReason}, decisions=${failure.decisions})`,
     )
     .join('; ');
 }

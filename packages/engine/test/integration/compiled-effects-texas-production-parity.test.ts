@@ -66,8 +66,8 @@ describe('compiled Texas production parity', () => {
         `compiled/interpreted Texas parity should hold for seed ${seed}`,
       );
       assert.equal(
-        compiledTrace.moves.length,
-        interpretedTrace.moves.length,
+        compiledTrace.decisions.length,
+        interpretedTrace.decisions.length,
         `compiled/interpreted Texas move counts should match for seed ${seed}`,
       );
       assert.ok(
@@ -102,6 +102,6 @@ describe('compiled Texas production parity', () => {
       createGameDefRuntime(TEXAS_DEF),
     );
 
-    assert.equal(compiledTrace.finalState.stateHash, 11679070811817458911n);
+    assert.equal(compiledTrace.finalState.stateHash, 5325836457645012576n);
   });
 });

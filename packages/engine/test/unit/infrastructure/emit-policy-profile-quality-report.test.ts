@@ -11,7 +11,7 @@ type PolicyProfileQualityRecord = {
   readonly seed: number;
   readonly passed: boolean;
   readonly stopReason: string;
-  readonly moves: number;
+  readonly decisions: number;
 };
 
 type ReportModule = {
@@ -46,7 +46,7 @@ const SAMPLE_REPORT = [
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
-    moves: 288,
+    decisions: 288,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts',
@@ -54,7 +54,7 @@ const SAMPLE_REPORT = [
     seed: 1049,
     passed: true,
     stopReason: 'terminal',
-    moves: 291,
+    decisions: 291,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
@@ -62,7 +62,7 @@ const SAMPLE_REPORT = [
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
-    moves: 289,
+    decisions: 289,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
@@ -70,7 +70,7 @@ const SAMPLE_REPORT = [
     seed: 1049,
     passed: false,
     stopReason: 'maxTurns',
-    moves: 300,
+    decisions: 300,
   },
 ] satisfies PolicyProfileQualityRecord[];
 
@@ -81,7 +81,7 @@ const BASELINE_REPORT = [
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
-    moves: 287,
+    decisions: 287,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts',
@@ -89,7 +89,7 @@ const BASELINE_REPORT = [
     seed: 1049,
     passed: true,
     stopReason: 'terminal',
-    moves: 290,
+    decisions: 290,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
@@ -97,7 +97,7 @@ const BASELINE_REPORT = [
     seed: 1020,
     passed: true,
     stopReason: 'terminal',
-    moves: 285,
+    decisions: 285,
   },
   {
     file: '/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts',
@@ -105,7 +105,7 @@ const BASELINE_REPORT = [
     seed: 1049,
     passed: true,
     stopReason: 'terminal',
-    moves: 292,
+    decisions: 292,
   },
 ] satisfies PolicyProfileQualityRecord[];
 
@@ -124,7 +124,7 @@ describe('emit-policy-profile-quality-report script', () => {
     const annotations = buildPolicyProfileQualityAnnotations(SAMPLE_REPORT);
 
     assert.deepEqual(annotations, [
-      '::warning file=/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts::POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-evolved seed=1049 stopReason=maxTurns moves=300',
+      '::warning file=/workspace/packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts::POLICY_PROFILE_QUALITY_REGRESSION variant=arvn-evolved seed=1049 stopReason=maxTurns decisions=300',
     ]);
   });
 
@@ -137,7 +137,7 @@ describe('emit-policy-profile-quality-report script', () => {
     assert.match(comment, /\| all-baselines \| 2\/2 -> 2\/2 \| {2}\|/u);
     assert.match(
       comment,
-      /\| arvn-evolved \| 2\/2 -> 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, moves=300\) \|/u,
+      /\| arvn-evolved \| 2\/2 -> 1\/2 \| seed 1049 did not converge \(stopReason=maxTurns, decisions=300\) \|/u,
     );
     assert.match(comment, /Determinism corpus is the blocking gate\./u);
   });

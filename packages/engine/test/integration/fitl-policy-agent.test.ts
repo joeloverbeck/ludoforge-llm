@@ -1170,8 +1170,8 @@ describe('FITL policy agent integration', () => {
 
     const trace = runGame(def, 11, agents, 5, 4);
 
-    assert.equal(trace.moves.length > 0, true);
-    for (const move of trace.moves) {
+    assert.equal(trace.decisions.length > 0, true);
+    for (const move of trace.decisions) {
       assert.equal(move.agentDecision?.kind, 'policy');
       if (move.agentDecision?.kind !== 'policy') {
         assert.fail('expected policy trace metadata');
@@ -1193,10 +1193,10 @@ describe('FITL policy agent integration', () => {
 
     const trace = runGame(def, 17, agents, 5, 4);
 
-    assert.equal(trace.moves.length > 0, true);
+    assert.equal(trace.decisions.length > 0, true);
     // Post-spec-132: 'agentStuck' is no longer a representable SimulationStopReason.
     assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
-    for (const move of trace.moves) {
+    for (const move of trace.decisions) {
       assert.equal(move.agentDecision?.kind, 'policy');
       if (move.agentDecision?.kind !== 'policy') {
         assert.fail('expected policy trace metadata');
@@ -1213,9 +1213,9 @@ describe('FITL policy agent integration', () => {
 
     const trace = runGame(def, 1041, agents, 20, 4, { skipDeltas: true }, runtime);
 
-    assert.equal(trace.moves.length, 20);
+    assert.equal(trace.decisions.length, 20);
     assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
-    const fallbackMoves = trace.moves.filter(
+    const fallbackMoves = trace.decisions.filter(
       (move) => move.agentDecision?.kind === 'policy' && move.agentDecision.emergencyFallback === true,
     );
     assert.equal(fallbackMoves.length, 0);
@@ -1427,9 +1427,9 @@ describe('FITL policy agent integration', () => {
       const second = runGame(def, seed, createPolicyAgents(4), 8, 4);
 
       assert.equal(first.finalState.stateHash, second.finalState.stateHash, `seed ${seed} should replay to the same final hash`);
-      assert.equal(first.moves.length > 0, true, `seed ${seed} should produce at least one move`);
+      assert.equal(first.decisions.length > 0, true, `seed ${seed} should produce at least one move`);
       for (const trace of [first, second]) {
-        for (const move of trace.moves) {
+        for (const move of trace.decisions) {
           assert.equal(move.agentDecision?.kind, 'policy');
           if (move.agentDecision?.kind !== 'policy') {
             assert.fail(`seed ${seed} expected policy trace metadata`);

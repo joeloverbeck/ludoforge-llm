@@ -1,5 +1,5 @@
 import type { GameDef, GameTrace } from '../kernel/index.js';
-import type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.js';
+import type { EnrichedDecisionLog, EnrichedGameTrace } from './enriched-trace-types.js';
 
 /**
  * Pure function that enriches a raw GameTrace with human-readable context:
@@ -9,22 +9,20 @@ import type { EnrichedGameTrace, EnrichedMoveLog } from './enriched-trace-types.
 export const enrichTrace = (trace: GameTrace, def: GameDef): EnrichedGameTrace => {
   const seatNames = (def.seats ?? []).map((seat) => seat.id);
 
-  const resolveSeatId = (playerIndex: number): string =>
-    seatNames[playerIndex] ?? `Player ${String(playerIndex)}`;
-
-  const enrichedMoves: EnrichedMoveLog[] = trace.moves.map((moveLog) => ({
-    ...moveLog,
-    seatId: resolveSeatId(moveLog.player),
+  const enrichedDecisions: EnrichedDecisionLog[] = trace.decisions.map((decisionLog) => ({
+    ...decisionLog,
   }));
 
   return {
     gameDefId: trace.gameDefId,
     seed: trace.seed,
     seatNames,
-    moves: enrichedMoves,
+    decisions: enrichedDecisions,
+    compoundTurns: trace.compoundTurns,
     finalState: trace.finalState,
     result: trace.result,
     turnsCount: trace.turnsCount,
     stopReason: trace.stopReason,
+    traceProtocolVersion: trace.traceProtocolVersion,
   };
 };

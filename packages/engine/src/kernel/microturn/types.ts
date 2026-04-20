@@ -1,4 +1,4 @@
-import { asSeatId, type ActionId, type SeatId, type TriggerId } from '../branded.js';
+import { asSeatId, type ActionId, type PlayerId, type SeatId, type TriggerId } from '../branded.js';
 import type { DecisionKey } from '../decision-scope.js';
 import type { ChoiceIllegalReason } from '../legality-reasons.js';
 import type { PlayerObservation } from '../observation.js';
@@ -20,6 +20,7 @@ import type {
   StateDelta,
   TriggerLogEntry,
 } from '../types-core.js';
+import type { MicroturnSnapshot } from '../../sim/snapshot-types.js';
 import type { GameDefRuntime } from '../gamedef-runtime.js';
 
 export type DecisionContextKind =
@@ -193,6 +194,7 @@ export interface MicroturnState {
 export interface DecisionLog {
   readonly stateHash: bigint;
   readonly seatId: ActiveDeciderSeatId;
+  readonly playerId?: PlayerId;
   readonly decisionContextKind: DecisionContextKind;
   readonly decisionKey: DecisionKey | null;
   readonly decision: Decision;
@@ -207,6 +209,7 @@ export interface DecisionLog {
   readonly decisionTrace?: readonly DecisionTraceEntry[];
   readonly selectorTrace?: readonly SelectorTraceEntry[];
   readonly agentDecision?: AgentDecisionTrace;
+  readonly snapshot?: MicroturnSnapshot;
 }
 
 export interface ApplyDecisionResult {

@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
+  applyDecision,
   applyTrustedMove,
   applyMove,
   areMovesEquivalent,
@@ -87,11 +88,11 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
   const secondTrace = runGame(def, seed, createPolicyAgents(playerCount), maxTurns, playerCount, undefined, runtime);
 
   assert.deepEqual(secondTrace, firstTrace, `${label} should produce an identical trace for the same seed`);
-  assert.equal(firstTrace.moves.length > 0, true, `${label} should emit at least one move`);
+  assert.equal(firstTrace.decisions.length > 0, true, `${label} should emit at least one move`);
 
   let replayState = initialState(def, seed, playerCount, undefined, runtime).state;
 
-  for (const [stepIndex, moveLog] of firstTrace.moves.entries()) {
+  for (const [stepIndex, moveLog] of firstTrace.decisions.entries()) {
     const rawMoves = legalMoves(def, replayState, undefined, runtime);
     const classifiedResult = enumerateLegalMoves(def, replayState, undefined, runtime);
     const classifiedMoves = classifiedResult.moves.map(({ move }) => move);
@@ -127,20 +128,22 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
       );
     }
     assert.equal(
-      moveLog.legalMoveCount,
+      moveLog.legalActionCount,
       classifiedResult.moves.length,
-      `${label} step=${stepIndex} trace legalMoveCount should match classified enumeration`,
+      `${label} step=${stepIndex} trace legalActionCount should match classified enumeration`,
     );
 
     assertCompleteMoveTrustedParity(label, def, replayState, stepIndex, runtime);
 
-    const baseline = applyMove(def, replayState, moveLog.move, undefined, runtime);
+    assert.equal(moveLog.decision.kind, 'actionSelection');
+    assert.ok(moveLog.decision.move);
+    const baseline = applyMove(def, replayState, moveLog.decision.move, undefined, runtime);
     const trusted = applyTrustedMove(
       def,
       replayState,
       {
-        ...moveLog.move,
-        move: moveLog.move,
+        ...moveLog.decision.move,
+        move: moveLog.decision.move,
         sourceStateHash: replayState.stateHash,
         provenance: 'enumerateLegalMoves',
       },
@@ -153,23 +156,24 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
       baseline,
       `${label} step=${stepIndex} selected move diverged under trusted execution`,
     );
+    const appliedDecision = applyDecision(def, replayState, moveLog.decision, undefined, runtime);
     assert.deepEqual(
-      baseline.triggerFirings,
+      appliedDecision.triggerFirings,
       moveLog.triggerFirings,
       `${label} step=${stepIndex} replay trigger firings should match trace`,
     );
     assert.deepEqual(
-      baseline.warnings,
+      appliedDecision.warnings,
       moveLog.warnings,
       `${label} step=${stepIndex} replay warnings should match trace`,
     );
     assert.equal(
-      baseline.state.stateHash,
+      appliedDecision.state.stateHash,
       moveLog.stateHash,
       `${label} step=${stepIndex} replay state hash should match trace`,
     );
 
-    replayState = baseline.state;
+    replayState = appliedDecision.state;
   }
 
   assert.deepEqual(replayState, firstTrace.finalState, `${label} replay should reconstruct final state exactly`);

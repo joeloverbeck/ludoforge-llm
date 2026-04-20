@@ -39,6 +39,12 @@ const zoneSize = (state: GameState, zoneName: string): number =>
 const totalTokenCount = (state: GameState): number =>
   Object.values(state.zones).reduce((sum, tokens) => sum + tokens.length, 0);
 
+const actionSelectionMove = (entry: ReturnType<typeof runGame>['decisions'][number]) => {
+  assert.equal(entry.decision.kind, 'actionSelection');
+  assert.ok(entry.decision.move);
+  return entry.decision.move;
+};
+
 /** Check whether a player is folded (handActive=false and not eliminated). */
 const isPlayerFolded = (state: GameState, player: number): boolean =>
   state.perPlayerVars[player]?.handActive === false
@@ -203,7 +209,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
 
     let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount).state);
 
-    for (const entry of trace.moves) {
+    for (const entry of trace.decisions) {
       const phase = current.currentPhase;
 
       if (['preflop', 'flop', 'turn', 'river'].includes(phase)) {
@@ -219,7 +225,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
         }
       }
 
-      current = applyMove(def, current, entry.move).state;
+      current = applyMove(def, current, actionSelectionMove(entry)).state;
     }
   });
 
@@ -250,7 +256,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
       river: 3,
     };
 
-    for (const entry of trace.moves) {
+    for (const entry of trace.decisions) {
       const phase = current.currentPhase;
 
       if (phase in expectedCommunity) {
@@ -271,7 +277,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
         );
       }
 
-      current = applyMove(def, current, entry.move).state;
+      current = applyMove(def, current, actionSelectionMove(entry)).state;
     }
   });
 });

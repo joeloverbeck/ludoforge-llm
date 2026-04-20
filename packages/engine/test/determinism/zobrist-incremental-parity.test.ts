@@ -55,7 +55,7 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
         kernel: { verifyIncrementalHash: true },
       }, runtime);
 
-      assert.ok(trace.moves.length > 0, `seed=${seed} should produce at least one move`);
+      assert.ok(trace.decisions.length > 0, `seed=${seed} should produce at least one move`);
     });
   }
 });
@@ -76,7 +76,7 @@ describe('Zobrist incremental parity — FITL', () => {
         kernel: { verifyIncrementalHash: true },
       }, runtime);
 
-      assert.ok(trace.moves.length > 0, `seed=${seed} should produce at least one move`);
+      assert.ok(trace.decisions.length > 0, `seed=${seed} should produce at least one move`);
     });
   }
 });
@@ -92,6 +92,6 @@ describe('Zobrist incremental parity — interval mode', () => {
       kernel: { verifyIncrementalHash: { interval: 5 } },
     }, runtime);
 
-    assert.ok(trace.moves.length > 0, 'should produce at least one move');
+    assert.ok(trace.decisions.length > 0, 'should produce at least one move');
   });
 });

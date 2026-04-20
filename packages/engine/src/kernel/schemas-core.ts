@@ -1584,6 +1584,51 @@ export const TriggerLogEntrySchema = z.union([
   OperationCompoundStagesReplacedTraceEntrySchema,
 ]);
 
+export const ConditionTraceEntrySchema = z
+  .object({
+    kind: z.literal('conditionEval'),
+    seq: IntegerSchema,
+    condition: ConditionASTSchema,
+    result: BooleanSchema,
+    context: z.union([
+      z.literal('actionPre'),
+      z.literal('triggerWhen'),
+      z.literal('triggerMatch'),
+      z.literal('ifBranch'),
+      z.literal('costValidation'),
+      z.literal('playCondition'),
+    ]),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
+export const DecisionTraceEntrySchema = z
+  .object({
+    kind: z.literal('decision'),
+    seq: IntegerSchema,
+    decisionKey: StringSchema,
+    type: z.union([z.literal('chooseOne'), z.literal('chooseN')]),
+    player: IntegerSchema,
+    options: z.array(z.union([NumberSchema, StringSchema, BooleanSchema, z.array(z.union([NumberSchema, StringSchema, BooleanSchema]))])),
+    selected: z.array(z.union([NumberSchema, StringSchema, BooleanSchema])),
+    min: IntegerSchema.optional(),
+    max: IntegerSchema.optional(),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
+export const SelectorTraceEntrySchema = z
+  .object({
+    kind: z.literal('selectorResolution'),
+    seq: IntegerSchema,
+    selectorType: z.union([z.literal('player'), z.literal('zone'), z.literal('token')]),
+    selectorExpr: z.unknown(),
+    candidateCount: IntegerSchema,
+    resolvedIds: z.array(StringSchema),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
 const AgentDecisionFailureSummarySchema = z
   .object({
     code: StringSchema,
@@ -1769,17 +1814,75 @@ const AgentDecisionTraceSchema = z.union([
     .strict(),
 ]);
 
-export const MoveLogSchema = z
+export const SeatStandingSnapshotSchema = z
+  .object({
+    seat: StringSchema,
+    margin: NumberSchema,
+    perPlayerVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])).optional(),
+    tokenCountOnBoard: NumberSchema.optional(),
+  })
+  .strict();
+
+export const ZoneSummarySchema = z
+  .object({
+    zoneId: StringSchema,
+    zoneVars: z.record(StringSchema, NumberSchema).optional(),
+    tokenCountBySeat: z.record(StringSchema, NumberSchema).optional(),
+  })
+  .strict();
+
+export const DecisionPointSnapshotSchema = z
+  .object({
+    turnCount: NumberSchema,
+    phaseId: StringSchema,
+    activePlayer: IntegerSchema,
+    seatStandings: z.array(SeatStandingSnapshotSchema),
+  })
+  .strict();
+
+export const MicroturnSnapshotSchema = DecisionPointSnapshotSchema.extend({
+  decisionContextKind: z.union([
+    z.literal('actionSelection'),
+    z.literal('chooseOne'),
+    z.literal('chooseNStep'),
+    z.literal('stochasticResolve'),
+    z.literal('outcomeGrantResolve'),
+    z.literal('turnRetirement'),
+  ]),
+  frameId: NumberSchema,
+  turnId: NumberSchema,
+  compoundTurnTrace: z.array(CompoundTurnTraceEntrySchema),
+  globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])).optional(),
+  zoneSummaries: z.array(ZoneSummarySchema).optional(),
+}).strict();
+
+export const DecisionLogSchema = z
   .object({
     stateHash: z.bigint(),
-    player: IntegerSchema,
-    move: MoveSchema,
-    legalMoveCount: NumberSchema,
+    seatId: ActiveDeciderSeatIdSchema,
+    playerId: IntegerSchema.optional(),
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    turnId: NumberSchema,
+    turnRetired: BooleanSchema,
+    legalActionCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    conditionTrace: z.array(ConditionTraceEntrySchema).optional(),
+    decisionTrace: z.array(DecisionTraceEntrySchema).optional(),
+    selectorTrace: z.array(SelectorTraceEntrySchema).optional(),
     agentDecision: AgentDecisionTraceSchema.optional(),
+    snapshot: MicroturnSnapshotSchema.optional(),
   })
   .strict();
 
@@ -1807,11 +1910,22 @@ export const GameTraceSchema = z
   .object({
     gameDefId: StringSchema,
     seed: NumberSchema,
-    moves: z.array(MoveLogSchema),
+    decisions: z.array(DecisionLogSchema),
+    compoundTurns: z.array(z.object({
+      turnId: NumberSchema,
+      seatId: ActiveDeciderSeatIdSchema,
+      decisionIndexRange: z.object({
+        start: NumberSchema,
+        end: NumberSchema,
+      }).strict(),
+      microturnCount: NumberSchema,
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+    }).strict()),
     finalState: GameStateSchema,
     result: TerminalResultSchema.nullable(),
     turnsCount: NumberSchema,
     stopReason: SimulationStopReasonSchema,
+    traceProtocolVersion: z.literal('spec-140'),
   })
   .strict();
 
@@ -1898,17 +2012,33 @@ export const SerializedGameStateSchema = z
   })
   .strict();
 
-export const SerializedMoveLogSchema = z
+export const SerializedDecisionLogSchema = z
   .object({
     stateHash: HexBigIntSchema,
-    player: IntegerSchema,
-    move: MoveSchema,
-    legalMoveCount: NumberSchema,
+    seatId: ActiveDeciderSeatIdSchema,
+    playerId: IntegerSchema.optional(),
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    turnId: NumberSchema,
+    turnRetired: BooleanSchema,
+    legalActionCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    conditionTrace: z.array(ConditionTraceEntrySchema).optional(),
+    decisionTrace: z.array(DecisionTraceEntrySchema).optional(),
+    selectorTrace: z.array(SelectorTraceEntrySchema).optional(),
     agentDecision: AgentDecisionTraceSchema.optional(),
+    snapshot: MicroturnSnapshotSchema.optional(),
   })
   .strict();
 
@@ -1916,11 +2046,22 @@ export const SerializedGameTraceSchema = z
   .object({
     gameDefId: StringSchema,
     seed: NumberSchema,
-    moves: z.array(SerializedMoveLogSchema),
+    decisions: z.array(SerializedDecisionLogSchema),
+    compoundTurns: z.array(z.object({
+      turnId: NumberSchema,
+      seatId: ActiveDeciderSeatIdSchema,
+      decisionIndexRange: z.object({
+        start: NumberSchema,
+        end: NumberSchema,
+      }).strict(),
+      microturnCount: NumberSchema,
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+    }).strict()),
     finalState: SerializedGameStateSchema,
     result: TerminalResultSchema.nullable(),
     turnsCount: NumberSchema,
     stopReason: SimulationStopReasonSchema,
+    traceProtocolVersion: z.literal('spec-140'),
   })
   .strict();
 

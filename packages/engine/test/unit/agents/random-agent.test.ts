@@ -531,7 +531,7 @@ describe('RandomAgent', () => {
       [stochasticAction, stochasticAction2],
       [makeProfile('stochastic-a'), makeProfile('stochastic-b')],
     );
-    const moves: Move[] = [
+    const decisions: Move[] = [
       { actionId: asActionId('stochastic-a'), params: {} },
       { actionId: asActionId('stochastic-b'), params: {} },
     ];
@@ -541,7 +541,7 @@ describe('RandomAgent', () => {
       def,
       state: stateStub,
       playerId: asPlayerId(0),
-      legalMoves: moves.map((move) => stochasticClassifiedMove(move)),
+      legalMoves: decisions.map((move) => stochasticClassifiedMove(move)),
       rng: createRng(77n),
     });
 

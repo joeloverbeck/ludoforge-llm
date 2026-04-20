@@ -170,13 +170,13 @@ describe('policy determinism', () => {
   it('keeps rng tie-break selection stable across legalMove permutations with the same seed', () => {
     const def = createDef();
     const state = initialState(def, 99, 2).state;
-    const moves: readonly Move[] = [
+    const decisions: readonly Move[] = [
       { actionId: asActionId('gamma'), params: {} },
       { actionId: asActionId('alpha'), params: {} },
       { actionId: asActionId('beta'), params: {} },
     ];
 
-    const results = permutations(moves).map((legalMoves) =>
+    const results = permutations(decisions).map((legalMoves) =>
       evaluatePolicyMove({
         def,
         state,

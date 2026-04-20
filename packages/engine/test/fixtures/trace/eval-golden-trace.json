@@ -1,15 +1,24 @@
 {
   "gameDefId": "eval-golden-trace",
   "seed": 7,
-  "moves": [
+  "decisions": [
     {
       "stateHash": "0x11",
-      "player": 0,
-      "move": {
+      "seatId": "0",
+      "playerId": 0,
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
         "actionId": "gather",
-        "params": {}
+        "move": {
+          "actionId": "gather",
+          "params": {}
+        }
       },
-      "legalMoveCount": 2,
+      "turnId": 1,
+      "turnRetired": true,
+      "legalActionCount": 2,
       "deltas": [
         {
           "path": "perPlayerVars.0.score",
@@ -32,12 +41,21 @@
     },
     {
       "stateHash": "0x22",
-      "player": 1,
-      "move": {
+      "seatId": "1",
+      "playerId": 1,
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
         "actionId": "attack",
-        "params": {}
+        "move": {
+          "actionId": "attack",
+          "params": {}
+        }
       },
-      "legalMoveCount": 4,
+      "turnId": 2,
+      "turnRetired": true,
+      "legalActionCount": 4,
       "deltas": [
         {
           "path": "perPlayerVars.1.score",
@@ -55,12 +73,21 @@
     },
     {
       "stateHash": "0x11",
-      "player": 0,
-      "move": {
+      "seatId": "0",
+      "playerId": 0,
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
         "actionId": "trade",
-        "params": {}
+        "move": {
+          "actionId": "trade",
+          "params": {}
+        }
       },
-      "legalMoveCount": 6,
+      "turnId": 3,
+      "turnRetired": true,
+      "legalActionCount": 6,
       "deltas": [
         {
           "path": "perPlayerVars.0.score",
@@ -85,6 +112,38 @@
       ],
       "triggerFirings": [],
       "warnings": []
+    }
+  ],
+  "compoundTurns": [
+    {
+      "turnId": 1,
+      "seatId": "0",
+      "decisionIndexRange": {
+        "start": 0,
+        "end": 1
+      },
+      "microturnCount": 1,
+      "turnStopReason": "retired"
+    },
+    {
+      "turnId": 2,
+      "seatId": "1",
+      "decisionIndexRange": {
+        "start": 1,
+        "end": 2
+      },
+      "microturnCount": 1,
+      "turnStopReason": "retired"
+    },
+    {
+      "turnId": 3,
+      "seatId": "0",
+      "decisionIndexRange": {
+        "start": 2,
+        "end": 3
+      },
+      "microturnCount": 1,
+      "turnStopReason": "terminal"
     }
   ],
   "finalState": {
@@ -125,5 +184,6 @@
   },
   "result": null,
   "turnsCount": 3,
-  "stopReason": "terminal"
+  "stopReason": "terminal",
+  "traceProtocolVersion": "spec-140"
 }

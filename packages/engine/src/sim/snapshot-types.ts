@@ -1,4 +1,5 @@
 import type { PhaseId, PlayerId, ZoneId } from '../kernel/branded.js';
+import type { DecisionContextKind, DecisionFrameId, TurnId, CompoundTurnTraceEntry } from '../kernel/microturn/types.js';
 import type { VariableValue } from '../kernel/types.js';
 
 export type SnapshotDepth = 'none' | 'minimal' | 'standard' | 'verbose';
@@ -30,3 +31,15 @@ export interface ZoneSummary {
 export interface VerboseDecisionPointSnapshot extends StandardDecisionPointSnapshot {
   readonly zoneSummaries: readonly ZoneSummary[];
 }
+
+export interface MicroturnSnapshotCommon {
+  readonly decisionContextKind: DecisionContextKind;
+  readonly frameId: DecisionFrameId;
+  readonly turnId: TurnId;
+  readonly compoundTurnTrace: readonly CompoundTurnTraceEntry[];
+}
+
+export type MicroturnSnapshot =
+  | (DecisionPointSnapshot & MicroturnSnapshotCommon)
+  | (StandardDecisionPointSnapshot & MicroturnSnapshotCommon)
+  | (VerboseDecisionPointSnapshot & MicroturnSnapshotCommon);

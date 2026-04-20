@@ -103,11 +103,11 @@ describe('simulator property-style invariants', () => {
       for (const seed of seeds) {
         for (const maxTurns of maxTurnsCases) {
           const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], maxTurns);
-          assert.ok(trace.moves.length <= maxTurns);
+          assert.ok(trace.decisions.length <= maxTurns);
           assert.equal(trace.turnsCount, trace.finalState.turnCount);
 
-          for (const moveLog of trace.moves) {
-            assert.ok(moveLog.legalMoveCount >= 1);
+          for (const moveLog of trace.decisions) {
+            assert.ok(moveLog.legalActionCount >= 1);
           }
         }
       }

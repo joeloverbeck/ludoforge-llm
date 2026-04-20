@@ -343,7 +343,7 @@ describe('move-completion retry classification', () => {
 
     const trace = runGame(def, 1009, agents, 5, 4, undefined, runtime);
 
-    assert.ok(trace.moves.length > 0, 'expected seed 1002 smoke to advance');
+    assert.ok(trace.decisions.length > 0, 'expected seed 1002 smoke to advance');
     assert.equal(trace.stopReason === 'noLegalMoves' || trace.stopReason === 'maxTurns' || trace.stopReason === 'terminal', true);
   });
 });

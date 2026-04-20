@@ -58,7 +58,7 @@ describe('FITL canary bounded termination', () => {
 
           assert.ok(
             ALLOWED_STOP_REASONS.has(trace.stopReason),
-            `stop=${trace.stopReason} after ${trace.moves.length} moves`,
+            `stop=${trace.stopReason} after ${trace.decisions.length} moves`,
           );
           for (const space of populationZeroSpaces) {
             assert.equal(

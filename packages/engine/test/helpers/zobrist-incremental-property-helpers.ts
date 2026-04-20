@@ -74,7 +74,7 @@ export const runVerifiedGame = (
     const trace = runGame(def, seed, agents, maxTurns, playerCount, {
       kernel: { verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL } },
     }, runtime);
-    return trace.moves.length;
+    return trace.decisions.length;
   } catch (err) {
     if (isKernelRuntimeError(err) && err.code === 'HASH_DRIFT') {
       throw err;

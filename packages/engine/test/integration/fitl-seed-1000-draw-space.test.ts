@@ -36,7 +36,7 @@ describe('FITL seed 1000 historical draw-space regression', () => {
       true,
       `seed 1000 must terminate cleanly, got ${trace.stopReason}`,
     );
-    assert.ok(trace.moves.length > 0, 'seed 1000 must produce at least one move');
-    assert.ok(trace.moves.length <= 200, 'seed 1000 must stay within the maxTurns budget');
+    assert.ok(trace.decisions.length > 0, 'seed 1000 must produce at least one move');
+    assert.ok(trace.decisions.length <= 200, 'seed 1000 must stay within the maxTurns budget');
   });
 });

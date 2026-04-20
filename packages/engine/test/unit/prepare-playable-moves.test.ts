@@ -477,9 +477,9 @@ describe('preparePlayableMoves', () => {
       const agents = [new PolicyAgent(), new PolicyAgent(), new PolicyAgent(), new PolicyAgent()];
 
       const trace = runGame(def, 11, agents, 5, 4, undefined, runtime);
-      assert.ok(trace.moves.length > 0, 'expected at least one move');
+      assert.ok(trace.decisions.length > 0, 'expected at least one move');
 
-      for (const move of trace.moves) {
+      for (const move of trace.decisions) {
         assert.equal(move.agentDecision?.kind, 'policy');
         if (move.agentDecision?.kind === 'policy') {
           assert.equal(move.agentDecision.emergencyFallback, false);
@@ -536,9 +536,9 @@ describe('preparePlayableMoves', () => {
 
       const trace = runGame(def, 1009, agents, 20, 4, undefined, runtime);
 
-      assert.ok(trace.moves.length > 3, 'seed 1009 must advance beyond the problematic free operation');
+      assert.ok(trace.decisions.length > 3, 'seed 1009 must advance beyond the problematic free operation');
       assert.notEqual(
-        trace.stopReason === 'noLegalMoves' && trace.moves.length <= 3,
+        trace.stopReason === 'noLegalMoves' && trace.decisions.length <= 3,
         true,
         'must not stall at the free-operation rally with notViable completions',
       );

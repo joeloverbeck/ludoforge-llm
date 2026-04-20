@@ -494,9 +494,9 @@ describe('FITL card-75 Sihanouk', () => {
 
     const trace = runGame(validatedDef, 1009, agents, 20, 4, undefined, runtime);
 
-    assert.equal(trace.moves.length > 3, true, 'Expected the seed-1009 run to continue beyond the VC Rally');
+    assert.equal(trace.decisions.length > 3, true, 'Expected the seed-1009 run to continue beyond the VC Rally');
     assert.notEqual(
-      trace.stopReason === 'noLegalMoves' && trace.moves.length === 3,
+      trace.stopReason === 'noLegalMoves' && trace.decisions.length === 3,
       true,
       'The run must not terminate immediately after the uncompletable shaded March window',
     );

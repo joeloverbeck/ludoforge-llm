@@ -42,9 +42,9 @@ describe('FITL seed 1000 regression gate', () => {
     assert.equal(
       ALLOWED_STOP_REASONS.has(trace.stopReason),
       true,
-      `seed 1000: expected terminal/maxTurns/noLegalMoves, got ${trace.stopReason} after ${trace.moves.length} moves`,
+      `seed 1000: expected terminal/maxTurns/noLegalMoves, got ${trace.stopReason} after ${trace.decisions.length} moves`,
     );
-    assert.ok(trace.moves.length <= MAX_TURNS, `seed 1000 exceeded ${MAX_TURNS} moves`);
+    assert.ok(trace.decisions.length <= MAX_TURNS, `seed 1000 exceeded ${MAX_TURNS} moves`);
   });
 
   it('remains deterministic across repeated runs', { timeout: 20_000 }, () => {

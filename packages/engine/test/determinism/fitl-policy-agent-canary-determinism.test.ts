@@ -56,11 +56,11 @@ describe('FITL PolicyAgent determinism canary', () => {
       const trace = runOnce(seed);
       assert.ok(
         BOUNDED_STOP_REASONS.has(trace.stopReason),
-        `seed ${seed}: expected a bounded stop reason, got ${trace.stopReason} after ${trace.moves.length} moves`,
+        `seed ${seed}: expected a bounded stop reason, got ${trace.stopReason} after ${trace.decisions.length} moves`,
       );
       assert.ok(
-        trace.moves.length <= MAX_TURNS,
-        `seed ${seed}: move count ${trace.moves.length} exceeded MAX_TURNS budget of ${MAX_TURNS}`,
+        trace.decisions.length <= MAX_TURNS,
+        `seed ${seed}: move count ${trace.decisions.length} exceeded MAX_TURNS budget of ${MAX_TURNS}`,
       );
     });
 
@@ -68,8 +68,8 @@ describe('FITL PolicyAgent determinism canary', () => {
       const trace1 = runOnce(seed);
       const trace2 = runOnce(seed);
       assert.equal(
-        trace1.moves.length,
-        trace2.moves.length,
+        trace1.decisions.length,
+        trace2.decisions.length,
         `seed ${seed}: move count diverged`,
       );
       assert.equal(

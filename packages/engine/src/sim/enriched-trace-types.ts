@@ -1,23 +1,22 @@
 import type {
+  CompoundTurnSummary,
+  DecisionLog,
   GameState,
-  MoveContext,
-  MoveLog,
   SimulationStopReason,
   TerminalResult,
 } from '../kernel/index.js';
 
-export interface EnrichedMoveLog extends MoveLog {
-  readonly seatId: string;
-  readonly moveContext?: MoveContext;
-}
+export type EnrichedDecisionLog = DecisionLog;
 
 export interface EnrichedGameTrace {
   readonly gameDefId: string;
   readonly seed: number;
   readonly seatNames: readonly string[];
-  readonly moves: readonly EnrichedMoveLog[];
+  readonly decisions: readonly EnrichedDecisionLog[];
+  readonly compoundTurns: readonly CompoundTurnSummary[];
   readonly finalState: GameState;
   readonly result: TerminalResult | null;
   readonly turnsCount: number;
   readonly stopReason: SimulationStopReason;
+  readonly traceProtocolVersion: 'spec-140';
 }

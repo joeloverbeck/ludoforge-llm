@@ -8,7 +8,7 @@ export type PolicyProfileQualityRecord = {
   readonly seed: number;
   readonly passed: boolean;
   readonly stopReason: string;
-  readonly moves: number;
+  readonly decisions: number;
 };
 
 export function emitPolicyProfileQualityRecord(

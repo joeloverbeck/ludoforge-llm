@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — deletes `Agent.chooseMove`; adds `Agent.chooseDecision`; rewrites PolicyAgent; retires two-phase split
-**Deps**: `tickets/140MICRODECPRO-006.md`
+**Deps**: `archive/tickets/140MICRODECPRO-006.md`
 
 ## Problem
 

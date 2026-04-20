@@ -72,8 +72,12 @@ const replayTrace = (
   const replayed = replayScript({
     def,
     initialState: initialState(def, trace.seed, PLAYER_COUNT).state,
-    script: trace.moves.map((entry) => ({
-      move: entry.move,
+    script: trace.decisions.map((entry) => ({
+      move: (() => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      })(),
       expectedStateHash: entry.stateHash,
     })),
     keyVars: ['pot', 'blindLevel', 'handsPlayed', 'currentBet'],

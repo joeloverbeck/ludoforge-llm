@@ -49,6 +49,7 @@ import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scop
 import type { DecisionKey } from './decision-scope.js';
 import type {
   ActiveDeciderSeatId,
+  DecisionLog,
   DecisionFrameId,
   DecisionStackFrame,
   TurnId,
@@ -63,7 +64,7 @@ import type {
   AgentPolicyZoneTokenAggOp,
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
-import type { DecisionPointSnapshot } from '../sim/snapshot-types.js';
+import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -1716,23 +1717,6 @@ export interface ApplyMoveResult {
   readonly selectorTrace?: readonly SelectorTraceEntry[];
 }
 
-export interface MoveLog {
-  readonly stateHash: bigint;
-  readonly player: PlayerId;
-  readonly move: Move;
-  readonly legalMoveCount: number;
-  readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerLogEntry[];
-  readonly warnings: readonly RuntimeWarning[];
-  readonly effectTrace?: readonly EffectTraceEntry[];
-  readonly conditionTrace?: readonly ConditionTraceEntry[];
-  readonly decisionTrace?: readonly DecisionTraceEntry[];
-  readonly selectorTrace?: readonly SelectorTraceEntry[];
-  readonly moveContext?: MoveContext;
-  readonly agentDecision?: AgentDecisionTrace;
-  readonly snapshot?: DecisionPointSnapshot;
-}
-
 export interface PlayerScore {
   readonly player: PlayerId;
   readonly score: number;
@@ -1749,14 +1733,27 @@ export type SimulationStopReason =
   | 'maxTurns'
   | 'noLegalMoves';
 
+export interface CompoundTurnSummary {
+  readonly turnId: TurnId;
+  readonly seatId: ActiveDeciderSeatId;
+  readonly decisionIndexRange: {
+    readonly start: number;
+    readonly end: number;
+  };
+  readonly microturnCount: number;
+  readonly turnStopReason: 'retired' | 'terminal' | 'maxTurns';
+}
+
 export interface GameTrace {
   readonly gameDefId: string;
   readonly seed: number;
-  readonly moves: readonly MoveLog[];
+  readonly decisions: readonly DecisionLog[];
+  readonly compoundTurns: readonly CompoundTurnSummary[];
   readonly finalState: GameState;
   readonly result: TerminalResult | null;
   readonly turnsCount: number;
   readonly stopReason: SimulationStopReason;
+  readonly traceProtocolVersion: 'spec-140';
 }
 
 export interface Metrics {
@@ -1803,8 +1800,9 @@ export interface SerializedRngState {
   readonly state: readonly HexBigInt[];
 }
 
-export interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
+export interface SerializedDecisionLog extends Omit<DecisionLog, 'stateHash'> {
   readonly stateHash: HexBigInt;
+  readonly snapshot?: MicroturnSnapshot;
 }
 
 export interface SerializedGameState extends Omit<
@@ -1819,8 +1817,8 @@ export interface SerializedGameState extends Omit<
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameTrace extends Omit<GameTrace, 'moves' | 'finalState'> {
-  readonly moves: readonly SerializedMoveLog[];
+export interface SerializedGameTrace extends Omit<GameTrace, 'decisions' | 'finalState'> {
+  readonly decisions: readonly SerializedDecisionLog[];
   readonly finalState: SerializedGameState;
 }
 

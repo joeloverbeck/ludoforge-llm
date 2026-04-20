@@ -3,9 +3,10 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { enrichTrace } from '../../src/sim/trace-enrichment.js';
-import { asPlayerId } from '../../src/kernel/branded.js';
+import { asActionId, asPlayerId, asSeatId } from '../../src/kernel/branded.js';
+import { asDecisionFrameId, asTurnId } from '../../src/kernel/index.js';
 import type { GameTrace, GameDef } from '../../src/kernel/types.js';
-import type { DecisionPointSnapshot } from '../../src/sim/snapshot-types.js';
+import type { MicroturnSnapshot } from '../../src/sim/snapshot-types.js';
 
 const makeMockDef = (seatIds: readonly string[]): GameDef => ({
   metadata: { id: 'test-game', name: 'Test', version: '1.0' },
@@ -24,48 +25,64 @@ const makeMockDef = (seatIds: readonly string[]): GameDef => ({
 const makeMockTrace = (playerIndices: readonly number[]): GameTrace => ({
   gameDefId: 'test-game',
   seed: 42,
-  moves: playerIndices.map((player) => ({
+  decisions: playerIndices.map((player) => ({
     stateHash: 0n,
-    _runningHash: 0n,
-    player: asPlayerId(player),
-    move: { actionId: 'pass' as unknown as GameTrace['moves'][0]['move']['actionId'], params: {} },
-    legalMoveCount: 1,
+    seatId: asSeatId(String(player)),
+    playerId: asPlayerId(player),
+    decisionContextKind: 'actionSelection',
+    decisionKey: null,
+    decision: { kind: 'actionSelection', actionId: asActionId('pass'), move: { actionId: asActionId('pass'), params: {} } },
+    turnId: asTurnId(player + 1),
+    turnRetired: true,
+    legalActionCount: 1,
     deltas: [],
     triggerFirings: [],
     warnings: [],
+  })),
+  compoundTurns: playerIndices.map((player, index) => ({
+    turnId: asTurnId(player + 1),
+    seatId: asSeatId(String(player)),
+    decisionIndexRange: { start: index, end: index + 1 },
+    microturnCount: 1,
+    turnStopReason: index === playerIndices.length - 1 ? 'maxTurns' : 'retired',
   })),
   finalState: {} as GameTrace['finalState'],
   result: null,
   turnsCount: playerIndices.length,
   stopReason: 'maxTurns',
+  traceProtocolVersion: 'spec-140',
 });
 
-const makeSnapshot = (): DecisionPointSnapshot => ({
+const makeSnapshot = (): MicroturnSnapshot => ({
   turnCount: 3,
-  phaseId: 'main' as DecisionPointSnapshot['phaseId'],
+  phaseId: 'main' as MicroturnSnapshot['phaseId'],
   activePlayer: asPlayerId(0),
   seatStandings: [{ seat: 'VC', margin: 2 }],
+  decisionContextKind: 'actionSelection',
+  frameId: asDecisionFrameId(1),
+  turnId: asTurnId(1),
+  compoundTurnTrace: [],
 });
 
 describe('enrichTrace', () => {
-  it('maps player indices to seat IDs', () => {
+  it('preserves explicit seat ids on the trace while surfacing def seat names', () => {
     const def = makeMockDef(['VC', 'NVA', 'US', 'ARVN']);
     const trace = makeMockTrace([0, 1, 2, 3]);
     const enriched = enrichTrace(trace, def);
 
     assert.deepEqual(enriched.seatNames, ['VC', 'NVA', 'US', 'ARVN']);
-    assert.equal(enriched.moves[0]!.seatId, 'VC');
-    assert.equal(enriched.moves[1]!.seatId, 'NVA');
-    assert.equal(enriched.moves[2]!.seatId, 'US');
-    assert.equal(enriched.moves[3]!.seatId, 'ARVN');
+    assert.equal(enriched.decisions[0]!.seatId, '0');
+    assert.equal(enriched.decisions[1]!.seatId, '1');
+    assert.equal(enriched.decisions[2]!.seatId, '2');
+    assert.equal(enriched.decisions[3]!.seatId, '3');
   });
 
-  it('falls back to "Player N" when seat index is out of range', () => {
+  it('does not rewrite unknown seat ids during enrichment', () => {
     const def = makeMockDef(['A', 'B']);
     const trace = makeMockTrace([0, 1, 5]);
     const enriched = enrichTrace(trace, def);
 
-    assert.equal(enriched.moves[2]!.seatId, 'Player 5');
+    assert.equal(enriched.decisions[2]!.seatId, '5');
   });
 
   it('handles games with no seats defined', () => {
@@ -75,7 +92,7 @@ describe('enrichTrace', () => {
     const enriched = enrichTrace(trace, def);
 
     assert.deepEqual(enriched.seatNames, []);
-    assert.equal(enriched.moves[0]!.seatId, 'Player 0');
+    assert.equal(enriched.decisions[0]!.seatId, '0');
   });
 
   it('preserves all original trace fields', () => {
@@ -89,13 +106,13 @@ describe('enrichTrace', () => {
     assert.equal(enriched.result, null);
   });
 
-  it('preserves snapshot payloads when enriching trace moves', () => {
+  it('preserves snapshot payloads when enriching trace decisions', () => {
     const def = makeMockDef(['VC']);
     const snapshot = makeSnapshot();
     const trace = makeMockTrace([0]);
     const traceWithSnapshot: GameTrace = {
       ...trace,
-      moves: trace.moves.map((move) => ({
+      decisions: trace.decisions.map((move) => ({
         ...move,
         snapshot,
       })),
@@ -103,7 +120,7 @@ describe('enrichTrace', () => {
 
     const enriched = enrichTrace(traceWithSnapshot, def);
 
-    assert.equal(enriched.moves[0]?.snapshot, snapshot);
-    assert.deepEqual(enriched.moves[0]?.snapshot?.seatStandings, [{ seat: 'VC', margin: 2 }]);
+    assert.equal(enriched.decisions[0]?.snapshot, snapshot);
+    assert.deepEqual(enriched.decisions[0]?.snapshot?.seatStandings, [{ seat: 'VC', margin: 2 }]);
   });
 });

@@ -3,7 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
+  applyDecision,
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
@@ -14,6 +14,7 @@ import {
   enumerateLegalMoves,
   createZobristTable,
   initialState,
+  publishMicroturn,
   terminalResult,
   type Agent,
   type ClassifiedMove,
@@ -22,7 +23,7 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
-import { extractDecisionPointSnapshot } from '../../../src/sim/snapshot.js';
+import { extractMicroturnSnapshot } from '../../../src/sim/snapshot.js';
 import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -207,7 +208,7 @@ describe('runGame', () => {
     const def = createDef({ terminalAtScore: 1 });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10);
 
-    assert.equal(trace.moves.length, 1);
+    assert.equal(trace.decisions.length, 1);
     assert.notEqual(trace.result, null);
     assert.equal(trace.stopReason, 'terminal');
   });
@@ -216,7 +217,7 @@ describe('runGame', () => {
     const def = createDef({ terminalAtScore: 1 });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 0);
 
-    assert.equal(trace.moves.length, 0);
+    assert.equal(trace.decisions.length, 0);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'maxTurns');
   });
@@ -225,7 +226,7 @@ describe('runGame', () => {
     const def = createDef();
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1);
 
-    assert.equal(trace.moves.length, 1);
+    assert.equal(trace.decisions.length, 1);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'maxTurns');
   });
@@ -234,7 +235,7 @@ describe('runGame', () => {
     const def = createDef({ withAction: false });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 5);
 
-    assert.equal(trace.moves.length, 0);
+    assert.equal(trace.decisions.length, 0);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'noLegalMoves');
   });
@@ -264,13 +265,13 @@ describe('runGame', () => {
     );
   });
 
-  it('sets turnsCount from finalState.turnCount, not move log length', () => {
+  it('records turnsCount from finalState.turnCount', () => {
     const def = createDef({ twoPhaseLoop: true });
     const trace = runGame(def, 5, [firstLegalAgent, firstLegalAgent], 2);
 
-    assert.equal(trace.moves.length, 2);
+    assert.equal(trace.decisions.length, 2);
     assert.equal(trace.turnsCount, trace.finalState.turnCount);
-    assert.notEqual(trace.turnsCount, trace.moves.length);
+    assert.equal(trace.turnsCount, 2);
   });
 
   it('logs post-state hashes that match independent full-hash recomputation', () => {
@@ -280,8 +281,8 @@ describe('runGame', () => {
 
     const table = createZobristTable(def);
     let replayState = initialState(def, seed, 2).state;
-    for (const moveLog of trace.moves) {
-      replayState = applyMove(def, replayState, moveLog.move).state;
+    for (const moveLog of trace.decisions) {
+      replayState = applyDecision(def, replayState, moveLog.decision).state;
       assert.equal(moveLog.stateHash, replayState.stateHash);
       assert.equal(moveLog.stateHash, computeFullHash(table, replayState));
     }
@@ -296,7 +297,10 @@ describe('runGame', () => {
     };
 
     const def = createDef();
-    assert.throws(() => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1), /Illegal move/);
+    assert.throws(
+      () => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1),
+      /MICROTURN_LEGACY_AGENT_ADAPTER_SELECTED_OUT_OF_FRONTIER:unknown-action/,
+    );
   });
 
   it('does not swallow unrelated agent failures', () => {
@@ -332,7 +336,7 @@ describe('runGame', () => {
       throw new Error('expected simulator to provide classified legal moves to agent');
     }
     classifiedMoves = observedLegalMoves;
-    assert.equal(trace.moves[0]?.legalMoveCount, classifiedMoves.length);
+    assert.equal(trace.decisions[0]?.legalActionCount, classifiedMoves.length);
   });
 
   it('captures a standard snapshot from the same pre-decision state the agent receives', () => {
@@ -342,7 +346,9 @@ describe('runGame', () => {
 
     const snapshotAgent: Agent = {
       chooseMove(input) {
-        observedSnapshots.push(extractDecisionPointSnapshot(def, input.state, runtime, 'standard'));
+        observedSnapshots.push(
+          extractMicroturnSnapshot(def, input.state, publishMicroturn(def, input.state, runtime), runtime, 'standard'),
+        );
         const move = input.legalMoves[0]?.move;
         if (move === undefined) {
           throw new Error('snapshotAgent requires at least one legal move');
@@ -352,7 +358,7 @@ describe('runGame', () => {
     };
 
     const trace = runGame(def, 17, [snapshotAgent, snapshotAgent], 1, 2, { snapshotDepth: 'standard' }, runtime);
-    const snapshot = trace.moves[0]?.snapshot;
+    const snapshot = trace.decisions[0]?.snapshot;
 
     assert.deepEqual(snapshot, observedSnapshots[0]);
     assert.equal(snapshot?.turnCount, 0);
@@ -372,14 +378,14 @@ describe('runGame', () => {
     const omittedTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1);
     const noneTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'none' });
 
-    assert.equal(omittedTrace.moves[0]?.snapshot, undefined);
-    assert.equal(noneTrace.moves[0]?.snapshot, undefined);
+    assert.equal(omittedTrace.decisions[0]?.snapshot, undefined);
+    assert.equal(noneTrace.decisions[0]?.snapshot, undefined);
   });
 
   it('attaches verbose zone summaries when requested', () => {
     const def = createSnapshotDef();
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'verbose' });
-    const snapshot = trace.moves[0]?.snapshot;
+    const snapshot = trace.decisions[0]?.snapshot;
 
     assert.ok(snapshot !== undefined && 'zoneSummaries' in snapshot);
     assert.deepEqual(snapshot.zoneSummaries, [
@@ -403,11 +409,11 @@ describe('runGame', () => {
     const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 10);
 
     let replayState = initialState(def, seed, 2).state;
-    for (const moveLog of trace.moves) {
+    for (const moveLog of trace.decisions) {
       const enumerated = enumerateLegalMoves(def, replayState);
-      assert.equal(moveLog.legalMoveCount, enumerated.moves.length);
+      assert.equal(moveLog.legalActionCount, enumerated.moves.length);
 
-      const applied = applyMove(def, replayState, moveLog.move, undefined, runtime);
+      const applied = applyDecision(def, replayState, moveLog.decision, undefined, runtime);
       assert.deepEqual(applied.triggerFirings, moveLog.triggerFirings);
       assert.deepEqual(applied.warnings, moveLog.warnings);
       replayState = applied.state;
@@ -487,7 +493,8 @@ phase: [asPhaseId('main')],
     };
 
     const trace = runGame(def, 31, [sideBranchAgent, sideBranchAgent], 1);
-    assert.deepEqual(trace.moves[0]?.move.params, {
+    assert.equal(trace.decisions[0]?.decision.kind, 'actionSelection');
+    assert.deepEqual(trace.decisions[0]?.decision.move?.params, {
       eventCardId: 'card-1',
       eventDeckId: 'deck-1',
       side: 'shaded',

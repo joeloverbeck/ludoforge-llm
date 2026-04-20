@@ -1,6 +1,6 @@
 # 140MICRODECPRO-004: D2 + D3 (simple contexts) — publishMicroturn + applyDecision for actionSelection / chooseOne / turnRetirement
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `publishMicroturn`, `applyDecision`, `advanceAutoresolvable` for simple contexts
@@ -156,3 +156,13 @@ None in this ticket — T1 (publication invariant), T3 (atomic legal actions), T
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+- Landed the simple microturn bridge in `packages/engine/src/kernel/microturn/`: `publish.ts` now publishes `actionSelection`, `chooseOne`, and `turnRetirement` contexts with per-seat projected state, canonical legal `Decision[]`, and reconstructed compound-turn trace; `apply.ts` now validates published decisions, suspends simple `chooseOne` chains on the decision stack, and completes terminal simple paths by executing through the legacy `applyMove` path before retiring the turn through `advancePhase`; `advance.ts` now auto-resolves `turnRetirement` frames with the ticket-scoped guard rails.
+- Extended the microturn/shared schema surface so the new bridge types serialize canonically: `EffectExecutionFrameSnapshot` now carries optional `decisionHistory`, `DecisionLog` / `Decision` / `CompoundTurnTraceEntry` are defined in `packages/engine/src/kernel/microturn/types.ts`, `packages/engine/src/kernel/index.ts` re-exports the publish/apply/advance modules, and `packages/engine/schemas/Trace.schema.json` was regenerated after updating `packages/engine/src/kernel/schemas-core.ts`.
+- Added the optional architectural smoke coverage at `packages/engine/test/unit/kernel/microturn-smoke.test.ts` to prove the three simple contexts: direct action-selection completion, a suspended root + resumed `chooseOne` chain, and explicit `turnRetirement` auto-resolution.
+- `ticket corrections applied`: the bridge cannot publish lossy action ids for the live runtime surface, so published `actionSelection` decisions now carry the canonical concrete `Move` discovered from the legality/move-enumeration seam. For simple terminal contexts, `turnRetired: true` required an explicit lifecycle step after `applyMove`; the implementation now retires the turn via `advancePhase` instead of assuming legacy move execution increments `turnCount` on its own.
+- `command corrections applied`: the final proof set is executed as separate commands rather than a shell-chained `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`, and the optional focused bridge proof lane `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-smoke.test.js` was added before the full engine suite.
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-smoke.test.js`; `pnpm -F @ludoforge/engine run schema:artifacts`; `pnpm -F @ludoforge/engine test`; `pnpm turbo build`; `pnpm turbo test`; `pnpm turbo lint`; `pnpm turbo typecheck`
+- `proof gaps`: none

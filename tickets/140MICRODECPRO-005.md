@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — full effect-frame suspend/resume implementation in `microturn/apply.ts` + relocates stochastic resolution logic from `move-completion.ts`
-**Deps**: `tickets/140MICRODECPRO-004.md`, `archive/tickets/140MICRODECPRO-001.md`
+**Deps**: `archive/tickets/140MICRODECPRO-004.md`, `archive/tickets/140MICRODECPRO-001.md`
 
 ## Problem
 

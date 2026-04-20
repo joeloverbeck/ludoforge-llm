@@ -1,9 +1,26 @@
 import { asSeatId, type ActionId, type SeatId, type TriggerId } from '../branded.js';
 import type { DecisionKey } from '../decision-scope.js';
 import type { ChoiceIllegalReason } from '../legality-reasons.js';
+import type { PlayerObservation } from '../observation.js';
 import type { ChooseNOptionResolution } from '../types-core.js';
 import type { MoveParamScalar, MoveParamValue } from '../types-ast.js';
 import type { TurnFlowPendingFreeOperationGrant } from '../types-turn-flow.js';
+import type {
+  AgentDecisionTrace,
+  ConditionTraceEntry,
+  DecisionTraceEntry,
+  EffectTraceEntry,
+  ExecutionOptions,
+  GameDef,
+  GameState,
+  Move,
+  Rng,
+  RuntimeWarning,
+  SelectorTraceEntry,
+  StateDelta,
+  TriggerLogEntry,
+} from '../types-core.js';
+import type { GameDefRuntime } from '../gamedef-runtime.js';
 
 export type DecisionContextKind =
   | 'actionSelection'
@@ -44,6 +61,7 @@ export interface EffectExecutionFrameSnapshot {
   readonly boundedIterationCursors: Readonly<Record<string, number>>;
   readonly localBindings: Readonly<Record<string, MoveParamValue>>;
   readonly pendingTriggerQueue: readonly TriggerId[];
+  readonly decisionHistory?: readonly CompoundTurnTraceEntry[];
 }
 
 export interface ActionSelectionContext {
@@ -103,6 +121,136 @@ export interface DecisionStackFrame {
   readonly context: DecisionContext;
   readonly accumulatedBindings: Readonly<Record<DecisionKey, MoveParamValue>>;
   readonly effectFrame: EffectExecutionFrameSnapshot;
+}
+
+export interface ProjectedGameState {
+  readonly state: GameState;
+  readonly observation?: PlayerObservation;
+}
+
+export interface ActionSelectionDecision {
+  readonly kind: 'actionSelection';
+  readonly actionId: ActionId;
+  readonly move?: Move;
+}
+
+export interface ChooseOneDecision {
+  readonly kind: 'chooseOne';
+  readonly decisionKey: DecisionKey;
+  readonly value: MoveParamValue;
+}
+
+export interface ChooseNStepDecision {
+  readonly kind: 'chooseNStep';
+  readonly decisionKey: DecisionKey;
+  readonly command: ChooseNStepCommand;
+  readonly value?: MoveParamScalar;
+}
+
+export interface StochasticResolveDecision {
+  readonly kind: 'stochasticResolve';
+  readonly decisionKey: DecisionKey;
+  readonly value: MoveParamValue;
+}
+
+export interface OutcomeGrantResolveDecision {
+  readonly kind: 'outcomeGrantResolve';
+  readonly grantId: string;
+}
+
+export interface TurnRetirementDecision {
+  readonly kind: 'turnRetirement';
+  readonly retiringTurnId: TurnId;
+}
+
+export type Decision =
+  | ActionSelectionDecision
+  | ChooseOneDecision
+  | ChooseNStepDecision
+  | StochasticResolveDecision
+  | OutcomeGrantResolveDecision
+  | TurnRetirementDecision;
+
+export interface CompoundTurnTraceEntry {
+  readonly seatId: ActiveDeciderSeatId;
+  readonly decisionContextKind: DecisionContextKind;
+  readonly decisionKey: DecisionKey | null;
+  readonly decision: Decision;
+  readonly frameId: DecisionFrameId;
+}
+
+export interface MicroturnState {
+  readonly kind: DecisionContextKind;
+  readonly seatId: ActiveDeciderSeatId;
+  readonly decisionContext: DecisionContext;
+  readonly legalActions: readonly Decision[];
+  readonly projectedState: ProjectedGameState;
+  readonly turnId: TurnId;
+  readonly frameId: DecisionFrameId;
+  readonly compoundTurnTrace: readonly CompoundTurnTraceEntry[];
+}
+
+export interface DecisionLog {
+  readonly stateHash: bigint;
+  readonly seatId: ActiveDeciderSeatId;
+  readonly decisionContextKind: DecisionContextKind;
+  readonly decisionKey: DecisionKey | null;
+  readonly decision: Decision;
+  readonly turnId: TurnId;
+  readonly turnRetired: boolean;
+  readonly legalActionCount: number;
+  readonly deltas: readonly StateDelta[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly warnings: readonly RuntimeWarning[];
+  readonly effectTrace?: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
+  readonly agentDecision?: AgentDecisionTrace;
+}
+
+export interface ApplyDecisionResult {
+  readonly state: GameState;
+  readonly log: DecisionLog;
+  readonly triggerFirings: readonly TriggerLogEntry[];
+  readonly warnings: readonly RuntimeWarning[];
+  readonly effectTrace?: readonly EffectTraceEntry[];
+  readonly conditionTrace?: readonly ConditionTraceEntry[];
+  readonly decisionTrace?: readonly DecisionTraceEntry[];
+  readonly selectorTrace?: readonly SelectorTraceEntry[];
+}
+
+export interface AdvanceAutoresolvableResult {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly autoResolvedLogs: readonly DecisionLog[];
+}
+
+export interface PublishMicroturn {
+  (
+    def: GameDef,
+    state: GameState,
+    runtime?: GameDefRuntime,
+  ): MicroturnState;
+}
+
+export interface ApplyDecision {
+  (
+    def: GameDef,
+    state: GameState,
+    decision: Decision,
+    options?: ExecutionOptions,
+    runtime?: GameDefRuntime,
+  ): ApplyDecisionResult;
+}
+
+export interface AdvanceAutoresolvable {
+  (
+    def: GameDef,
+    state: GameState,
+    rng: Rng,
+    runtime?: GameDefRuntime,
+  ): AdvanceAutoresolvableResult;
 }
 
 export const resolveActiveDeciderSeatIdForPlayer = (

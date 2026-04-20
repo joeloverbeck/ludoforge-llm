@@ -5545,6 +5545,341 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "decisionHistory": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "seatId": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "string",
+                              "const": "__chance"
+                            },
+                            {
+                              "type": "string",
+                              "const": "__kernel"
+                            }
+                          ]
+                        },
+                        "decisionContextKind": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "actionSelection"
+                            },
+                            {
+                              "type": "string",
+                              "const": "chooseOne"
+                            },
+                            {
+                              "type": "string",
+                              "const": "chooseNStep"
+                            },
+                            {
+                              "type": "string",
+                              "const": "stochasticResolve"
+                            },
+                            {
+                              "type": "string",
+                              "const": "outcomeGrantResolve"
+                            },
+                            {
+                              "type": "string",
+                              "const": "turnRetirement"
+                            }
+                          ]
+                        },
+                        "decisionKey": {
+                          "anyOf": [
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "decision": {
+                          "anyOf": [
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "actionSelection"
+                                },
+                                "actionId": {
+                                  "type": "string"
+                                },
+                                "move": {
+                                  "type": "object",
+                                  "properties": {
+                                    "actionId": {
+                                      "type": "string"
+                                    },
+                                    "params": {
+                                      "type": "object",
+                                      "propertyNames": {
+                                        "type": "string"
+                                      },
+                                      "additionalProperties": {
+                                        "anyOf": [
+                                          {
+                                            "anyOf": [
+                                              {
+                                                "type": "number"
+                                              },
+                                              {
+                                                "type": "string"
+                                              },
+                                              {
+                                                "type": "boolean"
+                                              }
+                                            ]
+                                          },
+                                          {
+                                            "type": "array",
+                                            "items": {
+                                              "anyOf": [
+                                                {
+                                                  "type": "number"
+                                                },
+                                                {
+                                                  "type": "string"
+                                                },
+                                                {
+                                                  "type": "boolean"
+                                                }
+                                              ]
+                                            }
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "freeOperation": {
+                                      "type": "boolean"
+                                    },
+                                    "actionClass": {
+                                      "type": "string"
+                                    },
+                                    "compound": {}
+                                  },
+                                  "required": [
+                                    "actionId",
+                                    "params"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "actionId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "chooseOne"
+                                },
+                                "decisionKey": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "decisionKey",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "chooseNStep"
+                                },
+                                "decisionKey": {
+                                  "type": "string"
+                                },
+                                "command": {
+                                  "anyOf": [
+                                    {
+                                      "type": "string",
+                                      "const": "add"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "remove"
+                                    },
+                                    {
+                                      "type": "string",
+                                      "const": "confirm"
+                                    }
+                                  ]
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "decisionKey",
+                                "command"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "stochasticResolve"
+                                },
+                                "decisionKey": {
+                                  "type": "string"
+                                },
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "decisionKey",
+                                "value"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "outcomeGrantResolve"
+                                },
+                                "grantId": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "grantId"
+                              ],
+                              "additionalProperties": false
+                            },
+                            {
+                              "type": "object",
+                              "properties": {
+                                "kind": {
+                                  "type": "string",
+                                  "const": "turnRetirement"
+                                },
+                                "retiringTurnId": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "kind",
+                                "retiringTurnId"
+                              ],
+                              "additionalProperties": false
+                            }
+                          ]
+                        },
+                        "frameId": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "seatId",
+                        "decisionContextKind",
+                        "decisionKey",
+                        "decision",
+                        "frameId"
+                      ],
+                      "additionalProperties": false
+                    }
                   }
                 },
                 "required": [

@@ -1178,6 +1178,86 @@ export const EffectExecutionFrameSnapshotSchema = z
     boundedIterationCursors: z.record(StringSchema, NumberSchema),
     localBindings: z.record(StringSchema, MoveParamValueSchema),
     pendingTriggerQueue: z.array(StringSchema),
+    decisionHistory: z.array(z.lazy(() => CompoundTurnTraceEntrySchema)).optional(),
+  })
+  .strict();
+
+export const ActionSelectionDecisionSchema = z
+  .object({
+    kind: z.literal('actionSelection'),
+    actionId: StringSchema,
+    move: z.object({
+      actionId: StringSchema,
+      params: z.record(StringSchema, MoveParamValueSchema),
+      freeOperation: BooleanSchema.optional(),
+      actionClass: StringSchema.optional(),
+      compound: z.unknown().optional(),
+    }).strict().optional(),
+  })
+  .strict();
+
+export const ChooseOneDecisionSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    decisionKey: StringSchema,
+    value: MoveParamValueSchema,
+  })
+  .strict();
+
+export const ChooseNStepDecisionSchema = z
+  .object({
+    kind: z.literal('chooseNStep'),
+    decisionKey: StringSchema,
+    command: z.union([z.literal('add'), z.literal('remove'), z.literal('confirm')]),
+    value: MoveParamScalarSchema.optional(),
+  })
+  .strict();
+
+export const StochasticResolveDecisionSchema = z
+  .object({
+    kind: z.literal('stochasticResolve'),
+    decisionKey: StringSchema,
+    value: MoveParamValueSchema,
+  })
+  .strict();
+
+export const OutcomeGrantResolveDecisionSchema = z
+  .object({
+    kind: z.literal('outcomeGrantResolve'),
+    grantId: StringSchema,
+  })
+  .strict();
+
+export const TurnRetirementDecisionSchema = z
+  .object({
+    kind: z.literal('turnRetirement'),
+    retiringTurnId: NumberSchema,
+  })
+  .strict();
+
+export const DecisionSchema = z.union([
+  ActionSelectionDecisionSchema,
+  ChooseOneDecisionSchema,
+  ChooseNStepDecisionSchema,
+  StochasticResolveDecisionSchema,
+  OutcomeGrantResolveDecisionSchema,
+  TurnRetirementDecisionSchema,
+]);
+
+export const CompoundTurnTraceEntrySchema = z
+  .object({
+    seatId: ActiveDeciderSeatIdSchema,
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    frameId: NumberSchema,
   })
   .strict();
 

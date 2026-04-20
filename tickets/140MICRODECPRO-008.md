@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game-data YAML only
-**Deps**: `tickets/140MICRODECPRO-007.md`, `tickets/140MICRODECPRO-002.md`
+**Deps**: `tickets/140MICRODECPRO-007.md`, `archive/tickets/140MICRODECPRO-002.md`
 
 ## Problem
 

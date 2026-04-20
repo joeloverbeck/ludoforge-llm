@@ -1,6 +1,6 @@
 # 140MICRODECPRO-002: I2 + I3 + I4 investigation — profile audit, worker-bridge audit, trace-transform design
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — documentation-only deliverables under `campaigns/phase3-microturn/` and `docs/migration/`
@@ -113,3 +113,12 @@ grep -c '^|' campaigns/phase3-microturn/worker-bridge-rewire.md
 
 1. Manual doc review (no automated test target).
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` (regression sanity).
+
+## Outcome
+
+- Landed `campaigns/phase3-microturn/profile-migration-audit.md` with the live per-profile expression audit across FITL and Texas. Reachable-expression totals: `93` rows across `6` profiles (`63` Category `A`, `13` Category `B`, `17` Category `C`).
+- Landed `campaigns/phase3-microturn/worker-bridge-rewire.md` with the current runner source/test consumer inventory for the retired bridge APIs and the ticket-010 migration mapping to `publishMicroturn` / `applyDecision` / `advanceAutoresolvable`.
+- Landed `docs/migration/spec-140-trace-transform.md` and created `docs/migration/` as the Spec-140 migration-doc home.
+- `ticket corrections applied`: Texas is not just a placeholder file; it has one live `baseline` profile with zero Category `C` rows. FITL still has live Category `C` rows, so ticket `140MICRODECPRO-009.md` remains in scope rather than becoming descopable.
+- `verification set`: `ls campaigns/phase3-microturn/`; `ls docs/migration/`; `grep -c '^|' campaigns/phase3-microturn/profile-migration-audit.md`; `grep -c '^|' campaigns/phase3-microturn/worker-bridge-rewire.md`; `pnpm turbo build`; `pnpm turbo test`; `pnpm turbo lint`; `pnpm turbo typecheck`
+- `proof gaps`: none

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
-**Deps**: `tickets/140MICRODECPRO-010.md`
+**Deps**: `archive/tickets/140MICRODECPRO-010.md`
 
 ## Problem
 

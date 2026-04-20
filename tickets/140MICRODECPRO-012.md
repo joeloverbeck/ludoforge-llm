@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — deletes certificate machinery across the kernel
-**Deps**: `archive/tickets/140MICRODECPRO-008.md`, `tickets/140MICRODECPRO-010.md`
+**Deps**: `archive/tickets/140MICRODECPRO-008.md`, `archive/tickets/140MICRODECPRO-010.md`
 
 ## Problem
 

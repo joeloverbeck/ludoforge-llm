@@ -17,7 +17,7 @@ import type { ActionId } from './branded.js';
 import type { GameState, ZobristFeature, Token, VariableValue } from './types-core.js';
 import type { ZobristTable } from './types-core.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
-import { zobristKey } from './zobrist.js';
+import { computeFullHash, zobristKey } from './zobrist.js';
 
 /** Update hash for a currentPhase change. */
 export const updatePhaseHash = (
@@ -220,7 +220,8 @@ const xorActionUsage = (
  * This is the **single source of truth** for hash reconciliation. It covers
  * every feature that `computeFullHash` iterates: tokenPlacements, globalVars,
  * perPlayerVars, zoneVars, activePlayer, currentPhase, turnCount, actionUsage,
- * markers, globalMarkers, reveals, activeLastingEffects, interruptPhaseStack.
+ * markers, globalMarkers, reveals, activeLastingEffects, interruptPhaseStack,
+ * decisionStack, nextFrameId, nextTurnId, activeDeciderSeatId.
  *
  * For each category, only changed entries incur XOR work. Unchanged entries
  * are skipped via reference-identity fast paths. Performance is O(changed
@@ -231,6 +232,15 @@ export const reconcileRunningHash = (
   baseline: GameState,
   target: GameState,
 ): bigint => {
+  if (
+    baseline.decisionStack !== target.decisionStack
+    || baseline.nextFrameId !== target.nextFrameId
+    || baseline.nextTurnId !== target.nextTurnId
+    || baseline.activeDeciderSeatId !== target.activeDeciderSeatId
+  ) {
+    return computeFullHash(table, target);
+  }
+
   let h = baseline._runningHash;
 
   // --- Scalar features ---
@@ -440,4 +450,3 @@ export const reconcileRunningHash = (
 
   return h;
 };
-

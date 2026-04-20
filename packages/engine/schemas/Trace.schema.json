@@ -4965,6 +4965,628 @@
             ],
             "additionalProperties": false
           }
+        },
+        "decisionStack": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "frameId": {
+                "type": "number"
+              },
+              "parentFrameId": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "turnId": {
+                "type": "number"
+              },
+              "context": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "actionSelection"
+                      },
+                      "seatId": {
+                        "type": "string"
+                      },
+                      "eligibleActions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "eligibleActions"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "chooseOne"
+                      },
+                      "seatId": {
+                        "type": "string"
+                      },
+                      "decisionKey": {
+                        "type": "string"
+                      },
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            "legality": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "legal"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "illegal"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "unknown"
+                                }
+                              ]
+                            },
+                            "illegalReason": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "resolution": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "exact"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "provisional"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "stochastic"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "ambiguous"
+                                }
+                              ]
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "legality",
+                            "illegalReason"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "decisionKey",
+                      "options"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "chooseNStep"
+                      },
+                      "seatId": {
+                        "type": "string"
+                      },
+                      "decisionKey": {
+                        "type": "string"
+                      },
+                      "options": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "anyOf": [
+                                {
+                                  "anyOf": [
+                                    {
+                                      "type": "number"
+                                    },
+                                    {
+                                      "type": "string"
+                                    },
+                                    {
+                                      "type": "boolean"
+                                    }
+                                  ]
+                                },
+                                {
+                                  "type": "array",
+                                  "items": {
+                                    "anyOf": [
+                                      {
+                                        "type": "number"
+                                      },
+                                      {
+                                        "type": "string"
+                                      },
+                                      {
+                                        "type": "boolean"
+                                      }
+                                    ]
+                                  }
+                                }
+                              ]
+                            },
+                            "legality": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "legal"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "illegal"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "unknown"
+                                }
+                              ]
+                            },
+                            "illegalReason": {
+                              "anyOf": [
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "null"
+                                }
+                              ]
+                            },
+                            "resolution": {
+                              "anyOf": [
+                                {
+                                  "type": "string",
+                                  "const": "exact"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "provisional"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "stochastic"
+                                },
+                                {
+                                  "type": "string",
+                                  "const": "ambiguous"
+                                }
+                              ]
+                            },
+                            "metadata": {
+                              "type": "object",
+                              "propertyNames": {
+                                "type": "string"
+                              },
+                              "additionalProperties": {}
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "legality",
+                            "illegalReason"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "selectedSoFar": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        }
+                      },
+                      "cardinality": {
+                        "type": "object",
+                        "properties": {
+                          "min": {
+                            "type": "number"
+                          },
+                          "max": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "min",
+                          "max"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "stepCommands": {
+                        "type": "array",
+                        "items": {
+                          "anyOf": [
+                            {
+                              "type": "string",
+                              "const": "add"
+                            },
+                            {
+                              "type": "string",
+                              "const": "remove"
+                            },
+                            {
+                              "type": "string",
+                              "const": "confirm"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "decisionKey",
+                      "options",
+                      "selectedSoFar",
+                      "cardinality",
+                      "stepCommands"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "stochasticResolve"
+                      },
+                      "seatId": {
+                        "type": "string",
+                        "const": "__chance"
+                      },
+                      "decisionKey": {
+                        "type": "string"
+                      },
+                      "distribution": {
+                        "type": "object",
+                        "properties": {
+                          "outcomes": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "value": {
+                                  "anyOf": [
+                                    {
+                                      "anyOf": [
+                                        {
+                                          "type": "number"
+                                        },
+                                        {
+                                          "type": "string"
+                                        },
+                                        {
+                                          "type": "boolean"
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "type": "array",
+                                      "items": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                },
+                                "weight": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "value",
+                                "weight"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "outcomes"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "decisionKey",
+                      "distribution"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "outcomeGrantResolve"
+                      },
+                      "seatId": {
+                        "type": "string",
+                        "const": "__kernel"
+                      },
+                      "grant": {
+                        "type": "object",
+                        "properties": {
+                          "grantId": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "grantId"
+                        ],
+                        "additionalProperties": {}
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "grant"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "const": "turnRetirement"
+                      },
+                      "seatId": {
+                        "type": "string",
+                        "const": "__kernel"
+                      },
+                      "retiringTurnId": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "seatId",
+                      "retiringTurnId"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "accumulatedBindings": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        },
+                        {
+                          "type": "boolean"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "number"
+                          },
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "boolean"
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+              },
+              "effectFrame": {
+                "type": "object",
+                "properties": {
+                  "programCounter": {
+                    "type": "number"
+                  },
+                  "boundedIterationCursors": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "number"
+                    }
+                  },
+                  "localBindings": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "anyOf": [
+                        {
+                          "anyOf": [
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            },
+                            {
+                              "type": "boolean"
+                            }
+                          ]
+                        },
+                        {
+                          "type": "array",
+                          "items": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              },
+                              {
+                                "type": "boolean"
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  },
+                  "pendingTriggerQueue": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "programCounter",
+                  "boundedIterationCursors",
+                  "localBindings",
+                  "pendingTriggerQueue"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "frameId",
+              "parentFrameId",
+              "turnId",
+              "context",
+              "accumulatedBindings",
+              "effectFrame"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "nextFrameId": {
+          "type": "number"
+        },
+        "nextTurnId": {
+          "type": "number"
+        },
+        "activeDeciderSeatId": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "string",
+              "const": "__chance"
+            },
+            {
+              "type": "string",
+              "const": "__kernel"
+            }
+          ]
         }
       },
       "required": [
@@ -4981,7 +5603,11 @@
         "stateHash",
         "actionUsage",
         "turnOrderState",
-        "markers"
+        "markers",
+        "decisionStack",
+        "nextFrameId",
+        "nextTurnId",
+        "activeDeciderSeatId"
       ],
       "additionalProperties": false
     },

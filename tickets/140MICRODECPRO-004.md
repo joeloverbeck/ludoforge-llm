@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `publishMicroturn`, `applyDecision`, `advanceAutoresolvable` for simple contexts
-**Deps**: `tickets/140MICRODECPRO-003.md`
+**Deps**: `archive/tickets/140MICRODECPRO-003.md`
 
 ## Problem
 

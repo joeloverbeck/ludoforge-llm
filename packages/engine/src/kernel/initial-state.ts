@@ -1,6 +1,7 @@
 import { asPlayerId } from './branded.js';
 import { applyEffects } from './effects.js';
 import { createExecutionEffectContext } from './effect-context.js';
+import { asDecisionFrameId, asTurnId, resolveActiveDeciderSeatIdForPlayer } from './microturn/types.js';
 import { createRng } from './prng.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { initializeTurnFlowEligibilityState } from './turn-flow-eligibility.js';
@@ -75,9 +76,13 @@ export const initialState = (
     globalMarkers: initialGlobalMarkers,
     activeLastingEffects: undefined,
     interruptPhaseStack: undefined,
+    decisionStack: [],
+    nextFrameId: asDecisionFrameId(0),
+    nextTurnId: asTurnId(0),
+    activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(validatedDef, 0),
     turnOrderState: initialTurnOrderState,
   };
-  const withInitialActivePlayer = resolveInitialActivePlayer(baseState, validatedDef.turnOrder);
+  const withInitialActivePlayer = resolveInitialActivePlayer(baseState, validatedDef);
 
   const setupResult = applyEffects(validatedDef.setup, createExecutionEffectContext({
     def: validatedDef,
@@ -174,7 +179,8 @@ const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameSt
   };
 };
 
-const resolveInitialActivePlayer = (state: GameState, strategy: GameDef['turnOrder']): GameState => {
+const resolveInitialActivePlayer = (state: GameState, def: GameDef): GameState => {
+  const strategy = def.turnOrder;
   if (strategy?.type !== 'fixedOrder') {
     return state;
   }
@@ -189,6 +195,7 @@ const resolveInitialActivePlayer = (state: GameState, strategy: GameDef['turnOrd
   return {
     ...state,
     activePlayer: asPlayerId(player),
+    activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, player),
   };
 };
 

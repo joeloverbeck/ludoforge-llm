@@ -227,6 +227,10 @@ const validGameState = {
   globalMarkers: undefined,
   activeLastingEffects: undefined,
   interruptPhaseStack: undefined,
+  decisionStack: [],
+  nextFrameId: 0,
+  nextTurnId: 0,
+  activeDeciderSeatId: '0',
 } as const;
 
 const validGameTrace = {

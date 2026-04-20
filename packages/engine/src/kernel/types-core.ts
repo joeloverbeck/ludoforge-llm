@@ -48,6 +48,12 @@ import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './deri
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { DecisionKey } from './decision-scope.js';
 import type {
+  ActiveDeciderSeatId,
+  DecisionFrameId,
+  DecisionStackFrame,
+  TurnId,
+} from './microturn/types.js';
+import type {
   AgentPolicyCandidateIntrinsic,
   AgentPolicyDecisionIntrinsic,
   AgentPolicyOptionIntrinsic,
@@ -1059,7 +1065,11 @@ export type ZobristFeature =
       readonly zoneId: string;
       readonly varName: string;
       readonly value: number;
-    };
+    }
+  | { readonly kind: 'decisionStackFrame'; readonly slot: number; readonly encoded: string }
+  | { readonly kind: 'nextFrameId'; readonly value: number }
+  | { readonly kind: 'nextTurnId'; readonly value: number }
+  | { readonly kind: 'activeDeciderSeatId'; readonly seatId: string };
 
 export interface InterruptPhaseFrame {
   readonly phase: PhaseId;
@@ -1081,8 +1091,10 @@ export interface RevealGrant {
  * Canonical shape: globalVars, perPlayerVars, zoneVars, playerCount, zones,
  * nextTokenOrdinal, currentPhase, activePlayer, turnCount, rng, stateHash,
  * _runningHash, actionUsage, turnOrderState, markers, reveals, globalMarkers,
- * activeLastingEffects, interruptPhaseStack.
- * All construction sites must materialize every property.
+ * activeLastingEffects, interruptPhaseStack, decisionStack, nextFrameId,
+ * nextTurnId, activeDeciderSeatId.
+ * Runtime construction sites should materialize every property; older
+ * hand-authored fixture states may rely on the identity defaults.
  */
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
@@ -1104,6 +1116,10 @@ export interface GameState {
   readonly globalMarkers: Readonly<Record<string, string>> | undefined;
   readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
   readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
+  readonly decisionStack?: readonly DecisionStackFrame[];
+  readonly nextFrameId?: DecisionFrameId;
+  readonly nextTurnId?: TurnId;
+  readonly activeDeciderSeatId?: ActiveDeciderSeatId;
 }
 
 export interface CompoundMovePayload {

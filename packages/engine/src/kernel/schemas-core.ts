@@ -1133,11 +1133,127 @@ export const GameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
+    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    nextFrameId: NumberSchema,
+    nextTurnId: NumberSchema,
+    activeDeciderSeatId: z.union([StringSchema, z.literal('__chance'), z.literal('__kernel')]),
   })
   .strict();
 
 export const MoveParamScalarSchema = z.union([NumberSchema, StringSchema, BooleanSchema]);
 export const MoveParamValueSchema = z.union([MoveParamScalarSchema, z.array(MoveParamScalarSchema)]);
+export const ActiveDeciderSeatIdSchema = z.union([StringSchema, z.literal('__chance'), z.literal('__kernel')]);
+
+export const ChooseOptionSchema = z
+  .object({
+    value: MoveParamValueSchema,
+    legality: z.union([z.literal('legal'), z.literal('illegal'), z.literal('unknown')]),
+    illegalReason: StringSchema.nullable(),
+    resolution: z.union([
+      z.literal('exact'),
+      z.literal('provisional'),
+      z.literal('stochastic'),
+      z.literal('ambiguous'),
+    ]).optional(),
+    metadata: z.record(StringSchema, z.unknown()).optional(),
+  })
+  .strict();
+
+export const StochasticDistributionEntrySchema = z
+  .object({
+    value: MoveParamValueSchema,
+    weight: NumberSchema,
+  })
+  .strict();
+
+export const StochasticDistributionSchema = z
+  .object({
+    outcomes: z.array(StochasticDistributionEntrySchema),
+  })
+  .strict();
+
+export const EffectExecutionFrameSnapshotSchema = z
+  .object({
+    programCounter: NumberSchema,
+    boundedIterationCursors: z.record(StringSchema, NumberSchema),
+    localBindings: z.record(StringSchema, MoveParamValueSchema),
+    pendingTriggerQueue: z.array(StringSchema),
+  })
+  .strict();
+
+export const ActionSelectionContextSchema = z
+  .object({
+    kind: z.literal('actionSelection'),
+    seatId: StringSchema,
+    eligibleActions: z.array(StringSchema),
+  })
+  .strict();
+
+export const ChooseOneContextSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    seatId: StringSchema,
+    decisionKey: StringSchema,
+    options: z.array(ChooseOptionSchema),
+  })
+  .strict();
+
+export const ChooseNStepContextSchema = z
+  .object({
+    kind: z.literal('chooseNStep'),
+    seatId: StringSchema,
+    decisionKey: StringSchema,
+    options: z.array(ChooseOptionSchema),
+    selectedSoFar: z.array(MoveParamScalarSchema),
+    cardinality: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
+    stepCommands: z.array(z.union([z.literal('add'), z.literal('remove'), z.literal('confirm')])),
+  })
+  .strict();
+
+export const StochasticResolveContextSchema = z
+  .object({
+    kind: z.literal('stochasticResolve'),
+    seatId: z.literal('__chance'),
+    decisionKey: StringSchema,
+    distribution: StochasticDistributionSchema,
+  })
+  .strict();
+
+export const OutcomeGrantResolveContextSchema = z
+  .object({
+    kind: z.literal('outcomeGrantResolve'),
+    seatId: z.literal('__kernel'),
+    grant: z.object({ grantId: StringSchema }).passthrough(),
+  })
+  .strict();
+
+export const TurnRetirementContextSchema = z
+  .object({
+    kind: z.literal('turnRetirement'),
+    seatId: z.literal('__kernel'),
+    retiringTurnId: NumberSchema,
+  })
+  .strict();
+
+export const DecisionContextSchema = z.union([
+  ActionSelectionContextSchema,
+  ChooseOneContextSchema,
+  ChooseNStepContextSchema,
+  StochasticResolveContextSchema,
+  OutcomeGrantResolveContextSchema,
+  TurnRetirementContextSchema,
+]);
+
+export const DecisionStackFrameSchema = z
+  .object({
+    frameId: NumberSchema,
+    parentFrameId: NumberSchema.nullable(),
+    turnId: NumberSchema,
+    context: DecisionContextSchema,
+    accumulatedBindings: z.record(StringSchema, MoveParamValueSchema),
+    effectFrame: EffectExecutionFrameSnapshotSchema,
+  })
+  .strict();
 
 export const CompoundMovePayloadSchema: z.ZodType = z.lazy(() =>
   z
@@ -1695,6 +1811,10 @@ export const SerializedGameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
+    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    nextFrameId: NumberSchema,
+    nextTurnId: NumberSchema,
+    activeDeciderSeatId: ActiveDeciderSeatIdSchema,
   })
   .strict();
 

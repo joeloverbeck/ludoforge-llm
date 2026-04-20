@@ -1,6 +1,6 @@
 # 140MICRODECPRO-003: D1 — domain types + decision stack on GameState + new deterministic constants
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — adds `packages/engine/src/kernel/microturn/` module + extends `GameState` + new constants
@@ -121,4 +121,17 @@ None in this ticket — T2 (decision stack invariants) and T8 (stochastic auto-a
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
-3. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+3. `pnpm turbo build`
+4. `pnpm turbo test`
+5. `pnpm turbo lint`
+6. `pnpm turbo typecheck`
+
+## Outcome
+
+- Landed the kernel-owned microturn type surface in `packages/engine/src/kernel/microturn/` with branded `TurnId` / `DecisionFrameId`, the six-way `DecisionContext` union, `DecisionStackFrame`, the initial suspend/resume snapshot shape, and helper constructors for the new branded ids.
+- Landed the new deterministic constants in `packages/engine/src/kernel/microturn/constants.ts`: `MAX_AUTO_RESOLVE_CHAIN` is derived from the existing move-enumeration decision/completion budgets, and `CHANCE_RNG_MIX` is a distinct fixed 64-bit mix constant.
+- Extended `GameState` / serialized game-state schemas / initial-state construction with `decisionStack`, `nextFrameId`, `nextTurnId`, and `activeDeciderSeatId`, and re-exported the new kernel module surface from `packages/engine/src/kernel/index.ts`.
+- Regenerated `packages/engine/schemas/Trace.schema.json` so the canonical trace schema includes the new serialized state fields, and updated the affected golden/schema fixtures to materialize the new empty-stack initial-state shape.
+- `ticket corrections applied`: the runtime and schema artifacts now fully materialize the four new microturn state fields, but `GameState` keeps those fields source-optional so existing hand-authored legacy fixture literals remain assignable while the migration proceeds. Empty-stack canonicality also needed an explicit hash rule: `decisionStack` frames always participate in the full hash, but `nextFrameId`, `nextTurnId`, and `activeDeciderSeatId` only contribute once the stack is non-empty so pre-spec empty-stack fixtures keep their existing state hashes.
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine test`; `pnpm turbo build`; `pnpm turbo test`; `pnpm turbo lint`; `pnpm turbo typecheck`
+- `proof gaps`: none

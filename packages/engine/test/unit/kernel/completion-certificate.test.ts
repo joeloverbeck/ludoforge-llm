@@ -11,6 +11,7 @@ import {
   deriveCompletionCertificateFingerprint,
   evaluateMoveLegality,
   materializeCompletionCertificate,
+  materializeCompletionCertificateFrontier,
   resolveMoveDecisionSequence,
   type ActionDef,
   type ActionPipelineDef,
@@ -119,6 +120,71 @@ const makeBaseMove = (): Move => ({
   params: {},
 });
 
+const makeStochasticFrontierAction = (): ActionDef => ({
+  id: asActionId('frontier-op'),
+  actor: 'active',
+  executor: 'actor',
+  phase: [asPhaseId('main')],
+  params: [],
+  pre: null,
+  cost: [],
+  effects: [],
+  limits: [],
+});
+
+const makeStochasticFrontierPipeline = (): ActionPipelineDef => ({
+  id: 'frontier-op-profile',
+  actionId: asActionId('frontier-op'),
+  legality: null,
+  costValidation: null,
+  costEffects: [],
+  targeting: {},
+  stages: [
+    {
+      effects: [
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$pick',
+            bind: '$pick',
+            options: { query: 'enums', values: ['good'] },
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+        eff({
+          rollRandom: {
+            bind: '$roll',
+            min: 1,
+            max: 2,
+            in: [],
+          },
+        }) as GameDef['actions'][number]['effects'][number],
+      ],
+    },
+  ],
+  atomicity: 'partial',
+});
+
+const makeStochasticFrontierDef = (): GameDef =>
+  asTaggedGameDef({
+    metadata: { id: 'completion-certificate-stochastic-frontier-test', players: { min: 2, max: 2 } },
+    seats: [{ id: '0' }, { id: '1' }],
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [{ id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set' }],
+    tokenTypes: [],
+    setup: [],
+    turnStructure: { phases: [{ id: asPhaseId('main') }] },
+    actions: [makeStochasticFrontierAction()],
+    actionPipelines: [makeStochasticFrontierPipeline()],
+    triggers: [],
+    terminal: { conditions: [] },
+  });
+
+const makeStochasticFrontierMove = (): Move => ({
+  actionId: asActionId('frontier-op'),
+  params: {},
+});
+
 const collectCanonicalAssignments = (
   def: GameDef,
   state: GameState,
@@ -186,6 +252,33 @@ const makeUnderspecifiedCertificate = (
   };
 };
 
+const makeStochasticFrontierCertificate = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+): CompletionCertificate => {
+  const request = resolveMoveDecisionSequence(def, state, baseMove, { choose: () => undefined });
+  if (request.nextDecision === undefined) {
+    throw new Error('Expected a deterministic pending decision before the stochastic frontier.');
+  }
+  const assignments: CompletionCertificate['assignments'] = [
+    {
+      decisionKey: request.nextDecision.decisionKey,
+      requestType: request.nextDecision.type,
+      value: 'good',
+    },
+  ];
+  return {
+    assignments,
+    fingerprint: deriveCompletionCertificateFingerprint({
+      stateHash: state.stateHash,
+      actionId: baseMove.actionId,
+      baseParams: baseMove.params,
+      assignments,
+    }),
+  };
+};
+
 describe('completion certificate materialization', () => {
   it('materializes a deterministic legal move from ordered assignments', () => {
     const def = makeDef();
@@ -219,6 +312,42 @@ describe('completion certificate materialization', () => {
 
     assert.throws(
       () => materializeCompletionCertificate(def, state, baseMove, underspecified),
+      (error: unknown) => {
+        const details = error as { readonly code?: unknown };
+        assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');
+        return true;
+      },
+    );
+  });
+
+  it('materializes a deterministic prefix to the stochastic frontier without requiring full completion', () => {
+    const state = makeBaseState();
+    const def = makeStochasticFrontierDef();
+    const baseMove = makeStochasticFrontierMove();
+    const certificate = makeStochasticFrontierCertificate(def, state, baseMove);
+
+    const frontier = materializeCompletionCertificateFrontier(
+      def,
+      state,
+      baseMove,
+      certificate,
+      undefined,
+    );
+
+    assert.equal(frontier.complete, false);
+    assert.equal(frontier.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(frontier.move.params, {
+      [certificate.assignments[0]?.decisionKey ?? 'missing']: 'good',
+    });
+
+    assert.throws(
+      () => materializeCompletionCertificate(
+        def,
+        state,
+        baseMove,
+        certificate,
+        undefined,
+      ),
       (error: unknown) => {
         const details = error as { readonly code?: unknown };
         assert.equal(details.code, 'RUNTIME_CONTRACT_INVALID');

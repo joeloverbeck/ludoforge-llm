@@ -44,6 +44,27 @@ They are not fully isolated stacks. Both flows reuse shared Pixi bootstrapping f
 - **Bounded iteration only**: `forEach` over finite collections, `repeat N` with compile-time bounds, no general recursion, trigger chains capped at depth K
 - **Small instruction set**: mechanics emerge from composition, not bespoke primitives
 
+## Legal Move Admission Contract
+
+Legal move enumeration now enforces constructibility as part of legality instead of treating it as a client-side follow-up concern.
+
+- **Admission verdicts**: decision-sequence admission distinguishes `satisfiable`, `unsatisfiable`, `unknown`, and `explicitStochastic`.
+- **Published move shapes**:
+  - complete move: fully bound and immediately executable
+  - stochastic move: admitted with a kernel-owned stochastic continuation and no completion certificate
+  - incomplete template: admitted only when paired with a kernel-produced completion certificate
+- **Mixed deterministic-to-stochastic paths**: when a deterministic prefix is required to reach a later stochastic boundary, legal-move publication materializes that prefix first so the public move is the stochastic continuation itself rather than a pre-stochastic template.
+- **Unknown is not public legality**: `unknown` admission states are rejected before publication. Clients never receive an incomplete move that still depends on uncertified search.
+- **Certificate side channel**: `enumerateLegalMoves(...)` returns admitted moves plus a kernel-internal `certificateIndex` keyed by move identity. The engine and simulator consume this side channel, but the runner worker bridge strips it before the structured-clone boundary so it does not become part of the public worker contract.
+
+### Agent Fallback
+
+Agents still attempt their normal bounded retry/completion flow first. If a published incomplete template exhausts its retry budget without producing a completion or stochastic continuation, the agent materializes the precomputed certificate instead of doing new search. Certificate materialization is deterministic and does not advance RNG beyond the already-consumed retry attempts.
+
+### Admission Search Shape
+
+The satisfiability classifier performs a bounded DFS over the remaining decision frontier. It records per-invocation memo entries and nogoods so repeated subproblems are short-circuited deterministically. When a satisfiable path is found, the classifier emits the canonical completion certificate for that path; when a stochastic boundary is encountered, it emits the `explicitStochastic` verdict. If a deterministic prefix is needed to reach that boundary, publication materializes the prefix before exposing the move.
+
 ## Key Data Flow
 
 ```

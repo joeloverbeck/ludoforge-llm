@@ -1,16 +1,16 @@
 ## 139CCONLEGCONT-006: FOUNDATIONS.md amendments + docs/architecture.md + T10 Foundation #18 conformance
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: None — docs + one integration test
+**Engine Changes**: Docs + kernel legality/publication fix + integration/unit proofs
 **Deps**: `archive/tickets/139CCONLEGCONT-005.md`
 
 ## Problem
 
 Spec 139 D7 amends Foundation #5 (adding the constructibility clause), rewords Foundation #10 (clarifying what "finite listability" requires), and adds Foundation #18 (`Constructibility Is Part of Legality`). Spec 139 D8 updates `docs/architecture.md` to describe the new admission contract and certificate flow. Per Spec 139 G9 and Foundation #16, the implementation must satisfy the amended Foundations as proven invariants — not the other way around. This ticket lands after tickets 001–005 so the invariants are already implemented; the amendments formalize what the code now guarantees.
 
-T10 is the test counterpart of Foundation #18: across the FITL canary corpus and the Texas Hold'em determinism corpus, every emitted classified incomplete move either carries a certificate (verdict `'satisfiable'`) or has verdict `'explicitStochastic'` with no certificate entry. Zero admitted moves have verdict `'unknown'`.
+T10 is the test counterpart of Foundation #18: across the FITL canary corpus and the Texas Hold'em determinism corpus, every emitted classified incomplete move is published in one of two constructible forms: either it carries a completion certificate, or it is already materialized to the true stochastic frontier with a kernel-owned stochastic continuation. Zero admitted incomplete moves are exposed as raw pre-stochastic templates without one of those construction artifacts, and zero admitted moves have verdict `'unknown'`.
 
 ## Assumption Reassessment (2026-04-19)
 
@@ -22,7 +22,7 @@ T10 is the test counterpart of Foundation #18: across the FITL canary corpus and
 ## Architecture Check
 
 1. **Amendments encode implemented invariants.** The new Foundation #18 and the amended #5 clause are not aspirational — tickets 001–005 make them architecturally true. This ticket documents the contract at the Foundations level (Foundation #16: testing as proof).
-2. **No code change beyond T10.** Docs-only for FOUNDATIONS.md and architecture.md; T10 is a new integration test that consumes the already-live admission contract.
+2. **Production fix required.** Live FITL witnesses showed that mixed deterministic-prefix-to-stochastic paths were still being published as uncertified pre-stochastic templates. The ticket therefore widened from docs-only to include the kernel publication fix required to make Foundation #18 true in production.
 3. **Downstream skills benefit.** Skills like `/reassess-spec`, `/spec-to-tickets`, and `/implement-ticket` cite `docs/FOUNDATIONS.md` as the architectural baseline. Amending it means future specs and tickets self-enforce the constructibility contract.
 
 ## What to Change
@@ -60,7 +60,7 @@ Append a sentence referencing Spec 139 alongside the existing Spec 136 reference
 Extend the existing admission-pipeline description with:
 
 - The new admission-classifier verdict set: `'satisfiable'`, `'unsatisfiable'`, `'unknown'`, `'explicitStochastic'`.
-- The certificate-carrying admission contract: three admission shapes (Complete / Stochastic / Template-with-certificate).
+- The certificate-carrying admission contract: three public shapes (Complete / Stochastic frontier / Template-with-certificate), including the rule that deterministic prefixes are materialized before exposing a stochastic continuation.
 - The `certificateIndex` side channel (kernel-internal, not worker-bridge-visible).
 - The agent's certificate-fallback path in the dead-end branch.
 - The memoized DFS + nogood recording mechanism (brief summary; detailed algorithm stays in spec 139).
@@ -73,23 +73,29 @@ File: `packages/engine/test/integration/spec-139-foundation-18-conformance.test.
 
 File-top marker: `// @test-class: architectural-invariant`.
 
-Assertions (per spec § Testing Strategy T10, updated):
+Assertions (per spec § Testing Strategy T10, corrected to the live architectural contract):
 
 - Across the FITL canary corpus (seeds 1002, 1005, 1010, 1013 × `[us-baseline, arvn-baseline, nva-baseline, vc-baseline]` and `[us-baseline, arvn-evolved, nva-baseline, vc-baseline]`) and the Texas Hold'em determinism corpus:
   - For every emitted classified move whose `viability.complete === false`:
-    - If the classifier verdict was `'satisfiable'`, assert a corresponding certificate is present in `certificateIndex`.
-    - If the classifier verdict was `'explicitStochastic'`, assert NO certificate entry is present for that move.
+    - Assert either `viability.stochasticDecision !== undefined` or a corresponding certificate is present in `certificateIndex`.
+    - If `viability.stochasticDecision !== undefined`, assert NO certificate entry is present for that published move.
 - Assert zero admitted incomplete moves have verdict `'unknown'` (the contract rejects them before admission).
 
 ## Files to Touch
 
 - `docs/FOUNDATIONS.md` (modify)
 - `docs/architecture.md` (modify)
+- `packages/engine/src/kernel/completion-certificate.ts` (modify)
+- `packages/engine/src/kernel/effects-choice.ts` (modify)
+- `packages/engine/src/kernel/legal-choices.ts` (modify)
+- `packages/engine/src/kernel/legal-moves.ts` (modify)
 - `packages/engine/test/integration/spec-139-foundation-18-conformance.test.ts` (new — T10)
+- `packages/engine/test/unit/kernel/completion-certificate.test.ts` (modify)
+- `packages/engine/test/unit/kernel/legal-moves-constructible-admission.test.ts` (modify)
 
 ## Out of Scope
 
-- Any code change beyond adding T10. The Foundations changes are documentation.
+- Changes outside the constructibility/publication boundary. The required runtime fix stays inside kernel legality/discovery/publication seams.
 - Renumbering existing foundations or restructuring the Appendix beyond appending one sentence.
 - Updating skills or other meta-docs that reference FOUNDATIONS.md — skills read it at invocation time; no propagation needed.
 
@@ -104,16 +110,50 @@ Assertions (per spec § Testing Strategy T10, updated):
 ### Invariants
 
 1. Foundation #18 is type-enforced via the `DecisionSequenceSatisfiability` union (from ticket 003) and runtime-enforced via the admission switch (from ticket 004).
-2. T10 is the runtime conformance proof: for every state in the corpus, every admitted incomplete move maps to exactly one of two certificate-presence states.
+2. T10 is the runtime conformance proof: for every state in the corpus, every admitted incomplete move maps to exactly one constructible public state, either certificate-backed or already materialized to a stochastic frontier.
 
 ## Test Plan
 
 ### New/Modified Tests
 
 1. `packages/engine/test/integration/spec-139-foundation-18-conformance.test.ts` (new) — T10.
+2. `packages/engine/test/unit/kernel/completion-certificate.test.ts` (modified) — stochastic-frontier materialization proof.
+3. `packages/engine/test/unit/kernel/legal-moves-constructible-admission.test.ts` (modified) — mixed deterministic-prefix-to-stochastic publication proof.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:integration` — T10.
-2. `pnpm turbo test` — full suite.
-3. Visual review: `docs/FOUNDATIONS.md` rendered in the user's preferred markdown previewer — confirms #18 placement and amendment wording.
+1. `pnpm -F @ludoforge/engine build` — rebuild owned engine surfaces.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-certificate.test.js` — frontier-materialization proof.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/legal-moves-constructible-admission.test.js` — mixed-path publication proof.
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/spec-139-foundation-18-conformance.test.js` — T10 corpus proof.
+5. `pnpm -F @ludoforge/engine test:unit` — engine unit lane.
+6. `pnpm turbo lint` — repo lint lane.
+7. `pnpm turbo typecheck` — repo typecheck lane.
+8. `pnpm turbo test` — full suite.
+
+## Outcome
+
+Completed on 2026-04-20.
+
+The original docs-only assumption was false. Live FITL witnesses exposed two production gaps that made Foundation #18 untrue in practice:
+
+1. Mixed deterministic-prefix-to-stochastic paths were being published as uncertified pre-stochastic templates even though the classifier had already found a deterministic prefix certificate.
+2. Some pure stochastic frontiers collapsed away a shared downstream deterministic decision tail, yielding an empty-alternative stochastic shell instead of the true executable frontier.
+
+The landed fix made the public legality surface architecturally complete:
+
+1. `materializeCompletionCertificateFrontier(...)` now replays deterministic prefixes to either full completion or the true stochastic frontier.
+2. Legal-move publication materializes explicit-stochastic paths before exposure, so published incomplete moves are either certificate-backed templates or already at the stochastic frontier.
+3. Stochastic request recovery now reconstructs shared downstream pending decisions when all stochastic outcomes lead to the same next deterministic request.
+4. `docs/FOUNDATIONS.md` and `docs/architecture.md` were updated to describe the real contract rather than the earlier contradictory wording.
+
+Verification completed cleanly with:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/completion-certificate.test.js`
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/legal-moves-constructible-admission.test.js`
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/spec-139-foundation-18-conformance.test.js`
+5. `pnpm -F @ludoforge/engine test:unit`
+6. `pnpm turbo lint`
+7. `pnpm turbo typecheck`
+8. `pnpm turbo test`

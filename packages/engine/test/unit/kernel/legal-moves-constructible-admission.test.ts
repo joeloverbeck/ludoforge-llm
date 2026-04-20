@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  type DecisionKey,
   asPhaseId,
   asPlayerId,
   asZoneId,
@@ -20,6 +21,8 @@ import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { readKernelSource } from '../../helpers/kernel-source-guard.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const PHASE_ID = asPhaseId('main');
 const ACTION_ID = asActionId('constructible-op');
@@ -94,7 +97,7 @@ const makeTemplateMove = (freeOperation = false): Move => ({
 });
 
 describe('legal move constructible admission', () => {
-  it('drops unknown, indexes satisfiable templates, and leaves explicit stochastic moves certificate-free', () => {
+  it('drops unknown, indexes satisfiable templates, and publishes stochastic-frontier moves without certificate leakage', () => {
     const decisionDef = makePipelineDef([
       eff({
         chooseOne: {
@@ -139,6 +142,7 @@ describe('legal move constructible admission', () => {
     const stochastic = enumerateLegalMoves(stochasticDef, state);
     assert.equal(stochastic.moves.length, 1);
     assert.equal(stochastic.certificateIndex, undefined);
+    assert.equal(stochastic.moves[0]?.viability.stochasticDecision?.kind, 'pendingStochastic');
     assert.equal(
       classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
         stochasticDef,
@@ -149,6 +153,52 @@ describe('legal move constructible admission', () => {
       ).classification,
       'explicitStochastic',
     );
+
+    const mixedStochasticDef = makePipelineDef([
+      eff({
+        chooseOne: {
+          internalDecisionId: 'decision:$pick',
+          bind: '$pick',
+          options: { query: 'enums', values: ['good'] },
+        },
+      }) as ActionDef['effects'][number],
+      eff({
+        rollRandom: {
+          bind: '$roll',
+          min: 1,
+          max: 2,
+          in: [],
+        },
+      }) as ActionDef['effects'][number],
+    ]);
+    const mixedStochastic = enumerateLegalMoves(mixedStochasticDef, state);
+    assert.equal(mixedStochastic.moves.length, 1);
+    assert.equal(mixedStochastic.certificateIndex, undefined);
+    assert.equal(mixedStochastic.moves[0]?.viability.stochasticDecision?.kind, 'pendingStochastic');
+    assert.equal(mixedStochastic.moves[0]?.viability.nextDecision, undefined);
+    assert.equal(
+      mixedStochastic.moves[0]?.trustedMove !== undefined,
+      true,
+    );
+    assert.deepEqual(mixedStochastic.moves[0]?.move.params, {
+      $pick: 'good',
+    });
+    const mixedClassification = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+      mixedStochasticDef,
+      state,
+      makeTemplateMove(),
+      MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE,
+      { emitCompletionCertificate: true },
+    );
+    assert.equal(mixedClassification.classification, 'explicitStochastic');
+    assert.deepEqual(mixedClassification.certificate?.assignments, [
+      {
+        decisionKey: asDecisionKey('$pick'),
+        requestType: 'chooseOne',
+        value: 'good',
+      },
+    ]);
+
   });
 
   it('preserves the offered-phase branch in must-change outcome-grant handling', () => {

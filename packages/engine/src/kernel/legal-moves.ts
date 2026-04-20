@@ -59,7 +59,10 @@ import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { evaluateMoveLegality } from './move-legality-predicate.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
-import type { CompletionCertificate } from './completion-certificate.js';
+import {
+  materializeCompletionCertificateFrontier,
+  type CompletionCertificate,
+} from './completion-certificate.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -167,6 +170,33 @@ const createFreeOperationTerminalValidator = (
       && state.turnOrderState.type === 'cardDriven'
       && (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).some((grant) => grant.completionPolicy === 'required');
   };
+
+const tryMaterializePublishedStochasticFrontier = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  certificate: CompletionCertificate | undefined,
+  runtime: GameDefRuntime | undefined,
+  discoveryCache: DiscoveryCache | undefined,
+): {
+  readonly move: Move;
+  readonly viability: ReturnType<typeof probeMoveViability>;
+  readonly trustedMove: ReturnType<typeof createTrustedExecutableMove>;
+} | null => {
+  if (certificate === undefined) {
+    return null;
+  }
+  const frontier = materializeCompletionCertificateFrontier(def, state, move, certificate, runtime);
+  const viability = probeMoveViability(def, state, frontier.move, runtime, discoveryCache);
+  if (!viability.viable || viability.stochasticDecision === undefined) {
+    return null;
+  }
+  return {
+    move: frontier.move,
+    viability,
+    trustedMove: createTrustedExecutableMove(viability.move, state.stateHash, 'enumerateLegalMoves'),
+  };
+};
 
 type MutableEnumerationReadContext = {
   -readonly [K in keyof ReadContext]: ReadContext[K];
@@ -421,6 +451,28 @@ const classifyEnumeratedMoves = (
             continue;
           }
           certificateIndex.set(stableMoveKey, admission.certificate);
+        } else if (admission.classification === 'explicitStochastic') {
+          const stochasticFrontier = tryMaterializePublishedStochasticFrontier(
+            def,
+            state,
+            move,
+            admission.certificate,
+            runtime,
+            discoveryCache,
+          );
+          if (stochasticFrontier === null) {
+            warnings.push({
+              code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
+              message: 'Explicit stochastic legal move could not be materialized to its stochastic frontier.',
+              context: {
+                actionId: String(move.actionId),
+                stateHash: state.stateHash,
+              },
+            });
+            classified.pop();
+            continue;
+          }
+          classified[classified.length - 1] = stochasticFrontier;
         } else if (admission.classification === 'unsatisfiable') {
           warnings.push({
             code: 'MOVE_ENUM_PROBE_REJECTED',
@@ -1353,8 +1405,13 @@ function enumerateCurrentEventMoves(
       continue;
     }
     const stableMoveKey = toMoveIdentityKey(def, move);
-    enumeration.prevalidatedIncompleteMoveKeys.add(stableMoveKey);
-    if (decisionSequenceResult.certificate !== undefined) {
+    if (decisionSequenceResult.classification === 'satisfiable') {
+      enumeration.prevalidatedIncompleteMoveKeys.add(stableMoveKey);
+    }
+    if (
+      decisionSequenceResult.classification === 'satisfiable'
+      && decisionSequenceResult.certificate !== undefined
+    ) {
       enumeration.precomputedCertificates.set(stableMoveKey, decisionSequenceResult.certificate);
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {

@@ -323,7 +323,7 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
   });
 };
 
-const mergePendingChoiceRequests = (
+export const mergePendingChoiceRequests = (
   pendingChoices: readonly ChoicePendingRequest[],
 ): readonly ChoicePendingRequest[] => {
   const [first, ...rest] = pendingChoices;

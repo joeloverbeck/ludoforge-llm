@@ -24,6 +24,17 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - Before marking a ticket complete, compare the ticket's named verification commands against the final proof set. Either run each named command directly or record, in the active ticket outcome, the exact broader lane that subsumed it.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 
+## Final-Proof Gate
+
+Before the first lane you intend to treat as the **final** acceptance-proof run, stop and verify all of the following:
+
+1. the active ticket status and outcome block already match the live intended result (`COMPLETED`, `BLOCKED`, narrowed scope, etc.)
+2. any command substitutions or ticket-correction ledger entries are already written into the active ticket when needed
+3. any sibling-ticket, dependency, spec, or touched-file-scope edits required for a truthful closeout are already done
+4. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
+
+If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
+
 ## Workflow
 
 ### Ticket-Type Triage
@@ -31,6 +42,8 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 Load `references/ticket-type-triage.md` to classify the ticket into the smallest live category before loading further references, and to run the category-specific preflights (bounded local refactor, proof/benchmark/audit/investigation, event/card/action-identity repro, gate/smoke/regression historical witness, historical-evidence sufficiency, contradictory live evidence, shared-contract downstream consumers).
 
 For **investigation / measurement / fixture-producing** tickets, do not default to the bounded-local-refactor fast path merely because the owned files are "just a script plus artifacts." If the ticket predicts an empirical outcome, witness distribution, or measured subset shape, prefer the investigation/proof path unless reassessment proves the evidence surface is trivial and contradiction risk is low.
+
+For inventory, audit, or fixture-producing tickets, verify the **live ownership unit** before building the deliverable. A ticket may name a broad semantic surface (`march`, `event-card action`, `policy profile`, etc.) while the real repo-owned boundary is finer-grained (`actionPipeline` id, card side, phase variant, emitted report row, or another runtime-owned artifact). Build the deliverable against the finest truthful live unit rather than collapsing distinct surfaces into the draft ticket's coarser prose.
 
 ### Bounded Local Refactor Fast Path
 
@@ -99,6 +112,12 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
 
+When the owned deliverable is a large checked-in fixture or inventory artifact, prefer generating it from the most authoritative live seam available (compiled spec surface, runtime snapshot, parser output, or equivalent) instead of hand-authoring repeated rows. Before check-in:
+
+1. record the derivation source in working notes
+2. capture a compact summary (`entry counts`, `surface classes`, `deepest cases`, or similar) so the artifact can be sanity-checked without rereading the whole file
+3. add or extend a validator that proves schema conformance plus coverage parity against the same live seam when proportionate
+
 Load `references/triage-and-resolution.md` when discrepancy classification is nontrivial, when the ticket is not a bounded local refactor, or when reassessment reveals boundary-affecting drift that would benefit from the fuller taxonomy. A bounded local refactor may skip this load if the discrepancy handling remains straightforward and is still recorded explicitly in working notes.
 
 If the change involves a mid-migration state or ticket rewrite, load `references/schema-and-migration.md` (Migration & Rewrite Awareness section).
@@ -137,10 +156,13 @@ When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture,
 2. Reuse existing fixture helpers such as `asTaggedGameDef`, effect-tag helpers, and nearby state builders before inventing new one-off scaffolding.
 3. Verify whether the test should import from the public package surface or an internal module before writing the fixture.
 4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
+5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
 
 ## Verification
 
 Before the final acceptance-proof pass, pause on this explicit checkpoint: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
+
+For active draft tickets, treat the **Final-Proof Gate** above as mandatory, not advisory. Do not rely on memory that the ticket will be updated later; the ticket artifact should already be truthful before the first proof lane you plan to cite as final acceptance.
 
 Load `references/verification.md` for non-bounded tickets, or for bounded local refactors once verification planning becomes nontrivial because of shared outputs, multi-lane acceptance proof, migration fallout, or environment/tooling ambiguity. This is the **full verification load**; do not treat the earlier command-sanity pass as requiring this whole reference by default. `references/verification.md` covers command sanity check, verification preflight, execution order, build ordering and output contention, verification safety, escalation ladder, failure isolation, schema & artifact regeneration, standard commands, and measured-gate outcome.
 

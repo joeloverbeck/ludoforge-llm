@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { RandomAgent } from '../../../src/agents/random-agent.js';
 import {
   completeClassifiedMove,
@@ -317,7 +316,7 @@ describe('RandomAgent', () => {
     assert.equal(result.move.actionId, asActionId('simple'));
   });
 
-  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+  it('throws an invariant error when every classified move is unsatisfiable', () => {
     const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
     const emptyProfile = createEmptyOptionsProfile('unplayable');
     const def = createDefWithProfile([action], [emptyProfile]);
@@ -332,11 +331,7 @@ describe('RandomAgent', () => {
         legalMoves: [pendingClassifiedMove(templateMove)],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'random'
-        && error.legalMoveCount === 1
-      ),
+      /RandomAgent invariant violation: no playable move remained after preparing 1 classified legal move\(s\)\./,
     );
   });
 

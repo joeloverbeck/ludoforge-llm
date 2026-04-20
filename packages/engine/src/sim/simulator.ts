@@ -19,7 +19,6 @@ import type {
   TerminalResult,
   ValidatedGameDef,
 } from '../kernel/index.js';
-import { isNoPlayableMovesAfterPreparationError } from '../agents/no-playable-move.js';
 import { computeDeltas } from './delta.js';
 import type { SimulationOptions } from './sim-options.js';
 import { extractDecisionPointSnapshot } from './snapshot.js';
@@ -98,7 +97,12 @@ export const runGame = (
     }
 
     const t0_legal = perfStart(profiler);
-    const legalMoveResult = enumerateLegalMoves(validatedDef, state, undefined, resolvedRuntime);
+    const legalMoveResult = enumerateLegalMoves(
+      validatedDef,
+      state,
+      profiler === undefined ? undefined : { profiler },
+      resolvedRuntime,
+    );
     perfEnd(profiler, 'simLegalMoves', t0_legal);
     if (legalMoveResult.moves.length === 0) {
       stopReason = 'noLegalMoves';
@@ -123,16 +127,15 @@ export const runGame = (
         state,
         playerId: player,
         legalMoves: legalMoveResult.moves,
+        ...(legalMoveResult.certificateIndex === undefined
+          ? {}
+          : { certificateIndex: legalMoveResult.certificateIndex }),
         rng: agentRng,
         runtime: resolvedRuntime,
       });
     } catch (error) {
-      if (!isNoPlayableMovesAfterPreparationError(error)) {
-        throw error;
-      }
       perfEnd(profiler, 'simAgentChooseMove', t0_agent);
-      stopReason = 'noPlayableMoveCompletion';
-      break;
+      throw error;
     }
     perfEnd(profiler, 'simAgentChooseMove', t0_agent);
     agentRngByPlayer[player] = selected.rng;

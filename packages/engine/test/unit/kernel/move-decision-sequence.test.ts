@@ -9,6 +9,7 @@ import {
   asTokenId,
   asZoneId,
   classifyMoveDecisionSequenceAdmissionForLegalMove,
+  classifyMoveDecisionSequenceSatisfiabilityForLegalMove,
   classifyMoveDecisionSequenceSatisfiability,
   isMoveDecisionSequenceAdmittedForLegalMove,
   isMoveDecisionSequenceSatisfiable,
@@ -901,7 +902,7 @@ phase: [asPhaseId('main')],
     }
   });
 
-  it('legal-move admission helper treats deferrable missing bindings as admissible unknowns across admission contexts', () => {
+  it('legal-move admission helper classifies deferrable missing bindings as unknown and does not admit them', () => {
     const action: ActionDef = {
       id: asActionId('missing-binding-admission-op'),
       actor: 'active',
@@ -944,13 +945,31 @@ phase: [asPhaseId('main')],
     ] as const;
     for (const context of contexts) {
       assert.equal(
+        classifyMoveDecisionSequenceAdmissionForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('missing-binding-admission-op'),
+          context,
+        ),
+        'unknown',
+      );
+      assert.equal(
+        classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+          def,
+          makeBaseState(),
+          makeMove('missing-binding-admission-op'),
+          context,
+        ).classification,
+        'unknown',
+      );
+      assert.equal(
         isMoveDecisionSequenceAdmittedForLegalMove(
           def,
           makeBaseState(),
           makeMove('missing-binding-admission-op'),
           context,
         ),
-        true,
+        false,
       );
     }
   });

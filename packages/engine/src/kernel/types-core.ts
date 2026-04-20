@@ -1290,8 +1290,11 @@ export type RuntimeWarningCode =
   | 'MOVE_ENUM_TEMPLATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'
+  | 'MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE'
   | 'MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED'
   | 'MOVE_ENUM_PROBE_REJECTED'
+  | 'CLASSIFIER_UNKNOWN_VERDICT_DROPPED'
+  | 'CONSTRUCTIBILITY_INVARIANT_VIOLATION'
   | 'MOVE_COMPLETION_RETRY_BIASED_NON_EMPTY';
 
 export interface RuntimeWarning {
@@ -1566,6 +1569,7 @@ export interface PolicyMovePreparationTrace {
   readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts?: number;
   readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
+  readonly templateCompletionSource?: 'certificateFallback';
   readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
   readonly warnings?: readonly RuntimeWarning[];
 }
@@ -1727,8 +1731,7 @@ export type TerminalResult =
 export type SimulationStopReason =
   | 'terminal'
   | 'maxTurns'
-  | 'noLegalMoves'
-  | 'noPlayableMoveCompletion';
+  | 'noLegalMoves';
 
 export interface GameTrace {
   readonly gameDefId: string;
@@ -1843,6 +1846,7 @@ export interface Agent {
     readonly state: GameState;
     readonly playerId: PlayerId;
     readonly legalMoves: readonly ClassifiedMove[];
+    readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
     readonly rng: Rng;
     readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
     /** Opt-in profiler for agent sub-function timing. */

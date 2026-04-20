@@ -34,6 +34,8 @@ Hidden and private information are first-class semantic concerns. Hands, decks, 
 
 The kernel is the single source of truth for legal actions and state transitions. UI gestures map to generic actions; agents choose from the same legal action set; simulations advance through the same apply-action pipeline. No UI-only rule paths, no simulation-only shortcuts, and no duplicated legality logic outside the kernel.
 
+**Constructibility clause**: No client-visible legal action may require uncertified client-side search to become executable. A legal action exposed by the kernel must be either directly executable, explicitly stochastic with a kernel-owned stochastic continuation, or accompanied by a kernel-produced completion certificate or a split decision-state continuation.
+
 ## 6. Schema Ownership Stays Generic
 
 **Payload schema and type contracts in shared compiler/kernel schemas MUST remain generic. No per-game schema files.**
@@ -62,7 +64,7 @@ The event stream, together with canonical snapshots when needed, must be suffici
 
 **All iteration MUST be bounded. No general recursion. All choices MUST be finite and enumerable.**
 
-`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. Legal moves must be finitely listable and emitted in stable deterministic order — no free-text moves, no unbounded generation. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
+`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. The kernel must finitely enumerate the current executable decision frontier in stable deterministic order. A compound human-visible turn may be represented either as a fully bound move, an explicitly stochastic continuation, or a bounded sequence of kernel-owned decision states. Finite listability does not require eager expansion of all end-of-turn concretizations when that expansion is combinatorially explosive; instead, the kernel produces a per-move completion certificate or split decision-state continuation that is itself bounded and deterministic. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
 
 ## 11. Immutability
 
@@ -108,6 +110,12 @@ Compiler determinism is proven by compiling the same GameSpecDoc twice and asser
 
 In TypeScript, this means branded types. The kernel validates identifier construction at runtime. Serialized YAML and JSON artifacts continue to use canonical string representations. This eliminates an entire class of bugs where identifiers from different domains are accidentally interchanged.
 
+## 18. Constructibility Is Part of Legality
+
+**A move is not legal for clients unless it is constructible under the kernel's bounded deterministic rules protocol. Existence without a construction artifact is insufficient.**
+
+Legality and constructibility are a single property exposed by a single kernel artifact. Client-visible incomplete moves carry a kernel-produced completion certificate; client-visible stochastic moves carry an explicit stochastic continuation; everything else is fully bound. Internal search states with `unknown` verdicts MUST NOT be exposed as legal actions. Failure to certify a structurally satisfiable move within bounded computation is an engine defect, not a recoverable game state.
+
 ---
 
 ## Appendix: Determinism Proofs vs. Profile-Quality Witnesses
@@ -116,4 +124,4 @@ The determinism commandment (#8) is proven by the `packages/engine/test/determin
 
 Convergence claims tied to a specific policy-profile variant are not engine invariants. They are quality signals for the profile maintainer, and they live in `packages/engine/test/policy-profile-quality/`, not in `determinism/`. Failures there emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings and a non-blocking CI summary rather than a blocking determinism failure.
 
-The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 was written to eliminate.
+The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 and Spec 139 were written to eliminate. Spec 139 added Foundation #18 and refined Foundations #5 and #10 to formalize the constructibility-carrying legality contract.

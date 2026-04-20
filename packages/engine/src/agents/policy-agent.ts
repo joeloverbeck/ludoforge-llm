@@ -2,8 +2,8 @@ import type { Agent } from '../kernel/types.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { perfStart, perfDynEnd } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
-import { NoPlayableMovesAfterPreparationError } from './no-playable-move.js';
 import { buildCompletionChooseCallback } from './completion-guidance-choice.js';
+import { createNoPlayableMoveInvariantError } from './agent-move-selection.js';
 import {
   evaluatePolicyMove,
   type PolicyEvaluationFailure,
@@ -35,6 +35,7 @@ export interface PolicyAgentConfig {
   readonly traceLevel?: PolicyDecisionTraceLevel;
   readonly fallbackOnError?: boolean;
   readonly completionsPerTemplate?: number;
+  readonly disableGuidedChooser?: boolean;
 }
 
 export class PolicyAgent implements Agent {
@@ -42,6 +43,7 @@ export class PolicyAgent implements Agent {
   private readonly traceLevel: PolicyDecisionTraceLevel;
   private readonly fallbackOnError: boolean | undefined;
   private readonly completionsPerTemplate: number;
+  private readonly disableGuidedChooser: boolean;
 
   constructor(config: PolicyAgentConfig = {}) {
     const { completionsPerTemplate } = config;
@@ -55,6 +57,7 @@ export class PolicyAgent implements Agent {
     this.traceLevel = config.traceLevel ?? 'summary';
     this.fallbackOnError = config.fallbackOnError;
     this.completionsPerTemplate = completionsPerTemplate ?? DEFAULT_COMPLETIONS_PER_TEMPLATE;
+    this.disableGuidedChooser = config.disableGuidedChooser ?? false;
   }
 
   chooseMove(input: Parameters<Agent['chooseMove']>[0]): ReturnType<Agent['chooseMove']> {
@@ -77,6 +80,7 @@ export class PolicyAgent implements Agent {
       resolvedProfile,
       choose,
       profiler,
+      this.disableGuidedChooser,
     );
     const phase1EvaluationInput = {
       ...input,
@@ -98,6 +102,7 @@ export class PolicyAgent implements Agent {
     const prepared = preparePlayableMoves(input, {
       pendingTemplateCompletions: this.completionsPerTemplate,
       actionIdFilter: phase1.move.actionId,
+      disableGuidedChooser: this.disableGuidedChooser,
       ...(choose === undefined ? {} : { choose }),
     });
     perfDynEnd(profiler, 'agent:preparePlayableMoves', t0_prepare);
@@ -112,6 +117,7 @@ export class PolicyAgent implements Agent {
         rng: prepared.rng,
       }, {
         pendingTemplateCompletions: this.completionsPerTemplate,
+        disableGuidedChooser: this.disableGuidedChooser,
         ...(choose === undefined ? {} : { choose }),
       });
       perfDynEnd(profiler, 'agent:preparePlayableMovesFallback', t0_broaderPrepare);
@@ -125,7 +131,7 @@ export class PolicyAgent implements Agent {
       }
     }
     if (playableMoves.length === 0) {
-      throw new NoPlayableMovesAfterPreparationError('policy', input.legalMoves.length);
+      throw createNoPlayableMoveInvariantError('PolicyAgent', input.legalMoves.length);
     }
     const trustedMoveIndex = new Map(
       playableMoves.map((trustedMove) => [toMoveIdentityKey(input.def, trustedMove.move), trustedMove] as const),
@@ -195,6 +201,7 @@ function buildPhase1ActionPreviewIndex(
   resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
   choose: ReturnType<typeof buildCompletionChooseCallback> | undefined,
   profiler: Parameters<typeof perfStart>[0],
+  disableGuidedChooser: boolean,
 ): {
     readonly index: ReadonlyMap<string, Phase1ActionPreviewEntry>;
     readonly rng: typeof input.rng;
@@ -224,6 +231,7 @@ function buildPhase1ActionPreviewIndex(
       {
         pendingTemplateCompletions: completionBudget,
         actionIdFilter,
+        disableGuidedChooser,
         ...(choose === undefined ? {} : { choose }),
       },
     );

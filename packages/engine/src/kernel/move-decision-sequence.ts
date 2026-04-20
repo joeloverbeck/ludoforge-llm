@@ -9,6 +9,7 @@ import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import type { PerfProfiler } from './perf-profiler.js';
 import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
 import type {
   ChoiceIllegalRequest,
@@ -35,6 +36,10 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
+  readonly emitCompletionCertificate?: boolean;
+  readonly validateSatisfiedMove?: (move: Move) => boolean;
+  readonly onClassified?: (result: MoveDecisionSequenceSatisfiabilityResult) => void;
+  readonly profiler?: PerfProfiler;
 }
 
 export interface ResolveMoveDecisionSequenceResult {
@@ -62,6 +67,19 @@ const probeMoveDecisionSequenceAdmissionClassification = (
 ): ProbeResult<MoveDecisionSequenceSatisfiabilityResult['classification']> =>
   probeWith(
     () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification,
+    (e) => classifyMissingBindingProbeError(e, context),
+  );
+
+const probeMoveDecisionSequenceAdmissionResult = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  runtime?: GameDefRuntime,
+): ProbeResult<MoveDecisionSequenceSatisfiabilityResult> =>
+  probeWith(
+    () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime),
     (e) => classifyMissingBindingProbeError(e, context),
   );
 
@@ -171,7 +189,8 @@ export const isMoveDecisionSequenceSatisfiable = (
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
-  return classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification === 'satisfiable';
+  const classification = classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification;
+  return classification === 'satisfiable' || classification === 'explicitStochastic';
 };
 
 export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
@@ -197,6 +216,29 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   });
 };
 
+export const classifyMoveDecisionSequenceSatisfiabilityForLegalMove = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
+  context: MissingBindingPolicyContext,
+  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  runtime?: GameDefRuntime,
+): MoveDecisionSequenceSatisfiabilityResult => {
+  const result = probeMoveDecisionSequenceAdmissionResult(
+    def,
+    state,
+    baseMove,
+    context,
+    options,
+    runtime,
+  );
+  return resolveProbeResult(result, {
+    onLegal: (value) => value,
+    onIllegal: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
+    onInconclusive: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
+  });
+};
+
 export const isMoveDecisionSequenceAdmittedForLegalMove = (
   def: GameDef,
   state: GameState,
@@ -204,14 +246,18 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   context: MissingBindingPolicyContext,
   options?: MoveDecisionSequenceSatisfiabilityOptions,
   runtime?: GameDefRuntime,
-): boolean => classifyMoveDecisionSequenceAdmissionForLegalMove(
-  def,
-  state,
-  baseMove,
-  context,
-  options,
-  runtime,
-) !== 'unsatisfiable';
+): boolean => {
+  const result = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+    def,
+    state,
+    baseMove,
+    context,
+    options,
+    runtime,
+  );
+  options?.onClassified?.(result);
+  return result.classification === 'satisfiable' || result.classification === 'explicitStochastic';
+};
 
 export const classifyMoveDecisionSequenceSatisfiability = (
   def: GameDef,
@@ -228,6 +274,14 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       orderSelections: (_request, selectableValues) => orderMoveParamValuesByAscendingComplexity(state, selectableValues),
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
+      ...(options?.validateSatisfiedMove === undefined ? {} : { validateSatisfiedMove: options.validateSatisfiedMove }),
+      ...(options?.emitCompletionCertificate === true
+        ? {
+          emitCompletionCertificate: true,
+          certificateFingerprintStateHash: state.stateHash,
+        }
+        : {}),
+      ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
     },
   );
 };

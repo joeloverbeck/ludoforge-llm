@@ -22,6 +22,8 @@ import { TRIGGER_LOG_ENTRIES_EXHAUSTIVE } from '../helpers/trigger-log-fixtures'
 import { CHOOSE_N_TEST_DEF, LEGAL_TICK_MOVE, TEST_DEF } from './test-fixtures';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
+type CertificateIndex = NonNullable<LegalMoveEnumerationResult['certificateIndex']>;
+type CloneCompatCertificate = CertificateIndex extends ReadonlyMap<string, infer T> ? T : never;
 
 const roundTripClone = <T>(value: T): T => {
   const cloned = structuredClone(value);
@@ -270,6 +272,35 @@ describe('worker boundary structured clone compatibility', () => {
     };
 
     roundTripClone(sample);
+  });
+
+  it('strips certificateIndex from worker-facing LegalMoveEnumerationResult clones', async () => {
+    const worker = createGameWorker();
+    const nextStamp = createStampFactory();
+    await worker.init(TEST_DEF, 7, undefined, nextStamp());
+
+    const certificate: CloneCompatCertificate = {
+      assignments: [
+        { decisionKey: asDecisionKey('decision:$target'), requestType: 'chooseOne', value: 'allowed' },
+      ],
+      fingerprint: 'fingerprint',
+      diagnostics: {
+        probeStepsConsumed: 1,
+        paramExpansionsConsumed: 1,
+        memoHits: 0,
+        nogoodsRecorded: 0,
+      },
+    };
+
+    vi.spyOn(runtime, 'enumerateLegalMoves').mockReturnValueOnce({
+      moves: [toClassifiedMove(LEGAL_TICK_MOVE)],
+      warnings: RUNTIME_WARNINGS,
+      certificateIndex: new Map([['tick', certificate]]),
+    });
+
+    const result = await worker.enumerateLegalMoves();
+    expect(result.certificateIndex).toBeUndefined();
+    roundTripClone(result);
   });
 
   it('round-trips applyTemplateMove uncompletable and illegal outcomes', async () => {

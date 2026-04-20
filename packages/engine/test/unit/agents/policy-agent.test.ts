@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { completeClassifiedMove, completeClassifiedMoves, pendingClassifiedMove } from '../../helpers/classified-move-fixtures.js';
 import { createTemplateChooseOneAction, createTemplateChooseOneProfile } from '../../helpers/agent-template-fixtures.js';
@@ -1211,7 +1210,7 @@ describe('PolicyAgent', () => {
     assert.equal(chooseTargetCandidate?.score, 102);
   });
 
-  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+  it('throws an invariant error when every classified move is unsatisfiable', () => {
     const actionId = asActionId('unplayable');
     const def = createDef({
       metadata: { id: 'policy-agent-unplayable-template', players: { min: 2, max: 2 } },
@@ -1229,11 +1228,7 @@ describe('PolicyAgent', () => {
         legalMoves: [pendingClassifiedMove({ actionId, params: {} })],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'policy'
-        && error.legalMoveCount === 1
-      ),
+      /PolicyAgent invariant violation: no playable move remained after preparing 1 classified legal move\(s\)\./,
     );
   });
 

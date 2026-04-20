@@ -1243,11 +1243,23 @@
                     },
                     {
                       "type": "string",
+                      "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
+                    },
+                    {
+                      "type": "string",
                       "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
                     },
                     {
                       "type": "string",
                       "const": "MOVE_ENUM_PROBE_REJECTED"
+                    },
+                    {
+                      "type": "string",
+                      "const": "CLASSIFIER_UNKNOWN_VERDICT_DROPPED"
+                    },
+                    {
+                      "type": "string",
+                      "const": "CONSTRUCTIBILITY_INVARIANT_VIOLATION"
                     },
                     {
                       "type": "string",
@@ -3224,11 +3236,23 @@
                                   },
                                   {
                                     "type": "string",
+                                    "const": "MOVE_ENUM_DECISION_PROBE_SUBSET_INCOMPLETE"
+                                  },
+                                  {
+                                    "type": "string",
                                     "const": "MOVE_ENUM_DEFERRED_PREDICATE_BUDGET_EXCEEDED"
                                   },
                                   {
                                     "type": "string",
                                     "const": "MOVE_ENUM_PROBE_REJECTED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "CLASSIFIER_UNKNOWN_VERDICT_DROPPED"
+                                  },
+                                  {
+                                    "type": "string",
+                                    "const": "CONSTRUCTIBILITY_INVARIANT_VIOLATION"
                                   },
                                   {
                                     "type": "string",
@@ -5130,10 +5154,6 @@
         {
           "type": "string",
           "const": "noLegalMoves"
-        },
-        {
-          "type": "string",
-          "const": "noPlayableMoveCompletion"
         }
       ]
     }

@@ -2224,7 +2224,7 @@ phase: [asPhaseId('main')],
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_PARAM_EXPANSION_BUDGET_EXCEEDED'), true);
   });
 
-  it('24. surfaces decision probe budget warnings through legal move diagnostics', () => {
+  it('24. drops classified pipeline templates when decision probing remains unknown', () => {
     const action: ActionDef = {
       id: asActionId('needsDecision'),
 actor: 'active',
@@ -2263,15 +2263,10 @@ phase: [asPhaseId('main')],
       budgets: { maxDecisionProbeSteps: 0 },
     });
 
-    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: asActionId('needsDecision'), params: {} }]);
-    // Pipeline template moves skip the decision-sequence satisfiability probe,
-    // so budget warnings from that probe are no longer surfaced for pipeline
-    // actions. The template is pushed based on pipeline predicate eligibility
-    // alone. Budget warnings still fire for non-pipeline actions and free-op
-    // enumeration paths that still run the full probe.
+    assert.deepEqual(result.moves.map(({ move }) => move), []);
   });
 
-  it('24b. preserves free-operation variants when decision satisfiability is unknown', () => {
+  it('24b. drops free-operation variants when decision satisfiability is unknown', () => {
     const action: ActionDef = {
       id: asActionId('operation'),
 actor: 'active',
@@ -2345,9 +2340,10 @@ phase: [asPhaseId('main')],
       result.moves.some(
         ({ move }) => String(move.actionId) === 'operation' && move.freeOperation === true,
       ),
-      true,
+      false,
     );
     assert.equal(result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'), true);
+    assert.equal(result.warnings.some((warning) => warning.code === 'CLASSIFIER_UNKNOWN_VERDICT_DROPPED'), true);
   });
 
   it('24c. excludes free-operation variants when decision sequence is unsatisfiable', () => {
@@ -2513,13 +2509,18 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    // Pipeline template moves skip the decision-sequence probe, so the error
-    // from the missing gvar reference is deferred to completion time.
-    const result = enumerateLegalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState());
-    assert.deepEqual(result.moves.map(({ move }) => move), [{ actionId: action.id, params: {} }]);
+    assert.throws(
+      () => enumerateLegalMoves(makeBaseDef({ actions: [action], actionPipelines: [profile] }), makeBaseState()),
+      (error: unknown) => {
+        assert.ok(error instanceof Error);
+        const details = error as Error & { code?: unknown };
+        assert.equal(details.code, 'MISSING_VAR');
+        return true;
+      },
+    );
   });
 
-  it('24f. admits free-operation variants when decision probing hits deferrable missing bindings', () => {
+  it('24f. drops free-operation variants when decision probing hits deferrable missing bindings', () => {
     const action: ActionDef = {
       id: asActionId('freeOpDeferrableMissingBinding'),
 actor: 'active',
@@ -2582,7 +2583,7 @@ phase: [asPhaseId('main')],
     const moves = legalMoves(def, state);
     assert.equal(
       moves.some((move) => String(move.actionId) === 'freeOpDeferrableMissingBinding' && move.freeOperation === true),
-      true,
+      false,
     );
   });
 
@@ -3645,8 +3646,8 @@ phase: [asPhaseId('main')],
     );
   });
 
-  it('26. preserves event moves when event decision probing hits deferrable missing bindings', () => {
-    const { def, state, actionId } = makeEventLegalMovesFixture({
+  it('26. drops event moves when event decision probing hits deferrable missing bindings', () => {
+    const { def, state } = makeEventLegalMovesFixture({
       id: 'event-deferrable-binding',
       title: 'Deferrable event',
       sideMode: 'single',
@@ -3663,19 +3664,11 @@ phase: [asPhaseId('main')],
     });
 
     const moves = legalMoves(def, state);
-    assert.equal(moves.length, 1);
-    assert.deepEqual(moves[0], {
-      actionId,
-      params: {
-        eventCardId: 'event-deferrable-binding',
-        eventDeckId: 'deck',
-        side: 'unshaded',
-      },
-    });
+    assert.equal(moves.length, 0);
   });
 
-  it('27. preserves event moves when event decision satisfiability is unknown', () => {
-    const { def, state, actionId } = makeEventLegalMovesFixture({
+  it('27. drops event moves when event decision satisfiability is unknown', () => {
+    const { def, state } = makeEventLegalMovesFixture({
       id: 'event-unknown',
       title: 'Unknown event',
       sideMode: 'single',
@@ -3693,16 +3686,7 @@ phase: [asPhaseId('main')],
     });
 
     const result = enumerateLegalMoves(def, state, { budgets: { maxDecisionProbeSteps: 0 } });
-    assert.deepEqual(result.moves.map(({ move }) => move), [
-      {
-        actionId,
-        params: {
-          eventCardId: 'event-unknown',
-          eventDeckId: 'deck',
-          side: 'unshaded',
-        },
-      },
-    ]);
+    assert.deepEqual(result.moves.map(({ move }) => move), []);
     assert.equal(
       result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
       true,
@@ -4022,7 +4006,7 @@ describe('legalMoves plain-action feasibility probe', () => {
     assert.equal(moves[0]?.actionId, asActionId('patrol'));
   });
 
-  it('34. probe budget exceeded classifies as unknown and keeps move', () => {
+  it('34. probe budget exceeded classifies as unknown and drops move with a warning', () => {
     const action: ActionDef = {
       id: asActionId('patrol'),
       actor: 'active',
@@ -4047,8 +4031,11 @@ describe('legalMoves plain-action feasibility probe', () => {
     const state = makeBaseState();
 
     const result = enumerateLegalMoves(def, state, { probePlainActionFeasibility: true, budgets: { maxDecisionProbeSteps: 0 } });
-    assert.equal(result.moves.length, 1, 'when probe budget is zero, move should be kept (conservative)');
-    assert.equal(result.moves[0]?.move.actionId, asActionId('patrol'));
+    assert.equal(result.moves.length, 0, 'when probe budget is zero, unknown admission should now be dropped');
+    assert.equal(
+      result.warnings.some((warning) => warning.code === 'MOVE_ENUM_DECISION_PROBE_STEP_BUDGET_EXCEEDED'),
+      true,
+    );
   });
 
   it('34a. runtime first-decision compilation filters unconditional empty token domains', () => {
@@ -4349,8 +4336,8 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     assert.match(
       source,
-      /const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);/u,
-      'enumerateLegalMoves must destructure moves and discoveryCache directly from enumerateRawLegalMoves',
+      /(const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);)|(const\s+rawEnumeration\s*=\s*enumerateRawLegalMoves\(def,\s*state,\s*options,\s*runtime\);\s*const\s+\{\s*moves,\s*warnings:\s*rawWarnings,\s*discoveryCache\s*\}\s*=\s*rawEnumeration;)/u,
+      'enumerateLegalMoves must take moves and discoveryCache from a single enumerateRawLegalMoves result',
     );
 
     const filterCalls = collectCallExpressionsByIdentifier(sourceFile, 'applyTurnFlowWindowFilters');
@@ -4369,13 +4356,14 @@ describe('legalMoves plain-action feasibility probe', () => {
     const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyEnumeratedMoves');
     assert.equal(
       classifyCalls.some((call) =>
-        call.arguments.length === 6
+        call.arguments.length >= 7
         && expressionToText(sourceFile, call.arguments[0]!) === 'def'
         && expressionToText(sourceFile, call.arguments[1]!) === 'state'
         && expressionToText(sourceFile, call.arguments[2]!) === 'moves'
         && expressionToText(sourceFile, call.arguments[3]!) === 'warnings'
-        && expressionToText(sourceFile, call.arguments[4]!) === 'runtime'
-        && expressionToText(sourceFile, call.arguments[5]!) === 'discoveryCache',
+        && expressionToText(sourceFile, call.arguments[4]!) === 'budgets'
+        && expressionToText(sourceFile, call.arguments[5]!) === 'runtime'
+        && expressionToText(sourceFile, call.arguments[6]!) === 'discoveryCache',
       ),
       true,
       'classification must consume the filtered moves array directly so the Move object identities remain valid cache keys',

@@ -1,0 +1,14 @@
+# Spec 139 I2 certificate-search diagnostic
+seed=1010
+profile=arvn-evolved
+witnessMode=live replay witness capture
+stateHash=3539869921862699720
+playerId=2
+actionId=event
+terminalVerdict=satisfiable
+witnessWarnings=[]
+probeStepsConsumed=3
+paramExpansionsConsumed=2
+memoHits=0
+nogoodsRecorded=0
+generatedCertificate={"assignments":[{"decisionKey":"decision:doc.eventDecks.0.cards.54.unshaded.effects.1.let.in.0.chooseN::$nvaLaosPieces","requestType":"chooseN","value":["tok_nva-guerrillas_77","tok_nva-guerrillas_76","tok_nva-guerrillas_75","tok_nva-bases_74"]},{"decisionKey":"decision:doc.eventDecks.0.cards.54.unshaded.effects.2.let.in.0.chooseN::$nvaCambodiaPieces[3]","requestType":"chooseN","value":["tok_nva-guerrillas_85","tok_nva-guerrillas_84","tok_nva-guerrillas_83","tok_nva-bases_82"]}],"fingerprint":"086b512d0eed3fed","diagnostics":{"probeStepsConsumed":3,"paramExpansionsConsumed":2,"memoHits":0,"nogoodsRecorded":0}}

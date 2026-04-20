@@ -4,7 +4,7 @@ import { advanceScope, type DecisionKey } from './decision-scope.js';
 import { createChooseNTemplate } from './choose-n-session.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import { canConfirmChooseNSelection, resolveChooseNCardinality } from './choose-n-cardinality.js';
-import { effectRuntimeError } from './effect-error.js';
+import { effectRuntimeError, isEffectRuntimeReason } from './effect-error.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import { createSeatResolutionContext } from './identity.js';
 import { nextInt } from './prng.js';
@@ -323,7 +323,7 @@ const pendingChoiceStructuralKey = (pendingChoice: ChoicePendingRequest): string
   });
 };
 
-const mergePendingChoiceRequests = (
+export const mergePendingChoiceRequests = (
   pendingChoices: readonly ChoicePendingRequest[],
 ): readonly ChoicePendingRequest[] => {
   const [first, ...rest] = pendingChoices;
@@ -1009,7 +1009,18 @@ export const applyRollRandom = (
         },
         ...(tracedEffectPath === cursor.effectPath ? {} : { effectPath: tracedEffectPath }),
       };
-      const nestedResult = applyBatch(effect.rollRandom.in, env, nestedCursor, budget);
+      let nestedResult: ReturnType<ApplyEffectsWithBudget>;
+      try {
+        nestedResult = applyBatch(effect.rollRandom.in, env, nestedCursor, budget);
+      } catch (error: unknown) {
+        if (
+          isEffectRuntimeReason(error, EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED)
+          && (error.context.effectType === 'chooseN' || error.context.effectType === 'chooseOne')
+        ) {
+          continue;
+        }
+        throw error;
+      }
       outcomes.push(...collectNestedOutcomes(effect.rollRandom.bind, rolledValue, nestedResult.pendingChoice));
     }
 

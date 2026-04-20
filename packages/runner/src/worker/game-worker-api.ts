@@ -338,7 +338,10 @@ export function createGameWorker(): GameWorkerAPI {
     async enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        return enumerateLegalMoves(current.def, current.state, options);
+        const result = enumerateLegalMoves(current.def, current.state, options);
+        const workerSafeResult = { ...result } as LegalMoveEnumerationResult & { certificateIndex?: unknown };
+        delete workerSafeResult.certificateIndex;
+        return workerSafeResult;
       });
     },
 

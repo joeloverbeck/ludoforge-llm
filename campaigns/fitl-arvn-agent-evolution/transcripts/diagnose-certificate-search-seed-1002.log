@@ -1,0 +1,14 @@
+# Spec 139 I2 certificate-search diagnostic
+seed=1002
+profile=arvn-evolved
+witnessMode=live replay witness capture
+stateHash=16925676244341125499
+playerId=1
+actionId=event
+terminalVerdict=satisfiable
+witnessWarnings=[]
+probeStepsConsumed=3
+paramExpansionsConsumed=2
+memoHits=0
+nogoodsRecorded=0
+generatedCertificate={"assignments":[{"decisionKey":"decision:doc.eventDecks.0.cards.62.unshaded.branches.0.effects.0.chooseN::$ffUs","requestType":"chooseN","value":["tok_us-troops_97"]},{"decisionKey":"decision:doc.eventDecks.0.cards.62.unshaded.branches.0.effects.1.forEach.effects.0.if.else.0.chooseOne::$ffDest@tok_us-troops_97[0]","requestType":"chooseOne","value":"loc-ban-me-thuot-da-lat:none"}],"fingerprint":"c1bf3bc1c1c1b7f0","diagnostics":{"probeStepsConsumed":3,"paramExpansionsConsumed":2,"memoHits":0,"nogoodsRecorded":0}}

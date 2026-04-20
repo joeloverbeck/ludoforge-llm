@@ -1,8 +1,10 @@
 import { perfStart, perfDynEnd, type PerfProfiler } from '../kernel/perf-profiler.js';
 import { evaluatePlayableMoveCandidate } from '../kernel/playable-candidate.js';
+import { materializeCompletionCertificate } from '../kernel/completion-certificate.js';
 import type { DrawDeadEndOptionalChooseN } from '../kernel/move-completion.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { fork } from '../kernel/prng.js';
+import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type {
   Agent,
   ChoicePendingRequest,
@@ -27,6 +29,7 @@ export interface PreparePlayableMovesOptions {
   readonly pendingTemplateCompletions?: number;
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly actionIdFilter?: Move['actionId'];
+  readonly disableGuidedChooser?: boolean;
 }
 
 export interface PreparedPlayableMoves {
@@ -43,6 +46,7 @@ interface TemplateCompletionTrace {
   readonly skippedAsDuplicate?: boolean;
   readonly templateCompletionAttempts: number;
   readonly templateCompletionOutcome: NonNullable<PolicyMovePreparationTrace['templateCompletionOutcome']>;
+  readonly templateCompletionSource?: PolicyMovePreparationTrace['templateCompletionSource'];
   readonly rejection?: PolicyMovePreparationTrace['rejection'];
   readonly warnings?: readonly RuntimeWarning[];
 }
@@ -54,7 +58,7 @@ const sameRngState = (left: Rng, right: Rng): boolean =>
   && left.state.state.every((entry, index) => entry === right.state.state[index]);
 
 export function preparePlayableMoves(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
+  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
   options: PreparePlayableMovesOptions = {},
 ): PreparedPlayableMoves {
   const profiler: PerfProfiler | undefined = (input as { profiler?: PerfProfiler }).profiler;
@@ -184,6 +188,9 @@ export function preparePlayableMoves(
       ...(completion.trace.skippedAsDuplicate === true ? { skippedAsDuplicate: true } : {}),
       templateCompletionAttempts: completion.trace.templateCompletionAttempts,
       templateCompletionOutcome: completion.trace.templateCompletionOutcome,
+      ...(completion.trace.templateCompletionSource === undefined
+        ? {}
+        : { templateCompletionSource: completion.trace.templateCompletionSource }),
       ...(completion.trace.rejection === undefined ? {} : { rejection: completion.trace.rejection }),
       ...(completion.trace.warnings === undefined ? {} : { warnings: completion.trace.warnings }),
     });
@@ -216,7 +223,7 @@ export function preparePlayableMoves(
  * fallthrough path.
  */
 function attemptTemplateCompletion(
-  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'rng' | 'runtime' | 'profiler'>,
+  input: Pick<Parameters<Agent['chooseMove']>[0], 'def' | 'state' | 'legalMoves' | 'certificateIndex' | 'rng' | 'runtime' | 'profiler'>,
   move: Move,
   initialRng: Rng,
   pendingTemplateCompletions: number,
@@ -239,6 +246,7 @@ function attemptTemplateCompletion(
   let templateCompletionStructuralFailures = 0;
   let sawCompletedMove = false;
   let duplicateOutputOutcome: TemplateCompletionTrace['templateCompletionOutcome'] | undefined;
+  let usedCertificateFallback = false;
   let rejection: PolicyMovePreparationTrace['rejection'] | undefined;
   const warnings: RuntimeWarning[] = [];
   // When every attempt so far returned `notViable` (bad random target draw,
@@ -255,7 +263,7 @@ function attemptTemplateCompletion(
     const [attemptRng, retryRng] = fork(currentRng);
     const t0_epc = perfStart(profiler);
     const retryBiasNonEmpty = shouldBias;
-    let result = evaluatePlayableMoveCandidate(
+    const result = evaluatePlayableMoveCandidate(
       input.def,
       input.state,
       move,
@@ -266,18 +274,6 @@ function attemptTemplateCompletion(
         ...(retryBiasNonEmpty ? { retryBiasNonEmpty: true } : {}),
       },
     );
-    if (choose !== undefined && result.kind === 'rejected') {
-      // Completion guidance is advisory. If a guided completion path dead-ends,
-      // retry the same template without guidance before discarding the move.
-      result = evaluatePlayableMoveCandidate(
-        input.def,
-        input.state,
-        move,
-        attemptRng,
-        input.runtime,
-        retryBiasNonEmpty ? { retryBiasNonEmpty: true } : undefined,
-      );
-    }
     if (retryBiasNonEmpty) {
       const priorDiagnostic = priorDeadEndOptionalChooseN;
       warnings.push({
@@ -347,6 +343,31 @@ function attemptTemplateCompletion(
       notViableRetries += 1;
     }
   }
+  if (!sawCompletedMove && stochasticCount === 0 && duplicateOutputOutcome === undefined) {
+    const certificate = input.certificateIndex?.get(toMoveIdentityKey(input.def, move));
+    if (certificate !== undefined) {
+      usedCertificateFallback = true;
+      const certifiedMove = createTrustedExecutableMove(
+        materializeCompletionCertificate(input.def, input.state, move, certificate, input.runtime),
+        input.state.stateHash,
+        'templateCompletion',
+      );
+      if (recordPlayableMove(certifiedMove, 'complete')) {
+        sawCompletedMove = true;
+      } else {
+        duplicateOutputOutcome = 'complete';
+      }
+    } else {
+      warnings.push({
+        code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
+        message: 'Admitted incomplete legal move had no certificate at agent fallback time.',
+        context: {
+          actionId: String(move.actionId),
+          stateHash: input.state.stateHash,
+        },
+      });
+    }
+  }
   const trace: TemplateCompletionTrace = stochasticCount > 0
     ? {
         finalClassification: 'stochastic',
@@ -357,10 +378,11 @@ function attemptTemplateCompletion(
       }
     : sawCompletedMove
       ? {
-          finalClassification: 'complete',
+        finalClassification: 'complete',
         enteredTrustedMoveIndex: true,
         templateCompletionAttempts,
         templateCompletionOutcome: 'complete',
+        ...(usedCertificateFallback ? { templateCompletionSource: 'certificateFallback' } : {}),
         ...(warnings.length === 0 ? {} : { warnings }),
       }
       : duplicateOutputOutcome !== undefined
@@ -370,6 +392,7 @@ function attemptTemplateCompletion(
             skippedAsDuplicate: true,
             templateCompletionAttempts,
             templateCompletionOutcome: duplicateOutputOutcome,
+            ...(usedCertificateFallback ? { templateCompletionSource: 'certificateFallback' } : {}),
             ...(warnings.length === 0 ? {} : { warnings }),
           }
       : {

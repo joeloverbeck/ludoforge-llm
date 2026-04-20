@@ -12,6 +12,7 @@ import type { ChooseNTemplate } from './choose-n-session.js';
 import { resolveActionApplicabilityPreflight } from './action-applicability-preflight.js';
 import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { applyEffects } from './effects.js';
+import { mergePendingChoiceRequests } from './effects-choice.js';
 import { isEffectErrorCode, isEffectRuntimeReason } from './effect-error.js';
 import { deriveChoiceTargetKinds } from './choice-target-kinds.js';
 import {
@@ -1063,21 +1064,83 @@ const legalChoicesWithPreparedContextProbeInternal = (
   options?: LegalChoicesInternalOptions,
   allowAmbiguousFreeOperationOverlapDiscovery = false,
 ): ChoiceRequest =>
-  legalChoicesWithPreparedContextInternal(
+  recoverCollapsedStochasticRequest(
     context,
     partialMove,
     shouldEvaluateOptionLegality,
-    executeDiscoveryEffectsProbe,
-    (probeMove, probeOptions) => legalChoicesWithPreparedContextProbeInternal(
-      context,
-      probeMove,
-      false,
-      probeOptions,
-      allowAmbiguousFreeOperationOverlapDiscovery,
-    ),
     options,
     allowAmbiguousFreeOperationOverlapDiscovery,
+    legalChoicesWithPreparedContextInternal(
+      context,
+      partialMove,
+      shouldEvaluateOptionLegality,
+      executeDiscoveryEffectsProbe,
+      (probeMove, probeOptions) => legalChoicesWithPreparedContextProbeInternal(
+        context,
+        probeMove,
+        false,
+        probeOptions,
+        allowAmbiguousFreeOperationOverlapDiscovery,
+      ),
+      options,
+      allowAmbiguousFreeOperationOverlapDiscovery,
+    ),
   );
+
+const recoverCollapsedStochasticRequest = (
+  context: LegalChoicesPreparedContext,
+  partialMove: Move,
+  shouldEvaluateOptionLegality: boolean,
+  options: LegalChoicesInternalOptions | undefined,
+  allowAmbiguousFreeOperationOverlapDiscovery: boolean,
+  request: ChoiceRequest,
+): ChoiceRequest => {
+  if (request.kind !== 'pendingStochastic' || request.alternatives.length > 0) {
+    return request;
+  }
+
+  const recoveredPendingChoices: ChoicePendingRequest[] = [];
+  for (const outcome of request.outcomes) {
+    const probeMove: Move = {
+      ...partialMove,
+      params: {
+        ...partialMove.params,
+        ...outcome.bindings,
+      },
+    };
+    const recovered = legalChoicesWithPreparedContextInternal(
+      context,
+      probeMove,
+      shouldEvaluateOptionLegality,
+      executeDiscoveryEffectsProbe,
+      (nextProbeMove, probeOptions) => legalChoicesWithPreparedContextProbeInternal(
+        context,
+        nextProbeMove,
+        false,
+        probeOptions,
+        allowAmbiguousFreeOperationOverlapDiscovery,
+      ),
+      options,
+      allowAmbiguousFreeOperationOverlapDiscovery,
+    );
+    if (recovered.kind !== 'pending') {
+      return request;
+    }
+    recoveredPendingChoices.push(recovered);
+  }
+
+  if (recoveredPendingChoices.length === 0) {
+    return request;
+  }
+
+  const mergedPendingChoices = mergePendingChoiceRequests(recoveredPendingChoices);
+  return mergedPendingChoices.length === 1
+    ? mergedPendingChoices[0]!
+    : {
+      ...request,
+      alternatives: mergedPendingChoices,
+    };
+};
 
 const legalChoicesWithPreparedContextProbe = (
   context: LegalChoicesPreparedContext,
@@ -1160,8 +1223,16 @@ const legalChoicesWithPreparedContextStrict = (
     (probeMove, probeOptions) => legalChoicesWithPreparedContextProbe(context, probeMove, false, probeOptions),
     options,
   );
-  if (strictRequest.kind !== 'illegal' || strictRequest.reason !== 'freeOperationAmbiguousOverlap') {
-    return strictRequest;
+  const recoveredStrictRequest = recoverCollapsedStochasticRequest(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    options,
+    false,
+    strictRequest,
+  );
+  if (recoveredStrictRequest.kind !== 'illegal' || recoveredStrictRequest.reason !== 'freeOperationAmbiguousOverlap') {
+    return recoveredStrictRequest;
   }
 
   const provisionalRequest = legalChoicesWithPreparedContextInternal(
@@ -1173,13 +1244,21 @@ const legalChoicesWithPreparedContextStrict = (
     options,
     true,
   );
+  const recoveredProvisionalRequest = recoverCollapsedStochasticRequest(
+    context,
+    partialMove,
+    shouldEvaluateOptionLegality,
+    options,
+    true,
+    provisionalRequest,
+  );
   if (
-    (provisionalRequest.kind !== 'pending' && provisionalRequest.kind !== 'pendingStochastic')
+    (recoveredProvisionalRequest.kind !== 'pending' && recoveredProvisionalRequest.kind !== 'pendingStochastic')
     || !canResolveAmbiguousFreeOperationOverlapViaLaterDecisions(context, partialMove, options)
   ) {
-    return strictRequest;
+    return recoveredStrictRequest;
   }
-  return provisionalRequest;
+  return recoveredProvisionalRequest;
 };
 
 const prepareLegalChoicesContext = (

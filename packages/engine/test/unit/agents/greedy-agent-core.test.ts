@@ -4,7 +4,6 @@ import { describe, it } from 'node:test';
 
 import { pickRandom } from '../../../src/agents/agent-move-selection.js';
 import { GreedyAgent } from '../../../src/agents/greedy-agent.js';
-import { NoPlayableMovesAfterPreparationError } from '../../../src/agents/no-playable-move.js';
 import {
   completeClassifiedMove,
   completeClassifiedMoves,
@@ -396,7 +395,7 @@ describe('GreedyAgent core', () => {
     assert.equal(selected.includes('beta'), true);
   });
 
-  it('throws a typed no-playable-move error when every classified move is unsatisfiable', () => {
+  it('throws an invariant error when every classified move is unsatisfiable', () => {
     const action = createTemplateChooseOneAction(asActionId('unplayable'), phaseId);
     const emptyProfile = createEmptyOptionsProfile('unplayable');
     const def = createDefWithProfile([action], [emptyProfile]);
@@ -411,11 +410,7 @@ describe('GreedyAgent core', () => {
         legalMoves: [pendingClassifiedMove(templateMove)],
         rng: createRng(42n),
       }),
-      (error: unknown) => (
-        error instanceof NoPlayableMovesAfterPreparationError
-        && error.agentId === 'greedy'
-        && error.legalMoveCount === 1
-      ),
+      /GreedyAgent invariant violation: no playable move remained after preparing 1 classified legal move\(s\)\./,
     );
   });
 

@@ -7,6 +7,7 @@ import {
   asActionId,
   asPhaseId,
   assertValidatedGameDef,
+  createGameDefRuntime,
   createRng,
   initialState,
   publishMicroturn,
@@ -15,6 +16,8 @@ import {
   type Agent,
   type GameDef,
 } from '../../src/kernel/index.js';
+import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
@@ -176,4 +179,36 @@ describe('agents never throw with non-empty published microturn actions', () => 
       });
     }
   }
+
+  it('covers the live FITL seed-123 publication surface for representative agent types', () => {
+    const { parsed, compiled } = compileProductionSpec();
+    assertNoErrors(parsed);
+    assertNoErrors(compiled);
+    if (compiled.gameDef === null) {
+      throw new Error('Expected compiled FITL gameDef');
+    }
+
+    const def = assertValidatedGameDef(compiled.gameDef);
+    const runtime = createGameDefRuntime(def);
+    const state = initialState(def, 123, 4).state;
+    const microturn = publishMicroturn(def, state, runtime);
+    assert.ok(microturn.legalActions.length > 0);
+
+    const agents: readonly Agent[] = [
+      new RandomAgent(),
+      new GreedyAgent(),
+      new PolicyAgent({ profileId: 'us-baseline', traceLevel: 'summary' }),
+    ];
+    for (const [index, agent] of agents.entries()) {
+      assert.doesNotThrow(() => {
+        agent.chooseDecision({
+          def,
+          state,
+          microturn,
+          rng: createRng(BigInt(index + 1)),
+          runtime,
+        });
+      });
+    }
+  });
 });

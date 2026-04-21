@@ -4,18 +4,17 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  applyDecision,
   assertValidatedGameDef,
   createGameDefRuntime,
-  enumerateLegalMoves,
   initialState,
+  publishMicroturn,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
 } from '../../src/kernel/index.js';
-import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { derivePlayerObservation } from '../../src/kernel/observation.js';
-import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
@@ -67,8 +66,8 @@ const withObserverSafeAction = (def: GameDef): GameDef => {
   };
 };
 
-describe('Spec 139 hidden-information safety', () => {
-  it('keeps published pending action identity and next public choice observer-safe when hidden hole cards change', () => {
+describe('Spec 140 hidden-information safety', () => {
+  it('keeps published microturn identity and downstream player choice observer-safe when hidden hole cards change', () => {
     const { compiled } = compileTexasProductionSpec();
     const def = withObserverSafeAction(assertValidatedGameDef(compiled.gameDef));
     const runtime = createGameDefRuntime(def);
@@ -93,27 +92,26 @@ describe('Spec 139 hidden-information safety', () => {
     const swappedObservation = derivePlayerObservation(def, swappedState, swappedState.activePlayer, observerProfile);
     assert.deepEqual(swappedObservation.visibleTokenIdsByZone[opponentZoneId], []);
 
-    const baseEnumerated = enumerateLegalMoves(def, state, undefined, runtime);
-    const swappedEnumerated = enumerateLegalMoves(def, swappedState, undefined, runtime);
-    const baseClassified = baseEnumerated.moves.find((candidate) => candidate.move.actionId === OBSERVER_SAFE_ACTION_ID);
-    const swappedClassified = swappedEnumerated.moves.find((candidate) => candidate.move.actionId === OBSERVER_SAFE_ACTION_ID);
+    const baseMicroturn = publishMicroturn(def, state, runtime);
+    const swappedMicroturn = publishMicroturn(def, swappedState, runtime);
+    const baseDecision = baseMicroturn.legalActions.find(
+      (candidate) => candidate.kind === 'actionSelection' && candidate.actionId === OBSERVER_SAFE_ACTION_ID,
+    );
+    const swappedDecision = swappedMicroturn.legalActions.find(
+      (candidate) => candidate.kind === 'actionSelection' && candidate.actionId === OBSERVER_SAFE_ACTION_ID,
+    );
 
-    assert.ok(baseClassified, 'expected observer-safe pending action in base state');
-    assert.ok(swappedClassified, 'expected observer-safe pending action in swapped hidden state');
-    assert.equal(baseClassified?.viability.complete, false);
-    assert.equal(swappedClassified?.viability.complete, false);
-    assert.equal(baseClassified?.trustedMove, undefined);
-    assert.equal(swappedClassified?.trustedMove, undefined);
+    assert.ok(baseDecision, 'expected observer-safe action in base state');
+    assert.ok(swappedDecision, 'expected observer-safe action in swapped hidden state');
+    assert.deepEqual(baseDecision, swappedDecision);
 
-    const baseKey = toMoveIdentityKey(def, baseClassified!.move);
-    const swappedKey = toMoveIdentityKey(def, swappedClassified!.move);
-    assert.equal(baseKey, swappedKey, 'hidden card order should not perturb published pending action identity');
+    const baseNext = publishMicroturn(def, applyDecision(def, state, baseDecision!, undefined, runtime).state, runtime);
+    const swappedNext = publishMicroturn(def, applyDecision(def, swappedState, swappedDecision!, undefined, runtime).state, runtime);
 
-    const baseContinuation = resolveDecisionContinuation(def, state, baseClassified!.move, { choose: () => undefined }, runtime);
-    const swappedContinuation = resolveDecisionContinuation(def, swappedState, swappedClassified!.move, { choose: () => undefined }, runtime);
-
-    assert.deepEqual(baseContinuation.nextDecision, swappedContinuation.nextDecision);
-    const serializedDecision = JSON.stringify(baseContinuation.nextDecision ?? null);
+    assert.equal(baseNext.kind, 'chooseOne');
+    assert.equal(swappedNext.kind, 'chooseOne');
+    assert.deepEqual(baseNext.legalActions, swappedNext.legalActions);
+    const serializedDecision = JSON.stringify(baseNext.legalActions);
     for (const card of opponentCards) {
       assert.equal(serializedDecision.includes(String(card.id)), false);
     }

@@ -27,7 +27,7 @@ import { validateCompoundTurnInventory } from '../../fixtures/spec-140-compound-
 
 const makeBaseDef = (actions: readonly ActionDef[]): GameDef =>
   asTaggedGameDef({
-    metadata: { id: 'microturn-suspend-resume-prototype', players: { min: 2, max: 2 } },
+    metadata: { id: 'microturn-effect-frame-suspend-resume', players: { min: 2, max: 2 } },
     seats: [{ id: '0' }, { id: '1' }],
     constants: {},
     globalVars: [
@@ -167,7 +167,7 @@ test('validates the spec-140 FITL compound-turn inventory fixture', () => {
   assert.ok(entries.length >= 100, 'inventory should cover the full live FITL compound-turn surface');
 });
 
-test('prototypes effect-frame suspend/resume across outer chooseOne and nested chooseN frames', () => {
+test('suspends and resumes effect frames across outer chooseOne and nested chooseN frames', () => {
   const def = makeBaseDef([makePrototypeAction()]);
   const runtime = createGameDefRuntime(def);
   let state = makeBaseState(def);
@@ -180,12 +180,14 @@ test('prototypes effect-frame suspend/resume across outer chooseOne and nested c
   assert.equal(outerChoice.kind, 'chooseOne');
   assert.equal(state.decisionStack?.[0]?.context.kind, 'actionSelection');
   assert.equal(state.decisionStack?.[1]?.context.kind, 'chooseOne');
+  assert.equal(state.decisionStack?.[1]?.parentFrameId, state.decisionStack?.[0]?.frameId ?? null);
 
   const chooseHighlands = requireDecision(
     outerChoice,
     (decision) => decision.kind === 'chooseOne' && decision.value === 'highlands',
   );
   state = applyDecision(def, state, chooseHighlands, undefined, runtime).state;
+  assert.equal(state.decisionStack?.[1]?.parentFrameId, state.decisionStack?.[0]?.frameId ?? null);
 
   let firstChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
   assert.match(String(firstChooseN.decisionContext.decisionKey), /\$selectedKontum/);
@@ -217,6 +219,7 @@ test('prototypes effect-frame suspend/resume across outer chooseOne and nested c
     (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
   );
   state = applyDecision(def, state, kontumConfirm, undefined, runtime).state;
+  assert.equal(state.decisionStack?.[1]?.parentFrameId, state.decisionStack?.[0]?.frameId ?? null);
 
   const pleikuChooseN = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
   assert.match(String(pleikuChooseN.decisionContext.decisionKey), /\$selectedPleiku/);

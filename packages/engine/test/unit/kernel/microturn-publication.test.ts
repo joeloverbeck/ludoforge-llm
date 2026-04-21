@@ -72,8 +72,8 @@ const chooseOneEffect = (bind: string, values: readonly string[]) => eff({
   },
 });
 
-describe('microturn bridge smoke', () => {
-  it('publishes and applies a simple action-selection decision through the legacy move path', () => {
+describe('microturn publication', () => {
+  it('publishes player-visible action-selection decisions with matching kind and projected observation', () => {
     const action: ActionDef = {
       id: asActionId('gain'),
       actor: 'active',
@@ -93,6 +93,8 @@ describe('microturn bridge smoke', () => {
     assert.equal(microturn.kind, 'actionSelection');
     assert.equal(microturn.legalActions.length, 1);
     assert.equal(microturn.legalActions[0]?.kind, 'actionSelection');
+    assert.ok(microturn.legalActions.every((entry) => entry.kind === microturn.kind));
+    assert.equal(microturn.projectedState.observation !== undefined, true);
 
     const applied = applyDecision(def, state, microturn.legalActions[0]!, undefined, runtime);
     assert.equal(applied.state.globalVars.resources, 1);
@@ -102,7 +104,7 @@ describe('microturn bridge smoke', () => {
     assert.equal(applied.log.turnRetired, true);
   });
 
-  it('bridges a simple chooseOne sequence with a suspended root frame', () => {
+  it('publishes downstream chooseOne decisions with matching kind and projected observation', () => {
     const action: ActionDef = {
       id: asActionId('choose-and-gain'),
       actor: 'active',
@@ -128,6 +130,8 @@ describe('microturn bridge smoke', () => {
     const chooseOne = publishMicroturn(def, afterActionSelection.state, runtime);
     assert.equal(chooseOne.kind, 'chooseOne');
     assert.equal(chooseOne.legalActions.length, 2);
+    assert.ok(chooseOne.legalActions.every((entry) => entry.kind === chooseOne.kind));
+    assert.equal(chooseOne.projectedState.observation !== undefined, true);
 
     const chosen = chooseOne.legalActions.find((entry) => entry.kind === 'chooseOne' && entry.value === 'A');
     assert.ok(chosen);
@@ -140,7 +144,7 @@ describe('microturn bridge smoke', () => {
     assert.equal(afterChoice.log.turnRetired, true);
   });
 
-  it('resolves an explicit turnRetirement frame for round-robin one-phase states', () => {
+  it('publishes kernel-owned turnRetirement decisions without a player projection', () => {
     const def = makeBaseDef([]);
     const runtime = createGameDefRuntime(def);
     const retirementFrame: DecisionStackFrame = {
@@ -167,6 +171,8 @@ describe('microturn bridge smoke', () => {
 
     const microturn = publishMicroturn(def, state, runtime);
     assert.equal(microturn.kind, 'turnRetirement');
+    assert.ok(microturn.legalActions.every((entry) => entry.kind === microturn.kind));
+    assert.equal(microturn.projectedState.observation, undefined);
 
     const applied = applyDecision(def, state, microturn.legalActions[0]!, undefined, runtime);
     assert.equal(applied.state.turnCount, 1);
@@ -175,4 +181,3 @@ describe('microturn bridge smoke', () => {
     assert.equal(applied.log.turnRetired, true);
   });
 });
-

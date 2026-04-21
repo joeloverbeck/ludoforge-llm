@@ -7,7 +7,7 @@ import {
   assertValidatedGameDef,
   createGameDefRuntime,
   serializeGameState,
-  type AgentDecisionTrace,
+  serializeTrace,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -32,12 +32,12 @@ const TEXAS_POLICY_PLAYER_COUNT = 4;
 const serializeFinalState = (state: Parameters<typeof serializeGameState>[0]): string =>
   JSON.stringify(serializeGameState(state));
 
-const hasVerbosePreparationDiagnostics = (decision: AgentDecisionTrace | undefined): boolean =>
+const hasMicroturnOnlyDiagnostics = (decision: { readonly kind?: string } | undefined): boolean =>
   decision?.kind === 'policy'
   && !('completionStatistics' in decision)
   && !('movePreparations' in decision);
 
-describe('Spec 139 replay identity', () => {
+describe('Spec 140 replay identity', () => {
   const fitlCompiled = compileProductionSpec();
   assertNoErrors(fitlCompiled.parsed);
   assertNoErrors(fitlCompiled.compiled);
@@ -108,6 +108,9 @@ describe('Spec 139 replay identity', () => {
     for (const seed of FITL_PASSING_CANARY_SEEDS) {
       const left = runFitlPolicy(seed);
       const right = runFitlPolicy(seed);
+      assert.equal(left.traceProtocolVersion, 'spec-140');
+      assert.deepEqual(left.decisions, right.decisions);
+      assert.deepEqual(left.compoundTurns, right.compoundTurns);
       assert.equal(
         serializeFinalState(left.finalState),
         serializeFinalState(right.finalState),
@@ -120,6 +123,9 @@ describe('Spec 139 replay identity', () => {
     for (const seed of TEXAS_DETERMINISM_SEEDS) {
       const left = runTexasRandom(seed);
       const right = runTexasRandom(seed);
+      assert.equal(left.traceProtocolVersion, 'spec-140');
+      assert.deepEqual(left.decisions, right.decisions);
+      assert.deepEqual(left.compoundTurns, right.compoundTurns);
       assert.equal(
         serializeFinalState(left.finalState),
         serializeFinalState(right.finalState),
@@ -132,12 +138,13 @@ describe('Spec 139 replay identity', () => {
     const trace = runFitlPolicyRepresentative(FITL_FALLBACK_INERT_REPRESENTATIVE_SEED);
     const rerun = runFitlPolicyRepresentative(FITL_FALLBACK_INERT_REPRESENTATIVE_SEED);
 
+    assert.deepEqual(serializeTrace(trace), serializeTrace(rerun));
     assert.equal(
       serializeFinalState(trace.finalState),
       serializeFinalState(rerun.finalState),
       `FITL seed ${FITL_FALLBACK_INERT_REPRESENTATIVE_SEED}: representative verbose rerun diverged`,
     );
-    assert.equal(trace.decisions.some((entry) => hasVerbosePreparationDiagnostics(entry.agentDecision)), true);
+    assert.equal(trace.decisions.some((entry) => hasMicroturnOnlyDiagnostics(entry.agentDecision)), true);
   });
 
   it('keeps a representative Texas policy run deterministic without legacy preparation diagnostics', () => {
@@ -150,6 +157,6 @@ describe('Spec 139 replay identity', () => {
       serializeFinalState(rerun.finalState),
       'expected Texas representative run to remain byte-identical on rerun',
     );
-    assert.equal(trace.decisions.some((entry) => hasVerbosePreparationDiagnostics(entry.agentDecision)), true);
+    assert.equal(trace.decisions.some((entry) => hasMicroturnOnlyDiagnostics(entry.agentDecision)), true);
   });
 });

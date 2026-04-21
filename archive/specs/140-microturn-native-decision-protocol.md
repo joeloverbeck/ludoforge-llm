@@ -1,6 +1,6 @@
 # Spec 140: Microturn-Native Decision Protocol (Phase 3)
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P1 (architectural simplification, unblocks richer agent policy evaluation; no active CI failure)
 **Complexity**: XL (cross-package: engine kernel, simulator, agents, worker bridge, runner UI, tests, goldens, policy profiles)
 **Dependencies**: Spec 139 [constructibility-certificate-legality-contract] (landed — this spec retires its certificate machinery and restates its FOUNDATIONS #18 amendment), Spec 138 [enumerate-time-template-viability-classifier] (archived — already superseded by 139; fully retired here), Spec 137 [convergence-witness-invariant-promotion] (distillation protocol applied in test rewrites), Spec 134 [unified-move-legality-predicate] (preserved — still the final legality oracle, now invoked per microturn), Spec 132 [agent-stuck-viable-template-completion-mismatch] (archived — template-completion concern disappears under microturns), Spec 97 [decision-point snapshot infrastructure] (leveraged — snapshot types generalize to per-microturn)
@@ -937,4 +937,19 @@ Implementation waves (per D12) orchestrate these into a 10-wave plan.
 
 ## Outcome
 
-To be filled in on completion.
+Completed on 2026-04-21.
+
+What changed:
+- The engine, runner, worker bridge, agents, and trace/test surfaces were migrated to the microturn-native decision protocol described by this spec.
+- The old template/certificate legality contract was retired from the public runtime surface, and the remaining internal authority seam was completed in the follow-up implementation wave.
+- The documentation set, agent-profile shipped surface, and the final spec-140 proof corpus were all updated to reflect the microturn-native architecture.
+
+Deviations from original plan:
+- Ticket `140MICRODECPRO-009` did not run a profile re-evolution campaign. Per later reassessment, it removed shipped microturn-incompatible heuristics only; future profile improvement remains separate work.
+- Ticket `140MICRODECPRO-012` was narrowed to truthful public-surface retirement and then split residual work into `140MICRODECPRO-015` (internal authority seam replacement) and `140MICRODECPRO-016` (remaining diagnostics/schema cleanup) instead of claiming the deeper rewrite had landed in one ticket.
+- Ticket `140MICRODECPRO-014` used truthful live-repo proofs rather than nonexistent historical comparators for the profile-migration and performance-gate lanes.
+
+Verification results:
+- The implementation ticket series through `140MICRODECPRO-016` was completed and post-reviewed, with the finished tickets archived under `archive/tickets/`.
+- `pnpm run check:ticket-deps` passed after the final ticket archival state.
+- The spec-140 test wave in `140MICRODECPRO-014` passed its focused proof lanes; the broader `pnpm -F @ludoforge/engine test` lane remained explicitly recorded there as `harness-noisy / not final-confirmed` rather than being overstated.

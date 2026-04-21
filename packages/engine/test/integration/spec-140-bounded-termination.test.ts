@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent } from '../../src/agents/index.js';
+import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -22,7 +22,7 @@ import { compileProductionSpec, deriveFitlPopulationZeroSpaces } from '../helper
  * supported policy-profile variant, not a pinned (seed, profile) pair.
  */
 
-const CANARY_SEEDS = [1002, 1005, 1010, 1013] as const;
+const FITL_POLICY_CANARY_SEEDS = [1002, 1005, 1010, 1013] as const;
 const POLICY_PROFILE_VARIANTS = [
   ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'],
   ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
@@ -31,7 +31,7 @@ const MAX_TURNS = 200;
 const PLAYER_COUNT = 4;
 const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
 
-describe('FITL canary bounded termination', () => {
+describe('Spec 140 bounded termination', () => {
   const { parsed, compiled } = compileProductionSpec();
   assertNoErrors(parsed);
   assertNoErrors(compiled);
@@ -47,8 +47,16 @@ describe('FITL canary bounded termination', () => {
     assert.ok(populationZeroSpaces.length > 0, 'Expected FITL production map to expose population-0 spaces');
   });
 
+  it('keeps the historical random-agent seed 123 canary bounded', () => {
+    const agents = Array.from({ length: PLAYER_COUNT }, () => new RandomAgent());
+    const trace = runGame(def, 123, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
+
+    assert.ok(ALLOWED_STOP_REASONS.has(trace.stopReason), `stop=${trace.stopReason} after ${trace.decisions.length} decisions`);
+    assert.ok(trace.decisions.length > 0);
+  });
+
   for (const profiles of POLICY_PROFILE_VARIANTS) {
-    for (const seed of CANARY_SEEDS) {
+    for (const seed of FITL_POLICY_CANARY_SEEDS) {
       it(
         `profiles=${profiles.join(',')} seed=${seed}: bounded stop and population-0 neutrality`,
         { timeout: 20_000 },
@@ -58,8 +66,10 @@ describe('FITL canary bounded termination', () => {
 
           assert.ok(
             ALLOWED_STOP_REASONS.has(trace.stopReason),
-            `stop=${trace.stopReason} after ${trace.decisions.length} moves`,
+            `stop=${trace.stopReason} after ${trace.decisions.length} decisions`,
           );
+          assert.ok(trace.decisions.length > 0);
+          assert.ok(trace.compoundTurns.length > 0);
           for (const space of populationZeroSpaces) {
             assert.equal(
               trace.finalState.markers[`${space}:none`]?.supportOpposition ?? 'neutral',

@@ -4,24 +4,7 @@
     "params": {
       "eventCardId": "card-29",
       "eventDeckId": "fitl-events-initial-card-pack",
-      "side": "shaded",
-      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.0.chooseN::$irregularsOnMap": [
-        "tok_us-irregulars_34",
-        "tok_us-irregulars_39",
-        "tok_us-irregulars_47"
-      ],
-      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_34[0]": [
-        "tok_vc-guerrillas_215"
-      ],
-      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_39[1]": [
-        "tok_vc-guerrillas_217"
-      ],
-      "decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_47[2]": [
-        "tok_vc-guerrillas_225"
-      ],
-      "decision:doc.eventDecks.0.cards.28.shaded.effects.1.let.in.0.if.then.0.chooseN::$neutralHighlandToShift[2][0]": [
-        "quang-nam:none"
-      ]
+      "side": "shaded"
     },
     "actionClass": "event"
   },
@@ -35,18 +18,8 @@
     "resolvedProfileId": "us-baseline",
     "profileFingerprint": "3e00cb8e49737f68940ad2e0c114f644d94460f14ee3441d24c78a3ba7ecbc30",
     "initialCandidateCount": 7,
-    "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\",\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.0.chooseN::$irregularsOnMap\":[\"tok_us-irregulars_34\",\"tok_us-irregulars_39\",\"tok_us-irregulars_47\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_34[0]\":[\"tok_vc-guerrillas_215\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_39[1]\":[\"tok_vc-guerrillas_217\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.0.let.in.0.if.then.1.forEach.effects.0.let.in.0.chooseN::$vcReplacementGuerrillas@tok_us-irregulars_47[2]\":[\"tok_vc-guerrillas_225\"],\"decision:doc.eventDecks.0.cards.28.shaded.effects.1.let.in.0.if.then.0.chooseN::$neutralHighlandToShift[2][0]\":[\"quang-nam:none\"]}|false|event",
+    "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\"}|false|event",
     "finalScore": -9.6,
-    "phase1Score": -9.6,
-    "phase2Score": -9.6,
-    "phase1ActionRanking": [
-      "pass",
-      "event",
-      "advise",
-      "assault",
-      "patrol",
-      "train"
-    ],
     "pruningSteps": [
       {
         "ruleId": "dropPassWhenOtherMovesExist",

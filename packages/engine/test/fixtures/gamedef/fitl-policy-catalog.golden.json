@@ -1147,38 +1147,6 @@
           "aggregates": [],
           "strategicConditions": []
         }
-      },
-      "targetSpacePopulation": {
-        "type": "number",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "zoneProp",
-              "zone": {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateParam",
-                  "id": "targetSpace"
-                }
-              },
-              "prop": "population"
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
       }
     },
     "candidateAggregates": {
@@ -2141,276 +2109,6 @@
           "strategicConditions": []
         }
       },
-      "preferPopulousTargets": {
-        "scopes": [
-          "completion"
-        ],
-        "costClass": "state",
-        "when": {
-          "kind": "op",
-          "op": "and",
-          "args": [
-            {
-              "kind": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "decisionIntrinsic",
-                    "intrinsic": "type"
-                  }
-                },
-                {
-                  "kind": "literal",
-                  "value": "chooseN"
-                }
-              ]
-            },
-            {
-              "kind": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "decisionIntrinsic",
-                    "intrinsic": "name"
-                  }
-                },
-                {
-                  "kind": "literal",
-                  "value": "$targetSpaces"
-                }
-              ]
-            },
-            {
-              "kind": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "decisionIntrinsic",
-                    "intrinsic": "targetKind"
-                  }
-                },
-                {
-                  "kind": "literal",
-                  "value": "zone"
-                }
-              ]
-            }
-          ]
-        },
-        "weight": {
-          "kind": "literal",
-          "value": 2
-        },
-        "value": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "zoneProp",
-              "zone": {
-                "kind": "ref",
-                "ref": {
-                  "kind": "optionIntrinsic",
-                  "intrinsic": "value"
-                }
-              },
-              "prop": "population"
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "preferRedeployToPopulousZones": {
-        "scopes": [
-          "completion"
-        ],
-        "costClass": "state",
-        "when": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "decisionIntrinsic",
-                "intrinsic": "name"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "$destination"
-            }
-          ]
-        },
-        "weight": {
-          "kind": "literal",
-          "value": 2
-        },
-        "value": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "zoneProp",
-              "zone": {
-                "kind": "ref",
-                "ref": {
-                  "kind": "optionIntrinsic",
-                  "intrinsic": "value"
-                }
-              },
-              "prop": "population"
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "preferRedeployNearEnemies": {
-        "scopes": [
-          "completion"
-        ],
-        "costClass": "state",
-        "when": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "decisionIntrinsic",
-                "intrinsic": "name"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "$destination"
-            }
-          ]
-        },
-        "weight": {
-          "kind": "literal",
-          "value": 1
-        },
-        "value": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "adjacentTokenAgg",
-              "anchorZone": {
-                "kind": "ref",
-                "ref": {
-                  "kind": "optionIntrinsic",
-                  "intrinsic": "value"
-                }
-              },
-              "tokenFilter": {
-                "props": {
-                  "faction": {
-                    "eq": "VC"
-                  },
-                  "type": {
-                    "eq": "guerrilla"
-                  }
-                }
-              },
-              "aggOp": "count"
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
-      "preferPacifyPopulousZones": {
-        "scopes": [
-          "move"
-        ],
-        "costClass": "candidate",
-        "when": {
-          "kind": "op",
-          "op": "eq",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateIntrinsic",
-                "intrinsic": "actionId"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": "coupPacifyARVN"
-            }
-          ]
-        },
-        "weight": {
-          "kind": "literal",
-          "value": 3
-        },
-        "value": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "zoneProp",
-              "zone": {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateParam",
-                  "id": "targetSpace"
-                }
-              },
-              "prop": "population"
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
       "preferNormalizedMargin": {
         "scopes": [
           "move"
@@ -2716,27 +2414,6 @@
           "aggregates": [],
           "strategicConditions": []
         }
-      },
-      "preferCheapTargetSpaces": {
-        "kind": "lowerExpr",
-        "costClass": "candidate",
-        "value": {
-          "kind": "ref",
-          "ref": {
-            "kind": "library",
-            "refKind": "candidateFeature",
-            "id": "targetSpacePopulation"
-          }
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "targetSpacePopulation"
-          ],
-          "aggregates": [],
-          "strategicConditions": []
-        }
       }
     },
     "strategicConditions": {}
@@ -2807,8 +2484,7 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preferGovernWeighted",
-          "preferPopulousTargets"
+          "preferGovernWeighted"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2816,7 +2492,7 @@
       },
       "preview": {
         "mode": "exactWorld",
-        "phase1": true,
+        "phase1": false,
         "phase1CompletionsPerAction": 1
       },
       "selection": {
@@ -2834,11 +2510,10 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preferGovernWeighted",
-          "preferPopulousTargets"
+          "preferGovernWeighted"
         ]
       },
-      "fingerprint": "83f6d4af937cc90c355e0c10300bde879ca5a92cdadfc8c8888ab05ef0075711"
+      "fingerprint": "8e14f41674dcd52e93083ff72e694fe5a7e225f76a0893d808b69eabdd657116"
     },
     "arvn-evolved": {
       "observerName": "currentPlayer",
@@ -2857,11 +2532,7 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow",
-          "preferPopulousTargets",
-          "preferRedeployToPopulousZones",
-          "preferRedeployNearEnemies",
-          "preferPacifyPopulousZones"
+          "trainWhenControlLow"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2869,7 +2540,7 @@
       },
       "preview": {
         "mode": "exactWorld",
-        "phase1": true,
+        "phase1": false,
         "phase1CompletionsPerAction": 1
       },
       "selection": {
@@ -2895,14 +2566,10 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow",
-          "preferPopulousTargets",
-          "preferRedeployToPopulousZones",
-          "preferRedeployNearEnemies",
-          "preferPacifyPopulousZones"
+          "trainWhenControlLow"
         ]
       },
-      "fingerprint": "4cc97bd4ea69c98d75ccebcaacf8c4fb115390107de746c64b8dd598b098a54d"
+      "fingerprint": "1a68bcfad6ee5a2deed74a928b4405c19c05c40b1a711adb4b3bba6f7aa13b16"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2974,8 +2641,7 @@
         "considerations": [
           "preferNormalizedMargin",
           "preferRallyWeighted",
-          "valueCapabilityGain",
-          "preferPopulousTargets"
+          "valueCapabilityGain"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -3006,11 +2672,10 @@
         "considerations": [
           "preferNormalizedMargin",
           "preferRallyWeighted",
-          "valueCapabilityGain",
-          "preferPopulousTargets"
+          "valueCapabilityGain"
         ]
       },
-      "fingerprint": "c2c588239ce1fafd3a391061f3cecbe833f491672d14239245ae5d3cbee790c3"
+      "fingerprint": "61adbd1ea3aafc9ce8e0a931eb8ae438d80013ce6b77f60545b42fdd239fba7b"
     }
   },
   "bindingsBySeat": {
@@ -3019,5 +2684,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "c9327cb21869adf3cd8721e8b37a5360e7a196e9ed50bd95797e5386a2baece7"
+  "catalogFingerprint": "0f275ad8c8cb8f4f999521177f69681470a146f9cf390eddd33bf9182343c031"
 }

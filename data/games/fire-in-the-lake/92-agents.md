@@ -142,14 +142,6 @@ agents:
                     - { ref: feature.vcFriendlyCapCount }
                 - { ref: feature.vcFriendlyCapCount }
             - 0
-      targetSpacePopulation:
-        type: number
-        expr:
-          coalesce:
-            - zoneProp:
-                zone: { ref: candidate.param.targetSpace }
-                prop: population
-            - 0
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -350,68 +342,6 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.train
-      preferPopulousTargets:
-        scopes: [completion]
-        when:
-          and:
-            - eq:
-                - { ref: decision.type }
-                - chooseN
-            - eq:
-                - { ref: decision.name }
-                - "$targetSpaces"
-            - eq:
-                - { ref: decision.targetKind }
-                - zone
-        weight: 2
-        value:
-          coalesce:
-            - zoneProp:
-                zone: { ref: option.value }
-                prop: population
-            - 0
-      preferRedeployToPopulousZones:
-        scopes: [completion]
-        when:
-          eq:
-            - { ref: decision.name }
-            - "$destination"
-        weight: 2
-        value:
-          coalesce:
-            - zoneProp:
-                zone: { ref: option.value }
-                prop: population
-            - 0
-      preferRedeployNearEnemies:
-        scopes: [completion]
-        when:
-          eq:
-            - { ref: decision.name }
-            - "$destination"
-        weight: 1
-        value:
-          coalesce:
-            - adjacentTokenAgg:
-                anchorZone: { ref: option.value }
-                aggOp: count
-                tokenFilter:
-                  props:
-                    faction: { eq: VC }
-                    type: { eq: guerrilla }
-            - 0
-      preferPacifyPopulousZones:
-        scopes: [move]
-        when:
-          eq: [{ ref: candidate.actionId }, coupPacifyARVN]
-        weight: 3
-        value:
-          coalesce:
-            - zoneProp:
-                zone: { ref: candidate.param.targetSpace }
-                prop: population
-            - 0
-
       preferNormalizedMargin:
         scopes: [move]
         weight: 5
@@ -464,10 +394,6 @@ agents:
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
-      preferCheapTargetSpaces:
-        kind: lowerExpr
-        value:
-          ref: feature.targetSpacePopulation
 
   profiles:
     us-baseline:
@@ -494,7 +420,6 @@ agents:
       observer: currentPlayer
       preview:
         mode: exactWorld
-        phase1: true
       params:
         projectedMarginWeight: 8
         governWeight: 5
@@ -504,7 +429,6 @@ agents:
         considerations:
           - preferProjectedSelfMargin
           - preferGovernWeighted
-          - preferPopulousTargets
         tieBreakers:
           - stableMoveKey
 
@@ -512,7 +436,6 @@ agents:
       observer: currentPlayer
       preview:
         mode: exactWorld
-        phase1: true
       params:
         projectedMarginWeight: 3
         governWeight: 5
@@ -527,10 +450,6 @@ agents:
           - preferTrainWeighted
           - governWhenPatronageLow
           - trainWhenControlLow
-          - preferPopulousTargets
-          - preferRedeployToPopulousZones
-          - preferRedeployNearEnemies
-          - preferPacifyPopulousZones
         tieBreakers:
           - stableMoveKey
 
@@ -570,7 +489,6 @@ agents:
           - preferNormalizedMargin
           - preferRallyWeighted
           - valueCapabilityGain
-          - preferPopulousTargets
         tieBreakers:
           - stableMoveKey
 

@@ -1,7 +1,10 @@
 import { asPlayerId, type SeatId } from '../branded.js';
+import { advanceChooseN } from '../advance-choose-n.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import type { DecisionKey } from '../decision-scope.js';
 import { enumerateLegalMoves } from '../legal-moves.js';
+import { evaluateMoveLegality } from '../move-legality-predicate.js';
+import { MISSING_BINDING_POLICY_CONTEXTS } from '../missing-binding-policy.js';
 import { derivePlayerObservation } from '../observation.js';
 import type {
   ChoicePendingRequest,
@@ -10,7 +13,11 @@ import type {
   Move,
 } from '../types-core.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
-import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
+import {
+  classifyDecisionContinuationAdmissionForLegalMove,
+  resolveDecisionContinuation,
+  type DecisionContinuationResult,
+} from './continuation.js';
 import {
   asDecisionFrameId,
   asTurnId,
@@ -106,6 +113,33 @@ const resolveContinuationForMove = (
     runtime,
   );
 
+const publicationContinuationContext = (move: Move): typeof MISSING_BINDING_POLICY_CONTEXTS[keyof typeof MISSING_BINDING_POLICY_CONTEXTS] =>
+  move.freeOperation === true
+    ? MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE
+    : MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PLAIN_ACTION_DECISION_SEQUENCE;
+
+const isPublishedMoveAdmitted = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+): boolean => {
+  if (move.freeOperation !== true) {
+    return true;
+  }
+  const classification = classifyDecisionContinuationAdmissionForLegalMove(
+    def,
+    state,
+    move,
+    publicationContinuationContext(move),
+    {
+      validateSatisfiedMove: (candidateMove) => evaluateMoveLegality(def, state, candidateMove, runtime).kind === 'legal',
+    },
+    runtime,
+  );
+  return classification === 'satisfiable' || classification === 'explicitStochastic';
+};
+
 const isSupportedActionMove = (
   def: GameDef,
   state: GameState,
@@ -114,6 +148,9 @@ const isSupportedActionMove = (
 ): boolean => {
   const continuation = resolveContinuationForMove(def, state, move, runtime);
   if (continuation.illegal !== undefined) {
+    return false;
+  }
+  if (!isPublishedMoveAdmitted(def, state, move, runtime)) {
     return false;
   }
   if (continuation.stochasticDecision !== undefined) {
@@ -243,10 +280,14 @@ const toChooseNStepContext = (
 });
 
 const toChooseNStepDecisions = (
+  def: GameDef,
+  state: GameState,
+  baseMove: Move,
   context: ChooseNStepContext,
+  runtime?: GameDefRuntime,
 ): readonly ChooseNStepDecision[] => {
   const selectedKeys = new Set(context.selectedSoFar.map((value) => JSON.stringify([typeof value, value])));
-  const additions = context.options
+  const decisions = context.options
     .filter((option) => option.legality !== 'illegal')
     .filter((option) => !Array.isArray(option.value))
     .filter((option) => !selectedKeys.has(JSON.stringify([typeof option.value, option.value])))
@@ -257,18 +298,40 @@ const toChooseNStepDecisions = (
       value: option.value as string | number | boolean,
     }));
   const removals = context.selectedSoFar.map<ChooseNStepDecision>((value) => ({
-    kind: 'chooseNStep',
-    decisionKey: context.decisionKey,
-    command: 'remove',
-    value,
+      kind: 'chooseNStep',
+      decisionKey: context.decisionKey,
+      command: 'remove',
+      value,
   }));
-  return context.stepCommands.includes('confirm')
-    ? [...additions, ...removals, {
+  decisions.push(...removals);
+  if (context.stepCommands.includes('confirm')) {
+    decisions.push({
       kind: 'chooseNStep',
       decisionKey: context.decisionKey,
       command: 'confirm',
-    }]
-    : [...additions, ...removals];
+    });
+  }
+  return decisions.filter((decision) => {
+    const advanced = advanceChooseN(
+      def,
+      state,
+      baseMove,
+      context.decisionKey,
+      context.selectedSoFar,
+      decision.command === 'confirm'
+        ? { type: 'confirm' }
+        : { type: decision.command, value: decision.value! },
+      runtime,
+    );
+    const candidateMove: Move = {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [context.decisionKey]: advanced.done ? advanced.value : advanced.pending.selected,
+      },
+    };
+    return isSupportedActionMove(def, state, candidateMove, runtime);
+  });
 };
 
 const toStochasticResolveContext = (
@@ -385,26 +448,22 @@ const publishStackTop = (
     const baseMove = rebuildMoveFromFrame(root);
     const legalActions = context.options
       .filter((option) => option.legality !== 'illegal')
-      .filter((option) => {
-        const continuation = resolveContinuationForMove(def, state, {
+      .map((option) => ({
+        decision: {
+          kind: 'chooseOne',
+          decisionKey: context.decisionKey,
+          value: option.value,
+        } as ChooseOneDecision,
+        move: {
           ...baseMove,
           params: {
             ...baseMove.params,
             [context.decisionKey]: option.value,
           },
-        }, runtime);
-        if (continuation.illegal !== undefined) {
-          return false;
-        }
-        return continuation.stochasticDecision !== undefined
-          ? toStochasticDistribution(continuation) !== null
-          : continuation.nextDecision === undefined || isSupportedChoiceRequest(continuation.nextDecision);
-      })
-      .map<ChooseOneDecision>((option) => ({
-        kind: 'chooseOne',
-        decisionKey: context.decisionKey,
-        value: option.value,
-      }));
+        },
+      }))
+      .filter(({ move }) => isSupportedActionMove(def, state, move, runtime))
+      .map(({ decision }) => decision);
     if (legalActions.length === 0) {
       throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: chooseOne context has no bridgeable continuations`);
     }
@@ -421,11 +480,12 @@ const publishStackTop = (
   }
   if (top.context.kind === 'chooseNStep') {
     const context = top.context;
+    const baseMove = rebuildMoveFromFrame(root);
     return {
       kind: 'chooseNStep',
       seatId,
       decisionContext: context,
-      legalActions: toChooseNStepDecisions(context),
+      legalActions: toChooseNStepDecisions(def, state, baseMove, context, runtime),
       projectedState: buildProjectedState(def, state, seatId),
       turnId: top.turnId,
       frameId: top.frameId,

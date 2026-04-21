@@ -163,6 +163,16 @@ When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture,
 4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
 5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
 
+### Regression Placement Triage
+
+When a bug lives in a shared runtime seam but the smallest truthful witness may be game-backed, choose the first regression target with this order:
+
+1. prefer a narrow shared-seam unit test when the failing contract is reproducible without runtime-owned game identities or shipped-sequence context
+2. prefer a shipped-game integration witness when the bug depends on live action identities, grant sequencing, event/card routing, or another runtime-owned surface that a synthetic fixture would have to guess
+3. when both are useful, land the game-backed witness first for correctness, then add the shared-seam unit only if it stays narrow and does not duplicate the same proof burden
+
+Record the chosen witness surface in working notes when the choice is not obvious from the ticket text.
+
 ### Direct Fallout Test Triage
 
 When a ticket retires a public surface and the first build exposes a large direct-fallout test set, classify each affected test before editing:
@@ -200,6 +210,14 @@ If the first broader proof lane fails on a newly added or modified test, do one 
 2. fix the issue against that focused lane first
 3. rerun the broader package/workspace lane only after the focused proof is green
 
+When a broader proof lane fails on a surface that may be unrelated to the owned ticket slice, classify it before widening implementation:
+
+1. `owned regression`: the failure directly exercises the changed contract, touched files, or an immediately dependent proof surface; fix it before treating broader proof as usable
+2. `likely preexisting unrelated failure`: the failure targets a different contract or appears unchanged by the owned diff; record it explicitly, keep your diff isolated, and do not silently absorb it into the ticket scope
+3. `harness/tooling defect`: the lane behavior itself appears broken or non-final; use the noisy-harness triage below before rewriting code around runner behavior
+
+If the failure is `likely preexisting unrelated failure`, preserve the evidence in the ticket outcome or final closeout instead of quietly treating the lane as green.
+
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
 For long-running package lanes that already printed `ok` lines for the ticket-owned retained regressions and later files, do one explicit progress triage before waiting indefinitely:
@@ -210,6 +228,13 @@ For long-running package lanes that already printed `ok` lines for the ticket-ow
 4. cite the directly observed retained-regression passes plus any successful single-file tail probe separately from the noisy package-lane result
 
 This preserves truthful proof language without requiring unbounded waiting on runner noise.
+
+When a broad package/workspace lane becomes `harness-noisy / not final-confirmed`, preserve one deterministic **owned witness proof** whenever proportionate:
+
+1. prefer a ticket-owned focused command, scripted replay, or exact witness file that exercises the corrected boundary directly
+2. rerun that owned witness after the final code and ticket-artifact edits land
+3. record it distinctly in the ticket outcome as the primary proof artifact for the owned behavior, separate from the non-final broad lane
+4. do not describe the noisy broad lane as fully green unless it actually returns a final harness summary
 
 When a **single focused proof file** emits only an initial harness header (for example `TAP version 13`) and then stays silent, do not immediately classify it as the same package-lane noise pattern. First inspect the file or its obvious helper corpus to determine whether the lane legitimately fronts a heavy deterministic workload (large replay corpus, repeated production-spec compile, benchmark-scale fixture setup, or similar). If the workload is plausibly heavy:
 
@@ -226,6 +251,12 @@ Before escalating that behavior into a harness defect or widening the ticket aro
 1. inspect the relevant lane manifest / file list to see whether the command still had plausible slow tail files remaining after the last printed output
 2. identify the most likely expensive tail file and, if proportionate, probe it directly with a bounded single-file run or source inspection
 3. only treat the behavior as a likely runner defect once that triage no longer explains the silence
+
+For durable closeout, use this rule when final proof mixes green owned witnesses with noisy broader lanes:
+
+1. `COMPLETED` is still truthful when the owned implementation slice is proven by direct focused witnesses or equivalent deterministic owned proofs, and each non-final named broad lane is explicitly recorded as noisy/non-final rather than claimed green
+2. do not mark `COMPLETED` when the only proof of the owned change depends on a lane that never returned a final result
+3. if the ticket explicitly requires a final green result from a named broad lane and no narrower owned witness can satisfy that requirement truthfully, leave the ticket open or blocked instead of inferring success
 
 For evidence states, trace-heavy ticket inspection, and generated artifact triage, load `references/verification-evidence.md`.
 

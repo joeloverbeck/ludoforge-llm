@@ -4,17 +4,21 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
+  applyDecision,
   applyMove,
   assertValidatedGameDef,
   asPlayerId,
   asTokenId,
+  createRng,
   createGameDefRuntime,
   createSeatResolutionContext,
   enumerateLegalMoves,
   hasLegalCompletedFreeOperationMoveInCurrentState,
   initialState,
   legalMoves,
+  publishMicroturn,
   type GameDef,
+  type Decision,
   type GameState,
   type Move,
   type Token,
@@ -153,6 +157,42 @@ const findCardMove = (
       && move.params.side === side
       && (branch === undefined || move.params.branch === branch),
   );
+
+const requireDecision = <T extends Decision>(
+  decisions: readonly Decision[],
+  predicate: (decision: Decision) => decision is T,
+  message: string,
+): T => {
+  const decision = decisions.find(predicate);
+  assert.notEqual(decision, undefined, message);
+  return decision as T;
+};
+
+const setupShadedNvaMarchWitness = (): {
+  readonly def: GameDef;
+  readonly nvaWindow: GameState;
+} => {
+  const def = compileDef();
+  const setup = setupCardDrivenState(def, 75004, 3, 'vc', 'nva', {
+    'available-NVA:none': [makeToken('sihanouk-nva-skip-vc', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' })],
+  }, {
+    nvaResources: 5,
+    vcResources: 5,
+    trail: 0,
+  });
+
+  const eventMove = findCardMove(def, setup, 'shaded');
+  assert.notEqual(eventMove, undefined, 'Expected Sihanouk shaded event move');
+
+  const afterEvent = applyMoveWithResolvedDecisionIds(def, setup, eventMove!).state;
+  const passToNva = legalMoves(def, afterEvent).find((move) => String(move.actionId) === 'pass');
+  assert.notEqual(passToNva, undefined, 'Expected a deterministic pass window before the NVA free grants');
+
+  return {
+    def,
+    nvaWindow: applyMove(def, afterEvent, passToNva!).state,
+  };
+};
 
 const countTokens = (state: GameState, zone: string, predicate: (token: Token) => boolean): number =>
   (state.zones[zone] ?? []).filter((token) => predicate(token as Token)).length;
@@ -500,5 +540,166 @@ describe('FITL card-75 Sihanouk', () => {
       true,
       'The run must not terminate immediately after the uncompletable shaded March window',
     );
+  });
+
+  it('publishes only executable microturn decisions through the shaded NVA Rally -> March witness', () => {
+    const { def, nvaWindow } = setupShadedNvaMarchWitness();
+    const replayedDecisions: Decision[] = [];
+    let state = nvaWindow;
+
+    let microturn = publishMicroturn(def, state);
+    const rallyAction = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> =>
+        decision.kind === 'actionSelection' && decision.actionId === 'rally',
+      'Expected published NVA Rally actionSelection decision',
+    );
+    replayedDecisions.push(rallyAction);
+    state = applyDecision(def, state, rallyAction).state;
+
+    microturn = publishMicroturn(def, state);
+    const rallyTargetAdd = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === NE_CAMBODIA,
+      'Expected published Rally target add decision',
+    );
+    replayedDecisions.push(rallyTargetAdd);
+    state = applyDecision(def, state, rallyTargetAdd).state;
+
+    microturn = publishMicroturn(def, state);
+    const rallyTargetConfirm = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      'Expected published Rally target confirm decision',
+    );
+    replayedDecisions.push(rallyTargetConfirm);
+    state = applyDecision(def, state, rallyTargetConfirm).state;
+
+    microturn = publishMicroturn(def, state);
+    const noBaseChoice = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> =>
+        decision.kind === 'chooseOne' && decision.value === 'place-guerrilla',
+      'Expected published Rally no-base decision',
+    );
+    replayedDecisions.push(noBaseChoice);
+    state = applyDecision(def, state, noBaseChoice).state;
+
+    microturn = publishMicroturn(def, state);
+    const improveTrailNo = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> =>
+        decision.kind === 'chooseOne' && decision.value === 'no',
+      'Expected published Rally trail decision',
+    );
+    replayedDecisions.push(improveTrailNo);
+    state = applyDecision(def, state, improveTrailNo).state;
+
+    microturn = publishMicroturn(def, state);
+    const marchAction = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> =>
+        decision.kind === 'actionSelection' && decision.actionId === 'march',
+      'Expected published NVA March actionSelection decision',
+    );
+    replayedDecisions.push(marchAction);
+    state = applyDecision(def, state, marchAction).state;
+
+    microturn = publishMicroturn(def, state);
+    const marchTargetAdd = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'pleiku-darlac:none',
+      'Expected published March target add decision',
+    );
+    replayedDecisions.push(marchTargetAdd);
+    state = applyDecision(def, state, marchTargetAdd).state;
+
+    microturn = publishMicroturn(def, state);
+    const marchTargetConfirm = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      'Expected published March target confirm decision',
+    );
+    replayedDecisions.push(marchTargetConfirm);
+    state = applyDecision(def, state, marchTargetConfirm).state;
+
+    microturn = publishMicroturn(def, state);
+    assert.equal(
+      microturn.legalActions.some(
+        (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      ),
+      false,
+      'publication must suppress the empty March mover confirm that would later fail mustChangeGameplayState',
+    );
+
+    const moverAdd = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'sihanouk-nva-skip-vc',
+      'Expected the executable March mover add decision to remain published',
+    );
+    replayedDecisions.push(moverAdd);
+    state = applyDecision(def, state, moverAdd).state;
+
+    microturn = publishMicroturn(def, state);
+    const moverConfirm = requireDecision(
+      microturn.legalActions,
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      'Expected the final mover confirm after selecting the moving guerrilla',
+    );
+    replayedDecisions.push(moverConfirm);
+    const finalState = applyDecision(def, state, moverConfirm).state;
+
+    assert.equal(
+      countTokens(finalState, 'pleiku-darlac:none', (token) => token.id === asTokenId('sihanouk-nva-skip-vc')),
+      1,
+      'The published March sequence should move the just-Rallyd guerrilla into Pleiku-Darlac',
+    );
+
+    let replayState = nvaWindow;
+    for (const decision of replayedDecisions) {
+      replayState = applyDecision(def, replayState, decision).state;
+    }
+    assert.equal(replayState.stateHash, finalState.stateHash, 'Replaying the published decision log must stay execution-consistent');
+  });
+
+  it('policy-agent frontier evaluation stays inside the executable March mover decisions', () => {
+    const { def, nvaWindow } = setupShadedNvaMarchWitness();
+    const agent = new PolicyAgent({ traceLevel: 'summary' });
+    let state = nvaWindow;
+
+    for (const expected of [
+      (decision: Decision) => decision.kind === 'actionSelection' && decision.actionId === 'rally',
+      (decision: Decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === NE_CAMBODIA,
+      (decision: Decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      (decision: Decision) => decision.kind === 'chooseOne' && decision.value === 'place-guerrilla',
+      (decision: Decision) => decision.kind === 'chooseOne' && decision.value === 'no',
+      (decision: Decision) => decision.kind === 'actionSelection' && decision.actionId === 'march',
+      (decision: Decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'pleiku-darlac:none',
+      (decision: Decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+    ]) {
+      const microturn = publishMicroturn(def, state);
+      const decision = requireDecision(microturn.legalActions, expected as (decision: Decision) => decision is Decision, 'Expected scripted decision');
+      state = applyDecision(def, state, decision).state;
+    }
+
+    const moverMicroturn = publishMicroturn(def, state);
+    assert.equal(
+      moverMicroturn.legalActions.some(
+        (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+      ),
+      false,
+      'policy-agent witness frontier must no longer expose the empty confirm branch',
+    );
+
+    const selected = agent.chooseDecision({ def, state, microturn: moverMicroturn, rng: createRng(17n) });
+    assert.equal(selected.decision.kind, 'chooseNStep');
+    assert.equal(selected.decision.command, 'add');
+    assert.equal(selected.decision.value, 'sihanouk-nva-skip-vc');
   });
 });

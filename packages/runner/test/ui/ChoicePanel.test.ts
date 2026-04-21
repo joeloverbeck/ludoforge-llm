@@ -8,7 +8,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { StoreApi } from 'zustand';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { asActionId } from '@ludoforge/engine/runtime';
 import type { DecisionKey } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
@@ -31,34 +30,51 @@ afterEach(() => {
 
 function createChoiceStore(state: {
   readonly renderModel: GameStore['renderModel'];
-  readonly selectedAction?: GameStore['selectedAction'];
-  readonly partialMove?: GameStore['partialMove'];
-  readonly chooseOne?: GameStore['chooseOne'];
-  readonly addChooseNItem?: GameStore['addChooseNItem'];
-  readonly removeChooseNItem?: GameStore['removeChooseNItem'];
-  readonly confirmChooseN?: GameStore['confirmChooseN'];
-  readonly cancelChoice?: GameStore['cancelChoice'];
-  readonly cancelMove?: GameStore['cancelMove'];
-  readonly confirmMove?: GameStore['confirmMove'];
+  readonly currentMicroturn?: GameStore['currentMicroturn'];
+  readonly submitActionSelection?: GameStore['submitActionSelection'];
+  readonly submitChoice?: GameStore['submitChoice'];
+  readonly submitChooseNStep?: GameStore['submitChooseNStep'];
+  readonly rewindToCurrentTurnStart?: GameStore['rewindToCurrentTurnStart'];
+  readonly chooseOne?: GameStore['submitChoice'];
+  readonly addChooseNItem?: (value: string | number | boolean) => Promise<void>;
+  readonly removeChooseNItem?: (value: string | number | boolean) => Promise<void>;
+  readonly confirmChooseN?: () => Promise<void>;
+  readonly cancelChoice?: GameStore['rewindToCurrentTurnStart'];
+  readonly cancelMove?: GameStore['rewindToCurrentTurnStart'];
 }): StoreApi<GameStore> {
+  const submitChoice = state.submitChoice ?? state.chooseOne ?? (async () => {});
+  const submitChooseNStep = state.submitChooseNStep ?? (async (command, value) => {
+    if (command === 'add' && state.addChooseNItem !== undefined && value !== undefined) {
+      await state.addChooseNItem(value);
+      return;
+    }
+    if (command === 'remove' && state.removeChooseNItem !== undefined && value !== undefined) {
+      await state.removeChooseNItem(value);
+      return;
+    }
+    if (command === 'confirm' && state.confirmChooseN !== undefined) {
+      await state.confirmChooseN();
+    }
+  });
+  const rewindToCurrentTurnStart = state.rewindToCurrentTurnStart
+    ?? state.cancelChoice
+    ?? state.cancelMove
+    ?? (async () => {});
+
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      selectedAction: state.selectedAction ?? null,
-      partialMove: state.partialMove ?? null,
-      chooseOne: state.chooseOne ?? (async () => {}),
-      addChooseNItem: state.addChooseNItem ?? (async () => {}),
-      removeChooseNItem: state.removeChooseNItem ?? (async () => {}),
-      confirmChooseN: state.confirmChooseN ?? (async () => {}),
-      cancelChoice: state.cancelChoice ?? (async () => {}),
-      cancelMove: state.cancelMove ?? (() => {}),
-      confirmMove: state.confirmMove ?? (async () => {}),
+      currentMicroturn: state.currentMicroturn ?? null,
+      submitActionSelection: state.submitActionSelection ?? (async () => {}),
+      submitChoice,
+      submitChooseNStep,
+      rewindToCurrentTurnStart,
     }),
   } as unknown as StoreApi<GameStore>;
 }
 
 describe('ChoicePanel', () => {
-  function renderChoicePanel(props: { readonly mode: 'choicePending' | 'choiceConfirm' | 'choiceInvalid'; readonly store: StoreApi<GameStore> }) {
+  function renderChoicePanel(props: { readonly mode: 'choicePending' | 'choiceInvalid'; readonly store: StoreApi<GameStore> }) {
     return render(createElement(ChoicePanel, props));
   }
 
@@ -147,19 +163,19 @@ describe('ChoicePanel', () => {
     expect(countChoicesToCancel(3, 3)).toBe(0);
   });
 
-  it('rewinds breadcrumb by dispatching cancelChoice() the expected number of times', async () => {
-    const cancelChoice = vi.fn(async () => {});
+  it('rewinds breadcrumb by dispatching rewindToCurrentTurnStart()', async () => {
+    const rewindToCurrentTurnStart = vi.fn(async () => {});
     const store = createChoiceStore({
       renderModel: makeRenderModel(),
-      cancelChoice,
+      rewindToCurrentTurnStart,
     });
-    await rewindChoiceToBreadcrumb(store, 3, 1);
+    await rewindChoiceToBreadcrumb(store, 1);
 
-    expect(cancelChoice).toHaveBeenCalledTimes(1);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(1);
   });
 
-  it('Back dispatches cancelChoice and is disabled when breadcrumb is empty', () => {
-    const cancelChoice = vi.fn(async () => {});
+  it('Back dispatches rewindToCurrentTurnStart and is disabled when breadcrumb is empty', () => {
+    const rewindToCurrentTurnStart = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -168,20 +184,20 @@ describe('ChoicePanel', () => {
             kind: 'discreteOne',
             decisionKey: asDecisionKey('test-decision'),
             options: [makeChoiceOption('zone-a', 'Zone A')],
-          },
-          choiceBreadcrumb: [],
-        }),
-        cancelChoice,
+            },
+            choiceBreadcrumb: [],
+          }),
+        rewindToCurrentTurnStart,
       }),
     });
 
     const backButton = getByTestId('choice-back') as HTMLButtonElement;
     expect(backButton.disabled).toBe(true);
-    expect(cancelChoice).toHaveBeenCalledTimes(0);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(0);
   });
 
-  it('Back dispatches cancelChoice when breadcrumb has prior steps', () => {
-    const cancelChoice = vi.fn(async () => {});
+  it('Back dispatches rewindToCurrentTurnStart when breadcrumb has prior steps', () => {
+    const rewindToCurrentTurnStart = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -191,22 +207,22 @@ describe('ChoicePanel', () => {
             decisionKey: asDecisionKey('test-decision'),
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
-          choiceBreadcrumb: [
-            makeBreadcrumbStep('step-1', 'first', 'zone-a', 'Zone A'),
-          ],
-        }),
-        cancelChoice,
+            choiceBreadcrumb: [
+              makeBreadcrumbStep('step-1', 'first', 'zone-a', 'Zone A'),
+            ],
+          }),
+        rewindToCurrentTurnStart,
       }),
     });
 
     const backButton = getByTestId('choice-back');
     expect((backButton as HTMLButtonElement).disabled).toBe(false);
     fireEvent.click(backButton);
-    expect(cancelChoice).toHaveBeenCalledTimes(1);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(1);
   });
 
-  it('Cancel dispatches cancelMove', () => {
-    const cancelMove = vi.fn();
+  it('Cancel dispatches rewindToCurrentTurnStart', () => {
+    const rewindToCurrentTurnStart = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -217,13 +233,13 @@ describe('ChoicePanel', () => {
             options: [makeChoiceOption('zone-a', 'Zone A')],
           },
         }),
-        cancelMove,
+        rewindToCurrentTurnStart,
       }),
     });
 
     const cancelButton = getByTestId('choice-cancel');
     fireEvent.click(cancelButton);
-    expect(cancelMove).toHaveBeenCalledTimes(1);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(1);
   });
 
   it('Mode A renders legal options enabled and non-legal options disabled with illegality feedback', () => {
@@ -376,26 +392,6 @@ describe('ChoicePanel', () => {
 
     expect(html).toContain(`data-testid="${choiceOptionTestId('a,b')}"`);
     expect(html).toContain(`data-testid="${choiceOptionTestId(['a', 'b'])}"`);
-  });
-
-  it('renders confirm button only when move is ready and dispatches confirmMove', () => {
-    const confirmMove = vi.fn(async () => {});
-
-    renderChoicePanel({
-      mode: 'choiceConfirm',
-      store: createChoiceStore({
-        renderModel: makeRenderModel({
-          choiceUi: { kind: 'confirmReady' },
-        }),
-        selectedAction: asActionId('pass'),
-        partialMove: { actionId: asActionId('pass'), params: {} },
-        confirmMove,
-      }),
-    });
-
-    const confirm = getByTestId('choice-confirm');
-    fireEvent.click(confirm);
-    expect(confirmMove).toHaveBeenCalledTimes(1);
   });
 
   it('Mode B renders toggle controls and deterministic selected-count indicator', () => {
@@ -746,16 +742,14 @@ describe('ChoicePanel', () => {
     expect(breadcrumbStepIndentedBlock).toContain('pointer-events: auto;');
   });
 
-  it('does not render confirm button when in choicePending mode', () => {
+  it('does not render confirm button in pending mode', () => {
     const html = renderToStaticMarkup(
       createElement(ChoicePanel, {
         mode: 'choicePending',
         store: createChoiceStore({
           renderModel: makeRenderModel({
-            choiceUi: { kind: 'confirmReady' },
+            choiceUi: { kind: 'none' },
           }),
-          selectedAction: asActionId('pass'),
-          partialMove: { actionId: asActionId('pass'), params: {} },
         }),
       }),
     );
@@ -770,24 +764,6 @@ describe('ChoicePanel', () => {
         store: createChoiceStore({
           renderModel: makeRenderModel({
             choiceUi: { kind: 'none' },
-          }),
-        }),
-      }),
-    );
-    expect(html).toBe('');
-  });
-
-  it('returns null when mode is choiceConfirm but choice is still pending', () => {
-    const html = renderToStaticMarkup(
-      createElement(ChoicePanel, {
-        mode: 'choiceConfirm',
-        store: createChoiceStore({
-          renderModel: makeRenderModel({
-            choiceUi: {
-              kind: 'discreteOne',
-              decisionKey: asDecisionKey('test-decision'),
-              options: [makeChoiceOption('zone-a', 'Zone A')],
-            },
           }),
         }),
       }),
@@ -1047,8 +1023,8 @@ describe('ChoicePanel', () => {
     expect(html).toContain('(3/3) Irregulars');
   });
 
-  it('grouped breadcrumb step click handlers trigger rewind with correct original index', () => {
-    const cancelChoice = vi.fn(async () => {});
+  it('grouped breadcrumb step click handlers rewind to the selected breadcrumb index', () => {
+    const rewindToCurrentTurnStart = vi.fn(async () => {});
     renderChoicePanel({
       mode: 'choicePending',
       store: createChoiceStore({
@@ -1064,16 +1040,14 @@ describe('ChoicePanel', () => {
             makeBreadcrumbStep('decision:placeType::zone-b', 'placeType', 'base', 'At Base', 'decision:placeType', 'Zone B'),
           ],
         }),
-        cancelChoice,
+        rewindToCurrentTurnStart,
       }),
     });
 
-    // Click on the second grouped step (original index 2), should rewind 0 times (it's the last step)
     fireEvent.click(getByTestId('choice-breadcrumb-step-2'));
-    expect(cancelChoice).toHaveBeenCalledTimes(0);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(1);
 
-    // Click on the first grouped step (original index 1), should rewind 1 time
     fireEvent.click(getByTestId('choice-breadcrumb-step-1'));
-    expect(cancelChoice).toHaveBeenCalledTimes(1);
+    expect(rewindToCurrentTurnStart).toHaveBeenCalledTimes(2);
   });
 });

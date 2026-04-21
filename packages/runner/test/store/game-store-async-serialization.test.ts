@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, asPlayerId, initialState, type GameDef } from '@ludoforge/engine/runtime';
+import { asPlayerId, initialState, type GameDef } from '@ludoforge/engine/runtime';
 
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
@@ -136,7 +136,7 @@ describe('createGameStore async serialization', () => {
     expect(state.gameState).toEqual(initialState(def, 202).state);
   });
 
-  it('stale selectAction completion after a newer initGame does not mutate the new session', async () => {
+  it('stale submitActionSelection completion after a newer initGame does not mutate the new session', async () => {
     const def = compileCounterFixture();
     const bridge = createGameWorker();
     const store = createStore(bridge);
@@ -149,7 +149,7 @@ describe('createGameStore async serialization', () => {
       return await baseApplyDecision(decision, options, stamp);
     });
 
-    const selectPromise = store.getState().selectAction(asActionId('tick'));
+    const selectPromise = store.getState().submitActionSelection('tick');
     const newerInitPromise = store.getState().initGame(def, 99, P1_HUMAN_CONFIG);
 
     gate.resolve();

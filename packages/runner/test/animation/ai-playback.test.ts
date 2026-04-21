@@ -15,7 +15,7 @@ interface AiPlaybackStoreState {
   readonly aiPlaybackSpeed: GameStore['aiPlaybackSpeed'];
   readonly aiPlaybackAutoSkip: GameStore['aiPlaybackAutoSkip'];
   readonly aiSkipRequestToken: number;
-  resolveAiStep: GameStore['resolveAiStep'];
+  runAiStep: GameStore['runAiStep'];
 }
 
 function createAiStore(overrides: Partial<AiPlaybackStoreState> = {}): StoreApi<AiPlaybackStoreState> {
@@ -37,7 +37,7 @@ function createAiStore(overrides: Partial<AiPlaybackStoreState> = {}): StoreApi<
       aiPlaybackSpeed: '1x',
       aiPlaybackAutoSkip: false,
       aiSkipRequestToken: 0,
-      resolveAiStep: async () => 'human-turn',
+      runAiStep: async () => 'human-turn',
       ...overrides,
     })),
   );
@@ -76,7 +76,7 @@ describe('createAiPlaybackController', () => {
     const store = createAiStore({ animationPlaying: true });
     let calls = 0;
     store.setState({
-      resolveAiStep: async () => {
+      runAiStep: async () => {
         calls += 1;
         if (calls === 1) {
           return 'advanced';
@@ -110,7 +110,7 @@ describe('createAiPlaybackController', () => {
     const store = createAiStore({ animationPlaying: true });
     let calls = 0;
     store.setState({
-      resolveAiStep: async () => {
+      runAiStep: async () => {
         calls += 1;
         if (calls === 1) {
           return 'advanced';
@@ -132,7 +132,7 @@ describe('createAiPlaybackController', () => {
     });
 
     controller.start();
-    // First resolveAiStep returns 'advanced', then waits for drain which never comes
+    // First runAiStep returns 'advanced', then waits for drain which never comes
     await flushAsync();
     expect(calls).toBe(1);
 
@@ -147,10 +147,10 @@ describe('createAiPlaybackController', () => {
   });
 
   it('skip requests trigger animation skip and immediate AI step resolution', async () => {
-    const resolveAiStep = vi.fn(async () => 'human-turn' as const);
+    const runAiStep = vi.fn(async () => 'human-turn' as const);
     const store = createAiStore({
       aiPlaybackSpeed: '1x',
-      resolveAiStep,
+      runAiStep,
     });
     const animation = {
       setDetailLevel: vi.fn(),
@@ -168,7 +168,7 @@ describe('createAiPlaybackController', () => {
     await flushAsync();
 
     expect(animation.skipAll).toHaveBeenCalled();
-    expect(resolveAiStep).toHaveBeenCalledTimes(1);
+    expect(runAiStep).toHaveBeenCalledTimes(1);
 
     controller.destroy();
   });
@@ -178,9 +178,9 @@ describe('createAiPlaybackController', () => {
     { outcome: 'uncompletable-template' as const, expectedMessage: 'could not be completed' },
     { outcome: 'illegal-template' as const, expectedMessage: 'failed legality validation' },
   ]) {
-    it(`calls onError when resolveAiStep returns ${errorCase.outcome}`, async () => {
+    it(`calls onError when runAiStep returns ${errorCase.outcome}`, async () => {
       const store = createAiStore({
-        resolveAiStep: async () => errorCase.outcome,
+        runAiStep: async () => errorCase.outcome,
       });
       const onError = vi.fn();
 
@@ -203,8 +203,8 @@ describe('createAiPlaybackController', () => {
 
   it('retries on no-op then calls onError after max retries exhausted', async () => {
     let calls = 0;
-    const store = createAiStore({
-      resolveAiStep: async () => {
+      const store = createAiStore({
+      runAiStep: async () => {
         calls += 1;
         return 'no-op';
       },
@@ -234,7 +234,7 @@ describe('createAiPlaybackController', () => {
   it('stops after maxDriveMoves and calls onError', async () => {
     let calls = 0;
     const store = createAiStore({
-      resolveAiStep: async () => {
+      runAiStep: async () => {
         calls += 1;
         return 'advanced';
       },

@@ -13,7 +13,7 @@ interface ActionToolbarProps {
   readonly onActionHoverEnd?: () => void;
 }
 
-type SelectActionId = Parameters<GameStore['selectAction']>[0];
+type SelectActionId = Parameters<GameStore['submitActionSelection']>[0];
 
 function canRenderToolbar(renderModel: GameStore['renderModel']): boolean {
   if (renderModel == null) {
@@ -52,7 +52,7 @@ export function ActionToolbar({ store, surfaceRevision, onActionHoverStart, onAc
                     if (!action.isAvailable) {
                       return;
                     }
-                    void store.getState().selectAction(actionId, action.actionClass);
+                    void store.getState().submitActionSelection(actionId, action.actionClass);
                   }}
                   onPointerEnter={(e) => onActionHoverStart?.({
                     playerId: toolbarModel.activePlayerID != null ? Number(toolbarModel.activePlayerID) : null,

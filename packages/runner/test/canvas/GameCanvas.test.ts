@@ -28,7 +28,7 @@ interface RuntimeStoreState {
   readonly animationPlaybackSpeed: GameStore['animationPlaybackSpeed'];
   readonly animationPaused: boolean;
   readonly animationSkipRequestToken: number;
-  chooseOne(choice: string): void;
+  submitChoice(choice: string): void;
   setAnimationPlaying(playing: boolean): void;
   setAnimationPlaybackSpeed(speed: GameStore['animationPlaybackSpeed']): void;
   setAnimationPaused(paused: boolean): void;
@@ -49,7 +49,7 @@ function createRuntimeStore(
       animationPlaybackSpeed: '1x',
       animationPaused: false,
       animationSkipRequestToken: 0,
-      chooseOne: (_choice: string) => {},
+      submitChoice: (_choice: string) => {},
       setAnimationPlaying: (playing: boolean) => {
         store.setState({ animationPlaying: playing });
       },

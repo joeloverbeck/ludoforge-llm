@@ -1,9 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type {
-  ActionId,
   AgentDecisionTrace,
-  ClassifiedMove,
   ChoicePendingRequest,
   EffectTraceEntry,
   GameDef,
@@ -63,13 +61,9 @@ interface GameStoreState {
   readonly currentMicroturn: MicroturnState | null;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
-  readonly choicePending: ChoicePendingRequest | null;
   readonly effectTrace: readonly EffectTraceEntry[];
   readonly triggerFirings: readonly TriggerLogEntry[];
   readonly terminal: TerminalResult | null;
-  readonly selectedAction: ActionId | null;
-  readonly partialMove: Move | null;
-  readonly choiceStack: readonly PartialChoice[];
   readonly animationPlaying: boolean;
   readonly animationPlaybackSpeed: AnimationPlaybackSpeed;
   readonly animationPaused: boolean;
@@ -123,20 +117,19 @@ interface GameStoreActions {
     triggerFirings: readonly TriggerLogEntry[],
   ): void;
   reportBootstrapFailure(error: unknown): void;
-  selectAction(actionId: ActionId, actionClass?: string): Promise<void>;
-  chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  addChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  removeChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  confirmChooseN(): Promise<void>;
-  confirmMove(): Promise<void>;
-  resolveAiStep(): Promise<AiStepOutcome>;
+  submitActionSelection(actionId: string, actionClass?: string): Promise<void>;
+  submitChoice(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
+  submitChooseNStep(
+    command: 'add' | 'remove' | 'confirm',
+    choice?: Exclude<MoveParamValue, readonly unknown[]>,
+  ): Promise<void>;
+  runAiStep(): Promise<AiStepOutcome>;
   resolveAiTurn(): Promise<void>;
   setAiPlaybackDetailLevel(level: AnimationDetailLevel): void;
   setAiPlaybackSpeed(speed: AiPlaybackSpeed): void;
   setAiPlaybackAutoSkip(enabled: boolean): void;
   requestAiTurnSkip(): void;
-  cancelChoice(): Promise<void>;
-  cancelMove(): Promise<void>;
+  rewindToCurrentTurnStart(): Promise<void>;
   undo(): Promise<void>;
   setAnimationPlaying(playing: boolean): void;
   setAnimationPlaybackSpeed(speed: AnimationPlaybackSpeed): void;
@@ -160,10 +153,6 @@ interface RenderDerivationInputs {
   readonly currentMicroturn: MicroturnState | null;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
-  readonly choicePending: ChoicePendingRequest | null;
-  readonly selectedAction: ActionId | null;
-  readonly partialMove: Move | null;
-  readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly terminal: TerminalResult | null;
 }
@@ -210,13 +199,9 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   currentMicroturn: null,
   legalMoveResult: null,
   actionAvailabilityById: new Map<string, boolean>(),
-  choicePending: null,
   effectTrace: [],
   triggerFirings: [],
   terminal: null,
-  selectedAction: null,
-  partialMove: null,
-  choiceStack: [],
   animationPlaying: false,
   animationPlaybackSpeed: '1x',
   animationPaused: false,
@@ -247,13 +232,9 @@ function resetSessionState(): Pick<
   | 'currentMicroturn'
   | 'legalMoveResult'
   | 'actionAvailabilityById'
-  | 'choicePending'
   | 'effectTrace'
   | 'triggerFirings'
   | 'terminal'
-  | 'selectedAction'
-  | 'partialMove'
-  | 'choiceStack'
   | 'playerSeats'
   | 'appliedMoveEvent'
   | 'appliedMoveSequence'
@@ -268,13 +249,9 @@ function resetSessionState(): Pick<
     currentMicroturn: null,
     legalMoveResult: null,
     actionAvailabilityById: new Map<string, boolean>(),
-    choicePending: null,
     effectTrace: [],
     triggerFirings: [],
     terminal: null,
-    selectedAction: null,
-    partialMove: null,
-    choiceStack: [],
     playerSeats: new Map<PlayerId, SeatController>(),
     appliedMoveEvent: null,
     appliedMoveSequence: 0,
@@ -307,7 +284,6 @@ function buildInitSuccessState(
     effectTrace: setupTrace,
     triggerFirings: [],
     playerSeats: buildPlayerSeatsFromConfig(playerConfig),
-    ...resetMoveConstructionState(),
   };
 }
 
@@ -316,15 +292,6 @@ function buildInitFailureState(error: unknown, lifecycle: GameLifecycle): Partia
     ...resetSessionState(),
     error: toWorkerError(error),
     gameLifecycle: lifecycle,
-  };
-}
-
-function resetMoveConstructionState(): Pick<GameStoreState, 'selectedAction' | 'partialMove' | 'choiceStack' | 'choicePending'> {
-  return {
-    selectedAction: null,
-    partialMove: null,
-    choiceStack: [],
-    choicePending: null,
   };
 }
 
@@ -349,7 +316,6 @@ function buildStateMutationState(
     triggerFirings,
     appliedMoveEvent: null,
     error: null,
-    ...resetMoveConstructionState(),
   };
 }
 
@@ -442,25 +408,6 @@ function validatePlayerConfig(
   }
 }
 
-function toClassifiedMove(move: Move): ClassifiedMove {
-  return {
-    move,
-    viability: {
-      viable: true,
-      complete: true,
-      move,
-      warnings: [],
-      code: undefined,
-      context: undefined,
-      error: undefined,
-      nextDecision: undefined,
-      nextDecisionSet: undefined,
-      stochasticDecision: undefined,
-    },
-    trustedMove: undefined,
-  };
-}
-
 function synthesizeLegalMoveResult(microturn: MicroturnState | null): LegalMoveEnumerationResult | null {
   if (microturn === null || microturn.kind !== 'actionSelection') {
     return null;
@@ -469,7 +416,22 @@ function synthesizeLegalMoveResult(microturn: MicroturnState | null): LegalMoveE
   return {
     moves: microturn.legalActions
       .filter((decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> => decision.kind === 'actionSelection')
-      .map((decision) => toClassifiedMove(decision.move ?? { actionId: decision.actionId, params: {} })),
+      .map((decision) => ({
+        move: decision.move ?? { actionId: decision.actionId, params: {} },
+        viability: {
+          viable: true,
+          complete: true,
+          move: decision.move ?? { actionId: decision.actionId, params: {} },
+          warnings: [],
+          code: undefined,
+          context: undefined,
+          error: undefined,
+          nextDecision: undefined,
+          nextDecisionSet: undefined,
+          stochasticDecision: undefined,
+        },
+        trustedMove: undefined,
+      })),
     warnings: [],
   };
 }
@@ -498,18 +460,11 @@ function deriveCompatibilityChoiceStack(microturn: MicroturnState | null): reado
   });
 }
 
-function deriveCompatibilitySelectedAction(microturn: MicroturnState | null): ActionId | null {
+function deriveCompatibilitySelectedAction(microturn: MicroturnState | null): string | null {
   const root = microturn?.compoundTurnTrace[0];
   return root?.decision.kind === 'actionSelection'
     ? root.decision.actionId
     : null;
-}
-
-function deriveCompatibilityPartialMove(microturn: MicroturnState | null): Move | null {
-  if (microturn === null || microturn.compoundTurnTrace.length === 0) {
-    return null;
-  }
-  return rebuildMoveFromTrace(microturn.compoundTurnTrace);
 }
 
 function deriveCompatibilityChoicePending(microturn: MicroturnState | null): ChoicePendingRequest | null {
@@ -548,20 +503,6 @@ function deriveCompatibilityChoicePending(microturn: MicroturnState | null): Cho
   }
 
   return null;
-}
-
-function buildMicroturnCompatibilityPatch(microturn: MicroturnState | null): Pick<
-  GameStoreState,
-  'currentMicroturn' | 'legalMoveResult' | 'choicePending' | 'selectedAction' | 'partialMove' | 'choiceStack'
-> {
-  return {
-    currentMicroturn: microturn,
-    legalMoveResult: synthesizeLegalMoveResult(microturn),
-    choicePending: deriveCompatibilityChoicePending(microturn),
-    selectedAction: deriveCompatibilitySelectedAction(microturn),
-    partialMove: deriveCompatibilityPartialMove(microturn),
-    choiceStack: deriveCompatibilityChoiceStack(microturn),
-  };
 }
 
 function decisionKeyForMicroturn(microturn: MicroturnState): MicroturnState['compoundTurnTrace'][number]['decisionKey'] {
@@ -613,10 +554,9 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
     playerID: inputs.playerID,
     legalMoveResult: inputs.legalMoveResult,
     actionAvailabilityById: inputs.actionAvailabilityById,
-    choicePending: inputs.choicePending,
-    selectedAction: inputs.selectedAction,
-    partialMove: inputs.partialMove,
-    choiceStack: inputs.choiceStack,
+    choicePending: deriveCompatibilityChoicePending(inputs.currentMicroturn),
+    selectedActionId: deriveCompatibilitySelectedAction(inputs.currentMicroturn),
+    choiceStack: deriveCompatibilityChoiceStack(inputs.currentMicroturn),
     playerSeats: inputs.playerSeats,
     terminal: inputs.terminal,
   };
@@ -655,10 +595,6 @@ function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivatio
     currentMicroturn: state.currentMicroturn,
     legalMoveResult: state.legalMoveResult,
     actionAvailabilityById: state.actionAvailabilityById,
-    choicePending: state.choicePending,
-    selectedAction: state.selectedAction,
-    partialMove: state.partialMove,
-    choiceStack: state.choiceStack,
     playerSeats: state.playerSeats,
     terminal: state.terminal,
   };
@@ -677,13 +613,9 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     orchestrationDiagnosticSequence: state.orchestrationDiagnosticSequence,
     legalMoveResult: state.legalMoveResult,
     actionAvailabilityById: state.actionAvailabilityById,
-    choicePending: state.choicePending,
     effectTrace: state.effectTrace,
     triggerFirings: state.triggerFirings,
     terminal: state.terminal,
-    selectedAction: state.selectedAction,
-    partialMove: state.partialMove,
-    choiceStack: state.choiceStack,
     animationPlaying: state.animationPlaying,
     animationPlaybackSpeed: state.animationPlaybackSpeed,
     animationPaused: state.animationPaused,
@@ -776,7 +708,7 @@ async function deriveActionAvailabilityById(
 }
 
 function toBlockedActionError(
-  actionId: ActionId,
+  actionId: string,
   description: Awaited<ReturnType<GameWorkerAPI['describeAction']>>,
 ): WorkerError {
   return {
@@ -940,7 +872,6 @@ export function createGameStore(
               applied.triggerFirings,
             ),
             ...appliedMovePatch,
-            ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
           });
           if (!wasApplied || completedMove === null) {
             return;
@@ -1019,7 +950,6 @@ export function createGameStore(
             applied.triggerFirings,
           ),
           ...appliedMovePatch,
-          ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
         });
         if (!wasApplied) {
           return 'no-op';
@@ -1067,12 +997,11 @@ export function createGameStore(
                   playerConfig,
                   mutationInputs.currentMicroturn,
                   mutationInputs.legalMoveResult,
-                  mutationInputs.actionAvailabilityById,
-                  mutationInputs.terminal,
-                  lifecycle,
-                  setupTrace,
+                mutationInputs.actionAvailabilityById,
+                mutationInputs.terminal,
+                lifecycle,
+                setupTrace,
                 ),
-                ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
               },
             );
 
@@ -1129,7 +1058,6 @@ export function createGameStore(
                   lifecycle,
                   [],
                 ),
-                ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
               },
             );
           } catch (error) {
@@ -1159,7 +1087,6 @@ export function createGameStore(
                 effectTrace,
                 triggerFirings,
               ),
-              ...buildMicroturnCompatibilityPatch(currentMicroturn),
             },
           );
         },
@@ -1170,7 +1097,7 @@ export function createGameStore(
           setAndDerive(buildInitFailureState(error, lifecycle));
         },
 
-        async selectAction(actionId, actionClass) {
+        async submitActionSelection(actionId, actionClass) {
           const state = get();
           const currentMicroturn = state.currentMicroturn;
           if (currentMicroturn === null || currentMicroturn.kind !== 'actionSelection') {
@@ -1189,7 +1116,6 @@ export function createGameStore(
             await runActionOperation(async (ctx) => {
               guardSetAndDerive(ctx, {
                 error: toBlockedActionError(actionId, description),
-                ...resetMoveConstructionState(),
               });
             });
             return;
@@ -1197,7 +1123,7 @@ export function createGameStore(
           await submitDecision(selected);
         },
 
-        async chooseOne(choice) {
+        async submitChoice(choice) {
           const currentMicroturn = get().currentMicroturn;
           if (currentMicroturn === null || currentMicroturn.kind !== 'chooseOne') {
             return;
@@ -1212,14 +1138,16 @@ export function createGameStore(
           await submitDecision(selected);
         },
 
-        async addChooseNItem(choice) {
+        async submitChooseNStep(command, choice) {
           const currentMicroturn = get().currentMicroturn;
           if (currentMicroturn === null || currentMicroturn.kind !== 'chooseNStep') {
             return;
           }
           const selected = currentMicroturn.legalActions.find(
             (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
-              decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === choice,
+              decision.kind === 'chooseNStep'
+              && decision.command === command
+              && (command === 'confirm' || decision.value === choice),
           );
           if (selected === undefined) {
             return;
@@ -1227,41 +1155,7 @@ export function createGameStore(
           await submitDecision(selected);
         },
 
-        async removeChooseNItem(choice) {
-          const currentMicroturn = get().currentMicroturn;
-          if (currentMicroturn === null || currentMicroturn.kind !== 'chooseNStep') {
-            return;
-          }
-          const selected = currentMicroturn.legalActions.find(
-            (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
-              decision.kind === 'chooseNStep' && decision.command === 'remove' && decision.value === choice,
-          );
-          if (selected === undefined) {
-            return;
-          }
-          await submitDecision(selected);
-        },
-
-        async confirmChooseN() {
-          const currentMicroturn = get().currentMicroturn;
-          if (currentMicroturn === null || currentMicroturn.kind !== 'chooseNStep') {
-            return;
-          }
-          const selected = currentMicroturn.legalActions.find(
-            (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
-              decision.kind === 'chooseNStep' && decision.command === 'confirm',
-          );
-          if (selected === undefined) {
-            return;
-          }
-          await submitDecision(selected);
-        },
-
-        async confirmMove() {
-          return;
-        },
-
-        async resolveAiStep() {
+        async runAiStep() {
           const outcome = await runActionOperation((ctx) => resolveSingleAiStep(ctx));
           return outcome ?? 'no-op';
         },
@@ -1298,49 +1192,7 @@ export function createGameStore(
           set((state) => ({ aiSkipRequestToken: state.aiSkipRequestToken + 1 }));
         },
 
-        async cancelChoice() {
-          await runActionOperation(async (ctx) => {
-            const state = get();
-            const currentMicroturn = state.currentMicroturn;
-            if (currentMicroturn === null || currentMicroturn.compoundTurnTrace.length <= 1) {
-              return;
-            }
-            const rewindTarget = await bridge.rewindToTurnBoundary(currentMicroturn.turnId as TurnId, toOperationStamp(ctx));
-            if (rewindTarget === null) {
-              return;
-            }
-            const replayDecisions = currentMicroturn.compoundTurnTrace
-              .slice(0, currentMicroturn.compoundTurnTrace.length - 1)
-              .map((entry) => entry.decision);
-            let replayState = rewindTarget;
-            for (const decision of replayDecisions) {
-              const applied = await bridge.applyDecision(decision, { trace: false }, toOperationStamp(ctx));
-              replayState = applied.state;
-            }
-            const mutationInputs = await deriveMutationInputs(replayState);
-            const lifecycle = assertLifecycleTransition(
-              state.gameLifecycle,
-              lifecycleFromTerminal(mutationInputs.terminal),
-              'cancelChoice',
-            );
-            guardSetAndDerive(ctx, {
-              ...buildStateMutationState(
-                mutationInputs.gameState,
-                mutationInputs.currentMicroturn,
-                mutationInputs.legalMoveResult,
-                mutationInputs.actionAvailabilityById,
-                mutationInputs.terminal,
-                lifecycle,
-                [],
-                [],
-              ),
-              ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
-              error: null,
-            });
-          });
-        },
-
-        async cancelMove() {
+        async rewindToCurrentTurnStart() {
           await runActionOperation(async (ctx) => {
             const currentMicroturn = get().currentMicroturn;
             if (currentMicroturn === null) {
@@ -1371,7 +1223,6 @@ export function createGameStore(
                 [],
                 [],
               ),
-              ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
               error: null,
             });
           });
@@ -1402,7 +1253,6 @@ export function createGameStore(
                 [],
                 [],
               ),
-              ...buildMicroturnCompatibilityPatch(mutationInputs.currentMicroturn),
             });
           });
         },

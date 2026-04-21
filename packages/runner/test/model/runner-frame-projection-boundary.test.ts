@@ -63,8 +63,7 @@ function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
     playerID: asPlayerId(0),
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
-    selectedAction: asActionId('tick'),
-    partialMove: null,
+    selectedActionId: asActionId('tick'),
     choiceStack: [],
     playerSeats: new Map([
       [asPlayerId(0), createHumanSeatController()],
@@ -121,7 +120,6 @@ describe('runner frame / render model boundary', () => {
     };
     const bundle = deriveRunnerFrame(state, def, makeContext({
       choicePending,
-      partialMove: { actionId: asActionId('tick'), params: {} },
     }));
     const frame = bundle.frame;
 

@@ -1,4 +1,5 @@
 import type { ChooseNOptionResolution, MoveParamValue } from '@ludoforge/engine/runtime';
+import type { Decision } from '../../../engine/src/kernel/microturn/types.js';
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactElement } from 'react';
 import type { StoreApi } from 'zustand';
 import { useStore } from 'zustand';
@@ -65,12 +66,38 @@ export function countChoicesToCancel(totalSteps: number, clickedIndex: number): 
 
 export async function rewindChoiceToBreadcrumb(
   store: StoreApi<GameStore>,
-  totalSteps: number,
   clickedIndex: number,
 ): Promise<void> {
-  const cancelCount = countChoicesToCancel(totalSteps, clickedIndex);
-  for (let step = 0; step < cancelCount; step += 1) {
-    await store.getState().cancelChoice();
+  await rewindToTraceLength(store, clickedIndex + 1);
+}
+
+async function replayDecision(store: StoreApi<GameStore>, decision: Decision): Promise<void> {
+  switch (decision.kind) {
+    case 'actionSelection':
+      await store.getState().submitActionSelection(
+        String(decision.actionId),
+        decision.move?.actionClass,
+      );
+      return;
+    case 'chooseOne':
+      if (isChoiceScalar(decision.value)) {
+        await store.getState().submitChoice(decision.value);
+      }
+      return;
+    case 'chooseNStep':
+      await store.getState().submitChooseNStep(decision.command, decision.value);
+      return;
+    default:
+      return;
+  }
+}
+
+async function rewindToTraceLength(store: StoreApi<GameStore>, traceLength: number): Promise<void> {
+  const trace = store.getState().currentMicroturn?.compoundTurnTrace ?? [];
+  const replayDecisions = trace.slice(0, traceLength).map((entry) => entry.decision);
+  await store.getState().rewindToCurrentTurnStart();
+  for (const decision of replayDecisions) {
+    await replayDecision(store, decision);
   }
 }
 
@@ -368,12 +395,11 @@ const MAX_VISIBLE_BREADCRUMB_SEGMENTS = 3;
 
 interface CollapsedBreadcrumbProps {
   readonly steps: readonly RenderChoiceStep[];
-  readonly totalSteps: number;
   readonly store: StoreApi<GameStore>;
   readonly showCurrent: boolean;
 }
 
-function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: CollapsedBreadcrumbProps): ReactElement {
+function CollapsedBreadcrumb({ steps, store, showCurrent }: CollapsedBreadcrumbProps): ReactElement {
   const allSegments = segmentBreadcrumb(steps);
   const shouldCollapse = allSegments.length > MAX_VISIBLE_BREADCRUMB_SEGMENTS;
   const visibleSegments = shouldCollapse
@@ -396,7 +422,7 @@ function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: Collapse
               className={styles.breadcrumbStep}
               data-testid={`choice-breadcrumb-step-${segment.originalIndex}`}
               onClick={() => {
-                void rewindChoiceToBreadcrumb(store, totalSteps, segment.originalIndex);
+                void rewindChoiceToBreadcrumb(store, segment.originalIndex);
               }}
             >
               {segment.step.displayName}
@@ -419,7 +445,7 @@ function CollapsedBreadcrumb({ steps, totalSteps, store, showCurrent }: Collapse
                     className={styles.breadcrumbStepIndented}
                     data-testid={`choice-breadcrumb-step-${originalIndex}`}
                     onClick={() => {
-                      void rewindChoiceToBreadcrumb(store, totalSteps, originalIndex);
+                      void rewindChoiceToBreadcrumb(store, originalIndex);
                     }}
                   >
                     {step.iterationLabel != null
@@ -454,14 +480,9 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
   const isPendingChoice = choiceUi.kind === 'discreteOne'
     || choiceUi.kind === 'discreteMany'
     || choiceUi.kind === 'numeric';
-  const isConfirmReady = choiceUi.kind === 'confirmReady';
   const isInvalid = choiceUi.kind === 'invalid';
 
   if (mode === 'choicePending' && !isPendingChoice) {
-    return null;
-  }
-
-  if (mode === 'choiceConfirm' && !isConfirmReady) {
     return null;
   }
 
@@ -469,7 +490,6 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     return null;
   }
 
-  const showConfirm = mode === 'choiceConfirm';
   const showNavigation = mode !== 'choiceInvalid';
 
   const effectiveContext = useMemo(() => {
@@ -494,16 +514,10 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
     <section className={styles.panel} aria-label="Choice panel" data-testid="choice-panel">
       {effectiveContext != null ? (
         <ChoiceContextHeader context={effectiveContext} />
-      ) : showConfirm && choiceModel.selectedActionDisplayName != null ? (
-        <div className={styles.choiceContextHeader} data-testid="choice-context-header">
-          <span className={styles.actionBadge}>{choiceModel.selectedActionDisplayName}</span>
-          <span className={styles.decisionPrompt}>Confirm your selections</span>
-        </div>
       ) : null}
       {mode !== 'choiceInvalid' ? (
         <CollapsedBreadcrumb
           steps={choiceModel.choiceBreadcrumb}
-          totalSteps={choiceModel.choiceBreadcrumb.length}
           store={store}
           showCurrent={isPendingChoice && choiceModel.choiceBreadcrumb.length > 0}
         />
@@ -538,7 +552,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
                       if (!isLegal || !isChoiceScalar(option.value)) {
                         return;
                       }
-                      void store.getState().chooseOne(option.value);
+                      void store.getState().submitChoice(option.value);
                     }}
                   >
                     <span>{option.displayName}</span>
@@ -558,13 +572,13 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             key={choiceUi.decisionKey}
             choiceUi={choiceUi}
             addChooseNItem={async (value) => {
-              await store.getState().addChooseNItem(value);
+              await store.getState().submitChooseNStep('add', value);
             }}
             removeChooseNItem={async (value) => {
-              await store.getState().removeChooseNItem(value);
+              await store.getState().submitChooseNStep('remove', value);
             }}
             confirmChooseN={async () => {
-              await store.getState().confirmChooseN();
+              await store.getState().submitChooseNStep('confirm');
             }}
           />
         ) : null}
@@ -574,7 +588,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             key={choiceUi.decisionKey}
             choiceUi={choiceUi}
             chooseOne={async (value) => {
-              await store.getState().chooseOne(value);
+              await store.getState().submitChoice(value);
             }}
           />
         ) : null}
@@ -588,7 +602,7 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             data-testid="choice-back"
             disabled={choiceModel.choiceBreadcrumb.length === 0}
             onClick={() => {
-              void store.getState().cancelChoice();
+              void rewindToTraceLength(store, Math.max(0, choiceModel.choiceBreadcrumb.length - 1));
             }}
           >
             Back
@@ -598,23 +612,11 @@ export function ChoicePanel({ store, mode }: ChoicePanelProps): ReactElement | n
             className={styles.navButton}
             data-testid="choice-cancel"
             onClick={() => {
-              store.getState().cancelMove();
+              void store.getState().rewindToCurrentTurnStart();
             }}
           >
             Cancel
           </button>
-          {showConfirm ? (
-            <button
-              type="button"
-              className={styles.navButton}
-              data-testid="choice-confirm"
-              onClick={() => {
-                void store.getState().confirmMove();
-              }}
-            >
-              Confirm
-            </button>
-          ) : null}
         </div>
       ) : null}
     </section>

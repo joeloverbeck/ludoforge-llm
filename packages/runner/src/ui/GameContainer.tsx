@@ -319,7 +319,6 @@ export function GameContainer({
           </>
         );
       case 'choicePending':
-      case 'choiceConfirm':
       case 'choiceInvalid':
         return <ChoicePanel store={store} mode={bottomBarState.kind} />;
       case 'aiTurn':

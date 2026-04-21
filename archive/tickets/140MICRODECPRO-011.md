@@ -1,6 +1,6 @@
 # 140MICRODECPRO-011: D7 — Runner store + UI adaptation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only
@@ -116,3 +116,17 @@ Every test exercising old store actions (`selectAction`, `chooseOne`, etc.) migr
 2. `pnpm -F @ludoforge/runner test`
 3. Manual: `pnpm -F @ludoforge/runner dev` — exercise UI choice flow.
 4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-04-21.
+
+The runner store no longer persists `selectedAction`, `partialMove`, `choiceStack`, or `choicePending` as mutable Zustand fields. `packages/runner/src/store/game-store.ts` now treats `currentMicroturn` plus derived action availability as the only live decision frontier, exposes the microturn-native action surface (`submitActionSelection`, `submitChoice`, `submitChooseNStep`, `rewindToCurrentTurnStart`, `runAiStep`), and derives the render/projection context directly from the published microturn instead of maintaining a second speculative move-construction state.
+
+The runner UI was rewired onto that microturn-native surface. `ActionToolbar` dispatches `submitActionSelection`; `ChoicePanel` dispatches `submitChoice` / `submitChooseNStep` and rewinds breadcrumbs by restarting the current turn and replaying the kept microturn trace; `bottom-bar-mode` / render-model projection no longer synthesize the move-era `confirmReady` branch, so action selection now returns to the `actions` toolbar instead of a runner-owned confirm screen. The runner, canvas-interaction, and projection tests were migrated to the new store contract in the same change.
+
+`InterruptBanner.tsx` and `IllegalityFeedback.tsx` did not require source edits after reassessment. Their existing render-model-driven surfaces already remained valid once the store and projection boundary stopped publishing runner-owned mutable choice state, so the ticket's originally listed file scope was broader than the live change boundary.
+
+- `ticket corrections applied`: `runner still uses compatibility store fields + confirm-ready projection -> compatibility state removed from store; projection now derives from currentMicroturn and action-selection returns to actions`; `broad store grep wording -> narrowed proof to mutable store-field declarations in packages/runner/src/store/game-store.ts because store-types.ts still intentionally carries derived projection context`; `ticket-listed UI file scope included InterruptBanner.tsx + IllegalityFeedback.tsx -> no source edits required because both already consumed render-model legality/interrupt context compatibly once the store boundary was simplified`
+- `verification set`: `pnpm -F @ludoforge/runner build`; `pnpm -F @ludoforge/runner test`; `rg -n "readonly (selectedAction|partialMove|choiceStack|choicePending):" packages/runner/src/store/game-store.ts`; `pnpm turbo build`; `pnpm turbo test`; `pnpm turbo lint`; `pnpm turbo typecheck`
+- `proof gaps`: `manual pnpm -F @ludoforge/runner dev smoke not run in this terminal session`

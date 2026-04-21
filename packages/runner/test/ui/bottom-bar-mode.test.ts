@@ -88,13 +88,13 @@ describe('deriveBottomBarState', () => {
     expect(mode).toEqual({ kind: 'choicePending' });
   });
 
-  it('returns choiceConfirm when choiceUi is confirmReady', () => {
+  it('returns actions when choiceUi is none', () => {
     const mode = deriveBottomBarState(
       makeRenderModel({
-        choiceUi: { kind: 'confirmReady' },
+        choiceUi: { kind: 'none' },
       }),
     );
-    expect(mode).toEqual({ kind: 'choiceConfirm' });
+    expect(mode).toEqual({ kind: 'actions' });
   });
 
   it('returns choiceInvalid when choiceUi is invalid', () => {
@@ -133,10 +133,10 @@ describe('deriveBottomBarState', () => {
         expected: { kind: 'aiTurn' },
       },
       {
-        name: 'ai turn overrides confirm-ready mode',
+        name: 'ai turn overrides neutral mode',
         renderModel: makeRenderModel({
           activePlayerID: asPlayerId(1),
-          choiceUi: { kind: 'confirmReady' },
+          choiceUi: { kind: 'none' },
         }),
         expected: { kind: 'aiTurn' },
       },

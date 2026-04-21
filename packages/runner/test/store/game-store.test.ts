@@ -103,18 +103,16 @@ describe('createGameStore', () => {
     expect(state.renderModel).not.toBeNull();
   });
 
-  it('selectAction immediately submits actionSelection decisions for simple actions', async () => {
+  it('submitActionSelection immediately submits actionSelection decisions for simple actions', async () => {
     const def = compileCounterFixture(5);
     const onMoveApplied = vi.fn();
     const store = createStore(onMoveApplied);
     await store.getState().initGame(def, 13, TWO_PLAYER_CONFIG);
 
-    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().submitActionSelection('tick');
 
     const state = store.getState();
     expect(state.gameState?.globalVars.round).toBe(1);
-    expect(state.selectedAction).toBeNull();
-    expect(state.choicePending).toBeNull();
     expect(state.currentMicroturn?.kind).toBe('actionSelection');
     expect(onMoveApplied).toHaveBeenCalledWith({ actionId: asActionId('tick'), params: {} });
   });
@@ -123,58 +121,51 @@ describe('createGameStore', () => {
     const store = createStore();
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 21, TWO_PLAYER_CONFIG);
 
-    await store.getState().selectAction(asActionId('pick-mixed'));
+    await store.getState().submitActionSelection('pick-mixed');
     expect(store.getState().currentMicroturn?.kind).toBe('chooseOne');
-    expect(store.getState().choicePending?.type).toBe('chooseOne');
-    expect(store.getState().selectedAction).toEqual(asActionId('pick-mixed'));
+    expect(store.getState().renderModel?.choiceUi.kind).toBe('discreteOne');
 
-    await store.getState().chooseOne('x');
+    await store.getState().submitChoice('x');
     expect(store.getState().currentMicroturn?.kind).toBe('chooseNStep');
-    expect(store.getState().choicePending?.type).toBe('chooseN');
-    expect(store.getState().choiceStack).toHaveLength(1);
-    const selectedKey = store.getState().choiceStack[0]?.decisionKey;
+    expect(store.getState().renderModel?.choiceUi.kind).toBe('discreteMany');
+    expect(store.getState().renderModel?.choiceBreadcrumb).toHaveLength(1);
+    const selectedKey = store.getState().renderModel?.choiceBreadcrumb[0]?.decisionKey;
     expect(selectedKey).toBeDefined();
-    expect(store.getState().partialMove?.params[selectedKey!]).toBe('x');
+    expect(store.getState().runnerFrame?.selectedActionId).toBe('pick-mixed');
 
-    await store.getState().addChooseNItem('m1');
-    const chooseNPending = store.getState().choicePending;
-    expect(chooseNPending?.type).toBe('chooseN');
-    if (chooseNPending?.type !== 'chooseN') {
-      throw new Error('Expected chooseN pending state.');
+    await store.getState().submitChooseNStep('add', 'm1');
+    const choiceUi = store.getState().renderModel?.choiceUi;
+    expect(choiceUi?.kind).toBe('discreteMany');
+    if (choiceUi?.kind !== 'discreteMany') {
+      throw new Error('Expected chooseN choice UI.');
     }
-    expect(chooseNPending.selected).toEqual(['m1']);
+    expect(choiceUi.selectedChoiceValueIds).toEqual(['s:2:m1']);
 
-    await store.getState().confirmChooseN();
+    await store.getState().submitChooseNStep('confirm');
     expect(store.getState().currentMicroturn?.kind).toBe('actionSelection');
-    expect(store.getState().choicePending).toBeNull();
-    expect(store.getState().selectedAction).toBeNull();
+    expect(store.getState().renderModel?.choiceUi.kind).toBe('none');
   });
 
-  it('cancelChoice rewinds one confirmed decision and cancelMove rewinds the whole turn', async () => {
+  it('rewindToCurrentTurnStart rewinds the whole current turn', async () => {
     const store = createStore();
     await store.getState().initGame(CHOOSE_MIXED_TEST_DEF, 31, TWO_PLAYER_CONFIG);
 
-    await store.getState().selectAction(asActionId('pick-mixed'));
-    await store.getState().chooseOne('x');
+    await store.getState().submitActionSelection('pick-mixed');
+    await store.getState().submitChoice('x');
     expect(store.getState().currentMicroturn?.kind).toBe('chooseNStep');
 
-    await store.getState().cancelChoice();
-    expect(store.getState().selectedAction).toEqual(asActionId('pick-mixed'));
-
-    await store.getState().chooseOne('x');
-    await store.getState().cancelMove();
+    await store.getState().rewindToCurrentTurnStart();
     await Promise.resolve();
     await Promise.resolve();
     expect(store.getState().currentMicroturn?.kind).toBe('actionSelection');
-    expect(store.getState().selectedAction).toBeNull();
-    expect(store.getState().choicePending).toBeNull();
+    expect(store.getState().renderModel?.choiceUi.kind).toBe('none');
   });
 
   it('hydrateFromReplayStep swaps in the replay frontier and clears move construction state', async () => {
     const def = compileCounterFixture(5);
     const store = createStore();
     await store.getState().initGame(def, 41, TWO_PLAYER_CONFIG);
-    await store.getState().selectAction(asActionId('tick'));
+    await store.getState().submitActionSelection('tick');
 
     const replayState = initialState(def, 99, 2).state;
     store.getState().hydrateFromReplayStep(replayState, null, null, [], []);
@@ -182,18 +173,17 @@ describe('createGameStore', () => {
     const state = store.getState();
     expect(state.gameState).toEqual(replayState);
     expect(state.currentMicroturn).toBeNull();
-    expect(state.selectedAction).toBeNull();
-    expect(state.choicePending).toBeNull();
+    expect(state.renderModel?.choiceUi.kind).toBe('none');
   });
 
-  it('resolveAiStep advances one published decision and reports completed moves', async () => {
+  it('runAiStep advances one published decision and reports completed moves', async () => {
     const def = compileCounterFixture(5);
     const onMoveApplied = vi.fn();
     const store = createStore(onMoveApplied);
     await store.getState().initGame(def, 51, AI_FIRST_CONFIG);
 
     expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(0));
-    const outcome = await store.getState().resolveAiStep();
+    const outcome = await store.getState().runAiStep();
 
     expect(outcome).toBe('advanced');
     expect(store.getState().gameState?.globalVars.round).toBe(1);

@@ -123,20 +123,27 @@ function compileFixture(options: CompileFixtureOptions): GameDef {
 function makeRenderContext(
   playerCount: number,
   playerID = asPlayerId(0),
-  overrides: Partial<RenderContext> = {},
+  overrides: Partial<RenderContext> & {
+    readonly selectedAction?: ReturnType<typeof asActionId> | null;
+    readonly partialMove?: unknown;
+  } = {},
 ): RenderContext {
+  const {
+    selectedAction,
+    ...contextOverrides
+  } = overrides;
+
   return {
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
-    selectedAction: asActionId('tick'),
-    partialMove: null,
+    selectedActionId: selectedAction ?? asActionId('tick'),
     choiceStack: [],
     playerSeats: new Map(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), createHumanSeatController()]),
     ),
     terminal: null,
-    ...overrides,
+    ...contextOverrides,
   };
 }
 

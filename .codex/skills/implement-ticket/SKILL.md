@@ -21,8 +21,11 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
+- If a ticket's named `Files to Touch` / `What to Change` list includes paths that reassessment proves do not require edits, do not silently ignore that mismatch. Either make the required change, or record the boundary correction in the active ticket before closeout so the untouched path is explained truthfully.
 - Before marking a ticket complete, compare the ticket's named verification commands against the final proof set. Either run each named command directly or record, in the active ticket outcome, the exact broader lane that subsumed it.
+- When a ticket names wildcard acceptance checks or grep-based emptiness proofs, validate early whether the literal pattern matches the true owned boundary. If the pattern overreaches into intentional derived surfaces outside the mutable slice, narrow the proof to the truthful owned invariant and record that correction in the active ticket before final closeout.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
+- Treat any code, test, fixture, generated-artifact, or ticket-text edit made after a proof lane as proof-invalidating for every affected acceptance command. Rerun the impacted focused/package/workspace lanes after those edits land; do not cite the earlier green run as final.
 
 ## Final-Proof Gate
 
@@ -87,6 +90,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - For every new module or test you expect to add, decide explicitly whether imports should come from the public package surface or an internal file path. Verify the required export surface before coding rather than discovering it during the first build.
    - When a new test depends on runtime-generated identifiers (for example `DecisionKey`, bind-expanded names, dynamic branch ids, or similar kernel-owned identity surfaces), do not assume the draft spec or hand-written fixture literals match the live canonical form. Prefer deriving those identifiers from the real runtime seam first and then asserting against that observed canonical sequence.
    - When the ticket names wildcard acceptance checks or `returns empty` grep lanes, validate those patterns against the live repo early, especially if they span files outside the owned `Files to Touch` slice. Do not defer repo-wide empty-match assumptions until after coding.
+   - If that early validation shows the ticket's literal pattern is broader than the real owned invariant, stop treating the draft pattern as authoritative. Decide the narrowest truthful live boundary up front, then carry that corrected proof description into working notes and the active ticket closeout.
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
    - When the command is a package-manager script target, prefer verifying the script definition and underlying runner entrypoint before using `--help` or ad hoc flags as a probe.
@@ -173,6 +177,12 @@ Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria`
 3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
 4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
 
+After any acceptance or proof lane goes green, preserve that result only while the proved surface stays unchanged:
+
+1. if you edit code, tests, fixtures, generated artifacts, or the active ticket text in a way that changes the acceptance story, immediately mark the affected earlier proof results as stale
+2. rerun the narrowest affected focused lane first, then any broader package/workspace lanes that depended on the stale state
+3. only treat the rerun set as the final proof record; earlier green runs become historical diagnostics, not closeout evidence
+
 If the first broader proof lane fails on a newly added or modified test, do one focused recovery loop before rerunning the full lane:
 
 1. isolate the failing owned test file or the narrowest direct harness that reproduces the failure
@@ -198,6 +208,8 @@ For evidence states, trace-heavy ticket inspection, and generated artifact triag
 Load `references/closeout-and-followup.md` for non-bounded tickets, or for bounded local refactors when closeout needs follow-up classification, ticket blocking, sibling rewrites, or other nontrivial handoff work. Covers the closeout summary, final acceptance sweep, acceptance-proof invalidation rules, tracked-ticket durable outcome block, durable state classification (`COMPLETED` / `BLOCKED by prerequisite` / `PENDING untouched`), optional state-transition ledger, and draft-ticket durable closeout.
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`.
+
+If that sweep finds ticket-named files that were intentionally left untouched because reassessment proved no live change was required, do not quietly leave the mismatch behind. Record the correction in the active ticket closeout so the final artifact explains why those paths remained unchanged.
 
 When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
 

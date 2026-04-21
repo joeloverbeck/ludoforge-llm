@@ -5,5 +5,5 @@ export type CanvasSelectionTarget =
   | { readonly type: 'token'; readonly id: string };
 
 export function dispatchCanvasSelection(store: GameStore, target: CanvasSelectionTarget): void {
-  store.chooseOne(target.id);
+  void store.submitChoice(target.id);
 }

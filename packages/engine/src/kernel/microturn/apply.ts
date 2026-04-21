@@ -21,7 +21,15 @@ import type { DecisionKey } from '../decision-scope.js';
 import type { ExecutionOptions, GameDef, GameState, Move, Rng, TriggerLogEntry } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
-import { advanceChooseNStepContext, publishMicroturn, rebuildMoveFromFrame, toDecisionStackContext, toStochasticDecisionStackContext, withResolvedHash } from './publish.js';
+import {
+  advanceChooseNStepContext,
+  publishMicroturn,
+  rebuildMoveFromFrame,
+  toChooseNStepDecisions,
+  toDecisionStackContext,
+  toStochasticDecisionStackContext,
+  withResolvedHash,
+} from './publish.js';
 import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 
@@ -201,6 +209,23 @@ const appendTraceEntry = (
     decisionHistory: [...rootHistory(frame), entry],
   },
 });
+
+const withAccumulatedBinding = (
+  frame: DecisionStackFrame,
+  decisionKey: DecisionKey,
+  value: readonly MoveParamScalar[],
+): DecisionStackFrame => {
+  const nextBindings = { ...frame.accumulatedBindings };
+  if (value.length === 0) {
+    delete nextBindings[decisionKey];
+  } else {
+    nextBindings[decisionKey] = value;
+  }
+  return {
+    ...frame,
+    accumulatedBindings: nextBindings,
+  };
+};
 
 const entryForDecision = (
   microturn: ReturnType<typeof publishMicroturn>,
@@ -459,7 +484,7 @@ export const applyPublishedDecision = (
     }
     const baseMove = rebuildMoveFromFrame(rootFrame);
     const advanced = advanceChooseNStepContext(top.context, decision);
-    const updatedRoot = advanced.done
+    const tracedRoot = advanced.done
       ? {
         ...appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
         accumulatedBindings: {
@@ -469,6 +494,11 @@ export const applyPublishedDecision = (
       }
       : appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
     if (!advanced.done) {
+      const updatedRoot = withAccumulatedBinding(
+        tracedRoot,
+        decision.decisionKey,
+        advanced.nextContext.selectedSoFar,
+      );
       const nextTop: DecisionStackFrame = {
         ...top,
         context: advanced.nextContext,
@@ -478,30 +508,37 @@ export const applyPublishedDecision = (
         decisionStack: [updatedRoot, nextTop],
         activeDeciderSeatId: nextTop.context.seatId,
       }, resolvedRuntime);
-      const nextMicroturn = publishMicroturn(def, nextState, resolvedRuntime);
-      const autoCompleteChooseN =
+      const selectedKeys = new Set(
+        advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
+      );
+      const hasRemainingLegalAdd = advanced.nextContext.options.some((option) =>
+        option.legality !== 'illegal'
+        && !Array.isArray(option.value)
+        && !selectedKeys.has(JSON.stringify([typeof option.value, option.value])),
+      );
+      const needsBridgeabilityCollapse =
         decision.command === 'add'
         && advanced.nextContext.selectedSoFar.length > 0
-        && nextMicroturn.kind === 'chooseNStep'
-        && nextMicroturn.legalActions.length > 0
-        && nextMicroturn.legalActions.every((candidate) =>
+        && !hasRemainingLegalAdd;
+      const nextLegalActions = needsBridgeabilityCollapse
+        ? toChooseNStepDecisions(
+          def,
+          nextState,
+          rebuildMoveFromFrame(updatedRoot),
+          advanced.nextContext,
+          nextTop.effectFrame,
+          resolvedRuntime,
+        )
+        : [];
+      const autoCompleteChooseN =
+        needsBridgeabilityCollapse
+        && nextLegalActions.length > 0
+        && nextLegalActions.every((candidate) =>
           candidate.kind === 'chooseNStep'
           && candidate.command === 'remove'
           && candidate.decisionKey === advanced.nextContext.decisionKey,
         );
       if (autoCompleteChooseN) {
-        const autoCompletedRoot: DecisionStackFrame = {
-          ...updatedRoot,
-          accumulatedBindings: {
-            ...updatedRoot.accumulatedBindings,
-            [decision.decisionKey]: advanced.nextContext.selectedSoFar,
-          },
-        };
-        const autoCompleteState = updateHash(def, {
-          ...canonicalState,
-          decisionStack: [autoCompletedRoot, nextTop],
-          activeDeciderSeatId: nextTop.context.seatId,
-        }, resolvedRuntime);
         const move: Move = {
           ...baseMove,
           params: {
@@ -509,7 +546,7 @@ export const applyPublishedDecision = (
             [decision.decisionKey]: advanced.nextContext.selectedSoFar,
           },
         };
-        return continueResolvedMove(def, autoCompleteState, move, microturn, decision, options, resolvedRuntime);
+        return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime);
       }
       return {
         state: nextState,
@@ -537,13 +574,13 @@ export const applyPublishedDecision = (
       }
       const nextState = {
         ...canonicalState,
-        decisionStack: [updatedRoot, top],
+        decisionStack: [tracedRoot, top],
       };
       return spawnPendingFrame(def, nextState, microturn, decision, continuation, resolvedRuntime);
     }
     const nextState = {
       ...canonicalState,
-      decisionStack: [updatedRoot, top],
+      decisionStack: [tracedRoot, top],
     };
     return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime);
   }

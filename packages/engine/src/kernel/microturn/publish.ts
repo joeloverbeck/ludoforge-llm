@@ -436,7 +436,7 @@ export const advanceChooseNStepContext = (
   };
 };
 
-const toChooseNStepDecisions = (
+export const toChooseNStepDecisions = (
   def: GameDef,
   state: GameState,
   baseMove: Move,

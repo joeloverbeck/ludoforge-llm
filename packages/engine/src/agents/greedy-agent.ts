@@ -1,4 +1,3 @@
-import { applyTrustedMove } from '../kernel/apply-move.js';
 import { applyDecision } from '../kernel/microturn/apply.js';
 import type { Decision } from '../kernel/microturn/types.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';

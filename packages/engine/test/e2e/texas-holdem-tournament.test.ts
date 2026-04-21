@@ -103,6 +103,7 @@ const replayTrace = (
         assert.ok(entry.decision.move);
         return entry.decision.move;
       })(),
+      decision: entry.decision,
       expectedStateHash: entry.stateHash,
     })),
     keyVars: ['pot', 'blindLevel', 'handsPlayed', 'activePlayers'],

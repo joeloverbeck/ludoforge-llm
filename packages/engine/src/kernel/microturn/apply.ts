@@ -225,13 +225,9 @@ const applyChosenMove = (
   const baseState = clearMicroturnState(def, state, runtime);
   const applied = applyMove(def, baseState, move, options, runtime);
   const triggerFirings = [...applied.triggerFirings];
-  const advanced = advancePhase(buildAdvancePhaseRequest(def, applied.state, createEvalRuntimeResources(), {
-    cachedRuntime: runtime,
-    triggerLogCollector: triggerFirings,
-  }));
   const nextState = updateHash(def, {
-    ...advanced,
-    activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(advanced.activePlayer)),
+    ...applied.state,
+    activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(applied.state.activePlayer)),
     decisionStack: [],
     nextTurnId: asTurnId((state.nextTurnId ?? asTurnId(0)) + 1),
   }, runtime);

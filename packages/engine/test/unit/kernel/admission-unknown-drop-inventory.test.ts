@@ -7,9 +7,7 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  classifyMoveDecisionSequenceAdmissionForLegalMove,
   enumerateLegalMoves,
-  isMoveDecisionSequenceAdmittedForLegalMove,
   MISSING_BINDING_POLICY_CONTEXTS,
   type ActionDef,
   type ActionPipelineDef,
@@ -17,6 +15,10 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import {
+  classifyDecisionContinuationAdmissionForLegalMove,
+  isDecisionContinuationAdmittedForLegalMove,
+} from '../../../src/kernel/microturn/continuation.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
@@ -104,13 +106,13 @@ describe('admission unknown drop inventory', () => {
     const context = MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE;
 
     assert.equal(
-      classifyMoveDecisionSequenceAdmissionForLegalMove(def, state, move, context, {
+      classifyDecisionContinuationAdmissionForLegalMove(def, state, move, context, {
         budgets: { maxDecisionProbeSteps: 0 },
       }),
       'unknown',
     );
     assert.equal(
-      isMoveDecisionSequenceAdmittedForLegalMove(def, state, move, context, {
+      isDecisionContinuationAdmittedForLegalMove(def, state, move, context, {
         budgets: { maxDecisionProbeSteps: 0 },
       }),
       false,

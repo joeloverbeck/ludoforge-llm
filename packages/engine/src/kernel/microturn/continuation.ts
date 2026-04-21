@@ -1,16 +1,16 @@
-import { legalChoicesDiscover } from './legal-choices.js';
+import { legalChoicesDiscover } from '../legal-choices.js';
 import {
   analyzeDecisionSequence,
-  type DecisionSequenceChoiceDiscoverer,
   type DecisionSequenceAnalysisResult,
-} from './decision-sequence-analysis.js';
-import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
-import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue } from './choice-option-policy.js';
-import type { GameDefRuntime } from './gamedef-runtime.js';
-import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from './missing-binding-policy.js';
-import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
-import type { PerfProfiler } from './perf-profiler.js';
-import { probeWith, resolveProbeResult, type ProbeResult } from './probe-result.js';
+  type DecisionSequenceChoiceDiscoverer,
+} from '../decision-sequence-analysis.js';
+import { createMoveDecisionSequenceChoiceDiscoverer } from '../move-decision-discoverer.js';
+import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue } from '../choice-option-policy.js';
+import type { GameDefRuntime } from '../gamedef-runtime.js';
+import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from '../missing-binding-policy.js';
+import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from '../move-enumeration-budgets.js';
+import type { PerfProfiler } from '../perf-profiler.js';
+import { probeWith, resolveProbeResult, type ProbeResult } from '../probe-result.js';
 import type {
   ChoiceIllegalRequest,
   ChoicePendingRequest,
@@ -21,18 +21,18 @@ import type {
   Move,
   MoveParamValue,
   RuntimeWarning,
-} from './types.js';
+} from '../types.js';
 
-export interface ResolveMoveDecisionSequenceOptions {
+export interface ResolveDecisionContinuationOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
-  readonly discoveryCache?: DiscoveryCache;
+  readonly discoveryCache?: DecisionContinuationCache;
 }
 
-export type DiscoveryCache = Map<Move, ChoiceRequest>;
+export type DecisionContinuationCache = Map<Move, ChoiceRequest>;
 
-export interface MoveDecisionSequenceSatisfiabilityOptions {
+export interface DecisionContinuationAnalysisOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
@@ -40,7 +40,7 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly profiler?: PerfProfiler;
 }
 
-export interface ResolveMoveDecisionSequenceResult {
+export interface DecisionContinuationResult {
   readonly complete: boolean;
   readonly move: Move;
   readonly nextDecision?: ChoicePendingRequest;
@@ -50,44 +50,44 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly warnings: readonly RuntimeWarning[];
 }
 
-export type MoveDecisionSequenceSatisfiabilityResult = DecisionSequenceAnalysisResult;
+export type DecisionContinuationAnalysisResult = DecisionSequenceAnalysisResult;
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
   pickDeterministicChoiceValue(request);
 
-const probeMoveDecisionSequenceAdmissionClassification = (
+const probeDecisionContinuationAdmissionClassification = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
-): ProbeResult<MoveDecisionSequenceSatisfiabilityResult['classification']> =>
+): ProbeResult<DecisionContinuationAnalysisResult['classification']> =>
   probeWith(
-    () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification,
-    (e) => classifyMissingBindingProbeError(e, context),
+    () => classifyDecisionContinuationSatisfiability(def, state, baseMove, options, runtime).classification,
+    (error) => classifyMissingBindingProbeError(error, context),
   );
 
-const probeMoveDecisionSequenceAdmissionResult = (
+const probeDecisionContinuationAdmissionResult = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
-): ProbeResult<MoveDecisionSequenceSatisfiabilityResult> =>
+): ProbeResult<DecisionContinuationAnalysisResult> =>
   probeWith(
-    () => classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime),
-    (e) => classifyMissingBindingProbeError(e, context),
+    () => classifyDecisionContinuationSatisfiability(def, state, baseMove, options, runtime),
+    (error) => classifyMissingBindingProbeError(error, context),
   );
 
-export const resolveMoveDecisionSequence = (
+export const resolveDecisionContinuation = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: ResolveMoveDecisionSequenceOptions,
+  options?: ResolveDecisionContinuationOptions,
   runtime?: GameDefRuntime,
-): ResolveMoveDecisionSequenceResult => {
+): DecisionContinuationResult => {
   const choose = options?.choose ?? defaultChoose;
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
@@ -143,7 +143,7 @@ export const resolveMoveDecisionSequence = (
     if (request.decisionPath === 'compound.specialActivity') {
       const compound = move.compound;
       if (compound === undefined) {
-        throw new Error('resolveMoveDecisionSequence: decisionPath is compound.specialActivity but move has no compound payload');
+        throw new Error('resolveDecisionContinuation: decisionPath is compound.specialActivity but move has no compound payload');
       }
       move = {
         ...move,
@@ -180,26 +180,26 @@ export const resolveMoveDecisionSequence = (
   return { complete: false, move, warnings };
 };
 
-export const isMoveDecisionSequenceSatisfiable = (
+export const isDecisionContinuationSatisfiable = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
-  const classification = classifyMoveDecisionSequenceSatisfiability(def, state, baseMove, options, runtime).classification;
+  const classification = classifyDecisionContinuationSatisfiability(def, state, baseMove, options, runtime).classification;
   return classification === 'satisfiable' || classification === 'explicitStochastic';
 };
 
-export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
+export const classifyDecisionContinuationAdmissionForLegalMove = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
-): MoveDecisionSequenceSatisfiabilityResult['classification'] => {
-  const result = probeMoveDecisionSequenceAdmissionClassification(
+): DecisionContinuationAnalysisResult['classification'] => {
+  const result = probeDecisionContinuationAdmissionClassification(
     def,
     state,
     baseMove,
@@ -214,15 +214,15 @@ export const classifyMoveDecisionSequenceAdmissionForLegalMove = (
   });
 };
 
-export const classifyMoveDecisionSequenceSatisfiabilityForLegalMove = (
+export const classifyDecisionContinuationForLegalMove = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
-): MoveDecisionSequenceSatisfiabilityResult => {
-  const result = probeMoveDecisionSequenceAdmissionResult(
+): DecisionContinuationAnalysisResult => {
+  const result = probeDecisionContinuationAdmissionResult(
     def,
     state,
     baseMove,
@@ -232,20 +232,20 @@ export const classifyMoveDecisionSequenceSatisfiabilityForLegalMove = (
   );
   return resolveProbeResult(result, {
     onLegal: (value) => value,
-    onIllegal: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
-    onInconclusive: (): MoveDecisionSequenceSatisfiabilityResult => ({ classification: 'unknown', warnings: [] }),
+    onIllegal: (): DecisionContinuationAnalysisResult => ({ classification: 'unknown', warnings: [] }),
+    onInconclusive: (): DecisionContinuationAnalysisResult => ({ classification: 'unknown', warnings: [] }),
   });
 };
 
-export const isMoveDecisionSequenceAdmittedForLegalMove = (
+export const isDecisionContinuationAdmittedForLegalMove = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: MissingBindingPolicyContext,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
 ): boolean => {
-  const result = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+  const result = classifyDecisionContinuationForLegalMove(
     def,
     state,
     baseMove,
@@ -256,13 +256,13 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
   return result.classification === 'satisfiable' || result.classification === 'explicitStochastic';
 };
 
-export const classifyMoveDecisionSequenceSatisfiability = (
+export const classifyDecisionContinuationSatisfiability = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
-  options?: MoveDecisionSequenceSatisfiabilityOptions,
+  options?: DecisionContinuationAnalysisOptions,
   runtime?: GameDefRuntime,
-): MoveDecisionSequenceSatisfiabilityResult => {
+): DecisionContinuationAnalysisResult => {
   const discoverChoices = options?.discoverer ?? createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
   return analyzeDecisionSequence(
     baseMove,

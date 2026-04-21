@@ -2,7 +2,6 @@ import { asPlayerId, type SeatId } from '../branded.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import type { DecisionKey } from '../decision-scope.js';
 import { enumerateLegalMoves } from '../legal-moves.js';
-import { resolveMoveDecisionSequence } from '../move-decision-sequence.js';
 import { derivePlayerObservation } from '../observation.js';
 import type {
   ChoicePendingRequest,
@@ -11,6 +10,7 @@ import type {
   Move,
 } from '../types-core.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
+import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
 import {
   asDecisionFrameId,
   asTurnId,
@@ -63,7 +63,7 @@ const isSupportedChoiceRequest = (request: ChoicePendingRequest): boolean =>
   request.type === 'chooseOne' || request.type === 'chooseN';
 
 const toStochasticDistribution = (
-  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+  continuation: DecisionContinuationResult,
 ): { readonly decisionKey: DecisionKey; readonly distribution: StochasticDistribution } | null => {
   const stochasticDecision = continuation.stochasticDecision;
   if (stochasticDecision === undefined) {
@@ -97,8 +97,8 @@ const resolveContinuationForMove = (
   state: GameState,
   move: Move,
   runtime?: GameDefRuntime,
-): ReturnType<typeof resolveMoveDecisionSequence> =>
-  resolveMoveDecisionSequence(
+): DecisionContinuationResult =>
+  resolveDecisionContinuation(
     def,
     state,
     move,
@@ -508,7 +508,7 @@ export const toDecisionStackContext = (
     : toChooseNStepContext(request, seatId);
 
 export const toStochasticDecisionStackContext = (
-  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+  continuation: DecisionContinuationResult,
 ): StochasticResolveContext => {
   const stochastic = toStochasticDistribution(continuation);
   if (stochastic === null) {

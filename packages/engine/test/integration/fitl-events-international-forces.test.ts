@@ -11,7 +11,6 @@ import {
   legalChoicesEvaluate,
   legalMoves,
   nextInt,
-  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Move,
@@ -19,6 +18,7 @@ import {
   type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
@@ -357,7 +357,7 @@ describe('FITL card-65 International Forces', () => {
     const move = findCardMove(def, setup, 'shaded');
     assert.notEqual(move, undefined, 'Expected International Forces shaded move');
 
-    const probe = resolveMoveDecisionSequence(def, setup, move!, {
+    const probe = resolveDecisionContinuation(def, setup, move!, {
       choose: () => undefined,
     });
 
@@ -398,7 +398,7 @@ describe('FITL card-65 International Forces', () => {
     const fullMove = findCardMove(def, fullSetup, 'shaded');
     assert.notEqual(fullMove, undefined, 'Expected International Forces shaded move with 6 US map pieces');
 
-    const fullProbe = resolveMoveDecisionSequence(def, fullSetup, fullMove!, {
+    const fullProbe = resolveDecisionContinuation(def, fullSetup, fullMove!, {
       choose: () => undefined,
     });
     assert.equal(fullProbe.stochasticDecision?.kind, 'pendingStochastic');
@@ -418,7 +418,7 @@ describe('FITL card-65 International Forces', () => {
     const limitedMove = findCardMove(def, limitedSetup, 'shaded');
     assert.notEqual(limitedMove, undefined, 'Expected International Forces shaded move with only 2 US map pieces');
 
-    const limitedProbe = resolveMoveDecisionSequence(def, limitedSetup, limitedMove!, {
+    const limitedProbe = resolveDecisionContinuation(def, limitedSetup, limitedMove!, {
       choose: () => undefined,
     });
     assert.equal(limitedProbe.stochasticDecision?.kind, 'pendingStochastic');

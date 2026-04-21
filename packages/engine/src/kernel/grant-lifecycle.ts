@@ -2,9 +2,9 @@ import { createGrantLifecycleTraceEntry } from './grant-lifecycle-trace.js';
 import {
   hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
+import type { DecisionContinuationResult } from './microturn/continuation.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { SeatResolutionContext } from './identity.js';
-import type { ResolveMoveDecisionSequenceResult } from './move-decision-sequence.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import type {
   GameDef,
@@ -399,7 +399,7 @@ export const transitionReadyGrantForCandidateMove = (
         readonly budgets?: Partial<MoveEnumerationBudgets>;
         readonly onWarning?: (warning: RuntimeWarning) => void;
       },
-    ) => ResolveMoveDecisionSequenceResult;
+    ) => DecisionContinuationResult;
   },
 ): GrantLifecycleTransitionResult => {
   assertPhase('transitionReadyGrantForCandidateMove', grant, ['ready']);

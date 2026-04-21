@@ -16,7 +16,6 @@ import { createEvalRuntimeResources } from '../eval-context.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import { deepEqual } from '../deep-equal.js';
 import { markOffered, withPendingFreeOperationGrants } from '../grant-lifecycle.js';
-import { resolveMoveDecisionSequence } from '../move-decision-sequence.js';
 import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
 import { nextInt } from '../prng.js';
 import type { DecisionKey } from '../decision-scope.js';
@@ -24,6 +23,7 @@ import type { ExecutionOptions, GameDef, GameState, Move, Rng, TriggerLogEntry }
 import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
 import { publishMicroturn, rebuildMoveFromFrame, toDecisionStackContext, toStochasticDecisionStackContext, withResolvedHash } from './publish.js';
+import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
 
 const rootHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -249,7 +249,7 @@ const spawnPendingFrame = (
   canonicalState: GameState,
   microturn: ReturnType<typeof publishMicroturn>,
   decision: Decision,
-  continuation: ReturnType<typeof resolveMoveDecisionSequence>,
+  continuation: DecisionContinuationResult,
   runtime: GameDefRuntime,
 ): ApplyDecisionResult => {
   const rootFrame = rootFrameFor(canonicalState);
@@ -301,7 +301,7 @@ const continueResolvedMove = (
   options: ExecutionOptions | undefined,
   runtime: GameDefRuntime,
 ): ApplyDecisionResult => {
-  const continuation = resolveMoveDecisionSequence(def, canonicalState, move, { choose: () => undefined }, runtime);
+  const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, runtime);
   if (continuation.illegal !== undefined) {
     throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
   }
@@ -343,7 +343,7 @@ export const applyDecision = (
 
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
-    const continuation = resolveMoveDecisionSequence(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
+    const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
     if (continuation.illegal !== undefined) {
       throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
     }

@@ -1343,7 +1343,7 @@ const maybeChainCompoundSA = (
   // SA completeness check: probe the SA without option legality validation.
   // If the SA's params already satisfy all required decisions, the compound
   // move is fully resolved — return `complete` without re-discovery.
-  // This prevents resolveMoveDecisionSequence from re-routing already-filled
+  // This prevents the continuation resolver from re-routing already-filled
   // SA params through the decision-key system against the pre-main-op state.
   //
   // The probe checks moveParams by decision key.  Externally-specified moves

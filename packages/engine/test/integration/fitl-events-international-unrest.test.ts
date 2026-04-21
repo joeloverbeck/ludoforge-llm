@@ -9,13 +9,13 @@ import {
   initialState,
   legalMoves,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Move,
   type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -159,7 +159,7 @@ describe('FITL card-57 International Unrest', () => {
     assert.notEqual(move, undefined, 'Expected International Unrest unshaded event move');
 
     let assertedDecisionOwner = false;
-    const pendingProbe = resolveMoveDecisionSequence(def, setup, move!, {
+    const pendingProbe = resolveDecisionContinuation(def, setup, move!, {
       choose: (request): MoveParamValue | undefined => {
         if (request.name === '$casualtiesToAvailable') {
           assertedDecisionOwner = true;

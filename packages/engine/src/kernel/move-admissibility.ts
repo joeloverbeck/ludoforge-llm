@@ -1,9 +1,7 @@
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from './missing-binding-policy.js';
+import { classifyDecisionContinuationAdmissionForLegalMove } from './microturn/continuation.js';
 import { evaluateMoveLegality } from './move-legality-predicate.js';
-import {
-  classifyMoveDecisionSequenceAdmissionForLegalMove,
-} from './move-decision-sequence.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { ILLEGAL_MOVE_REASONS, type IllegalMoveReason } from './runtime-reasons.js';
 import type { GameDef, GameState, Move, TurnFlowPendingFreeOperationGrant } from './types.js';
@@ -102,7 +100,7 @@ export const classifyMoveAdmissibility = (
     return { kind: 'pendingAdmissible', continuation: 'decisionSet' };
   }
 
-  const admission = classifyMoveDecisionSequenceAdmissionForLegalMove(
+  const admission = classifyDecisionContinuationAdmissionForLegalMove(
     def,
     state,
     move,

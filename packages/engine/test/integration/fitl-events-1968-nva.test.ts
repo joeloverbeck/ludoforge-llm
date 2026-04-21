@@ -8,11 +8,11 @@ import {
   asTokenId,
   initialState,
   legalMoves,
-  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
@@ -485,7 +485,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     );
     assert.notEqual(move, undefined, 'Expected legal RAND unshaded event move');
 
-    const pending = resolveMoveDecisionSequence(def, configured, move!, { choose: () => undefined });
+    const pending = resolveDecisionContinuation(def, configured, move!, { choose: () => undefined });
     assert.equal(pending.complete, false);
     assert.equal(pending.nextDecision?.name, '$randCapabilityMarker');
     assert.deepEqual(
@@ -539,7 +539,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     );
     assert.notEqual(move, undefined, 'Expected legal RAND shaded event move for ARVN');
 
-    const pending = resolveMoveDecisionSequence(def, configured, move!, { choose: () => undefined });
+    const pending = resolveDecisionContinuation(def, configured, move!, { choose: () => undefined });
     assert.equal(pending.complete, false);
     assert.equal(pending.nextDecision?.name, '$randCapabilityMarker');
     assert.deepEqual(

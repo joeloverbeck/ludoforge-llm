@@ -6,8 +6,8 @@ import {
   advanceChooseN,
   applyMove,
   legalChoicesEvaluate,
-  resolveMoveDecisionSequence,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
@@ -230,7 +230,7 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     });
 
     const move = requireEventMove(def, state, CARD_ID, 'unshaded');
-    const resolved = resolveMoveDecisionSequence(def, state, move, {
+    const resolved = resolveDecisionContinuation(def, state, move, {
       choose: (request) => (
         matchesDecisionRequest({ name: '$nguyenChanhThiArvnPieces', resolvedBind: '$nguyenChanhThiArvnPieces' })(request)
           ? ['thi-fast-troop-1', 'thi-fast-police-1', 'thi-fast-map-base']
@@ -272,7 +272,7 @@ describe('FITL card-87 Nguyen Chanh Thi', () => {
     const move = requireEventMove(def, state, CARD_ID, 'unshaded');
 
     assert.throws(
-      () => resolveMoveDecisionSequence(def, state, move, {
+      () => resolveDecisionContinuation(def, state, move, {
         choose: (request) => (
           matchesDecisionRequest({ name: '$nguyenChanhThiArvnPieces', resolvedBind: '$nguyenChanhThiArvnPieces' })(request)
             ? ['thi-fast-illegal-map-troop', 'thi-fast-illegal-police', 'thi-fast-illegal-map-base']

@@ -12,7 +12,6 @@ export * from './pipeline-viability-policy.js';
 export * from './missing-binding-policy.js';
 export * from './legal-moves.js';
 export * from './move-enumeration-budgets.js';
-export * from './move-decision-sequence.js';
 export * from './move-equivalence.js';
 export * from './move-runtime-bindings.js';
 export * from './trusted-move.js';

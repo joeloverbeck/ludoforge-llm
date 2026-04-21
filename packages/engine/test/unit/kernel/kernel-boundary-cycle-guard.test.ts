@@ -13,9 +13,9 @@ const importsModule = (sourcePath: string, modulePath: string): boolean => {
 describe('kernel boundary cycle guard', () => {
   it('enforces expected forward edges and forbids legacy back-edge in turn-flow legality chain', () => {
     assert.equal(
-      importsModule('src/kernel/free-operation-viability.ts', './move-decision-sequence.js'),
+      importsModule('src/kernel/free-operation-viability.ts', './microturn/continuation.js'),
       true,
-      'free-operation-viability.ts must import move-decision-sequence.ts',
+      'free-operation-viability.ts must import microturn/continuation.ts',
     );
     assert.equal(
       importsModule('src/kernel/turn-flow-eligibility.ts', './free-operation-viability.js'),
@@ -23,9 +23,9 @@ describe('kernel boundary cycle guard', () => {
       'turn-flow-eligibility.ts must import free-operation-viability.ts',
     );
     assert.equal(
-      importsModule('src/kernel/move-decision-sequence.ts', './legal-choices.js'),
+      importsModule('src/kernel/microturn/continuation.ts', '../legal-choices.js'),
       true,
-      'move-decision-sequence.ts must import legal-choices.ts',
+      'microturn/continuation.ts must import legal-choices.ts',
     );
     assert.equal(
       importsModule('src/kernel/legal-choices.ts', './turn-flow-eligibility.js'),

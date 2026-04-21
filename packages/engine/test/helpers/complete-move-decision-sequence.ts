@@ -1,5 +1,4 @@
 import {
-  resolveMoveDecisionSequence,
   type ChoicePendingRequest,
   type ChoiceStochasticPendingRequest,
   type GameDef,
@@ -7,6 +6,7 @@ import {
   type Move,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 
 export interface CompleteMoveDecisionSequenceOptions {
   readonly budgets?: {
@@ -24,7 +24,7 @@ export interface CompleteMoveDecisionSequenceResult {
   readonly nextDecision?: ChoicePendingRequest;
   readonly nextDecisionSet?: readonly ChoicePendingRequest[];
   readonly stochasticDecision?: ChoiceStochasticPendingRequest;
-  readonly illegal?: ReturnType<typeof resolveMoveDecisionSequence>['illegal'];
+  readonly illegal?: ReturnType<typeof resolveDecisionContinuation>['illegal'];
 }
 
 const applyBindings = (
@@ -48,7 +48,7 @@ export const completeMoveDecisionSequence = (
   let move = baseMove;
 
   for (let step = 0; step < maxSteps; step += 1) {
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       state,
       move,
@@ -71,7 +71,7 @@ export const completeMoveDecisionSequence = (
     move = applyBindings(result.move, selectedBindings);
   }
 
-  return resolveMoveDecisionSequence(
+  return resolveDecisionContinuation(
     def,
     state,
     move,

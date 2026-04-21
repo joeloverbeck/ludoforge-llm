@@ -8,11 +8,11 @@ import {
   createGameDefRuntime,
   enumerateLegalMoves,
   initialState,
-  resolveMoveDecisionSequence,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { advanceToDecisionPoint } from '../../src/kernel/phase-advance.js';
 import { derivePlayerObservation } from '../../src/kernel/observation.js';
 import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
@@ -109,8 +109,8 @@ describe('Spec 139 hidden-information safety', () => {
     const swappedKey = toMoveIdentityKey(def, swappedClassified!.move);
     assert.equal(baseKey, swappedKey, 'hidden card order should not perturb published pending action identity');
 
-    const baseContinuation = resolveMoveDecisionSequence(def, state, baseClassified!.move, { choose: () => undefined }, runtime);
-    const swappedContinuation = resolveMoveDecisionSequence(def, swappedState, swappedClassified!.move, { choose: () => undefined }, runtime);
+    const baseContinuation = resolveDecisionContinuation(def, state, baseClassified!.move, { choose: () => undefined }, runtime);
+    const swappedContinuation = resolveDecisionContinuation(def, swappedState, swappedClassified!.move, { choose: () => undefined }, runtime);
 
     assert.deepEqual(baseContinuation.nextDecision, swappedContinuation.nextDecision);
     const serializedDecision = JSON.stringify(baseContinuation.nextDecision ?? null);

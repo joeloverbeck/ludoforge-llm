@@ -7,7 +7,6 @@ import {
   asPhaseId,
   asPlayerId,
   asZoneId,
-  classifyMoveDecisionSequenceSatisfiability,
   legalChoicesDiscover,
   propagateChooseNSetVariable,
   resolveMoveEnumerationBudgets,
@@ -18,6 +17,7 @@ import {
   type Move,
   type MoveParamScalar,
 } from '../../../src/kernel/index.js';
+import { classifyDecisionContinuationSatisfiability } from '../../../src/kernel/microturn/continuation.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
@@ -273,7 +273,7 @@ describe('chooseN set-variable propagation', () => {
       evaluateProbeMove: (probeMove) => legalChoicesDiscover(def, state, probeMove),
       classifyProbeMoveSatisfiability: (probeMove) => {
         classificationCalls += 1;
-        return classifyMoveDecisionSequenceSatisfiability(def, state, probeMove, {
+        return classifyDecisionContinuationSatisfiability(def, state, probeMove, {
           budgets,
           onWarning: (warning) => warnings.push(warning.code),
         }).classification;

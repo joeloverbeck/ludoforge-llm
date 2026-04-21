@@ -26,11 +26,11 @@ import {
   type GameState,
   type Move,
   type ActionPipelineDef,
-  type DiscoveryCache,
   type OperationCompoundStagesReplacedTraceEntry,
   type TurnFlowPendingFreeOperationGrant,
   type VariableDef,
 } from '../../../src/kernel/index.js';
+import { type DecisionContinuationCache } from '../../../src/kernel/microturn/continuation.js';
 import {
   cardSeatOrderLifecycleZones,
   makeCardSeatOrderEventDeck,
@@ -3372,7 +3372,7 @@ it('uses injected discoveryCache for decision-sequence probing', () => {
   const def = makeBaseDef({ actions: [action], globalVars: [] });
   const state = makeBaseState({ globalVars: {} });
   const move: Move = { actionId: action.id, params: {} };
-  const discoveryCache: DiscoveryCache = new Map([[
+  const discoveryCache: DecisionContinuationCache = new Map([[
     move,
     { kind: 'illegal', complete: false, reason: 'pipelineLegalityFailed' },
   ]]);
@@ -3420,11 +3420,11 @@ describe('applyMove seat-resolution lifecycle architecture guard', () => {
     );
   });
 
-  it('threads discoveryCache into resolveMoveDecisionSequence during probeMoveViability', () => {
+  it('threads discoveryCache into resolveDecisionContinuation during probeMoveViability', () => {
     const source = readKernelSource('src/kernel/apply-move.ts');
     const sourceFile = parseTypeScriptSource(source, 'apply-move.ts');
 
-    const resolveCalls = collectCallExpressionsByIdentifier(sourceFile, 'resolveMoveDecisionSequence');
+    const resolveCalls = collectCallExpressionsByIdentifier(sourceFile, 'resolveDecisionContinuation');
     assert.equal(
       resolveCalls.some((call) => {
         if (
@@ -3443,7 +3443,7 @@ describe('applyMove seat-resolution lifecycle architecture guard', () => {
         );
       }),
       true,
-      'probeMoveViability must forward discoveryCache into resolveMoveDecisionSequence',
+      'probeMoveViability must forward discoveryCache into resolveDecisionContinuation',
     );
   });
 });

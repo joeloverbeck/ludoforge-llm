@@ -10,12 +10,12 @@ import { isRecoverableEvalResolutionError } from './eval-error-classification.js
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
-  classifyMoveDecisionSequenceSatisfiabilityForLegalMove,
-  isMoveDecisionSequenceAdmittedForLegalMove,
-  resolveMoveDecisionSequence,
-  type DiscoveryCache,
-  type MoveDecisionSequenceSatisfiabilityOptions,
-} from './move-decision-sequence.js';
+  classifyDecisionContinuationForLegalMove,
+  isDecisionContinuationAdmittedForLegalMove,
+  resolveDecisionContinuation,
+  type DecisionContinuationAnalysisOptions,
+  type DecisionContinuationCache,
+} from './microturn/continuation.js';
 import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import {
   applyTurnFlowWindowFilters,
@@ -117,10 +117,10 @@ export interface LegalMoveEnumerationResult {
 interface RawLegalMoveEnumerationResult {
   readonly moves: readonly Move[];
   readonly warnings: readonly RuntimeWarning[];
-  readonly discoveryCache: DiscoveryCache;
+  readonly discoveryCache: DecisionContinuationCache;
 }
 
-type EnumerationDecisionDiscoverer = MoveDecisionSequenceSatisfiabilityOptions['discoverer'];
+type EnumerationDecisionDiscoverer = DecisionContinuationAnalysisOptions['discoverer'];
 
 interface MoveEnumerationState {
   readonly budgets: MoveEnumerationBudgets;
@@ -133,9 +133,9 @@ interface MoveEnumerationState {
 }
 
 const withTerminalLegalityValidation = (
-  options: MoveDecisionSequenceSatisfiabilityOptions,
-  validateSatisfiedMove: NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']>,
-): MoveDecisionSequenceSatisfiabilityOptions => ({
+  options: DecisionContinuationAnalysisOptions,
+  validateSatisfiedMove: NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']>,
+): DecisionContinuationAnalysisOptions => ({
   ...options,
   validateSatisfiedMove,
 });
@@ -144,13 +144,13 @@ const createStandardTerminalLegalityValidator = (
   def: GameDef,
   state: GameState,
   runtime?: GameDefRuntime,
-): NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']> =>
+): NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']> =>
   (move) => evaluateMoveLegality(def, state, move, runtime).kind === 'legal';
 
 const createFreeOperationTerminalValidator = (
   def: GameDef,
   state: GameState,
-): NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']> =>
+): NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']> =>
   (move) => {
     const verdict = evaluateMoveLegality(def, state, move);
     if (verdict.kind === 'legal') {
@@ -166,13 +166,13 @@ const tryResolvePublishedStochasticFrontier = (
   state: GameState,
   move: Move,
   runtime: GameDefRuntime | undefined,
-  discoveryCache: DiscoveryCache | undefined,
+  discoveryCache: DecisionContinuationCache | undefined,
 ): {
   readonly move: Move;
   readonly viability: ReturnType<typeof probeMoveViability>;
   readonly trustedMove: ReturnType<typeof createTrustedExecutableMove>;
 } | null => {
-  const frontier = resolveMoveDecisionSequence(
+  const frontier = resolveDecisionContinuation(
     def,
     state,
     move,
@@ -325,7 +325,7 @@ const classifyEnumeratedMoves = (
   warnings: RuntimeWarning[],
   budgets: MoveEnumerationBudgets,
   runtime?: GameDefRuntime,
-  discoveryCache?: DiscoveryCache,
+  discoveryCache?: DecisionContinuationCache,
   profiler?: PerfProfiler,
 ): {
   readonly moves: readonly ClassifiedMove[];
@@ -407,7 +407,7 @@ const classifyEnumeratedMoves = (
         const admissionContext = move.freeOperation === true
           ? MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE
           : MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE;
-        const admission = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+        const admission = classifyDecisionContinuationForLegalMove(
           def,
           state,
           move,
@@ -418,8 +418,7 @@ const classifyEnumeratedMoves = (
           }, createStandardTerminalLegalityValidator(def, state, runtime)),
           runtime,
         );
-        if (admission.classification === 'satisfiable') {
-        } else if (admission.classification === 'explicitStochastic') {
+        if (admission.classification === 'explicitStochastic') {
           const stochasticFrontier = tryResolvePublishedStochasticFrontier(
             def,
             state,
@@ -676,7 +675,7 @@ function enumerateParams(
     if (enumeration.probePlainActionFeasibility && options?.pipeline === undefined) {
       try {
         if (
-          !isMoveDecisionSequenceAdmittedForLegalMove(
+          !isDecisionContinuationAdmittedForLegalMove(
             def,
             state,
             move,
@@ -838,7 +837,7 @@ function enumeratePendingFreeOperationMoves(
         return false;
       }
     }
-    const decisionSequenceResult = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+    const decisionSequenceResult = classifyDecisionContinuationForLegalMove(
       def,
       candidateState,
       candidateMove,
@@ -1238,7 +1237,7 @@ function enumeratePendingFreeOperationMoves(
           if (!isFreeOperationGrantedForMove(def, candidateScopedState, candidateMove, seatResolution)) {
             return false;
           }
-          return isMoveDecisionSequenceAdmittedForLegalMove(
+          return isDecisionContinuationAdmittedForLegalMove(
             def,
             candidateScopedState,
             candidateMove,
@@ -1334,7 +1333,7 @@ function enumerateCurrentEventMoves(
     // Event effects resolve from the current card/branch runtime state.
     // Keep event admission on the canonical interpreter path; the compiled
     // first-decision guard only applies to static action/pipeline effect trees.
-    const admitted = isMoveDecisionSequenceAdmittedForLegalMove(
+    const admitted = isDecisionContinuationAdmittedForLegalMove(
       def,
       state,
       move,
@@ -1365,7 +1364,7 @@ const enumerateRawLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
-  const discoveryCache: DiscoveryCache = new Map();
+  const discoveryCache: DecisionContinuationCache = new Map();
   const firstDecisionDomains = runtime?.firstDecisionDomains ?? compileGameDefFirstDecisionDomains(def);
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {

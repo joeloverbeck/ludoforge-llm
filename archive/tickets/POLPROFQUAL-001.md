@@ -1,6 +1,6 @@
 # POLPROFQUAL-001: Make policy-profile-quality reporting resilient when no report artifact is produced
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — workflow / reporting script only
@@ -85,3 +85,15 @@ Do not regress the normal path:
 
 1. `node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input <missing-file>` or equivalent guarded workflow reproduction
 2. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-04-21.
+
+The resilient path landed in `packages/engine/scripts/emit-policy-profile-quality-report.mjs`. When the current run did not produce `policy-profile-quality-report.ndjson`, the script now emits a clear no-report markdown summary, preserves the non-blocking witness framing, posts the same summary to the PR comment path when enabled, and exits successfully instead of replacing the underlying lane result with an `ENOENT` crash.
+
+Focused unit coverage in `packages/engine/test/unit/infrastructure/emit-policy-profile-quality-report.test.ts` now proves both the normal report path and the missing-input branch. The workflow did not require changes because the script is the authoritative reporting seam that the job already invokes unconditionally.
+
+- `ticket corrections applied`: `Files to Touch implied workflow modification was required -> script-side absent-input handling alone is the truthful minimal fix at the reporting seam`
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/emit-policy-profile-quality-report.test.js`; `node packages/engine/scripts/emit-policy-profile-quality-report.mjs --input missing-file.ndjson`; `pnpm turbo lint`; `pnpm turbo typecheck`
+- `proof gaps`: `none`

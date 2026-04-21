@@ -16,6 +16,7 @@ type PolicyProfileQualityRecord = {
 
 type ReportModule = {
   readonly DEFAULT_INPUT_PATH: string;
+  readonly buildNoReportComment: (inputPath: string) => string;
   readonly parsePolicyProfileQualityReport: (reportText: string) => PolicyProfileQualityRecord[];
   readonly buildPolicyProfileQualityAnnotations: (records: PolicyProfileQualityRecord[]) => string[];
   readonly buildPolicyProfileQualityComment: (
@@ -151,6 +152,17 @@ describe('emit-policy-profile-quality-report script', () => {
     assert.doesNotMatch(comment, /\d+\/\d+ -> \d+\/\d+/u);
   });
 
+  it('builds an explicit no-report summary when the current report file is absent', async () => {
+    const { buildNoReportComment } = await loadModule();
+
+    const comment = buildNoReportComment('missing-report.ndjson');
+
+    assert.match(comment, /## Policy-Profile Quality Report/u);
+    assert.match(comment, /No policy-profile-quality report was produced for this run\./u);
+    assert.match(comment, /missing-report\.ndjson/u);
+    assert.match(comment, /Determinism corpus is the blocking gate\./u);
+  });
+
   it('writes annotations and markdown to stdout and posts the sticky comment when enabled', async () => {
     const { DEFAULT_INPUT_PATH, main } = await loadModule();
     let stdout = '';
@@ -179,5 +191,32 @@ describe('emit-policy-profile-quality-report script', () => {
     assert.match(stdout, /2\/2 -> 1\/2/u);
     assert.match(stdout, /## Policy-Profile Quality Report/u);
     assert.equal(postedComment.includes('<!-- policy-profile-quality-report -->'), true);
+  });
+
+  it('exits successfully with a no-report summary when the current report file is missing', async () => {
+    const { DEFAULT_INPUT_PATH, main } = await loadModule();
+    let stdout = '';
+    let postedComment = '';
+
+    const exitCode = main(['--input', DEFAULT_INPUT_PATH, '--pr-comment'], {
+      readFileSyncImpl() {
+        const error = new Error('missing report');
+        Object.assign(error, { code: 'ENOENT' });
+        throw error;
+      },
+      stdout: {
+        write(chunk: string) {
+          stdout += chunk;
+        },
+      },
+      commentPoster(commentBody: string) {
+        postedComment = commentBody;
+      },
+    });
+
+    assert.equal(exitCode, 0);
+    assert.match(stdout, /No policy-profile-quality report was produced for this run\./u);
+    assert.match(stdout, /Expected input at `\.\/policy-profile-quality-report\.ndjson`\./u);
+    assert.equal(postedComment.includes('No policy-profile-quality report was produced for this run.'), true);
   });
 });

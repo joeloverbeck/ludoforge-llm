@@ -96,6 +96,18 @@ function formatConvergenceCell(currentBucket, baselineBucket) {
   return `${baselineBucket.converged}/${baselineBucket.total} -> ${currentRate}`;
 }
 
+export function buildNoReportComment(inputPath) {
+  return [
+    STICKY_COMMENT_MARKER,
+    '## Policy-Profile Quality Report',
+    '',
+    `No policy-profile-quality report was produced for this run. Expected input at \`${inputPath}\`.`,
+    '',
+    '_Non-blocking signal per Spec 136. Determinism corpus is the blocking gate._',
+    '',
+  ].join('\n');
+}
+
 export function buildPolicyProfileQualityComment(records, baselineRecords = []) {
   const summary = summarizeByVariant(records);
   const baselineSummary = summarizeByVariant(baselineRecords);
@@ -142,7 +154,21 @@ export function main(argv = process.argv.slice(2), options = {}) {
   const stdout = options.stdout ?? process.stdout;
   const commentPoster = options.commentPoster ?? postStickyPullRequestComment;
 
-  const reportText = readFileSyncImpl(inputPath, 'utf8');
+  let reportText;
+  try {
+    reportText = readFileSyncImpl(inputPath, 'utf8');
+  } catch (error) {
+    if (!(error instanceof Error) || 'code' in error === false || error.code !== 'ENOENT') {
+      throw error;
+    }
+
+    const commentBody = buildNoReportComment(inputPath);
+    stdout.write(`${commentBody}\n`);
+    if (prComment) {
+      commentPoster(commentBody);
+    }
+    return 0;
+  }
   const records = parsePolicyProfileQualityReport(reportText);
   const baselineRecords =
     baselineInputPath === null ? [] : parsePolicyProfileQualityReport(readFileSyncImpl(baselineInputPath, 'utf8'));

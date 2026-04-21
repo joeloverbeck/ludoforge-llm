@@ -384,19 +384,6 @@ describe('json schema artifacts', () => {
           },
           agentDecision: {
             ...fixture.agentDecision,
-            completionStatistics: {
-              totalClassifiedMoves: 3,
-              completedCount: 1,
-              stochasticCount: 1,
-              rejectedNotViable: 1,
-              templateCompletionAttempts: 2,
-              templateCompletionSuccesses: 1,
-              templateCompletionStructuralFailures: 1,
-              duplicatesRemoved: 0,
-              completionsByActionId: {
-                advance: 1,
-              },
-            },
             candidates: [
               {
                 actionId: 'advance',

@@ -8,7 +8,6 @@ import {
   createGameDefRuntime,
   serializeGameState,
   type AgentDecisionTrace,
-  type PolicyMovePreparationTrace,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
@@ -33,16 +32,10 @@ const TEXAS_POLICY_PLAYER_COUNT = 4;
 const serializeFinalState = (state: Parameters<typeof serializeGameState>[0]): string =>
   JSON.stringify(serializeGameState(state));
 
-const policyMovePreparations = (decision: AgentDecisionTrace | undefined): readonly PolicyMovePreparationTrace[] =>
-  decision?.kind === 'policy' ? (decision.movePreparations ?? []) : [];
-
-const countCertificateFallbackUses = (
-  decisions: readonly (AgentDecisionTrace | undefined)[],
-): number =>
-  decisions
-    .flatMap(policyMovePreparations)
-    .filter((entry) => entry.templateCompletionSource === 'certificateFallback')
-    .length;
+const hasVerbosePreparationDiagnostics = (decision: AgentDecisionTrace | undefined): boolean =>
+  decision?.kind === 'policy'
+  && !('completionStatistics' in decision)
+  && !('movePreparations' in decision);
 
 describe('Spec 139 replay identity', () => {
   const fitlCompiled = compileProductionSpec();
@@ -135,34 +128,28 @@ describe('Spec 139 replay identity', () => {
     }
   });
 
-  it('does not use certificate fallback on the representative FITL passing seed while template completion still occurs', () => {
+  it('keeps the representative FITL policy trace deterministic without legacy preparation diagnostics', () => {
     const trace = runFitlPolicyRepresentative(FITL_FALLBACK_INERT_REPRESENTATIVE_SEED);
-    const decisions = trace.decisions.map((move) => move.agentDecision);
-    const templatePreparationCount = decisions
-      .flatMap(policyMovePreparations)
-      .filter((entry) => entry.templateCompletionAttempts !== undefined)
-      .length;
+    const rerun = runFitlPolicyRepresentative(FITL_FALLBACK_INERT_REPRESENTATIVE_SEED);
 
-    assert.ok(
-      templatePreparationCount > 0,
-      'expected representative FITL passing seed to exercise template completion preparations',
-    );
     assert.equal(
-      countCertificateFallbackUses(decisions),
-      0,
-      `FITL seed ${FITL_FALLBACK_INERT_REPRESENTATIVE_SEED}: certificate fallback should remain inert on the passing corpus`,
+      serializeFinalState(trace.finalState),
+      serializeFinalState(rerun.finalState),
+      `FITL seed ${FITL_FALLBACK_INERT_REPRESENTATIVE_SEED}: representative verbose rerun diverged`,
     );
+    assert.equal(trace.decisions.some((entry) => hasVerbosePreparationDiagnostics(entry.agentDecision)), true);
   });
 
-  it('does not use certificate fallback on a representative Texas policy run', () => {
+  it('keeps a representative Texas policy run deterministic without legacy preparation diagnostics', () => {
     const trace = runTexasPolicyRepresentative(TEXAS_POLICY_REPRESENTATIVE_SEED);
-    const decisions = trace.decisions.map((move) => move.agentDecision);
+    const rerun = runTexasPolicyRepresentative(TEXAS_POLICY_REPRESENTATIVE_SEED);
 
     assert.equal(trace.decisions.length > 0, true, 'expected Texas representative run to emit moves');
     assert.equal(
-      countCertificateFallbackUses(decisions),
-      0,
-      'expected Texas representative run to avoid certificate fallback entirely',
+      serializeFinalState(trace.finalState),
+      serializeFinalState(rerun.finalState),
+      'expected Texas representative run to remain byte-identical on rerun',
     );
+    assert.equal(trace.decisions.some((entry) => hasVerbosePreparationDiagnostics(entry.agentDecision)), true);
   });
 });

@@ -68,38 +68,6 @@ function createMetadata(): PolicyEvaluationMetadata {
         unknownFailed: 0,
       },
     },
-    completionStatistics: {
-      totalClassifiedMoves: 3,
-      completedCount: 1,
-      stochasticCount: 1,
-      rejectedNotViable: 1,
-      templateCompletionAttempts: 2,
-      templateCompletionSuccesses: 1,
-      templateCompletionStructuralFailures: 1,
-      duplicatesRemoved: 0,
-      completionsByActionId: {
-        advance: 1,
-      },
-    },
-    movePreparations: [
-      {
-        actionId: 'advance',
-        stableMoveKey: 'alpha',
-        initialClassification: 'complete',
-        finalClassification: 'complete',
-        enteredTrustedMoveIndex: true,
-      },
-      {
-        actionId: 'pass',
-        stableMoveKey: 'beta',
-        initialClassification: 'pending',
-        finalClassification: 'rejected',
-        enteredTrustedMoveIndex: false,
-        templateCompletionAttempts: 2,
-        templateCompletionOutcome: 'failed',
-        rejection: 'structurallyUnsatisfiable',
-      },
-    ],
     selectedStableMoveKey: 'alpha',
     finalScore: 7,
     phase1Score: 5,
@@ -125,30 +93,14 @@ describe('policy-diagnostics', () => {
     assert.equal(trace.phase1Score, 5);
     assert.equal(trace.phase2Score, 7);
     assert.deepEqual(trace.phase1ActionRanking, ['advance', 'pass', 'event']);
-    assert.equal(trace.completionStatistics, undefined);
-    assert.equal(trace.movePreparations, undefined);
     assert.equal(trace.candidates, undefined);
   });
 
-  it('includes completion statistics and per-candidate preview outcomes at verbose level', () => {
+  it('includes verbose candidate preview outcomes without legacy preparation diagnostics', () => {
     const trace = buildPolicyAgentDecisionTrace(createMetadata(), 'verbose');
 
-    assert.deepEqual(trace.completionStatistics, {
-      totalClassifiedMoves: 3,
-      completedCount: 1,
-      stochasticCount: 1,
-      rejectedNotViable: 1,
-      templateCompletionAttempts: 2,
-      templateCompletionSuccesses: 1,
-      templateCompletionStructuralFailures: 1,
-      duplicatesRemoved: 0,
-      completionsByActionId: {
-        advance: 1,
-      },
-    });
-    assert.equal(trace.movePreparations?.length, 2);
-    assert.equal(trace.movePreparations?.[1]?.templateCompletionOutcome, 'failed');
-    assert.equal(trace.movePreparations?.[1]?.rejection, 'structurallyUnsatisfiable');
+    assert.equal('completionStatistics' in trace, false);
+    assert.equal('movePreparations' in trace, false);
     assert.equal(trace.candidates?.length, 3);
     assert.equal(trace.candidates?.[0]?.previewOutcome, 'ready');
     assert.equal(trace.candidates?.[0]?.grantedOperationSimulated, true);

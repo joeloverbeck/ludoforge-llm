@@ -1,6 +1,6 @@
 # 140MICRODECPRO-016: D8c — Retire legacy template-completion policy diagnostics and finish the stale Spec 139 replay migration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — narrows exported policy trace/schema surface and updates adjacent tests
@@ -11,6 +11,7 @@
 Post-ticket review of ticket 012 found that one slice of the public legacy decision/completion story still survives in exported diagnostics rather than the main legality/agent contract:
 
 - `packages/engine/src/kernel/types-core.ts` still exports `PolicyMovePreparationTrace` fields `templateCompletionAttempts`, `templateCompletionOutcome`, and `templateCompletionSource`, plus `PolicyCompletionStatistics.templateCompletion*` counters.
+- `packages/engine/src/kernel/types-core.ts` also still exports the stale adjacent public union member `TrustedMoveProvenance = 'templateCompletion'`, even though ticket 012 removed the public certificate/template runtime path that once motivated it.
 - `packages/engine/src/kernel/schemas-core.ts` still validates the same retired template-completion diagnostics surface.
 - `packages/engine/test/determinism/spec-139-replay-identity.test.ts` still proves the old certificate-fallback/template-completion narrative instead of the microturn-native contract.
 - Adjacent diagnostics tests (`packages/engine/test/unit/agents/policy-diagnostics.test.ts`, `packages/engine/test/unit/json-schema.test.ts`) still encode those retired fields.
@@ -22,6 +23,8 @@ Ticket 012 correctly removed the public legality/runtime certificate surface, bu
 1. The exported policy diagnostics types still contain template-completion fields after ticket 012: `PolicyMovePreparationTrace` in `packages/engine/src/kernel/types-core.ts` and the matching Zod schema in `packages/engine/src/kernel/schemas-core.ts`.
 2. `packages/engine/test/determinism/spec-139-replay-identity.test.ts` still imports `PolicyMovePreparationTrace` and asserts `templateCompletionSource === 'certificateFallback'` plus `templateCompletionAttempts`, so the named regression migration from ticket 012 did not fully land.
 3. The remaining active tickets do not currently own this source-level cleanup. Ticket 014 is a larger test-wave/audit ticket; ticket 015 is the separate `move-decision-sequence.ts` authority rewrite. Without a new ticket, this remainder would be orphaned.
+4. The ticket's originally drafted focused built-test commands point at `packages/engine/dist/...` while already running under `pnpm -F @ludoforge/engine`; the repo-valid proof shape is the same files under `dist/test/...` from the package root after build.
+5. Generated schema artifacts still encode the retired diagnostics fields, so `packages/engine/schemas/Trace.schema.json` is direct fallout and must be regenerated as part of this ticket.
 
 ## Architecture Check
 
@@ -41,6 +44,7 @@ Remove the retired template-completion/certificate-fallback fields from the expo
 - `PolicyCompletionStatistics.templateCompletionAttempts`
 - `PolicyCompletionStatistics.templateCompletionSuccesses`
 - `PolicyCompletionStatistics.templateCompletionStructuralFailures`
+- `TrustedMoveProvenance = 'templateCompletion'`
 
 Retain only diagnostics fields that still describe truthful microturn-native candidate preparation / rejection behavior.
 
@@ -51,6 +55,7 @@ Update the matching schema/serialization path and any diagnostics builders or ev
 - `packages/engine/src/kernel/schemas-core.ts`
 - `packages/engine/src/agents/policy-eval.ts`
 - `packages/engine/src/agents/policy-diagnostics.ts`
+- `packages/engine/schemas/Trace.schema.json`
 
 If a slimmer replacement summary is still useful, keep only the narrowest truthful metric names and record that boundary in the ticket outcome.
 
@@ -71,6 +76,7 @@ Additional direct fallout tests that still prove the retired diagnostics vocabul
 - `packages/engine/src/kernel/schemas-core.ts` (modify)
 - `packages/engine/src/agents/policy-eval.ts` (modify)
 - `packages/engine/src/agents/policy-diagnostics.ts` (modify)
+- `packages/engine/schemas/Trace.schema.json` (modify)
 - `packages/engine/test/determinism/spec-139-replay-identity.test.ts` (modify)
 - `packages/engine/test/unit/agents/policy-diagnostics.test.ts` (modify)
 - `packages/engine/test/unit/json-schema.test.ts` (modify)
@@ -87,14 +93,16 @@ Additional direct fallout tests that still prove the retired diagnostics vocabul
 
 1. `rg -n "templateCompletionAttempts|templateCompletionOutcome|templateCompletionSource|certificateFallback" packages/engine/src packages/engine/test` returns zero hits outside archived tickets or explicitly documented historical comments.
 2. `pnpm -F @ludoforge/engine build`
-3. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/determinism/spec-139-replay-identity.test.js`
-4. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js`
-5. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/unit/json-schema.test.js`
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-139-replay-identity.test.js`
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-diagnostics.test.js`
+5. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js`
+6. `pnpm -F @ludoforge/engine schema:artifacts`
 
 ### Invariants
 
 1. No exported policy trace/schema contract names retired template-completion or certificate-fallback machinery after this ticket.
 2. `spec-139-replay-identity.test.ts` proves deterministic microturn-era behavior only; it does not assert a legacy certificate/template fallback path.
+3. Generated trace schema artifacts match the narrowed exported diagnostics contract.
 
 ## Test Plan
 
@@ -103,11 +111,34 @@ Additional direct fallout tests that still prove the retired diagnostics vocabul
 1. `packages/engine/test/determinism/spec-139-replay-identity.test.ts` — remove retired template-completion/certificate-fallback assertions and replace them with microturn-native deterministic invariants.
 2. `packages/engine/test/unit/agents/policy-diagnostics.test.ts` — update diagnostics expectations to the narrowed trace shape.
 3. `packages/engine/test/unit/json-schema.test.ts` — update schema fixture coverage for the narrowed trace shape.
+4. `packages/engine/schemas/Trace.schema.json` — regenerate artifact output for the narrowed exported trace contract.
 
 ### Commands
 
 1. `rg -n "templateCompletionAttempts|templateCompletionOutcome|templateCompletionSource|certificateFallback" packages/engine/src packages/engine/test`
 2. `pnpm -F @ludoforge/engine build`
-3. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/determinism/spec-139-replay-identity.test.js`
-4. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/unit/agents/policy-diagnostics.test.js`
-5. `pnpm -F @ludoforge/engine exec node --test packages/engine/dist/test/unit/json-schema.test.js`
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-139-replay-identity.test.js`
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-diagnostics.test.js`
+5. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js`
+6. `pnpm -F @ludoforge/engine schema:artifacts`
+
+## Outcome
+
+Retired the remaining exported template-completion/certificate-fallback diagnostics vocabulary from the engine trace contract.
+
+- Removed `PolicyMovePreparationTrace` and `PolicyCompletionStatistics` entirely from `packages/engine/src/kernel/types-core.ts` and dropped `completionStatistics` / `movePreparations` from `PolicyAgentDecisionTrace`.
+- Narrowed the adjacent stale public union `TrustedMoveProvenance` to `enumerateLegalMoves` only.
+- Removed the matching schema surface from `packages/engine/src/kernel/schemas-core.ts`, stopped the policy evaluation/diagnostics path from carrying the retired metadata in `packages/engine/src/agents/policy-eval.ts` and `packages/engine/src/agents/policy-diagnostics.ts`, and regenerated `packages/engine/schemas/Trace.schema.json`.
+- Finished the stale replay/test migration by rewriting `packages/engine/test/determinism/spec-139-replay-identity.test.ts` to prove deterministic microturn-era behavior without legacy preparation diagnostics, and updated the adjacent diagnostics/schema tests to the narrowed trace shape.
+
+No replacement summary fields were kept: the final boundary is that verbose policy traces still expose candidate-level preview/pruning diagnostics, but no longer expose retired template-completion preparation or certificate-fallback reporting.
+
+## Verification Outcome
+
+- Passed: `rg -n "templateCompletionAttempts|templateCompletionOutcome|templateCompletionSource|certificateFallback" packages/engine/src packages/engine/test`
+- Passed: `pnpm -F @ludoforge/engine build`
+- Passed: `pnpm -F @ludoforge/engine schema:artifacts`
+- Passed: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-diagnostics.test.js`
+- Passed: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js`
+- Passed: `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-139-replay-identity.test.js`
+  - this focused determinism lane is slow but clean: the final TAP summary arrived after about `161s`

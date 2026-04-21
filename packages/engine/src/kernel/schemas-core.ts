@@ -1682,39 +1682,6 @@ const PolicyCandidateDecisionTraceSchema = z
   })
   .strict();
 
-const PolicyMovePreparationTraceSchema = z
-  .object({
-    actionId: StringSchema,
-    stableMoveKey: StringSchema,
-    initialClassification: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('pending'),
-      z.literal('rejected'),
-    ]),
-    finalClassification: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('rejected'),
-    ]),
-    enteredTrustedMoveIndex: BooleanSchema,
-    skippedAsDuplicate: BooleanSchema.optional(),
-    templateCompletionAttempts: NumberSchema.optional(),
-    templateCompletionOutcome: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('failed'),
-    ]).optional(),
-    rejection: z.union([
-      z.literal('structurallyUnsatisfiable'),
-      z.literal('drawDeadEnd'),
-      z.literal('notViable'),
-      z.literal('notDecisionComplete'),
-    ]).optional(),
-    warnings: z.array(RuntimeWarningSchema).optional(),
-  })
-  .strict();
-
 const PolicyPruningStepTraceSchema = z
   .object({
     ruleId: StringSchema,
@@ -1739,20 +1706,6 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
     unknownFailed: NumberSchema,
-  })
-  .strict();
-
-const PolicyCompletionStatisticsSchema = z
-  .object({
-    totalClassifiedMoves: NumberSchema,
-    completedCount: NumberSchema,
-    stochasticCount: NumberSchema,
-    rejectedNotViable: NumberSchema,
-    templateCompletionAttempts: NumberSchema,
-    templateCompletionSuccesses: NumberSchema,
-    templateCompletionStructuralFailures: NumberSchema,
-    duplicatesRemoved: NumberSchema,
-    completionsByActionId: z.record(StringSchema, NumberSchema).optional(),
   })
   .strict();
 
@@ -1807,8 +1760,6 @@ const AgentDecisionTraceSchema = z.union([
       emergencyFallback: BooleanSchema,
       failure: AgentDecisionFailureSummarySchema.nullable(),
       stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
-      completionStatistics: PolicyCompletionStatisticsSchema.optional(),
-      movePreparations: z.array(PolicyMovePreparationTraceSchema).optional(),
       candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
     })
     .strict(),

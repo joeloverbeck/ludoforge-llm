@@ -10,8 +10,6 @@ import type {
   GameDef,
   GameState,
   Move,
-  PolicyCompletionStatistics,
-  PolicyMovePreparationTrace,
   PolicyPreviewOutcomeBreakdownTrace,
   Rng,
   TrustedExecutableMove,
@@ -118,8 +116,6 @@ export interface PolicyEvaluationMetadata {
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
   readonly selection?: PolicyEvaluationSelectionTrace;
-  readonly completionStatistics?: PolicyCompletionStatistics;
-  readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
@@ -145,8 +141,6 @@ export interface EvaluatePolicyMoveInput {
   readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly rng: Rng;
   readonly runtime?: GameDefRuntime;
-  readonly completionStatistics?: PolicyCompletionStatistics;
-  readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly fallbackOnError?: boolean;
   readonly profileIdOverride?: string;
   readonly previewDependencies?: PolicyPreviewDependencies;
@@ -370,8 +364,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         pruningSteps: [],
         tieBreakChain: [],
         previewUsage: emptyPreviewUsage('exactWorld'),
-        ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
-        ...(input.movePreparations === undefined ? {} : { movePreparations: input.movePreparations }),
         selectedStableMoveKey: null,
         finalScore: null,
         usedFallback: false,
@@ -388,7 +380,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
     return failureWithMetadata(candidates, null, requestedProfileId, null, {
       code: 'POLICY_CATALOG_MISSING',
       message: 'GameDef.agents is required to evaluate an authored policy.',
-    }, null, input.completionStatistics, input.movePreparations);
+    });
   }
 
   const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
@@ -406,7 +398,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       code: 'PROFILE_BINDING_MISSING',
       message: `Seat "${seatId}" is not bound to an authored policy profile.`,
       detail: { seatId },
-    }, null, input.completionStatistics, input.movePreparations);
+    });
   }
 
   const profile = catalog.profiles[profileId];
@@ -415,7 +407,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       code: 'PROFILE_MISSING',
       message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
       detail: { seatId, profileId },
-    }, null, input.completionStatistics, input.movePreparations);
+    });
   }
 
   try {
@@ -627,8 +619,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         tieBreakChain,
         previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
         ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
-        ...(input.completionStatistics === undefined ? {} : { completionStatistics: input.completionStatistics }),
-        ...(input.movePreparations === undefined ? {} : { movePreparations: input.movePreparations }),
         ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
         selectedStableMoveKey: selected.stableMoveKey,
         finalScore: Number.isFinite(selected.score) ? selected.score : null,
@@ -650,8 +640,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       profileId,
       failure,
       profile.fingerprint,
-      input.completionStatistics,
-      input.movePreparations,
     );
   }
 }
@@ -736,8 +724,6 @@ function failureWithMetadata(
   profileId: string | null,
   failure: PolicyEvaluationFailure,
   profileFingerprint: string | null = null,
-  completionStatistics?: PolicyCompletionStatistics,
-  movePreparations?: readonly PolicyMovePreparationTrace[],
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -754,8 +740,6 @@ function failureWithMetadata(
       pruningSteps: [],
       tieBreakChain: [],
       previewUsage: summarizePreviewUsage(candidates, 'exactWorld'),
-      ...(completionStatistics === undefined ? {} : { completionStatistics }),
-      ...(movePreparations === undefined ? {} : { movePreparations }),
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,

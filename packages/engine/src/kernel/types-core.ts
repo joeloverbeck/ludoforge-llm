@@ -1138,7 +1138,7 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
-export type TrustedMoveProvenance = 'enumerateLegalMoves' | 'templateCompletion';
+export type TrustedMoveProvenance = 'enumerateLegalMoves';
 
 export interface TrustedExecutableMove extends Move {
   readonly move: Move;
@@ -1577,20 +1577,6 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewFailureReason?: string;
 }
 
-export interface PolicyMovePreparationTrace {
-  readonly actionId: string;
-  readonly stableMoveKey: string;
-  readonly initialClassification: 'complete' | 'stochastic' | 'pending' | 'rejected';
-  readonly finalClassification: 'complete' | 'stochastic' | 'rejected';
-  readonly enteredTrustedMoveIndex: boolean;
-  readonly skippedAsDuplicate?: boolean;
-  readonly templateCompletionAttempts?: number;
-  readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
-  readonly templateCompletionSource?: 'certificateFallback';
-  readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
-  readonly warnings?: readonly RuntimeWarning[];
-}
-
 export interface PolicyPruningStepTrace {
   readonly ruleId: string;
   readonly remainingCandidateCount: number;
@@ -1628,18 +1614,6 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownFailed: number;
 }
 
-export interface PolicyCompletionStatistics {
-  readonly totalClassifiedMoves: number;
-  readonly completedCount: number;
-  readonly stochasticCount: number;
-  readonly rejectedNotViable: number;
-  readonly templateCompletionAttempts: number;
-  readonly templateCompletionSuccesses: number;
-  readonly templateCompletionStructuralFailures: number;
-  readonly duplicatesRemoved: number;
-  readonly completionsByActionId?: Readonly<Record<string, number>>;
-}
-
 export interface BuiltinAgentDecisionTrace {
   readonly kind: 'builtin';
   readonly agent: BuiltinAgentDescriptor;
@@ -1668,8 +1642,6 @@ export interface PolicyAgentDecisionTrace {
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
-  readonly completionStatistics?: PolicyCompletionStatistics;
-  readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 

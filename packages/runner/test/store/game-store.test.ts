@@ -176,7 +176,7 @@ describe('createGameStore', () => {
     expect(state.renderModel?.choiceUi.kind).toBe('none');
   });
 
-  it('runAiStep advances one published decision and reports completed moves', async () => {
+  it('runAiStep advances one published decision and projects the authoritative post-step active player', async () => {
     const def = compileCounterFixture(5);
     const onMoveApplied = vi.fn();
     const store = createStore(onMoveApplied);
@@ -188,6 +188,7 @@ describe('createGameStore', () => {
     expect(outcome).toBe('advanced');
     expect(store.getState().gameState?.globalVars.round).toBe(1);
     expect(onMoveApplied).toHaveBeenCalledTimes(1);
-    expect(store.getState().renderModel?.activePlayerID).toEqual(asPlayerId(1));
+    expect(store.getState().gameState?.activePlayer).toEqual(asPlayerId(0));
+    expect(store.getState().renderModel?.activePlayerID).toEqual(store.getState().gameState?.activePlayer);
   });
 });

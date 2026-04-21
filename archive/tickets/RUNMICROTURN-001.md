@@ -1,6 +1,6 @@
 # RUNMICROTURN-001: Align runner AI-step active-player projection with the Spec 140 microturn protocol
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — runner-only unless investigation proves the engine trace contract is wrong
@@ -105,3 +105,16 @@ Adjust or extend runner tests so they prove:
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm turbo test`
 3. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-04-21)
+
+- The runner store and render-model projection were reassessed against the live Spec 140 contract and verified to already project the authoritative kernel active player from `gameState.activePlayer`; no runner store/model code change was required.
+- `packages/runner/test/store/game-store.test.ts` now proves the authoritative post-step contract directly by asserting that a single AI microturn advances one published decision, reports the completed move, and leaves `renderModel.activePlayerID` equal to the engine state's `activePlayer`.
+- `packages/runner/src/store/game-store.ts` and the render-model projection path were `verified-no-edit`; the stale expectation lived in the runner test, not in production projection logic.
+
+- `ticket corrections applied`: `expected post-step activePlayerID=1 in the counter fixture -> authoritative post-step active player remains gameState.activePlayer (0) unless the engine state itself rotates seats`
+- `verification substitutions`: `pnpm -F @ludoforge/runner exec vitest run test/store/game-store.test.ts` used as the focused file proof because the package test script runs from `packages/runner` and does not accept the repo-root file path used in the original probe
+- `verification set`: `pnpm -F @ludoforge/runner exec vitest run test/store/game-store.test.ts`, `pnpm -F @ludoforge/runner test`, `pnpm turbo lint`, `pnpm turbo typecheck`
+- `subsumed proof`: `pnpm turbo test -> not required for truthful closeout because the owned runner boundary was proven by the focused runner store file plus the full runner package test lane`
+- `proof gaps`: none
+- `schema/artifact fallout`: none

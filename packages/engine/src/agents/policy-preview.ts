@@ -1,8 +1,10 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
+import { probeMoveViability } from '../kernel/apply-move.js';
+import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
 import { buildSeatResolutionIndex } from '../kernel/identity.js';
-import { classifyPlayableMoveCandidate, type PlayableCandidateClassification } from '../kernel/playable-candidate.js';
+import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
   AgentPreviewMode,
@@ -33,12 +35,18 @@ export interface PolicyPreviewCandidate {
 }
 
 export interface PolicyPreviewDependencies {
+  readonly classifyCandidate?: (
+    def: GameDef,
+    state: GameState,
+    move: Move,
+    runtime?: GameDefRuntime,
+  ) => PreviewCandidateClassification;
   readonly classifyPlayableMoveCandidate?: (
     def: GameDef,
     state: GameState,
     move: Move,
     runtime?: GameDefRuntime,
-  ) => PlayableCandidateClassification;
+  ) => PreviewCandidateClassification;
   readonly applyMove?: (
     def: GameDef,
     state: GameState,
@@ -133,8 +141,48 @@ type PreviewOutcome =
       readonly failureReason?: string;
     };
 
+type PreviewCandidateClassification =
+  | {
+      readonly kind: 'playable';
+      readonly move: TrustedExecutableMove;
+    }
+  | {
+      readonly kind: 'rejected';
+      readonly failureReason?: string;
+    };
+
+const classifyPreviewCandidate = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  runtime?: GameDefRuntime,
+): PreviewCandidateClassification => {
+  const viability = probeMoveViability(def, state, move, runtime);
+  if (!viability.viable) {
+    return {
+      kind: 'rejected',
+      failureReason: viability.code,
+    };
+  }
+  const admissibility = classifyMoveAdmissibility(def, state, move, viability, runtime);
+  if (
+    admissibility.kind === 'inadmissible'
+    || (admissibility.kind === 'pendingAdmissible' && admissibility.continuation !== 'stochastic')
+  ) {
+    return {
+      kind: 'rejected',
+      failureReason: admissibility.kind === 'inadmissible' ? admissibility.reason : 'notDecisionComplete',
+    };
+  }
+  return {
+    kind: 'playable',
+    move: createTrustedExecutableMove(viability.move, state.stateHash, 'enumerateLegalMoves'),
+  };
+};
+
 const defaultDependencies = {
-  classifyPlayableMoveCandidate,
+  classifyCandidate: classifyPreviewCandidate,
+  classifyPlayableMoveCandidate: classifyPreviewCandidate,
   applyMove: applyPreviewMove,
   derivePlayerObservation,
   evaluateGrantedOperation: () => undefined,
@@ -282,17 +330,24 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       ? tryApplyPreview(trustedMove)
       : representativeTrustedMove !== undefined
         ? tryApplyPreview(representativeTrustedMove)
-        : classifyPreviewOutcome(deps.classifyPlayableMoveCandidate(input.def, input.state, candidate.move, input.runtime));
+        : classifyPreviewOutcome(
+          (deps.classifyPlayableMoveCandidate ?? deps.classifyCandidate)(
+            input.def,
+            input.state,
+            candidate.move,
+            input.runtime,
+          ),
+        );
     cache.set(candidate.stableMoveKey, outcome);
     return outcome;
   }
 
-  function classifyPreviewOutcome(classification: PlayableCandidateClassification): PreviewOutcome {
-    if (classification.kind !== 'playableComplete') {
+  function classifyPreviewOutcome(classification: PreviewCandidateClassification): PreviewOutcome {
+    if (classification.kind !== 'playable') {
       return {
         kind: 'unknown',
         reason: 'unresolved',
-        ...(classification.kind === 'rejected' ? { failureReason: classification.rejection } : {}),
+        ...(classification.failureReason === undefined ? {} : { failureReason: classification.failureReason }),
       };
     }
 
@@ -381,8 +436,13 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return undefined;
     }
 
-    const classification = deps.classifyPlayableMoveCandidate(input.def, previewState, selected.move, input.runtime);
-    if (classification.kind !== 'playableComplete' && classification.kind !== 'playableStochastic') {
+    const classification = (deps.classifyPlayableMoveCandidate ?? deps.classifyCandidate)(
+      input.def,
+      previewState,
+      selected.move,
+      input.runtime,
+    );
+    if (classification.kind !== 'playable') {
       return undefined;
     }
 

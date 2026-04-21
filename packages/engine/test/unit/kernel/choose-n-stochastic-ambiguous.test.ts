@@ -22,7 +22,7 @@ import {
 import { effectRuntimeError } from '../../../src/kernel/effect-error.js';
 import { optionKey } from '../../../src/kernel/legal-choices.js';
 import { EFFECT_RUNTIME_REASONS } from '../../../src/kernel/runtime-reasons.js';
-import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-satisfiability.js';
+import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-analysis.js';
 import type {
   ChoiceOption,
   ChoicePendingChooseNRequest,

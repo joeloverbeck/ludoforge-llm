@@ -1,7 +1,6 @@
 export * from './branded.js';
 export * from './choice-option-policy.js';
 export * from './gamedef-runtime.js';
-export * from './move-completion.js';
 export * from './choose-n-cardinality.js';
 export * from './advance-choose-n.js';
 export * from './choose-n-session.js';
@@ -14,7 +13,6 @@ export * from './missing-binding-policy.js';
 export * from './legal-moves.js';
 export * from './move-enumeration-budgets.js';
 export * from './move-decision-sequence.js';
-export * from './playable-candidate.js';
 export * from './move-equivalence.js';
 export * from './move-runtime-bindings.js';
 export * from './trusted-move.js';

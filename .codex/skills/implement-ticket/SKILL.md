@@ -162,6 +162,16 @@ When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture,
 4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
 5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
 
+### Direct Fallout Test Triage
+
+When a ticket retires a public surface and the first build exposes a large direct-fallout test set, classify each affected test before editing:
+
+1. `delete` the test when its primary asserted contract is the retired surface itself (deleted export, legacy overload, certificate/template helper, or another compatibility-era artifact)
+2. `migrate` the test when it still proves a retained runtime, legality, visibility, replay, or agent behavior on the live boundary
+3. if many fallout tests are deleted in one sweep, record the rationale in the active ticket outcome so the reduction is inspectable rather than looking like silent coverage loss
+
+Use this rule to avoid both over-migrating dead compatibility tests and over-deleting tests that still prove live behavior.
+
 ## Verification
 
 Before the final acceptance-proof pass, pause on this explicit checkpoint: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
@@ -190,6 +200,15 @@ If the first broader proof lane fails on a newly added or modified test, do one 
 3. rerun the broader package/workspace lane only after the focused proof is green
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
+
+For long-running package lanes that already printed `ok` lines for the ticket-owned retained regressions and later files, do one explicit progress triage before waiting indefinitely:
+
+1. identify the last printed passing file and whether the runner is now only emitting repeated quiet-progress notices
+2. probe the most likely expensive tail file directly with a bounded single-file run when proportionate
+3. if that direct file run returns cleanly but the package lane still does not hand back a final shell prompt after repeated quiet-progress cycles, record the package lane as `harness-noisy / not final-confirmed` rather than blocking closeout indefinitely
+4. cite the directly observed retained-regression passes plus any successful single-file tail probe separately from the noisy package-lane result
+
+This preserves truthful proof language without requiring unbounded waiting on runner noise.
 
 When rerunning proof commands that write append-only local artifacts (for example temp NDJSON, captured logs, or ad hoc report files), prefer a fresh temp path per rerun or clear the artifact first so the resulting evidence reflects a single proof pass rather than accumulated historical rows.
 

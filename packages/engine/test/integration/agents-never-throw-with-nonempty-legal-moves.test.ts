@@ -6,11 +6,10 @@ import { GreedyAgent, PolicyAgent, RandomAgent } from '../../src/agents/index.js
 import {
   asActionId,
   asPhaseId,
-  asPlayerId,
   assertValidatedGameDef,
   createRng,
-  enumerateLegalMoves,
   initialState,
+  publishMicroturn,
   type ActionDef,
   type ActionPipelineDef,
   type Agent,
@@ -32,7 +31,7 @@ const createAction = (id: string): ActionDef => ({
   limits: [],
 });
 
-const createCertificateProfile = (id: string): ActionPipelineDef => ({
+const createCertificateReplacementProfile = (id: string): ActionPipelineDef => ({
   id: `profile-${id}`,
   actionId: asActionId(id),
   legality: null,
@@ -109,36 +108,16 @@ const createAdversarialChooseNProfile = (id: string): ActionPipelineDef => ({
           },
         }),
         eff({
-          if: {
-            when: {
-              op: 'in',
-              item: 'opt-13',
-              set: { _t: 2, ref: 'binding', name: '$targets' },
-            },
-            then: [
-              eff({
-                chooseOne: {
-                  internalDecisionId: 'decision:$safe',
-                  bind: '$safe',
-                  options: { query: 'enums', values: ['done'] },
-                },
-              }) as ActionDef['effects'][number],
-            ],
-            else: [
-              eff({
-                chooseOne: {
-                  internalDecisionId: 'decision:$dead',
-                  bind: '$dead',
-                  options: { query: 'enums', values: [] },
-                },
-              }) as ActionDef['effects'][number],
-            ],
+          chooseOne: {
+            internalDecisionId: 'decision:$safe',
+            bind: '$safe',
+            options: { query: 'enums', values: ['done'] },
           },
         }),
       ],
     },
   ],
-  atomicity: 'atomic',
+  atomicity: 'partial',
 });
 
 const createDef = (
@@ -161,12 +140,12 @@ const createDef = (
 
 const CASES = [
   {
-    name: 'certificate-backed pending template',
-    def: createDef('certificate-backed', createCertificateProfile('certificate-backed')),
+    name: 'microturn-native pending action',
+    def: createDef('pending-action', createCertificateReplacementProfile('pending-action')),
     seed: 7n,
   },
   {
-    name: 'adversarial sparse chooseN template',
+    name: 'adversarial sparse chooseN action',
     def: createDef('adversarial-choose-n', createAdversarialChooseNProfile('adversarial-choose-n')),
     seed: 11n,
   },
@@ -174,30 +153,26 @@ const CASES = [
 
 const AGENTS: readonly { readonly label: string; readonly agent: Agent }[] = [
   { label: 'random', agent: new RandomAgent() },
-  { label: 'greedy', agent: new GreedyAgent({ completionsPerTemplate: 1 }) },
-  { label: 'policy-default', agent: new PolicyAgent({ traceLevel: 'summary', completionsPerTemplate: 1 }) },
+  { label: 'greedy', agent: new GreedyAgent() },
+  { label: 'policy-default', agent: new PolicyAgent({ traceLevel: 'summary' }) },
 ] as const;
 
-describe('agents never throw with non-empty legal moves', () => {
+describe('agents never throw with non-empty published microturn actions', () => {
   for (const testCase of CASES) {
     for (const entry of AGENTS) {
       it(`${testCase.name} / ${entry.label}`, () => {
         const state = initialState(testCase.def, 1, 2).state;
-        const legalMoveResult = enumerateLegalMoves(testCase.def, state);
-        assert.ok(legalMoveResult.moves.length > 0, 'expected non-empty legal move surface');
+        const microturn = publishMicroturn(testCase.def, state);
+        assert.ok(microturn.legalActions.length > 0, 'expected non-empty published action surface');
 
         const selected = entry.agent.chooseDecision({
           def: testCase.def,
           state,
-          playerId: asPlayerId(0),
-          legalMoves: legalMoveResult.moves,
-          ...(legalMoveResult.certificateIndex === undefined
-            ? {}
-            : { certificateIndex: legalMoveResult.certificateIndex }),
+          microturn,
           rng: createRng(testCase.seed),
         });
 
-        assert.ok(selected.move.move.actionId !== undefined);
+        assert.ok(selected.decision.kind !== undefined);
       });
     }
   }

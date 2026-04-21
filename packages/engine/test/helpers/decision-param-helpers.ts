@@ -1,6 +1,5 @@
 import {
   applyMove,
-  completeMoveDecisionSequence,
   IllegalMoveError,
   nextInt,
   pickDeterministicChoiceValue,
@@ -13,6 +12,7 @@ import {
   type MoveParamValue,
   type Rng,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from './complete-move-decision-sequence.js';
 
 const MAX_DECISION_STEPS = 256;
 const INDEXED_DECISION_KEY_PATTERN = /^decision:.*#\d+$/;

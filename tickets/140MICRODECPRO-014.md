@@ -4,15 +4,15 @@
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — adds ~15 new test files under `packages/engine/test/`; no source changes
-**Deps**: `tickets/140MICRODECPRO-012.md`
+**Deps**: `archive/tickets/140MICRODECPRO-012.md`, `tickets/140MICRODECPRO-015.md`, `tickets/140MICRODECPRO-016.md`
 
 ## Problem
 
-With implementation + retirement + docs complete, the full microturn test surface can now land. This ticket authors all new tests T1-T15 per spec 140 Testing Strategy, plus the T14 performance gate (deterministic probe-step proxy against FITL reference corpus), and audits that ticket 012's T0 migrations are complete.
+With implementation + retirement + docs complete, the full microturn test surface can now land. This ticket authors all new tests T1-T15 per spec 140 Testing Strategy, plus the T14 performance gate (deterministic probe-step proxy against FITL reference corpus), and audits that ticket 012's public legacy retirement, ticket 015's remaining internal authority migration, and ticket 016's residual policy-diagnostics cleanup are complete.
 
 ## Assumption Reassessment (2026-04-20)
 
-1. Ticket 012 has landed — T0 migrations for Spec 139 test artifacts are in place. This ticket audits their class markers and witness IDs; it does not re-migrate them.
+1. Ticket 012 has landed, but post-review split the remaining stale policy-diagnostics/replay regression cleanup into ticket 016. This ticket audits the final T0 state after 015 and 016, rather than re-owning those residual migrations itself.
 2. All 15 new T-series tests target paths explicitly named in spec 140 Testing Strategy sections (T1-T15).
 3. `.claude/rules/testing.md` is the canonical authority for test-class markers — confirmed.
 4. Spec 137's distillation rule governs promotion from `convergence-witness` to `architectural-invariant` — per reassessed spec 140.

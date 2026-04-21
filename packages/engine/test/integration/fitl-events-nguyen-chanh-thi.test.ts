@@ -5,10 +5,10 @@ import { describe, it } from 'node:test';
 import {
   advanceChooseN,
   applyMove,
-  completeMoveDecisionSequence,
   legalChoicesEvaluate,
   resolveMoveDecisionSequence,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import {

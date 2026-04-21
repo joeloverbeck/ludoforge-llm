@@ -6,9 +6,9 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
-  completeMoveDecisionSequence,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';

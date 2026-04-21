@@ -32,9 +32,9 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
-  classifyDecisionSequenceSatisfiability,
+  analyzeDecisionSequence,
   type DecisionSequenceSatisfiability,
-} from './decision-sequence-satisfiability.js';
+} from './decision-sequence-analysis.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
@@ -739,7 +739,7 @@ const classifyProbeMoveSatisfiability = (
   options: LegalChoicesRuntimeOptions | undefined,
   evaluateProbeLegality: ProbeLegalityEvaluator,
 ): DecisionSequenceSatisfiability =>
-  classifyDecisionSequenceSatisfiability(
+  analyzeDecisionSequence(
     probeMove,
     (candidateMove, discoverOptions) =>
       evaluateProbeLegality(candidateMove, {

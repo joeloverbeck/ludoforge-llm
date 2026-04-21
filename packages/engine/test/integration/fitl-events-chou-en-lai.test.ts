@@ -6,7 +6,6 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
-  completeMoveDecisionSequence,
   initialState,
   legalMoves,
   pickDeterministicChoiceValue,
@@ -16,6 +15,7 @@ import {
   type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';

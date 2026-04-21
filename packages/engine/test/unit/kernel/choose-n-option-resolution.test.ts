@@ -23,7 +23,7 @@ import {
   type WitnessSearchTierContext,
 } from '../../../src/kernel/choose-n-option-resolution.js';
 import type { ChoicePendingChooseNRequest, ChoiceRequest, MoveParamScalar } from '../../../src/kernel/types.js';
-import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-satisfiability.js';
+import type { DecisionSequenceSatisfiability } from '../../../src/kernel/decision-sequence-analysis.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;

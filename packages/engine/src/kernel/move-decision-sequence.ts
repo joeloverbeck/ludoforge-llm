@@ -1,9 +1,9 @@
 import { legalChoicesDiscover } from './legal-choices.js';
 import {
-  classifyDecisionSequenceSatisfiability,
+  analyzeDecisionSequence,
   type DecisionSequenceChoiceDiscoverer,
-  type DecisionSequenceSatisfiabilityResult,
-} from './decision-sequence-satisfiability.js';
+  type DecisionSequenceAnalysisResult,
+} from './decision-sequence-analysis.js';
 import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import { orderMoveParamValuesByAscendingComplexity, pickDeterministicChoiceValue } from './choice-option-policy.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
@@ -36,9 +36,7 @@ export interface MoveDecisionSequenceSatisfiabilityOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoverer?: DecisionSequenceChoiceDiscoverer;
-  readonly emitCompletionCertificate?: boolean;
   readonly validateSatisfiedMove?: (move: Move) => boolean;
-  readonly onClassified?: (result: MoveDecisionSequenceSatisfiabilityResult) => void;
   readonly profiler?: PerfProfiler;
 }
 
@@ -52,7 +50,7 @@ export interface ResolveMoveDecisionSequenceResult {
   readonly warnings: readonly RuntimeWarning[];
 }
 
-export type MoveDecisionSequenceSatisfiabilityResult = DecisionSequenceSatisfiabilityResult;
+export type MoveDecisionSequenceSatisfiabilityResult = DecisionSequenceAnalysisResult;
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
   pickDeterministicChoiceValue(request);
@@ -255,7 +253,6 @@ export const isMoveDecisionSequenceAdmittedForLegalMove = (
     options,
     runtime,
   );
-  options?.onClassified?.(result);
   return result.classification === 'satisfiable' || result.classification === 'explicitStochastic';
 };
 
@@ -267,7 +264,7 @@ export const classifyMoveDecisionSequenceSatisfiability = (
   runtime?: GameDefRuntime,
 ): MoveDecisionSequenceSatisfiabilityResult => {
   const discoverChoices = options?.discoverer ?? createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);
-  return classifyDecisionSequenceSatisfiability(
+  return analyzeDecisionSequence(
     baseMove,
     discoverChoices,
     {
@@ -275,12 +272,6 @@ export const classifyMoveDecisionSequenceSatisfiability = (
       ...(options?.budgets === undefined ? {} : { budgets: options.budgets }),
       ...(options?.onWarning === undefined ? {} : { onWarning: options.onWarning }),
       ...(options?.validateSatisfiedMove === undefined ? {} : { validateSatisfiedMove: options.validateSatisfiedMove }),
-      ...(options?.emitCompletionCertificate === true
-        ? {
-          emitCompletionCertificate: true,
-          certificateFingerprintStateHash: state.stateHash,
-        }
-        : {}),
       ...(options?.profiler === undefined ? {} : { profiler: options.profiler }),
     },
   );

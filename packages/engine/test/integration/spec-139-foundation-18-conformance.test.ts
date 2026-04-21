@@ -13,7 +13,6 @@ import {
   type ClassifiedMove,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
-import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -24,16 +23,16 @@ const FITL_PROFILE_VARIANTS = [
   ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'],
 ] as const;
 const TEXAS_SEEDS = process.env.RUN_SLOW_E2E === '1'
-  ? Array.from({ length: 20 }, (_, index) => 2000 + index)
-  : Array.from({ length: 10 }, (_, index) => 2000 + index);
+  ? Array.from({ length: 20 }, (_unused, index) => 2000 + index)
+  : Array.from({ length: 10 }, (_unused, index) => 2000 + index);
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
 const MAX_TURNS = 200;
 
 type ConformanceCounters = {
   totalIncomplete: number;
-  satisfiableTemplates: number;
-  explicitStochasticTemplates: number;
+  pendingWithoutTrustedMove: number;
+  explicitStochasticWithTrustedMove: number;
 };
 
 const compileFitlDef = (): ValidatedGameDef => {
@@ -57,9 +56,7 @@ const compileTexasDef = (): ValidatedGameDef => {
 };
 
 const assertFoundation18Conformance = (
-  def: ValidatedGameDef,
   legalMoves: readonly ClassifiedMove[],
-  certificateIndex: ReadonlyMap<string, unknown> | undefined,
   counters: ConformanceCounters,
 ): void => {
   for (const classified of legalMoves) {
@@ -67,22 +64,17 @@ const assertFoundation18Conformance = (
       continue;
     }
     counters.totalIncomplete += 1;
-    const stableMoveKey = toMoveIdentityKey(def, classified.move);
-    const hasCertificate = certificateIndex?.has(stableMoveKey) ?? false;
     if (classified.viability.stochasticDecision !== undefined) {
-      counters.explicitStochasticTemplates += 1;
-      assert.equal(
-        hasCertificate,
-        false,
-        `explicitStochastic move ${String(classified.move.actionId)} must not carry a completion certificate`,
-      );
+      counters.explicitStochasticWithTrustedMove += classified.trustedMove === undefined ? 0 : 1;
+      assert.ok(classified.trustedMove, `explicit stochastic move ${String(classified.move.actionId)} should expose its stochastic frontier`);
       continue;
     }
-    counters.satisfiableTemplates += 1;
+
+    counters.pendingWithoutTrustedMove += classified.trustedMove === undefined ? 1 : 0;
     assert.equal(
-      hasCertificate,
-      true,
-      `incomplete non-stochastic move ${String(classified.move.actionId)} must carry a completion certificate`,
+      classified.trustedMove,
+      undefined,
+      `pending incomplete move ${String(classified.move.actionId)} must remain unmaterialized`,
     );
   }
 };
@@ -94,12 +86,7 @@ const wrapAgentWithConformanceAudit = (
 ): Agent => ({
   chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
     const enumerated = enumerateLegalMoves(def, input.state, undefined, input.runtime);
-    assertFoundation18Conformance(
-      def,
-      enumerated.moves,
-      enumerated.certificateIndex as ReadonlyMap<string, unknown> | undefined,
-      counters,
-    );
+    assertFoundation18Conformance(enumerated.moves, counters);
     return inner.chooseDecision(input);
   },
 } as Agent);
@@ -132,11 +119,11 @@ describe('Spec 139 Foundation #18 conformance', () => {
 
   for (const profiles of FITL_PROFILE_VARIANTS) {
     for (const seed of FITL_CANARY_SEEDS) {
-      it(`FITL profiles=${profiles.join(',')} seed=${seed}: admitted incomplete moves always carry the right constructibility artifact`, { timeout: 20_000 }, () => {
+      it(`FITL profiles=${profiles.join(',')} seed=${seed}: incomplete moves stay on the published microturn boundary`, { timeout: 20_000 }, () => {
         const counters: ConformanceCounters = {
           totalIncomplete: 0,
-          satisfiableTemplates: 0,
-          explicitStochasticTemplates: 0,
+          pendingWithoutTrustedMove: 0,
+          explicitStochasticWithTrustedMove: 0,
         };
         const trace = runFoundation18Audit(
           fitlDef,
@@ -152,16 +139,17 @@ describe('Spec 139 Foundation #18 conformance', () => {
           `unexpected stopReason=${trace.stopReason}`,
         );
         assert.ok(counters.totalIncomplete > 0, 'expected FITL canary run to exercise incomplete admitted moves');
+        assert.equal(counters.totalIncomplete, counters.pendingWithoutTrustedMove + counters.explicitStochasticWithTrustedMove);
       });
     }
   }
 
   for (const seed of TEXAS_SEEDS) {
-    it(`Texas seed=${seed}: admitted incomplete moves always carry the right constructibility artifact`, () => {
+    it(`Texas seed=${seed}: incomplete moves stay on the published microturn boundary`, () => {
       const counters: ConformanceCounters = {
         totalIncomplete: 0,
-        satisfiableTemplates: 0,
-        explicitStochasticTemplates: 0,
+        pendingWithoutTrustedMove: 0,
+        explicitStochasticWithTrustedMove: 0,
       };
       const trace = runFoundation18Audit(
         texasDef,

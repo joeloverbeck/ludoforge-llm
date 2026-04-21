@@ -1870,25 +1870,6 @@ export interface AgentMicroturnDecisionResult {
   readonly agentDecision?: AgentDecisionTrace;
 }
 
-export interface AgentLegacyDecisionInput {
-  readonly def: GameDef;
-  readonly state: GameState;
-  readonly playerId: PlayerId;
-  readonly legalMoves: readonly ClassifiedMove[];
-  readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
-  readonly rng: Rng;
-  readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
-  /** Opt-in profiler for agent sub-function timing. */
-  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-}
-
-export interface AgentLegacyDecisionResult {
-  readonly move: TrustedExecutableMove;
-  readonly rng: Rng;
-  readonly agentDecision?: AgentDecisionTrace;
-}
-
 export interface Agent {
   chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult;
-  chooseDecision(input: AgentLegacyDecisionInput): AgentLegacyDecisionResult;
 }

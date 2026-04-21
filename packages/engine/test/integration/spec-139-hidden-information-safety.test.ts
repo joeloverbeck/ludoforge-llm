@@ -8,7 +8,7 @@ import {
   createGameDefRuntime,
   enumerateLegalMoves,
   initialState,
-  materializeCompletionCertificate,
+  resolveMoveDecisionSequence,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -19,9 +19,9 @@ import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 
-const OBSERVER_SAFE_ACTION_ID = asActionId('observer-safe-certificate');
+const OBSERVER_SAFE_ACTION_ID = asActionId('observer-safe-pending-action');
 
-const withObserverSafeCertificateAction = (def: GameDef): GameDef => {
+const withObserverSafeAction = (def: GameDef): GameDef => {
   const action: ActionDef = {
     id: OBSERVER_SAFE_ACTION_ID,
     actor: 'active',
@@ -34,7 +34,7 @@ const withObserverSafeCertificateAction = (def: GameDef): GameDef => {
     limits: [],
   };
   const pipeline: ActionPipelineDef = {
-    id: 'observer-safe-certificate-profile',
+    id: 'observer-safe-pending-profile',
     actionId: OBSERVER_SAFE_ACTION_ID,
     legality: null,
     costValidation: null,
@@ -68,9 +68,9 @@ const withObserverSafeCertificateAction = (def: GameDef): GameDef => {
 };
 
 describe('Spec 139 hidden-information safety', () => {
-  it('keeps certificate assignments and materialized moves observer-safe when only hidden hole-card bindings change', () => {
+  it('keeps published pending action identity and next public choice observer-safe when hidden hole cards change', () => {
     const { compiled } = compileTexasProductionSpec();
-    const def = withObserverSafeCertificateAction(assertValidatedGameDef(compiled.gameDef));
+    const def = withObserverSafeAction(assertValidatedGameDef(compiled.gameDef));
     const runtime = createGameDefRuntime(def);
     const state = advanceToDecisionPoint(def, initialState(def, 29, 2).state);
     const opponentPlayer = Number(state.activePlayer) === 0 ? 1 : 0;
@@ -79,7 +79,7 @@ describe('Spec 139 hidden-information safety', () => {
 
     assert.equal(opponentCards.length >= 2, true, 'expected opponent to hold hidden hole cards');
 
-    const observerProfile = def.observers?.observers['currentPlayer'];
+    const observerProfile = def.observers?.observers.currentPlayer;
     const observation = derivePlayerObservation(def, state, state.activePlayer, observerProfile);
     assert.deepEqual(observation.visibleTokenIdsByZone[opponentZoneId], []);
 
@@ -98,29 +98,24 @@ describe('Spec 139 hidden-information safety', () => {
     const baseClassified = baseEnumerated.moves.find((candidate) => candidate.move.actionId === OBSERVER_SAFE_ACTION_ID);
     const swappedClassified = swappedEnumerated.moves.find((candidate) => candidate.move.actionId === OBSERVER_SAFE_ACTION_ID);
 
-    assert.ok(baseClassified, 'expected observer-safe certificate move to be legal in base state');
-    assert.ok(swappedClassified, 'expected observer-safe certificate move to be legal in swapped hidden state');
+    assert.ok(baseClassified, 'expected observer-safe pending action in base state');
+    assert.ok(swappedClassified, 'expected observer-safe pending action in swapped hidden state');
     assert.equal(baseClassified?.viability.complete, false);
     assert.equal(swappedClassified?.viability.complete, false);
-    assert.equal(baseClassified?.viability.stochasticDecision, undefined);
-    assert.equal(swappedClassified?.viability.stochasticDecision, undefined);
+    assert.equal(baseClassified?.trustedMove, undefined);
+    assert.equal(swappedClassified?.trustedMove, undefined);
 
     const baseKey = toMoveIdentityKey(def, baseClassified!.move);
     const swappedKey = toMoveIdentityKey(def, swappedClassified!.move);
-    const baseCertificate = baseEnumerated.certificateIndex?.get(baseKey);
-    const swappedCertificate = swappedEnumerated.certificateIndex?.get(swappedKey);
+    assert.equal(baseKey, swappedKey, 'hidden card order should not perturb published pending action identity');
 
-    assert.ok(baseCertificate, 'expected completion certificate in base state');
-    assert.ok(swappedCertificate, 'expected completion certificate in swapped hidden state');
-    assert.deepEqual(baseCertificate?.assignments, swappedCertificate?.assignments);
+    const baseContinuation = resolveMoveDecisionSequence(def, state, baseClassified!.move, { choose: () => undefined }, runtime);
+    const swappedContinuation = resolveMoveDecisionSequence(def, swappedState, swappedClassified!.move, { choose: () => undefined }, runtime);
 
-    const baseMaterialized = materializeCompletionCertificate(def, state, baseClassified!.move, baseCertificate!, runtime);
-    const swappedMaterialized = materializeCompletionCertificate(def, swappedState, swappedClassified!.move, swappedCertificate!, runtime);
-
-    assert.deepEqual(baseMaterialized, swappedMaterialized);
-    const serializedAssignments = JSON.stringify(baseCertificate?.assignments ?? []);
+    assert.deepEqual(baseContinuation.nextDecision, swappedContinuation.nextDecision);
+    const serializedDecision = JSON.stringify(baseContinuation.nextDecision ?? null);
     for (const card of opponentCards) {
-      assert.equal(serializedAssignments.includes(String(card.id)), false);
+      assert.equal(serializedDecision.includes(String(card.id)), false);
     }
   });
 });

@@ -1,8 +1,3 @@
-import {
-  deriveCompletionCertificateFingerprint,
-  type CompletionCertificate,
-  type CompletionCertificateAssignment,
-} from './completion-certificate.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { perfCount, type PerfProfiler } from './perf-profiler.js';
 import {
@@ -20,7 +15,6 @@ import type {
   ChoicePendingChooseNRequest,
   ChoicePendingRequest,
   ChoiceRequest,
-  GameState,
   Move,
   MoveParamScalar,
   MoveParamValue,
@@ -33,18 +27,15 @@ export type DecisionSequenceSatisfiability =
   | 'unknown'
   | 'explicitStochastic';
 
-export interface DecisionSequenceSatisfiabilityResult {
+export interface DecisionSequenceAnalysisResult {
   readonly classification: DecisionSequenceSatisfiability;
   readonly warnings: readonly RuntimeWarning[];
-  readonly certificate?: CompletionCertificate;
 }
 
-export interface DecisionSequenceSatisfiabilityOptions {
+export interface DecisionSequenceAnalysisOptions {
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly orderSelections?: (request: ChoicePendingRequest, selectableValues: readonly MoveParamValue[]) => readonly MoveParamValue[];
-  readonly emitCompletionCertificate?: boolean;
-  readonly certificateFingerprintStateHash?: GameState['stateHash'];
   readonly validateSatisfiedMove?: (move: Move) => boolean;
   readonly profiler?: PerfProfiler;
 }
@@ -58,10 +49,7 @@ export type DecisionSequenceChoiceDiscoverer = (
 
 interface SearchOutcome {
   readonly classification: DecisionSequenceSatisfiability;
-  readonly assignments: readonly CompletionCertificateAssignment[];
 }
-
-const EMPTY_ASSIGNMENTS: readonly CompletionCertificateAssignment[] = [];
 
 const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly MoveParamValue[] => {
   if (request.type === 'chooseOne') {
@@ -71,7 +59,7 @@ const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly 
 };
 
 const hashCanonical = (value: unknown): string =>
-  stableFingerprintHex('decision-sequence-satisfiability-v1', value);
+  stableFingerprintHex('decision-sequence-analysis-v1', value);
 
 const normalizeMoveBinding = (move: Move): string => canonicalizeFingerprintValue({
   params: Object.fromEntries(
@@ -138,20 +126,11 @@ const assignDecisionSelection = (
   };
 };
 
-const selectionAssignment = (
-  request: ChoicePendingRequest,
-  selection: MoveParamValue,
-): CompletionCertificateAssignment => ({
-  decisionKey: request.decisionKey,
-  requestType: request.type,
-  value: selection,
-});
-
 const MAX_SMALL_EXACT_CHOOSEN_COMBINATIONS = 64;
 
 const collectDeterministicSingletonSelections = (
   request: ChoicePendingChooseNRequest,
-  orderSelections: DecisionSequenceSatisfiabilityOptions['orderSelections'],
+  orderSelections: DecisionSequenceAnalysisOptions['orderSelections'],
 ): readonly (readonly MoveParamScalar[])[] => {
   const ordered = orderSelections?.(request, collectSelectableOptionValues(request)) ?? collectSelectableOptionValues(request);
   const singletons: Array<readonly MoveParamScalar[]> = [];
@@ -174,7 +153,7 @@ const collectDeterministicSingletonSelections = (
 
 const collectOrderedChooseNResidualOptions = (
   request: ChoicePendingChooseNRequest,
-  orderSelections: DecisionSequenceSatisfiabilityOptions['orderSelections'],
+  orderSelections: DecisionSequenceAnalysisOptions['orderSelections'],
 ): readonly MoveParamScalar[] => {
   const ordered = orderSelections?.(request, collectSelectableOptionValues(request)) ?? collectSelectableOptionValues(request);
   const selectedKeys = new Set(request.selected.map((value) => canonicalizeFingerprintValue(value)));
@@ -219,7 +198,7 @@ const countCombinationsWithinLimit = (
 
 const collectSmallExactChooseNSelections = (
   request: ChoicePendingChooseNRequest,
-  orderSelections: DecisionSequenceSatisfiabilityOptions['orderSelections'],
+  orderSelections: DecisionSequenceAnalysisOptions['orderSelections'],
 ): readonly (readonly MoveParamScalar[])[] | null => {
   const min = request.min ?? 0;
   const max = request.max ?? request.options.length;
@@ -274,7 +253,7 @@ const collectSmallExactChooseNSelections = (
 
 const collectDeterministicChooseNWitnessSelections = (
   request: ChoicePendingChooseNRequest,
-  orderSelections: DecisionSequenceSatisfiabilityOptions['orderSelections'],
+  orderSelections: DecisionSequenceAnalysisOptions['orderSelections'],
 ): readonly (readonly MoveParamScalar[])[] => {
   const min = request.min ?? 0;
   const max = request.max ?? request.options.length;
@@ -295,11 +274,11 @@ const collectDeterministicChooseNWitnessSelections = (
   return [[...request.selected, ...residual.slice(0, additionsNeeded)]];
 };
 
-export const classifyDecisionSequenceSatisfiability = (
+export const analyzeDecisionSequence = (
   baseMove: Move,
   discoverChoices: DecisionSequenceChoiceDiscoverer,
-  options?: DecisionSequenceSatisfiabilityOptions,
-): DecisionSequenceSatisfiabilityResult => {
+  options?: DecisionSequenceAnalysisOptions,
+): DecisionSequenceAnalysisResult => {
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const profiler = options?.profiler;
   const warnings: RuntimeWarning[] = [];
@@ -309,8 +288,6 @@ export const classifyDecisionSequenceSatisfiability = (
   let decisionProbeSteps = 0;
   let deferredPredicatesEvaluated = 0;
   let paramExpansions = 0;
-  let memoHits = 0;
-  let nogoodsRecorded = 0;
   let warnedParamBudget = false;
   let warnedStepBudget = false;
   let warnedDeferredBudget = false;
@@ -333,7 +310,7 @@ export const classifyDecisionSequenceSatisfiability = (
         },
       });
     }
-    return { classification: 'unknown', assignments: EMPTY_ASSIGNMENTS };
+    return { classification: 'unknown' };
   };
 
   const unknownFromDecisionBudget = (): SearchOutcome => {
@@ -348,7 +325,7 @@ export const classifyDecisionSequenceSatisfiability = (
         },
       });
     }
-    return { classification: 'unknown', assignments: EMPTY_ASSIGNMENTS };
+    return { classification: 'unknown' };
   };
 
   const unknownFromDeferredBudget = (): SearchOutcome => {
@@ -364,7 +341,7 @@ export const classifyDecisionSequenceSatisfiability = (
         },
       });
     }
-    return { classification: 'unknown', assignments: EMPTY_ASSIGNMENTS };
+    return { classification: 'unknown' };
   };
 
   const discoverRequest = (move: Move): ChoiceRequest | SearchOutcome => {
@@ -399,21 +376,20 @@ export const classifyDecisionSequenceSatisfiability = (
     const request = discovered;
     if (request.kind === 'complete') {
       if (options?.validateSatisfiedMove !== undefined && !options.validateSatisfiedMove(move)) {
-        return { classification: 'unsatisfiable', assignments: EMPTY_ASSIGNMENTS };
+        return { classification: 'unsatisfiable' };
       }
-      return { classification: 'satisfiable', assignments: EMPTY_ASSIGNMENTS };
+      return { classification: 'satisfiable' };
     }
     if (request.kind === 'illegal') {
-      return { classification: 'unsatisfiable', assignments: EMPTY_ASSIGNMENTS };
+      return { classification: 'unsatisfiable' };
     }
     if (request.kind === 'pendingStochastic') {
-      return { classification: 'explicitStochastic', assignments: EMPTY_ASSIGNMENTS };
+      return { classification: 'explicitStochastic' };
     }
 
     const memoKey = createMemoKey(move, request);
     const cached = memo.get(memoKey);
     if (cached !== undefined) {
-      memoHits += 1;
       return cached;
     }
 
@@ -430,23 +406,14 @@ export const classifyDecisionSequenceSatisfiability = (
           memo.set(memoKey, outcome);
           return outcome;
         }
-        const branchMove = assignDecisionSelection(move, request, selection);
-        const branch = search(branchMove);
+        const branch = search(assignDecisionSelection(move, request, selection));
         if (branch.classification === 'satisfiable' || branch.classification === 'explicitStochastic') {
-          const outcome: SearchOutcome = {
-            classification: branch.classification,
-            assignments: [
-              selectionAssignment(request, selection),
-              ...branch.assignments,
-            ],
-          };
-          memo.set(memoKey, outcome);
-          return outcome;
+          memo.set(memoKey, branch);
+          return branch;
         }
         if (branch.classification === 'unsatisfiable' && !knownNogoods.has(selectionKey)) {
           knownNogoods.add(selectionKey);
           nogoods.set(memoKey, knownNogoods);
-          nogoodsRecorded += 1;
         }
       }
     }
@@ -462,23 +429,14 @@ export const classifyDecisionSequenceSatisfiability = (
           memo.set(memoKey, outcome);
           return outcome;
         }
-        const branchMove = assignDecisionSelection(move, request, selection);
-        const branch = search(branchMove);
+        const branch = search(assignDecisionSelection(move, request, selection));
         if (branch.classification === 'satisfiable' || branch.classification === 'explicitStochastic') {
-          const outcome: SearchOutcome = {
-            classification: branch.classification,
-            assignments: [
-              selectionAssignment(request, selection),
-              ...branch.assignments,
-            ],
-          };
-          memo.set(memoKey, outcome);
-          return outcome;
+          memo.set(memoKey, branch);
+          return branch;
         }
         if (branch.classification === 'unsatisfiable' && !knownNogoods.has(selectionKey)) {
           knownNogoods.add(selectionKey);
           nogoods.set(memoKey, knownNogoods);
-          nogoodsRecorded += 1;
         }
       }
     }
@@ -526,7 +484,7 @@ export const classifyDecisionSequenceSatisfiability = (
     })();
 
     if (!Array.isArray(candidateSelections)) {
-      const outcome: SearchOutcome = { classification: 'unsatisfiable', assignments: EMPTY_ASSIGNMENTS };
+      const outcome: SearchOutcome = { classification: 'unsatisfiable' };
       memo.set(memoKey, outcome);
       return outcome;
     }
@@ -543,18 +501,10 @@ export const classifyDecisionSequenceSatisfiability = (
         memo.set(memoKey, outcome);
         return outcome;
       }
-      const branchMove = assignDecisionSelection(move, request, selection);
-      const branch = search(branchMove);
+      const branch = search(assignDecisionSelection(move, request, selection));
       if (branch.classification === 'satisfiable' || branch.classification === 'explicitStochastic') {
-        const outcome: SearchOutcome = {
-          classification: branch.classification,
-          assignments: [
-            selectionAssignment(request, selection),
-            ...branch.assignments,
-          ],
-        };
-        memo.set(memoKey, outcome);
-        return outcome;
+        memo.set(memoKey, branch);
+        return branch;
       }
       if (branch.classification === 'unknown') {
         branchUnknown = true;
@@ -564,49 +514,19 @@ export const classifyDecisionSequenceSatisfiability = (
       if (!knownNogoods.has(selectionKey)) {
         knownNogoods.add(selectionKey);
         nogoods.set(memoKey, knownNogoods);
-        nogoodsRecorded += 1;
       }
     }
 
     const outcome: SearchOutcome = {
       classification: branchUnknown ? 'unknown' : 'unsatisfiable',
-      assignments: EMPTY_ASSIGNMENTS,
     };
     memo.set(memoKey, outcome);
     return outcome;
   };
 
   const outcome = search(baseMove);
-  let result: DecisionSequenceSatisfiabilityResult = {
+  return {
     classification: outcome.classification,
     warnings,
   };
-
-  if (
-    options?.emitCompletionCertificate === true
-    && options.certificateFingerprintStateHash !== undefined
-    && outcome.assignments.length > 0
-    && (outcome.classification === 'satisfiable' || outcome.classification === 'explicitStochastic')
-  ) {
-    result = {
-      ...result,
-      certificate: {
-        assignments: outcome.assignments,
-        fingerprint: deriveCompletionCertificateFingerprint({
-          stateHash: options.certificateFingerprintStateHash,
-          actionId: baseMove.actionId,
-          baseParams: baseMove.params,
-          assignments: outcome.assignments,
-        }),
-        diagnostics: {
-          probeStepsConsumed: decisionProbeSteps,
-          paramExpansionsConsumed: paramExpansions,
-          memoHits,
-          nogoodsRecorded,
-        },
-      },
-    };
-  }
-
-  return result;
 };

@@ -6,7 +6,6 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
-  completeMoveDecisionSequence,
   createRng,
   initialState,
   legalChoicesEvaluate,
@@ -24,6 +23,7 @@ import {
   applyMoveWithResolvedDecisionIds,
   type DecisionOverrideRule,
 } from '../helpers/decision-param-helpers.js';
+import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — docs only
-**Deps**: `tickets/140MICRODECPRO-012.md`
+**Deps**: `archive/tickets/140MICRODECPRO-012.md`
 
 ## Problem
 

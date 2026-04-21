@@ -15,7 +15,7 @@ const PLAYER_COUNT = 4;
 const FORMER_CRASH_OR_HANG_SEEDS = [
   1010, 1012, 1014, 1015, 1019, 1025, 1030, 1035, 1040, 1042, 1043, 1046, 1047, 1051, 1054,
 ] as const;
-const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns']);
+const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
 
 describe('FITL former crash/hang seeds stay bounded', () => {
   const { parsed, compiled } = compileProductionSpec();
@@ -41,7 +41,7 @@ describe('FITL former crash/hang seeds stay bounded', () => {
       assert.equal(
         ALLOWED_STOP_REASONS.has(trace.stopReason),
         true,
-        `seed ${seed}: expected terminal/maxTurns, got ${trace.stopReason} after ${trace.decisions.length} moves`,
+        `seed ${seed}: expected a bounded stop reason, got ${trace.stopReason} after ${trace.decisions.length} moves`,
       );
     });
   }

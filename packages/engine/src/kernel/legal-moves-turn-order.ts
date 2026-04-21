@@ -100,6 +100,14 @@ function isLookaheadCardCoup(def: GameDef, state: GameState): boolean {
   return state.zones[lookaheadZone]?.[0]?.props.isCoup === true;
 }
 
+function isPlayedCardCoup(def: GameDef, state: GameState): boolean {
+  const playedZone = cardDrivenConfig(def)?.turnFlow.cardLifecycle.played;
+  if (playedZone === undefined) {
+    return false;
+  }
+  return state.zones[playedZone]?.[0]?.props.isCoup === true;
+}
+
 function compareSeatByInterruptPrecedence(
   left: string,
   right: string,
@@ -303,6 +311,10 @@ export function applyTurnFlowWindowFilters(
   }
 
   const monsoonActive = turnFlow.monsoon !== undefined && isLookaheadCardCoup(def, state);
+  const coupPhaseIds = new Set(def.turnOrder?.type === 'cardDriven'
+    ? def.turnOrder.config.coupPlan?.phases.map((phase) => phase.id) ?? []
+    : []);
+  const immediateCoupInstructionWindow = isPlayedCardCoup(def, state) && !coupPhaseIds.has(String(state.currentPhase));
   const pivotalActionIds = new Set(turnFlow.pivotal?.actionIds ?? []);
   const inPreActionWindow = (cardDrivenRuntime(state)?.currentCard.nonPassCount ?? 0) === 0;
   const activeSeat = state.turnOrderState.type === 'cardDriven'
@@ -317,6 +329,9 @@ export function applyTurnFlowWindowFilters(
   const interruptWinnerSeat =
     precedence.length > 0 && inPreActionWindow ? resolveInterruptWinnerSeat(state, precedence) : null;
   const filtered = moves.filter((move) => {
+    if (immediateCoupInstructionWindow && resolveTurnFlowActionClass(def, move) !== 'event') {
+      return false;
+    }
     if (!isEventMovePlayableUnderGrantViabilityPolicy(def, state, move, seatResolution)) {
       return false;
     }

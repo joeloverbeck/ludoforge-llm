@@ -6,7 +6,7 @@ import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js
 import type { DecisionKey } from '../decision-scope.js';
 import { enumerateLegalMoves } from '../legal-moves.js';
 import { evaluateMoveLegality } from '../move-legality-predicate.js';
-import { probeMoveLegality } from '../apply-move.js';
+import { probeMoveViability } from '../apply-move.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from '../missing-binding-policy.js';
 import { derivePlayerObservation } from '../observation.js';
 import type {
@@ -174,14 +174,18 @@ const isSupportedContinuationResult = (
   if (!isPublishedMoveAdmitted(def, state, move, runtime)) {
     return false;
   }
-  const moveLegality = probeMoveLegality(def, state, move, runtime);
+  const moveViability = probeMoveViability(def, state, move, runtime);
   if (continuation.stochasticDecision !== undefined) {
     return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
-    return continuation.complete && moveLegality.legal;
+    return continuation.complete && moveViability.viable;
   }
-  if (!moveLegality.legal && moveLegality.code === 'ILLEGAL_MOVE' && moveLegality.context.reason !== 'moveHasIncompleteParams') {
+  if (
+    !moveViability.viable
+    && moveViability.code === 'ILLEGAL_MOVE'
+    && moveViability.context.reason !== 'moveHasIncompleteParams'
+  ) {
     return false;
   }
   return isSupportedChoiceRequest(continuation.nextDecision);

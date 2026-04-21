@@ -6307,6 +6307,93 @@
                             }
                           ]
                         }
+                      },
+                      "templateHint": {
+                        "type": "object",
+                        "properties": {
+                          "normalizedDomain": {
+                            "type": "array",
+                            "items": {
+                              "anyOf": [
+                                {
+                                  "type": "number"
+                                },
+                                {
+                                  "type": "string"
+                                },
+                                {
+                                  "type": "boolean"
+                                }
+                              ]
+                            }
+                          },
+                          "prioritizedTierEntries": {
+                            "anyOf": [
+                              {
+                                "type": "array",
+                                "items": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "value": {
+                                        "anyOf": [
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      },
+                                      "qualifier": {
+                                        "anyOf": [
+                                          {
+                                            "type": "string"
+                                          },
+                                          {
+                                            "type": "number"
+                                          },
+                                          {
+                                            "type": "boolean"
+                                          }
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "value"
+                                    ],
+                                    "additionalProperties": false
+                                  }
+                                }
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "qualifierMode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "none"
+                              },
+                              {
+                                "type": "string",
+                                "const": "byQualifier"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "normalizedDomain",
+                          "prioritizedTierEntries",
+                          "qualifierMode"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
@@ -6889,7 +6976,8 @@
                       ],
                       "additionalProperties": false
                     }
-                  }
+                  },
+                  "suspendedFrame": {}
                 },
                 "required": [
                   "programCounter",

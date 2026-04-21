@@ -646,14 +646,14 @@ describe('FITL card-75 Sihanouk', () => {
     state = applyDecision(def, state, moverAdd).state;
 
     microturn = publishMicroturn(def, state);
-    const moverConfirm = requireDecision(
+    const emptyTroopConfirm = requireDecision(
       microturn.legalActions,
       (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
         decision.kind === 'chooseNStep' && decision.command === 'confirm',
-      'Expected the final mover confirm after selecting the moving guerrilla',
+      'Expected the terminal empty troop confirm after selecting the lone guerrilla mover',
     );
-    replayedDecisions.push(moverConfirm);
-    const finalState = applyDecision(def, state, moverConfirm).state;
+    replayedDecisions.push(emptyTroopConfirm);
+    const finalState = applyDecision(def, state, emptyTroopConfirm).state;
 
     assert.equal(
       countTokens(finalState, 'pleiku-darlac:none', (token) => token.id === asTokenId('sihanouk-nva-skip-vc')),

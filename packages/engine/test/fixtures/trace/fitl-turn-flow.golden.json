@@ -157,6 +157,10 @@
         },
         "markers": {},
         "globalMarkers": {},
+        "decisionStack": [],
+        "nextFrameId": 0,
+        "nextTurnId": 0,
+        "activeDeciderSeatId": "US",
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -293,6 +297,10 @@
         },
         "markers": {},
         "globalMarkers": {},
+        "decisionStack": [],
+        "nextFrameId": 0,
+        "nextTurnId": 0,
+        "activeDeciderSeatId": "US",
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -474,6 +482,10 @@
         },
         "markers": {},
         "globalMarkers": {},
+        "decisionStack": [],
+        "nextFrameId": 0,
+        "nextTurnId": 0,
+        "activeDeciderSeatId": "US",
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {
@@ -661,6 +673,10 @@
         },
         "markers": {},
         "globalMarkers": {},
+        "decisionStack": [],
+        "nextFrameId": 0,
+        "nextTurnId": 0,
+        "activeDeciderSeatId": "US",
         "turnOrderState": {
           "type": "cardDriven",
           "runtime": {

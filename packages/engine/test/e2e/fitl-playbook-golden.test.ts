@@ -48,6 +48,7 @@ const PLAYBOOK_DECK_IDS: readonly string[] = [
   'card-51',  // 11 301st Supply Bn
   'card-43',  // 12 Economic Aid
   'card-112', // 13 Colonel Chau
+  'card-126', // hidden post-tutorial Coup card so card-125 is not finalCoup
 ];
 
 // ---------------------------------------------------------------------------
@@ -421,7 +422,14 @@ const computeUsVictory = (def: GameDef, state: GameState): number =>
 // Deck engineering — replace all card zones with the playbook's 13-card mini-deck
 // ---------------------------------------------------------------------------
 
-const COUP_CARD_ID = 'card-125';
+const COUP_CARD_IDS = new Set([
+  'card-125',
+  'card-126',
+  'card-127',
+  'card-128',
+  'card-129',
+  'card-130',
+]);
 const EVENT_DECK_ID = 'fitl-events-initial-card-pack';
 
 const makeCardToken = (cardId: string, ordinal: number): Token => ({
@@ -430,7 +438,7 @@ const makeCardToken = (cardId: string, ordinal: number): Token => ({
   props: {
     cardId,
     eventDeckId: EVENT_DECK_ID,
-    isCoup: cardId === COUP_CARD_ID,
+    isCoup: COUP_CARD_IDS.has(cardId),
   },
 });
 
@@ -574,7 +582,7 @@ const TURN_1: PlaybookTurn = {
     activePlayer: 2,
     currentCard: 'card-55',
     previewCard: 'card-68',
-    deckSize: 10,
+    deckSize: 11,
     seatOrder: ['nva', 'vc', 'us', 'arvn'],
     firstEligible: 'nva',
     secondEligible: 'us',
@@ -724,7 +732,7 @@ const TURN_2: PlaybookTurn = {
     activePlayer: 1,
     currentCard: 'card-68',
     previewCard: 'card-1',
-    deckSize: 9,
+    deckSize: 10,
     seatOrder: ['arvn', 'us', 'vc', 'nva'],
     firstEligible: 'arvn',
     secondEligible: 'vc',
@@ -935,7 +943,7 @@ const TURN_3: PlaybookTurn = {
     activePlayer: 0,
     currentCard: 'card-1',
     previewCard: 'card-97',
-    deckSize: 8,
+    deckSize: 9,
     seatOrder: ['us', 'nva', 'arvn', 'vc'],
     firstEligible: 'us',
     secondEligible: 'nva',
@@ -1234,7 +1242,7 @@ const TURN_4: PlaybookTurn = {
     activePlayer: 3,
     currentCard: 'card-97',
     previewCard: 'card-79',
-    deckSize: 7,
+    deckSize: 8,
     seatOrder: ['vc', 'us', 'arvn', 'nva'],
     firstEligible: 'vc',
     secondEligible: 'arvn',
@@ -1388,7 +1396,7 @@ const TURN_5: PlaybookTurn = {
     activePlayer: 1,
     currentCard: 'card-79',
     previewCard: 'card-101',
-    deckSize: 6,
+    deckSize: 7,
     seatOrder: ['arvn', 'nva', 'vc', 'us'],
     firstEligible: 'arvn',
     secondEligible: 'nva',
@@ -1683,7 +1691,7 @@ const TURN_6: PlaybookTurn = {
     activePlayer: 3,
     currentCard: 'card-101',
     previewCard: 'card-125',
-    deckSize: 5,
+    deckSize: 6,
     seatOrder: ['vc', 'nva', 'us', 'arvn'],
     firstEligible: 'vc',
     secondEligible: 'nva',
@@ -1897,7 +1905,7 @@ const TURN_7: PlaybookTurn = {
         ],
         globalMarkers: [
           { marker: 'cap_boobyTraps', expected: 'shaded' },
-          { marker: 'activeLeader', expected: 'minh' },
+          { marker: 'activeLeader', expected: 'khanh' },
         ],
         computedValues: [
           { label: 'NVA victory marker', expected: 8, compute: computeNvaVictory },
@@ -1920,13 +1928,12 @@ const TURN_7: PlaybookTurn = {
       infiltrateCount: 1,
       terrorSabotageMarkersPlaced: 1,
     },
-    // After the card boundary fires (coup card promoted to played),
-    // advanceToDecisionPoint detects stale phase and transitions into
-    // coupVictory where the coup entry reset makes all factions eligible.
+    // The Turn 7 boundary promotes Nguyen Khanh, applies its immediate leader
+    // effect, and enters coupVictory with all factions eligible.
     eligibility: { us: true, arvn: true, nva: true, vc: true },
     currentCard: 'card-125',
     previewCard: 'card-75',
-    deckSize: 4,
+    deckSize: 5,
     zoneTokenCounts: [
       // ── Available boxes ──
       // VC available: unchanged from Turn 6
@@ -1999,7 +2006,7 @@ const TURN_7: PlaybookTurn = {
     ],
     globalMarkers: [
       { marker: 'cap_boobyTraps', expected: 'shaded' },
-      { marker: 'activeLeader', expected: 'minh' },
+      { marker: 'activeLeader', expected: 'khanh' },
     ],
     zoneVars: [
       { zone: 'hue:none', variable: 'terrorCount', expected: 1 },
@@ -2020,13 +2027,15 @@ const TURN_7: PlaybookTurn = {
 };
 
 // Turn 8 — Coup! Nguyen Khanh (card-125)
-// The coup card triggers a full Coup Round (Rule 6.0) with 6 phases:
+// The Turn 7 boundary has already promoted Nguyen Khanh and entered the Coup
+// Round. Turn 8 therefore begins in coupVictory and runs the remaining phases:
 //   coupVictory (6.1), coupResources (6.2), coupSupport (6.3),
 //   coupRedeploy (6.4), coupCommitment (6.5), coupReset (6.6).
-// At start of Turn 8, all factions are reset to eligible for each coup phase.
-// Within coup phases, factions act sequentially (no card-driven 2-faction limit).
+// Coup phases run sequentially with all factions eligible (no card-driven
+// 2-faction limit).
 //
-// Phase 6.1 — Victory Check: No faction meets victory threshold. 1 move auto-advances.
+// Phase 6.1 — Victory Check: No faction meets victory threshold. One move
+// advances from coupVictory into coupResources.
 // Phase 6.2 — Resources: Macro effects compute ARVN/VC/NVA earnings, casualties-aid.
 //   ARVN: 18+14(aid)+15(econ)=47, VC: 10+7(bases)=17, NVA: 2+3(bases)+2(trail×2)=7
 //   Aid: 14−3(1 casualty)=11
@@ -2047,9 +2056,14 @@ const TURN_8: PlaybookTurn = {
         actionId: asActionId('coupVictoryCheck'),
         params: {},
       },
-      // Narrative 6.1: "none of the four factions have met their victory condition thresholds"
-      // Prove it: US<50, ARVN<60(?), NVA<12(?), VC<40(?) — all below.
       expectedState: {
+        activePlayer: 0,
+        currentCard: 'card-125',
+        previewCard: 'card-75',
+        deckSize: 5,
+        globalMarkers: [
+          { marker: 'activeLeader', expected: 'khanh' },
+        ],
         computedValues: [
           { label: 'US VP at victory check', expected: 42, compute: computeUsVictory },
           { label: 'ARVN VP at victory check', expected: 38, compute: computeArvnVictory },
@@ -2491,7 +2505,7 @@ const TURN_8: PlaybookTurn = {
     eligibility: { us: true, arvn: true, nva: true, vc: true },
     currentCard: 'card-75',  // Sihanouk
     previewCard: 'card-17',  // Claymores
-    deckSize: 3,
+    deckSize: 4,
     globalMarkers: [
       { marker: 'cap_boobyTraps', expected: 'shaded' },
     ],
@@ -2575,7 +2589,7 @@ describe('FITL playbook golden suite', () => {
       activePlayer: 3,
       currentCard: 'card-107',
       previewCard: 'card-55',
-      deckSize: 11,
+      deckSize: 12,
       cardsInZones: [
         { zone: 'leader:none', cardId: 'card-121', present: true },
         { zone: 'leader:none', cardId: 'card-122', present: true },

@@ -238,7 +238,7 @@ const expireBlockingPendingFreeOperationGrants = (
  * Returns the state unchanged if the target phase is not a coup phase or
  * the turn order is not card-driven.
  */
-const applyCoupPhaseEntryReset = (
+export const applyCoupPhaseEntryReset = (
   def: GameDef,
   state: GameState,
   phaseId: GameState['currentPhase'],

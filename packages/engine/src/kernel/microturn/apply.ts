@@ -478,6 +478,39 @@ export const applyPublishedDecision = (
         decisionStack: [updatedRoot, nextTop],
         activeDeciderSeatId: nextTop.context.seatId,
       }, resolvedRuntime);
+      const nextMicroturn = publishMicroturn(def, nextState, resolvedRuntime);
+      const autoCompleteChooseN =
+        decision.command === 'add'
+        && advanced.nextContext.selectedSoFar.length > 0
+        && nextMicroturn.kind === 'chooseNStep'
+        && nextMicroturn.legalActions.length > 0
+        && nextMicroturn.legalActions.every((candidate) =>
+          candidate.kind === 'chooseNStep'
+          && candidate.command === 'remove'
+          && candidate.decisionKey === advanced.nextContext.decisionKey,
+        );
+      if (autoCompleteChooseN) {
+        const autoCompletedRoot: DecisionStackFrame = {
+          ...updatedRoot,
+          accumulatedBindings: {
+            ...updatedRoot.accumulatedBindings,
+            [decision.decisionKey]: advanced.nextContext.selectedSoFar,
+          },
+        };
+        const autoCompleteState = updateHash(def, {
+          ...canonicalState,
+          decisionStack: [autoCompletedRoot, nextTop],
+          activeDeciderSeatId: nextTop.context.seatId,
+        }, resolvedRuntime);
+        const move: Move = {
+          ...baseMove,
+          params: {
+            ...baseMove.params,
+            [decision.decisionKey]: advanced.nextContext.selectedSoFar,
+          },
+        };
+        return continueResolvedMove(def, autoCompleteState, move, microturn, decision, options, resolvedRuntime);
+      }
       return {
         state: nextState,
         log: createDecisionLog(nextState, microturn, decision, false, [], []),

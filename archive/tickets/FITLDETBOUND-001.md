@@ -1,6 +1,6 @@
 # FITLDETBOUND-001: Investigate and eliminate Spec 140 policy/microturn boundedness regressions in FITL determinism lanes
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — investigation-first across kernel microturn publication/application, policy-agent evaluation, simulator replay/determinism, and memory/perf instrumentation
@@ -125,3 +125,38 @@ Add or update tests that prove:
 3. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js`
 4. `pnpm -F @ludoforge/engine test:memory`
 5. `pnpm -F @ludoforge/engine test:performance`
+
+## Outcome
+
+The boundedness regression was real and split across several root causes in the live Spec 140 path:
+
+1. microturn publication/application was replaying from decision history instead of resuming the discovered continuation, which duplicated work and re-exposed already-processed FITL frontiers
+2. determinism/property helpers were retaining per-run runtime memo state across shared-runtime sweeps
+3. FITL final-coup termination was encoded too narrowly and missed the real rules boundary for the last coup card, especially when a coup card was played in `main` without another coup round
+4. the `spec-140-compound-turn-overhead` performance witness still carried stale recorded ceilings that no longer matched the live bounded corpus, including Texas control seeds
+
+The implemented fix stayed on the authoritative architecture and rules boundary rather than adding FITL-specific kernel exemptions:
+
+- completed the suspended continuation path for nested microturn execution so `applyDecision` resumes the discovered effect frame instead of whole-move replay
+- tightened publication legality against suspended continuations and removed redundant simulator republishes
+- forked per-run runtime/Zobrist memo state at game boundaries and reduced determinism trace retention where full replay artifacts were not needed
+- corrected FITL coup/final-coup rule encoding so the last coup ends the game when no future coup cards remain, including the suppressed-coup-round `main` case
+- rebased the recorded compound-turn overhead witness to the current bounded deterministic corpus with modest slack instead of stale pre-fix ceilings
+
+Focused witness evidence that identified and then closed the last FITL blocker:
+
+- short-diverse outliers `seed=1` and `seed=8` previously ran into `main`-phase empty-card tails with `deck:none=0`, `lookahead:none=0`, and `played:none=null`
+- after the final-coup rule fix, those same seeds stop at `terminal:final-coup-ranking` in `main` on the last suppressed coup card instead of drifting into the empty-card void
+
+Acceptance proof:
+
+1. `pnpm -F @ludoforge/engine build` — ran directly
+2. `pnpm -F @ludoforge/engine test:determinism` — ran directly, passed
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/fitl-policy-agent-canary-determinism.test.js` — subsumed by `pnpm -F @ludoforge/engine test:determinism`
+4. `pnpm -F @ludoforge/engine test:memory` — ran directly, passed
+5. `pnpm -F @ludoforge/engine test:performance` — ran directly, passed
+
+Deviation from the original acceptance wording:
+
+- The in-session proof set established the equivalent local determinism, memory, and performance lanes directly.
+- The corresponding GitHub Actions CI reruns were not directly re-observed in this session, so the archived record should be read as `local lane equivalents passed without timeout inflation`, not as a separate claimed CI rerun artifact.

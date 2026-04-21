@@ -93,7 +93,15 @@ const applyEffectWithBudget = (
   const bindings = result.bindings ?? cursor.bindings;
   const decisionScope = result.decisionScope ?? cursor.decisionScope;
   if (result.pendingChoice !== undefined) {
-    return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope, pendingChoice: result.pendingChoice };
+    return {
+      state: result.state,
+      rng: result.rng,
+      emittedEvents: emitted,
+      bindings,
+      decisionScope,
+      pendingChoice: result.pendingChoice,
+      ...(result.suspendedFrame === undefined ? {} : { suspendedFrame: result.suspendedFrame }),
+    };
   }
   return { state: result.state, rng: result.rng, emittedEvents: emitted, bindings, decisionScope };
 };
@@ -150,6 +158,18 @@ export const applyEffectsWithBudgetState = (
       for (let i = 0; i < result.emittedEvents.length; i++) emittedEvents.push(result.emittedEvents[i]!);
     }
     if (result.pendingChoice !== undefined) {
+      const baseSuspendedFrame = result.suspendedFrame;
+      const remainingEffects = effects.slice(effectIndex + 1);
+      const suspendedFrame = baseSuspendedFrame === undefined
+        ? undefined
+        : (
+          remainingEffects.length === 0
+            ? baseSuspendedFrame
+            : {
+              ...baseSuspendedFrame,
+              resumeStack: [...baseSuspendedFrame.resumeStack, { kind: 'sequence' as const, effects: remainingEffects }],
+            }
+        );
       return {
         state: currentState,
         rng: currentRng,
@@ -157,6 +177,7 @@ export const applyEffectsWithBudgetState = (
         bindings: currentBindings,
         decisionScope: currentDecisionScope,
         pendingChoice: result.pendingChoice,
+        ...(suspendedFrame === undefined ? {} : { suspendedFrame }),
       };
     }
   }

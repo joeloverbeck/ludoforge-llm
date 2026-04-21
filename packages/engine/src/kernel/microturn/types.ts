@@ -1,9 +1,12 @@
 import { asSeatId, type ActionId, type PlayerId, type SeatId, type TriggerId } from '../branded.js';
-import type { DecisionKey } from '../decision-scope.js';
+import type { DecisionKey, DecisionScope } from '../decision-scope.js';
+import type { FreeOperationExecutionOverlay } from '../free-operation-overlay.js';
 import type { ChoiceIllegalReason } from '../legality-reasons.js';
 import type { PlayerObservation } from '../observation.js';
+import type { PrioritizedTierEntry } from '../prioritized-tier-legality.js';
 import type { ChooseNOptionResolution } from '../types-core.js';
-import type { MoveParamScalar, MoveParamValue } from '../types-ast.js';
+import type { EffectAST, MoveParamScalar, MoveParamValue } from '../types-ast.js';
+import type { ActionResolutionStageDef } from '../types-operations.js';
 import type { TurnFlowPendingFreeOperationGrant } from '../types-turn-flow.js';
 import type {
   AgentDecisionTrace,
@@ -63,6 +66,85 @@ export interface EffectExecutionFrameSnapshot {
   readonly localBindings: Readonly<Record<string, MoveParamValue>>;
   readonly pendingTriggerQueue: readonly TriggerId[];
   readonly decisionHistory?: readonly CompoundTurnTraceEntry[];
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
+}
+
+export interface SuspendedChoiceBindingOption {
+  readonly comparable: MoveParamScalar;
+  readonly binding: unknown;
+}
+
+export interface SuspendedChooseOneLeaf {
+  readonly kind: 'chooseOne';
+  readonly decisionKey: DecisionKey;
+  readonly bind: string;
+  readonly decisionScope: DecisionScope;
+  readonly bindingOptions: readonly SuspendedChoiceBindingOption[];
+}
+
+export interface SuspendedChooseNLeaf {
+  readonly kind: 'chooseN';
+  readonly decisionKey: DecisionKey;
+  readonly bind: string;
+  readonly decisionScope: DecisionScope;
+  readonly bindingOptions: readonly SuspendedChoiceBindingOption[];
+}
+
+export type SuspendedDecisionLeaf =
+  | SuspendedChooseOneLeaf
+  | SuspendedChooseNLeaf;
+
+export interface SuspendedSequenceResumeFrame {
+  readonly kind: 'sequence';
+  readonly effects: readonly EffectAST[];
+}
+
+export interface SuspendedForEachResumeFrame {
+  readonly kind: 'forEach';
+  readonly bind: string;
+  readonly items: readonly unknown[];
+  readonly nextIndex: number;
+  readonly effects: readonly EffectAST[];
+  readonly parentBindings: Readonly<Record<string, unknown>>;
+  readonly parentIterationPath: string;
+}
+
+export interface SuspendedLetResumeFrame {
+  readonly kind: 'let';
+  readonly bind: string;
+  readonly parentBindings: Readonly<Record<string, unknown>>;
+}
+
+export interface SuspendedReduceResumeFrame {
+  readonly kind: 'reduce';
+  readonly bind: string;
+  readonly parentBindings: Readonly<Record<string, unknown>>;
+}
+
+export interface SuspendedPipelineResumeFrame {
+  readonly kind: 'pipeline';
+  readonly actionId: ActionId;
+  readonly profileId: string;
+  readonly atomicity: 'atomic' | 'partial';
+  readonly remainingStages: readonly ActionResolutionStageDef[];
+  readonly eventEffects: readonly EffectAST[];
+}
+
+export type SuspendedResumeFrame =
+  | SuspendedSequenceResumeFrame
+  | SuspendedForEachResumeFrame
+  | SuspendedLetResumeFrame
+  | SuspendedReduceResumeFrame
+  | SuspendedPipelineResumeFrame;
+
+export interface SuspendedEffectFrameSnapshot {
+  readonly state: GameState;
+  readonly rng: Rng;
+  readonly actorPlayer: GameState['activePlayer'];
+  readonly bindings: Readonly<Record<string, unknown>>;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
+  readonly leaf: SuspendedDecisionLeaf;
+  readonly resumeStack: readonly SuspendedResumeFrame[];
 }
 
 export interface ActionSelectionContext {
@@ -86,6 +168,11 @@ export interface ChooseNStepContext {
   readonly selectedSoFar: readonly MoveParamScalar[];
   readonly cardinality: { readonly min: number; readonly max: number };
   readonly stepCommands: readonly ChooseNStepCommand[];
+  readonly templateHint?: {
+    readonly normalizedDomain: readonly MoveParamScalar[];
+    readonly prioritizedTierEntries: readonly (readonly PrioritizedTierEntry[])[] | null;
+    readonly qualifierMode: 'none' | 'byQualifier';
+  };
 }
 
 export interface StochasticResolveContext {

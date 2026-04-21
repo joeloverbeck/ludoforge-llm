@@ -14,6 +14,12 @@ export interface SimulationOptions {
   readonly kernel?: ExecutionOptions;
   /** When true the simulator skips delta computation between moves. */
   readonly skipDeltas?: boolean;
+  /**
+   * Trace retention policy for simulation runs.
+   * `full` preserves decision logs and compound-turn summaries; `finalStateOnly`
+   * keeps only the terminal state/result metadata.
+   */
+  readonly traceRetention?: 'full' | 'finalStateOnly';
   /** Snapshot depth captured by sim traces before each agent decision. */
   readonly snapshotDepth?: SnapshotDepth;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */

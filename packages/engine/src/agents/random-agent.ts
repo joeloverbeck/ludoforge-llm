@@ -13,7 +13,23 @@ export class RandomAgent implements Agent {
       throw new Error('RandomAgent.chooseDecision called with empty legalActions');
     }
 
-    const { item: selected, rng: nextRng } = pickRandom(input.microturn.legalActions, input.rng);
+    const candidateActions = input.microturn.kind === 'chooseNStep'
+      ? (() => {
+          const confirmDecision = input.microturn.legalActions.find(
+            (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
+          );
+          if (confirmDecision !== undefined) {
+            return [confirmDecision];
+          }
+
+          const addActions = input.microturn.legalActions.filter(
+            (decision) => decision.kind === 'chooseNStep' && decision.command === 'add',
+          );
+          return addActions.length > 0 ? addActions : input.microturn.legalActions;
+        })()
+      : input.microturn.legalActions;
+
+    const { item: selected, rng: nextRng } = pickRandom(candidateActions, input.rng);
     return {
       decision: selected,
       rng: nextRng,

@@ -76,6 +76,11 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - Prefer the smallest credible candidate search first: already-curated nearby seeds/cases, the previous witness family, or explicitly referenced historical candidates before broad brute-force probing.
    - Capture exact old-vs-new witness evidence during reassessment so the ticket correction can cite why the original witness drifted under the live code.
    - Update the active ticket's correction ledger and witness description before the final acceptance-proof pass so the last green run matches the re-blessed artifact.
+   - When the stale witness is a recorded benchmark or performance ceiling rather than a semantic correctness example, first distinguish `stale recorded budget` from `live runtime regression`:
+     1. compare the failing witness against nearby control cases or previously stable exemplars in the same harness
+     2. check whether the owned implementation actually changed the measured hot path or only invalidated an old stored baseline
+     3. rebaseline only when the evidence shows the harness expectations are stale while the live runtime contract remains correct
+   - Record that classification explicitly in working notes and the active ticket correction ledger so rebasing does not look like silently relaxing a performance guard.
 
 ### Phase 1: Read and Understand
 
@@ -131,6 +136,8 @@ If the change involves a mid-migration state or ticket rewrite, load `references
     - If the active ticket absorbs work originally owned by sibling draft tickets, plan the sibling-ticket status rewrite as part of closeout, not as optional cleanup after acceptance. The series artifact should tell the same ownership story as the final code and proof set.
     - If the active ticket's corrected live contract changes the interface, call shape, touched-file expectation, or verification assumption used by dependent active tickets in the same series, update those dependent tickets in the same turn before final proof so the active series remains internally consistent.
     - If that same boundary correction invalidates design language, assumptions, or the ticket list in an active spec, update the active spec in the same turn before final proof so tickets and specs stay parity-aligned.
+    - If the active ticket uncovers a broader architectural gap that extends beyond the owned implementation slice but is now evidenced concretely by live code, tests, or rules artifacts, do not leave that discovery implicit. Propose or draft the narrowest truthful follow-on spec/design artifact before final closeout when the user wants series artifacts kept current, or record it explicitly as required follow-up ownership when the user prefers to defer spec work.
+    - Treat this as an architecture-gap extraction case rather than ordinary ticket sprawl when the local fix is valid but the session proved a missing cross-ticket contract such as runtime cache ownership, terminal-phase semantics, or another boundary that should govern future tickets as well.
 11. If stronger live evidence contradicts an archived sibling ticket's benchmark or investigation verdict, load `references/triage-and-resolution.md` (Archived Sibling Contradiction section) and classify the contradiction explicitly before coding.
 
 ### Phase 3: Resolve Before Coding
@@ -258,6 +265,16 @@ For durable closeout, use this rule when final proof mixes green owned witnesses
 2. do not mark `COMPLETED` when the only proof of the owned change depends on a lane that never returned a final result
 3. if the ticket explicitly requires a final green result from a named broad lane and no narrower owned witness can satisfy that requirement truthfully, leave the ticket open or blocked instead of inferring success
 
+For long tickets whose final proof requires multiple expensive lanes after ticket-artifact rewrites, choose the final-proof choreography explicitly instead of rerunning ad hoc:
+
+1. land all durable ticket/spec/sibling-artifact edits that change the acceptance story
+2. run the producing build or artifact-generation step first when later proof lanes depend on that output
+3. run the longest blocking acceptance lane next so you do not waste shorter final-proof runs on a state that may still fail
+4. run the remaining shorter focused/package/workspace lanes afterward in dependency order
+5. reconcile the final command ledger against the active ticket only after that exact rerun set completes
+
+If a late artifact rewrite or benchmark rebaseline lands between those steps, treat every affected downstream proof lane as stale and restart the choreography from the earliest impacted step rather than appending one more run to the end.
+
 For evidence states, trace-heavy ticket inspection, and generated artifact triage, load `references/verification-evidence.md`.
 
 ## Follow-Up
@@ -309,6 +326,7 @@ Suggested compact final-proof ledger:
 - `verification set`: `<commands run directly in final proof order>`
 - `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
 - `proof gaps`: `none` or `<remaining blocker>`
+- `architectural follow-up`: `<new spec/ticket id or proposed artifact> for <cross-ticket contract discovered during implementation>` when the ticket uncovered a broader design gap that outlives the local fix
 
 Investigation-ticket example when the artifact landed but the hypothesis shifted:
 

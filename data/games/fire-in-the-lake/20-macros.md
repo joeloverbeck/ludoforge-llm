@@ -3509,6 +3509,25 @@ effectMacros:
             - setMarker: { space: $space, marker: coupAgitateSpaceUsage, state: open }
             - setMarker: { space: $space, marker: coupSupportShiftCount, state: zero }
 
+  # ── coup-redeploy-reset-trackers ──────────────────────────────────────────
+  # Rule 6.4 temporary per-piece redeploy tracking resets on redeploy phase entry.
+  - id: coup-redeploy-reset-trackers
+    params: []
+    exports: []
+    effects:
+      - forEach:
+          bind: $piece
+          over:
+            query: tokensInMapSpaces
+            filter:
+              op: and
+              args:
+                - { prop: faction, op: in, value: ['ARVN', 'NVA'] }
+                - { prop: type, op: in, value: ['troops', 'police'] }
+                - { prop: coupRedeployed, op: eq, value: true }
+          effects:
+            - setTokenProp: { token: $piece, prop: coupRedeployed, value: false }
+
   # ── coup-support-mark-space-used ──────────────────────────────────────────
   # Marks a support-phase space usage marker as used if not already used.
   - id: coup-support-mark-space-used

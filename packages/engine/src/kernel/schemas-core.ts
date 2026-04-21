@@ -1179,6 +1179,7 @@ export const EffectExecutionFrameSnapshotSchema = z
     localBindings: z.record(StringSchema, MoveParamValueSchema),
     pendingTriggerQueue: z.array(StringSchema),
     decisionHistory: z.array(z.lazy(() => CompoundTurnTraceEntrySchema)).optional(),
+    suspendedFrame: z.unknown().optional(),
   })
   .strict();
 
@@ -1287,6 +1288,18 @@ export const ChooseNStepContextSchema = z
     selectedSoFar: z.array(MoveParamScalarSchema),
     cardinality: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
     stepCommands: z.array(z.union([z.literal('add'), z.literal('remove'), z.literal('confirm')])),
+    templateHint: z.object({
+      normalizedDomain: z.array(MoveParamScalarSchema),
+      prioritizedTierEntries: z.array(
+        z.array(
+          z.object({
+            value: MoveParamScalarSchema,
+            qualifier: z.union([StringSchema, NumberSchema, BooleanSchema]).optional(),
+          }).strict(),
+        ),
+      ).nullable(),
+      qualifierMode: z.union([z.literal('none'), z.literal('byQualifier')]),
+    }).strict().optional(),
   })
   .strict();
 

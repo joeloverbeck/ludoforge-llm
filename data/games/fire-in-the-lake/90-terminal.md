@@ -273,7 +273,7 @@ terminal:
     - id: final-coup-ranking
       seat: 'nva'
       timing: finalCoup
-      phases: [coupRedeploy]
+      phases: [coupRedeploy, main]
       when:
         op: and
         args:
@@ -289,8 +289,30 @@ terminal:
                     args:
                       - { prop: isCoup, op: eq, value: true }
             right: 1
-          - { op: '==', left: { ref: zoneCount, zone: deck:none }, right: 0 }
-          - { op: '==', left: { ref: zoneCount, zone: lookahead:none }, right: 0 }
+          - op: '=='
+            left:
+              aggregate:
+                op: count
+                query:
+                  query: tokensInZone
+                  zone: lookahead:none
+                  filter:
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
+            right: 0
+          - op: '=='
+            left:
+              aggregate:
+                op: count
+                query:
+                  query: tokensInZone
+                  zone: deck:none
+                  filter:
+                    op: and
+                    args:
+                      - { prop: isCoup, op: eq, value: true }
+            right: 0
   margins:
     - seat: 'us'
       value:

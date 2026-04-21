@@ -52,6 +52,7 @@ import type {
   DecisionLog,
   DecisionFrameId,
   DecisionStackFrame,
+  SuspendedEffectFrameSnapshot,
   TurnId,
 } from './microturn/types.js';
 import type {
@@ -1215,6 +1216,8 @@ interface ChoicePendingRequestBase {
   readonly reason?: ChoiceIllegalReason;
   /** Where the decision value should be placed in the move structure. Absent or `'main'` → `move.params[decisionKey]`. */
   readonly decisionPath?: CompoundDecisionPath;
+  /** Internal suspension payload used by the microturn kernel to resume execution after the decision resolves. */
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }
 
 export interface ChoicePendingChooseOneRequest extends ChoicePendingRequestBase {

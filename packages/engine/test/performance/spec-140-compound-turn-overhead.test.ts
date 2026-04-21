@@ -9,13 +9,18 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_BUDGET = {
-  totalDecisions: 150,
-  totalCompoundTurns: 35,
-  maxMicroturnsPerTurn: 50,
+  // Recorded from the current deterministic FITL witness corpus after the
+  // suspend/resume and final-coup boundedness fixes, with modest slack to
+  // catch step explosions without pinning to exact seed noise.
+  totalDecisions: 1400,
+  totalCompoundTurns: 500,
+  maxMicroturnsPerTurn: 16,
 } as const;
 const TEXAS_BUDGET = {
-  totalDecisions: 10,
-  totalCompoundTurns: 10,
+  // Texas remains the small control corpus; keep a narrow ceiling, but align
+  // it to the live recorded witness instead of the stale pre-Spec-140 count.
+  totalDecisions: 80,
+  totalCompoundTurns: 80,
   maxMicroturnsPerTurn: 2,
 } as const;
 

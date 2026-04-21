@@ -1,8 +1,9 @@
 import {
   advanceAutoresolvable,
-  applyDecision,
+  applyPublishedDecision,
   asPlayerId,
   createGameDefRuntime,
+  forkGameDefRuntimeForRun,
   createRng,
   initialState,
   publishMicroturn,
@@ -63,6 +64,13 @@ const resolvePlayerIndexForSeat = (
   return Number.isInteger(parsed) && parsed >= 0 ? parsed : -1;
 };
 
+const isNoBridgeableMicroturnError = (error: unknown): boolean =>
+  error instanceof Error
+  && (
+    error.message.includes('no simple actionSelection moves are currently bridgeable')
+    || error.message.includes('has no bridgeable continuations')
+  );
+
 export const runGame = (
   def: ValidatedGameDef,
   seed: number,
@@ -75,11 +83,15 @@ export const runGame = (
   validateSeed(seed);
   validateMaxTurns(maxTurns);
   const validatedDef = assertValidatedGameDef(def);
-  const resolvedRuntime = runtime ?? createGameDefRuntime(validatedDef);
+  const resolvedRuntime = runtime === undefined
+    ? createGameDefRuntime(validatedDef)
+    : forkGameDefRuntimeForRun(runtime);
   const snapshotDepth = options?.snapshotDepth ?? 'none';
+  const traceRetention = options?.traceRetention ?? 'full';
   const kernelOptions = options?.kernel;
   const profiler = options?.profiler;
   const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
+  const shouldRetainTrace = traceRetention === 'full';
 
   // initialState receives the profiler so lifecycle events during init are captured.
   // Simulator-side profiling remains opt-in; kernel execution still uses the existing bucket contract.
@@ -105,7 +117,9 @@ export const runGame = (
     perfEnd(profiler, 'simLegalMoves', t0_auto);
     state = autoResult.state;
     currentChanceRng = autoResult.rng;
-    decisionLogs.push(...autoResult.autoResolvedLogs);
+    if (shouldRetainTrace) {
+      decisionLogs.push(...autoResult.autoResolvedLogs);
+    }
 
     const t0_term = perfStart(profiler);
     const terminal = terminalResult(validatedDef, state, resolvedRuntime);
@@ -125,7 +139,7 @@ export const runGame = (
     try {
       microturn = publishMicroturn(validatedDef, state, resolvedRuntime);
     } catch (error) {
-      if (error instanceof Error && error.message.includes('no simple actionSelection moves are currently bridgeable')) {
+      if (isNoBridgeableMicroturnError(error)) {
         stopReason = 'noLegalMoves';
         break;
       }
@@ -166,7 +180,14 @@ export const runGame = (
 
     const preState = state;
     const t0_apply = perfStart(profiler);
-    const applied = applyDecision(validatedDef, state, selected.decision, kernelOptions, resolvedRuntime);
+    const applied = applyPublishedDecision(
+      validatedDef,
+      state,
+      microturn,
+      selected.decision,
+      kernelOptions,
+      resolvedRuntime,
+    );
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
 
@@ -174,20 +195,22 @@ export const runGame = (
     const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);
     perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
-    decisionLogs.push({
-      ...applied.log,
-      playerId: asPlayerId(player),
-      deltas,
-      ...(snapshot === undefined ? {} : { snapshot }),
-      ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
-    });
+    if (shouldRetainTrace) {
+      decisionLogs.push({
+        ...applied.log,
+        playerId: asPlayerId(player),
+        deltas,
+        ...(snapshot === undefined ? {} : { snapshot }),
+        ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
+      });
+    }
   }
 
   return {
     gameDefId: validatedDef.metadata.id,
     seed,
-    decisions: decisionLogs,
-    compoundTurns: synthesizeCompoundTurnSummaries(decisionLogs, stopReason),
+    decisions: shouldRetainTrace ? decisionLogs : [],
+    compoundTurns: shouldRetainTrace ? synthesizeCompoundTurnSummaries(decisionLogs, stopReason) : [],
     finalState: state,
     result,
     turnsCount: state.turnCount,

@@ -240,6 +240,32 @@ describe('runGame', () => {
     assert.equal(trace.stopReason, 'noLegalMoves');
   });
 
+  it('can retain only final-state metadata when full trace logs are not needed', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, {
+      traceRetention: 'finalStateOnly',
+    });
+
+    assert.equal(trace.decisions.length, 0);
+    assert.equal(trace.compoundTurns.length, 0);
+    assert.notEqual(trace.result, null);
+    assert.equal(trace.stopReason, 'terminal');
+    assert.equal(trace.finalState.globalVars.score, 1);
+  });
+
+  it('treats shared runtime zobrist caches as per-run state', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const sharedRuntime = createGameDefRuntime(def);
+
+    assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    const first = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
+    const second = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
+
+    assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    assert.equal(first.finalState.stateHash, second.finalState.stateHash);
+    assert.equal(first.stopReason, second.stopReason);
+  });
+
   it('throws descriptive errors for invalid seed, invalid maxTurns, and mismatched agent count', () => {
     const def = createDef();
 

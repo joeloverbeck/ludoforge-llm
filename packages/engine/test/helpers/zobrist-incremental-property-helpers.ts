@@ -1,12 +1,19 @@
 import { RandomAgent } from '../../src/agents/index.js';
 import {
+  advanceAutoresolvable,
+  applyPublishedDecision,
   assertValidatedGameDef,
+  createRng,
+  forkGameDefRuntimeForRun,
+  initialState,
   isKernelRuntimeError,
+  publishMicroturn,
+  terminalResult,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import type { GameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
-import { runGame } from '../../src/sim/index.js';
+import { CHANCE_RNG_MIX } from '../../src/kernel/microturn/constants.js';
 import { assertNoErrors } from './diagnostic-helpers.js';
 import {
   compileProductionSpec,
@@ -35,6 +42,28 @@ export const FITL_MEDIUM_DIVERSE_SEEDS = [2, 7, 13, 17, 1000, 12345] as const;
 
 const createRandomAgents = (count: number): readonly RandomAgent[] =>
   Array.from({ length: count }, () => new RandomAgent());
+
+const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
+
+const resolvePlayerIndexForSeat = (
+  def: ValidatedGameDef,
+  seatId: string,
+): number => {
+  const explicitIndex = (def.seats ?? []).findIndex((seat) => seat.id === seatId);
+  if (explicitIndex >= 0) {
+    return explicitIndex;
+  }
+
+  const parsed = Number(seatId);
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : -1;
+};
+
+const isNoBridgeableMicroturnError = (error: unknown): boolean =>
+  error instanceof Error
+  && (
+    error.message.includes('no simple actionSelection moves are currently bridgeable')
+    || error.message.includes('has no bridgeable continuations')
+  );
 
 export const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -70,11 +99,61 @@ export const runVerifiedGame = (
   runtime: GameDefRuntime,
 ): number => {
   const agents = createRandomAgents(playerCount);
+  const kernelOptions = {
+    verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
+  } as const;
+  const runRuntime = forkGameDefRuntimeForRun(runtime);
+  const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
+  const agentRngByPlayer = Array.from(
+    { length: playerCount },
+    (_, playerIndex) => createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX)),
+  );
+
   try {
-    const trace = runGame(def, seed, agents, maxTurns, playerCount, {
-      kernel: { verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL } },
-    }, runtime);
-    return trace.decisions.length;
+    let state = initialState(def, seed, playerCount, kernelOptions, runRuntime).state;
+    let currentChanceRng = chanceRng;
+    let decisionCount = 0;
+
+    while (true) {
+      const autoResult = advanceAutoresolvable(def, state, currentChanceRng, runRuntime);
+      state = autoResult.state;
+      currentChanceRng = autoResult.rng;
+      decisionCount += autoResult.autoResolvedLogs.length;
+
+      if (terminalResult(def, state, runRuntime) !== null || state.turnCount >= maxTurns) {
+        return decisionCount;
+      }
+
+      let microturn;
+      try {
+        microturn = publishMicroturn(def, state, runRuntime);
+      } catch (error) {
+        if (isNoBridgeableMicroturnError(error)) {
+          return decisionCount;
+        }
+        throw error;
+      }
+
+      if (microturn.legalActions.length === 0) {
+        return decisionCount;
+      }
+
+      const player = resolvePlayerIndexForSeat(def, microturn.seatId);
+      if (player < 0 || player >= agents.length) {
+        throw new Error(`missing agent for player seat ${String(microturn.seatId)}`);
+      }
+
+      const selected = agents[player]!.chooseDecision({
+        def,
+        state,
+        microturn,
+        rng: agentRngByPlayer[player]!,
+        runtime: runRuntime,
+      });
+      agentRngByPlayer[player] = selected.rng;
+      state = applyPublishedDecision(def, state, microturn, selected.decision, kernelOptions, runRuntime).state;
+      decisionCount += 1;
+    }
   } catch (err) {
     if (isKernelRuntimeError(err) && err.code === 'HASH_DRIFT') {
       throw err;

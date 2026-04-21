@@ -1,4 +1,5 @@
 import { legalChoicesDiscover } from '../legal-choices.js';
+import type { ChooseNTemplate } from '../choose-n-session.js';
 import {
   analyzeDecisionSequence,
   type DecisionSequenceAnalysisResult,
@@ -22,12 +23,14 @@ import type {
   MoveParamValue,
   RuntimeWarning,
 } from '../types.js';
+import type { SuspendedEffectFrameSnapshot } from './types.js';
 
 export interface ResolveDecisionContinuationOptions {
   readonly choose?: (request: ChoicePendingRequest) => MoveParamValue | undefined;
   readonly budgets?: Partial<MoveEnumerationBudgets>;
   readonly onWarning?: (warning: RuntimeWarning) => void;
   readonly discoveryCache?: DecisionContinuationCache;
+  readonly onChooseNTemplateCreated?: (template: ChooseNTemplate) => void;
 }
 
 export type DecisionContinuationCache = Map<Move, ChoiceRequest>;
@@ -48,6 +51,8 @@ export interface DecisionContinuationResult {
   readonly stochasticDecision?: ChoiceStochasticPendingRequest;
   readonly illegal?: ChoiceIllegalRequest;
   readonly warnings: readonly RuntimeWarning[];
+  readonly nextChooseNTemplate?: ChooseNTemplate;
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }
 
 export type DecisionContinuationAnalysisResult = DecisionSequenceAnalysisResult;
@@ -99,12 +104,17 @@ export const resolveDecisionContinuation = (
   const maxDeferredPredicates = budgets.maxDeferredPredicates;
   let deferredPredicatesEvaluated = 0;
   let move = baseMove;
+  let nextChooseNTemplate: ChooseNTemplate | undefined;
 
   for (let step = 0; step < maxSteps; step += 1) {
     const cached = options?.discoveryCache?.get(move);
     const request = cached ?? legalChoicesDiscover(def, state, move, {
       onDeferredPredicatesEvaluated: (count) => {
         deferredPredicatesEvaluated += count;
+      },
+      onChooseNTemplateCreated: (template) => {
+        nextChooseNTemplate = template;
+        options?.onChooseNTemplateCreated?.(template);
       },
     }, runtime);
     if (deferredPredicatesEvaluated > maxDeferredPredicates) {
@@ -137,7 +147,16 @@ export const resolveDecisionContinuation = (
 
     const selected = choose(request);
     if (selected === undefined) {
-      return { complete: false, move, nextDecision: request, warnings };
+      return {
+        complete: false,
+        move,
+        nextDecision: request,
+        warnings,
+        ...(request.suspendedFrame === undefined ? {} : { suspendedFrame: request.suspendedFrame }),
+        ...(request.type === 'chooseN' && nextChooseNTemplate !== undefined
+          ? { nextChooseNTemplate }
+          : {}),
+      };
     }
 
     if (request.decisionPath === 'compound.specialActivity') {

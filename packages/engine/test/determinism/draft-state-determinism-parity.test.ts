@@ -79,7 +79,10 @@ const runOnce = (
 ): RunOutcome => {
   try {
     const agents = createRandomAgents(playerCount);
-    const trace = runGame(def, seed, agents, MAX_TURNS, playerCount, { skipDeltas: true });
+    const trace = runGame(def, seed, agents, MAX_TURNS, playerCount, {
+      skipDeltas: true,
+      traceRetention: 'finalStateOnly',
+    });
     return { kind: 'ok', hash: trace.finalState.stateHash };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);

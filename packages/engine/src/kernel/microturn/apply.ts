@@ -11,7 +11,6 @@ import {
   type StochasticDistribution,
 } from './types.js';
 import { applyMove } from '../apply-move.js';
-import { advanceChooseN } from '../advance-choose-n.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import { deepEqual } from '../deep-equal.js';
@@ -22,8 +21,9 @@ import type { DecisionKey } from '../decision-scope.js';
 import type { ExecutionOptions, GameDef, GameState, Move, Rng, TriggerLogEntry } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
-import { publishMicroturn, rebuildMoveFromFrame, toDecisionStackContext, toStochasticDecisionStackContext, withResolvedHash } from './publish.js';
+import { advanceChooseNStepContext, publishMicroturn, rebuildMoveFromFrame, toDecisionStackContext, toStochasticDecisionStackContext, withResolvedHash } from './publish.js';
 import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
+import { resumeSuspendedEffectFrame } from './resume.js';
 
 const rootHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -261,19 +261,26 @@ const spawnPendingFrame = (
       turnId: updatedRoot.turnId,
       context: toStochasticDecisionStackContext(continuation),
       accumulatedBindings: updatedRoot.accumulatedBindings,
-      effectFrame: emptyEffectFrame(),
+      effectFrame: {
+        ...emptyEffectFrame(),
+        ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
+      },
     }
     : {
       frameId,
       parentFrameId: updatedRoot.frameId,
       turnId: updatedRoot.turnId,
-      context: toDecisionStackContext(
-        continuation.nextDecision!,
-        pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
-      ),
-      accumulatedBindings: updatedRoot.accumulatedBindings,
-      effectFrame: emptyEffectFrame(),
-    };
+        context: toDecisionStackContext(
+          continuation.nextDecision!,
+          pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
+          continuation.nextChooseNTemplate,
+        ),
+        accumulatedBindings: updatedRoot.accumulatedBindings,
+        effectFrame: {
+          ...emptyEffectFrame(),
+          ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
+        },
+      };
   const nextState = updateHash(def, {
     ...canonicalState,
     decisionStack: [updatedRoot, nextFrame],
@@ -336,6 +343,19 @@ export const applyDecision = (
   const resolvedRuntime = runtime ?? createGameDefRuntime(def);
   const canonicalState = withResolvedHash(def, state, resolvedRuntime);
   const microturn = ensurePublishedDecision(def, canonicalState, decision, resolvedRuntime);
+  return applyPublishedDecision(def, canonicalState, microturn, decision, options, resolvedRuntime);
+};
+
+export const applyPublishedDecision = (
+  def: GameDef,
+  state: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+): ApplyDecisionResult => {
+  const resolvedRuntime = runtime ?? createGameDefRuntime(def);
+  const canonicalState = withResolvedHash(def, state, resolvedRuntime);
 
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
@@ -369,7 +389,10 @@ export const applyDecision = (
         turnId,
         context: toStochasticDecisionStackContext(continuation),
         accumulatedBindings: {},
-        effectFrame: emptyEffectFrame(),
+        effectFrame: {
+          ...emptyEffectFrame(),
+          ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
+        },
       }
       : {
         frameId: childFrameId,
@@ -378,9 +401,13 @@ export const applyDecision = (
         context: toDecisionStackContext(
           continuation.nextDecision!,
           pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
+          continuation.nextChooseNTemplate,
         ),
         accumulatedBindings: {},
-        effectFrame: emptyEffectFrame(),
+        effectFrame: {
+          ...emptyEffectFrame(),
+          ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
+        },
       };
     const nextState = updateHash(def, {
       ...canonicalState,
@@ -398,6 +425,7 @@ export const applyDecision = (
 
   if (decision.kind === 'chooseOne') {
     const rootFrame = rootFrameFor(canonicalState);
+    const topFrame = canonicalState.decisionStack?.at(-1);
     if (rootFrame === undefined) {
       throw new Error('MICROTURN_ROOT_FRAME_MISSING');
     }
@@ -408,6 +436,18 @@ export const applyDecision = (
         [decision.decisionKey]: decision.value,
       },
     };
+    if (topFrame?.effectFrame.suspendedFrame !== undefined) {
+      const continuation = resumeSuspendedEffectFrame(
+        def,
+        topFrame.effectFrame.suspendedFrame,
+        move,
+        resolvedRuntime,
+      );
+      if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
+        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+      }
+      return spawnPendingFrame(def, canonicalState, microturn, decision, continuation, resolvedRuntime);
+    }
     return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
   }
 
@@ -418,17 +458,7 @@ export const applyDecision = (
       throw new Error('MICROTURN_CHOOSE_N_FRAME_MISSING');
     }
     const baseMove = rebuildMoveFromFrame(rootFrame);
-    const advanced = advanceChooseN(
-      def,
-      canonicalState,
-      baseMove,
-      top.context.decisionKey,
-      top.context.selectedSoFar,
-      decision.command === 'confirm'
-        ? { type: 'confirm' }
-        : { type: decision.command, value: decision.value! },
-      resolvedRuntime,
-    );
+    const advanced = advanceChooseNStepContext(top.context, decision);
     const updatedRoot = advanced.done
       ? {
         ...appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
@@ -441,7 +471,7 @@ export const applyDecision = (
     if (!advanced.done) {
       const nextTop: DecisionStackFrame = {
         ...top,
-        context: toDecisionStackContext(advanced.pending, top.context.seatId),
+        context: advanced.nextContext,
       };
       const nextState = updateHash(def, {
         ...canonicalState,
@@ -462,6 +492,22 @@ export const applyDecision = (
         [decision.decisionKey]: advanced.value,
       },
     };
+    if (top.effectFrame.suspendedFrame !== undefined) {
+      const continuation = resumeSuspendedEffectFrame(
+        def,
+        top.effectFrame.suspendedFrame,
+        move,
+        resolvedRuntime,
+      );
+      if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
+        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+      }
+      const nextState = {
+        ...canonicalState,
+        decisionStack: [updatedRoot, top],
+      };
+      return spawnPendingFrame(def, nextState, microturn, decision, continuation, resolvedRuntime);
+    }
     const nextState = {
       ...canonicalState,
       decisionStack: [updatedRoot, top],

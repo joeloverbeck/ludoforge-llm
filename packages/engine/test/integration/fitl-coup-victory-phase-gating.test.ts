@@ -65,7 +65,7 @@ describe('FITL coup victory phase gating', () => {
     assert.deepEqual(phasesByCheckpoint['arvn-victory'], ['coupVictory']);
     assert.deepEqual(phasesByCheckpoint['nva-victory'], ['coupVictory']);
     assert.deepEqual(phasesByCheckpoint['vc-victory'], ['coupVictory']);
-    assert.deepEqual(phasesByCheckpoint['final-coup-ranking'], ['coupRedeploy']);
+    assert.deepEqual(phasesByCheckpoint['final-coup-ranking'], ['coupRedeploy', 'main']);
   });
 
   it('halts in coupVictory when a during-coup checkpoint is met', () => {
@@ -150,7 +150,7 @@ describe('FITL coup victory phase gating', () => {
     assert.equal(afterResources.state.turnCount, state.turnCount);
   });
 
-  it('resolves final-coup ranking after coupRedeploy on the last coup round', () => {
+  it('resolves final-coup ranking after coupRedeploy when no future coup cards remain', () => {
     const def = compileProductionDef();
     const start = withClearedZones(def, initialState(def,8103, 4).state);
     const state: GameState = {
@@ -164,12 +164,12 @@ describe('FITL coup victory phase gating', () => {
   reveals: undefined,
   globalMarkers: undefined,
   activeLastingEffects: undefined,
-  interruptPhaseStack: undefined,
+      interruptPhaseStack: undefined,
       zones: {
         ...start.zones,
         'played:none': [{ id: asTokenId('coup-final'), type: 'card', props: { isCoup: true } }],
-        'lookahead:none': [],
-        'deck:none': [],
+        'lookahead:none': [{ id: asTokenId('leftover-lookahead-event'), type: 'card', props: { isCoup: false } }],
+        'deck:none': [{ id: asTokenId('leftover-deck-event'), type: 'card', props: { isCoup: false } }],
       },
     };
 
@@ -178,6 +178,55 @@ describe('FITL coup victory phase gating', () => {
     assert.equal(applied.state.currentPhase, asPhaseId('coupRedeploy'));
     assert.equal(applied.state.turnCount, state.turnCount);
     assert.deepEqual(terminalResult(def, applied.state), {
+      type: 'win',
+      player: 2,
+      victory: {
+        timing: 'finalCoup',
+        checkpointId: 'final-coup-ranking',
+        winnerSeat: 'nva',
+        ranking: [
+          { seat: 'nva', margin: -18, rank: 1, tieBreakKey: 'nva' },
+          { seat: 'vc', margin: -35, rank: 2, tieBreakKey: 'vc' },
+          { seat: 'arvn', margin: -50, rank: 3, tieBreakKey: 'arvn' },
+          { seat: 'us', margin: -50, rank: 4, tieBreakKey: 'us' },
+        ],
+      },
+    });
+  });
+
+  it('resolves final-coup ranking in main when the last coup is played without a coup round', () => {
+    const def = compileProductionDef();
+    const start = withClearedZones(def, initialState(def, 8106, 4).state);
+    const state: GameState = {
+      ...start,
+      currentPhase: asPhaseId('main'),
+      globalVars: {
+        ...start.globalVars,
+        patronage: 0,
+      },
+      markers: {},
+      reveals: undefined,
+      globalMarkers: undefined,
+      activeLastingEffects: undefined,
+      interruptPhaseStack: undefined,
+      turnOrderState: start.turnOrderState.type !== 'cardDriven'
+        ? start.turnOrderState
+        : {
+          type: 'cardDriven',
+          runtime: {
+            ...start.turnOrderState.runtime,
+            consecutiveCoupRounds: 1,
+          },
+        },
+      zones: {
+        ...start.zones,
+        'played:none': [{ id: asTokenId('coup-final-main'), type: 'card', props: { isCoup: true } }],
+        'lookahead:none': [{ id: asTokenId('leftover-lookahead-event-main'), type: 'card', props: { isCoup: false } }],
+        'deck:none': [{ id: asTokenId('leftover-deck-event-main'), type: 'card', props: { isCoup: false } }],
+      },
+    };
+
+    assert.deepEqual(terminalResult(def, state), {
       type: 'win',
       player: 2,
       victory: {

@@ -1,23 +1,29 @@
 import { asPlayerId, type SeatId } from '../branded.js';
-import { advanceChooseN } from '../advance-choose-n.js';
+import { canConfirmChooseNSelection } from '../choose-n-cardinality.js';
+import { computeTierAdmissibility } from '../prioritized-tier-legality.js';
+import type { ChooseNTemplate } from '../choose-n-session.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import type { DecisionKey } from '../decision-scope.js';
 import { enumerateLegalMoves } from '../legal-moves.js';
 import { evaluateMoveLegality } from '../move-legality-predicate.js';
+import { probeMoveLegality } from '../apply-move.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from '../missing-binding-policy.js';
 import { derivePlayerObservation } from '../observation.js';
 import type {
+  ChoiceOption,
   ChoicePendingRequest,
   GameDef,
   GameState,
   Move,
 } from '../types-core.js';
+import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
 import {
   classifyDecisionContinuationAdmissionForLegalMove,
   resolveDecisionContinuation,
   type DecisionContinuationResult,
 } from './continuation.js';
+import { resumeSuspendedEffectFrame } from './resume.js';
 import {
   asDecisionFrameId,
   asTurnId,
@@ -33,6 +39,7 @@ import {
   type EffectExecutionFrameSnapshot,
   type MicroturnState,
   type StochasticDistribution,
+  type SuspendedEffectFrameSnapshot,
   type StochasticResolveContext,
   type StochasticResolveDecision,
   type TurnRetirementContext,
@@ -146,20 +153,57 @@ const isSupportedActionMove = (
   move: Move,
   runtime?: GameDefRuntime,
 ): boolean => {
-  const continuation = resolveContinuationForMove(def, state, move, runtime);
+  try {
+    const continuation = resolveContinuationForMove(def, state, move, runtime);
+    return isSupportedContinuationResult(def, state, move, continuation, runtime);
+  } catch {
+    return false;
+  }
+};
+
+const isSupportedContinuationResult = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  continuation: DecisionContinuationResult,
+  runtime?: GameDefRuntime,
+): boolean => {
   if (continuation.illegal !== undefined) {
     return false;
   }
   if (!isPublishedMoveAdmitted(def, state, move, runtime)) {
     return false;
   }
+  const moveLegality = probeMoveLegality(def, state, move, runtime);
   if (continuation.stochasticDecision !== undefined) {
     return toStochasticDistribution(continuation) !== null;
   }
   if (continuation.nextDecision === undefined) {
-    return continuation.complete;
+    return continuation.complete && moveLegality.legal;
+  }
+  if (!moveLegality.legal && moveLegality.code === 'ILLEGAL_MOVE' && moveLegality.context.reason !== 'moveHasIncompleteParams') {
+    return false;
   }
   return isSupportedChoiceRequest(continuation.nextDecision);
+};
+
+const isSupportedFrameContinuationMove = (
+  def: GameDef,
+  state: GameState,
+  effectFrame: EffectExecutionFrameSnapshot,
+  move: Move,
+  runtime?: GameDefRuntime,
+): boolean => {
+  const suspendedFrame: SuspendedEffectFrameSnapshot | undefined = effectFrame.suspendedFrame;
+  if (suspendedFrame === undefined) {
+    return isSupportedActionMove(def, state, move, runtime);
+  }
+  try {
+    const continuation = resumeSuspendedEffectFrame(def, suspendedFrame, move, runtime);
+    return isSupportedContinuationResult(def, state, move, continuation, runtime);
+  } catch {
+    return false;
+  }
 };
 
 const supportedActionMovesForState = (
@@ -266,6 +310,7 @@ const toTurnRetirementDecision = (
 const toChooseNStepContext = (
   request: ChoicePendingRequest & { readonly type: 'chooseN' },
   seatId: SeatId,
+  template?: ChooseNTemplate,
 ): ChooseNStepContext => ({
   kind: 'chooseNStep',
   seatId,
@@ -277,13 +322,122 @@ const toChooseNStepContext = (
     max: request.max ?? request.options.length,
   },
   stepCommands: request.canConfirm ? ['add', 'remove', 'confirm'] : ['add', 'remove'],
+  ...(template === undefined
+    ? {}
+    : {
+      templateHint: {
+        normalizedDomain: template.normalizedDomain,
+        prioritizedTierEntries: template.prioritizedTierEntries,
+        qualifierMode: template.qualifierMode,
+      },
+    }),
 });
+
+type AdvanceChooseNStepContextResult =
+  | { readonly done: false; readonly nextContext: ChooseNStepContext }
+  | { readonly done: true; readonly value: readonly MoveParamScalar[] };
+
+const scalarKey = (value: MoveParamScalar): string => JSON.stringify([typeof value, value]);
+
+const rebuildChooseNStepOptions = (
+  context: ChooseNStepContext,
+  nextSelected: readonly MoveParamScalar[],
+): readonly ChoiceOption[] => {
+  const domain = context.templateHint?.normalizedDomain
+    ?? context.options.map((option) => option.value as MoveParamScalar);
+  const selectedKeys = new Set(nextSelected.map((value) => scalarKey(value)));
+  const hasAddCapacity = nextSelected.length < context.cardinality.max;
+  const admissibleKeys = context.templateHint?.prioritizedTierEntries === null || context.templateHint === undefined
+    ? null
+    : new Set(
+      computeTierAdmissibility(
+        context.templateHint.prioritizedTierEntries,
+        nextSelected,
+        context.templateHint.qualifierMode,
+      ).admissibleValues.map((value) => scalarKey(value)),
+    );
+
+  return domain.map((value) => {
+    const key = scalarKey(value);
+    const isSelected = selectedKeys.has(key);
+    const isPrioritizedIllegal = admissibleKeys !== null && !admissibleKeys.has(key);
+    const isStaticallyIllegal = isSelected || !hasAddCapacity || isPrioritizedIllegal;
+    return {
+      value,
+      legality: isStaticallyIllegal ? 'illegal' as const : 'unknown' as const,
+      illegalReason: null,
+      ...(isStaticallyIllegal ? { resolution: 'exact' as const } : {}),
+    };
+  });
+};
+
+export const advanceChooseNStepContext = (
+  context: ChooseNStepContext,
+  decision: ChooseNStepDecision,
+): AdvanceChooseNStepContextResult => {
+  if (decision.command === 'confirm') {
+    if (!context.stepCommands.includes('confirm')) {
+      throw new Error('MICROTURN_CHOOSE_N_CONFIRM_NOT_AVAILABLE');
+    }
+    return { done: true, value: [...context.selectedSoFar] };
+  }
+
+  if (decision.value === undefined) {
+    throw new Error('MICROTURN_CHOOSE_N_VALUE_REQUIRED');
+  }
+
+  const selectedKeys = new Set(context.selectedSoFar.map((value) => scalarKey(value)));
+  const decisionKey = scalarKey(decision.value);
+
+  if (decision.command === 'add') {
+    if (selectedKeys.has(decisionKey)) {
+      throw new Error('MICROTURN_CHOOSE_N_DUPLICATE_ADD');
+    }
+    const option = context.options.find((candidate) => scalarKey(candidate.value as MoveParamScalar) === decisionKey);
+    if (option === undefined || option.legality === 'illegal') {
+      throw new Error('MICROTURN_CHOOSE_N_ADD_NOT_LEGAL');
+    }
+    const nextSelected = [...context.selectedSoFar, decision.value];
+    return {
+      done: false,
+      nextContext: {
+        ...context,
+        selectedSoFar: nextSelected,
+        options: rebuildChooseNStepOptions(context, nextSelected),
+        stepCommands: canConfirmChooseNSelection(
+          nextSelected.length,
+          context.cardinality.min,
+          context.cardinality.max,
+        ) ? ['add', 'remove', 'confirm'] : ['add', 'remove'],
+      },
+    };
+  }
+
+  if (!selectedKeys.has(decisionKey)) {
+    throw new Error('MICROTURN_CHOOSE_N_REMOVE_NOT_SELECTED');
+  }
+  const nextSelected = context.selectedSoFar.filter((value) => scalarKey(value) !== decisionKey);
+  return {
+    done: false,
+    nextContext: {
+      ...context,
+      selectedSoFar: nextSelected,
+      options: rebuildChooseNStepOptions(context, nextSelected),
+      stepCommands: canConfirmChooseNSelection(
+        nextSelected.length,
+        context.cardinality.min,
+        context.cardinality.max,
+      ) ? ['add', 'remove', 'confirm'] : ['add', 'remove'],
+    },
+  };
+};
 
 const toChooseNStepDecisions = (
   def: GameDef,
   state: GameState,
   baseMove: Move,
   context: ChooseNStepContext,
+  effectFrame: EffectExecutionFrameSnapshot,
   runtime?: GameDefRuntime,
 ): readonly ChooseNStepDecision[] => {
   const selectedKeys = new Set(context.selectedSoFar.map((value) => JSON.stringify([typeof value, value])));
@@ -312,25 +466,34 @@ const toChooseNStepDecisions = (
     });
   }
   return decisions.filter((decision) => {
-    const advanced = advanceChooseN(
-      def,
-      state,
-      baseMove,
-      context.decisionKey,
-      context.selectedSoFar,
-      decision.command === 'confirm'
-        ? { type: 'confirm' }
-        : { type: decision.command, value: decision.value! },
-      runtime,
-    );
-    const candidateMove: Move = {
-      ...baseMove,
-      params: {
-        ...baseMove.params,
-        [context.decisionKey]: advanced.done ? advanced.value : advanced.pending.selected,
-      },
-    };
-    return isSupportedActionMove(def, state, candidateMove, runtime);
+    try {
+      const advanced = advanceChooseNStepContext(context, decision);
+
+      // Intermediate chooseN steps are executable if they produce another
+      // valid pending chooseN frame in the current microturn context. Only the
+      // terminal confirm step must additionally prove that the resulting move
+      // continuation remains bridgeable as a supported action move.
+      if (!advanced.done) {
+        return true;
+      }
+
+      const candidateMove: Move = {
+        ...baseMove,
+        params: {
+          ...baseMove.params,
+          [context.decisionKey]: advanced.value,
+        },
+      };
+      return isSupportedFrameContinuationMove(
+        def,
+        state,
+        effectFrame,
+        candidateMove,
+        runtime,
+      );
+    } catch {
+      return false;
+    }
   });
 };
 
@@ -462,7 +625,7 @@ const publishStackTop = (
           },
         },
       }))
-      .filter(({ move }) => isSupportedActionMove(def, state, move, runtime))
+      .filter(({ move }) => isSupportedFrameContinuationMove(def, state, top.effectFrame, move, runtime))
       .map(({ decision }) => decision);
     if (legalActions.length === 0) {
       throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: chooseOne context has no bridgeable continuations`);
@@ -481,11 +644,15 @@ const publishStackTop = (
   if (top.context.kind === 'chooseNStep') {
     const context = top.context;
     const baseMove = rebuildMoveFromFrame(root);
+    const legalActions = toChooseNStepDecisions(def, state, baseMove, context, top.effectFrame, runtime);
+    if (legalActions.length === 0) {
+      throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: chooseNStep context has no bridgeable continuations`);
+    }
     return {
       kind: 'chooseNStep',
       seatId,
       decisionContext: context,
-      legalActions: toChooseNStepDecisions(def, state, baseMove, context, runtime),
+      legalActions,
       projectedState: buildProjectedState(def, state, seatId),
       turnId: top.turnId,
       frameId: top.frameId,
@@ -562,10 +729,11 @@ export const createChooseOneFrame = (
 export const toDecisionStackContext = (
   request: ChoicePendingRequest,
   seatId: SeatId,
+  chooseNTemplate?: ChooseNTemplate,
 ): ChooseOneContext | ChooseNStepContext =>
   request.type === 'chooseOne'
     ? toChooseOneContext(request, seatId)
-    : toChooseNStepContext(request, seatId);
+    : toChooseNStepContext(request, seatId, chooseNTemplate);
 
 export const toStochasticDecisionStackContext = (
   continuation: DecisionContinuationResult,

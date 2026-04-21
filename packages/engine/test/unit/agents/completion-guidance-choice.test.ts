@@ -2,7 +2,10 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { buildCompletionChooseCallback } from '../../../src/agents/completion-guidance-choice.js';
+import {
+  buildCompletionChooseCallback,
+  selectBestCompletionChooseOneValue,
+} from '../../../src/agents/completion-guidance-choice.js';
 import {
   asActionId,
   asPhaseId,
@@ -326,6 +329,36 @@ describe('completion-guidance-choice', () => {
     });
 
     assert.equal(choose?.(createChoiceRequest()), undefined);
+  });
+
+  it('can still rank the best chooseOne option without a positive score threshold', () => {
+    const harness = createHarness(completionConsiderations({
+      avoidZoneB: {
+        costClass: 'state',
+        when: literal(true),
+        weight: literal(1),
+        value: opExpr('if',
+          opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-b')),
+          literal(-2),
+          literal(0),
+        ),
+        dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+      },
+    }), createProfile({
+      use: { pruningRules: [], considerations: ['avoidZoneB'], tieBreakers: [] },
+      plan: { stateFeatures: [], candidateFeatures: [], candidateAggregates: [], considerations: ['avoidZoneB'] },
+    }));
+
+    const selection = selectBestCompletionChooseOneValue({
+      state: harness.state,
+      def: harness.def,
+      catalog: harness.catalog,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      profile: harness.profile,
+    }, createChoiceRequest(), { requirePositiveScore: false });
+
+    assert.deepEqual(selection, { value: 'zone-a', score: 0 });
   });
 
   it('scores unknown options when no legal options are available', () => {

@@ -25,14 +25,69 @@ export interface BuildCompletionChooseCallbackInput {
   readonly runtime?: GameDefRuntime;
 }
 
+export interface CompletionChoiceSelection {
+  readonly value: MoveParamValue;
+  readonly score: number;
+}
+
+const completionConsiderationIdsForProfile = (
+  catalog: AgentPolicyCatalog,
+  profile: CompiledAgentProfile,
+): readonly string[] => {
+  const considerations = catalog.library.considerations ?? {};
+  return (profile.use.considerations ?? []).filter(
+    (considerationId) => considerations[considerationId]?.scopes?.includes('completion') === true,
+  );
+};
+
+export function selectBestCompletionChooseOneValue(
+  input: BuildCompletionChooseCallbackInput,
+  request: ChoicePendingRequest,
+  options: { readonly requirePositiveScore?: boolean } = {},
+): CompletionChoiceSelection | undefined {
+  const completionConsiderationIds = completionConsiderationIdsForProfile(input.catalog, input.profile);
+  if (completionConsiderationIds.length === 0) {
+    return undefined;
+  }
+
+  const selectableOptions = selectChoiceOptionsByLegalityPrecedence(request);
+  if (selectableOptions.length <= 1) {
+    return undefined;
+  }
+
+  let bestSelection: CompletionChoiceSelection | undefined;
+  for (const option of selectableOptions) {
+    const score = scoreCompletionOption(
+      input.state,
+      input.def,
+      input.catalog,
+      input.playerId,
+      input.seatId,
+      input.profile.params,
+      request,
+      option.value,
+      completionConsiderationIds,
+      input.runtime,
+    );
+    if (bestSelection === undefined || score > bestSelection.score) {
+      bestSelection = { value: option.value, score };
+    }
+  }
+
+  if (bestSelection === undefined) {
+    return undefined;
+  }
+  if (options.requirePositiveScore === true && bestSelection.score <= 0) {
+    return undefined;
+  }
+  return bestSelection;
+}
+
 export function buildCompletionChooseCallback(
   input: BuildCompletionChooseCallbackInput,
 ): ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined {
   const { profile } = input;
-  const considerations = input.catalog.library.considerations ?? {};
-  const completionConsiderationIds = (profile.use.considerations ?? []).filter(
-    (considerationId) => considerations[considerationId]?.scopes?.includes('completion') === true,
-  );
+  const completionConsiderationIds = completionConsiderationIdsForProfile(input.catalog, profile);
   if (completionConsiderationIds.length === 0) {
     return undefined;
   }
@@ -90,35 +145,6 @@ export function buildCompletionChooseCallback(
       return undefined;
     }
 
-    const selectableOptions = selectChoiceOptionsByLegalityPrecedence(request);
-    if (selectableOptions.length <= 1) {
-      return undefined;
-    }
-
-    let bestScore = Number.NEGATIVE_INFINITY;
-    let bestValue: MoveParamValue | undefined;
-    for (const option of selectableOptions) {
-      const score = scoreCompletionOption(
-        input.state,
-        input.def,
-        input.catalog,
-        input.playerId,
-        input.seatId,
-        profile.params,
-        request,
-        option.value,
-        completionConsiderationIds,
-        input.runtime,
-      );
-      if (score > bestScore) {
-        bestScore = score;
-        bestValue = option.value;
-      }
-    }
-
-    if (bestScore > 0) {
-      return bestValue;
-    }
-    return undefined;
+    return selectBestCompletionChooseOneValue(input, request, { requirePositiveScore: true })?.value;
   };
 }

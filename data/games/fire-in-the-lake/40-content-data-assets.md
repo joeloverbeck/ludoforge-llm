@@ -942,6 +942,7 @@ dataAssets:
             faction: ARVN
             type: troops
             m48PatrolMoved: false
+            coupRedeployed: false
         - id: arvn-police
           seat: arvn
           statusDimensions: []
@@ -950,6 +951,7 @@ dataAssets:
             faction: ARVN
             type: police
             m48PatrolMoved: false
+            coupRedeployed: false
         - id: arvn-rangers
           seat: arvn
           statusDimensions:
@@ -979,6 +981,7 @@ dataAssets:
           runtimeProps:
             faction: NVA
             type: troops
+            coupRedeployed: false
         - id: nva-guerrillas
           seat: nva
           statusDimensions:

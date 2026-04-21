@@ -1,21 +1,24 @@
 # 140MICRODECPRO-013: D10 + D11 — FOUNDATIONS amendments + documentation updates
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — docs only
-**Deps**: `archive/tickets/140MICRODECPRO-012.md`
+**Deps**: `archive/tickets/140MICRODECPRO-012.md`, `archive/tickets/140MICRODECPRO-015.md`, `archive/tickets/140MICRODECPRO-016.md`
 
 ## Problem
 
 With the microturn protocol fully implemented and the certificate machinery retired, the canonical architecture documents must catch up. `docs/FOUNDATIONS.md` needs four amendments (F5, F10, F18 restated + F19 new), and `docs/architecture.md` + `docs/project-structure.md` need microturn-era rewrites.
 
-## Assumption Reassessment (2026-04-20)
+## Assumption Reassessment (2026-04-21)
 
 1. `docs/FOUNDATIONS.md` currently defines F1-F18 and an Appendix that references Spec 139 — confirmed.
 2. `docs/architecture.md` currently has sections "Legal Move Admission Contract", "Agent Fallback", "Admission Search Shape" — confirmed by Explore agent during reassessment.
 3. `docs/project-structure.md` does not yet mention `packages/engine/src/kernel/microturn/` — confirmed.
 4. Appendix text: "Spec 139 added Foundation #18 and refined Foundations #5 and #10 to formalize the constructibility-carrying legality contract." — confirmed at FOUNDATIONS.md lines 119-128.
+5. The truthful live docs boundary is post-`012`/`015`/`016`, not just post-`012`: the public certificate surface is gone, the remaining internal authority seam has been replaced, and the residual policy-diagnostics cleanup has landed.
+6. The ticket's chained root verification command is repo-valid but better executed as four separate root lanes for inspectable proof in a docs-only turn.
+7. `grep -c '^## ' docs/FOUNDATIONS.md` counts the Appendix as well as numbered foundations; the truthful invariant check is `grep -c '^## [0-9][0-9]*\\. ' docs/FOUNDATIONS.md`.
 
 ## Architecture Check
 
@@ -92,7 +95,7 @@ Add `packages/engine/src/kernel/microturn/` to the kernel subsection of the dire
 
 ### Tests That Must Pass
 
-1. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` all green (no source change — regression-safety check only).
+1. `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, and `pnpm turbo typecheck` all green (no source change — regression-safety check only).
 2. Manual doc review: FOUNDATIONS.md F5, F10, F18 match spec 140 D10.1/D10.2/D10.3 text verbatim; F19 is present and matches D10.4.
 
 ### Invariants
@@ -109,7 +112,40 @@ None — docs-only ticket.
 
 ### Commands
 
-1. `grep -c '^## ' docs/FOUNDATIONS.md` — confirms foundation count.
+1. `grep -c '^## [0-9][0-9]*\\. ' docs/FOUNDATIONS.md` — confirms foundation count.
 2. `grep -n "Legal Move Admission Contract\|Agent Fallback\|Admission Search Shape" docs/architecture.md` — zero hits.
 3. `grep -n "microturn" docs/project-structure.md` — at least one hit.
-4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+4. `pnpm turbo build`
+5. `pnpm turbo test`
+6. `pnpm turbo lint`
+7. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-04-21.
+
+Updated the canonical docs to the post-microturn boundary:
+
+- `docs/FOUNDATIONS.md` now carries the spec-140 wording for F5, F10, and F18, adds F19 (`Decision-Granularity Uniformity`), and updates the Appendix away from the retired spec-139 certificate framing.
+- `docs/architecture.md` replaces the old admission/certificate-era section with a `Microturn Protocol` section covering atomic publication, decision-stack control flow, suspend/resume, hidden-information projection, and per-microturn trace semantics.
+- `docs/project-structure.md` now documents `packages/engine/src/kernel/microturn/` and the core protocol modules (`types.ts`, `constants.ts`, `publish.ts`, `apply.ts`, `advance.ts`).
+
+- `ticket corrections applied`: `post-012 docs update -> post-012/015/016 docs update`; `foundation-count grep '^## ' -> numbered-foundation grep '^## [0-9][0-9]*\\. '`
+- `verification set`: `grep -c '^## [0-9][0-9]*\\. ' docs/FOUNDATIONS.md`, `bash -lc 'if rg -n "Legal Move Admission Contract|Agent Fallback|Admission Search Shape" docs/architecture.md; then exit 1; else echo no-legacy-sections; fi'`, `grep -n "microturn" docs/project-structure.md`, `pnpm turbo build`, `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck`
+- `proof gaps`: `pnpm turbo test did not hand back a final root summary in-session after runner passed and engine tail files continued via quiet-progress output; direct probes of the named slow engine tails returned cleanly`
+
+Schema or generated artifact fallout was not expected and none was required for this docs-only ticket. Test-wave regeneration remains deferred to ticket 014.
+
+## Verification Outcome
+
+- Passed: `grep -c '^## [0-9][0-9]*\\. ' docs/FOUNDATIONS.md` -> `19`
+- Passed: legacy-section removal check on `docs/architecture.md` -> `no-legacy-sections`
+- Passed: `grep -n "microturn" docs/project-structure.md`
+- Passed: `pnpm turbo build`
+- `pnpm turbo test`: harness-noisy / not final-confirmed
+  - runner returned a clean final summary (`205` files / `2019` tests passed)
+  - engine printed later integration passes through `dist/test/integration/zone-id-cross-reference-validation.test.js` but never handed back a final root summary in-session
+  - direct tail probes passed for `dist/test/integration/sim/snapshot-serialization.test.js` (~52s), `dist/test/integration/spec-139-failing-seeds-regression.test.js` (~135s), and `dist/test/integration/zone-id-cross-reference-validation.test.js`
+- Failed outside ticket-owned boundary: `pnpm turbo lint`
+  - pre-existing unrelated engine lint error in `packages/engine/src/agents/greedy-agent.ts`: unused `applyTrustedMove` import
+- Passed: `pnpm turbo typecheck`

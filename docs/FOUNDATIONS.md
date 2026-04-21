@@ -34,7 +34,7 @@ Hidden and private information are first-class semantic concerns. Hands, decks, 
 
 The kernel is the single source of truth for legal actions and state transitions. UI gestures map to generic actions; agents choose from the same legal action set; simulations advance through the same apply-action pipeline. No UI-only rule paths, no simulation-only shortcuts, and no duplicated legality logic outside the kernel.
 
-**Constructibility clause**: No client-visible legal action may require uncertified client-side search to become executable. A legal action exposed by the kernel must be either directly executable, explicitly stochastic with a kernel-owned stochastic continuation, or accompanied by a kernel-produced completion certificate or a split decision-state continuation.
+**Constructibility clause**: Every client-visible legal action is directly executable at its microturn scope. Client-side search, template completion, or completion certificates are not part of the legality contract. Each microturn publishes a finite list of atomic decisions; selecting any decision is sufficient to advance kernel state.
 
 ## 6. Schema Ownership Stays Generic
 
@@ -64,7 +64,7 @@ The event stream, together with canonical snapshots when needed, must be suffici
 
 **All iteration MUST be bounded. No general recursion. All choices MUST be finite and enumerable.**
 
-`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. The kernel must finitely enumerate the current executable decision frontier in stable deterministic order. A compound human-visible turn may be represented either as a fully bound move, an explicitly stochastic continuation, or a bounded sequence of kernel-owned decision states. Finite listability does not require eager expansion of all end-of-turn concretizations when that expansion is combinatorially explosive; instead, the kernel produces a per-move completion certificate or split decision-state continuation that is itself bounded and deterministic. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
+`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. The kernel must finitely enumerate the current executable decision frontier in stable deterministic order. A compound human-visible turn is modeled as a bounded sequence of kernel-owned decision states (microturns), each of which exposes atomic legal actions only. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
 
 ## 11. Immutability
 
@@ -114,7 +114,13 @@ In TypeScript, this means branded types. The kernel validates identifier constru
 
 **A move is not legal for clients unless it is constructible under the kernel's bounded deterministic rules protocol. Existence without a construction artifact is insufficient.**
 
-Legality and constructibility are a single property exposed by a single kernel artifact. Client-visible incomplete moves carry a kernel-produced completion certificate; client-visible stochastic moves carry an explicit stochastic continuation; everything else is fully bound. Internal search states with `unknown` verdicts MUST NOT be exposed as legal actions. Failure to certify a structurally satisfiable move within bounded computation is an engine defect, not a recoverable game state.
+Legality and constructibility are a single property exposed by a single kernel artifact. Every kernel-published legal action is constructible atomically at its microturn scope. No client-side search, no template completion, no satisfiability verdict distinct from publication, no `unknown` legal actions. The microturn publication pipeline is the single kernel artifact that establishes legality and executability; they cannot diverge.
+
+## 19. Decision-Granularity Uniformity
+
+**Every kernel-visible decision is atomic. Compound human-visible turns emerge from decision sequences grouped by `turnId`, not from templates or pre-declared compound shapes.**
+
+Player agents and chance / kernel agents operate under the same microturn protocol; the only distinction is who decides. Player decisions require agent consultation; chance decisions resolve via the authoritative RNG; kernel-owned decisions (outcome grants, turn retirement) resolve via deterministic kernel rules. No compound shape is ever exposed as a legal action. No grammar layer in the kernel or runtime ever aggregates multiple kernel decisions into a single client-visible unit except for analytics-side summaries (`compoundTurns[]`), which are derived post-hoc from `decisions[]` and never authoritative.
 
 ---
 
@@ -124,4 +130,4 @@ The determinism commandment (#8) is proven by the `packages/engine/test/determin
 
 Convergence claims tied to a specific policy-profile variant are not engine invariants. They are quality signals for the profile maintainer, and they live in `packages/engine/test/policy-profile-quality/`, not in `determinism/`. Failures there emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings and a non-blocking CI summary rather than a blocking determinism failure.
 
-The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 and Spec 139 were written to eliminate. Spec 139 added Foundation #18 and refined Foundations #5 and #10 to formalize the constructibility-carrying legality contract.
+The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 and Spec 139 were written to eliminate. Spec 140 amended Foundations #5, #10, and #18, and added Foundation #19, to formalize the microturn-native decision protocol. Spec 139's certificate-carrying contract (the prior iteration of #18) is retired.

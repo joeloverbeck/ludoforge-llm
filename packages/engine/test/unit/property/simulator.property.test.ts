@@ -54,12 +54,12 @@ phase: [asPhaseId('p2')],
             id: asActionId('step'),
 actor: 'active' as const,
 executor: 'actor' as const,
-phase: [asPhaseId('main')],
+            phase: [asPhaseId('main')],
             params: [],
             pre: null,
             cost: [],
             effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
-            limits: [],
+            limits: [{ id: 'step::turn::0', scope: 'turn' as const, max: 1 }],
           },
         ];
 
@@ -98,7 +98,7 @@ describe('simulator property-style invariants', () => {
       for (const seed of seeds) {
         for (const maxTurns of maxTurnsCases) {
           const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], maxTurns);
-          assert.ok(trace.decisions.length <= maxTurns);
+          assert.ok(trace.turnsCount <= maxTurns);
           assert.equal(trace.turnsCount, trace.finalState.turnCount);
 
           for (const moveLog of trace.decisions) {

@@ -42,7 +42,7 @@ const createLoopingLifecycleDef = (): ValidatedGameDef =>
         pre: null,
         cost: [],
         effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
-        limits: [],
+        limits: [{ id: 'step::turn::0', scope: 'turn', max: 1 }],
       },
     ],
     triggers: [],

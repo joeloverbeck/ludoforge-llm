@@ -1,6 +1,6 @@
 # AGENTSUNSET-004: Restore final-confirmed default engine test lane after test-agent migration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test harness and proof-lane stability only
@@ -80,3 +80,14 @@ Once the lane is final-confirmed or truthfully narrowed, update the archived `AG
 3. `node --test dist/test/unit/property/simulator.property.test.js`
 4. `node --test dist/test/unit/sim/simulator.test.js`
 5. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+- Completed: 2026-04-22
+
+- Stabilized the default-lane simulator witnesses by adding turn-scoped action limits to the synthetic single-phase fixtures that otherwise looped forever under the current microturn-native `runGame` contract.
+- Refreshed stale simulator assertions exposed once those files became final-confirmable: the property witness now checks `turnsCount <= maxTurns`, the two-phase witness records four decisions across two turns, and the illegal-move guard asserts the structured `LEGAL_CHOICES_UNKNOWN_ACTION` kernel error.
+- `ticket corrections applied`: `runner-noise root cause unclear -> same-turn synthetic witnesses were stale after the live turn-count stop contract, with one additional stale simulator error/assertion surface`
+- `verification set`: `pnpm -F @ludoforge/engine build`; `node --test dist/test/integration/compiled-effects-verification.test.js`; `node dist/test/unit/property/simulator.property.test.js`; `node dist/test/unit/sim/simulator.test.js`
+- `subsumed proof`: `pnpm -F @ludoforge/engine test -> schema:artifacts:check plus the default-lane integration and simulator tranche returned cleanly, then the reporter remained in quiet-progress on dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js for more than 6 minutes without a terminal summary`
+- `proof gaps`: `no owned simulator/compiled-effects proof gap remains; the non-final broad-lane tail is now policy-profile-quality witness runtime rather than the migrated simulator files this ticket corrected`

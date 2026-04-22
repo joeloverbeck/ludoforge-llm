@@ -170,6 +170,13 @@ When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture,
 4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
 5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
 
+When a synthetic fixture proves simulator boundedness, turn retirement, or `runGame` stop behavior, add this stale-witness check before treating silence or timeout as harness drift:
+
+1. verify the live stop budget the runtime actually enforces (`turnCount`, decision count, terminal condition, or another owned bound) instead of assuming the draft witness still targets the same budget surface
+2. check that the fixture's legal-action frontier still advances the owned stop surface under the current protocol; a same-turn repeatable action may keep emitting legal decisions forever without progressing the budget the simulator now uses
+3. if the fixture no longer advances that surface, fix the witness first and rerun before escalating to runner or harness diagnosis
+4. when the remaining negative-path contract is a structured runtime/kernel error, prefer asserting the stable error code or equivalent structured field over a brittle regex against the formatted message
+
 ### Regression Placement Triage
 
 When a bug lives in a shared runtime seam but the smallest truthful witness may be game-backed, choose the first regression target with this order:
@@ -252,6 +259,12 @@ When a **single focused proof file** emits only an initial harness header (for e
 2. if it later returns cleanly, record the observed runtime in the ticket outcome so the slow-but-valid lane is distinguishable from harness drift
 3. only fall back to `harness-noisy / not final-confirmed` language when source inspection and the bounded rerun still do not explain or complete the silence
 
+If the focused file is synthetic, simulator-facing, or otherwise owns its own tiny witness fixture, do one more stale-witness check before calling it harness noise:
+
+1. confirm the witness still progresses the live runtime seam it claims to prove (for example turn retirement, stop-budget advancement, or the current legality/publication contract)
+2. if the fixture can now loop forever inside one turn or microturn budget, classify that as stale witness setup rather than reporter drift
+3. repair the witness on the live seam first, then rerun the focused file before widening into runner-level diagnosis
+
 When rerunning proof commands that write append-only local artifacts (for example temp NDJSON, captured logs, or ad hoc report files), prefer a fresh temp path per rerun or clear the artifact first so the resulting evidence reflects a single proof pass rather than accumulated historical rows.
 
 When verification intentionally mutates a real repo file as a temporary negative/manual check, confirm that the file is restored exactly to its original contents and placement before running broader proof lanes. Treat any post-check restoration drift as proof-invalidating and rerun the affected acceptance set after the exact restore lands.
@@ -268,6 +281,12 @@ For durable closeout, use this rule when final proof mixes green owned witnesses
 2. do not mark `COMPLETED` when the only proof of the owned change depends on a lane that never returned a final result
 3. if the ticket explicitly names a broad package/workspace lane as an acceptance command and that lane did not reach a final confirmed result in the current proof set, treat that command as `not yet proven` unless the active ticket is first corrected to record a truthful narrower proof substitution
 4. if the ticket explicitly requires a final green result from a named broad lane and no narrower owned witness can satisfy that requirement truthfully, leave the ticket open or blocked instead of inferring success
+
+If a ticket originally owned a specific noisy tail inside that broad lane and live proof shows the owned tail is now fixed while the remaining non-final behavior has moved to a different witness class or later file family:
+
+1. record that shift explicitly in the active ticket outcome rather than continuing to describe the original owned tail as unresolved
+2. keep the owned ticket `COMPLETED` only when the corrected slice is covered by direct focused witnesses or another deterministic owned proof
+3. describe the remaining broad-lane non-final state by its new live location or witness class so the next follow-up, if any, starts from the truthful boundary
 
 For long tickets whose final proof requires multiple expensive lanes after ticket-artifact rewrites, choose the final-proof choreography explicitly instead of rerunning ad hoc:
 

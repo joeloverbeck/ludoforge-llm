@@ -71,12 +71,12 @@ phase: [asPhaseId('p2')],
             id: asActionId('step'),
 actor: 'active' as const,
 executor: 'actor' as const,
-phase: [asPhaseId('main')],
+            phase: [asPhaseId('main')],
             params: [],
             pre: null,
             cost: [],
             effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
-            limits: [],
+            limits: [{ id: 'step::turn::0', scope: 'turn' as const, max: 1 }],
           },
         ];
 
@@ -131,12 +131,12 @@ const createSnapshotDef = (): ValidatedGameDef =>
         id: asActionId('step'),
 actor: 'active',
 executor: 'actor' as const,
-phase: [asPhaseId('main')],
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
         effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
-        limits: [],
+        limits: [{ id: 'step::turn::0', scope: 'turn' as const, max: 1 }],
       },
     ],
     triggers: [],
@@ -286,7 +286,7 @@ describe('runGame', () => {
     const def = createDef({ twoPhaseLoop: true });
     const trace = runGame(def, 5, [firstLegalAgent, firstLegalAgent], 2);
 
-    assert.equal(trace.decisions.length, 2);
+    assert.equal(trace.decisions.length, 4);
     assert.equal(trace.turnsCount, trace.finalState.turnCount);
     assert.equal(trace.turnsCount, 2);
   });
@@ -316,7 +316,10 @@ describe('runGame', () => {
     const def = createDef();
     assert.throws(
       () => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1),
-      /MICROTURN_DECISION_NOT_PUBLISHED:actionSelection/,
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && error.code === 'LEGAL_CHOICES_UNKNOWN_ACTION',
     );
   });
 
@@ -463,14 +466,14 @@ describe('runGame', () => {
         {
           id: asActionId('event'),
 capabilities: ['cardEvent'],
-actor: 'active',
+        actor: 'active',
 executor: 'actor' as const,
 phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
           effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
-          limits: [],
+          limits: [{ id: 'event::turn::0', scope: 'turn' as const, max: 1 }],
         },
       ],
       triggers: [],

@@ -689,7 +689,7 @@ describe('projectRenderModel state metadata', () => {
       makeRenderContext(state.playerCount, asPlayerId(0), {
         playerSeats: new Map<ReturnType<typeof asPlayerId>, ReturnType<typeof createHumanSeatController> | ReturnType<typeof createAgentSeatController>>([
           [asPlayerId(0), createHumanSeatController()],
-          [asPlayerId(1), createAgentSeatController({ kind: 'builtin', builtinId: 'random' })],
+          [asPlayerId(1), createAgentSeatController()],
         ]),
       }),
     );

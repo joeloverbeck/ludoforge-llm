@@ -57,7 +57,7 @@ describe('ai-move-policy', () => {
     const microturn = { ...publishMicroturn(def, state, runtime), legalActions: [] };
 
     expect(selectAgentDecision({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       state,
       microturn,
@@ -66,14 +66,14 @@ describe('ai-move-policy', () => {
     })).toBeNull();
   });
 
-  it('selectAgentDecision with builtin greedy emits builtin greedy decision metadata', () => {
+  it('selectAgentDecision with policy control emits policy decision metadata', () => {
     const def = compileFixture();
     const state = initialState(def, 7, 2).state;
     const runtime = createGameDefRuntime(def);
     const microturn = publishMicroturn(def, state, runtime);
 
     const result = selectAgentDecision({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
+      controller: createAgentSeatController(),
       def,
       state,
       microturn,
@@ -84,9 +84,9 @@ describe('ai-move-policy', () => {
     expect(result).not.toBeNull();
     expect(microturn.legalActions).toContainEqual(result?.decision);
     expect(result?.agentDecision).toMatchObject({
-      kind: 'builtin',
-      agent: { kind: 'builtin', builtinId: 'greedy' },
-      candidateCount: 3,
+      kind: 'policy',
+      agent: { kind: 'policy' },
+      initialCandidateCount: 3,
     });
   });
 

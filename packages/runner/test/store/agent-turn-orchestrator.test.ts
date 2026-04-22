@@ -44,7 +44,7 @@ describe('agent-turn-orchestrator', () => {
     const orchestrator = createAgentTurnOrchestrator();
 
     expect(orchestrator.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, state, runtime),
       state,
@@ -61,19 +61,19 @@ describe('agent-turn-orchestrator', () => {
     const interleaved = createAgentTurnOrchestrator();
     interleaved.initializeSession({ def, seed: 17, playerCount: 2 });
     const p0First = interleaved.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
       state: { ...baseState, activePlayer: player0 },
     });
     const p1First = interleaved.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player1 }, runtime),
       state: { ...baseState, activePlayer: player1 },
     });
     const p0Second = interleaved.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
       state: { ...baseState, activePlayer: player0 },
@@ -82,13 +82,13 @@ describe('agent-turn-orchestrator', () => {
     const isolated = createAgentTurnOrchestrator();
     isolated.initializeSession({ def, seed: 17, playerCount: 2 });
     const isolatedP0First = isolated.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
       state: { ...baseState, activePlayer: player0 },
     });
     const isolatedP0Second = isolated.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
       state: { ...baseState, activePlayer: player0 },
@@ -105,7 +105,7 @@ describe('agent-turn-orchestrator', () => {
       || isolatedP0First.kind !== 'selected-decision'
       || isolatedP0Second.kind !== 'selected-decision'
     ) {
-      throw new Error('Expected random agent selections.');
+      throw new Error('Expected policy agent selections.');
     }
 
     expect(p0First.decision).toEqual(isolatedP0First.decision);
@@ -114,7 +114,7 @@ describe('agent-turn-orchestrator', () => {
     interleaved.resetSession();
     interleaved.initializeSession({ def, seed: 17, playerCount: 2 });
     const resetP0First = interleaved.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+      controller: createAgentSeatController(),
       def,
       microturn: publishMicroturn(def, { ...baseState, activePlayer: player0 }, runtime),
       state: { ...baseState, activePlayer: player0 },
@@ -122,7 +122,7 @@ describe('agent-turn-orchestrator', () => {
 
     expect(resetP0First).toMatchObject({ kind: 'selected-decision' });
     if (resetP0First.kind !== 'selected-decision') {
-      throw new Error('Expected random agent selection after reset.');
+      throw new Error('Expected policy agent selection after reset.');
     }
     expect(resetP0First.decision).toEqual(p0First.decision);
   });
@@ -142,7 +142,7 @@ describe('agent-turn-orchestrator', () => {
     })).toEqual({ kind: 'human-turn' });
   });
 
-  it('uses structured agent descriptors to choose decisions and surface decision metadata', () => {
+  it('uses policy descriptors to choose decisions and surface decision metadata', () => {
     const def = compileFixture();
     const state = initialState(def, 11, 2).state;
     const runtime = createGameDefRuntime(def);
@@ -151,7 +151,7 @@ describe('agent-turn-orchestrator', () => {
     orchestrator.initializeSession({ def, seed: 11, playerCount: 2 });
 
     const result = orchestrator.resolveStep({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
+      controller: createAgentSeatController(),
       def,
       microturn,
       state,
@@ -160,9 +160,9 @@ describe('agent-turn-orchestrator', () => {
     expect(result).toMatchObject({
       kind: 'selected-decision',
       agentDecision: {
-        kind: 'builtin',
-        agent: { kind: 'builtin', builtinId: 'greedy' },
-        candidateCount: 3,
+        kind: 'policy',
+        agent: { kind: 'policy' },
+        initialCandidateCount: 3,
       },
     });
     if (result.kind !== 'selected-decision') {

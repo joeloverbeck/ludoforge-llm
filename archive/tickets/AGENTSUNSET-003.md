@@ -1,6 +1,6 @@
 # AGENTSUNSET-003: Remove built-in agent modes from runner configuration and trace presentation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only after policy-only engine contract lands
@@ -44,8 +44,16 @@ Refresh runner tests so they prove:
 ## Files to Touch
 
 - `packages/runner/src/ui/PreGameConfigScreen.tsx` (modify)
-- `packages/runner/src/store/ai-move-policy.ts` (modify as needed)
 - `packages/runner/src/trace/console-trace-subscriber.ts` (modify)
+- `packages/runner/test/store/ai-move-policy.test.ts` (modify)
+- `packages/runner/test/store/agent-turn-orchestrator.test.ts` (modify)
+- `packages/runner/test/store/game-store.test.ts` (modify)
+- `packages/runner/test/store/game-store-async-serialization.test.ts` (modify)
+- `packages/runner/test/store/store-types.test.ts` (modify)
+- `packages/runner/test/session/session-store.test.ts` (modify)
+- `packages/runner/test/model/project-render-model-state.test.ts` (modify)
+- `packages/runner/test/persistence/save-manager.test.ts` (modify)
+- `packages/runner/test/presentation/action-announcement-presentation.test.ts` (modify)
 - `packages/runner/test/ui/PreGameConfigScreen.test.tsx` (modify)
 - `packages/runner/test/trace/console-trace-subscriber.test.ts` (modify)
 
@@ -74,9 +82,24 @@ Refresh runner tests so they prove:
 
 1. `packages/runner/test/ui/PreGameConfigScreen.test.tsx` — prove policy-only seat-agent configuration.
 2. `packages/runner/test/trace/console-trace-subscriber.test.ts` — prove policy-only agent trace labeling.
+3. `packages/runner/test/store/ai-move-policy.test.ts` — prove runner agent selection stays policy-only.
+4. `packages/runner/test/store/agent-turn-orchestrator.test.ts` — prove policy descriptors still drive deterministic runner AI steps.
+5. `packages/runner/test/store/game-store.test.ts` and related session/store fixtures — prove human-vs-agent defaults still initialize and serialize through policy-only seat configs.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/runner test`
 2. `pnpm -F @ludoforge/runner lint`
 3. `pnpm -F @ludoforge/runner typecheck`
+
+## Outcome
+
+- Completed: 2026-04-22
+
+- Removed built-in agent choices from the runner pre-game screen so authored policy is the only selectable agent mode and the screen no longer formats or parses `builtin:*` values.
+- Narrowed console trace presentation to the policy-only `agentDecision` payload shape introduced by `AGENTSUNSET-002`.
+- Updated runner tests and fixture configs that still encoded builtin descriptors so the runner suite now proves policy-only defaults across UI, trace, session, store, persistence, presentation, and render-model seams.
+
+- `ticket corrections applied`: `packages/runner/src/store/ai-move-policy.ts required live modification -> no production-store change was needed because the store already normalized to policy; direct fallout instead landed in runner test fixtures and policy-only trace/UI expectations`
+- `verification set`: `pnpm -F @ludoforge/runner test -- test/ui/PreGameConfigScreen.test.tsx test/trace/console-trace-subscriber.test.ts test/store/ai-move-policy.test.ts test/store/agent-turn-orchestrator.test.ts test/store/game-store.test.ts`; `pnpm -F @ludoforge/runner test`; `pnpm -F @ludoforge/runner lint`; `pnpm -F @ludoforge/runner typecheck`
+- `proof gaps`: `none`

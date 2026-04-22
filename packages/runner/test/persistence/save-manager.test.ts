@@ -42,7 +42,7 @@ function createBaseRecord(overrides: Partial<Omit<SavedGameRecord, 'id'>> = {}):
     moveHistory: [MOVE_A, MOVE_B],
     playerConfig: [
       { playerId: 0, controller: createHumanSeatController() },
-      { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+      { playerId: 1, controller: createAgentSeatController() },
     ],
     playerId: 0,
     moveCount: 2,

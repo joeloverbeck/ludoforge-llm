@@ -88,11 +88,11 @@ function compileCounterFixture(): GameDef {
 
 const P0_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
   { playerId: 0, controller: createHumanSeatController() },
-  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+  { playerId: 1, controller: createAgentSeatController() },
 ];
 
 const P1_HUMAN_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+  { playerId: 0, controller: createAgentSeatController() },
   { playerId: 1, controller: createHumanSeatController() },
 ];
 

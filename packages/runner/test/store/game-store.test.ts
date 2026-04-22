@@ -11,11 +11,11 @@ import type { PlayerSeatConfig } from '../../src/session/session-types.js';
 
 const TWO_PLAYER_CONFIG: readonly PlayerSeatConfig[] = [
   { playerId: 0, controller: createHumanSeatController() },
-  { playerId: 1, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }) },
+  { playerId: 1, controller: createAgentSeatController() },
 ];
 
 const AI_FIRST_CONFIG: readonly PlayerSeatConfig[] = [
-  { playerId: 0, controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }) },
+  { playerId: 0, controller: createAgentSeatController() },
   { playerId: 1, controller: createHumanSeatController() },
 ];
 

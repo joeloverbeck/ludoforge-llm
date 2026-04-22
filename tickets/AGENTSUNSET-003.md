@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — runner-only after policy-only engine contract lands
-**Deps**: `tickets/AGENTSUNSET-002.md`
+**Deps**: `archive/tickets/AGENTSUNSET-002.md`
 
 ## Problem
 

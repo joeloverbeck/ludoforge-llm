@@ -6,7 +6,7 @@ Engine source modules are under `packages/engine/src/`, with a separate runner p
 |-----------|---------|
 | `packages/engine/src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
 | `packages/engine/src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `packages/engine/src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
+| `packages/engine/src/agents/` | Policy-agent runtime, diagnostics, and factory helpers conforming to a strict `Agent` interface |
 | `packages/engine/src/sim/` | Simulation runner, trace logging, state delta engine |
 | `packages/engine/src/cli/` | Developer commands (stub — not yet implemented) |
 | `packages/engine/schemas/` | JSON Schemas for GameDef, Trace, EvalReport |

@@ -3361,482 +3361,193 @@
             }
           },
           "agentDecision": {
-            "anyOf": [
-              {
-                "type": "object",
-                "properties": {
-                  "kind": {
-                    "type": "string",
-                    "const": "builtin"
-                  },
-                  "agent": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "builtin"
-                      },
-                      "builtinId": {
-                        "anyOf": [
-                          {
-                            "type": "string",
-                            "const": "random"
-                          },
-                          {
-                            "type": "string",
-                            "const": "greedy"
-                          }
-                        ]
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "builtinId"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "candidateCount": {
-                    "type": "number"
-                  },
-                  "selectedIndex": {
-                    "type": "number"
-                  },
-                  "selectedStableMoveKey": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "agent",
-                  "candidateCount"
-                ],
-                "additionalProperties": false
+            "type": "object",
+            "properties": {
+              "kind": {
+                "type": "string",
+                "const": "policy"
               },
-              {
+              "agent": {
                 "type": "object",
                 "properties": {
                   "kind": {
                     "type": "string",
                     "const": "policy"
                   },
-                  "agent": {
-                    "type": "object",
-                    "properties": {
-                      "kind": {
-                        "type": "string",
-                        "const": "policy"
-                      },
-                      "profileId": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "kind"
-                    ],
-                    "additionalProperties": false
+                  "profileId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind"
+                ],
+                "additionalProperties": false
+              },
+              "seatId": {
+                "anyOf": [
+                  {
+                    "type": "string"
                   },
-                  "seatId": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "requestedProfileId": {
+                "anyOf": [
+                  {
+                    "type": "string"
                   },
-                  "requestedProfileId": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "resolvedProfileId": {
+                "anyOf": [
+                  {
+                    "type": "string"
                   },
-                  "resolvedProfileId": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "profileFingerprint": {
+                "anyOf": [
+                  {
+                    "type": "string"
                   },
-                  "profileFingerprint": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "initialCandidateCount": {
+                "type": "number"
+              },
+              "selectedStableMoveKey": {
+                "anyOf": [
+                  {
+                    "type": "string"
                   },
-                  "initialCandidateCount": {
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "phase1Score": {
+                "anyOf": [
+                  {
                     "type": "number"
                   },
-                  "selectedStableMoveKey": {
-                    "anyOf": [
-                      {
-                        "type": "string"
-                      },
-                      {
-                        "type": "null"
-                      }
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "phase2Score": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "phase1ActionRanking": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "finalScore": {
+                "anyOf": [
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "pruningSteps": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ruleId": {
+                      "type": "string"
+                    },
+                    "remainingCandidateCount": {
+                      "type": "number"
+                    },
+                    "skippedBecauseEmpty": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ruleId",
+                    "remainingCandidateCount",
+                    "skippedBecauseEmpty"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "tieBreakChain": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tieBreakerId": {
+                      "type": "string"
+                    },
+                    "candidateCountBefore": {
+                      "type": "number"
+                    },
+                    "candidateCountAfter": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "tieBreakerId",
+                    "candidateCountBefore",
+                    "candidateCountAfter"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "previewUsage": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "exactWorld",
+                      "tolerateStochastic",
+                      "disabled"
                     ]
                   },
-                  "phase1Score": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
+                  "evaluatedCandidateCount": {
+                    "type": "number"
                   },
-                  "phase2Score": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "phase1ActionRanking": {
+                  "refIds": {
                     "type": "array",
                     "items": {
                       "type": "string"
                     }
                   },
-                  "finalScore": {
-                    "anyOf": [
-                      {
-                        "type": "number"
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "pruningSteps": {
+                  "unknownRefs": {
                     "type": "array",
                     "items": {
                       "type": "object",
                       "properties": {
-                        "ruleId": {
+                        "refId": {
                           "type": "string"
                         },
-                        "remainingCandidateCount": {
-                          "type": "number"
-                        },
-                        "skippedBecauseEmpty": {
-                          "type": "boolean"
-                        }
-                      },
-                      "required": [
-                        "ruleId",
-                        "remainingCandidateCount",
-                        "skippedBecauseEmpty"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "tieBreakChain": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "tieBreakerId": {
-                          "type": "string"
-                        },
-                        "candidateCountBefore": {
-                          "type": "number"
-                        },
-                        "candidateCountAfter": {
-                          "type": "number"
-                        }
-                      },
-                      "required": [
-                        "tieBreakerId",
-                        "candidateCountBefore",
-                        "candidateCountAfter"
-                      ],
-                      "additionalProperties": false
-                    }
-                  },
-                  "previewUsage": {
-                    "type": "object",
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "exactWorld",
-                          "tolerateStochastic",
-                          "disabled"
-                        ]
-                      },
-                      "evaluatedCandidateCount": {
-                        "type": "number"
-                      },
-                      "refIds": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
-                        }
-                      },
-                      "unknownRefs": {
-                        "type": "array",
-                        "items": {
-                          "type": "object",
-                          "properties": {
-                            "refId": {
-                              "type": "string"
-                            },
-                            "reason": {
-                              "anyOf": [
-                                {
-                                  "type": "string",
-                                  "const": "random"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "hidden"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "unresolved"
-                                },
-                                {
-                                  "type": "string",
-                                  "const": "failed"
-                                }
-                              ]
-                            }
-                          },
-                          "required": [
-                            "refId",
-                            "reason"
-                          ],
-                          "additionalProperties": false
-                        }
-                      },
-                      "outcomeBreakdown": {
-                        "type": "object",
-                        "properties": {
-                          "ready": {
-                            "type": "number"
-                          },
-                          "stochastic": {
-                            "type": "number"
-                          },
-                          "unknownRandom": {
-                            "type": "number"
-                          },
-                          "unknownHidden": {
-                            "type": "number"
-                          },
-                          "unknownUnresolved": {
-                            "type": "number"
-                          },
-                          "unknownFailed": {
-                            "type": "number"
-                          }
-                        },
-                        "required": [
-                          "ready",
-                          "stochastic",
-                          "unknownRandom",
-                          "unknownHidden",
-                          "unknownUnresolved",
-                          "unknownFailed"
-                        ],
-                        "additionalProperties": false
-                      }
-                    },
-                    "required": [
-                      "mode",
-                      "evaluatedCandidateCount",
-                      "refIds",
-                      "unknownRefs"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "selection": {
-                    "type": "object",
-                    "properties": {
-                      "mode": {
-                        "type": "string",
-                        "enum": [
-                          "argmax",
-                          "softmaxSample",
-                          "weightedSample"
-                        ]
-                      },
-                      "temperature": {
-                        "type": "number"
-                      },
-                      "candidateCount": {
-                        "type": "number"
-                      },
-                      "samplingProbabilities": {
-                        "type": "array",
-                        "items": {
-                          "type": "number"
-                        }
-                      },
-                      "selectedIndex": {
-                        "type": "number"
-                      }
-                    },
-                    "required": [
-                      "mode",
-                      "candidateCount",
-                      "selectedIndex"
-                    ],
-                    "additionalProperties": false
-                  },
-                  "emergencyFallback": {
-                    "type": "boolean"
-                  },
-                  "failure": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "code": {
-                            "type": "string"
-                          },
-                          "message": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "code",
-                          "message"
-                        ],
-                        "additionalProperties": false
-                      },
-                      {
-                        "type": "null"
-                      }
-                    ]
-                  },
-                  "stateFeatures": {
-                    "type": "object",
-                    "propertyNames": {
-                      "type": "string"
-                    },
-                    "additionalProperties": {
-                      "anyOf": [
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string"
-                        },
-                        {
-                          "type": "boolean"
-                        }
-                      ]
-                    }
-                  },
-                  "candidates": {
-                    "type": "array",
-                    "items": {
-                      "type": "object",
-                      "properties": {
-                        "actionId": {
-                          "type": "string"
-                        },
-                        "stableMoveKey": {
-                          "type": "string"
-                        },
-                        "score": {
-                          "type": "number"
-                        },
-                        "prunedBy": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "scoreContributions": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "termId": {
-                                "type": "string"
-                              },
-                              "contribution": {
-                                "type": "number"
-                              }
-                            },
-                            "required": [
-                              "termId",
-                              "contribution"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "previewRefIds": {
-                          "type": "array",
-                          "items": {
-                            "type": "string"
-                          }
-                        },
-                        "unknownPreviewRefs": {
-                          "type": "array",
-                          "items": {
-                            "type": "object",
-                            "properties": {
-                              "refId": {
-                                "type": "string"
-                              },
-                              "reason": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "const": "random"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "hidden"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "unresolved"
-                                  },
-                                  {
-                                    "type": "string",
-                                    "const": "failed"
-                                  }
-                                ]
-                              }
-                            },
-                            "required": [
-                              "refId",
-                              "reason"
-                            ],
-                            "additionalProperties": false
-                          }
-                        },
-                        "previewOutcome": {
+                        "reason": {
                           "anyOf": [
-                            {
-                              "type": "string",
-                              "const": "ready"
-                            },
-                            {
-                              "type": "string",
-                              "const": "stochastic"
-                            },
                             {
                               "type": "string",
                               "const": "random"
@@ -3854,66 +3565,301 @@
                               "const": "failed"
                             }
                           ]
-                        },
-                        "grantedOperationSimulated": {
-                          "type": "boolean"
-                        },
-                        "grantedOperationMove": {
-                          "type": "object",
-                          "properties": {
-                            "actionId": {
-                              "type": "string"
-                            },
-                            "params": {
-                              "type": "object",
-                              "propertyNames": {
-                                "type": "string"
-                              },
-                              "additionalProperties": {}
-                            }
+                        }
+                      },
+                      "required": [
+                        "refId",
+                        "reason"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "outcomeBreakdown": {
+                    "type": "object",
+                    "properties": {
+                      "ready": {
+                        "type": "number"
+                      },
+                      "stochastic": {
+                        "type": "number"
+                      },
+                      "unknownRandom": {
+                        "type": "number"
+                      },
+                      "unknownHidden": {
+                        "type": "number"
+                      },
+                      "unknownUnresolved": {
+                        "type": "number"
+                      },
+                      "unknownFailed": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "ready",
+                      "stochastic",
+                      "unknownRandom",
+                      "unknownHidden",
+                      "unknownUnresolved",
+                      "unknownFailed"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "mode",
+                  "evaluatedCandidateCount",
+                  "refIds",
+                  "unknownRefs"
+                ],
+                "additionalProperties": false
+              },
+              "selection": {
+                "type": "object",
+                "properties": {
+                  "mode": {
+                    "type": "string",
+                    "enum": [
+                      "argmax",
+                      "softmaxSample",
+                      "weightedSample"
+                    ]
+                  },
+                  "temperature": {
+                    "type": "number"
+                  },
+                  "candidateCount": {
+                    "type": "number"
+                  },
+                  "samplingProbabilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "number"
+                    }
+                  },
+                  "selectedIndex": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "mode",
+                  "candidateCount",
+                  "selectedIndex"
+                ],
+                "additionalProperties": false
+              },
+              "emergencyFallback": {
+                "type": "boolean"
+              },
+              "failure": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "stateFeatures": {
+                "type": "object",
+                "propertyNames": {
+                  "type": "string"
+                },
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "boolean"
+                    }
+                  ]
+                }
+              },
+              "candidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "actionId": {
+                      "type": "string"
+                    },
+                    "stableMoveKey": {
+                      "type": "string"
+                    },
+                    "score": {
+                      "type": "number"
+                    },
+                    "prunedBy": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "scoreContributions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "termId": {
+                            "type": "string"
                           },
-                          "required": [
-                            "actionId",
-                            "params"
-                          ],
-                          "additionalProperties": false
+                          "contribution": {
+                            "type": "number"
+                          }
                         },
-                        "grantedOperationMarginDelta": {
-                          "type": "number"
+                        "required": [
+                          "termId",
+                          "contribution"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "previewRefIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "unknownPreviewRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "refId": {
+                            "type": "string"
+                          },
+                          "reason": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "const": "random"
+                              },
+                              {
+                                "type": "string",
+                                "const": "hidden"
+                              },
+                              {
+                                "type": "string",
+                                "const": "unresolved"
+                              },
+                              {
+                                "type": "string",
+                                "const": "failed"
+                              }
+                            ]
+                          }
                         },
-                        "previewFailureReason": {
+                        "required": [
+                          "refId",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "previewOutcome": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "ready"
+                        },
+                        {
+                          "type": "string",
+                          "const": "stochastic"
+                        },
+                        {
+                          "type": "string",
+                          "const": "random"
+                        },
+                        {
+                          "type": "string",
+                          "const": "hidden"
+                        },
+                        {
+                          "type": "string",
+                          "const": "unresolved"
+                        },
+                        {
+                          "type": "string",
+                          "const": "failed"
+                        }
+                      ]
+                    },
+                    "grantedOperationSimulated": {
+                      "type": "boolean"
+                    },
+                    "grantedOperationMove": {
+                      "type": "object",
+                      "properties": {
+                        "actionId": {
                           "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "propertyNames": {
+                            "type": "string"
+                          },
+                          "additionalProperties": {}
                         }
                       },
                       "required": [
                         "actionId",
-                        "stableMoveKey",
-                        "score",
-                        "prunedBy"
+                        "params"
                       ],
                       "additionalProperties": false
+                    },
+                    "grantedOperationMarginDelta": {
+                      "type": "number"
+                    },
+                    "previewFailureReason": {
+                      "type": "string"
                     }
-                  }
-                },
-                "required": [
-                  "kind",
-                  "agent",
-                  "seatId",
-                  "requestedProfileId",
-                  "resolvedProfileId",
-                  "profileFingerprint",
-                  "initialCandidateCount",
-                  "selectedStableMoveKey",
-                  "finalScore",
-                  "pruningSteps",
-                  "tieBreakChain",
-                  "previewUsage",
-                  "emergencyFallback",
-                  "failure"
-                ],
-                "additionalProperties": false
+                  },
+                  "required": [
+                    "actionId",
+                    "stableMoveKey",
+                    "score",
+                    "prunedBy"
+                  ],
+                  "additionalProperties": false
+                }
               }
-            ]
+            },
+            "required": [
+              "kind",
+              "agent",
+              "seatId",
+              "requestedProfileId",
+              "resolvedProfileId",
+              "profileFingerprint",
+              "initialCandidateCount",
+              "selectedStableMoveKey",
+              "finalScore",
+              "pruningSteps",
+              "tieBreakChain",
+              "previewUsage",
+              "emergencyFallback",
+              "failure"
+            ],
+            "additionalProperties": false
           },
           "snapshot": {
             "type": "object",

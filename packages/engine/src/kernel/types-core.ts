@@ -1533,19 +1533,12 @@ export interface MoveContext {
   readonly turnFlowWindow?: string;
 }
 
-export type BuiltinAgentId = 'random' | 'greedy';
-
-export interface BuiltinAgentDescriptor {
-  readonly kind: 'builtin';
-  readonly builtinId: BuiltinAgentId;
-}
-
 export interface PolicyAgentDescriptor {
   readonly kind: 'policy';
   readonly profileId?: string;
 }
 
-export type AgentDescriptor = BuiltinAgentDescriptor | PolicyAgentDescriptor;
+export type AgentDescriptor = PolicyAgentDescriptor;
 
 export interface AgentDecisionFailureSummary {
   readonly code: string;
@@ -1617,14 +1610,6 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownFailed: number;
 }
 
-export interface BuiltinAgentDecisionTrace {
-  readonly kind: 'builtin';
-  readonly agent: BuiltinAgentDescriptor;
-  readonly candidateCount: number;
-  readonly selectedIndex?: number;
-  readonly selectedStableMoveKey?: string;
-}
-
 export interface PolicyAgentDecisionTrace {
   readonly kind: 'policy';
   readonly agent: PolicyAgentDescriptor;
@@ -1648,7 +1633,7 @@ export interface PolicyAgentDecisionTrace {
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 
-export type AgentDecisionTrace = BuiltinAgentDecisionTrace | PolicyAgentDecisionTrace;
+export type AgentDecisionTrace = PolicyAgentDecisionTrace;
 
 // ── Execution Options & Collector ─────────────────────────
 

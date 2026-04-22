@@ -1742,41 +1742,30 @@ const PolicySelectionTraceSchema = z
   })
   .strict();
 
-const AgentDecisionTraceSchema = z.union([
-  z
-    .object({
-      kind: z.literal('builtin'),
-      agent: z.object({ kind: z.literal('builtin'), builtinId: z.union([z.literal('random'), z.literal('greedy')]) }).strict(),
-      candidateCount: NumberSchema,
-      selectedIndex: NumberSchema.optional(),
-      selectedStableMoveKey: StringSchema.optional(),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('policy'),
-      agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
-      seatId: StringSchema.nullable(),
-      requestedProfileId: StringSchema.nullable(),
-      resolvedProfileId: StringSchema.nullable(),
-      profileFingerprint: StringSchema.nullable(),
-      initialCandidateCount: NumberSchema,
-      selectedStableMoveKey: StringSchema.nullable(),
-      phase1Score: NumberSchema.nullable().optional(),
-      phase2Score: NumberSchema.nullable().optional(),
-      phase1ActionRanking: z.array(StringSchema).optional(),
-      finalScore: NumberSchema.nullable(),
-      pruningSteps: z.array(PolicyPruningStepTraceSchema),
-      tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
-      previewUsage: PolicyPreviewUsageTraceSchema,
-      selection: PolicySelectionTraceSchema.optional(),
-      emergencyFallback: BooleanSchema,
-      failure: AgentDecisionFailureSummarySchema.nullable(),
-      stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
-      candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
-    })
-    .strict(),
-]);
+const AgentDecisionTraceSchema = z
+  .object({
+    kind: z.literal('policy'),
+    agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
+    seatId: StringSchema.nullable(),
+    requestedProfileId: StringSchema.nullable(),
+    resolvedProfileId: StringSchema.nullable(),
+    profileFingerprint: StringSchema.nullable(),
+    initialCandidateCount: NumberSchema,
+    selectedStableMoveKey: StringSchema.nullable(),
+    phase1Score: NumberSchema.nullable().optional(),
+    phase2Score: NumberSchema.nullable().optional(),
+    phase1ActionRanking: z.array(StringSchema).optional(),
+    finalScore: NumberSchema.nullable(),
+    pruningSteps: z.array(PolicyPruningStepTraceSchema),
+    tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
+    previewUsage: PolicyPreviewUsageTraceSchema,
+    selection: PolicySelectionTraceSchema.optional(),
+    emergencyFallback: BooleanSchema,
+    failure: AgentDecisionFailureSummarySchema.nullable(),
+    stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
+    candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
+  })
+  .strict();
 
 export const SeatStandingSnapshotSchema = z
   .object({

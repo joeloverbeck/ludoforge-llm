@@ -1,6 +1,6 @@
 # AGENTSUNSET-002: Remove RandomAgent and GreedyAgent from the shipped engine contract
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent exports, descriptors, schemas, and trace contract
@@ -55,6 +55,9 @@ Remove references to RandomAgent / GreedyAgent as supported engine bots from doc
 - `packages/engine/src/agents/greedy-agent.ts` (delete)
 - `packages/engine/src/kernel/types-core.ts` (modify)
 - `packages/engine/src/kernel/schemas-core.ts` (modify)
+- `packages/engine/schemas/Trace.schema.json` (modify, generated)
+- `packages/engine/test/unit/agents/factory.test.ts` (add)
+- `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts` (modify, lint fallout only)
 - `docs/architecture.md` (modify)
 
 ## Out of Scope
@@ -91,3 +94,16 @@ Remove references to RandomAgent / GreedyAgent as supported engine bots from doc
 3. `pnpm -F @ludoforge/engine lint`
 4. `pnpm -F @ludoforge/engine typecheck`
 
+## Outcome
+
+- Completed: 2026-04-22
+
+- Removed shipped `RandomAgent` / `GreedyAgent` sources and exports so the public `@ludoforge/engine/agents` surface is policy-only.
+- Collapsed the agent descriptor and `agentDecision` trace contracts to policy-only across runtime types, runtime schemas, and the generated `Trace.schema.json` artifact.
+- Added focused factory coverage proving policy descriptor normalization plus explicit rejection of legacy `builtin:*` descriptors.
+- Cleared a direct lint fallout in `packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts` after the policy-only contract removed the last live use of its imported `Agent` type.
+- Original ticket deliverable split: final confirmation or truthful narrowing of `pnpm -F @ludoforge/engine test` now belongs to `tickets/AGENTSUNSET-005.md`; this ticket landed the engine-contract removal itself but not the last named broad-lane proof.
+
+- `ticket corrections applied`: `Files to Touch omitted generated trace schema plus direct test fallout -> added packages/engine/schemas/Trace.schema.json, packages/engine/test/unit/agents/factory.test.ts, and packages/engine/test/performance/compiled-vs-interpreted-benchmark.test.ts to match the live diff`
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/factory.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js`; `pnpm -F @ludoforge/engine build` (rerun after the benchmark-test lint fix); `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine typecheck`
+- `proof gaps`: `tickets/AGENTSUNSET-005.md` owns final confirmation or truthful narrowing of `pnpm -F @ludoforge/engine test` after the default lane narrowed to `dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js` and emitted progress heartbeats for over 20 minutes without a terminal pass/fail summary

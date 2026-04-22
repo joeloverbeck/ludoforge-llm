@@ -1,14 +1,7 @@
-import type { Agent, AgentDescriptor, BuiltinAgentId, PolicyAgentDescriptor } from '../kernel/types.js';
-import { GreedyAgent } from './greedy-agent.js';
+import type { Agent, AgentDescriptor, PolicyAgentDescriptor } from '../kernel/types.js';
 import { PolicyAgent, type PolicyAgentConfig } from './policy-agent.js';
-import { RandomAgent } from './random-agent.js';
 
 export type AgentFactoryOptions = Omit<PolicyAgentConfig, 'profileId'>;
-
-const BUILTIN_AGENT_IDS: readonly BuiltinAgentId[] = ['random', 'greedy'];
-
-const isBuiltinAgentId = (value: string): value is BuiltinAgentId =>
-  BUILTIN_AGENT_IDS.includes(value as BuiltinAgentId);
 
 const normalizePolicyDescriptor = (profileId: string | undefined): PolicyAgentDescriptor => {
   if (profileId === undefined) {
@@ -23,16 +16,16 @@ const normalizePolicyDescriptor = (profileId: string | undefined): PolicyAgentDe
   return { kind: 'policy', profileId: trimmedProfileId };
 };
 
-export const normalizeAgentDescriptor = (descriptor: AgentDescriptor): AgentDescriptor => {
-  if (descriptor.kind === 'builtin') {
-    if (!isBuiltinAgentId(descriptor.builtinId)) {
-      throw new Error(`Unknown builtin agent id: ${String(descriptor.builtinId)}. Allowed: ${BUILTIN_AGENT_IDS.join(', ')}`);
-    }
-    return { kind: 'builtin', builtinId: descriptor.builtinId };
-  }
+const LEGACY_AGENT_DESCRIPTOR_ERROR =
+  'Legacy builtin agent descriptors are no longer supported. Use policy or policy:<profileId>.';
 
+export const normalizeAgentDescriptor = (descriptor: AgentDescriptor): AgentDescriptor => {
   if (descriptor.kind === 'policy') {
     return normalizePolicyDescriptor(descriptor.profileId);
+  }
+
+  if ((descriptor as { kind?: unknown }).kind === 'builtin') {
+    throw new Error(LEGACY_AGENT_DESCRIPTOR_ERROR);
   }
 
   throw new Error(`Unknown agent descriptor kind: ${String((descriptor as { kind?: unknown }).kind)}`);
@@ -51,31 +44,14 @@ export const parseAgentDescriptor = (spec: string): AgentDescriptor => {
   }
 
   if (kind === 'builtin') {
-    const builtinId = rest.join(':').trim().toLowerCase();
-    if (!isBuiltinAgentId(builtinId)) {
-      throw new Error(`Unknown builtin agent id: ${builtinId || '<empty>'}. Allowed: ${BUILTIN_AGENT_IDS.join(', ')}`);
-    }
-    return { kind: 'builtin', builtinId };
+    throw new Error(LEGACY_AGENT_DESCRIPTOR_ERROR);
   }
 
-  throw new Error(
-    `Unknown agent descriptor: ${trimmed}. Allowed forms: policy, policy:<profileId>, builtin:random, builtin:greedy`,
-  );
+  throw new Error(`Unknown agent descriptor: ${trimmed}. Allowed forms: policy, policy:<profileId>`);
 };
 
 export const createAgent = (descriptor: AgentDescriptor, options: AgentFactoryOptions = {}): Agent => {
   const normalized = normalizeAgentDescriptor(descriptor);
-
-  if (normalized.kind === 'builtin') {
-    switch (normalized.builtinId) {
-      case 'random':
-      return new RandomAgent();
-      case 'greedy':
-      return new GreedyAgent();
-      default:
-        throw new Error(`Unknown builtin agent id: ${normalized.builtinId}`);
-    }
-  }
 
   return new PolicyAgent({
     ...options,
@@ -89,8 +65,6 @@ export const createAgent = (descriptor: AgentDescriptor, options: AgentFactoryOp
  * Supported formats per slot:
  *   - `policy`
  *   - `policy:<profileId>`
- *   - `builtin:random`
- *   - `builtin:greedy`
  */
 export const parseAgentSpec = (spec: string, playerCount: number): readonly AgentDescriptor[] => {
   const parts = spec

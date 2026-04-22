@@ -42,6 +42,7 @@ Use concrete evidence only. Review against:
 - nearby architecture that the implementation depends on, even if not modified
 - available diff, commit, and history context around the implementation when useful
 - active tickets that may already cover adjacent work
+- relevant archived sibling tickets or archived follow-up tickets when a staged series may already have moved adjacent ownership into the archive
 
 Do not create refactor tickets from vague taste or hypothetical cleanup ideas. If evidence is weak, do nothing.
 
@@ -72,6 +73,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - invariants
 2. Identify the code that was actually touched and the nearby modules that matter architecturally.
 3. Read the remaining active tickets and check for overlap, adjacent scope, and likely dependency relationships.
+4. If overlap or remainder ownership is still unclear in a staged series, inspect the relevant archived sibling tickets or archived follow-up tickets before creating new work.
 
 ### Phase 2: Review With a Do-Nothing Bias
 

@@ -5,7 +5,6 @@ import { describe, it } from 'node:test';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
-  type Agent,
   type GameDefRuntime,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';

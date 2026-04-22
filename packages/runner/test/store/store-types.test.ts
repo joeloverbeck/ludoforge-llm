@@ -57,12 +57,11 @@ describe('store-types', () => {
       playerID: asPlayerId(0),
       legalMoveResult,
       choicePending,
-      selectedAction: asActionId('play-card'),
-      partialMove: { actionId: asActionId('play-card'), params: {} },
+      selectedActionId: asActionId('play-card'),
       choiceStack: [],
       playerSeats: new Map<ReturnType<typeof asPlayerId>, ReturnType<typeof createHumanSeatController> | ReturnType<typeof createAgentSeatController>>([
         [asPlayerId(0), createHumanSeatController()],
-        [asPlayerId(1), createAgentSeatController({ kind: 'builtin', builtinId: 'random' })],
+        [asPlayerId(1), createAgentSeatController()],
       ]),
       terminal,
     };

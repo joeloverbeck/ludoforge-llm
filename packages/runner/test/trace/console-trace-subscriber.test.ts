@@ -57,10 +57,33 @@ describe('createConsoleTraceSubscriber', () => {
       triggerFirings: [],
       effectTrace: [],
       agentDecision: {
-        kind: 'builtin',
-        agent: { kind: 'builtin', builtinId: 'greedy' },
-        candidateCount: 7,
-        selectedIndex: 0,
+        kind: 'policy',
+        agent: { kind: 'policy' },
+        seatId: null,
+        requestedProfileId: null,
+        resolvedProfileId: 'baseline',
+        profileFingerprint: null,
+        initialCandidateCount: 7,
+        selectedStableMoveKey: 'train|{}|false|unclassified',
+        finalScore: null,
+        pruningSteps: [],
+        tieBreakChain: [],
+        previewUsage: {
+          mode: 'disabled',
+          evaluatedCandidateCount: 0,
+          refIds: [],
+          unknownRefs: [],
+          outcomeBreakdown: {
+            ready: 0,
+            stochastic: 0,
+            unknownRandom: 0,
+            unknownHidden: 0,
+            unknownUnresolved: 0,
+            unknownFailed: 0,
+          },
+        },
+        emergencyFallback: false,
+        failure: null,
       },
     };
 
@@ -71,7 +94,7 @@ describe('createConsoleTraceSubscriber', () => {
     expect(headerCall).toContain('Turn 3');
     expect(headerCall).toContain('Player 2');
     expect(headerCall).toContain('train');
-    expect(headerCall).toContain('builtin:greedy');
+    expect(headerCall).toContain('policy:baseline');
   });
 
   it('logs move-applied events without agent decision metadata for human moves', () => {
@@ -92,7 +115,7 @@ describe('createConsoleTraceSubscriber', () => {
 
     expect(groupSpy).toHaveBeenCalled();
     const headerCall = groupSpy.mock.calls[0]?.[0] as string;
-    expect(headerCall).not.toContain('builtin:');
+    expect(headerCall).not.toContain('policy:');
   });
 
   it('logs game-terminal events', () => {

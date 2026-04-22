@@ -49,3 +49,20 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     compiledLifecycleEffects,
   };
 }
+
+/**
+ * Fork a structural runtime into a per-run instance.
+ *
+ * Structural runtime artifacts remain shared, but the Zobrist key memo table
+ * is reset at game boundaries so long-lived callers do not accumulate
+ * cross-run feature keys.
+ */
+export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): GameDefRuntime {
+  return {
+    ...runtime,
+    zobristTable: {
+      ...runtime.zobristTable,
+      keyCache: new Map(),
+    },
+  };
+}

@@ -175,7 +175,7 @@ export function createAiPlaybackController(options: AiPlaybackControllerOptions)
           options.animation.skipAll();
         }
 
-        const outcome = await selectorStore.getState().resolveAiStep();
+        const outcome = await selectorStore.getState().runAiStep();
         if (destroyed) {
           return;
         }

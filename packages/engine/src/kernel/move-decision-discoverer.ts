@@ -1,7 +1,7 @@
 import { legalChoicesDiscover } from './legal-choices.js';
 import type { GameDefRuntime } from './gamedef-runtime.js';
 import type { GameDef, GameState } from './types.js';
-import type { DecisionSequenceChoiceDiscoverer } from './decision-sequence-satisfiability.js';
+import type { DecisionSequenceChoiceDiscoverer } from './decision-sequence-analysis.js';
 
 export const createMoveDecisionSequenceChoiceDiscoverer = (
   def: GameDef,

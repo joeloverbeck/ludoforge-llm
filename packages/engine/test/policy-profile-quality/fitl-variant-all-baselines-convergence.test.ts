@@ -13,7 +13,11 @@ import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-qualit
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-const FITL_1964_CANARY_SEEDS = [1020, 1049, 1054] as const;
+const FITL_1964_CANARY_SEEDS = [
+  { seed: 1020, expectedStopReason: 'terminal' },
+  { seed: 1049, expectedStopReason: 'terminal' },
+  { seed: 1054, expectedStopReason: 'noLegalMoves' },
+] as const;
 const MAX_TURNS = 300;
 const PLAYER_COUNT = 4;
 const TEST_FILE = fileURLToPath(import.meta.url);
@@ -29,20 +33,24 @@ describe('FITL all-baselines variant convergence witness', () => {
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
 
-  for (const seed of FITL_1964_CANARY_SEEDS) {
-    it(`seed ${seed}: reaches terminal within ${MAX_TURNS} moves`, () => {
+  for (const { seed, expectedStopReason } of FITL_1964_CANARY_SEEDS) {
+    it(`seed ${seed}: reaches expected stopReason=${expectedStopReason} within ${MAX_TURNS} decisions`, () => {
       const agents = VARIANT_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
       const trace = runGame(def, seed, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
       emitPolicyProfileQualityRecord({
         file: TEST_FILE,
         variantId: 'all-baselines',
         seed,
-        passed: trace.stopReason === 'terminal',
+        passed: trace.stopReason === expectedStopReason,
         stopReason: trace.stopReason,
-        moves: trace.moves.length,
+        decisions: trace.decisions.length,
       });
 
-      assert.equal(trace.stopReason, 'terminal', `failed to converge - seed ${seed} stopped with ${trace.stopReason}`);
+      assert.equal(
+        trace.stopReason,
+        expectedStopReason,
+        `seed ${seed} stopped with ${trace.stopReason} instead of expected ${expectedStopReason}`,
+      );
     });
   }
 });

@@ -1,45 +1,32 @@
 import {
-  advanceChooseN,
-  advanceChooseNWithSession,
-  applyMove,
-  applyTrustedMove,
+  applyMove as engineApplyMove,
   assertValidatedGameDefInput,
-  completeTemplateMove,
-  createChooseNSession,
   createGameDefRuntime,
   describeAction as engineDescribeAction,
-  enumerateLegalMoves,
   initialState,
-  isChooseNSessionEligible,
-  isSessionValid,
-  legalChoicesEvaluate,
-  legalMoves,
   terminalResult,
 } from '@ludoforge/engine/runtime';
+import { advanceAutoresolvable as engineAdvanceAutoresolvable } from '../../../engine/src/kernel/microturn/advance.js';
+import { applyDecision as engineApplyDecision } from '../../../engine/src/kernel/microturn/apply.js';
+import { publishMicroturn as enginePublishMicroturn } from '../../../engine/src/kernel/microturn/publish.js';
+import type {
+  AdvanceAutoresolvableResult,
+  ApplyDecisionResult,
+  MicroturnState,
+  TurnId,
+} from '../../../engine/src/kernel/microturn/types.js';
 
 import type {
-  AdvanceChooseNResult,
   AnnotatedActionDescription,
   AnnotationContext,
-  ApplyMoveResult,
-  ChoiceRequest,
-  ChoicePendingChooseNRequest,
-  ChooseNCommand,
-  ChooseNSession,
-  ChooseNTemplate,
-  DecisionKey,
   EffectTraceEntry,
   ExecutionOptions,
   GameDef,
   GameDefRuntime,
   GameState,
-  LegalMoveEnumerationOptions,
-  LegalMoveEnumerationResult,
   Move,
-  MoveParamScalar,
   PlayerId,
   TerminalResult,
-  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 
 export interface WorkerError {
@@ -71,58 +58,38 @@ export interface InitResult {
   readonly setupTrace: readonly EffectTraceEntry[];
 }
 
-export interface ApplyTemplateMoveApplied {
-  readonly outcome: 'applied';
-  readonly move: Move;
-  readonly result: ApplyMoveResult;
-}
-
-export interface ApplyTemplateMoveUncompletable {
-  readonly outcome: 'uncompletable';
-}
-
-export interface ApplyTemplateMoveIllegal {
-  readonly outcome: 'illegal';
-  readonly error: WorkerError;
-}
-
-export type ApplyTemplateMoveResult =
-  | ApplyTemplateMoveApplied
-  | ApplyTemplateMoveUncompletable
-  | ApplyTemplateMoveIllegal;
-
 export interface GameWorkerAPI {
   init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult>;
-  legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]>;
-  enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult>;
-  legalChoices(partialMove: Move): Promise<ChoiceRequest>;
-  advanceChooseN(
-    partialMove: Move,
-    decisionKey: DecisionKey,
-    currentSelected: readonly MoveParamScalar[],
-    command: ChooseNCommand,
-  ): Promise<AdvanceChooseNResult>;
-  applyMove(
+  publishMicroturn(): Promise<MicroturnState>;
+  applyDecision(
+    decision: MicroturnState['legalActions'][number],
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<ApplyDecisionResult>;
+  advanceAutoresolvable(
+    options: { readonly trace?: boolean } | undefined,
+    stamp: OperationStamp,
+  ): Promise<AdvanceAutoresolvableResult>;
+  applyReplayMove(
     move: Move,
     options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
-  ): Promise<ApplyMoveResult>;
-  applyTrustedMove(
-    move: TrustedExecutableMove,
-    options: { readonly trace?: boolean } | undefined,
-    stamp: OperationStamp,
-  ): Promise<ApplyMoveResult>;
-  applyTemplateMove(
-    templateMove: Move,
-    options: { readonly trace?: boolean } | undefined,
-    stamp: OperationStamp,
-  ): Promise<ApplyTemplateMoveResult>;
+  ): Promise<{
+    readonly state: GameState;
+    readonly triggerFirings: ApplyDecisionResult['triggerFirings'];
+    readonly warnings: ApplyDecisionResult['warnings'];
+    readonly effectTrace?: ApplyDecisionResult['effectTrace'];
+    readonly conditionTrace?: ApplyDecisionResult['conditionTrace'];
+    readonly decisionTrace?: ApplyDecisionResult['decisionTrace'];
+    readonly selectorTrace?: ApplyDecisionResult['selectorTrace'];
+  }>;
   playSequence(
     moves: readonly Move[],
     options: { readonly trace?: boolean } | undefined,
     stamp: OperationStamp,
-    onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
-  ): Promise<readonly ApplyMoveResult[]>;
+    onStep?: (result: Awaited<ReturnType<GameWorkerAPI['applyReplayMove']>>, moveIndex: number) => void,
+  ): Promise<readonly Awaited<ReturnType<GameWorkerAPI['applyReplayMove']>>[]>;
+  rewindToTurnBoundary(turnId: TurnId, stamp: OperationStamp): Promise<GameState | null>;
   describeAction(actionId: string, context?: { readonly actorPlayer?: number }): Promise<AnnotatedActionDescription | null>;
   terminalResult(): Promise<TerminalResult | null>;
   getState(): Promise<GameState>;
@@ -232,6 +199,10 @@ const withValidationFailureMapping = async <T>(run: () => Promise<T>): Promise<T
   }
 };
 
+const isTurnBoundaryState = (state: GameState, turnId: TurnId): boolean =>
+  (state.decisionStack?.length ?? 0) === 0
+  && state.nextTurnId === turnId;
+
 export function createGameWorker(): GameWorkerAPI {
   let def: GameDef | null = null;
   let state: GameState | null = null;
@@ -239,16 +210,6 @@ export function createGameWorker(): GameWorkerAPI {
   let history: GameState[] = [];
   let enableTrace = true;
   let latestMutationStamp: OperationStamp | null = null;
-
-  // ── ChooseN session state ───────────────────────────────────────────
-  let chooseNSession: ChooseNSession | null = null;
-  let revision = 0;
-
-  /** Increment revision and invalidate any active session. Called on every state mutation. */
-  const invalidateSession = (): void => {
-    revision += 1;
-    chooseNSession = null;
-  };
 
   const compareOperationStamp = (left: OperationStamp, right: OperationStamp): number => {
     if (left.epoch !== right.epoch) {
@@ -274,24 +235,22 @@ export function createGameWorker(): GameWorkerAPI {
     state = nextInit.state;
     history = [];
     enableTrace = traceEnabled;
-    invalidateSession();
     return { state: nextInit.state, setupTrace: nextInit.setupTrace };
   };
 
-  const executeAppliedMove = (
+  const applyReplayMove = (
     currentDef: GameDef,
     currentState: GameState,
     move: Move,
     options: { readonly trace?: boolean } | undefined,
-  ): ApplyMoveResult => {
+  ): Awaited<ReturnType<GameWorkerAPI['applyReplayMove']>> => {
     history.push(currentState);
     try {
       const executionOptions: ExecutionOptions = {
         trace: options?.trace ?? enableTrace,
       };
-      const result = applyMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
+      const result = engineApplyMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
       state = result.state;
-      invalidateSession();
       return result;
     } catch (error) {
       history.pop();
@@ -299,20 +258,35 @@ export function createGameWorker(): GameWorkerAPI {
     }
   };
 
-  const executeTrustedAppliedMove = (
+  const applyDecision = (
     currentDef: GameDef,
     currentState: GameState,
-    move: TrustedExecutableMove,
+    decision: MicroturnState['legalActions'][number],
     options: { readonly trace?: boolean } | undefined,
-  ): ApplyMoveResult => {
+  ): ApplyDecisionResult => {
     history.push(currentState);
     try {
       const executionOptions: ExecutionOptions = {
         trace: options?.trace ?? enableTrace,
       };
-      const result = applyTrustedMove(currentDef, currentState, move, executionOptions, runtime ?? undefined);
+      const result = engineApplyDecision(currentDef, currentState, decision, executionOptions, runtime ?? undefined);
       state = result.state;
-      invalidateSession();
+      return result;
+    } catch (error) {
+      history.pop();
+      throw error;
+    }
+  };
+
+  const advanceAutoresolvable = (
+    currentDef: GameDef,
+    currentState: GameState,
+    _options: { readonly trace?: boolean } | undefined,
+  ): AdvanceAutoresolvableResult => {
+    history.push(currentState);
+    try {
+      const result = engineAdvanceAutoresolvable(currentDef, currentState, { state: currentState.rng }, runtime ?? undefined);
+      state = result.state;
       return result;
     } catch (error) {
       history.pop();
@@ -321,198 +295,80 @@ export function createGameWorker(): GameWorkerAPI {
   };
 
   const api: GameWorkerAPI = {
-    async init(nextDef: GameDef, seed: number, options: BridgeInitOptions | undefined, stamp: OperationStamp): Promise<InitResult> {
+    async init(nextDef, seed, options, stamp): Promise<InitResult> {
       return withInternalErrorMapping(() => {
         ensureFreshMutation(stamp);
         return initState(nextDef, seed, options);
       });
     },
 
-    async legalMoves(options?: LegalMoveEnumerationOptions): Promise<readonly Move[]> {
+    async publishMicroturn(): Promise<MicroturnState> {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        return legalMoves(current.def, current.state, options);
+        return enginePublishMicroturn(current.def, current.state, runtime ?? undefined);
       });
     },
 
-    async enumerateLegalMoves(options?: LegalMoveEnumerationOptions): Promise<LegalMoveEnumerationResult> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-        const result = enumerateLegalMoves(current.def, current.state, options);
-        const workerSafeResult = { ...result } as LegalMoveEnumerationResult & { certificateIndex?: unknown };
-        delete workerSafeResult.certificateIndex;
-        return workerSafeResult;
-      });
-    },
-
-    async legalChoices(partialMove: Move): Promise<ChoiceRequest> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-        let capturedTemplate: ChooseNTemplate | null = null;
-        const request = legalChoicesEvaluate(
-          current.def,
-          current.state,
-          partialMove,
-          {
-            onChooseNTemplateCreated: (template) => {
-              capturedTemplate = template;
-            },
-          },
-          runtime ?? undefined,
-        );
-
-        // Attempt to create a session if a chooseN template was captured.
-        chooseNSession = null;
-        if (
-          capturedTemplate !== null
-          && request.kind === 'pending'
-          && 'type' in request
-          && request.type === 'chooseN'
-          && isChooseNSessionEligible(capturedTemplate)
-        ) {
-          chooseNSession = createChooseNSession(
-            capturedTemplate,
-            (request as ChoicePendingChooseNRequest).selected,
-            request as ChoicePendingChooseNRequest,
-            revision,
-          );
-        }
-
-        return request;
-      });
-    },
-
-    async advanceChooseN(
-      partialMove: Move,
-      decisionKey: DecisionKey,
-      currentSelected: readonly MoveParamScalar[],
-      command: ChooseNCommand,
-    ): Promise<AdvanceChooseNResult> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-
-        // Session fast path: use session if valid and matches the decision key.
-        if (
-          chooseNSession !== null
-          && isSessionValid(chooseNSession, revision)
-          && chooseNSession.decisionKey === decisionKey
-        ) {
-          try {
-            return advanceChooseNWithSession(chooseNSession, command);
-          } catch {
-            // Conservative fallback: discard session and use stateless path.
-            chooseNSession = null;
-          }
-        }
-
-        // Stateless fallback.
-        return advanceChooseN(
-          current.def,
-          current.state,
-          partialMove,
-          decisionKey,
-          currentSelected,
-          command,
-          runtime ?? undefined,
-        );
-      });
-    },
-
-    async applyMove(
-      move: Move,
-      options: { readonly trace?: boolean } | undefined,
-      stamp: OperationStamp,
-    ): Promise<ApplyMoveResult> {
+    async applyDecision(decision, options, stamp): Promise<ApplyDecisionResult> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
-      return withIllegalMoveMapping(() => executeAppliedMove(current.def, current.state, move, options));
+      return withIllegalMoveMapping(() => applyDecision(current.def, current.state, decision, options));
     },
 
-    async applyTrustedMove(
-      move: TrustedExecutableMove,
-      options: { readonly trace?: boolean } | undefined,
-      stamp: OperationStamp,
-    ): Promise<ApplyMoveResult> {
+    async advanceAutoresolvable(options, stamp): Promise<AdvanceAutoresolvableResult> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
-      return withIllegalMoveMapping(() => executeTrustedAppliedMove(current.def, current.state, move, options));
+      return withIllegalMoveMapping(() => advanceAutoresolvable(current.def, current.state, options));
     },
 
-    async applyTemplateMove(
-      templateMove: Move,
-      options: { readonly trace?: boolean } | undefined,
-      stamp: OperationStamp,
-    ): Promise<ApplyTemplateMoveResult> {
-      return withInternalErrorMapping(() => {
-        const current = assertInitialized(def, state);
-        ensureFreshMutation(stamp);
-        const completion = completeTemplateMove(
-          current.def,
-          current.state,
-          templateMove,
-          { state: current.state.rng },
-          runtime ?? undefined,
-        );
-        if (completion.kind !== 'completed') {
-          return { outcome: 'uncompletable' };
-        }
-        const completedMove = completion.move;
-
-        try {
-          const result = executeAppliedMove(current.def, current.state, completedMove, options);
-          return {
-            outcome: 'applied',
-            move: completedMove,
-            result,
-          };
-        } catch (error) {
-          return {
-            outcome: 'illegal',
-            error: toWorkerError('ILLEGAL_MOVE', error, 'Illegal move.'),
-          };
-        }
-      });
-    },
-
-    playSequence(
-      moves: readonly Move[],
-      options: { readonly trace?: boolean } | undefined,
-      stamp: OperationStamp,
-      onStep?: (result: ApplyMoveResult, moveIndex: number) => void,
-    ): Promise<readonly ApplyMoveResult[]> {
+    async applyReplayMove(move, options, stamp): Promise<Awaited<ReturnType<GameWorkerAPI['applyReplayMove']>>> {
       const current = assertInitialized(def, state);
       ensureFreshMutation(stamp);
-      const results: ApplyMoveResult[] = [];
+      return withIllegalMoveMapping(() => applyReplayMove(current.def, current.state, move, options));
+    },
 
-      return withIllegalMoveMapping(() => {
+    async playSequence(moves, options, stamp, onStep) {
+      const current = assertInitialized(def, state);
+      ensureFreshMutation(stamp);
+      return withIllegalMoveMapping(async () => {
+        const results = [];
+        let replayState = current.state;
         for (let index = 0; index < moves.length; index += 1) {
-          const currentState = state;
-          if (currentState === null) {
-            throw toWorkerError('NOT_INITIALIZED', undefined, 'Worker is not initialized. Call init() first.');
-          }
-          history.push(currentState);
-
-          try {
-            const executionOptions: ExecutionOptions = { trace: options?.trace ?? enableTrace };
-            const result = applyMove(current.def, currentState, moves[index]!, executionOptions, runtime ?? undefined);
-            state = result.state;
-            results.push(result);
-            onStep?.(result, index);
-          } catch (error) {
-            history.pop();
-            throw error;
-          }
+          const result = applyReplayMove(current.def, replayState, moves[index]!, options);
+          replayState = result.state;
+          results.push(result);
+          onStep?.(result, index);
         }
-
         return results;
       });
     },
 
-    async describeAction(actionId: string, callerContext?: { readonly actorPlayer?: number }): Promise<AnnotatedActionDescription | null> {
+    async rewindToTurnBoundary(turnId, stamp) {
+      ensureFreshMutation(stamp);
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
-        const actionDef = current.def.actions.find((a) => String(a.id) === actionId);
-        if (!actionDef) return null;
+        const currentWithPresent = [current.state, ...history.slice().reverse()];
+        const matchIndex = currentWithPresent.findIndex((candidate) => isTurnBoundaryState(candidate, turnId));
+        if (matchIndex < 0) {
+          return null;
+        }
+        const matched = currentWithPresent[matchIndex]!;
+        const retainedHistory = currentWithPresent
+          .slice(matchIndex + 1)
+          .reverse();
+        history = retainedHistory;
+        state = matched;
+        return matched;
+      });
+    },
+
+    async describeAction(actionId, callerContext) {
+      return withInternalErrorMapping(() => {
+        const current = assertInitialized(def, state);
+        const actionDef = current.def.actions.find((action) => String(action.id) === actionId);
+        if (actionDef === undefined) {
+          return null;
+        }
         const currentRuntime = runtime ?? createGameDefRuntime(current.def);
         const actorPlayer = callerContext?.actorPlayer != null
           ? (callerContext.actorPlayer as PlayerId)
@@ -528,21 +384,21 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async terminalResult(): Promise<TerminalResult | null> {
+    async terminalResult() {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return terminalResult(current.def, current.state);
       });
     },
 
-    async getState(): Promise<GameState> {
+    async getState() {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return current.state;
       });
     },
 
-    async getMetadata(): Promise<GameMetadata> {
+    async getMetadata() {
       return withInternalErrorMapping(() => {
         const current = assertInitialized(def, state);
         return {
@@ -555,13 +411,12 @@ export function createGameWorker(): GameWorkerAPI {
       });
     },
 
-    async getHistoryLength(): Promise<number> {
+    async getHistoryLength() {
       return history.length;
     },
 
-    async undo(stamp: OperationStamp): Promise<GameState | null> {
+    async undo(stamp) {
       ensureFreshMutation(stamp);
-      invalidateSession();
       if (history.length === 0) {
         return null;
       }
@@ -569,29 +424,18 @@ export function createGameWorker(): GameWorkerAPI {
       return state;
     },
 
-    async reset(
-      nextDef: GameDef | undefined,
-      seed: number | undefined,
-      options: BridgeInitOptions | undefined,
-      stamp: OperationStamp,
-    ): Promise<InitResult> {
+    async reset(nextDef, seed, options, stamp) {
       return withInternalErrorMapping(() => {
         ensureFreshMutation(stamp);
         const resolvedDef = nextDef ?? def;
         if (resolvedDef === null) {
           throw toWorkerError('NOT_INITIALIZED', undefined, 'No GameDef available. Provide one or call init() first.');
         }
-        const resolvedSeed = seed ?? 0;
-        return initState(resolvedDef, resolvedSeed, options);
+        return initState(resolvedDef, seed ?? 0, options);
       });
     },
 
-    async loadFromUrl(
-      url: string,
-      seed: number,
-      options: BridgeInitOptions | undefined,
-      stamp: OperationStamp,
-    ): Promise<InitResult> {
+    async loadFromUrl(url, seed, options, stamp) {
       ensureFreshMutation(stamp);
       return withValidationFailureMapping(async () => {
         const response = await fetch(url);

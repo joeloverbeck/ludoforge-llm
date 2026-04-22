@@ -2,7 +2,7 @@ import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { describe, expect, it, vi } from 'vitest';
-import { asActionId, asPlayerId } from '@ludoforge/engine/runtime';
+import { asPlayerId } from '@ludoforge/engine/runtime';
 import type { DecisionKey } from '@ludoforge/engine/runtime';
 
 import type { GameStore } from '../../src/store/game-store.js';
@@ -214,8 +214,6 @@ interface MinimalContainerState {
   readonly error: WorkerError | null;
   readonly gameDef: GameStore['gameDef'];
   readonly renderModel: GameStore['renderModel'];
-  readonly selectedAction: GameStore['selectedAction'];
-  readonly partialMove: GameStore['partialMove'];
   clearError(): void;
 }
 
@@ -275,8 +273,6 @@ function createContainerStore(state: {
   readonly error: WorkerError | null;
   readonly gameDef?: GameStore['gameDef'];
   readonly renderModel?: GameStore['renderModel'];
-  readonly selectedAction?: GameStore['selectedAction'];
-  readonly partialMove?: GameStore['partialMove'];
   readonly clearError?: () => void;
 }): StoreApi<GameStore> {
   const clearError = state.clearError ?? (() => {});
@@ -285,8 +281,6 @@ function createContainerStore(state: {
     error: state.error,
     gameDef: state.gameDef ?? null,
     renderModel: state.renderModel ?? null,
-    selectedAction: state.selectedAction ?? null,
-    partialMove: state.partialMove ?? null,
     clearError,
   })) as unknown as StoreApi<GameStore>;
 }
@@ -672,8 +666,6 @@ describe('GameContainer', () => {
               }],
             },
           }),
-          selectedAction: asActionId('pass'),
-          partialMove: { actionId: asActionId('pass'), params: {} },
         }),
         visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
@@ -685,7 +677,7 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
   });
 
-  it('renders choiceConfirm mode branch only', () => {
+  it('renders actions branch when no choice is pending', () => {
     const html = renderToStaticMarkup(
       createElement(GameContainer, {
         bridge: TEST_BRIDGE,
@@ -693,18 +685,15 @@ describe('GameContainer', () => {
           gameLifecycle: 'playing',
           error: null,
           renderModel: makeRenderModel({
-            choiceUi: { kind: 'confirmReady' },
+            choiceUi: { kind: 'none' },
           }),
-          selectedAction: asActionId('pass'),
-          partialMove: { actionId: asActionId('pass'), params: {} },
         }),
         visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
     );
 
-    expect(html).toContain('data-testid="choice-panel-choiceConfirm"');
-    expect(html).not.toContain('data-testid="action-toolbar"');
-    expect(html).not.toContain('data-testid="undo-control"');
+    expect(html).toContain('data-testid="action-toolbar"');
+    expect(html).toContain('data-testid="undo-control"');
     expect(html).not.toContain('data-testid="choice-panel-choicePending"');
   });
 
@@ -761,10 +750,8 @@ describe('GameContainer', () => {
           error: null,
           renderModel: makeRenderModel({
             activePlayerID: asPlayerId(1),
-            choiceUi: { kind: 'confirmReady' },
+            choiceUi: { kind: 'none' },
           }),
-          selectedAction: asActionId('pass'),
-          partialMove: { actionId: asActionId('pass'), params: {} },
         }),
         visualConfigProvider: TEST_VISUAL_CONFIG_PROVIDER,
       }),
@@ -773,7 +760,6 @@ describe('GameContainer', () => {
     expect(html).not.toContain('data-testid="action-toolbar"');
     expect(html).not.toContain('data-testid="undo-control"');
     expect(html).not.toContain('data-testid="choice-panel-choicePending"');
-    expect(html).not.toContain('data-testid="choice-panel-choiceConfirm"');
     expect(html).not.toContain('data-testid="choice-panel-choiceInvalid"');
     expect(html).toContain('data-testid="ai-turn-overlay"');
   });
@@ -933,8 +919,6 @@ describe('GameContainer', () => {
               }],
             },
           }),
-          selectedAction: asActionId('pass'),
-          partialMove: { actionId: asActionId('pass'), params: {} },
         }),
         readOnlyMode: false,
         expectedPrimaryTestId: 'choice-panel-choicePending',

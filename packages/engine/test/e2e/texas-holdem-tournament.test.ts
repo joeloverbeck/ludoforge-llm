@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { GreedyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   applyMove,
   asPhaseId,
@@ -54,15 +54,8 @@ const compileTexasDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-const createAgents = (count: number, kind: 'random' | 'greedy' | 'mixed'): readonly Agent[] => {
-  if (kind === 'random') {
-    return Array.from({ length: count }, () => new RandomAgent());
-  }
-  if (kind === 'greedy') {
-    return Array.from({ length: count }, () => new GreedyAgent());
-  }
-  return Array.from({ length: count }, (_unused, index) => (index % 2 === 0 ? new RandomAgent() : new GreedyAgent()));
-};
+const createPolicyAgents = (count: number, traceLevel: 'summary' | 'verbose' = 'summary'): readonly Agent[] =>
+  Array.from({ length: count }, () => new PolicyAgent({ traceLevel }));
 
 const totalChipsInPlay = (state: GameState): number => {
   const pot = Number(state.globalVars.pot ?? 0);
@@ -97,8 +90,13 @@ const replayTrace = (
   replayScript({
     def,
     initialState: initialState(def, trace.seed, playerCount).state,
-    script: trace.moves.map((entry) => ({
-      move: entry.move,
+    script: trace.decisions.map((entry) => ({
+      move: (() => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      })(),
+      decision: entry.decision,
       expectedStateHash: entry.stateHash,
     })),
     keyVars: ['pot', 'blindLevel', 'handsPlayed', 'activePlayers'],
@@ -125,7 +123,7 @@ const formatRunawayDiagnostics = (trace: GameTrace): string =>
   JSON.stringify({
     stopReason: trace.stopReason,
     turnsCount: trace.turnsCount,
-    moves: trace.moves.length,
+    moves: trace.decisions.length,
     currentPhase: trace.finalState.currentPhase,
     activePlayers: Number(trace.finalState.globalVars.activePlayers ?? -1),
     handsPlayed: Number(trace.finalState.globalVars.handsPlayed ?? -1),
@@ -135,10 +133,10 @@ const formatRunawayDiagnostics = (trace: GameTrace): string =>
 
 describe('texas hold\'em tournament e2e', () => {
   if (RUN_SLOW_E2E) {
-    it('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {
+    it('[slow] completes a 4-player authored-policy tournament run with stable end-state invariants', () => {
       const def = compileTexasDef();
       const playerCount = 4;
-      const trace = loadTrace(def, 42, createAgents(playerCount, 'random'), playerCount, FULL_TOURNAMENT_MAX_TURNS);
+      const trace = loadTrace(def, 42, createPolicyAgents(playerCount), playerCount, FULL_TOURNAMENT_MAX_TURNS);
 
       const totalInitialChips = totalChipsInPlay(initialState(def, 42, playerCount).state);
       assert.equal(totalChipsInPlay(trace.finalState), totalInitialChips);
@@ -171,17 +169,17 @@ describe('texas hold\'em tournament e2e', () => {
       assert.equal(alive.length > 1, true, `slow tournament reached maxTurns with <=1 survivors: ${formatRunawayDiagnostics(trace)}`);
     });
   } else {
-    it.skip('[slow] completes a 4-player random-agent tournament run with stable end-state invariants', () => {});
+    it.skip('[slow] completes a 4-player authored-policy tournament run with stable end-state invariants', () => {});
   }
 
   for (const playerCount of [2, 3, 6, 10]) {
-    it(`completes random-agent tournament at playerCount=${playerCount}`, () => {
+    it(`completes authored-policy tournament at playerCount=${playerCount}`, () => {
       const def = compileTexasDef();
       const seed = PLAYER_COUNT_SEEDS[playerCount]!;
       const trace = loadTrace(
         def,
         seed,
-        createAgents(playerCount, 'random'),
+        createPolicyAgents(playerCount),
         playerCount,
         FULL_TOURNAMENT_MAX_TURNS,
       );
@@ -195,15 +193,23 @@ describe('texas hold\'em tournament e2e', () => {
   it('is deterministic for identical seed and agent lineup', () => {
     const def = compileTexasDef();
     const playerCount = 4;
-    const agentsA = createAgents(playerCount, 'random');
-    const agentsB = createAgents(playerCount, 'random');
+    const agentsA = createPolicyAgents(playerCount);
+    const agentsB = createPolicyAgents(playerCount);
 
     const first = loadTrace(def, 77, agentsA, playerCount);
     const second = loadTrace(def, 77, agentsB, playerCount);
 
     assert.deepEqual(
-      first.moves.map((entry) => entry.move),
-      second.moves.map((entry) => entry.move),
+      first.decisions.map((entry) => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      }),
+      second.decisions.map((entry) => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      }),
     );
     assert.equal(first.finalState.stateHash, second.finalState.stateHash);
     assert.deepEqual(serializeTrace(first), serializeTrace(second));
@@ -216,7 +222,7 @@ describe('texas hold\'em tournament e2e', () => {
   it('follows the blind schedule exactly and only changes blinds at hand boundaries', () => {
     const def = compileTexasDef();
     const playerCount = 6;
-    const trace = loadTrace(def, 58, createAgents(playerCount, 'random'), playerCount);
+    const trace = loadTrace(def, 58, createPolicyAgents(playerCount), playerCount);
     const replay = replayTrace(def, trace, playerCount);
     const schedule = readBlindSchedule(def);
 
@@ -249,7 +255,7 @@ describe('texas hold\'em tournament e2e', () => {
   it('keeps per-turn legal move cardinality bounded under Texas raise rebucketing', () => {
     const def = compileTexasDef();
     const playerCount = 6;
-    const trace = loadTrace(def, 58, createAgents(playerCount, 'random'), playerCount);
+    const trace = loadTrace(def, 58, createPolicyAgents(playerCount), playerCount);
     const replay = replayTrace(def, trace, playerCount);
 
     const peakLegalMoveCount = replay.steps.reduce(
@@ -328,16 +334,16 @@ describe('texas hold\'em tournament e2e', () => {
     assert.equal(Number(headsUpState.perPlayerVars[bbSeat!]?.streetBet ?? -1), Number(headsUpState.globalVars.bigBlind));
   });
 
-  it('completes a 4-player greedy-agent tournament without runtime errors', () => {
+  it('completes a 4-player authored-policy tournament without runtime errors', () => {
     const def = compileTexasDef();
-    const trace = loadTrace(def, 63, createAgents(4, 'greedy'), 4);
+    const trace = loadTrace(def, 63, createPolicyAgents(4), 4);
 
     assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
   });
 
-  it('completes a mixed-agent tournament (random + greedy)', () => {
+  it('completes a verbose authored-policy tournament', () => {
     const def = compileTexasDef();
-    const trace = loadTrace(def, 64, createAgents(4, 'mixed'), 4);
+    const trace = loadTrace(def, 64, createPolicyAgents(4, 'verbose'), 4);
 
     assert.equal(trace.stopReason === 'terminal' || trace.stopReason === 'maxTurns', true);
   });

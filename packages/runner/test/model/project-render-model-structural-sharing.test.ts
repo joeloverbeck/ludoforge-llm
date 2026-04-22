@@ -125,8 +125,7 @@ function makeContext(overrides: Partial<RenderContext> = {}): RenderContext {
     playerID: asPlayerId(0),
     legalMoveResult: { moves: [], warnings: [] },
     choicePending: null,
-    selectedAction: asActionId('tick'),
-    partialMove: null,
+    selectedActionId: asActionId('tick'),
     choiceStack: [],
     playerSeats: new Map([
       [asPlayerId(0), createHumanSeatController()],

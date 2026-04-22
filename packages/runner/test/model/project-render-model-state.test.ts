@@ -146,21 +146,28 @@ function compileFixture(): GameDef {
 function makeRenderContext(
   playerCount: number,
   playerID = asPlayerId(0),
-  overrides: Partial<RenderContext> = {},
+  overrides: Partial<RenderContext> & {
+    readonly selectedAction?: ReturnType<typeof asActionId> | null;
+    readonly partialMove?: Move | null;
+  } = {},
 ): RenderContext {
+  const {
+    selectedAction,
+    ...contextOverrides
+  } = overrides;
+
   return {
     playerID,
     legalMoveResult: { moves: [], warnings: [] },
     actionAvailabilityById: new Map<string, boolean>(),
     choicePending: null,
-    selectedAction: null,
-    partialMove: null,
+    selectedActionId: selectedAction ?? null,
     choiceStack: [],
     playerSeats: new Map(
       Array.from({ length: playerCount }, (_unused, player) => [asPlayerId(player), createHumanSeatController()]),
     ),
     terminal: null,
-    ...overrides,
+    ...contextOverrides,
   };
 }
 
@@ -682,7 +689,7 @@ describe('projectRenderModel state metadata', () => {
       makeRenderContext(state.playerCount, asPlayerId(0), {
         playerSeats: new Map<ReturnType<typeof asPlayerId>, ReturnType<typeof createHumanSeatController> | ReturnType<typeof createAgentSeatController>>([
           [asPlayerId(0), createHumanSeatController()],
-          [asPlayerId(1), createAgentSeatController({ kind: 'builtin', builtinId: 'random' })],
+          [asPlayerId(1), createAgentSeatController()],
         ]),
       }),
     );
@@ -1289,7 +1296,7 @@ describe('projectRenderModel state metadata', () => {
     });
   });
 
-  it('maps no-pending selected-action context to confirmReady choiceUi', () => {
+  it('maps no-pending selected-action context to no choiceUi', () => {
     const def = compileFixture();
     const state = initialState(def, 234, 2).state;
     const model = deriveModel(
@@ -1301,7 +1308,7 @@ describe('projectRenderModel state metadata', () => {
         partialMove: { actionId: asActionId('tick'), params: {} },
       }),
     );
-    expect(model.choiceUi).toEqual({ kind: 'confirmReady' });
+    expect(model.choiceUi).toEqual({ kind: 'none' });
   });
 
   it('maps pending choice without selectedAction to invalid choiceUi', () => {
@@ -1328,7 +1335,7 @@ describe('projectRenderModel state metadata', () => {
     expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'PENDING_CHOICE_MISSING_ACTION' });
   });
 
-  it('maps pending choice without partialMove to invalid choiceUi', () => {
+  it('keeps pending choice usable without a runner-owned partialMove projection', () => {
     const def = compileFixture();
     const state = initialState(def, 238, 2).state;
     const choicePending: ChoicePendingRequest = {
@@ -1349,10 +1356,18 @@ describe('projectRenderModel state metadata', () => {
         partialMove: null,
       }),
     );
-    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'PENDING_CHOICE_MISSING_PARTIAL_MOVE' });
+    expect(model.choiceUi).toEqual({
+      kind: 'discreteOne',
+      decisionKey: asDecisionKey('target'),
+      options: [expectedRenderChoiceOption('table:none', 'Table', 'legal', null, {
+        kind: 'zone',
+        entityId: 'table:none',
+        displaySource: 'zone',
+      })],
+    });
   });
 
-  it('maps selectedAction without partialMove to invalid confirm-ready state', () => {
+  it('maps selectedAction without a pending choice to none', () => {
     const def = compileFixture();
     const state = initialState(def, 236, 2).state;
     const model = deriveModel(
@@ -1364,10 +1379,10 @@ describe('projectRenderModel state metadata', () => {
         partialMove: null,
       }),
     );
-    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'CONFIRM_READY_MISSING_PARTIAL_MOVE' });
+    expect(model.choiceUi).toEqual({ kind: 'none' });
   });
 
-  it('maps partialMove without selectedAction to invalid confirm-ready state', () => {
+  it('ignores legacy partialMove-only fixtures with no selected action', () => {
     const def = compileFixture();
     const state = initialState(def, 239, 2).state;
     const model = deriveModel(
@@ -1379,10 +1394,10 @@ describe('projectRenderModel state metadata', () => {
         partialMove: { actionId: asActionId('tick'), params: {} },
       }),
     );
-    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'CONFIRM_READY_MISSING_ACTION' });
+    expect(model.choiceUi).toEqual({ kind: 'none' });
   });
 
-  it('maps selectedAction/partialMove action mismatch to invalid choiceUi', () => {
+  it('ignores legacy selectedAction/partialMove mismatch fixtures when no choice is pending', () => {
     const def = compileFixture();
     const state = initialState(def, 237, 2).state;
     const model = deriveModel(
@@ -1394,7 +1409,7 @@ describe('projectRenderModel state metadata', () => {
         partialMove: { actionId: asActionId('other-action'), params: {} },
       }),
     );
-    expect(model.choiceUi).toEqual({ kind: 'invalid', reason: 'ACTION_MOVE_MISMATCH' });
+    expect(model.choiceUi).toEqual({ kind: 'none' });
   });
 
   it('maps terminal variants to render terminal payloads', () => {

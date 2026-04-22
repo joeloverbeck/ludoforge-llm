@@ -32,9 +32,9 @@ import { selectorInvalidSpecError } from './selector-runtime-contract.js';
 import { toChoiceIllegalReason } from './legality-outcome.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import {
-  classifyDecisionSequenceSatisfiability,
+  analyzeDecisionSequence,
   type DecisionSequenceSatisfiability,
-} from './decision-sequence-satisfiability.js';
+} from './decision-sequence-analysis.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { createSeatResolutionContext, type SeatResolutionContext } from './identity.js';
@@ -222,6 +222,39 @@ interface DiscoveryEffectExecutionResult {
   readonly bindings: Readonly<Record<string, unknown>>;
 }
 
+const appendPipelineContinuationFrame = (
+  request: ChoiceRequest,
+  action: ActionDef,
+  pipeline: { readonly id: string; readonly atomicity: 'atomic' | 'partial' },
+  remainingStages: readonly import('./types-operations.js').ActionResolutionStageDef[],
+  eventEffects: readonly EffectAST[],
+): ChoiceRequest => {
+  if (
+    request.kind !== 'pending'
+    || request.suspendedFrame === undefined
+    || (remainingStages.length === 0 && eventEffects.length === 0)
+  ) {
+    return request;
+  }
+  return {
+    ...request,
+    suspendedFrame: {
+      ...request.suspendedFrame,
+      resumeStack: [
+        ...request.suspendedFrame.resumeStack,
+        {
+          kind: 'pipeline' as const,
+          actionId: action.id,
+          profileId: pipeline.id,
+          atomicity: pipeline.atomicity,
+          remainingStages,
+          eventEffects,
+        },
+      ],
+    },
+  };
+};
+
 const STACKING_VIOLATION_PROBE_RESULT: ProbeResult<never> = {
   outcome: 'illegal',
   reason: 'stackingViolation',
@@ -269,8 +302,15 @@ const executeDiscoveryEffectsStrict = (
   return probeWith(
     () => {
       const result = applyEffects(effects, createDiscoveryStrictEffectContext(baseContext));
+      const request = result.pendingChoice === undefined
+        ? COMPLETE
+        : (
+          result.suspendedFrame === undefined
+            ? result.pendingChoice
+            : { ...result.pendingChoice, suspendedFrame: result.suspendedFrame }
+        );
       return {
-        request: result.pendingChoice ?? COMPLETE,
+        request,
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
       };
@@ -289,8 +329,15 @@ const executeDiscoveryEffectsProbe = (
   return probeWith(
     () => {
       const result = applyEffects(effects, createDiscoveryProbeEffectContext(baseContext));
+      const request = result.pendingChoice === undefined
+        ? COMPLETE
+        : (
+          result.suspendedFrame === undefined
+            ? result.pendingChoice
+            : { ...result.pendingChoice, suspendedFrame: result.suspendedFrame }
+        );
       return {
-        request: result.pendingChoice ?? COMPLETE,
+        request,
         state: result.state,
         bindings: result.bindings ?? evalCtx.bindings,
       };
@@ -739,7 +786,7 @@ const classifyProbeMoveSatisfiability = (
   options: LegalChoicesRuntimeOptions | undefined,
   evaluateProbeLegality: ProbeLegalityEvaluator,
 ): DecisionSequenceSatisfiability =>
-  classifyDecisionSequenceSatisfiability(
+  analyzeDecisionSequence(
     probeMove,
     (candidateMove, discoverOptions) =>
       evaluateProbeLegality(candidateMove, {
@@ -944,7 +991,8 @@ const legalChoicesWithPreparedContextInternal = (
     }
     let stageState = state;
     let stageBindings = pipelineEvalCtx.bindings;
-    for (const stage of pipeline.stages) {
+    for (let stageIndex = 0; stageIndex < pipeline.stages.length; stageIndex += 1) {
+      const stage = pipeline.stages[stageIndex]!;
       const stageEvalCtx: ReadContext = {
         ...pipelineEvalCtx,
         state: stageState,
@@ -985,12 +1033,29 @@ const legalChoicesWithPreparedContextInternal = (
       if (!shouldEvaluateOptionLegality || resolvedStageResult.request.kind !== 'pending') {
         if (resolvedStageResult.request.kind !== 'complete') {
           recordPipeline();
-          return finalizeRequest(resolvedStageResult.request);
+          return finalizeRequest(appendPipelineContinuationFrame(
+            resolvedStageResult.request,
+            action,
+            pipeline,
+            pipeline.stages.slice(stageIndex + 1),
+            eventEffects,
+          ));
         }
       } else {
+        const continuedRequest = appendPipelineContinuationFrame(
+          resolvedStageResult.request,
+          action,
+          pipeline,
+          pipeline.stages.slice(stageIndex + 1),
+          eventEffects,
+        );
+        if (continuedRequest.kind !== 'pending') {
+          recordPipeline();
+          return finalizeRequest(continuedRequest);
+        }
         recordPipeline();
         return finalizeRequest({
-          ...resolvedStageResult.request,
+          ...continuedRequest,
           options: mapPendingChoiceOptions(
             partialMove,
             resolvedStageResult.request,
@@ -1343,7 +1408,7 @@ const maybeChainCompoundSA = (
   // SA completeness check: probe the SA without option legality validation.
   // If the SA's params already satisfy all required decisions, the compound
   // move is fully resolved — return `complete` without re-discovery.
-  // This prevents resolveMoveDecisionSequence from re-routing already-filled
+  // This prevents the continuation resolver from re-routing already-filled
   // SA params through the decision-key system against the pre-main-op state.
   //
   // The probe checks moveParams by decision key.  Externally-specified moves

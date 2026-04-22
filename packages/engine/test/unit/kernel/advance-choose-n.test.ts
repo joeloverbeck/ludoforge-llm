@@ -10,13 +10,13 @@ import {
   asTokenId,
   asZoneId,
   legalChoicesEvaluate,
-  resolveMoveDecisionSequence,
   type ActionDef,
   type DecisionKey,
   type GameDef,
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../../src/kernel/microturn/continuation.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
@@ -495,7 +495,7 @@ describe('advanceChooseN', () => {
     );
   });
 
-  it('preserves the full-array choose callback fast path in resolveMoveDecisionSequence', () => {
+  it('preserves the full-array choose callback fast path in resolveDecisionContinuation', () => {
     const action: ActionDef = {
       id: asActionId('ai-fast-path-choose-n'),
       actor: 'active',
@@ -518,7 +518,7 @@ describe('advanceChooseN', () => {
     };
 
     const def = makeBaseDef({ actions: [action] });
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       makeBaseState(),
       makeMove('ai-fast-path-choose-n'),

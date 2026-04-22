@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -12,6 +11,7 @@ import {
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { createSeededChoiceAgents } from '../helpers/test-agents.js';
 import {
   compileProductionSpec,
   compileTexasProductionSpec,
@@ -48,8 +48,8 @@ const compileTexasDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-const createRandomAgents = (count: number): readonly Agent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
+const createTestAgents = (count: number): readonly Agent[] =>
+  createSeededChoiceAgents(count);
 
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
@@ -82,11 +82,11 @@ const measureGcPressure = (
   }
 
   // Warm up — compile caches, JIT
-  const warmAgents = createRandomAgents(playerCount);
+  const warmAgents = createTestAgents(playerCount);
   try {
     runGame(def, 999, warmAgents, MAX_TURNS, playerCount, { skipDeltas: true }, runtime);
   } catch {
-    // Warm-up failure is non-fatal (e.g. FITL stall loops with RandomAgent)
+    // Warm-up failure is non-fatal.
   }
   gc();
 
@@ -95,7 +95,7 @@ const measureGcPressure = (
 
   for (let i = 0; i < gameCount; i++) {
     const seed = 5000 + i;
-    const agents = createRandomAgents(playerCount);
+    const agents = createTestAgents(playerCount);
     try {
       runGame(def, seed, agents, MAX_TURNS, playerCount, { skipDeltas: true }, runtime);
     } catch {

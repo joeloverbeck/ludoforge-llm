@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   applyMove,
   assertValidatedGameDef,
@@ -72,8 +72,13 @@ const replayTrace = (
   const replayed = replayScript({
     def,
     initialState: initialState(def, trace.seed, PLAYER_COUNT).state,
-    script: trace.moves.map((entry) => ({
-      move: entry.move,
+    script: trace.decisions.map((entry) => ({
+      move: (() => {
+        assert.equal(entry.decision.kind, 'actionSelection');
+        assert.ok(entry.decision.move);
+        return entry.decision.move;
+      })(),
+      decision: entry.decision,
       expectedStateHash: entry.stateHash,
     })),
     keyVars: ['pot', 'blindLevel', 'handsPlayed', 'currentBet'],
@@ -88,7 +93,7 @@ const runShortTournament = (def: ValidatedGameDef, seed: number): GameTrace =>
   runGame(
     def,
     seed,
-    Array.from({ length: PLAYER_COUNT }, () => new RandomAgent()),
+    Array.from({ length: PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'summary' })),
     MAX_TURNS,
     PLAYER_COUNT,
   );

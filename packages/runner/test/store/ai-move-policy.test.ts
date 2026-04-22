@@ -1,43 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { compileGameSpecToGameDef, createEmptyGameSpecDoc } from '@ludoforge/engine/cnl';
-import { asActionId, createGameDefRuntime, createRng, createTrustedExecutableMove, initialState, type ClassifiedMove, type GameDef, type Move } from '@ludoforge/engine/runtime';
+import {
+  createGameDefRuntime,
+  createRng,
+  initialState,
+  type GameDef,
+} from '@ludoforge/engine/runtime';
+import { publishMicroturn } from '../../../engine/src/kernel/microturn/publish.js';
 
 import { createAgentSeatController, createHumanSeatController } from '../../src/seat/seat-controller.js';
 import {
   resolveAgentDescriptor,
   resolveAiPlaybackDelayMs,
-  selectAgentMove,
+  selectAgentDecision,
   selectRandomIndex,
 } from '../../src/store/ai-move-policy.js';
-
-const MOVE_A: Move = { actionId: asActionId('a'), params: {} };
-const MOVE_B: Move = { actionId: asActionId('b'), params: {} };
-const MOVE_C: Move = { actionId: asActionId('c'), params: {} };
-
-function toClassifiedMove(move: Move, sourceStateHash = 0n): ClassifiedMove {
-  return {
-    move,
-    viability: {
-      viable: true,
-      complete: true,
-      move,
-      warnings: [],
-      code: undefined,
-      context: undefined,
-      error: undefined,
-      nextDecision: undefined,
-      nextDecisionSet: undefined,
-      stochasticDecision: undefined,
-    },
-    trustedMove: createTrustedExecutableMove(move, sourceStateHash, 'enumerateLegalMoves'),
-  };
-}
 
 function compileFixture(): GameDef {
   const compiled = compileGameSpecToGameDef({
     ...createEmptyGameSpecDoc(),
     metadata: {
-      id: 'runner-ai-move-policy-test',
+      id: 'runner-ai-microturn-policy-test',
       players: { min: 2, max: 2 },
     },
     globalVars: [{ name: 'tick', type: 'int', init: 0, min: 0, max: 10 }],
@@ -67,41 +50,43 @@ describe('ai-move-policy', () => {
     expect(() => resolveAgentDescriptor(createHumanSeatController())).toThrow(/human-controlled seat/u);
   });
 
-  it('selectAgentMove returns null when there are no legal moves', () => {
+  it('selectAgentDecision returns null when there are no legal actions', () => {
     const def = compileFixture();
     const state = initialState(def, 7, 2).state;
+    const runtime = createGameDefRuntime(def);
+    const microturn = { ...publishMicroturn(def, state, runtime), legalActions: [] };
 
-    expect(selectAgentMove({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+    expect(selectAgentDecision({
+      controller: createAgentSeatController(),
       def,
       state,
-      playerId: state.activePlayer,
-      legalMoves: [],
+      microturn,
       rng: createRng(7n),
-      runtime: createGameDefRuntime(def),
+      runtime,
     })).toBeNull();
   });
 
-  it('selectAgentMove with builtin greedy emits builtin greedy decision metadata', () => {
+  it('selectAgentDecision with policy control emits policy decision metadata', () => {
     const def = compileFixture();
     const state = initialState(def, 7, 2).state;
+    const runtime = createGameDefRuntime(def);
+    const microturn = publishMicroturn(def, state, runtime);
 
-    const result = selectAgentMove({
-      controller: createAgentSeatController({ kind: 'builtin', builtinId: 'greedy' }),
+    const result = selectAgentDecision({
+      controller: createAgentSeatController(),
       def,
       state,
-      playerId: state.activePlayer,
-      legalMoves: [MOVE_A, MOVE_B, MOVE_C].map((move) => toClassifiedMove(move, state.stateHash)),
+      microturn,
       rng: createRng(7n),
-      runtime: createGameDefRuntime(def),
+      runtime,
     });
 
     expect(result).not.toBeNull();
-    expect([MOVE_A, MOVE_B, MOVE_C]).toContainEqual(result?.move.move);
+    expect(microturn.legalActions).toContainEqual(result?.decision);
     expect(result?.agentDecision).toMatchObject({
-      kind: 'builtin',
-      agent: { kind: 'builtin', builtinId: 'greedy' },
-      candidateCount: 3,
+      kind: 'policy',
+      agent: { kind: 'policy' },
+      initialCandidateCount: 3,
     });
   });
 

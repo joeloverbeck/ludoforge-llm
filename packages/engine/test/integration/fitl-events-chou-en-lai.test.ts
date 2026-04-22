@@ -6,16 +6,16 @@ import {
   applyMove,
   asPlayerId,
   asTokenId,
-  completeMoveDecisionSequence,
   initialState,
   legalMoves,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type MoveParamValue,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
+import { completeMoveDecisionSequence } from '../helpers/complete-move-decision-sequence.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -89,7 +89,7 @@ describe('FITL card-42 Chou En Lai', () => {
     assert.notEqual(move, undefined, 'Expected card-42 unshaded event move');
 
     let assertedNvaOwnedTroopRemoval = false;
-    const pendingProbe = resolveMoveDecisionSequence(def, setup, move!, {
+    const pendingProbe = resolveDecisionContinuation(def, setup, move!, {
       choose: (request): MoveParamValue | undefined => {
         if (request.type === 'chooseN') {
           assert.equal(

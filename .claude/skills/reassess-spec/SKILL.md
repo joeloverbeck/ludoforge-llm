@@ -35,7 +35,7 @@ Follow these steps in order. Do not skip any step.
 
 Read ALL of these files before any analysis:
 
-1. **The spec file** (from the argument) — read the entire file
+1. **The spec file** (from the argument) — read the entire file. For XL specs exceeding Read's token limit (~25000 tokens, commonly >~900 lines), consume the full content via paginated reads (`offset`/`limit`) — do not substitute a summary or skip sections. Use `wc -l` first to size the file and plan the chunk boundaries.
 2. **`docs/FOUNDATIONS.md`** — architectural commandments; every spec must align with these principles
 
 Parse the spec's metadata: Status, Priority, Dependencies, Goals, Non-Goals, FOUNDATIONS.md Alignment table (if present), and all implementation sections. If standard metadata fields (Status, Priority, Complexity, Dependencies) are absent, record this as an Improvement finding — downstream skills like spec-to-tickets depend on these fields.
@@ -96,7 +96,7 @@ Provide each agent with either the full spec content or a comprehensive structur
 
 When multiple Explore agents return conflicting findings on the same factual claim (e.g., one agent says a parameter exists, the other says it doesn't), treat the conflict as unresolved. Verify the claim directly by reading the authoritative source file before classifying the finding. Do not prefer one agent's result over another without independent verification — agent conflicts are the highest-signal indicator that a claim needs manual tracing.
 
-For quantitative claims (file counts, call site counts), spot-check at least one agent-reported number against an independent grep before using it in findings — agent grep strategies may over- or under-count (e.g., counting all files importing a barrel re-export rather than files specifically using the target symbol).
+For quantitative claims (file counts, call site counts), spot-check at least one agent-reported number against an independent grep before using it in findings **or in numbers that propagate into the updated spec** — agent grep strategies may over- or under-count (e.g., counting all files importing a barrel re-export rather than files specifically using the target symbol). Numbers that flow into D12 wave plans, D8 retirement notes, or ticket decomposition hints carry the same propagation risk as numbers in the findings report.
 
 For *negative* existence claims from a single agent (file missing, export not found, function absent), always spot-check via direct Glob or Grep before classifying as a finding. Single-agent negatives are a common false-positive source because the agent's search strategy may have missed the artifact even when present — e.g., the file lives in a different module than the agent expected, or the symbol is re-exported through a barrel the agent didn't traverse. Multi-agent conflict resolution (above) doesn't cover this case because there's no second agent to disagree; the spot-check is the equivalent guardrail for single-agent mode.
 
@@ -235,7 +235,7 @@ Do not conflate "plan file written" with "spec file written" — the plan file i
 3. **Wait for final approval** before writing the file. Two exception paths bypass the wait:
    - **Exception A — pre-approval via delegation**: If the user has explicitly delegated all outstanding decisions in their most recent message (e.g., "you decide", "proceed with whatever you think is best", "reassess based on FOUNDATIONS", "choose whatever seems better"), the delegation itself serves as approval. Present the diff summary inline and proceed directly to Step 6.4 without re-asking. This parallels the plan-mode bypass where ExitPlanMode approval covers the diff summary gate. The delegation must be explicit and cover all open questions — partial delegation (e.g., one question deferred, another still open) does not trigger the bypass.
    - **Exception B — pre-approval via direct write instruction**: If the user's most recent message is a direct write instruction after the diff summary has been presented (e.g., "Write the updated spec", "Apply the changes", "Go ahead and write it", "Proceed", "Ship it"), treat it as the final approval. The direct instruction subsumes Step 6.3 — no further presentation or confirmation is needed. Distinguish from delegation: delegation (Exception A) resolves open decisions before the diff summary; direct write (Exception B) approves the already-presented diff summary.
-4. **Write the updated spec** to the same path as the original, overwriting it.
+4. **Write the updated spec** to the same path as the original. Prefer targeted `Edit` calls over `Write` for surgical changes — `Write` overwrites the full file and risks silent loss of sections not covered by the diff summary. Apply edits top-to-bottom to avoid offset drift from earlier insertions shifting later line numbers. Use `Write` instead when cumulative changes exceed ~50 lines or cross the >60% section threshold (the full-rewrite case from 6.2) — at that scale a fresh write is cleaner than many overlapping edits. After edits, proceed directly to Step 7 verifications.
 
 If the user requests changes to the draft, incorporate them and re-present before writing.
 

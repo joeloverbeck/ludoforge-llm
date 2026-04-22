@@ -136,8 +136,6 @@ export function buildPolicyAgentDecisionTrace(
     ...(traceLevel === 'verbose'
       ? {
           candidates: verboseCandidates,
-          ...(metadata.completionStatistics === undefined ? {} : { completionStatistics: metadata.completionStatistics }),
-          ...(metadata.movePreparations === undefined ? {} : { movePreparations: metadata.movePreparations }),
         }
       : {}),
   };

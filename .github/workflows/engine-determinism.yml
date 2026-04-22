@@ -41,6 +41,27 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     continue-on-error: true
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_id: baseline-variants
+            shard_label: baseline variants
+            test_paths: |
+              dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js
+              dist/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.js
+          - shard_id: campaign-seat-mapping
+            shard_label: campaign seat mapping
+            test_paths: |
+              dist/test/policy-profile-quality/fitl-variant-campaign-seat-mapping-seed-1000-convergence.test.js
+          - shard_id: regression-witnesses
+            shard_label: regression witnesses
+            test_paths: |
+              dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js
+          - shard_id: arvn-evolved-seed-1000
+            shard_label: arvn evolved seed 1000
+            test_paths: |
+              dist/test/policy-profile-quality/fitl-variant-arvn-evolved-seed-1000-draw-space-convergence.test.js
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5
@@ -50,13 +71,47 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - name: Run policy-profile-quality lane
+      - name: Run policy-profile-quality shard
         id: policy-profile-quality-run
+        working-directory: packages/engine
         env:
-          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report.ndjson
-        run: pnpm -F @ludoforge/engine test:policy-profile-quality 2>&1 | tee policy-profile-quality.log
+          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report-${{ matrix.shard_id }}.ndjson
+          POLICY_PROFILE_QUALITY_TEST_PATHS: ${{ matrix.test_paths }}
+        run: |
+          mapfile -t test_paths <<< "$POLICY_PROFILE_QUALITY_TEST_PATHS"
+          node scripts/run-tests.mjs --lane policy-profile-quality "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
+      - name: Upload shard policy-profile-quality log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-profile-quality-shard-${{ matrix.shard_id }}
+          path: |
+            policy-profile-quality-${{ matrix.shard_id }}.log
+            policy-profile-quality-report-${{ matrix.shard_id }}.ndjson
+          retention-days: 7
+
+  policy-profile-quality-report:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs:
+      - policy-profile-quality
+    if: always()
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - name: Download current-run shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: current-policy-profile-quality
+          pattern: policy-profile-quality-shard-*
+          merge-multiple: true
       - name: Download latest main-branch policy-profile-quality baseline
-        if: always() && github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -67,8 +122,21 @@ jobs:
           else
             echo "No successful main-branch baseline run found for engine-determinism.yml"
           fi
+      - name: Combine current-run policy-profile-quality artifacts
+        run: |
+          shopt -s nullglob
+          : > policy-profile-quality.log
+          for log_path in current-policy-profile-quality/*.log; do
+            printf '=== %s ===\n' "$(basename "$log_path")" >> policy-profile-quality.log
+            cat "$log_path" >> policy-profile-quality.log
+            printf '\n' >> policy-profile-quality.log
+          done
+
+          : > policy-profile-quality-report.ndjson
+          for report_path in current-policy-profile-quality/*.ndjson; do
+            cat "$report_path" >> policy-profile-quality-report.ndjson
+          done
       - name: Emit policy-profile-quality annotations and PR comment
-        if: always()
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -77,8 +145,7 @@ jobs:
             args+=(--baseline-input baseline-policy-profile-quality/policy-profile-quality-report.ndjson)
           fi
           node packages/engine/scripts/emit-policy-profile-quality-report.mjs "${args[@]}"
-      - name: Upload policy-profile-quality log for annotation job
-        if: always()
+      - name: Upload aggregated policy-profile-quality log
         uses: actions/upload-artifact@v4
         with:
           name: policy-profile-quality-log

@@ -18,10 +18,10 @@ import {
   resolveGrantMoveActionClassOverride,
 } from './free-operation-grant-bindings.js';
 import {
-  classifyMoveDecisionSequenceSatisfiability,
-  resolveMoveDecisionSequence,
-  type ResolveMoveDecisionSequenceResult,
-} from './move-decision-sequence.js';
+  classifyDecisionContinuationSatisfiability,
+  resolveDecisionContinuation,
+  type DecisionContinuationResult,
+} from './microturn/continuation.js';
 import { resolveMoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import {
   decideApplyMovePipelineViability,
@@ -208,7 +208,7 @@ type FreeOperationDecisionSequenceResolver = (
     readonly budgets?: Partial<ReturnType<typeof resolveMoveEnumerationBudgets>>;
     readonly onWarning?: (warning: RuntimeWarning) => void;
   },
-) => ResolveMoveDecisionSequenceResult;
+) => DecisionContinuationResult;
 
 const STRICT_FREE_OPERATION_PROBE_BUDGETS = {
   maxParamExpansions: 500_000,
@@ -588,7 +588,7 @@ const hasLegalCompletedProbeMove = (
     return paramExpansions <= budgets.maxParamExpansions;
   };
   const resolveDecisionSequence = options?.resolveDecisionSequence ?? ((move, resolveOptions) =>
-    resolveMoveDecisionSequence(
+    resolveDecisionContinuation(
       def,
       explorationState,
       move,
@@ -849,7 +849,7 @@ export const isFreeOperationGrantUsableInCurrentState = (
       continue;
     }
     if (
-      classifyMoveDecisionSequenceSatisfiability(
+      classifyDecisionContinuationSatisfiability(
         def,
         explorationState,
         probeMove,

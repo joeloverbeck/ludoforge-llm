@@ -2,9 +2,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { DegeneracyFlag, asActionId, asPhaseId, asPlayerId, deserializeTrace } from '../../../src/kernel/index.js';
+import { DegeneracyFlag, asActionId, asPhaseId, asPlayerId, asSeatId, asTurnId, deserializeTrace } from '../../../src/kernel/index.js';
 import { evaluateTrace } from '../../../src/sim/index.js';
-import type { GameState, GameTrace, MoveLog, SerializedGameTrace, StateDelta, VariableValue } from '../../../src/kernel/index.js';
+import type { CompoundTurnSummary, GameState, GameTrace, DecisionLog, SerializedGameTrace, StateDelta, VariableValue } from '../../../src/kernel/index.js';
 import { readFixtureJson } from '../../helpers/fixture-reader.js';
 
 type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
@@ -38,33 +38,58 @@ const makeMoveLog = (
   actionId: string,
   legalMoveCount: number,
   deltas: readonly StateDelta[] = [],
-  overrides: Partial<MoveLog> = {},
-): MoveLog => ({
+  overrides: Partial<DecisionLog> = {},
+): DecisionLog => ({
   stateHash: BigInt(index + 1),
-  player: asPlayerId(player),
-  move: {
+  seatId: asSeatId(String(player)),
+  playerId: asPlayerId(player),
+  decisionContextKind: 'actionSelection',
+  decisionKey: null,
+  decision: {
+    kind: 'actionSelection',
     actionId: asActionId(actionId),
-    params: {},
+    move: {
+      actionId: asActionId(actionId),
+      params: {},
+    },
   },
-  legalMoveCount,
+  turnId: asTurnId(index + 1),
+  turnRetired: true,
+  legalActionCount: legalMoveCount,
   deltas,
   triggerFirings: [],
   warnings: [],
   ...overrides,
 });
 
+const makeCompoundTurns = (decisions: readonly DecisionLog[], stopReason: GameTrace['stopReason']): readonly CompoundTurnSummary[] =>
+  decisions.map((decision, index) => ({
+    turnId: decision.turnId,
+    seatId: decision.seatId,
+    decisionIndexRange: { start: index, end: index + 1 },
+    microturnCount: 1,
+    turnStopReason: (() => {
+      if (index !== decisions.length - 1 || stopReason === 'noLegalMoves') {
+        return 'retired' as const;
+      }
+      return stopReason === 'maxTurns' ? 'maxTurns' : 'terminal';
+    })(),
+  }));
+
 const makeTrace = (
-  moves: readonly MoveLog[],
+  decisions: readonly DecisionLog[],
   finalPerPlayerVars: PerPlayerVars,
   overrides: Partial<GameTrace> = {},
 ): GameTrace => ({
   gameDefId: 'test-game',
   seed: 7,
-  moves,
-  finalState: makeState(finalPerPlayerVars, { turnCount: moves.length }),
+  decisions,
+  compoundTurns: makeCompoundTurns(decisions, overrides.stopReason ?? 'terminal'),
+  finalState: makeState(finalPerPlayerVars, { turnCount: decisions.length }),
   result: null,
-  turnsCount: moves.length,
+  turnsCount: decisions.length,
   stopReason: 'terminal',
+  traceProtocolVersion: 'spec-140',
   ...overrides,
 });
 

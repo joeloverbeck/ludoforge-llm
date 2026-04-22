@@ -2,7 +2,6 @@ import * as assert from 'node:assert/strict';
 
 import {
   applyMove,
-  completeMoveDecisionSequence,
   createRng,
   initialState,
   legalMoves,
@@ -15,6 +14,7 @@ import {
   type Move,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from './complete-move-decision-sequence.js';
 
 export interface RuntimeSmokeInvariantContext {
   readonly def: GameDef;

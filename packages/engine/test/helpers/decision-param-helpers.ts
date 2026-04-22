@@ -1,10 +1,8 @@
 import {
   applyMove,
-  completeMoveDecisionSequence,
   IllegalMoveError,
   nextInt,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type ApplyMoveResult,
   type ChoicePendingRequest,
   type GameDef,
@@ -13,6 +11,8 @@ import {
   type MoveParamValue,
   type Rng,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
+import { completeMoveDecisionSequence } from './complete-move-decision-sequence.js';
 
 const MAX_DECISION_STEPS = 256;
 const INDEXED_DECISION_KEY_PATTERN = /^decision:.*#\d+$/;
@@ -110,7 +110,7 @@ const stripStochasticOnlyBindings = (
     ...resolvedMove,
     params,
   };
-  const viabilityProbe = resolveMoveDecisionSequence(def, state, candidateMove, {
+  const viabilityProbe = resolveDecisionContinuation(def, state, candidateMove, {
     budgets: { maxDecisionProbeSteps },
     choose: () => undefined,
   });

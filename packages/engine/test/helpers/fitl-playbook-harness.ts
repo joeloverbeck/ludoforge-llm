@@ -109,7 +109,7 @@ export type PlaybookMove =
 
 export interface PlaybookTurn {
   readonly label: string;
-  readonly moves: readonly PlaybookMove[];
+  readonly decisions: readonly PlaybookMove[];
   readonly expectedEndState: PlaybookStateSnapshot;
 }
 
@@ -370,7 +370,7 @@ export const replayPlaybookTurn = (
   turn: PlaybookTurn,
 ): GameState => {
   let current = state;
-  for (const playMove of turn.moves) {
+  for (const playMove of turn.decisions) {
     if (playMove.expectedOperationState !== undefined) {
       if (playMove.kind !== 'resolved' || playMove.move.compound === undefined) {
         assert.fail(

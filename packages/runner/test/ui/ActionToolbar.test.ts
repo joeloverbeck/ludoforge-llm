@@ -93,12 +93,12 @@ function findElementByTestId(node: ReactNode, testId: string): TraversableElemen
 
 function createToolbarStore(state: {
   readonly renderModel: GameStore['renderModel'];
-  readonly selectAction?: GameStore['selectAction'];
+  readonly submitActionSelection?: GameStore['submitActionSelection'];
 }): StoreApi<GameStore> {
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      selectAction: state.selectAction ?? (async () => {}),
+      submitActionSelection: state.submitActionSelection ?? (async () => {}),
     }),
   } as unknown as StoreApi<GameStore>;
 }
@@ -136,8 +136,8 @@ describe('ActionToolbar', () => {
     expect(disabledButton.props['aria-disabled']).toBe('true');
   });
 
-  it('clicking an available action dispatches selectAction with actionClass', () => {
-    const selectAction = vi.fn(async () => {});
+  it('clicking an available action dispatches submitActionSelection with actionClass', () => {
+    const submitActionSelection = vi.fn(async () => {});
 
     const actionsWithClass: NonNullable<GameStore['renderModel']>['actionGroups'] = [
       {
@@ -152,7 +152,7 @@ describe('ActionToolbar', () => {
     const tree = ActionToolbar({
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel({ actionGroups: actionsWithClass }),
-        selectAction,
+        submitActionSelection,
       }),
       surfaceRevision: 7,
     });
@@ -164,17 +164,17 @@ describe('ActionToolbar', () => {
     }
 
     trainButton.props.onClick();
-    expect(selectAction).toHaveBeenCalledTimes(1);
-    expect(selectAction).toHaveBeenCalledWith('train', 'operation');
+    expect(submitActionSelection).toHaveBeenCalledTimes(1);
+    expect(submitActionSelection).toHaveBeenCalledWith('train', 'operation');
   });
 
   it('clicking an action without actionClass passes undefined', () => {
-    const selectAction = vi.fn(async () => {});
+    const submitActionSelection = vi.fn(async () => {});
 
     const tree = ActionToolbar({
       store: createToolbarStore({
         renderModel: makeToolbarRenderModel(),
-        selectAction,
+        submitActionSelection,
       }),
       surfaceRevision: 7,
     });
@@ -186,8 +186,8 @@ describe('ActionToolbar', () => {
     }
 
     moveButton.props.onClick();
-    expect(selectAction).toHaveBeenCalledTimes(1);
-    expect(selectAction).toHaveBeenCalledWith('move', undefined);
+    expect(submitActionSelection).toHaveBeenCalledTimes(1);
+    expect(submitActionSelection).toHaveBeenCalledWith('move', undefined);
   });
 
   it('does not render when renderModel is null', () => {

@@ -6,23 +6,12 @@ import {
   assertValidatedGameDef,
   createGameDefRuntime,
   createPerfProfiler,
-  type Agent,
   type GameDefRuntime,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
-import { trustedMove } from '../helpers/classified-move-fixtures.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
-    }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
-  },
-};
+import { firstLegalAgent } from '../helpers/test-agents.js';
 
 const TEXAS_DEF = assertValidatedGameDef(compileTexasProductionSpec().compiled.gameDef) as ValidatedGameDef;
 
@@ -66,8 +55,8 @@ describe('compiled Texas production parity', () => {
         `compiled/interpreted Texas parity should hold for seed ${seed}`,
       );
       assert.equal(
-        compiledTrace.moves.length,
-        interpretedTrace.moves.length,
+        compiledTrace.decisions.length,
+        interpretedTrace.decisions.length,
         `compiled/interpreted Texas move counts should match for seed ${seed}`,
       );
       assert.ok(
@@ -102,6 +91,6 @@ describe('compiled Texas production parity', () => {
       createGameDefRuntime(TEXAS_DEF),
     );
 
-    assert.equal(compiledTrace.finalState.stateHash, 11679070811817458911n);
+    assert.equal(compiledTrace.finalState.stateHash, 15836027167635952872n);
   });
 });

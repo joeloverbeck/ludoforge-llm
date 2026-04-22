@@ -301,7 +301,6 @@ describe('render-model types', () => {
   it('covers all RenderChoiceUi variants', () => {
     const choices: readonly RenderChoiceUi[] = [
       { kind: 'none' },
-      { kind: 'confirmReady' },
       {
         kind: 'discreteOne',
         decisionKey: asDecisionKey('pick-zone'),
@@ -340,6 +339,6 @@ describe('render-model types', () => {
         reason: 'ACTION_MOVE_MISMATCH',
       },
     ];
-    expect(choices).toHaveLength(6);
+    expect(choices).toHaveLength(5);
   });
 });

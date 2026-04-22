@@ -10,13 +10,12 @@ import { isRecoverableEvalResolutionError } from './eval-error-classification.js
 import { resolveCapturedSequenceZonesByKey } from './free-operation-captured-sequence-zones.js';
 import { buildFreeOperationPreflightOverlay } from './free-operation-preflight-overlay.js';
 import {
-  classifyMoveDecisionSequenceSatisfiabilityForLegalMove,
-  isMoveDecisionSequenceAdmittedForLegalMove,
-  resolveMoveDecisionSequence,
-  type DiscoveryCache,
-  type MoveDecisionSequenceSatisfiabilityResult,
-  type MoveDecisionSequenceSatisfiabilityOptions,
-} from './move-decision-sequence.js';
+  classifyDecisionContinuationForLegalMove,
+  isDecisionContinuationAdmittedForLegalMove,
+  resolveDecisionContinuation,
+  type DecisionContinuationAnalysisOptions,
+  type DecisionContinuationCache,
+} from './microturn/continuation.js';
 import { createMoveDecisionSequenceChoiceDiscoverer } from './move-decision-discoverer.js';
 import {
   applyTurnFlowWindowFilters,
@@ -59,10 +58,6 @@ import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { evaluateMoveLegality } from './move-legality-predicate.js';
 import { toMoveIdentityKey } from './move-identity.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
-import {
-  materializeCompletionCertificateFrontier,
-  type CompletionCertificate,
-} from './completion-certificate.js';
 import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { selectorInvalidSpecError } from './selector-runtime-contract.js';
@@ -117,35 +112,30 @@ export interface LegalMoveEnumerationOptions {
 export interface LegalMoveEnumerationResult {
   readonly moves: readonly ClassifiedMove[];
   readonly warnings: readonly RuntimeWarning[];
-  readonly certificateIndex?: ReadonlyMap<string, CompletionCertificate>;
 }
 
 interface RawLegalMoveEnumerationResult {
   readonly moves: readonly Move[];
   readonly warnings: readonly RuntimeWarning[];
-  readonly discoveryCache: DiscoveryCache;
-  readonly prevalidatedIncompleteMoveKeys?: ReadonlySet<string>;
-  readonly precomputedCertificates?: ReadonlyMap<string, CompletionCertificate>;
+  readonly discoveryCache: DecisionContinuationCache;
 }
 
-type EnumerationDecisionDiscoverer = MoveDecisionSequenceSatisfiabilityOptions['discoverer'];
+type EnumerationDecisionDiscoverer = DecisionContinuationAnalysisOptions['discoverer'];
 
 interface MoveEnumerationState {
   readonly budgets: MoveEnumerationBudgets;
   readonly probePlainActionFeasibility: boolean;
   readonly warnings: RuntimeWarning[];
   readonly moves: Move[];
-  readonly prevalidatedIncompleteMoveKeys: Set<string>;
-  readonly precomputedCertificates: Map<string, CompletionCertificate>;
   paramExpansions: number;
   templateBudgetExceeded: boolean;
   paramExpansionBudgetExceeded: boolean;
 }
 
 const withTerminalLegalityValidation = (
-  options: MoveDecisionSequenceSatisfiabilityOptions,
-  validateSatisfiedMove: NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']>,
-): MoveDecisionSequenceSatisfiabilityOptions => ({
+  options: DecisionContinuationAnalysisOptions,
+  validateSatisfiedMove: NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']>,
+): DecisionContinuationAnalysisOptions => ({
   ...options,
   validateSatisfiedMove,
 });
@@ -154,13 +144,13 @@ const createStandardTerminalLegalityValidator = (
   def: GameDef,
   state: GameState,
   runtime?: GameDefRuntime,
-): NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']> =>
+): NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']> =>
   (move) => evaluateMoveLegality(def, state, move, runtime).kind === 'legal';
 
 const createFreeOperationTerminalValidator = (
   def: GameDef,
   state: GameState,
-): NonNullable<MoveDecisionSequenceSatisfiabilityOptions['validateSatisfiedMove']> =>
+): NonNullable<DecisionContinuationAnalysisOptions['validateSatisfiedMove']> =>
   (move) => {
     const verdict = evaluateMoveLegality(def, state, move);
     if (verdict.kind === 'legal') {
@@ -171,22 +161,27 @@ const createFreeOperationTerminalValidator = (
       && (state.turnOrderState.runtime.pendingFreeOperationGrants ?? []).some((grant) => grant.completionPolicy === 'required');
   };
 
-const tryMaterializePublishedStochasticFrontier = (
+const tryResolvePublishedStochasticFrontier = (
   def: GameDef,
   state: GameState,
   move: Move,
-  certificate: CompletionCertificate | undefined,
   runtime: GameDefRuntime | undefined,
-  discoveryCache: DiscoveryCache | undefined,
+  discoveryCache: DecisionContinuationCache | undefined,
 ): {
   readonly move: Move;
   readonly viability: ReturnType<typeof probeMoveViability>;
   readonly trustedMove: ReturnType<typeof createTrustedExecutableMove>;
 } | null => {
-  if (certificate === undefined) {
+  const frontier = resolveDecisionContinuation(
+    def,
+    state,
+    move,
+    discoveryCache === undefined ? undefined : { discoveryCache },
+    runtime,
+  );
+  if (frontier.stochasticDecision === undefined) {
     return null;
   }
-  const frontier = materializeCompletionCertificateFrontier(def, state, move, certificate, runtime);
   const viability = probeMoveViability(def, state, frontier.move, runtime, discoveryCache);
   if (!viability.viable || viability.stochasticDecision === undefined) {
     return null;
@@ -206,7 +201,7 @@ const emitEnumerationWarning = (state: MoveEnumerationState, warning: RuntimeWar
   state.warnings.push(warning);
 };
 
-const tryPushTemplateMove = (state: MoveEnumerationState, move: Move, actionId: ActionDef['id']): boolean => {
+const tryPushEnumeratedMove = (state: MoveEnumerationState, move: Move, actionId: ActionDef['id']): boolean => {
   if (state.moves.length >= state.budgets.maxTemplates) {
     if (!state.templateBudgetExceeded) {
       state.templateBudgetExceeded = true;
@@ -247,7 +242,7 @@ const tryPushOptionMatrixFilteredMove = (
 ): boolean => {
   const baseClass = resolveTurnFlowActionClass(def, move);
   if (move.freeOperation === true && isMoveAllowedByTurnFlowOptionMatrix(def, state, move)) {
-    return tryPushTemplateMove(
+    return tryPushEnumeratedMove(
       enumeration,
       baseClass !== null && move.actionClass === undefined
         ? {
@@ -297,7 +292,7 @@ const tryPushOptionMatrixFilteredMove = (
     if (!isMoveAllowedByTurnFlowOptionMatrix(def, state, variant)) {
       continue;
     }
-    if (!tryPushTemplateMove(enumeration, variant, action.id)) {
+    if (!tryPushEnumeratedMove(enumeration, variant, action.id)) {
       return false;
     }
   }
@@ -330,17 +325,13 @@ const classifyEnumeratedMoves = (
   warnings: RuntimeWarning[],
   budgets: MoveEnumerationBudgets,
   runtime?: GameDefRuntime,
-  discoveryCache?: DiscoveryCache,
-  prevalidatedIncompleteMoveKeys?: ReadonlySet<string>,
-  precomputedCertificates?: ReadonlyMap<string, CompletionCertificate>,
+  discoveryCache?: DecisionContinuationCache,
   profiler?: PerfProfiler,
 ): {
   readonly moves: readonly ClassifiedMove[];
-  readonly certificateIndex?: ReadonlyMap<string, CompletionCertificate>;
 } => {
   const alwaysCompleteActionIds = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
   const classified: ClassifiedMove[] = [];
-  const certificateIndex = new Map<string, CompletionCertificate>();
 
   for (const move of moves) {
     if (alwaysCompleteActionIds.has(move.actionId)) {
@@ -413,50 +404,25 @@ const classifyEnumeratedMoves = (
           : undefined,
       });
       if (!viability.complete && viability.stochasticDecision === undefined) {
-        const stableMoveKey = toMoveIdentityKey(def, move);
-        if (prevalidatedIncompleteMoveKeys?.has(stableMoveKey) === true) {
-          const cachedCertificate = precomputedCertificates?.get(stableMoveKey);
-          if (cachedCertificate !== undefined) {
-            certificateIndex.set(stableMoveKey, cachedCertificate);
-          }
-          continue;
-        }
-
         const admissionContext = move.freeOperation === true
           ? MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_FREE_OPERATION_DECISION_SEQUENCE
           : MISSING_BINDING_POLICY_CONTEXTS.LEGAL_MOVES_PIPELINE_DECISION_SEQUENCE;
-        const admission = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+        const admission = classifyDecisionContinuationForLegalMove(
           def,
           state,
           move,
           admissionContext,
           withTerminalLegalityValidation({
             budgets,
-            emitCompletionCertificate: true,
             ...(profiler === undefined ? {} : { profiler }),
           }, createStandardTerminalLegalityValidator(def, state, runtime)),
           runtime,
         );
-        if (admission.classification === 'satisfiable') {
-          if (admission.certificate === undefined) {
-            warnings.push({
-              code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
-              message: 'Admitted incomplete legal move classified as satisfiable without a completion certificate.',
-              context: {
-                actionId: String(move.actionId),
-                stateHash: state.stateHash,
-              },
-            });
-            classified.pop();
-            continue;
-          }
-          certificateIndex.set(stableMoveKey, admission.certificate);
-        } else if (admission.classification === 'explicitStochastic') {
-          const stochasticFrontier = tryMaterializePublishedStochasticFrontier(
+        if (admission.classification === 'explicitStochastic') {
+          const stochasticFrontier = tryResolvePublishedStochasticFrontier(
             def,
             state,
             move,
-            admission.certificate,
             runtime,
             discoveryCache,
           );
@@ -513,7 +479,6 @@ const classifyEnumeratedMoves = (
 
   return {
     moves: classified,
-    ...(certificateIndex.size === 0 ? {} : { certificateIndex }),
   };
 };
 
@@ -710,7 +675,7 @@ function enumerateParams(
     if (enumeration.probePlainActionFeasibility && options?.pipeline === undefined) {
       try {
         if (
-          !isMoveDecisionSequenceAdmittedForLegalMove(
+          !isDecisionContinuationAdmittedForLegalMove(
             def,
             state,
             move,
@@ -872,7 +837,7 @@ function enumeratePendingFreeOperationMoves(
         return false;
       }
     }
-    const decisionSequenceResult = classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+    const decisionSequenceResult = classifyDecisionContinuationForLegalMove(
       def,
       candidateState,
       candidateMove,
@@ -880,7 +845,6 @@ function enumeratePendingFreeOperationMoves(
       withTerminalLegalityValidation({
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-        emitCompletionCertificate: true,
         ...(profiler === undefined ? {} : { profiler }),
       }, createFreeOperationTerminalValidator(def, candidateState)),
     );
@@ -898,21 +862,6 @@ function enumeratePendingFreeOperationMoves(
         });
         return false;
       case 'satisfiable':
-        if (decisionSequenceResult.certificate === undefined) {
-          const resolution = resolveMoveDecisionSequence(def, candidateState, candidateMove);
-          if (resolution.complete) {
-            break;
-          }
-          emitEnumerationWarning(enumeration, {
-            code: 'CONSTRUCTIBILITY_INVARIANT_VIOLATION',
-            message: 'Free-operation candidate classified as satisfiable without a completion certificate.',
-            context: {
-              actionId: String(candidateMove.actionId),
-              stateHash: candidateState.stateHash,
-            },
-          });
-          return false;
-        }
         break;
       case 'explicitStochastic':
         break;
@@ -1288,7 +1237,7 @@ function enumeratePendingFreeOperationMoves(
           if (!isFreeOperationGrantedForMove(def, candidateScopedState, candidateMove, seatResolution)) {
             return false;
           }
-          return isMoveDecisionSequenceAdmittedForLegalMove(
+          return isDecisionContinuationAdmittedForLegalMove(
             def,
             candidateScopedState,
             candidateMove,
@@ -1312,7 +1261,7 @@ function enumeratePendingFreeOperationMoves(
       }
       seenGrantMoveKeys.add(baseMoveKey);
 
-      if (!tryPushTemplateMove(enumeration, baseMove, action.id)) {
+      if (!tryPushEnumeratedMove(enumeration, baseMove, action.id)) {
         return;
       }
     }
@@ -1384,8 +1333,7 @@ function enumerateCurrentEventMoves(
     // Event effects resolve from the current card/branch runtime state.
     // Keep event admission on the canonical interpreter path; the compiled
     // first-decision guard only applies to static action/pipeline effect trees.
-    let decisionSequenceResult: MoveDecisionSequenceSatisfiabilityResult | undefined;
-    const admitted = isMoveDecisionSequenceAdmittedForLegalMove(
+    const admitted = isDecisionContinuationAdmittedForLegalMove(
       def,
       state,
       move,
@@ -1393,26 +1341,12 @@ function enumerateCurrentEventMoves(
       withTerminalLegalityValidation({
         budgets: enumeration.budgets,
         onWarning: (warning) => emitEnumerationWarning(enumeration, warning),
-        emitCompletionCertificate: true,
-        onClassified: (result) => {
-          decisionSequenceResult = result;
-        },
         ...(discoverer === undefined ? {} : { discoverer }),
       }, createStandardTerminalLegalityValidator(def, state, runtime)),
       runtime,
     );
-    if (!admitted || decisionSequenceResult === undefined) {
+    if (!admitted) {
       continue;
-    }
-    const stableMoveKey = toMoveIdentityKey(def, move);
-    if (decisionSequenceResult.classification === 'satisfiable') {
-      enumeration.prevalidatedIncompleteMoveKeys.add(stableMoveKey);
-    }
-    if (
-      decisionSequenceResult.classification === 'satisfiable'
-      && decisionSequenceResult.certificate !== undefined
-    ) {
-      enumeration.precomputedCertificates.set(stableMoveKey, decisionSequenceResult.certificate);
     }
     if (!tryPushOptionMatrixFilteredMove(enumeration, def, state, move, action)) {
       return;
@@ -1430,7 +1364,7 @@ const enumerateRawLegalMoves = (
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const warnings: RuntimeWarning[] = [];
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
-  const discoveryCache: DiscoveryCache = new Map();
+  const discoveryCache: DecisionContinuationCache = new Map();
   const firstDecisionDomains = runtime?.firstDecisionDomains ?? compileGameDefFirstDecisionDomains(def);
 
   if (!isActiveSeatEligibleForTurnFlow(def, state, seatResolution)) {
@@ -1442,8 +1376,6 @@ const enumerateRawLegalMoves = (
     probePlainActionFeasibility: options?.probePlainActionFeasibility === true,
     warnings,
     moves: [],
-    prevalidatedIncompleteMoveKeys: new Set(),
-    precomputedCertificates: new Map(),
     paramExpansions: 0,
     templateBudgetExceeded: false,
     paramExpansionBudgetExceeded: false,
@@ -1649,12 +1581,6 @@ const enumerateRawLegalMoves = (
     moves: finalMoves,
     warnings,
     discoveryCache,
-    ...(enumeration.prevalidatedIncompleteMoveKeys.size === 0
-      ? {}
-      : { prevalidatedIncompleteMoveKeys: enumeration.prevalidatedIncompleteMoveKeys }),
-    ...(enumeration.precomputedCertificates.size === 0
-      ? {}
-      : { precomputedCertificates: enumeration.precomputedCertificates }),
   };
 };
 
@@ -1666,7 +1592,6 @@ export const enumerateLegalMoves = (
 ): LegalMoveEnumerationResult => {
   const rawEnumeration = enumerateRawLegalMoves(def, state, options, runtime);
   const { moves, warnings: rawWarnings, discoveryCache } = rawEnumeration;
-  const { prevalidatedIncompleteMoveKeys, precomputedCertificates } = rawEnumeration;
   const warnings = [...rawWarnings];
   const budgets = resolveMoveEnumerationBudgets(options?.budgets);
   const classified = classifyEnumeratedMoves(
@@ -1677,14 +1602,11 @@ export const enumerateLegalMoves = (
     budgets,
     runtime,
     discoveryCache,
-    prevalidatedIncompleteMoveKeys,
-    precomputedCertificates,
     options?.profiler,
   );
   return {
     moves: classified.moves,
     warnings,
-    ...(classified.certificateIndex === undefined ? {} : { certificateIndex: classified.certificateIndex }),
   };
 };
 

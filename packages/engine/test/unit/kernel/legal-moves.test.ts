@@ -24,7 +24,6 @@ import {
   enumerateLegalMoves,
   isKernelErrorCode,
   legalMoves,
-  resolveMoveDecisionSequence,
   TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS,
   type ActionDef,
   type GameDef,
@@ -32,6 +31,7 @@ import {
   type ActionPipelineDef,
   type EventCardDef,
 } from '../../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../../src/kernel/microturn/continuation.js';
 import { initializeTurnFlowEligibilityState } from '../../../src/kernel/turn-flow-eligibility.js';
 import { isMoveAllowedByTurnFlowOptionMatrix } from '../../../src/kernel/legal-moves-turn-order.js';
 import {
@@ -2018,7 +2018,7 @@ phase: [asPhaseId('main')],
 
     const template = legalMoves(def, state).find((move) => String(move.actionId) === 'operation' && move.freeOperation === true);
     assert.ok(template);
-    const sequence = resolveMoveDecisionSequence(def, state, template, { choose: () => undefined });
+    const sequence = resolveDecisionContinuation(def, state, template, { choose: () => undefined });
     assert.equal(sequence.complete, false);
     assert.deepEqual(sequence.nextDecision?.options.map((option) => option.value), ['board:cambodia']);
   });
@@ -3725,7 +3725,7 @@ phase: [asPhaseId('main')],
       },
     ]);
 
-    const pending = resolveMoveDecisionSequence(def, state, moves[0]!, { choose: () => undefined });
+    const pending = resolveDecisionContinuation(def, state, moves[0]!, { choose: () => undefined });
     assert.equal(pending.complete, false);
     assert.equal(pending.nextDecision?.type, 'chooseN');
     assert.equal(pending.nextDecision?.min, 2);
@@ -3837,10 +3837,10 @@ phase: [asPhaseId('main')],
   it('31. routes event/pipeline decision admission through canonical move-decision helper', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
-    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    const imports = collectNamedImportsByLocalName(sourceFile, './microturn/continuation.js');
     assert.equal(
-      imports.get('isMoveDecisionSequenceAdmittedForLegalMove'),
-      'isMoveDecisionSequenceAdmittedForLegalMove',
+      imports.get('isDecisionContinuationAdmittedForLegalMove'),
+      'isDecisionContinuationAdmittedForLegalMove',
       'legal-moves.ts must import canonical legal-move decision admission helper',
     );
     assert.equal(
@@ -3849,7 +3849,7 @@ phase: [asPhaseId('main')],
       'legal-moves.ts must not import legacy unsatisfiable-only helper for legal-move admission',
     );
     assert.equal(
-      imports.has('classifyMoveDecisionSequenceSatisfiability'),
+      imports.has('classifyDecisionContinuationSatisfiability'),
       false,
       'event-path decision-policy must not depend on inline classify API imports',
     );
@@ -3860,7 +3860,7 @@ phase: [asPhaseId('main')],
       'legal-moves.ts must import canonical missing-binding policy context identifiers',
     );
 
-    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isDecisionContinuationAdmittedForLegalMove');
     assert.equal(
       helperCalls.some((call) => {
         if (call.arguments.length < 4) {
@@ -3882,11 +3882,11 @@ phase: [asPhaseId('main')],
     // full satisfiability to agent template completion. Only the event-path
     // call is required.
 
-    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveDecisionSequenceSatisfiability');
+    const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyDecisionContinuationSatisfiability');
     assert.equal(
       classifyCalls.length,
       0,
-      'legal-moves.ts should not reintroduce inline classifyMoveDecisionSequenceSatisfiability admission logic',
+      'legal-moves.ts should not reintroduce inline classifyDecisionContinuationSatisfiability admission logic',
     );
 
     const deferCalls = collectCallExpressionsByIdentifier(sourceFile, 'shouldDeferMissingBinding');
@@ -4214,7 +4214,7 @@ describe('legalMoves plain-action feasibility probe', () => {
 
     assert.match(
       eventFunctionSource,
-      /isMoveDecisionSequenceAdmittedForLegalMove/u,
+      /isDecisionContinuationAdmittedForLegalMove/u,
       'event admission should continue to use the canonical interpreter-backed helper',
     );
     assert.doesNotMatch(
@@ -4233,7 +4233,7 @@ describe('legalMoves plain-action feasibility probe', () => {
     const source = readKernelSource('src/kernel/legal-moves.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves.ts');
 
-    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isDecisionContinuationAdmittedForLegalMove');
     assert.equal(
       helperCalls.some((call) => {
         if (call.arguments.length < 4) {
@@ -4265,7 +4265,7 @@ describe('legalMoves plain-action feasibility probe', () => {
     };
 
     const enumerateParamsCalls = collectCallExpressionsByIdentifier(sourceFile, 'enumerateParams');
-    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove');
+    const helperCalls = collectCallExpressionsByIdentifier(sourceFile, 'isDecisionContinuationAdmittedForLegalMove');
     const classifyCalls = collectCallExpressionsByIdentifier(sourceFile, 'classifyMoveAdmissibility');
 
     const hasRootStateDiscoverer = (contextName: string): boolean =>
@@ -4677,9 +4677,9 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
   it('keeps free-operation move creation out of legal-moves turn-order helpers', () => {
     const source = readKernelSource('src/kernel/legal-moves-turn-order.ts');
     const sourceFile = parseTypeScriptSource(source, 'legal-moves-turn-order.ts');
-    const imports = collectNamedImportsByLocalName(sourceFile, './move-decision-sequence.js');
+    const imports = collectNamedImportsByLocalName(sourceFile, './microturn/continuation.js');
     assert.equal(
-      imports.has('isMoveDecisionSequenceAdmittedForLegalMove'),
+      imports.has('isDecisionContinuationAdmittedForLegalMove'),
       false,
       'legal-moves-turn-order.ts must not import free-operation decision admission helpers once canonical builder owns move creation',
     );
@@ -4731,7 +4731,7 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
       'legal-moves-turn-order.ts must not perform free-operation grant checks for move creation',
     );
     assert.equal(
-      collectCallExpressionsByIdentifier(sourceFile, 'isMoveDecisionSequenceAdmittedForLegalMove').length,
+      collectCallExpressionsByIdentifier(sourceFile, 'isDecisionContinuationAdmittedForLegalMove').length,
       0,
       'legal-moves-turn-order.ts must not perform free-operation decision admission for move creation',
     );

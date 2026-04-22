@@ -1,3 +1,4 @@
+import { resetPhaseUsage, resetTurnUsage } from './action-usage.js';
 import { asPlayerId } from './branded.js';
 import { createEvalContext, createEvalRuntimeResources } from './eval-context.js';
 import { resolveBoundaryDurationsAtTurnEnd } from './event-execution.js';
@@ -31,6 +32,7 @@ import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolu
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { applyCoupPhaseEntryReset, resolveCardDrivenCoupContext } from './phase-advance.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import {
@@ -546,6 +548,14 @@ const computePostCardEligibility = (
   return eligibility;
 };
 
+const isPlayedCardCoup = (def: GameDef, state: GameState): boolean => {
+  const playedZone = cardDrivenConfig(def)?.turnFlow.cardLifecycle.played;
+  if (playedZone === undefined) {
+    return false;
+  }
+  return state.zones[playedZone]?.[0]?.props.isCoup === true;
+};
+
 const finalizeSuspendedOrEndedCard = (
   def: GameDef,
   rewardState: GameState,
@@ -1014,6 +1024,7 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const before = runtime.currentCard;
   const acted = new Set(before.actedSeats);
+  const moveClass = resolveTurnFlowActionClass(def, move);
   if (!inCoupPhase || isPassAction(def, move)) {
     acted.add(activeSeat);
   }
@@ -1040,7 +1051,6 @@ export const applyTurnFlowEligibilityAfterMove = (
     nonPassCount += 1;
   }
 
-  const moveClass = resolveTurnFlowActionClass(def, move);
   const firstActionClass =
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
@@ -1077,6 +1087,35 @@ export const applyTurnFlowEligibilityAfterMove = (
           }
           return mutableState as GameState;
         })();
+
+  const immediateCoupEntryPhase: GameState['currentPhase'] | undefined =
+    !inCoupPhase
+    && isPlayedCardCoup(def, rewardState)
+    && (resolveCardDrivenCoupContext(def, rewardState)?.coupActive ?? false)
+    && moveClass === 'event'
+      ? def.turnOrder?.type === 'cardDriven'
+        ? def.turnOrder.config.coupPlan?.phases[0]?.id as GameState['currentPhase'] | undefined
+        : undefined
+      : undefined;
+  if (immediateCoupEntryPhase !== undefined) {
+    const stateAtCoupEntry =
+      options?.tracker === undefined
+        ? {
+          ...rewardState,
+          currentPhase: immediateCoupEntryPhase,
+        }
+        : (() => {
+          const mutableState = rewardState as MutableGameState;
+          mutableState.currentPhase = immediateCoupEntryPhase;
+          return mutableState as GameState;
+        })();
+    const resetUsageState = resetPhaseUsage(resetTurnUsage(stateAtCoupEntry, options?.tracker), options?.tracker);
+    return {
+      state: applyCoupPhaseEntryReset(def, resetUsageState, immediateCoupEntryPhase, seatResolution, options?.tracker),
+      traceEntries: [...sequenceAdvanced.traceEntries],
+      ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
+    };
+  }
 
   const traceEntries: TriggerLogEntry[] = [
     ...sequenceAdvanced.traceEntries,

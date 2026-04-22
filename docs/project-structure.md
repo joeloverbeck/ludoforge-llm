@@ -5,6 +5,12 @@ packages/
   engine/
     src/
       kernel/      # Deterministic game engine
+        microturn/     # Atomic decision protocol
+          types.ts     # Microturn state, decision stack, decision log, and decision payload types
+          constants.ts # Shared microturn protocol bounds and constants
+          publish.ts   # Microturn publication and projected-state construction
+          apply.ts     # Single-decision application and decision-stack progression
+          advance.ts   # Auto-resolve loop for chance/kernel-owned microturns
       cnl/         # Parser, validator, compiler
       agents/      # Bot implementations
       sim/         # Simulator and trace

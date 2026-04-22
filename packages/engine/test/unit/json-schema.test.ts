@@ -9,9 +9,12 @@ import { Ajv, type ErrorObject } from 'ajv';
 import {
   type AgentDecisionTrace,
   asActionId,
+  asDecisionFrameId,
   asPhaseId,
   asPlayerId,
+  asSeatId,
   asTriggerId,
+  asTurnId,
   asZoneId,
   serializeTrace,
 } from '../../src/kernel/index.js';
@@ -171,12 +174,21 @@ const gameDefWithModernEventDeck: GameDef = {
 const validRuntimeTrace: GameTrace = {
   gameDefId: 'full-game',
   seed: 1234,
-  moves: [
+  decisions: [
     {
       stateHash: 43n,
-      player: asPlayerId(0),
-      move: { actionId: asActionId('playCard'), params: { amount: 1, target: 'deck:none', legal: true } },
-      legalMoveCount: 3,
+      seatId: asSeatId('0'),
+      playerId: asPlayerId(0),
+      decisionContextKind: 'actionSelection',
+      decisionKey: null,
+      decision: {
+        kind: 'actionSelection',
+        actionId: asActionId('playCard'),
+        move: { actionId: asActionId('playCard'), params: { amount: 1, target: 'deck:none', legal: true } },
+      },
+      turnId: asTurnId(1),
+      turnRetired: true,
+      legalActionCount: 3,
       deltas: [{ path: 'globalVars.round', before: 1, after: 2 }],
       triggerFirings: [
         {
@@ -252,6 +264,9 @@ const validRuntimeTrace: GameTrace = {
       warnings: [],
     },
   ],
+  compoundTurns: [
+    { turnId: asTurnId(1), seatId: asSeatId('0'), decisionIndexRange: { start: 0, end: 1 }, microturnCount: 1, turnStopReason: 'terminal' },
+  ],
   finalState: {
     globalVars: {},
     perPlayerVars: {},
@@ -284,14 +299,19 @@ const validRuntimeTrace: GameTrace = {
       },
     },
     markers: {},
-  reveals: undefined,
-  globalMarkers: undefined,
-  activeLastingEffects: undefined,
-  interruptPhaseStack: undefined,
+    reveals: undefined,
+    globalMarkers: undefined,
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
+    decisionStack: [],
+    nextFrameId: asDecisionFrameId(0),
+    nextTurnId: asTurnId(0),
+    activeDeciderSeatId: asSeatId('0'),
   },
   result: { type: 'draw' },
   turnsCount: 1,
   stopReason: 'terminal',
+  traceProtocolVersion: 'spec-140',
 };
 
 interface PolicyDecisionGolden {
@@ -333,10 +353,13 @@ describe('json schema artifacts', () => {
     const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0]!,
-          move: toSerializedTraceMove(fixture.move),
+          ...baseSerializedTrace.decisions[0]!,
+          decision: {
+            ...baseSerializedTrace.decisions[0]!.decision,
+            move: toSerializedTraceMove(fixture.move),
+          },
           agentDecision: fixture.agentDecision,
         },
       ],
@@ -352,25 +375,15 @@ describe('json schema artifacts', () => {
     const fixture = readTraceFixture<PolicyDecisionGolden>('fitl-policy-summary.golden.json');
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0]!,
-          move: toSerializedTraceMove(fixture.move),
+          ...baseSerializedTrace.decisions[0]!,
+          decision: {
+            ...baseSerializedTrace.decisions[0]!.decision,
+            move: toSerializedTraceMove(fixture.move),
+          },
           agentDecision: {
             ...fixture.agentDecision,
-            completionStatistics: {
-              totalClassifiedMoves: 3,
-              completedCount: 1,
-              stochasticCount: 1,
-              rejectedNotViable: 1,
-              templateCompletionAttempts: 2,
-              templateCompletionSuccesses: 1,
-              templateCompletionStructuralFailures: 1,
-              duplicatesRemoved: 0,
-              completionsByActionId: {
-                advance: 1,
-              },
-            },
             candidates: [
               {
                 actionId: 'advance',
@@ -426,10 +439,13 @@ describe('json schema artifacts', () => {
     };
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0]!,
-          move: toSerializedTraceMove(fixture.move),
+          ...baseSerializedTrace.decisions[0]!,
+          decision: {
+            ...baseSerializedTrace.decisions[0]!.decision,
+            move: toSerializedTraceMove(fixture.move),
+          },
           agentDecision: {
             ...fixture.agentDecision,
             previewUsage: previewUsageWithoutBreakdown,
@@ -587,9 +603,9 @@ describe('json schema artifacts', () => {
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0],
+          ...baseSerializedTrace.decisions[0],
           effectTrace: [
             {
               kind: 'reveal',
@@ -628,9 +644,9 @@ describe('json schema artifacts', () => {
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0],
+          ...baseSerializedTrace.decisions[0],
           effectTrace: [
             {
               kind: 'resourceTransfer',
@@ -660,9 +676,9 @@ describe('json schema artifacts', () => {
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
     const makeSerializedTrace = (from: unknown, to: unknown) => ({
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0],
+          ...baseSerializedTrace.decisions[0],
           effectTrace: [
             {
               kind: 'resourceTransfer',
@@ -724,9 +740,9 @@ describe('json schema artifacts', () => {
     const provenance = { phase: 'main', eventContext: 'actionEffect', effectPath: 'effects[0]' } as const;
     const makeSerializedTrace = (entry: unknown) => ({
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0],
+          ...baseSerializedTrace.decisions[0],
           effectTrace: [entry],
         },
       ],
@@ -1330,11 +1346,11 @@ describe('json schema artifacts', () => {
     const baseSerializedTrace = serializeTrace(validRuntimeTrace);
     const serializedTrace = {
       ...baseSerializedTrace,
-      moves: [
+      decisions: [
         {
-          ...baseSerializedTrace.moves[0],
+          ...baseSerializedTrace.decisions[0],
           triggerFirings: [
-            ...baseSerializedTrace.moves[0]!.triggerFirings,
+            ...baseSerializedTrace.decisions[0]!.triggerFirings,
             { kind: 'unexpectedEntry', value: 1 },
           ],
         },
@@ -1345,7 +1361,8 @@ describe('json schema artifacts', () => {
     assert.ok(
       validate.errors?.some(
         (error: ErrorObject<string, Record<string, unknown>, unknown>) =>
-          error.instancePath === '/moves/0/triggerFirings/8' || error.instancePath === '/moves/0/triggerFirings/9',
+          error.instancePath === '/decisions/0/triggerFirings/8'
+          || error.instancePath === '/decisions/0/triggerFirings/9',
       ),
       JSON.stringify(validate.errors, null, 2),
     );

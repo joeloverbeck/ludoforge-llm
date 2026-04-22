@@ -4,7 +4,7 @@ import type { GameStore } from '../../../src/store/game-store';
 import { createCanvasInteractionController } from '../../../src/canvas/interactions/canvas-interaction-controller';
 
 function createState(overrides: Partial<GameStore> = {}): GameStore {
-  const chooseOne = vi.fn();
+  const submitChoice = vi.fn();
   const base = {
     renderModel: {
       zones: [
@@ -16,7 +16,7 @@ function createState(overrides: Partial<GameStore> = {}): GameStore {
         { id: 'token:1', type: 'Infantry' },
       ],
     },
-    chooseOne,
+    submitChoice,
   } as unknown as GameStore;
 
   return {
@@ -63,7 +63,7 @@ describe('createCanvasInteractionController', () => {
     controller.onSelectTarget({ type: 'zone', id: 'zone:a' });
 
     expect(controller.getFocusedZoneID()).toBe('zone:a');
-    expect(state.chooseOne).toHaveBeenCalledWith('zone:a');
+    expect(state.submitChoice).toHaveBeenCalledWith('zone:a');
     expect(announcer.announce).toHaveBeenCalledWith('Zone selected: Zone A');
   });
 
@@ -74,7 +74,7 @@ describe('createCanvasInteractionController', () => {
 
     controller.onSelectTarget({ type: 'token', id: 'token:1' });
 
-    expect(state.chooseOne).toHaveBeenCalledWith('token:1');
+    expect(state.submitChoice).toHaveBeenCalledWith('token:1');
     expect(announcer.announce).toHaveBeenCalledWith('Token selected: Infantry');
   });
 });

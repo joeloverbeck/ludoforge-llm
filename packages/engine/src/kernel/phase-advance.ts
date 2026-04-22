@@ -102,7 +102,7 @@ const resolveCurrentCoupSeat = (
  * current state are free-op moves from such grants AND removing those grants
  * leaves zero legal moves, the grants are effectively uncompletable by the
  * agent.  Remove them so the main advanceToDecisionPoint loop can advance
- * past the grant instead of breaking into agent.chooseMove which would throw.
+ * past the grant instead of breaking into agent.chooseDecision which would throw.
  */
 const preSkipUncompletableGrants = (
   def: GameDef,
@@ -238,7 +238,7 @@ const expireBlockingPendingFreeOperationGrants = (
  * Returns the state unchanged if the target phase is not a coup phase or
  * the turn order is not card-driven.
  */
-const applyCoupPhaseEntryReset = (
+export const applyCoupPhaseEntryReset = (
   def: GameDef,
   state: GameState,
   phaseId: GameState['currentPhase'],
@@ -313,7 +313,7 @@ const assignRunningHash = (
 const snapshotForHash = (state: GameState, tracker: DraftTracker | undefined): GameState =>
   tracker === undefined ? state : { ...state };
 
-const resolveCardDrivenCoupContext = (
+export const resolveCardDrivenCoupContext = (
   def: GameDef,
   state: GameState,
 ): {

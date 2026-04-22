@@ -42,8 +42,11 @@ Use concrete evidence only. Review against:
 - nearby architecture that the implementation depends on, even if not modified
 - available diff, commit, and history context around the implementation when useful
 - active tickets that may already cover adjacent work
+- relevant archived sibling tickets or archived follow-up tickets when a staged series may already have moved adjacent ownership into the archive
 
 Do not create refactor tickets from vague taste or hypothetical cleanup ideas. If evidence is weak, do nothing.
+
+When the completed ticket claims to retire or narrow a public surface, explicitly inspect adjacent exported types, schemas, diagnostics, and replay/test contracts for stale fields or vocabulary even if the main runtime/source grep is already green.
 
 ## Review Dimensions
 
@@ -70,6 +73,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - invariants
 2. Identify the code that was actually touched and the nearby modules that matter architecturally.
 3. Read the remaining active tickets and check for overlap, adjacent scope, and likely dependency relationships.
+4. If overlap or remainder ownership is still unclear in a staged series, inspect the relevant archived sibling tickets or archived follow-up tickets before creating new work.
 
 ### Phase 2: Review With a Do-Nothing Bias
 
@@ -101,6 +105,8 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - align the problem and architecture check with `docs/FOUNDATIONS.md`
    - add dependencies instead of overlapping scope with other active tickets
    - keep the scope specific and actionable
+   - if the new follow-up changes the truth of any sibling active ticket's dependency, audit boundary, or ownership wording, update those sibling tickets in the same review turn
+   - after later archive/rewrite commands run, reread every active ticket you created or edited in this review turn and confirm `Deps`, `Files to Touch`, and any archive-path references are still literal-path correct
 11. If review evidence shows the implementation can stand but the original ticket was not fully satisfied as written:
    - amend the original ticket's closeout text so it truthfully records the deviation
    - state what landed, what did not, and which active follow-up ticket now owns the remainder
@@ -108,6 +114,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 12. Before archival, do a final contract check:
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
+   - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 13. If no unresolved `must-fix-now` cleanup remains, archive the implemented ticket per `docs/archival-workflow.md`.
 
 ## Ticket Authoring Rules

@@ -1,9 +1,7 @@
 import type {
-  ActionId,
   ChoicePendingRequest,
   DecisionKey,
   LegalMoveEnumerationResult,
-  Move,
   MoveParamValue,
   PlayerId,
   TerminalResult,
@@ -23,8 +21,7 @@ export interface RenderContext {
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById?: ReadonlyMap<string, boolean>;
   readonly choicePending: ChoicePendingRequest | null;
-  readonly selectedAction: ActionId | null;
-  readonly partialMove: Move | null;
+  readonly selectedActionId: string | null;
   readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly terminal: TerminalResult | null;

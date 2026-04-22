@@ -48,6 +48,14 @@ import type { SeatGroupConfig, MarkerWeightConfig, VictoryFormula } from './deri
 import type { ScopedVarEndpointContract, ScopedVarPayloadContract } from './scoped-var-contract.js';
 import type { DecisionKey } from './decision-scope.js';
 import type {
+  ActiveDeciderSeatId,
+  DecisionLog,
+  DecisionFrameId,
+  DecisionStackFrame,
+  SuspendedEffectFrameSnapshot,
+  TurnId,
+} from './microturn/types.js';
+import type {
   AgentPolicyCandidateIntrinsic,
   AgentPolicyDecisionIntrinsic,
   AgentPolicyOptionIntrinsic,
@@ -57,7 +65,7 @@ import type {
   AgentPolicyZoneTokenAggOp,
   AgentPolicyZoneTokenAggOwner,
 } from '../contracts/index.js';
-import type { DecisionPointSnapshot } from '../sim/snapshot-types.js';
+import type { MicroturnSnapshot } from '../sim/snapshot-types.js';
 
 export interface RngState {
   readonly algorithm: 'pcg-dxsm-128';
@@ -1059,7 +1067,11 @@ export type ZobristFeature =
       readonly zoneId: string;
       readonly varName: string;
       readonly value: number;
-    };
+    }
+  | { readonly kind: 'decisionStackFrame'; readonly slot: number; readonly encoded: string }
+  | { readonly kind: 'nextFrameId'; readonly value: number }
+  | { readonly kind: 'nextTurnId'; readonly value: number }
+  | { readonly kind: 'activeDeciderSeatId'; readonly seatId: string };
 
 export interface InterruptPhaseFrame {
   readonly phase: PhaseId;
@@ -1081,8 +1093,10 @@ export interface RevealGrant {
  * Canonical shape: globalVars, perPlayerVars, zoneVars, playerCount, zones,
  * nextTokenOrdinal, currentPhase, activePlayer, turnCount, rng, stateHash,
  * _runningHash, actionUsage, turnOrderState, markers, reveals, globalMarkers,
- * activeLastingEffects, interruptPhaseStack.
- * All construction sites must materialize every property.
+ * activeLastingEffects, interruptPhaseStack, decisionStack, nextFrameId,
+ * nextTurnId, activeDeciderSeatId.
+ * Runtime construction sites should materialize every property; older
+ * hand-authored fixture states may rely on the identity defaults.
  */
 export interface GameState {
   readonly globalVars: Readonly<Record<string, VariableValue>>;
@@ -1104,6 +1118,10 @@ export interface GameState {
   readonly globalMarkers: Readonly<Record<string, string>> | undefined;
   readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
   readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
+  readonly decisionStack?: readonly DecisionStackFrame[];
+  readonly nextFrameId?: DecisionFrameId;
+  readonly nextTurnId?: TurnId;
+  readonly activeDeciderSeatId?: ActiveDeciderSeatId;
 }
 
 export interface CompoundMovePayload {
@@ -1121,7 +1139,7 @@ export interface Move {
   readonly compound?: CompoundMovePayload;
 }
 
-export type TrustedMoveProvenance = 'enumerateLegalMoves' | 'templateCompletion';
+export type TrustedMoveProvenance = 'enumerateLegalMoves';
 
 export interface TrustedExecutableMove extends Move {
   readonly move: Move;
@@ -1198,6 +1216,8 @@ interface ChoicePendingRequestBase {
   readonly reason?: ChoiceIllegalReason;
   /** Where the decision value should be placed in the move structure. Absent or `'main'` → `move.params[decisionKey]`. */
   readonly decisionPath?: CompoundDecisionPath;
+  /** Internal suspension payload used by the microturn kernel to resume execution after the decision resolves. */
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }
 
 export interface ChoicePendingChooseOneRequest extends ChoicePendingRequestBase {
@@ -1513,19 +1533,12 @@ export interface MoveContext {
   readonly turnFlowWindow?: string;
 }
 
-export type BuiltinAgentId = 'random' | 'greedy';
-
-export interface BuiltinAgentDescriptor {
-  readonly kind: 'builtin';
-  readonly builtinId: BuiltinAgentId;
-}
-
 export interface PolicyAgentDescriptor {
   readonly kind: 'policy';
   readonly profileId?: string;
 }
 
-export type AgentDescriptor = BuiltinAgentDescriptor | PolicyAgentDescriptor;
+export type AgentDescriptor = PolicyAgentDescriptor;
 
 export interface AgentDecisionFailureSummary {
   readonly code: string;
@@ -1558,20 +1571,6 @@ export interface PolicyCandidateDecisionTrace {
   };
   readonly grantedOperationMarginDelta?: number;
   readonly previewFailureReason?: string;
-}
-
-export interface PolicyMovePreparationTrace {
-  readonly actionId: string;
-  readonly stableMoveKey: string;
-  readonly initialClassification: 'complete' | 'stochastic' | 'pending' | 'rejected';
-  readonly finalClassification: 'complete' | 'stochastic' | 'rejected';
-  readonly enteredTrustedMoveIndex: boolean;
-  readonly skippedAsDuplicate?: boolean;
-  readonly templateCompletionAttempts?: number;
-  readonly templateCompletionOutcome?: 'complete' | 'stochastic' | 'failed';
-  readonly templateCompletionSource?: 'certificateFallback';
-  readonly rejection?: 'structurallyUnsatisfiable' | 'drawDeadEnd' | 'notViable' | 'notDecisionComplete';
-  readonly warnings?: readonly RuntimeWarning[];
 }
 
 export interface PolicyPruningStepTrace {
@@ -1611,26 +1610,6 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownFailed: number;
 }
 
-export interface PolicyCompletionStatistics {
-  readonly totalClassifiedMoves: number;
-  readonly completedCount: number;
-  readonly stochasticCount: number;
-  readonly rejectedNotViable: number;
-  readonly templateCompletionAttempts: number;
-  readonly templateCompletionSuccesses: number;
-  readonly templateCompletionStructuralFailures: number;
-  readonly duplicatesRemoved: number;
-  readonly completionsByActionId?: Readonly<Record<string, number>>;
-}
-
-export interface BuiltinAgentDecisionTrace {
-  readonly kind: 'builtin';
-  readonly agent: BuiltinAgentDescriptor;
-  readonly candidateCount: number;
-  readonly selectedIndex?: number;
-  readonly selectedStableMoveKey?: string;
-}
-
 export interface PolicyAgentDecisionTrace {
   readonly kind: 'policy';
   readonly agent: PolicyAgentDescriptor;
@@ -1651,12 +1630,10 @@ export interface PolicyAgentDecisionTrace {
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
-  readonly completionStatistics?: PolicyCompletionStatistics;
-  readonly movePreparations?: readonly PolicyMovePreparationTrace[];
   readonly candidates?: readonly PolicyCandidateDecisionTrace[];
 }
 
-export type AgentDecisionTrace = BuiltinAgentDecisionTrace | PolicyAgentDecisionTrace;
+export type AgentDecisionTrace = PolicyAgentDecisionTrace;
 
 // ── Execution Options & Collector ─────────────────────────
 
@@ -1700,23 +1677,6 @@ export interface ApplyMoveResult {
   readonly selectorTrace?: readonly SelectorTraceEntry[];
 }
 
-export interface MoveLog {
-  readonly stateHash: bigint;
-  readonly player: PlayerId;
-  readonly move: Move;
-  readonly legalMoveCount: number;
-  readonly deltas: readonly StateDelta[];
-  readonly triggerFirings: readonly TriggerLogEntry[];
-  readonly warnings: readonly RuntimeWarning[];
-  readonly effectTrace?: readonly EffectTraceEntry[];
-  readonly conditionTrace?: readonly ConditionTraceEntry[];
-  readonly decisionTrace?: readonly DecisionTraceEntry[];
-  readonly selectorTrace?: readonly SelectorTraceEntry[];
-  readonly moveContext?: MoveContext;
-  readonly agentDecision?: AgentDecisionTrace;
-  readonly snapshot?: DecisionPointSnapshot;
-}
-
 export interface PlayerScore {
   readonly player: PlayerId;
   readonly score: number;
@@ -1733,14 +1693,27 @@ export type SimulationStopReason =
   | 'maxTurns'
   | 'noLegalMoves';
 
+export interface CompoundTurnSummary {
+  readonly turnId: TurnId;
+  readonly seatId: ActiveDeciderSeatId;
+  readonly decisionIndexRange: {
+    readonly start: number;
+    readonly end: number;
+  };
+  readonly microturnCount: number;
+  readonly turnStopReason: 'retired' | 'terminal' | 'maxTurns';
+}
+
 export interface GameTrace {
   readonly gameDefId: string;
   readonly seed: number;
-  readonly moves: readonly MoveLog[];
+  readonly decisions: readonly DecisionLog[];
+  readonly compoundTurns: readonly CompoundTurnSummary[];
   readonly finalState: GameState;
   readonly result: TerminalResult | null;
   readonly turnsCount: number;
   readonly stopReason: SimulationStopReason;
+  readonly traceProtocolVersion: 'spec-140';
 }
 
 export interface Metrics {
@@ -1787,8 +1760,9 @@ export interface SerializedRngState {
   readonly state: readonly HexBigInt[];
 }
 
-export interface SerializedMoveLog extends Omit<MoveLog, 'stateHash'> {
+export interface SerializedDecisionLog extends Omit<DecisionLog, 'stateHash'> {
   readonly stateHash: HexBigInt;
+  readonly snapshot?: MicroturnSnapshot;
 }
 
 export interface SerializedGameState extends Omit<
@@ -1803,8 +1777,8 @@ export interface SerializedGameState extends Omit<
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameTrace extends Omit<GameTrace, 'moves' | 'finalState'> {
-  readonly moves: readonly SerializedMoveLog[];
+export interface SerializedGameTrace extends Omit<GameTrace, 'decisions' | 'finalState'> {
+  readonly decisions: readonly SerializedDecisionLog[];
   readonly finalState: SerializedGameState;
 }
 
@@ -1840,16 +1814,22 @@ export interface MechanicBundle {
   readonly mutationPoints?: readonly string[];
 }
 
+export interface AgentMicroturnDecisionInput {
+  readonly def: GameDef;
+  readonly state: GameState;
+  readonly microturn: import('./microturn/types.js').MicroturnState;
+  readonly rng: Rng;
+  readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
+  /** Opt-in profiler for agent sub-function timing. */
+  readonly profiler?: import('./perf-profiler.js').PerfProfiler;
+}
+
+export interface AgentMicroturnDecisionResult {
+  readonly decision: import('./microturn/types.js').Decision;
+  readonly rng: Rng;
+  readonly agentDecision?: AgentDecisionTrace;
+}
+
 export interface Agent {
-  chooseMove(input: {
-    readonly def: GameDef;
-    readonly state: GameState;
-    readonly playerId: PlayerId;
-    readonly legalMoves: readonly ClassifiedMove[];
-    readonly certificateIndex?: ReadonlyMap<string, import('./completion-certificate.js').CompletionCertificate>;
-    readonly rng: Rng;
-    readonly runtime?: import('./gamedef-runtime.js').GameDefRuntime;
-    /** Opt-in profiler for agent sub-function timing. */
-    readonly profiler?: import('./perf-profiler.js').PerfProfiler;
-  }): { readonly move: TrustedExecutableMove; readonly rng: Rng; readonly agentDecision?: AgentDecisionTrace };
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult;
 }

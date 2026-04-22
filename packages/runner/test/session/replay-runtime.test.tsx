@@ -23,7 +23,7 @@ const testDoubles = vi.hoisted(() => ({
   syncFromController: vi.fn(),
   destroyReplayStore: vi.fn(),
   bridgeGetState: vi.fn(),
-  bridgeEnumerateLegalMoves: vi.fn(),
+  bridgePublishMicroturn: vi.fn(),
   bridgeTerminalResult: vi.fn(),
   onReplayStateChange: null as (() => void) | null,
 }));
@@ -76,7 +76,7 @@ describe('useReplayRuntime', () => {
     testDoubles.syncFromController.mockReset();
     testDoubles.destroyReplayStore.mockReset();
     testDoubles.bridgeGetState.mockReset();
-    testDoubles.bridgeEnumerateLegalMoves.mockReset();
+    testDoubles.bridgePublishMicroturn.mockReset();
     testDoubles.bridgeTerminalResult.mockReset();
     testDoubles.onReplayStateChange = null;
 
@@ -89,12 +89,12 @@ describe('useReplayRuntime', () => {
     });
 
     testDoubles.bridgeGetState.mockResolvedValue({ turn: 2 });
-    testDoubles.bridgeEnumerateLegalMoves.mockResolvedValue({ moves: [] });
+    testDoubles.bridgePublishMicroturn.mockResolvedValue(null);
     testDoubles.bridgeTerminalResult.mockResolvedValue(null);
     testDoubles.createGameBridge.mockReturnValue({
       bridge: {
         getState: testDoubles.bridgeGetState,
-        enumerateLegalMoves: testDoubles.bridgeEnumerateLegalMoves,
+        publishMicroturn: testDoubles.bridgePublishMicroturn,
         terminalResult: testDoubles.bridgeTerminalResult,
       },
       onFatalError: vi.fn(() => testDoubles.detachFatalError),

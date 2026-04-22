@@ -1,10 +1,49 @@
-import type { GameTrace, MoveLog, TraceEval, TraceMetrics, VariableValue } from '../kernel/types.js';
+import type { GameTrace, StateDelta, TraceEval, TraceMetrics, TriggerLogEntry, VariableValue } from '../kernel/types.js';
+import type { Decision } from '../kernel/microturn/types.js';
 
 import { DegeneracyFlag } from '../kernel/diagnostics.js';
 import { reconstructPerPlayerVarTrajectory, parsePerPlayerVarPath } from './delta.js';
 import { DEFAULT_EVAL_CONFIG, type EvalConfig } from './eval-config.js';
 
 type PerPlayerVars = Readonly<Record<number, Readonly<Record<string, VariableValue>>>>;
+
+interface CompoundTurnLog {
+  readonly stateHash: bigint;
+  readonly playerId?: number;
+  readonly actionId: string;
+  readonly legalActionCount: number;
+  readonly deltas: readonly StateDelta[];
+  readonly triggerFirings: readonly TriggerLogEntry[];
+}
+
+const isActionSelectionDecision = (
+  decision: Decision,
+): decision is Extract<Decision, { readonly kind: 'actionSelection' }> => decision.kind === 'actionSelection';
+
+const extractActionId = (decision: Decision): string | null => {
+  if (!isActionSelectionDecision(decision)) {
+    return null;
+  }
+  return decision.actionId;
+};
+
+const toCompoundTurnLogs = (trace: GameTrace): readonly CompoundTurnLog[] =>
+  trace.compoundTurns.map((summary) => {
+    const slice = trace.decisions.slice(summary.decisionIndexRange.start, summary.decisionIndexRange.end);
+    const first = slice[0]!;
+    const last = slice.at(-1)!;
+    const actionSelection = slice.find((entry) => isActionSelectionDecision(entry.decision));
+    return {
+      stateHash: last.stateHash,
+      actionId: (actionSelection === undefined ? null : extractActionId(actionSelection.decision)) ?? first.decision.kind,
+      legalActionCount: actionSelection?.legalActionCount ?? first.legalActionCount,
+      deltas: slice.flatMap((entry) => entry.deltas),
+      triggerFirings: slice.flatMap((entry) => entry.triggerFirings),
+      ...(slice.find((entry) => entry.playerId !== undefined)?.playerId === undefined
+        ? {}
+        : { playerId: Number(slice.find((entry) => entry.playerId !== undefined)!.playerId) }),
+    };
+  });
 
 const mean = (values: readonly number[]): number => {
   if (values.length === 0) {
@@ -15,28 +54,27 @@ const mean = (values: readonly number[]): number => {
 
 const computeGameLength = (trace: GameTrace): number => trace.turnsCount;
 
-const computeAvgBranchingFactor = (moves: readonly MoveLog[]): number =>
-  mean(moves.map((move) => move.legalMoveCount));
+const computeAvgBranchingFactor = (turns: readonly CompoundTurnLog[]): number =>
+  mean(turns.map((turn) => turn.legalActionCount));
 
-const countMovesByAction = (moves: readonly MoveLog[]): readonly number[] => {
+const countMovesByAction = (turns: readonly CompoundTurnLog[]): readonly number[] => {
   const counts = new Map<string, number>();
-  for (const move of moves) {
-    const actionId = move.move.actionId;
-    counts.set(actionId, (counts.get(actionId) ?? 0) + 1);
+  for (const turn of turns) {
+    counts.set(turn.actionId, (counts.get(turn.actionId) ?? 0) + 1);
   }
   return Array.from(counts.values());
 };
 
-const computeActionDiversity = (moves: readonly MoveLog[]): number => {
-  if (moves.length === 0) {
+const computeActionDiversity = (turns: readonly CompoundTurnLog[]): number => {
+  if (turns.length === 0) {
     return 0;
   }
-  const counts = countMovesByAction(moves);
+  const counts = countMovesByAction(turns);
   if (counts.length <= 1) {
     return 0;
   }
 
-  const totalMoves = moves.length;
+  const totalMoves = turns.length;
   let entropy = 0;
   for (const count of counts) {
     const probability = count / totalMoves;
@@ -88,19 +126,22 @@ const computeResourceTension = (trajectory: readonly PerPlayerVars[]): number =>
   return mean(perTurnVariances);
 };
 
-const computeInteractionProxy = (moves: readonly MoveLog[]): number => {
+const computeInteractionProxy = (turns: readonly CompoundTurnLog[]): number => {
   const interactionRatios: number[] = [];
 
-  for (const move of moves) {
+  for (const turn of turns) {
+    if (turn.playerId === undefined) {
+      continue;
+    }
     let totalPerPlayerVarDeltas = 0;
     let interactionDeltas = 0;
-    for (const delta of move.deltas) {
+    for (const delta of turn.deltas) {
       const parsedPath = parsePerPlayerVarPath(delta.path);
       if (parsedPath === null) {
         continue;
       }
       totalPerPlayerVarDeltas += 1;
-      if (parsedPath.playerId !== move.player) {
+      if (parsedPath.playerId !== turn.playerId) {
         interactionDeltas += 1;
       }
     }
@@ -112,12 +153,12 @@ const computeInteractionProxy = (moves: readonly MoveLog[]): number => {
   return mean(interactionRatios);
 };
 
-const computeDominantActionFreq = (moves: readonly MoveLog[]): number => {
-  if (moves.length === 0) {
+const computeDominantActionFreq = (turns: readonly CompoundTurnLog[]): number => {
+  if (turns.length === 0) {
     return 0;
   }
-  const counts = countMovesByAction(moves);
-  return Math.max(...counts) / moves.length;
+  const counts = countMovesByAction(turns);
+  return Math.max(...counts) / turns.length;
 };
 
 const uniqueLeader = (snapshot: PerPlayerVars, scoringVar: string): number | null => {
@@ -177,41 +218,46 @@ const computeMetrics = (
   trace: GameTrace,
   config: EvalConfig,
 ): TraceMetrics => {
-  const trajectory = reconstructPerPlayerVarTrajectory(trace.finalState.perPlayerVars, trace.moves);
+  const compoundTurns = toCompoundTurnLogs(trace);
+  const trajectory = reconstructPerPlayerVarTrajectory(
+    trace.finalState.perPlayerVars,
+    trace.decisions,
+    trace.compoundTurns,
+  );
 
   return {
     gameLength: computeGameLength(trace),
-    avgBranchingFactor: computeAvgBranchingFactor(trace.moves),
-    actionDiversity: computeActionDiversity(trace.moves),
+    avgBranchingFactor: computeAvgBranchingFactor(compoundTurns),
+    actionDiversity: computeActionDiversity(compoundTurns),
     resourceTension: computeResourceTension(trajectory),
-    interactionProxy: computeInteractionProxy(trace.moves),
-    dominantActionFreq: computeDominantActionFreq(trace.moves),
+    interactionProxy: computeInteractionProxy(compoundTurns),
+    dominantActionFreq: computeDominantActionFreq(compoundTurns),
     dramaMeasure: computeDramaMeasure(trajectory, config.scoringVar, trace.turnsCount),
   };
 };
 
-const hasRepeatedStateHash = (moves: readonly MoveLog[]): boolean => {
+const hasRepeatedStateHash = (turns: readonly CompoundTurnLog[]): boolean => {
   const seen = new Set<bigint>();
-  for (const move of moves) {
-    if (seen.has(move.stateHash)) {
+  for (const turn of turns) {
+    if (seen.has(turn.stateHash)) {
       return true;
     }
-    seen.add(move.stateHash);
+    seen.add(turn.stateHash);
   }
   return false;
 };
 
 const hasStallRun = (
-  moves: readonly MoveLog[],
+  turns: readonly CompoundTurnLog[],
   stallTurnThreshold: number,
 ): boolean => {
-  if (moves.length === 0) {
+  if (turns.length === 0) {
     return false;
   }
 
   let consecutiveCount = 1;
-  for (let index = 1; index < moves.length; index += 1) {
-    if (moves[index]?.stateHash === moves[index - 1]?.stateHash) {
+  for (let index = 1; index < turns.length; index += 1) {
+    if (turns[index]?.stateHash === turns[index - 1]?.stateHash) {
       consecutiveCount += 1;
     } else {
       consecutiveCount = 1;
@@ -225,8 +271,8 @@ const hasStallRun = (
   return stallTurnThreshold <= 1;
 };
 
-const hasTriggerDepthExceeded = (moves: readonly MoveLog[]): boolean =>
-  moves.some((move) => move.triggerFirings.some((entry) => entry.kind === 'truncated'));
+const hasTriggerDepthExceeded = (turns: readonly CompoundTurnLog[]): boolean =>
+  turns.some((turn) => turn.triggerFirings.some((entry) => entry.kind === 'truncated'));
 
 const computeDegeneracyFlags = (
   trace: GameTrace,
@@ -234,8 +280,9 @@ const computeDegeneracyFlags = (
   config: EvalConfig,
 ): readonly DegeneracyFlag[] => {
   const flags: DegeneracyFlag[] = [];
+  const turns = toCompoundTurnLogs(trace);
 
-  if (hasRepeatedStateHash(trace.moves)) {
+  if (hasRepeatedStateHash(turns)) {
     flags.push(DegeneracyFlag.LOOP_DETECTED);
   }
   if (trace.stopReason === 'noLegalMoves') {
@@ -247,10 +294,10 @@ const computeDegeneracyFlags = (
   if (trace.result !== null && trace.turnsCount < (config.trivialWinThreshold ?? DEFAULT_EVAL_CONFIG.trivialWinThreshold)) {
     flags.push(DegeneracyFlag.TRIVIAL_WIN);
   }
-  if (hasStallRun(trace.moves, config.stallTurnThreshold ?? DEFAULT_EVAL_CONFIG.stallTurnThreshold)) {
+  if (hasStallRun(turns, config.stallTurnThreshold ?? DEFAULT_EVAL_CONFIG.stallTurnThreshold)) {
     flags.push(DegeneracyFlag.STALL);
   }
-  if (hasTriggerDepthExceeded(trace.moves)) {
+  if (hasTriggerDepthExceeded(turns)) {
     flags.push(DegeneracyFlag.TRIGGER_DEPTH_EXCEEDED);
   }
 

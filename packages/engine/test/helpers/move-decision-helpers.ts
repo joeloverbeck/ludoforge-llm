@@ -1,5 +1,4 @@
 import {
-  completeMoveDecisionSequence,
   pickDeterministicChoiceValue,
   type ChoicePendingRequest,
   type GameDef,
@@ -7,6 +6,7 @@ import {
   type Move,
   type MoveParamValue,
 } from '../../src/kernel/index.js';
+import { completeMoveDecisionSequence } from './complete-move-decision-sequence.js';
 
 export const pickDeterministicDecisionValue = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   return pickDeterministicChoiceValue(request);

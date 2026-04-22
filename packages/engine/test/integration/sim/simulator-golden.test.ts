@@ -7,24 +7,13 @@ import {
   asActionId,
   asPhaseId,
   serializeTrace,
-  type Agent,
   type SerializedGameTrace,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 import { readFixtureJson } from '../../helpers/fixture-reader.js';
-import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
-
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
-    }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
-  },
-};
+import { firstLegalAgent } from '../../helpers/test-agents.js';
 
 const createGoldenDef = (): ValidatedGameDef =>
   assertValidatedGameDef({
@@ -73,8 +62,8 @@ describe('simulator golden trace stability', () => {
     const serialized = serializeTrace(trace);
 
     assert.deepEqual(
-      serialized.moves.map((move) => move.stateHash),
-      fixture.moves.map((move) => move.stateHash),
+      serialized.decisions.map((move) => move.stateHash),
+      fixture.decisions.map((move) => move.stateHash),
     );
     assert.deepEqual(serialized, fixture);
   });

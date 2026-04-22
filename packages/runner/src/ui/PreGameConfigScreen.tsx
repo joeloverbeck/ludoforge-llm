@@ -22,7 +22,7 @@ interface PreGameConfigScreenProps {
 }
 
 type ControllerKind = SeatController['kind'];
-type AgentMode = 'policy' | 'builtin:greedy' | 'builtin:random';
+type AgentMode = 'policy';
 
 const CONTROLLER_KIND_OPTIONS: ReadonlyArray<{ readonly value: ControllerKind; readonly label: string }> = [
   { value: 'human', label: 'Human' },
@@ -31,8 +31,6 @@ const CONTROLLER_KIND_OPTIONS: ReadonlyArray<{ readonly value: ControllerKind; r
 
 const AGENT_MODE_OPTIONS: ReadonlyArray<{ readonly value: AgentMode; readonly label: string }> = [
   { value: 'policy', label: 'Authored Policy' },
-  { value: 'builtin:greedy', label: 'Built-in Greedy' },
-  { value: 'builtin:random', label: 'Built-in Random' },
 ];
 
 export function PreGameConfigScreen({ gameId, descriptor, onStartGame, onBack }: PreGameConfigScreenProps): ReactElement {
@@ -372,23 +370,17 @@ function resizeSeatControllers(current: readonly SeatController[], playerCount: 
 }
 
 function parseAgentMode(mode: AgentMode): AgentDescriptor {
-  switch (mode) {
-    case 'policy':
-      return { kind: 'policy' };
-    case 'builtin:greedy':
-      return { kind: 'builtin', builtinId: 'greedy' };
-    case 'builtin:random':
-      return { kind: 'builtin', builtinId: 'random' };
-    default:
-      throw new Error(`Unsupported agent mode: ${String(mode)}`);
+  if (mode !== 'policy') {
+    throw new Error(`Unsupported agent mode: ${String(mode)}`);
   }
+  return { kind: 'policy' };
 }
 
 function formatAgentMode(agent: AgentDescriptor): AgentMode {
-  if (agent.kind === 'policy') {
-    return 'policy';
+  if (agent.kind !== 'policy') {
+    throw new Error(`Unsupported agent descriptor kind: ${String(agent.kind)}`);
   }
-  return `builtin:${agent.builtinId}`;
+  return 'policy';
 }
 
 function parseSeedValue(raw: string): number | null {

@@ -7,11 +7,14 @@ import {
   asPlayerId,
   asTokenId,
   ILLEGAL_MOVE_REASONS,
+  type ChoiceOption,
   type EffectAST,
+  type ChoicePendingRequest,
   type GameState,
   type MapPayload,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
@@ -220,6 +223,71 @@ describe('FITL NVA/VC special activities integration', () => {
     const nvaBase = (final.zones[space] ?? []).find((token) => token.props.faction === 'NVA' && token.type === 'base');
     assert.ok(nvaBase, 'Takeover should place an NVA counterpart base');
     assert.equal(nvaBase!.props.tunnel, 'tunneled', 'Replacing a tunneled VC base should transfer tunnel status to NVA base');
+  });
+
+  it('only offers infiltrate takeover replacement when a VC piece is present', () => {
+    const { compiled } = FITL_PRODUCTION_FIXTURE;
+    assert.notEqual(compiled.gameDef, null);
+    const def = compiled.gameDef!;
+
+    const space = 'southern-laos:none';
+    const start = operationInitialState(def, 179, 4);
+    const modifiedStart: GameState = {
+      ...start,
+      zones: {
+        ...start.zones,
+        [space]: [
+          makeToken('take-nva-base-1', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('take-nva-base-2', 'base', 'NVA', { type: 'base', tunnel: 'untunneled' }),
+          makeToken('take-nva-t1', 'troops', 'NVA', { type: 'troops' }),
+          makeToken('take-nva-g1', 'guerrilla', 'NVA', { type: 'guerrilla', activity: 'underground' }),
+        ],
+      },
+      markers: {
+        ...start.markers,
+        [space]: {
+          ...(start.markers[space] ?? {}),
+          supportOpposition: 'passiveOpposition',
+        },
+      },
+    };
+
+    const continuation = resolveDecisionContinuation(def, modifiedStart, {
+      actionId: asActionId('infiltrate'),
+      params: {},
+    }, {
+      choose: (request: ChoicePendingRequest) => {
+        if (request.name === '$targetSpaces') {
+          return [space];
+        }
+        if (request.name === `$infiltrateMode@${space}`) {
+          return 'takeover';
+        }
+        return undefined;
+      },
+    });
+
+    assert.ok(continuation.nextDecision, 'Expected infiltrate takeover to publish a follow-up decision');
+    assert.equal(continuation.nextDecision?.name, `$infiltrateTakeoverReplace@${space}`);
+    assert.deepEqual(
+      continuation.nextDecision?.options.map((option: ChoiceOption) => option.value),
+      ['no'],
+      'Takeover replacement should not offer yes when no VC piece is present',
+    );
+
+    const result = applyMoveWithResolvedDecisionIds(def, modifiedStart, {
+      actionId: asActionId('infiltrate'),
+      params: {
+        $targetSpaces: [space],
+        [`$infiltrateMode@${space}`]: 'takeover',
+        [`$infiltrateTakeoverReplace@${space}`]: 'no',
+      },
+    });
+
+    const final = result.state;
+    assert.equal(final.markers[space]?.supportOpposition, 'neutral', 'Takeover without replacement should still erode opposition');
+    assert.equal(countTokens(final, space, (token) => token.type === 'base'), 2, 'Takeover without replacement should preserve existing base count');
+    assert.equal(countTokens(final, space, (token) => token.props.faction === 'VC'), 0, 'Takeover without replacement should not conjure VC pieces');
   });
 
   it('executes bombard with per-space troop choice, faction-correct routing, and no die roll', () => {

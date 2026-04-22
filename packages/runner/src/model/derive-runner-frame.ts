@@ -136,7 +136,7 @@ export function deriveRunnerFrame(
       context.actionAvailabilityById,
     ),
     choiceBreadcrumb: deriveChoiceBreadcrumb(context, zonesById),
-    selectedActionId: context.selectedAction ?? null,
+    selectedActionId: context.selectedActionId,
     choiceContext,
     choiceUi,
     moveEnumerationWarnings: (context.legalMoveResult?.warnings ?? []).map((warning) => ({
@@ -1209,11 +1209,11 @@ function deriveChoiceContext(
   context: RenderContext,
   zonesById: ReadonlyMap<string, RunnerZone>,
 ): RunnerChoiceContext | null {
-  if (context.selectedAction === null || context.choicePending === null) {
+  if (context.selectedActionId === null || context.choicePending === null) {
     return null;
   }
 
-  const { selectedAction, choicePending } = context;
+  const { selectedActionId, choicePending } = context;
 
   const min = choicePending.type === 'chooseN' ? choicePending.min : undefined;
   const max = choicePending.type === 'chooseN' ? choicePending.max : undefined;
@@ -1238,7 +1238,7 @@ function deriveChoiceContext(
   }
 
   return {
-    selectedActionId: selectedAction,
+    selectedActionId,
     decisionParamName: choicePending.name,
     minSelections: normalizeChoiceBound(min),
     maxSelections: normalizeChoiceBound(max),
@@ -1375,22 +1375,11 @@ function deriveChoiceUi(
   _players: readonly RunnerPlayer[],
 ): RunnerChoiceUi {
   const pending = context.choicePending;
-  const hasSelectedAction = context.selectedAction !== null;
-  const hasPartialMove = context.partialMove !== null;
-  const hasActionMoveMismatch = hasSelectedAction
-    && hasPartialMove
-    && context.partialMove.actionId !== context.selectedAction;
-
-  if (hasActionMoveMismatch) {
-    return toInvalidChoiceUi('ACTION_MOVE_MISMATCH');
-  }
+  const hasSelectedAction = context.selectedActionId !== null;
 
   if (pending !== null) {
     if (!hasSelectedAction) {
       return toInvalidChoiceUi('PENDING_CHOICE_MISSING_ACTION');
-    }
-    if (!hasPartialMove) {
-      return toInvalidChoiceUi('PENDING_CHOICE_MISSING_PARTIAL_MOVE');
     }
 
     const allOptions = pending.options.map((option) => {
@@ -1431,20 +1420,6 @@ function deriveChoiceUi(
       decisionKey: pending.decisionKey,
       options,
     };
-  }
-
-  if (hasSelectedAction && hasPartialMove) {
-    return {
-      kind: 'confirmReady',
-    };
-  }
-
-  if (hasSelectedAction && !hasPartialMove) {
-    return toInvalidChoiceUi('CONFIRM_READY_MISSING_PARTIAL_MOVE');
-  }
-
-  if (!hasSelectedAction && hasPartialMove) {
-    return toInvalidChoiceUi('CONFIRM_READY_MISSING_ACTION');
   }
 
   return {

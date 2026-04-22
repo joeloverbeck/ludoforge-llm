@@ -133,7 +133,38 @@ const encodeFeature = (feature: ZobristFeature): string => {
       ].join('|');
     case 'zoneVar':
       return `kind=zoneVar|zoneId=${feature.zoneId}|varName=${feature.varName}|value=${feature.value}`;
+    case 'decisionStackFrame':
+      return `kind=decisionStackFrame|slot=${feature.slot}|encoded=${feature.encoded}`;
+    case 'nextFrameId':
+      return `kind=nextFrameId|value=${feature.value}`;
+    case 'nextTurnId':
+      return `kind=nextTurnId|value=${feature.value}`;
+    case 'activeDeciderSeatId':
+      return `kind=activeDeciderSeatId|seatId=${feature.seatId}`;
   }
+};
+
+const canonicalizeHashValue = (value: unknown): string => {
+  if (value === null) {
+    return 'null';
+  }
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'bigint') {
+    return `"${value.toString()}"`;
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => canonicalizeHashValue(entry)).join(',')}]`;
+  }
+  if (typeof value === 'object') {
+    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right));
+    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeHashValue(entry)}`).join(',')}}`;
+  }
+  return JSON.stringify(String(value));
 };
 
 const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {
@@ -411,6 +442,28 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
       resumePhase: frame.resumePhase,
     });
   });
+
+  const decisionStack = state.decisionStack ?? [];
+  decisionStack.forEach((frame, slot) => {
+    hash ^= zobristKey(table, {
+      kind: 'decisionStackFrame',
+      slot,
+      encoded: canonicalizeHashValue(frame),
+    });
+  });
+
+  if ((state.nextFrameId ?? 0) !== 0) {
+    hash ^= zobristKey(table, { kind: 'nextFrameId', value: state.nextFrameId ?? 0 });
+  }
+  if ((state.nextTurnId ?? 0) !== 0) {
+    hash ^= zobristKey(table, { kind: 'nextTurnId', value: state.nextTurnId ?? 0 });
+  }
+  if (decisionStack.length > 0) {
+    hash ^= zobristKey(table, {
+      kind: 'activeDeciderSeatId',
+      seatId: state.activeDeciderSeatId ?? String(state.activePlayer),
+    });
+  }
 
   return hash;
 };

@@ -71,6 +71,7 @@ export const applyIf = (
       bindings: thenResult.bindings ?? cursor.bindings,
       ...(thenResult.decisionScope === undefined ? {} : { decisionScope: thenResult.decisionScope }),
       ...(thenResult.pendingChoice === undefined ? {} : { pendingChoice: thenResult.pendingChoice }),
+      ...(thenResult.suspendedFrame === undefined ? {} : { suspendedFrame: thenResult.suspendedFrame }),
     };
   }
 
@@ -83,6 +84,7 @@ export const applyIf = (
       bindings: elseResult.bindings ?? cursor.bindings,
       ...(elseResult.decisionScope === undefined ? {} : { decisionScope: elseResult.decisionScope }),
       ...(elseResult.pendingChoice === undefined ? {} : { pendingChoice: elseResult.pendingChoice }),
+      ...(elseResult.suspendedFrame === undefined ? {} : { suspendedFrame: elseResult.suspendedFrame }),
     };
   }
 
@@ -118,6 +120,21 @@ export const applyLet = (
       bindings: cursor.bindings,
       ...(nestedResult.decisionScope === undefined ? {} : { decisionScope: nestedResult.decisionScope }),
       pendingChoice: nestedResult.pendingChoice,
+      ...(nestedResult.suspendedFrame === undefined
+        ? {}
+        : {
+          suspendedFrame: {
+            ...nestedResult.suspendedFrame,
+            resumeStack: [
+              ...nestedResult.suspendedFrame.resumeStack,
+              {
+                kind: 'let' as const,
+                bind: effect.let.bind,
+                parentBindings: cursor.bindings,
+              },
+            ],
+          },
+        }),
     };
   }
   const nestedBindings = nestedResult.bindings ?? nestedCursor.bindings;
@@ -197,6 +214,25 @@ export const applyForEach = (
         bindings: cursor.bindings,
         decisionScope: currentDecisionScope,
         pendingChoice: iterationResult.pendingChoice,
+        ...(iterationResult.suspendedFrame === undefined
+          ? {}
+          : {
+            suspendedFrame: {
+              ...iterationResult.suspendedFrame,
+              resumeStack: [
+                ...iterationResult.suspendedFrame.resumeStack,
+                {
+                  kind: 'forEach' as const,
+                  bind: effect.forEach.bind,
+                  items: boundedItems,
+                  nextIndex: iterIdx + 1,
+                  effects: effect.forEach.effects,
+                  parentBindings: cursor.bindings,
+                  parentIterationPath,
+                },
+              ],
+            },
+          }),
       };
     }
   }
@@ -243,6 +279,7 @@ export const applyForEach = (
         bindings: cursor.bindings,
         decisionScope: currentDecisionScope,
         pendingChoice: countResult.pendingChoice,
+        ...(countResult.suspendedFrame === undefined ? {} : { suspendedFrame: countResult.suspendedFrame }),
       };
     }
   }
@@ -324,6 +361,21 @@ export const applyReduce = (
       bindings: cursor.bindings,
       ...(continuationResult.decisionScope === undefined ? {} : { decisionScope: continuationResult.decisionScope }),
       pendingChoice: continuationResult.pendingChoice,
+      ...(continuationResult.suspendedFrame === undefined
+        ? {}
+        : {
+          suspendedFrame: {
+            ...continuationResult.suspendedFrame,
+            resumeStack: [
+              ...continuationResult.suspendedFrame.resumeStack,
+              {
+                kind: 'reduce' as const,
+                bind: effect.reduce.resultBind,
+                parentBindings: cursor.bindings,
+              },
+            ],
+          },
+        }),
     };
   }
   const continuationBindings = continuationResult.bindings ?? continuationCursor.bindings;
@@ -477,6 +529,7 @@ export const applyRemoveByPriority = (
         bindings: exportedBindings,
         decisionScope: currentDecisionScope,
         pendingChoice: inResult.pendingChoice,
+        ...(inResult.suspendedFrame === undefined ? {} : { suspendedFrame: inResult.suspendedFrame }),
       };
     }
   }

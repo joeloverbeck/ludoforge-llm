@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   applyMove,
   assertValidatedGameDef,
@@ -28,8 +28,8 @@ const compileTexasDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-const createRandomAgents = (count: number): readonly Agent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
+const createTexasPolicyAgents = (count: number): readonly Agent[] =>
+  Array.from({ length: count }, () => new PolicyAgent({ traceLevel: 'summary' }));
 
 /** Count tokens in a specific zone. */
 const zoneSize = (state: GameState, zoneName: string): number =>
@@ -38,6 +38,12 @@ const zoneSize = (state: GameState, zoneName: string): number =>
 /** Count total tokens across all zones. */
 const totalTokenCount = (state: GameState): number =>
   Object.values(state.zones).reduce((sum, tokens) => sum + tokens.length, 0);
+
+const actionSelectionMove = (entry: ReturnType<typeof runGame>['decisions'][number]) => {
+  assert.equal(entry.decision.kind, 'actionSelection');
+  assert.ok(entry.decision.move);
+  return entry.decision.move;
+};
 
 /** Check whether a player is folded (handActive=false and not eliminated). */
 const isPlayerFolded = (state: GameState, player: number): boolean =>
@@ -59,7 +65,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
     const playerCount = 2;
     const seed = 42;
     const maxTurns = 300;
-    const agents = createRandomAgents(playerCount);
+    const agents = createTexasPolicyAgents(playerCount);
     const trace = runGame(def, seed, agents, maxTurns, playerCount);
 
     const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
@@ -90,7 +96,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
         { playerCount: 4, seed: 300, maxTurns: 500 },
         { playerCount: 6, seed: 400, maxTurns: 500 },
       ]) {
-        const agents = createRandomAgents(playerCount);
+        const agents = createTexasPolicyAgents(playerCount);
         const trace = runGame(def, seed, agents, maxTurns, playerCount);
 
         const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
@@ -122,7 +128,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
 
       for (const seed of [100, 150, 200, 250, 300]) {
         for (const playerCount of [2, 3, 4, 6]) {
-          const agents = createRandomAgents(playerCount);
+          const agents = createTexasPolicyAgents(playerCount);
           const trace = runGame(def, seed, agents, 200, playerCount);
 
           const deckSize = zoneSize(trace.finalState, 'deck:none');
@@ -160,7 +166,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
       ];
 
       for (const { playerCount, seed, maxTurns } of configs) {
-        const agents = createRandomAgents(playerCount);
+        const agents = createTexasPolicyAgents(playerCount);
         const trace = runGame(def, seed, agents, maxTurns, playerCount);
 
         const handsPlayed = Number(trace.finalState.globalVars.handsPlayed ?? 0);
@@ -198,12 +204,12 @@ describe('texas hold\'em card lifecycle e2e', () => {
     const def = compileTexasDef();
     const playerCount = 2;
     const seed = 42;
-    const agents = createRandomAgents(playerCount);
+    const agents = createTexasPolicyAgents(playerCount);
     const trace = runGame(def, seed, agents, 300, playerCount);
 
     let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount).state);
 
-    for (const entry of trace.moves) {
+    for (const entry of trace.decisions) {
       const phase = current.currentPhase;
 
       if (['preflop', 'flop', 'turn', 'river'].includes(phase)) {
@@ -219,7 +225,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
         }
       }
 
-      current = applyMove(def, current, entry.move).state;
+      current = applyMove(def, current, actionSelectionMove(entry)).state;
     }
   });
 
@@ -231,7 +237,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
     const def = compileTexasDef();
     const playerCount = 3;
     const seed = 55;
-    const agents = createRandomAgents(playerCount);
+    const agents = createTexasPolicyAgents(playerCount);
     const trace = runGame(def, seed, agents, 200, playerCount);
 
     let current = advanceToDecisionPoint(def, initialState(def, seed, playerCount).state);
@@ -250,7 +256,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
       river: 3,
     };
 
-    for (const entry of trace.moves) {
+    for (const entry of trace.decisions) {
       const phase = current.currentPhase;
 
       if (phase in expectedCommunity) {
@@ -271,7 +277,7 @@ describe('texas hold\'em card lifecycle e2e', () => {
         );
       }
 
-      current = applyMove(def, current, entry.move).state;
+      current = applyMove(def, current, actionSelectionMove(entry)).state;
     }
   });
 });

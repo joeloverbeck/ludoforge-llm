@@ -8,17 +8,10 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
-  classifyMoveDecisionSequenceAdmissionForLegalMove,
-  classifyMoveDecisionSequenceSatisfiabilityForLegalMove,
-  classifyMoveDecisionSequenceSatisfiability,
-  isMoveDecisionSequenceAdmittedForLegalMove,
-  isMoveDecisionSequenceSatisfiable,
   MISSING_BINDING_POLICY_CONTEXTS,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type DecisionKey,
   type ChoicePendingRequest,
-  type DiscoveryCache,
   type ActionDef,
   type ActionPipelineDef,
   type GameDef,
@@ -26,6 +19,15 @@ import {
   type Move,
   type Token,
 } from '../../../src/kernel/index.js';
+import {
+  classifyDecisionContinuationAdmissionForLegalMove,
+  classifyDecisionContinuationForLegalMove,
+  classifyDecisionContinuationSatisfiability,
+  isDecisionContinuationAdmittedForLegalMove,
+  isDecisionContinuationSatisfiable,
+  resolveDecisionContinuation,
+  type DecisionContinuationCache,
+} from '../../../src/kernel/microturn/continuation.js';
 
 const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 import {
@@ -134,7 +136,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('choose-one-op'));
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('choose-one-op'));
     assert.equal(result.complete, true);
     assert.equal(result.move.params['$target'], 'a');
   });
@@ -176,7 +178,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       makeBaseState(),
       {
@@ -242,7 +244,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-then-choose-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('random-then-choose-op'), {
       choose: () => undefined,
     });
 
@@ -299,7 +301,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-branching-decisions-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('random-branching-decisions-op'), {
       choose: () => undefined,
     });
 
@@ -342,7 +344,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('random-exact-choose-n-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('random-exact-choose-n-op'), {
       choose: () => undefined,
     });
 
@@ -401,11 +403,11 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('unsat-op'));
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('unsat-op'));
     assert.equal(result.complete, false);
     assert.equal(result.illegal?.reason, 'emptyDomain');
-    assert.equal(classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('unsat-op')).classification, 'unsatisfiable');
-    assert.equal(isMoveDecisionSequenceSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
+    assert.equal(classifyDecisionContinuationSatisfiability(def, makeBaseState(), makeMove('unsat-op')).classification, 'unsatisfiable');
+    assert.equal(isDecisionContinuationSatisfiable(def, makeBaseState(), makeMove('unsat-op')), false);
   });
 
   it('reports satisfiable when at least one downstream branch can complete', () => {
@@ -470,8 +472,8 @@ phase: [asPhaseId('main')],
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const state = makeBaseState();
 
-    assert.equal(resolveMoveDecisionSequence(def, state, makeMove('branching-op')).complete, false);
-    assert.equal(isMoveDecisionSequenceSatisfiable(def, state, makeMove('branching-op')), true);
+    assert.equal(resolveDecisionContinuation(def, state, makeMove('branching-op')).complete, false);
+    assert.equal(isDecisionContinuationSatisfiable(def, state, makeMove('branching-op')), true);
   });
 
   it('tries lower-complexity branches first during satisfiability classification', () => {
@@ -491,7 +493,7 @@ phase: [asPhaseId('main')],
     });
     const move = makeMove('complexity-ordered-op');
 
-    const result = classifyMoveDecisionSequenceSatisfiability(
+    const result = classifyDecisionContinuationSatisfiability(
       def,
       state,
       move,
@@ -551,7 +553,7 @@ phase: [asPhaseId('main')],
     const move = makeMove('external-discoverer-op');
     const seenMoves: Move[] = [];
 
-    const result = classifyMoveDecisionSequenceSatisfiability(
+    const result = classifyDecisionContinuationSatisfiability(
       makeBaseDef(),
       state,
       move,
@@ -638,9 +640,9 @@ phase: [asPhaseId('main')],
       ],
       targetKinds: [],
     };
-    const discoveryCache: DiscoveryCache = new Map([[move, cachedRequest]]);
+    const discoveryCache: DecisionContinuationCache = new Map([[move, cachedRequest]]);
 
-    const result = resolveMoveDecisionSequence(def, state, move, { discoveryCache });
+    const result = resolveDecisionContinuation(def, state, move, { discoveryCache });
 
     assert.equal(result.complete, true);
     assert.equal(result.move.params.$target, 'pipeline-b');
@@ -686,7 +688,7 @@ phase: [asPhaseId('main')],
     const state = makeBaseState();
     const move = makeMove('cache-miss-resolve-op');
     const structurallyEqualMove: Move = { actionId: move.actionId, params: {} };
-    const discoveryCache: DiscoveryCache = new Map([[
+    const discoveryCache: DecisionContinuationCache = new Map([[
       structurallyEqualMove,
       {
         kind: 'pending',
@@ -702,7 +704,7 @@ phase: [asPhaseId('main')],
       },
     ]]);
 
-    const result = resolveMoveDecisionSequence(def, state, move, { discoveryCache });
+    const result = resolveDecisionContinuation(def, state, move, { discoveryCache });
 
     assert.equal(result.complete, true);
     assert.equal(result.move.params.$target, 'pipeline-a');
@@ -730,7 +732,7 @@ phase: [asPhaseId('main')],
     };
 
     assert.equal(
-      classifyMoveDecisionSequenceAdmissionForLegalMove(
+      classifyDecisionContinuationAdmissionForLegalMove(
         makeBaseDef(),
         state,
         move,
@@ -740,7 +742,7 @@ phase: [asPhaseId('main')],
       'satisfiable',
     );
     assert.equal(
-      isMoveDecisionSequenceAdmittedForLegalMove(
+      isDecisionContinuationAdmittedForLegalMove(
         makeBaseDef(),
         state,
         move,
@@ -789,7 +791,7 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('custom-choose-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('custom-choose-op'), {
       choose: (request) => request.options[2]?.value,
     });
     assert.equal(result.complete, true);
@@ -833,13 +835,13 @@ phase: [asPhaseId('main')],
     };
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('stuck-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('stuck-op'), {
       budgets: { maxDecisionProbeSteps: 0 },
     });
     assert.equal(result.complete, false);
     assert.equal(result.nextDecision, undefined);
     assert.equal(
-      classifyMoveDecisionSequenceSatisfiability(def, makeBaseState(), makeMove('stuck-op'), {
+      classifyDecisionContinuationSatisfiability(def, makeBaseState(), makeMove('stuck-op'), {
         budgets: { maxDecisionProbeSteps: 0 },
       }).classification,
       'unknown',
@@ -891,7 +893,7 @@ phase: [asPhaseId('main')],
     ] as const;
     for (const context of contexts) {
       assert.equal(
-        isMoveDecisionSequenceAdmittedForLegalMove(
+        isDecisionContinuationAdmittedForLegalMove(
           def,
           makeBaseState(),
           makeMove('unsat-admission-op'),
@@ -945,7 +947,7 @@ phase: [asPhaseId('main')],
     ] as const;
     for (const context of contexts) {
       assert.equal(
-        classifyMoveDecisionSequenceAdmissionForLegalMove(
+        classifyDecisionContinuationAdmissionForLegalMove(
           def,
           makeBaseState(),
           makeMove('missing-binding-admission-op'),
@@ -954,7 +956,7 @@ phase: [asPhaseId('main')],
         'unknown',
       );
       assert.equal(
-        classifyMoveDecisionSequenceSatisfiabilityForLegalMove(
+        classifyDecisionContinuationForLegalMove(
           def,
           makeBaseState(),
           makeMove('missing-binding-admission-op'),
@@ -963,7 +965,7 @@ phase: [asPhaseId('main')],
         'unknown',
       );
       assert.equal(
-        isMoveDecisionSequenceAdmittedForLegalMove(
+        isDecisionContinuationAdmittedForLegalMove(
           def,
           makeBaseState(),
           makeMove('missing-binding-admission-op'),
@@ -1017,7 +1019,7 @@ phase: [asPhaseId('main')],
     ] as const;
     for (const context of contexts) {
       assert.throws(() =>
-        isMoveDecisionSequenceAdmittedForLegalMove(
+        isDecisionContinuationAdmittedForLegalMove(
           def,
           makeBaseState(),
           makeMove('nondeferrable-admission-op'),
@@ -1051,7 +1053,7 @@ phase: [asPhaseId('main')],
       atomicity: 'partial',
     };
 
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       makeBaseDef({ actions: [action], actionPipelines: [profile] }),
       makeBaseState(),
       makeMove('deferred-op'),
@@ -1110,7 +1112,7 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
     const selectedDecisionIds: string[] = [];
-    const result = resolveMoveDecisionSequence(def, makeBaseState(), makeMove('nested-op'), {
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('nested-op'), {
       choose: (request) => {
         selectedDecisionIds.push(request.decisionKey);
         return request.options[1]?.value;
@@ -1165,7 +1167,7 @@ phase: [asPhaseId('main')],
     const state = makeBaseState();
     const move = makeMove('broken-decision-op');
 
-    assert.throws(() => isMoveDecisionSequenceSatisfiable(def, state, move));
+    assert.throws(() => isDecisionContinuationSatisfiable(def, state, move));
   });
 
   it('applies free-operation zone filters at decision checkpoints for template moves', () => {
@@ -1260,7 +1262,7 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       state,
       { actionId: asActionId('operation'), params: {}, freeOperation: true },
@@ -1367,7 +1369,7 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       state,
       { actionId: asActionId('operation'), params: {}, freeOperation: true },
@@ -1474,7 +1476,7 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       state,
       { actionId: asActionId('operation'), params: {}, freeOperation: true },
@@ -1591,7 +1593,7 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const result = resolveMoveDecisionSequence(
+    const result = resolveDecisionContinuation(
       def,
       state,
       { actionId: asActionId('operation'), params: {}, freeOperation: true },
@@ -1698,7 +1700,7 @@ phase: [asPhaseId('main')],
       },
     });
 
-    const result = resolveMoveDecisionSequence(def, state, {
+    const result = resolveDecisionContinuation(def, state, {
       actionId: asActionId('operation'),
       params: { '$zone': 'board:vietnam' },
       freeOperation: true,
@@ -1776,7 +1778,7 @@ phase: [asPhaseId('main')],
       turnOrderState: createSequenceContextMismatchTurnOrderState(),
     });
 
-    const result = resolveMoveDecisionSequence(def, state, {
+    const result = resolveDecisionContinuation(def, state, {
       actionId: asActionId('operation'),
       params: { '$zone': SEQUENCE_CONTEXT_DENIED_ZONE_ID },
       freeOperation: true,
@@ -1811,7 +1813,7 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action] });
       const state = makeBaseState();
 
-      const resolved = resolveMoveDecisionSequence(def, state, {
+      const resolved = resolveDecisionContinuation(def, state, {
         actionId: asActionId(actionId),
         params: { '$target': ownershipSelection(primitive, 'a') },
       });
@@ -1853,7 +1855,7 @@ phase: [asPhaseId('main')],
       const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
       const state = makeBaseState();
 
-      const resolved = resolveMoveDecisionSequence(def, state, {
+      const resolved = resolveDecisionContinuation(def, state, {
         actionId: asActionId(actionId),
         params: { '$target': ownershipSelection(primitive, 'a') },
       });
@@ -1884,7 +1886,7 @@ phase: [asPhaseId('main')],
 
     const def = makeBaseDef({ actions: [action] });
     const state = makeBaseState();
-    const requestA = resolveMoveDecisionSequence(def, state, {
+    const requestA = resolveDecisionContinuation(def, state, {
       actionId: asActionId('stale-key-op'),
       params: { mode: 'a' },
     }, {
@@ -1894,7 +1896,7 @@ phase: [asPhaseId('main')],
     const staleDecisionId = requestA.nextDecision?.decisionKey;
     assert.equal(typeof staleDecisionId, 'string');
 
-    const result = resolveMoveDecisionSequence(def, state, {
+    const result = resolveDecisionContinuation(def, state, {
       actionId: asActionId('stale-key-op'),
       params: {
         mode: 'b',

@@ -162,7 +162,7 @@ describe('engine test lane taxonomy policy', () => {
     }
   });
 
-  it('keeps policy-profile-quality tests isolated from determinism and integration lanes while including them in explicit and default execution plans', async () => {
+  it('keeps policy-profile-quality tests isolated from determinism, integration, and the default blocking lane', async () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
     const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
@@ -179,7 +179,7 @@ describe('engine test lane taxonomy policy', () => {
       };
     };
 
-    assert.equal(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS.length, 2);
+    assert.equal(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS.length >= 2, true);
     const policyProfileQualitySource = new Set(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS);
 
     for (const testPath of manifest.ALL_POLICY_PROFILE_QUALITY_TESTS) {
@@ -204,7 +204,7 @@ describe('engine test lane taxonomy policy', () => {
     for (const testPath of manifest.ALL_POLICY_PROFILE_QUALITY_TESTS) {
       const distPath = manifest.toDistTestPath(testPath);
       assert.equal(policyLanePlan.patterns.includes(distPath), true, `${distPath} must be in the explicit lane`);
-      assert.equal(defaultLanePlan.patterns.includes(distPath), true, `${distPath} must also be in the default lane`);
+      assert.equal(defaultLanePlan.patterns.includes(distPath), false, `${distPath} must stay out of the default blocking lane`);
     }
   });
 

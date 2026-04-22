@@ -6,8 +6,8 @@ arguments:
   - name: request
     description: "The brainstorming topic or question. If omitted, inferred from the preceding conversation context."
     required: false
-  - name: reference_path
-    description: "Optional path to a reference file (report, brainstorming doc, analysis) to read as context before starting the interview."
+  - name: reference_paths
+    description: "Optional path(s) to one or more reference files (report, brainstorming doc, analysis) to read as context before starting the interview. Multiple paths are common when the brainstorm builds on layered prior analysis (e.g., research report → spec → deferred-work section of that spec)."
     required: false
 ---
 
@@ -40,6 +40,9 @@ Classify: design | decision/triage | operational
               Confidence-driven interview loop (target: 95%)
                        |
                        v
+              [Optional] External prior-art survey for architectural topics
+                       |
+                       v
               Propose 2-3 approaches with tradeoffs
                        |
                        v
@@ -59,7 +62,7 @@ Classify: design | decision/triage | operational
 
 ## Step 1: Read Context
 
-1. **Reference file**: If `reference_path` is provided, read the entire file. Extract key claims, proposals, and open questions from it. Summarize what it contains in 2-3 sentences before proceeding.
+1. **Reference files**: If one or more reference paths are provided, read each entire file. Extract key claims, proposals, and open questions from each. Summarize what they contain in 2-3 sentences before proceeding. When references form a chain (e.g., a research report that spawned a spec, plus a deferred-work section of that spec asking for extension), read them in the order provided and treat the latest as primary; earlier references are background. Reference plurality also applies when one document names another document that is load-bearing for the brainstorm — read the named document too rather than treating the user's list as exhaustive.
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
@@ -88,7 +91,7 @@ Before the interview, run targeted verification when either of these triggers ap
 
 Mode-specific behavior:
 
-- **Design mode**: For Trigger A, present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them. For Trigger B, run inspections directly without asking — the cost is low and it shapes better questions.
+- **Design mode**: For Trigger A, present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them. For Trigger B, run inspections directly without asking — the cost is low and it shapes better questions. When the topic spans multiple subsystems (kernel + simulator + agents + protocol + UI, etc.), orientation-level reads — `docs/architecture.md`, `docs/project-structure.md`, and representative source files at module boundaries — are a legitimate Trigger B activity; keep the read scoped to what makes the first interview question specific rather than attempting a full codebase survey. "Inspections" in this skill is shorthand for both prescribed checks and scoped orientation reads.
 - **Triage mode**: Proceed directly to verification without asking. The user invoked triage specifically to act on the report — verification is an expected prerequisite, not an optional step.
 - **Operational mode**: Always run state verification (Trigger B). The plan's correctness depends on accurate observed state, not assumed state.
 - Run checks using Explore agents, grep, git log, file reads — whatever the checks require
@@ -176,6 +179,23 @@ In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the pr
 ### Mid-Flow Investigation (Triage Mode)
 
 If the user responds to a triage question with a request for additional investigation rather than a decision (e.g., "check against FOUNDATIONS.md", "investigate further before I decide"), perform the investigation, present findings with a recommendation, and resume the triage flow. This is not a confidence regression — it's a targeted inquiry within a decision that's otherwise scoped. Do not restart the interview or re-ask resolved questions.
+
+## Step 2.5: External Prior-Art Survey (Optional)
+
+Before proposing approaches, run a targeted external prior-art survey when either trigger applies:
+
+**Trigger A — User requested external research.** The user asked to "research online", "look up prior art", or similar. Proceed without re-asking.
+
+**Trigger B — Architectural topic without prior-art coverage in references.** The brainstorm designs cross-cutting architecture (kernel, protocol, state model, public API) and the reference files do not already survey how similar systems solved the same problem. External survey grounds Step 3's approaches in real systems rather than speculation, which serves FOUNDATIONS #15 (Architectural Completeness).
+
+Execution:
+
+- Run 3–5 parallel web searches scoped to systems that solved the *same* problem, not adjacent ones. Frame searches as "What repository or framework made this architectural choice for this reason?" rather than broad topic surveys.
+- Cite sources when presenting approaches in Step 3 — short URL lists under each approach are sufficient.
+- Capture canonical pattern names (e.g., "IExtendedSequence stack", "information sets", "factored action spaces") so the design can reference shared vocabulary.
+- Skip the step entirely when the reference file already inventories prior art, when the topic is project-specific with no natural external analog (data fixtures, private DSL details, game-specific tuning), or when neither trigger applies.
+
+This is a solution-space survey, not an interview replacement. Do not substitute prior-art reading for unresolved user-intent gaps from Step 2. If prior-art findings reveal that approach options depend on a user decision not yet covered, pause the survey and return to Step 2 for the missing interview round — treat it as one more investigation stage under Step 2's "no cap on investigation stages" rule.
 
 ## Step 3: Propose Approaches
 
@@ -269,10 +289,15 @@ What would you like to do next?
 **If output was already a spec** (`specs/`):
 ```
 What would you like to do next?
-1. Decompose into implementation tickets (invoke spec-to-tickets)
-2. Start implementing directly
-3. Done for now — I'll review the spec later
+1. Decompose into implementation tickets (invoke spec-to-tickets with namespace <SUGGESTED>)
+2. Review the spec first — recommended for XL specs (many tickets, broad scope) where direct implementation would skip the decomposition step
+3. Start implementing directly — appropriate for small specs (single ticket or small contiguous slice)
+4. Done for now — I'll review the spec later
 ```
+
+Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-INITIALS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`. Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
+
+Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
 
 **If triage produced spec(s) and/or report updates**:
 ```

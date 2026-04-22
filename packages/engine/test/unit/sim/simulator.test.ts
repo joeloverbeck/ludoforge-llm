@@ -3,7 +3,9 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  applyMove,
+  applyDecision,
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
@@ -14,27 +16,17 @@ import {
   enumerateLegalMoves,
   createZobristTable,
   initialState,
+  publishMicroturn,
   terminalResult,
   type Agent,
-  type ClassifiedMove,
   type GameDef,
   type Move,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
-import { extractDecisionPointSnapshot } from '../../../src/sim/snapshot.js';
-import { trustedMove } from '../../helpers/classified-move-fixtures.js';
+import { extractMicroturnSnapshot } from '../../../src/sim/snapshot.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
-
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
-    }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
-  },
-};
+import { firstLegalAgent } from '../../helpers/test-agents.js';
 
 const createDef = (options?: {
   readonly withAction?: boolean;
@@ -79,12 +71,12 @@ phase: [asPhaseId('p2')],
             id: asActionId('step'),
 actor: 'active' as const,
 executor: 'actor' as const,
-phase: [asPhaseId('main')],
+            phase: [asPhaseId('main')],
             params: [],
             pre: null,
             cost: [],
             effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
-            limits: [],
+            limits: [{ id: 'step::turn::0', scope: 'turn' as const, max: 1 }],
           },
         ];
 
@@ -139,12 +131,12 @@ const createSnapshotDef = (): ValidatedGameDef =>
         id: asActionId('step'),
 actor: 'active',
 executor: 'actor' as const,
-phase: [asPhaseId('main')],
+        phase: [asPhaseId('main')],
         params: [],
         pre: null,
         cost: [],
         effects: [eff({ addVar: { scope: 'global' as const, var: 'score', delta: 1 } })],
-        limits: [],
+        limits: [{ id: 'step::turn::0', scope: 'turn' as const, max: 1 }],
       },
     ],
     triggers: [],
@@ -207,7 +199,7 @@ describe('runGame', () => {
     const def = createDef({ terminalAtScore: 1 });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10);
 
-    assert.equal(trace.moves.length, 1);
+    assert.equal(trace.decisions.length, 1);
     assert.notEqual(trace.result, null);
     assert.equal(trace.stopReason, 'terminal');
   });
@@ -216,7 +208,7 @@ describe('runGame', () => {
     const def = createDef({ terminalAtScore: 1 });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 0);
 
-    assert.equal(trace.moves.length, 0);
+    assert.equal(trace.decisions.length, 0);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'maxTurns');
   });
@@ -225,7 +217,7 @@ describe('runGame', () => {
     const def = createDef();
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1);
 
-    assert.equal(trace.moves.length, 1);
+    assert.equal(trace.decisions.length, 1);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'maxTurns');
   });
@@ -234,9 +226,35 @@ describe('runGame', () => {
     const def = createDef({ withAction: false });
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 5);
 
-    assert.equal(trace.moves.length, 0);
+    assert.equal(trace.decisions.length, 0);
     assert.equal(trace.result, null);
     assert.equal(trace.stopReason, 'noLegalMoves');
+  });
+
+  it('can retain only final-state metadata when full trace logs are not needed', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, {
+      traceRetention: 'finalStateOnly',
+    });
+
+    assert.equal(trace.decisions.length, 0);
+    assert.equal(trace.compoundTurns.length, 0);
+    assert.notEqual(trace.result, null);
+    assert.equal(trace.stopReason, 'terminal');
+    assert.equal(trace.finalState.globalVars.score, 1);
+  });
+
+  it('treats shared runtime zobrist caches as per-run state', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const sharedRuntime = createGameDefRuntime(def);
+
+    assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    const first = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
+    const second = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
+
+    assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    assert.equal(first.finalState.stateHash, second.finalState.stateHash);
+    assert.equal(first.stopReason, second.stopReason);
   });
 
   it('throws descriptive errors for invalid seed, invalid maxTurns, and mismatched agent count', () => {
@@ -264,13 +282,13 @@ describe('runGame', () => {
     );
   });
 
-  it('sets turnsCount from finalState.turnCount, not move log length', () => {
+  it('records turnsCount from finalState.turnCount', () => {
     const def = createDef({ twoPhaseLoop: true });
     const trace = runGame(def, 5, [firstLegalAgent, firstLegalAgent], 2);
 
-    assert.equal(trace.moves.length, 2);
+    assert.equal(trace.decisions.length, 4);
     assert.equal(trace.turnsCount, trace.finalState.turnCount);
-    assert.notEqual(trace.turnsCount, trace.moves.length);
+    assert.equal(trace.turnsCount, 2);
   });
 
   it('logs post-state hashes that match independent full-hash recomputation', () => {
@@ -280,28 +298,34 @@ describe('runGame', () => {
 
     const table = createZobristTable(def);
     let replayState = initialState(def, seed, 2).state;
-    for (const moveLog of trace.moves) {
-      replayState = applyMove(def, replayState, moveLog.move).state;
+    for (const moveLog of trace.decisions) {
+      replayState = applyDecision(def, replayState, moveLog.decision).state;
       assert.equal(moveLog.stateHash, replayState.stateHash);
       assert.equal(moveLog.stateHash, computeFullHash(table, replayState));
     }
   });
 
   it('does not bypass kernel legality checks when an agent selects an illegal move', () => {
-    const illegalMoveAgent: Agent = {
-      chooseMove(input) {
+    const illegalMoveAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
         const move: Move = { actionId: asActionId('unknown-action'), params: {} };
-        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+        return { decision: { kind: 'actionSelection', actionId: move.actionId, move }, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const def = createDef();
-    assert.throws(() => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1), /Illegal move/);
+    assert.throws(
+      () => runGame(def, 9, [illegalMoveAgent, illegalMoveAgent], 1),
+      (error: unknown) =>
+        error instanceof Error
+        && 'code' in error
+        && error.code === 'LEGAL_CHOICES_UNKNOWN_ACTION',
+    );
   });
 
   it('does not swallow unrelated agent failures', () => {
     const explodingAgent: Agent = {
-      chooseMove() {
+      chooseDecision() {
         throw new Error('unexpected agent failure');
       },
     };
@@ -312,27 +336,23 @@ describe('runGame', () => {
 
   it('passes classified enumerated moves into the agent boundary', () => {
     const def = createDef();
-    let observedLegalMoves: readonly ClassifiedMove[] | null = null;
+    let observedLegalActionCount: number | null = null;
 
-    const inspectingAgent: Agent = {
-      chooseMove(input) {
-        observedLegalMoves = input.legalMoves;
-        assert.ok(input.legalMoves.length > 0);
-        assert.ok('move' in input.legalMoves[0]!);
-        assert.ok('viability' in input.legalMoves[0]!);
-        assert.deepEqual(input.legalMoves, enumerateLegalMoves(input.def, input.state, undefined, input.runtime).moves);
-        return { move: input.legalMoves[0]!.trustedMove ?? trustedMove(input.legalMoves[0]!.move, input.state.stateHash), rng: input.rng };
+    const inspectingAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+        observedLegalActionCount = input.microturn.legalActions.length;
+        assert.ok(input.microturn.legalActions.length > 0);
+        assert.deepEqual(input.microturn.legalActions.length, publishMicroturn(input.def, input.state, input.runtime).legalActions.length);
+        return { decision: input.microturn.legalActions[0]!, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 13, [inspectingAgent, inspectingAgent], 1);
 
-    let classifiedMoves: readonly ClassifiedMove[];
-    if (observedLegalMoves === null) {
-      throw new Error('expected simulator to provide classified legal moves to agent');
+    if (observedLegalActionCount === null) {
+      throw new Error('expected simulator to provide published legal actions to agent');
     }
-    classifiedMoves = observedLegalMoves;
-    assert.equal(trace.moves[0]?.legalMoveCount, classifiedMoves.length);
+    assert.equal(trace.decisions[0]?.legalActionCount, observedLegalActionCount);
   });
 
   it('captures a standard snapshot from the same pre-decision state the agent receives', () => {
@@ -340,19 +360,21 @@ describe('runGame', () => {
     const runtime = createGameDefRuntime(def);
     const observedSnapshots: unknown[] = [];
 
-    const snapshotAgent: Agent = {
-      chooseMove(input) {
-        observedSnapshots.push(extractDecisionPointSnapshot(def, input.state, runtime, 'standard'));
-        const move = input.legalMoves[0]?.move;
-        if (move === undefined) {
-          throw new Error('snapshotAgent requires at least one legal move');
+    const snapshotAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+        observedSnapshots.push(
+          extractMicroturnSnapshot(def, input.state, publishMicroturn(def, input.state, runtime), runtime, 'standard'),
+        );
+        const decision = input.microturn.legalActions[0];
+        if (decision === undefined) {
+          throw new Error('snapshotAgent requires at least one legal action');
         }
-        return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
+        return { decision, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 17, [snapshotAgent, snapshotAgent], 1, 2, { snapshotDepth: 'standard' }, runtime);
-    const snapshot = trace.moves[0]?.snapshot;
+    const snapshot = trace.decisions[0]?.snapshot;
 
     assert.deepEqual(snapshot, observedSnapshots[0]);
     assert.equal(snapshot?.turnCount, 0);
@@ -372,14 +394,14 @@ describe('runGame', () => {
     const omittedTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1);
     const noneTrace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'none' });
 
-    assert.equal(omittedTrace.moves[0]?.snapshot, undefined);
-    assert.equal(noneTrace.moves[0]?.snapshot, undefined);
+    assert.equal(omittedTrace.decisions[0]?.snapshot, undefined);
+    assert.equal(noneTrace.decisions[0]?.snapshot, undefined);
   });
 
   it('attaches verbose zone summaries when requested', () => {
     const def = createSnapshotDef();
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 1, 2, { snapshotDepth: 'verbose' });
-    const snapshot = trace.moves[0]?.snapshot;
+    const snapshot = trace.decisions[0]?.snapshot;
 
     assert.ok(snapshot !== undefined && 'zoneSummaries' in snapshot);
     assert.deepEqual(snapshot.zoneSummaries, [
@@ -403,11 +425,11 @@ describe('runGame', () => {
     const trace = runGame(def, seed, [firstLegalAgent, firstLegalAgent], 10);
 
     let replayState = initialState(def, seed, 2).state;
-    for (const moveLog of trace.moves) {
+    for (const moveLog of trace.decisions) {
       const enumerated = enumerateLegalMoves(def, replayState);
-      assert.equal(moveLog.legalMoveCount, enumerated.moves.length);
+      assert.equal(moveLog.legalActionCount, enumerated.moves.length);
 
-      const applied = applyMove(def, replayState, moveLog.move, undefined, runtime);
+      const applied = applyDecision(def, replayState, moveLog.decision, undefined, runtime);
       assert.deepEqual(applied.triggerFirings, moveLog.triggerFirings);
       assert.deepEqual(applied.warnings, moveLog.warnings);
       replayState = applied.state;
@@ -444,14 +466,14 @@ describe('runGame', () => {
         {
           id: asActionId('event'),
 capabilities: ['cardEvent'],
-actor: 'active',
+        actor: 'active',
 executor: 'actor' as const,
 phase: [asPhaseId('main')],
           params: [],
           pre: null,
           cost: [],
           effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
-          limits: [],
+          limits: [{ id: 'event::turn::0', scope: 'turn' as const, max: 1 }],
         },
       ],
       triggers: [],
@@ -474,20 +496,21 @@ phase: [asPhaseId('main')],
       ],
     } as const);
 
-    const sideBranchAgent: Agent = {
-      chooseMove(input) {
-        const selected = input.legalMoves.find(
-          ({ move }) => move.params.side === 'shaded' && move.params.branch === 'b',
+    const sideBranchAgent = {
+      chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+        const selected = input.microturn.legalActions.find(
+          (decision) => decision.kind === 'actionSelection' && decision.move?.params.side === 'shaded' && decision.move?.params.branch === 'b',
         );
         if (selected === undefined) {
           throw new Error('expected shaded/b event move to be legal');
         }
-        return { move: selected.trustedMove ?? trustedMove(selected.move, input.state.stateHash), rng: input.rng };
+        return { decision: selected, rng: input.rng };
       },
-    };
+    } as Agent;
 
     const trace = runGame(def, 31, [sideBranchAgent, sideBranchAgent], 1);
-    assert.deepEqual(trace.moves[0]?.move.params, {
+    assert.equal(trace.decisions[0]?.decision.kind, 'actionSelection');
+    assert.deepEqual(trace.decisions[0]?.decision.move?.params, {
       eventCardId: 'card-1',
       eventDeckId: 'deck-1',
       side: 'shaded',

@@ -103,7 +103,7 @@ import { classifyMoveAdmissibility } from './move-admissibility.js';
 import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viability-predicate.js';
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
-import { resolveMoveDecisionSequence, type DiscoveryCache } from './move-decision-sequence.js';
+import { resolveDecisionContinuation, type DecisionContinuationCache } from './microturn/continuation.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -468,7 +468,7 @@ const validateDecisionSequenceForMove = (
   runtime?: GameDefRuntime,
 ): void => {
   try {
-    const result = resolveMoveDecisionSequence(def, state, move, {
+    const result = resolveDecisionContinuation(def, state, move, {
       choose: () => undefined,
     }, runtime);
     if (result.complete) {
@@ -1792,7 +1792,7 @@ const probeMoveViabilityRaw = (
   state: GameState,
   move: Move,
   runtime?: GameDefRuntime,
-  discoveryCache?: DiscoveryCache,
+  discoveryCache?: DecisionContinuationCache,
 ): MoveViabilityProbeResult => {
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
@@ -1852,7 +1852,7 @@ const probeMoveViabilityRaw = (
     }
     validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
 
-    const sequence = resolveMoveDecisionSequence(
+    const sequence = resolveDecisionContinuation(
       def,
       state,
       move,
@@ -1982,7 +1982,7 @@ export const probeMoveViability = (
   state: GameState,
   move: Move,
   runtime?: GameDefRuntime,
-  discoveryCache?: DiscoveryCache,
+  discoveryCache?: DecisionContinuationCache,
 ): MoveViabilityProbeResult => {
   const raw = probeMoveViabilityRaw(def, state, move, runtime, discoveryCache);
   const rewritten = deriveMoveViabilityVerdict(move, raw);

@@ -20,7 +20,7 @@ import type {
   ConditionAST,
   ExecutionOptions,
   EffectAST,
-  MoveLog,
+  DecisionLog,
   OptionsQuery,
   PlayerSel,
   ScenarioDeckComposition,
@@ -281,17 +281,17 @@ describe('exhaustive kernel unions', () => {
     assert.equal(assetRowOpCoverage, true);
   });
 
-  it('ensures MoveLog includes legalMoveCount', () => {
-    type HasLegalMoveCount = MoveLog extends { readonly legalMoveCount: number } ? true : false;
-    const hasLegalMoveCount: HasLegalMoveCount = true;
-    assert.equal(hasLegalMoveCount, true);
+  it('ensures DecisionLog includes legalActionCount', () => {
+    type HasLegalActionCount = DecisionLog extends { readonly legalActionCount: number } ? true : false;
+    const hasLegalActionCount: HasLegalActionCount = true;
+    assert.equal(hasLegalActionCount, true);
   });
 
   it('keeps snapshot trace contracts wired into shared types', () => {
     // snapshotDepth must NOT be on ExecutionOptions (sim-only concern moved to SimulationOptions)
     type KernelLacksSnapshotDepth = ExecutionOptions extends { readonly snapshotDepth?: unknown } ? false : true;
     type SimHasSnapshotDepth = SimulationOptions extends { readonly snapshotDepth?: 'none' | 'minimal' | 'standard' | 'verbose' } ? true : false;
-    type HasSnapshot = MoveLog extends { readonly snapshot?: { readonly turnCount: number } } ? true : false;
+    type HasSnapshot = DecisionLog extends { readonly snapshot?: { readonly turnCount: number } } ? true : false;
 
     const kernelLacksSnapshotDepth: KernelLacksSnapshotDepth = true;
     const simHasSnapshotDepth: SimHasSnapshotDepth = true;

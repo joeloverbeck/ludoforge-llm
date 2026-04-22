@@ -1,12 +1,14 @@
 import {
   advancePhase,
   buildAdvancePhaseRequest,
+  applyDecision,
   applyMove,
   legalMoves,
   canonicalMoveParamsKey,
   createEvalRuntimeResources,
   type MoveExecutionPolicy,
   type ExecutionOptions,
+  type Decision,
   type GameDef,
   type GameState,
   type Move,
@@ -15,6 +17,7 @@ import {
 
 export interface ReplayScriptStep {
   readonly move: Move;
+  readonly decision?: Decision;
   readonly expectedStateHash?: bigint;
   readonly expectedLegalCount?: number;
 }
@@ -24,6 +27,7 @@ export interface ReplayExecutedStep {
   readonly legal: readonly Move[];
   readonly move: Move;
   readonly after: GameState;
+  readonly decision?: Decision;
 }
 
 export interface ReplayStepAssertContext {
@@ -134,9 +138,11 @@ export const replayScript = (config: ReplayScriptConfig): ReplayScriptResult => 
       );
     }
 
-    let applied: ReturnType<typeof applyMove>;
+    let applied: ReturnType<typeof applyMove> | ReturnType<typeof applyDecision>;
     try {
-      applied = applyMove(config.def, state, step.move, config.executionOptions);
+      applied = step.decision === undefined
+        ? applyMove(config.def, state, step.move, config.executionOptions)
+        : applyDecision(config.def, state, step.decision, config.executionOptions);
     } catch (error) {
       throw wrapReplayApplyMoveFailure(before, stepIndex, step.move, config.keyVars, error);
     }
@@ -145,6 +151,7 @@ export const replayScript = (config: ReplayScriptConfig): ReplayScriptResult => 
       legal,
       move: step.move,
       after: applied.state,
+      ...(step.decision === undefined ? {} : { decision: step.decision }),
     };
 
     if (step.expectedStateHash !== undefined && applied.state.stateHash !== step.expectedStateHash) {

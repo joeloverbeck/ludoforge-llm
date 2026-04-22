@@ -1,6 +1,7 @@
 import type { PlayerId } from './branded.js';
 import type { ChooseNTemplate } from './choose-n-session.js';
 import { emptyScope, type DecisionScope } from './decision-scope.js';
+import type { SuspendedEffectFrameSnapshot } from './microturn/types.js';
 import type { DraftTracker } from './state-draft.js';
 import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
@@ -94,6 +95,7 @@ export interface PartialEffectResult {
   readonly bindings?: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
   readonly decisionScope?: DecisionScope;
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }
 
 export interface NormalizedEffectResult {
@@ -103,6 +105,7 @@ export interface NormalizedEffectResult {
   readonly bindings: Readonly<Record<string, unknown>>;
   readonly pendingChoice?: ChoicePendingRequest | ChoiceStochasticPendingRequest;
   readonly decisionScope: DecisionScope;
+  readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
 }
 
 interface RuntimeEffectContextOptions extends Omit<

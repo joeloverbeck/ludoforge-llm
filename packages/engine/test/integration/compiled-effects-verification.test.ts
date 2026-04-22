@@ -2,28 +2,18 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
   initialState,
-  type Agent,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
-import { trustedMove } from '../helpers/classified-move-fixtures.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
-
-const firstLegalAgent: Agent = {
-  chooseMove(input) {
-    const move = input.legalMoves[0]?.move;
-    if (move === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal move');
-    }
-    return { move: trustedMove(move, input.state.stateHash), rng: input.rng };
-  },
-};
+import { firstLegalAgent } from '../helpers/test-agents.js';
 
 const createLoopingLifecycleDef = (): ValidatedGameDef =>
   assertValidatedGameDef({
@@ -52,7 +42,7 @@ const createLoopingLifecycleDef = (): ValidatedGameDef =>
         pre: null,
         cost: [],
         effects: [eff({ addVar: { scope: 'global', var: 'score', delta: 1 } })],
-        limits: [],
+        limits: [{ id: 'step::turn::0', scope: 'turn', max: 1 }],
       },
     ],
     triggers: [],
@@ -69,7 +59,7 @@ describe('compiled effect verification integration', () => {
     const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 3, 2, {
       kernel: { verifyCompiledEffects: true },
     });
-    assert.equal(trace.moves.length, 3);
+    assert.equal(trace.decisions.length, 3);
     const finalScore = trace.finalState.globalVars.score;
     assert.ok(typeof finalScore === 'number');
     assert.ok(finalScore >= 4);
@@ -78,10 +68,13 @@ describe('compiled effect verification integration', () => {
   it('runs a short Texas Holdem simulation with verification enabled', () => {
     const texasDef = compileTexasProductionSpec().compiled.gameDef as ValidatedGameDef;
 
-    const trace = runGame(texasDef, 41, [firstLegalAgent, firstLegalAgent], 6, 2, {
+    const trace = runGame(texasDef, 41, [
+      new PolicyAgent({ traceLevel: 'summary' }),
+      new PolicyAgent({ traceLevel: 'summary' }),
+    ], 6, 2, {
       kernel: { verifyCompiledEffects: true },
     });
 
-    assert.ok(trace.moves.length > 0);
+    assert.ok(trace.decisions.length > 0);
   });
 });

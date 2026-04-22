@@ -67,7 +67,9 @@ describe('FITL cross-system modifier smoke', () => {
   it('keeps Air Strike illegal under rolling thunder even with cap_arcLight unshaded active', () => {
     const { def } = compileDef();
 
-    const base = withGlobalMarker(withActivePlayer(initialState(def, 11001, 4).state, 0), 'cap_arcLight', 'unshaded');
+    // Seed 9001 opens a legal US special-activity window for Air Strike, so this
+    // witness isolates momentum-vs-capability legality instead of turn-flow gating.
+    const base = withGlobalMarker(withActivePlayer(initialState(def, 9001, 4).state, 0), 'cap_arcLight', 'unshaded');
 
     assert.doesNotThrow(() =>
       applyMoveWithResolvedDecisionIds(def, base, {

@@ -3,11 +3,13 @@ import { evalValue } from '../kernel/eval-value.js';
 import { countSeatTokens } from '../kernel/derived-values.js';
 import type { ZoneId } from '../kernel/branded.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import type { MicroturnState } from '../kernel/microturn/types.js';
 import { kernelRuntimeError } from '../kernel/runtime-error.js';
 import type { GameState, VariableValue } from '../kernel/types.js';
 import type { ValidatedGameDef } from '../kernel/validate-gamedef.js';
 import type {
   DecisionPointSnapshot,
+  MicroturnSnapshot,
   SeatStandingSnapshot,
   SnapshotDepth,
   StandardDecisionPointSnapshot,
@@ -140,3 +142,17 @@ export function extractDecisionPointSnapshot(
     zoneSummaries: buildZoneSummaries(def, state, boardZoneIds),
   };
 }
+
+export const extractMicroturnSnapshot = (
+  def: ValidatedGameDef,
+  state: GameState,
+  microturn: MicroturnState,
+  runtime: GameDefRuntime,
+  depth: SnapshotDepth,
+): MicroturnSnapshot => ({
+  ...extractDecisionPointSnapshot(def, state, runtime, depth),
+  decisionContextKind: microturn.kind,
+  frameId: microturn.frameId,
+  turnId: microturn.turnId,
+  compoundTurnTrace: microturn.compoundTurnTrace,
+});

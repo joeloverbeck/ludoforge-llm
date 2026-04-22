@@ -26,6 +26,10 @@
   "actionUsage": {},
   "markers": {},
   "globalMarkers": {},
+  "decisionStack": [],
+  "nextFrameId": 0,
+  "nextTurnId": 0,
+  "activeDeciderSeatId": "us",
   "turnOrderState": {
     "type": "roundRobin"
   }

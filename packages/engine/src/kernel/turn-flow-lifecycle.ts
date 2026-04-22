@@ -1,4 +1,6 @@
 import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
+import { asActionId } from './branded.js';
+import { executeEventMove } from './event-execution.js';
 import {
   ensureTurnOrderStateCloned,
   ensureZoneCloned,
@@ -167,6 +169,54 @@ const prependToken = (state: GameState, zoneId: string, token: Token, tracker?: 
 
 const isCoupCard = (token: Token): boolean => resolveTokenViewFieldValue(token, 'isCoup') === true;
 
+const applyPromotedCoupImmediateEffects = (
+  def: GameDef,
+  state: GameState,
+  slots: LifecycleSlots,
+  tracker?: DraftTracker,
+): GameState => {
+  const promoted = state.zones[slots.played]?.[0];
+  const cardId = promoted?.props.cardId;
+  if (promoted === undefined || promoted.props.isCoup !== true || typeof cardId !== 'string' || cardId.length === 0) {
+    return state;
+  }
+
+  const eventDeckId = typeof promoted.props.eventDeckId === 'string' && promoted.props.eventDeckId.length > 0
+    ? promoted.props.eventDeckId
+    : undefined;
+  const execution = executeEventMove(
+    def,
+    state,
+    { state: state.rng },
+    {
+      actionId: asActionId('event'),
+      params: {
+        eventCardId: cardId,
+        side: 'unshaded',
+        ...(eventDeckId === undefined ? {} : { eventDeckId }),
+      },
+    },
+    undefined,
+    undefined,
+    'turnFlow:coupImmediate',
+    tracker,
+  );
+
+  if (execution.rng.state === state.rng) {
+    return execution.state;
+  }
+
+  if (tracker !== undefined) {
+    (execution.state as MutableGameState).rng = execution.rng.state;
+    return execution.state;
+  }
+
+  return {
+    ...execution.state,
+    rng: execution.rng.state,
+  };
+};
+
 const withConsecutiveCoupRounds = (state: GameState, rounds: number, tracker?: DraftTracker): GameState => {
   const runtime = cardDrivenRuntime(state);
   if (runtime === null || runtime.consecutiveCoupRounds === rounds) {
@@ -281,6 +331,7 @@ export const applyTurnFlowCardBoundary = (
   nextState = promoted.state;
   if (promoted.moved !== null) {
     pushLifecycleEntry(traceEntries, 'promoteLookaheadToPlayed', slots, beforePromotion, nextState);
+    nextState = applyPromotedCoupImmediateEffects(def, nextState, slots, options?.tracker);
   }
 
   const drawPileId = resolveDrawPileId(def, slots);

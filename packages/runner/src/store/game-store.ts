@@ -1,10 +1,7 @@
 import { create, type StoreApi, type UseBoundStore } from 'zustand';
 import { subscribeWithSelector } from 'zustand/middleware';
 import type {
-  ActionId,
   AgentDecisionTrace,
-  ApplyMoveResult,
-  ChoiceIllegalRequest,
   ChoicePendingRequest,
   EffectTraceEntry,
   GameDef,
@@ -17,6 +14,16 @@ import type {
   TriggerLogEntry,
 } from '@ludoforge/engine/runtime';
 import { asPlayerId } from '@ludoforge/engine/runtime';
+import type {
+  ApplyDecisionResult,
+  ChooseNStepContext,
+  ChooseOneContext,
+  Decision,
+  MicroturnState,
+  StochasticResolveContext,
+  TurnId,
+} from '../../../engine/src/kernel/microturn/types.js';
+import { rebuildMoveFromTrace } from '../../../engine/src/kernel/microturn/publish.js';
 
 import { deriveRunnerFrame } from '../model/derive-runner-frame.js';
 import { projectRenderModel } from '../model/project-render-model.js';
@@ -51,15 +58,12 @@ interface GameStoreState {
   readonly error: WorkerError | null;
   readonly orchestrationDiagnostic: OrchestrationDiagnostic | null;
   readonly orchestrationDiagnosticSequence: number;
+  readonly currentMicroturn: MicroturnState | null;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
-  readonly choicePending: ChoicePendingRequest | null;
   readonly effectTrace: readonly EffectTraceEntry[];
   readonly triggerFirings: readonly TriggerLogEntry[];
   readonly terminal: TerminalResult | null;
-  readonly selectedAction: ActionId | null;
-  readonly partialMove: Move | null;
-  readonly choiceStack: readonly PartialChoice[];
   readonly animationPlaying: boolean;
   readonly animationPlaybackSpeed: AnimationPlaybackSpeed;
   readonly animationPaused: boolean;
@@ -107,26 +111,25 @@ interface GameStoreActions {
   initGameFromHistory(def: GameDef, seed: number, playerConfig: readonly PlayerSeatConfig[], moveHistory: readonly Move[]): Promise<void>;
   hydrateFromReplayStep(
     gameState: GameState,
-    legalMoveResult: LegalMoveEnumerationResult,
+    currentMicroturn: MicroturnState | null,
     terminal: TerminalResult | null,
     effectTrace: readonly EffectTraceEntry[],
     triggerFirings: readonly TriggerLogEntry[],
   ): void;
   reportBootstrapFailure(error: unknown): void;
-  selectAction(actionId: ActionId, actionClass?: string): Promise<void>;
-  chooseOne(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  addChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  removeChooseNItem(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
-  confirmChooseN(): Promise<void>;
-  confirmMove(): Promise<void>;
-  resolveAiStep(): Promise<AiStepOutcome>;
+  submitActionSelection(actionId: string, actionClass?: string): Promise<void>;
+  submitChoice(choice: Exclude<MoveParamValue, readonly unknown[]>): Promise<void>;
+  submitChooseNStep(
+    command: 'add' | 'remove' | 'confirm',
+    choice?: Exclude<MoveParamValue, readonly unknown[]>,
+  ): Promise<void>;
+  runAiStep(): Promise<AiStepOutcome>;
   resolveAiTurn(): Promise<void>;
   setAiPlaybackDetailLevel(level: AnimationDetailLevel): void;
   setAiPlaybackSpeed(speed: AiPlaybackSpeed): void;
   setAiPlaybackAutoSkip(enabled: boolean): void;
   requestAiTurnSkip(): void;
-  cancelChoice(): Promise<void>;
-  cancelMove(): void;
+  rewindToCurrentTurnStart(): Promise<void>;
   undo(): Promise<void>;
   setAnimationPlaying(playing: boolean): void;
   setAnimationPlaybackSpeed(speed: AnimationPlaybackSpeed): void;
@@ -147,19 +150,17 @@ interface RenderDerivationInputs {
   readonly gameDef: GameDef | null;
   readonly gameState: GameState | null;
   readonly playerID: PlayerId | null;
+  readonly currentMicroturn: MicroturnState | null;
   readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
-  readonly choicePending: ChoicePendingRequest | null;
-  readonly selectedAction: ActionId | null;
-  readonly partialMove: Move | null;
-  readonly choiceStack: readonly PartialChoice[];
   readonly playerSeats: ReadonlyMap<PlayerId, SeatController>;
   readonly terminal: TerminalResult | null;
 }
 
 interface MutationTransitionInputs {
   readonly gameState: GameState;
-  readonly legalMoveResult: LegalMoveEnumerationResult;
+  readonly currentMicroturn: MicroturnState | null;
+  readonly legalMoveResult: LegalMoveEnumerationResult | null;
   readonly actionAvailabilityById: ReadonlyMap<string, boolean>;
   readonly terminal: TerminalResult | null;
 }
@@ -170,19 +171,12 @@ interface CreateGameStoreOptions {
   readonly traceBus?: TraceBus;
 }
 
-type ChoiceActionType = ChoicePendingRequest['type'];
 type OperationKind = 'init' | 'action';
 
 interface OperationContext {
   readonly epoch: number;
   readonly token: number;
   readonly kind: OperationKind;
-}
-
-interface ChoiceValidationIssue {
-  readonly reason: 'CHOICE_TYPE_MISMATCH' | 'CHOICE_VALUE_SHAPE_INVALID';
-  readonly expected: ChoiceActionType | 'scalar' | 'array';
-  readonly received: ChoiceActionType | 'scalar' | 'array';
 }
 
 const WORKER_ERROR_CODES: readonly WorkerError['code'][] = [
@@ -202,15 +196,12 @@ const INITIAL_STATE: Omit<GameStoreState, 'playerSeats'> = {
   error: null,
   orchestrationDiagnostic: null,
   orchestrationDiagnosticSequence: 0,
+  currentMicroturn: null,
   legalMoveResult: null,
   actionAvailabilityById: new Map<string, boolean>(),
-  choicePending: null,
   effectTrace: [],
   triggerFirings: [],
   terminal: null,
-  selectedAction: null,
-  partialMove: null,
-  choiceStack: [],
   animationPlaying: false,
   animationPlaybackSpeed: '1x',
   animationPaused: false,
@@ -238,15 +229,12 @@ function resetSessionState(): Pick<
   | 'playerID'
   | 'orchestrationDiagnostic'
   | 'orchestrationDiagnosticSequence'
+  | 'currentMicroturn'
   | 'legalMoveResult'
   | 'actionAvailabilityById'
-  | 'choicePending'
   | 'effectTrace'
   | 'triggerFirings'
   | 'terminal'
-  | 'selectedAction'
-  | 'partialMove'
-  | 'choiceStack'
   | 'playerSeats'
   | 'appliedMoveEvent'
   | 'appliedMoveSequence'
@@ -258,15 +246,12 @@ function resetSessionState(): Pick<
     playerID: null,
     orchestrationDiagnostic: null,
     orchestrationDiagnosticSequence: 0,
+    currentMicroturn: null,
     legalMoveResult: null,
     actionAvailabilityById: new Map<string, boolean>(),
-    choicePending: null,
     effectTrace: [],
     triggerFirings: [],
     terminal: null,
-    selectedAction: null,
-    partialMove: null,
-    choiceStack: [],
     playerSeats: new Map<PlayerId, SeatController>(),
     appliedMoveEvent: null,
     appliedMoveSequence: 0,
@@ -278,7 +263,8 @@ function buildInitSuccessState(
   def: GameDef,
   gameState: GameState,
   playerConfig: readonly PlayerSeatConfig[],
-  legalMoveResult: LegalMoveEnumerationResult,
+  currentMicroturn: MicroturnState | null,
+  legalMoveResult: LegalMoveEnumerationResult | null,
   actionAvailabilityById: ReadonlyMap<string, boolean>,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
@@ -289,6 +275,7 @@ function buildInitSuccessState(
     gameDef: def,
     gameState,
     playerID: humanSeat !== undefined ? asPlayerId(humanSeat.playerId) : null,
+    currentMicroturn,
     legalMoveResult,
     actionAvailabilityById,
     terminal,
@@ -297,7 +284,6 @@ function buildInitSuccessState(
     effectTrace: setupTrace,
     triggerFirings: [],
     playerSeats: buildPlayerSeatsFromConfig(playerConfig),
-    ...resetMoveConstructionState(),
   };
 }
 
@@ -309,18 +295,10 @@ function buildInitFailureState(error: unknown, lifecycle: GameLifecycle): Partia
   };
 }
 
-function resetMoveConstructionState(): Pick<GameStoreState, 'selectedAction' | 'partialMove' | 'choiceStack' | 'choicePending'> {
-  return {
-    selectedAction: null,
-    partialMove: null,
-    choiceStack: [],
-    choicePending: null,
-  };
-}
-
 function buildStateMutationState(
   gameState: GameState,
-  legalMoveResult: LegalMoveEnumerationResult,
+  currentMicroturn: MicroturnState | null,
+  legalMoveResult: LegalMoveEnumerationResult | null,
   actionAvailabilityById: ReadonlyMap<string, boolean>,
   terminal: TerminalResult | null,
   lifecycle: GameLifecycle,
@@ -329,6 +307,7 @@ function buildStateMutationState(
 ): Partial<MutableGameStoreState> {
   return {
     gameState,
+    currentMicroturn,
     legalMoveResult,
     actionAvailabilityById,
     terminal,
@@ -337,7 +316,6 @@ function buildStateMutationState(
     triggerFirings,
     appliedMoveEvent: null,
     error: null,
-    ...resetMoveConstructionState(),
   };
 }
 
@@ -406,69 +384,6 @@ function toWorkerError(error: unknown): WorkerError {
   };
 }
 
-function toIllegalChoiceError(request: ChoiceIllegalRequest): WorkerError {
-  return {
-    code: 'ILLEGAL_MOVE',
-    message: `Illegal choice: ${request.reason}`,
-    details: request,
-  };
-}
-
-function toChoiceValidationError(issue: ChoiceValidationIssue): WorkerError {
-  return {
-    code: 'VALIDATION_FAILED',
-    message: 'Choice input is incompatible with the current pending choice.',
-    details: issue,
-  };
-}
-
-function validateChoiceSubmission(
-  pendingType: ChoicePendingRequest['type'],
-  actionType: ChoiceActionType,
-  choice: MoveParamValue,
-): WorkerError | null {
-  if (pendingType !== actionType) {
-    return toChoiceValidationError({
-      reason: 'CHOICE_TYPE_MISMATCH',
-      expected: pendingType,
-      received: actionType,
-    });
-  }
-
-  if (actionType === 'chooseOne' && Array.isArray(choice)) {
-    return toChoiceValidationError({
-      reason: 'CHOICE_VALUE_SHAPE_INVALID',
-      expected: 'scalar',
-      received: 'array',
-    });
-  }
-
-  if (actionType === 'chooseN' && !Array.isArray(choice)) {
-    return toChoiceValidationError({
-      reason: 'CHOICE_VALUE_SHAPE_INVALID',
-      expected: 'array',
-      received: 'scalar',
-    });
-  }
-
-  return null;
-}
-
-function validatePendingChoiceType(
-  pendingType: ChoicePendingRequest['type'],
-  expectedType: ChoicePendingRequest['type'],
-): WorkerError | null {
-  if (pendingType === expectedType) {
-    return null;
-  }
-
-  return toChoiceValidationError({
-    reason: 'CHOICE_TYPE_MISMATCH',
-    expected: expectedType,
-    received: pendingType,
-  });
-}
-
 function buildPlayerSeatsFromConfig(
   playerConfig: readonly PlayerSeatConfig[],
 ): ReadonlyMap<PlayerId, SeatController> {
@@ -493,11 +408,141 @@ function validatePlayerConfig(
   }
 }
 
-function buildMove(actionId: ActionId, choices: readonly PartialChoice[]): Move {
+function synthesizeLegalMoveResult(microturn: MicroturnState | null): LegalMoveEnumerationResult | null {
+  if (microturn === null || microturn.kind !== 'actionSelection') {
+    return null;
+  }
+
   return {
-    actionId,
-    params: Object.fromEntries(choices.map((choice) => [choice.decisionKey, choice.value])),
+    moves: microturn.legalActions
+      .filter((decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> => decision.kind === 'actionSelection')
+      .map((decision) => ({
+        move: decision.move ?? { actionId: decision.actionId, params: {} },
+        viability: {
+          viable: true,
+          complete: true,
+          move: decision.move ?? { actionId: decision.actionId, params: {} },
+          warnings: [],
+          code: undefined,
+          context: undefined,
+          error: undefined,
+          nextDecision: undefined,
+          nextDecisionSet: undefined,
+          stochasticDecision: undefined,
+        },
+        trustedMove: undefined,
+      })),
+    warnings: [],
   };
+}
+
+function deriveCompatibilityChoiceStack(microturn: MicroturnState | null): readonly PartialChoice[] {
+  if (microturn === null) {
+    return [];
+  }
+
+  return microturn.compoundTurnTrace.flatMap<PartialChoice>((entry) => {
+    if (entry.decision.kind === 'chooseOne') {
+      return [{
+        decisionKey: entry.decision.decisionKey,
+        name: String(entry.decision.decisionKey),
+        value: entry.decision.value,
+      }];
+    }
+    if (entry.decision.kind === 'chooseNStep' && entry.decision.command === 'confirm' && entry.decision.value !== undefined) {
+      return [{
+        decisionKey: entry.decision.decisionKey,
+        name: String(entry.decision.decisionKey),
+        value: entry.decision.value,
+      }];
+    }
+    return [];
+  });
+}
+
+function deriveCompatibilitySelectedAction(microturn: MicroturnState | null): string | null {
+  const root = microturn?.compoundTurnTrace[0];
+  return root?.decision.kind === 'actionSelection'
+    ? root.decision.actionId
+    : null;
+}
+
+function deriveCompatibilityChoicePending(microturn: MicroturnState | null): ChoicePendingRequest | null {
+  if (microturn === null) {
+    return null;
+  }
+
+  if (microturn.kind === 'chooseOne') {
+    const context = microturn.decisionContext as ChooseOneContext;
+    return {
+      kind: 'pending',
+      complete: false,
+      decisionKey: context.decisionKey,
+      name: String(context.decisionKey),
+      type: 'chooseOne',
+      options: context.options,
+      targetKinds: [],
+    };
+  }
+
+  if (microturn.kind === 'chooseNStep') {
+    const context = microturn.decisionContext as ChooseNStepContext;
+    return {
+      kind: 'pending',
+      complete: false,
+      decisionKey: context.decisionKey,
+      name: String(context.decisionKey),
+      type: 'chooseN',
+      options: context.options,
+      targetKinds: [],
+      min: context.cardinality.min,
+      max: context.cardinality.max,
+      selected: context.selectedSoFar,
+      canConfirm: context.stepCommands.includes('confirm'),
+    };
+  }
+
+  return null;
+}
+
+function decisionKeyForMicroturn(microturn: MicroturnState): MicroturnState['compoundTurnTrace'][number]['decisionKey'] {
+  if (microturn.kind === 'chooseOne' || microturn.kind === 'chooseNStep' || microturn.kind === 'stochasticResolve') {
+    const context = microturn.decisionContext as ChooseOneContext | ChooseNStepContext | StochasticResolveContext;
+    return context.decisionKey;
+  }
+  return null;
+}
+
+function appendDecisionToTrace(
+  microturn: MicroturnState,
+  decision: Decision,
+): readonly MicroturnState['compoundTurnTrace'][number][] {
+  return [
+    ...microturn.compoundTurnTrace,
+    {
+      seatId: microturn.seatId,
+      decisionContextKind: microturn.kind,
+      decisionKey: decisionKeyForMicroturn(microturn),
+      decision,
+      frameId: microturn.frameId,
+    },
+  ];
+}
+
+function maybeCompletedMove(
+  microturn: MicroturnState,
+  decision: Decision,
+  result: ApplyDecisionResult,
+): Move | null {
+  if (!result.log.turnRetired) {
+    return null;
+  }
+
+  if (microturn.kind === 'actionSelection' && decision.kind === 'actionSelection' && microturn.compoundTurnTrace.length === 0) {
+    return decision.move ?? { actionId: decision.actionId, params: {} };
+  }
+
+  return rebuildMoveFromTrace(appendDecisionToTrace(microturn, decision));
 }
 
 function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
@@ -509,10 +554,9 @@ function toRenderContext(inputs: RenderDerivationInputs): RenderContext | null {
     playerID: inputs.playerID,
     legalMoveResult: inputs.legalMoveResult,
     actionAvailabilityById: inputs.actionAvailabilityById,
-    choicePending: inputs.choicePending,
-    selectedAction: inputs.selectedAction,
-    partialMove: inputs.partialMove,
-    choiceStack: inputs.choiceStack,
+    choicePending: deriveCompatibilityChoicePending(inputs.currentMicroturn),
+    selectedActionId: deriveCompatibilitySelectedAction(inputs.currentMicroturn),
+    choiceStack: deriveCompatibilityChoiceStack(inputs.currentMicroturn),
     playerSeats: inputs.playerSeats,
     terminal: inputs.terminal,
   };
@@ -548,12 +592,9 @@ function toRenderDerivationInputs(state: MutableGameStoreState): RenderDerivatio
     gameDef: state.gameDef,
     gameState: state.gameState,
     playerID: state.playerID,
+    currentMicroturn: state.currentMicroturn,
     legalMoveResult: state.legalMoveResult,
     actionAvailabilityById: state.actionAvailabilityById,
-    choicePending: state.choicePending,
-    selectedAction: state.selectedAction,
-    partialMove: state.partialMove,
-    choiceStack: state.choiceStack,
     playerSeats: state.playerSeats,
     terminal: state.terminal,
   };
@@ -564,6 +605,7 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     gameDef: state.gameDef,
     gameState: state.gameState,
     playerID: state.playerID,
+    currentMicroturn: state.currentMicroturn,
     gameLifecycle: state.gameLifecycle,
     loading: state.loading,
     error: state.error,
@@ -571,13 +613,9 @@ function snapshotMutableState(state: GameStore): MutableGameStoreState {
     orchestrationDiagnosticSequence: state.orchestrationDiagnosticSequence,
     legalMoveResult: state.legalMoveResult,
     actionAvailabilityById: state.actionAvailabilityById,
-    choicePending: state.choicePending,
     effectTrace: state.effectTrace,
     triggerFirings: state.triggerFirings,
     terminal: state.terminal,
-    selectedAction: state.selectedAction,
-    partialMove: state.partialMove,
-    choiceStack: state.choiceStack,
     animationPlaying: state.animationPlaying,
     animationPlaybackSpeed: state.animationPlaybackSpeed,
     animationPaused: state.animationPaused,
@@ -606,7 +644,7 @@ function emitMoveAppliedTrace(
   state: Pick<GameStoreState, 'playerID' | 'renderModel'>,
   mutationInputs: MutationTransitionInputs,
   move: Move,
-  result: ApplyMoveResult,
+  result: Pick<ApplyDecisionResult, 'triggerFirings' | 'effectTrace' | 'conditionTrace' | 'decisionTrace' | 'selectorTrace'>,
   agentDecision?: AgentDecisionTrace,
 ): void {
   const tracePlayer = state.renderModel?.activePlayerID ?? state.playerID;
@@ -642,9 +680,15 @@ function emitMoveAppliedTrace(
 async function deriveActionAvailabilityById(
   bridge: GameWorkerAPI,
   gameState: GameState,
-  legalMoveResult: LegalMoveEnumerationResult,
+  currentMicroturn: MicroturnState | null,
 ): Promise<ReadonlyMap<string, boolean>> {
-  const actionIds = Array.from(new Set(legalMoveResult.moves.map(({ move }) => String(move.actionId))));
+  const actionIds = currentMicroturn?.kind === 'actionSelection'
+    ? Array.from(new Set(
+      currentMicroturn.legalActions
+        .filter((decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> => decision.kind === 'actionSelection')
+        .map((decision) => String(decision.actionId)),
+    ))
+    : [];
   if (actionIds.length === 0) {
     return new Map<string, boolean>();
   }
@@ -664,7 +708,7 @@ async function deriveActionAvailabilityById(
 }
 
 function toBlockedActionError(
-  actionId: ActionId,
+  actionId: string,
   description: Awaited<ReturnType<GameWorkerAPI['describeAction']>>,
 ): WorkerError {
   return {
@@ -732,14 +776,6 @@ export function createGameStore(
         return true;
       };
 
-      const invalidateActiveActionOperation = (): void => {
-        if (activeOperation === null || activeOperation.kind !== 'action' || activeOperation.epoch !== sessionEpoch) {
-          return;
-        }
-        activeOperation = null;
-        set({ loading: false });
-      };
-
       const setAndDerive = (patch: Partial<MutableGameStoreState>): void => {
         set((current) => {
           const nextState = materializeNextState(current, patch);
@@ -788,112 +824,62 @@ export function createGameStore(
       };
 
       const deriveMutationInputs = async (gameState: GameState): Promise<MutationTransitionInputs> => {
-        const legalMoveResult = await bridge.enumerateLegalMoves();
-        const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
         const terminal = await bridge.terminalResult();
+        const currentMicroturn = terminal === null
+          ? await bridge.publishMicroturn()
+          : null;
+        const legalMoveResult = synthesizeLegalMoveResult(currentMicroturn);
+        const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, currentMicroturn);
         return {
           gameState,
+          currentMicroturn,
           legalMoveResult,
           actionAvailabilityById,
           terminal,
         };
       };
 
-      const submitChoice = async (choice: MoveParamValue, actionType: ChoiceActionType): Promise<void> => {
-        await runActionOperation(async (ctx) => {
-          const state = get();
-          if (state.selectedAction === null || state.choicePending === null) {
-            return;
-          }
-
-          const validationError = validateChoiceSubmission(state.choicePending.type, actionType, choice);
-          if (validationError !== null) {
-            guardSet(ctx, { error: validationError });
-            return;
-          }
-
-          const nextChoice: PartialChoice = {
-            decisionKey: state.choicePending.decisionKey,
-            name: state.choicePending.name,
-            value: choice,
-          };
-          const nextChoiceStack = [...state.choiceStack, nextChoice];
-          const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-          const choiceRequest = await bridge.legalChoices(nextMove);
-          if (choiceRequest.kind === 'illegal') {
-            guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
-            return;
-          }
-
-          guardSetAndDerive(ctx, {
-            partialMove: nextMove,
-            choiceStack: nextChoiceStack,
-            choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
-            error: null,
-          });
-        });
-      };
-
-      const advanceChooseN = async (
-        command: Parameters<GameWorkerAPI['advanceChooseN']>[3],
+      const submitDecision = async (
+        decision: Decision,
+        agentDecision?: AgentDecisionTrace,
       ): Promise<void> => {
         await runActionOperation(async (ctx) => {
           const state = get();
-          if (state.selectedAction === null || state.partialMove === null || state.choicePending === null) {
+          const currentMicroturn = state.currentMicroturn;
+          if (currentMicroturn === null) {
             return;
           }
-
-          const validationError = validatePendingChoiceType(state.choicePending.type, 'chooseN');
-          if (validationError !== null) {
-            guardSet(ctx, { error: validationError });
-            return;
-          }
-
-          const currentPending = state.choicePending;
-          if (currentPending.type !== 'chooseN') {
-            guardSet(ctx, {
-              error: toChoiceValidationError({
-                reason: 'CHOICE_TYPE_MISMATCH',
-                expected: 'chooseN',
-                received: currentPending.type,
-              }),
-            });
-            return;
-          }
-          const result = await bridge.advanceChooseN(
-            state.partialMove,
-            currentPending.decisionKey,
-            currentPending.selected,
-            command,
+          const applied = await bridge.applyDecision(decision, undefined, toOperationStamp(ctx));
+          const mutationInputs = await deriveMutationInputs(applied.state);
+          const completedMove = maybeCompletedMove(currentMicroturn, decision, applied);
+          const appliedMovePatch = completedMove === null
+            ? { appliedMoveEvent: null, appliedMoveSequence: state.appliedMoveSequence }
+            : buildAppliedMoveEventPatch(state, completedMove);
+          const lifecycle = assertLifecycleTransition(
+            state.gameLifecycle,
+            lifecycleFromTerminal(mutationInputs.terminal),
+            'submitDecision',
           );
-
-          if (!result.done) {
-            guardSetAndDerive(ctx, {
-              choicePending: result.pending,
-              error: null,
-            });
-            return;
-          }
-
-          const nextChoice: PartialChoice = {
-            decisionKey: currentPending.decisionKey,
-            name: currentPending.name,
-            value: result.value,
-          };
-          const nextChoiceStack = [...state.choiceStack, nextChoice];
-          const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-          const choiceRequest = await bridge.legalChoices(nextMove);
-          if (choiceRequest.kind === 'illegal') {
-            guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
-            return;
-          }
-
-          guardSetAndDerive(ctx, {
-            partialMove: nextMove,
-            choiceStack: nextChoiceStack,
-            choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
-            error: null,
+          const wasApplied = guardSetAndDerive(ctx, {
+            ...buildStateMutationState(
+              mutationInputs.gameState,
+              mutationInputs.currentMicroturn,
+              mutationInputs.legalMoveResult,
+              mutationInputs.actionAvailabilityById,
+              mutationInputs.terminal,
+              lifecycle,
+              applied.effectTrace ?? [],
+              applied.triggerFirings,
+            ),
+            ...appliedMovePatch,
           });
+          if (!wasApplied || completedMove === null) {
+            return;
+          }
+          options?.onMoveApplied?.(completedMove);
+          if (options?.traceBus !== undefined) {
+            emitMoveAppliedTrace(options.traceBus, state, mutationInputs, completedMove, applied, agentDecision);
+          }
         });
       };
 
@@ -902,18 +888,16 @@ export function createGameStore(
         if (state.gameLifecycle === 'terminal') {
           return 'terminal';
         }
-        if (state.renderModel === null || state.gameDef === null || state.gameState === null) {
+        if (state.renderModel === null || state.gameDef === null || state.gameState === null || state.currentMicroturn === null) {
           return 'no-op';
         }
 
         const activePlayerId = state.renderModel.activePlayerID;
         const activeController = state.playerSeats.get(activePlayerId);
-        const legalMoveResult = state.legalMoveResult ?? await bridge.enumerateLegalMoves();
         const aiStep = agentTurnOrchestrator.resolveStep({
           controller: activeController,
           def: state.gameDef,
-          legalMoves: legalMoveResult.moves,
-          playerId: activePlayerId,
+          microturn: state.currentMicroturn,
           state: state.gameState,
         });
 
@@ -923,32 +907,32 @@ export function createGameStore(
         if (aiStep.kind === 'human-turn') {
           return 'human-turn';
         }
-        if (aiStep.kind === 'illegal-template') {
+        if (aiStep.kind === 'illegal-decision') {
           guardSetAndDerive(ctx, {
-            legalMoveResult,
             error: toWorkerError(aiStep.error),
           });
           return 'illegal-template';
         }
-        if (aiStep.kind === 'no-legal-moves') {
-          guardSetAndDerive(ctx, { legalMoveResult, error: null });
+        if (aiStep.kind === 'no-legal-actions') {
+          guardSetAndDerive(ctx, { error: null });
           return 'no-legal-moves';
         }
 
-        let result;
+        let applied;
         try {
-          result = await bridge.applyTrustedMove(aiStep.move, undefined, toOperationStamp(ctx));
+          applied = await bridge.applyDecision(aiStep.decision, undefined, toOperationStamp(ctx));
         } catch (error) {
           guardSetAndDerive(ctx, {
-            legalMoveResult,
             error: toWorkerError(error),
           });
           return 'illegal-template';
         }
 
-        const completedMove = aiStep.move.move;
-        const mutationInputs = await deriveMutationInputs(result.state);
-        const appliedMovePatch = buildAppliedMoveEventPatch(state, completedMove);
+        const mutationInputs = await deriveMutationInputs(applied.state);
+        const completedMove = maybeCompletedMove(state.currentMicroturn, aiStep.decision, applied);
+        const appliedMovePatch = completedMove === null
+          ? { appliedMoveEvent: null, appliedMoveSequence: state.appliedMoveSequence }
+          : buildAppliedMoveEventPatch(state, completedMove);
         const lifecycle = assertLifecycleTransition(
           state.gameLifecycle,
           lifecycleFromTerminal(mutationInputs.terminal),
@@ -957,22 +941,25 @@ export function createGameStore(
         const wasApplied = guardSetAndDerive(ctx, {
           ...buildStateMutationState(
             mutationInputs.gameState,
+            mutationInputs.currentMicroturn,
             mutationInputs.legalMoveResult,
             mutationInputs.actionAvailabilityById,
             mutationInputs.terminal,
             lifecycle,
-            result.effectTrace ?? [],
-            result.triggerFirings,
+            applied.effectTrace ?? [],
+            applied.triggerFirings,
           ),
           ...appliedMovePatch,
         });
         if (!wasApplied) {
           return 'no-op';
         }
-        options?.onMoveApplied?.(completedMove);
+        if (completedMove !== null) {
+          options?.onMoveApplied?.(completedMove);
+        }
 
-        if (options?.traceBus !== undefined && aiStep.agentDecision !== undefined) {
-          emitMoveAppliedTrace(options.traceBus, state, mutationInputs, completedMove, result, aiStep.agentDecision);
+        if (options?.traceBus !== undefined && aiStep.agentDecision !== undefined && completedMove !== null) {
+          emitMoveAppliedTrace(options.traceBus, state, mutationInputs, completedMove, applied, aiStep.agentDecision);
         }
 
         return 'advanced';
@@ -994,18 +981,28 @@ export function createGameStore(
 
           try {
             const { state: gameState, setupTrace } = await bridge.init(def, seed, { playerCount: playerConfig.length }, toOperationStamp(operation));
-            const legalMoveResult = await bridge.enumerateLegalMoves();
-            const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
-            const terminal = await bridge.terminalResult();
+            const mutationInputs = await deriveMutationInputs(gameState);
             agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
-              lifecycleFromTerminal(terminal),
+              lifecycleFromTerminal(mutationInputs.terminal),
               'initGame:success',
             );
             guardSetAndDerive(
               operation,
-              buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, actionAvailabilityById, terminal, lifecycle, setupTrace),
+              {
+                ...buildInitSuccessState(
+                  def,
+                  gameState,
+                  playerConfig,
+                  mutationInputs.currentMicroturn,
+                  mutationInputs.legalMoveResult,
+                mutationInputs.actionAvailabilityById,
+                mutationInputs.terminal,
+                lifecycle,
+                setupTrace,
+                ),
+              },
             );
 
             if (options?.traceBus !== undefined) {
@@ -1040,18 +1037,28 @@ export function createGameStore(
               await bridge.playSequence(moveHistory, undefined, toOperationStamp(operation));
             }
             const gameState = await bridge.getState();
-            const legalMoveResult = await bridge.enumerateLegalMoves();
-            const actionAvailabilityById = await deriveActionAvailabilityById(bridge, gameState, legalMoveResult);
-            const terminal = await bridge.terminalResult();
+            const mutationInputs = await deriveMutationInputs(gameState);
             agentTurnOrchestrator.initializeSession({ def, seed, playerCount: gameState.playerCount });
             const lifecycle = assertLifecycleTransition(
               get().gameLifecycle,
-              lifecycleFromTerminal(terminal),
+              lifecycleFromTerminal(mutationInputs.terminal),
               'initGameFromHistory:success',
             );
             guardSetAndDerive(
               operation,
-              buildInitSuccessState(def, gameState, playerConfig, legalMoveResult, actionAvailabilityById, terminal, lifecycle, []),
+              {
+                ...buildInitSuccessState(
+                  def,
+                  gameState,
+                  playerConfig,
+                  mutationInputs.currentMicroturn,
+                  mutationInputs.legalMoveResult,
+                  mutationInputs.actionAvailabilityById,
+                  mutationInputs.terminal,
+                  lifecycle,
+                  [],
+                ),
+              },
             );
           } catch (error) {
             const lifecycle = assertLifecycleTransition(get().gameLifecycle, 'idle', 'initGameFromHistory:failure');
@@ -1061,7 +1068,7 @@ export function createGameStore(
           }
         },
 
-        hydrateFromReplayStep(gameState, legalMoveResult, terminal, effectTrace, triggerFirings) {
+        hydrateFromReplayStep(gameState, currentMicroturn, terminal, effectTrace, triggerFirings) {
           agentTurnOrchestrator.resetSession();
           const lifecycle = assertLifecycleTransition(
             get().gameLifecycle,
@@ -1069,15 +1076,18 @@ export function createGameStore(
             'hydrateFromReplayStep',
           );
           setAndDerive(
-            buildStateMutationState(
-              gameState,
-              legalMoveResult,
-              get().actionAvailabilityById,
-              terminal,
-              lifecycle,
-              effectTrace,
-              triggerFirings,
-            ),
+            {
+              ...buildStateMutationState(
+                gameState,
+                currentMicroturn,
+                synthesizeLegalMoveResult(currentMicroturn),
+                get().actionAvailabilityById,
+                terminal,
+                lifecycle,
+                effectTrace,
+                triggerFirings,
+              ),
+            },
           );
         },
 
@@ -1087,102 +1097,65 @@ export function createGameStore(
           setAndDerive(buildInitFailureState(error, lifecycle));
         },
 
-        async selectAction(actionId, actionClass) {
-          await runActionOperation(async (ctx) => {
-            const state = get();
-            if (state.gameState === null) {
-              return;
-            }
-            const description = await bridge.describeAction(String(actionId), {
-              actorPlayer: state.gameState.activePlayer,
-            });
-            if (description?.tooltipPayload?.ruleState.available === false) {
+        async submitActionSelection(actionId, actionClass) {
+          const state = get();
+          const currentMicroturn = state.currentMicroturn;
+          if (currentMicroturn === null || currentMicroturn.kind !== 'actionSelection') {
+            return;
+          }
+          const selected = currentMicroturn.legalActions.find(
+            (decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> =>
+              decision.kind === 'actionSelection'
+              && decision.actionId === actionId
+              && (actionClass === undefined || decision.move?.actionClass === actionClass),
+          );
+          if (selected === undefined) {
+            const description = state.gameState === null
+              ? null
+              : await bridge.describeAction(String(actionId), { actorPlayer: state.gameState.activePlayer });
+            await runActionOperation(async (ctx) => {
               guardSetAndDerive(ctx, {
                 error: toBlockedActionError(actionId, description),
-                ...resetMoveConstructionState(),
               });
-              return;
-            }
-
-            const baseMove: Move = {
-              actionId,
-              params: {},
-              ...(actionClass !== undefined ? { actionClass } : {}),
-            };
-            const choiceRequest = await bridge.legalChoices(baseMove);
-            if (choiceRequest.kind === 'illegal') {
-              guardSetAndDerive(ctx, {
-                error: toIllegalChoiceError(choiceRequest),
-                ...resetMoveConstructionState(),
-              });
-              return;
-            }
-
-            guardSetAndDerive(ctx, {
-              selectedAction: actionId,
-              partialMove: baseMove,
-              choiceStack: [],
-              choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
-              error: null,
             });
-          });
+            return;
+          }
+          await submitDecision(selected);
         },
 
-        async chooseOne(choice) {
-          await submitChoice(choice, 'chooseOne');
+        async submitChoice(choice) {
+          const currentMicroturn = get().currentMicroturn;
+          if (currentMicroturn === null || currentMicroturn.kind !== 'chooseOne') {
+            return;
+          }
+          const selected = currentMicroturn.legalActions.find(
+            (decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> =>
+              decision.kind === 'chooseOne' && decision.value === choice,
+          );
+          if (selected === undefined) {
+            return;
+          }
+          await submitDecision(selected);
         },
 
-        async addChooseNItem(choice) {
-          await advanceChooseN({ type: 'add', value: choice });
+        async submitChooseNStep(command, choice) {
+          const currentMicroturn = get().currentMicroturn;
+          if (currentMicroturn === null || currentMicroturn.kind !== 'chooseNStep') {
+            return;
+          }
+          const selected = currentMicroturn.legalActions.find(
+            (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+              decision.kind === 'chooseNStep'
+              && decision.command === command
+              && (command === 'confirm' || decision.value === choice),
+          );
+          if (selected === undefined) {
+            return;
+          }
+          await submitDecision(selected);
         },
 
-        async removeChooseNItem(choice) {
-          await advanceChooseN({ type: 'remove', value: choice });
-        },
-
-        async confirmChooseN() {
-          await advanceChooseN({ type: 'confirm' });
-        },
-
-        async confirmMove() {
-          await runActionOperation(async (ctx) => {
-            const state = get();
-            if (state.partialMove === null) {
-              return;
-            }
-            const move = state.partialMove;
-
-            const result = await bridge.applyMove(move, undefined, toOperationStamp(ctx));
-            const mutationInputs = await deriveMutationInputs(result.state);
-            const appliedMovePatch = buildAppliedMoveEventPatch(state, move);
-            const lifecycle = assertLifecycleTransition(
-              state.gameLifecycle,
-              lifecycleFromTerminal(mutationInputs.terminal),
-              'confirmMove',
-            );
-            const wasApplied = guardSetAndDerive(ctx, {
-              ...buildStateMutationState(
-                mutationInputs.gameState,
-                mutationInputs.legalMoveResult,
-                mutationInputs.actionAvailabilityById,
-                mutationInputs.terminal,
-                lifecycle,
-                result.effectTrace ?? [],
-                result.triggerFirings,
-              ),
-              ...appliedMovePatch,
-            });
-            if (wasApplied) {
-              options?.onMoveApplied?.(move);
-
-              if (options?.traceBus !== undefined) {
-                emitMoveAppliedTrace(options.traceBus, state, mutationInputs, move, result);
-              }
-            }
-          });
-        },
-
-        async resolveAiStep() {
+        async runAiStep() {
           const outcome = await runActionOperation((ctx) => resolveSingleAiStep(ctx));
           return outcome ?? 'no-op';
         },
@@ -1219,33 +1192,40 @@ export function createGameStore(
           set((state) => ({ aiSkipRequestToken: state.aiSkipRequestToken + 1 }));
         },
 
-        async cancelChoice() {
+        async rewindToCurrentTurnStart() {
           await runActionOperation(async (ctx) => {
-            const state = get();
-            if (state.selectedAction === null || state.choiceStack.length === 0) {
+            const currentMicroturn = get().currentMicroturn;
+            if (currentMicroturn === null) {
               return;
             }
-
-            const nextChoiceStack = state.choiceStack.slice(0, state.choiceStack.length - 1);
-            const nextMove = buildMove(state.selectedAction, nextChoiceStack);
-            const choiceRequest = await bridge.legalChoices(nextMove);
-            if (choiceRequest.kind === 'illegal') {
-              guardSet(ctx, { error: toIllegalChoiceError(choiceRequest) });
+            const isRootActionSelection = currentMicroturn.kind === 'actionSelection' && currentMicroturn.compoundTurnTrace.length === 0;
+            if (isRootActionSelection) {
               return;
             }
-
+            const restored = await bridge.rewindToTurnBoundary(currentMicroturn.turnId as TurnId, toOperationStamp(ctx));
+            if (restored === null) {
+              return;
+            }
+            const mutationInputs = await deriveMutationInputs(restored);
+            const lifecycle = assertLifecycleTransition(
+              get().gameLifecycle,
+              lifecycleFromTerminal(mutationInputs.terminal),
+              'cancelMove',
+            );
             guardSetAndDerive(ctx, {
-              partialMove: nextMove,
-              choiceStack: nextChoiceStack,
-              choicePending: choiceRequest.kind === 'pending' ? choiceRequest : null,
+              ...buildStateMutationState(
+                mutationInputs.gameState,
+                mutationInputs.currentMicroturn,
+                mutationInputs.legalMoveResult,
+                mutationInputs.actionAvailabilityById,
+                mutationInputs.terminal,
+                lifecycle,
+                [],
+                [],
+              ),
               error: null,
             });
           });
-        },
-
-        cancelMove() {
-          invalidateActiveActionOperation();
-          setAndDerive(resetMoveConstructionState());
         },
 
         async undo() {
@@ -1265,6 +1245,7 @@ export function createGameStore(
             guardSetAndDerive(ctx, {
               ...buildStateMutationState(
                 mutationInputs.gameState,
+                mutationInputs.currentMicroturn,
                 mutationInputs.legalMoveResult,
                 mutationInputs.actionAvailabilityById,
                 mutationInputs.terminal,

@@ -1,4 +1,5 @@
-import type { GameState, MoveLog, StateDelta, VariableValue } from '../kernel/types.js';
+import type { CompoundTurnSummary, GameState, StateDelta, VariableValue } from '../kernel/types.js';
+import type { DecisionLog } from '../kernel/microturn/types.js';
 
 const sortedUnionKeys = (
   left: Readonly<Record<string, unknown>>,
@@ -169,22 +170,29 @@ export const computeDeltas = (preState: GameState, postState: GameState): readon
 
 export const reconstructPerPlayerVarTrajectory = (
   finalPerPlayerVars: PerPlayerVars,
-  moves: readonly MoveLog[],
+  decisions: readonly DecisionLog[],
+  compoundTurns: readonly CompoundTurnSummary[],
 ): readonly PerPlayerVars[] => {
   const initialPerPlayerVars = clonePerPlayerVars(finalPerPlayerVars);
-  for (let moveIndex = moves.length - 1; moveIndex >= 0; moveIndex -= 1) {
-    const move = moves[moveIndex];
-    if (move === undefined) {
+  const turnDeltas = compoundTurns.map((summary) =>
+    decisions
+      .slice(summary.decisionIndexRange.start, summary.decisionIndexRange.end)
+      .flatMap((decision) => decision.deltas),
+  );
+
+  for (let moveIndex = turnDeltas.length - 1; moveIndex >= 0; moveIndex -= 1) {
+    const deltas = turnDeltas[moveIndex];
+    if (deltas === undefined) {
       continue;
     }
-    applyPerPlayerVarDeltas(initialPerPlayerVars, move.deltas, 'before');
+    applyPerPlayerVarDeltas(initialPerPlayerVars, deltas, 'before');
   }
 
   const trajectory: PerPlayerVars[] = [clonePerPlayerVars(initialPerPlayerVars)];
   const workingPerPlayerVars = clonePerPlayerVars(initialPerPlayerVars);
 
-  for (const move of moves) {
-    applyPerPlayerVarDeltas(workingPerPlayerVars, move.deltas, 'after');
+  for (const deltas of turnDeltas) {
+    applyPerPlayerVarDeltas(workingPerPlayerVars, deltas, 'after');
     trajectory.push(clonePerPlayerVars(workingPerPlayerVars));
   }
 

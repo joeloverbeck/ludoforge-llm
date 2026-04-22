@@ -9,12 +9,12 @@ import {
   asTokenId,
   initialState,
   legalChoicesEvaluate,
-  resolveMoveDecisionSequence,
   type GameDef,
   type GameState,
   type Move,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpers.js';
 
 const optionLegalityByValue = (
@@ -219,13 +219,13 @@ describe('prioritized chooseN integration', () => {
     const move = makeMove();
 
     assert.throws(
-      () => resolveMoveDecisionSequence(def, state, move, {
+      () => resolveDecisionContinuation(def, state, move, {
         choose: (request) => (request.type === 'chooseN' ? ['board-red'] : undefined),
       }),
       /violates prioritized tier ordering/,
     );
 
-    const resolved = resolveMoveDecisionSequence(def, state, move, {
+    const resolved = resolveDecisionContinuation(def, state, move, {
       choose: (request) => (request.type === 'chooseN' ? ['board-blue'] : undefined),
     });
     assert.equal(resolved.complete, true);

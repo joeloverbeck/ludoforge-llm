@@ -622,6 +622,7 @@ actions:
                   args:
                     - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: eq, value: troops }
+                    - { prop: coupRedeployed, op: eq, value: false }
           right: 0
         - op: or
           args:
@@ -674,6 +675,7 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: troops }
+                - { prop: coupRedeployed, op: eq, value: false }
           effects:
             - chooseOne:
                 bind: $destination
@@ -706,6 +708,7 @@ actions:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
+            - setTokenProp: { token: $movedTroop, prop: coupRedeployed, value: true }
     limits: []
   - id: coupArvnRedeployOptionalTroops
     actor: active
@@ -756,6 +759,7 @@ actions:
                               args:
                                 - { prop: faction, op: eq, value: ARVN }
                                 - { prop: type, op: eq, value: troops }
+                                - { prop: coupRedeployed, op: eq, value: false }
                       right: 0
           right: 0
         - op: '>'
@@ -770,6 +774,7 @@ actions:
                   args:
                     - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: eq, value: troops }
+                    - { prop: coupRedeployed, op: eq, value: false }
           right: 0
     cost: []
     effects:
@@ -783,6 +788,7 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: troops }
+                - { prop: coupRedeployed, op: eq, value: false }
           effects:
             - chooseOne:
                 bind: $destination
@@ -815,6 +821,7 @@ actions:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
+            - setTokenProp: { token: $movedTroop, prop: coupRedeployed, value: true }
     limits: []
   - id: coupArvnRedeployPolice
     actor: active
@@ -839,6 +846,7 @@ actions:
                   args:
                     - { prop: faction, op: eq, value: ARVN }
                     - { prop: type, op: eq, value: police }
+                    - { prop: coupRedeployed, op: eq, value: false }
           right: 0
     cost: []
     effects:
@@ -852,6 +860,7 @@ actions:
               args:
                 - { prop: faction, op: eq, value: ARVN }
                 - { prop: type, op: eq, value: police }
+                - { prop: coupRedeployed, op: eq, value: false }
           effects:
             - chooseOne:
                 bind: $destination
@@ -885,6 +894,7 @@ actions:
                 token: $movedPolice
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
+            - setTokenProp: { token: $movedPolice, prop: coupRedeployed, value: true }
     limits: []
   - id: coupNvaRedeployTroops
     actor: active
@@ -909,6 +919,7 @@ actions:
                   args:
                     - { prop: faction, op: eq, value: NVA }
                     - { prop: type, op: eq, value: troops }
+                    - { prop: coupRedeployed, op: eq, value: false }
           right: 0
     cost: []
     effects:
@@ -922,6 +933,7 @@ actions:
               args:
                 - { prop: faction, op: eq, value: NVA }
                 - { prop: type, op: eq, value: troops }
+                - { prop: coupRedeployed, op: eq, value: false }
           effects:
             - chooseOne:
                 bind: $destination
@@ -945,6 +957,7 @@ actions:
                 token: $movedTroop
                 from: { zoneExpr: { ref: binding, name: sourceSpace } }
                 to: { zoneExpr: $destination }
+            - setTokenProp: { token: $movedTroop, prop: coupRedeployed, value: true }
     limits: []
   - id: coupRedeployPass
     tags: []
@@ -5601,9 +5614,28 @@ actionPipelines:
                                                 - { op: '==', left: { ref: markerState, space: $space, marker: supportOpposition }, right: passiveOpposition }
                                             then:
                                               - shiftMarker: { space: $space, marker: supportOpposition, delta: 1 }
-                                        - chooseOne:
-                                            bind: '$infiltrateTakeoverReplace@{$space}'
-                                            options: { query: enums, values: ['yes', 'no'] }
+                                        - if:
+                                            when:
+                                              op: '>'
+                                              left:
+                                                aggregate:
+                                                  op: count
+                                                  query:
+                                                    query: tokensInZone
+                                                    zone: $space
+                                                    filter:
+                                                      op: and
+                                                      args:
+                                                        - { prop: faction, op: eq, value: VC }
+                                              right: 0
+                                            then:
+                                              - chooseOne:
+                                                  bind: '$infiltrateTakeoverReplace@{$space}'
+                                                  options: { query: enums, values: ['yes', 'no'] }
+                                            else:
+                                              - chooseOne:
+                                                  bind: '$infiltrateTakeoverReplace@{$space}'
+                                                  options: { query: enums, values: ['no'] }
                                         - if:
                                             when: { op: '==', left: { ref: binding, name: '$infiltrateTakeoverReplace@{$space}' }, right: yes }
                                             then:
@@ -6432,6 +6464,7 @@ triggers:
       type: phaseEnter
       phase: coupRedeploy
     effects:
+      - macro: coup-redeploy-reset-trackers
       - macro: coup-laos-cambodia-removal
   - id: on-coup-reset-enter
     event:

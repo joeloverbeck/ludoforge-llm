@@ -30,15 +30,10 @@ function createChoiceStore(state: {
   return {
     getState: () => ({
       renderModel: state.renderModel,
-      selectedAction: null,
-      partialMove: null,
-      chooseOne: async () => {},
-      addChooseNItem: async () => {},
-      removeChooseNItem: async () => {},
-      confirmChooseN: async () => {},
-      cancelChoice: async () => {},
-      cancelMove: () => {},
-      confirmMove: async () => {},
+      currentMicroturn: null,
+      submitChoice: async () => {},
+      submitChooseNStep: async () => {},
+      rewindToCurrentTurnStart: async () => {},
     }),
   } as unknown as StoreApi<GameStore>;
 }

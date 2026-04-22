@@ -9,10 +9,10 @@ import {
   asTokenId,
   initialState,
   pickDeterministicChoiceValue,
-  resolveMoveDecisionSequence,
   type GameState,
   type Token,
 } from '../../src/kernel/index.js';
+import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
@@ -291,7 +291,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
         $assaultLoCs: [],
       },
     };
-    const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
+    const resolved = resolveDecisionContinuation(def, configured, baseMove, {
       choose: (request) => {
         if (request.name === '$targetLoCs') {
           return [locA, locB];
@@ -363,7 +363,7 @@ describe('FITL capability branches (Train/Patrol/Rally)', () => {
         $assaultLoCs: [],
       },
     };
-    const resolved = resolveMoveDecisionSequence(def, configured, baseMove, {
+    const resolved = resolveDecisionContinuation(def, configured, baseMove, {
       choose: (request) => {
         if (request.name === '$targetLoCs') {
           return [loc];

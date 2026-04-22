@@ -16,14 +16,16 @@ export interface ReplayRuntime {
 }
 
 async function syncReplayProjection(runtime: ReplayRuntime, controller: ReplayController): Promise<void> {
-  const [gameState, legalMoveResult, terminal] = await Promise.all([
+  const [gameState, terminal] = await Promise.all([
     runtime.bridgeHandle.bridge.getState(),
-    runtime.bridgeHandle.bridge.enumerateLegalMoves(),
     runtime.bridgeHandle.bridge.terminalResult(),
   ]);
+  const currentMicroturn = terminal === null
+    ? await runtime.bridgeHandle.bridge.publishMicroturn()
+    : null;
   runtime.store.getState().hydrateFromReplayStep(
     gameState,
-    legalMoveResult,
+    currentMicroturn,
     terminal,
     controller.lastEffectTrace,
     controller.lastTriggerFirings,

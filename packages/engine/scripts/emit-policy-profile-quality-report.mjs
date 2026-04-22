@@ -56,7 +56,7 @@ export function buildPolicyProfileQualityAnnotations(records) {
     .filter((record) => record.passed === false)
     .map(
       (record) =>
-        `::warning file=${record.file}::POLICY_PROFILE_QUALITY_REGRESSION variant=${record.variantId} seed=${record.seed} stopReason=${record.stopReason} moves=${record.moves}`,
+        `::warning file=${record.file}::POLICY_PROFILE_QUALITY_REGRESSION variant=${record.variantId} seed=${record.seed} stopReason=${record.stopReason} decisions=${record.decisions}`,
     );
 }
 
@@ -82,7 +82,7 @@ function formatFailureNotes(failures) {
   return failures
     .map(
       (failure) =>
-        `seed ${failure.seed} did not converge (stopReason=${failure.stopReason}, moves=${failure.moves})`,
+        `seed ${failure.seed} did not converge (stopReason=${failure.stopReason}, decisions=${failure.decisions})`,
     )
     .join('; ');
 }
@@ -94,6 +94,18 @@ function formatConvergenceCell(currentBucket, baselineBucket) {
   }
 
   return `${baselineBucket.converged}/${baselineBucket.total} -> ${currentRate}`;
+}
+
+export function buildNoReportComment(inputPath) {
+  return [
+    STICKY_COMMENT_MARKER,
+    '## Policy-Profile Quality Report',
+    '',
+    `No policy-profile-quality report was produced for this run. Expected input at \`${inputPath}\`.`,
+    '',
+    '_Non-blocking signal per Spec 136. Determinism corpus is the blocking gate._',
+    '',
+  ].join('\n');
 }
 
 export function buildPolicyProfileQualityComment(records, baselineRecords = []) {
@@ -124,9 +136,54 @@ export function buildPolicyProfileQualityComment(records, baselineRecords = []) 
   return `${lines.join('\n')}\n`;
 }
 
-function postStickyPullRequestComment(commentBody) {
+export function resolvePullRequestCommentTarget(
+  env = process.env,
+  options = {},
+) {
+  const readFileSyncImpl = options.readFileSyncImpl ?? readFileSync;
+  const eventPath = env.GITHUB_EVENT_PATH;
+  const fallbackRepo = typeof env.GITHUB_REPOSITORY === 'string' && env.GITHUB_REPOSITORY.length > 0
+    ? env.GITHUB_REPOSITORY
+    : null;
+
+  if (typeof eventPath !== 'string' || eventPath.length === 0) {
+    return null;
+  }
+
   try {
-    execFileSync('gh', ['pr', 'comment', '--edit-last', '--create-if-none', '--body', commentBody], {
+    const payload = JSON.parse(readFileSyncImpl(eventPath, 'utf8'));
+    const pullRequestNumber = payload?.pull_request?.number;
+    if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
+      return null;
+    }
+
+    const repo =
+      typeof payload?.repository?.full_name === 'string' && payload.repository.full_name.length > 0
+        ? payload.repository.full_name
+        : fallbackRepo;
+
+    return {
+      prNumber: String(pullRequestNumber),
+      repo,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function postStickyPullRequestComment(commentBody) {
+  const target = resolvePullRequestCommentTarget();
+  const args = ['pr', 'comment'];
+  if (target !== null) {
+    args.push(target.prNumber);
+    if (target.repo !== null) {
+      args.push('--repo', target.repo);
+    }
+  }
+  args.push('--edit-last', '--create-if-none', '--body', commentBody);
+
+  try {
+    execFileSync('gh', args, {
       stdio: ['ignore', 'inherit', 'inherit'],
       env: { ...process.env, GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? '' },
     });
@@ -142,7 +199,21 @@ export function main(argv = process.argv.slice(2), options = {}) {
   const stdout = options.stdout ?? process.stdout;
   const commentPoster = options.commentPoster ?? postStickyPullRequestComment;
 
-  const reportText = readFileSyncImpl(inputPath, 'utf8');
+  let reportText;
+  try {
+    reportText = readFileSyncImpl(inputPath, 'utf8');
+  } catch (error) {
+    if (!(error instanceof Error) || 'code' in error === false || error.code !== 'ENOENT') {
+      throw error;
+    }
+
+    const commentBody = buildNoReportComment(inputPath);
+    stdout.write(`${commentBody}\n`);
+    if (prComment) {
+      commentPoster(commentBody);
+    }
+    return 0;
+  }
   const records = parsePolicyProfileQualityReport(reportText);
   const baselineRecords =
     baselineInputPath === null ? [] : parsePolicyProfileQualityReport(readFileSyncImpl(baselineInputPath, 'utf8'));

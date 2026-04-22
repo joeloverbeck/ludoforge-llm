@@ -17,7 +17,7 @@ import { optionKey } from './legal-choices.js';
 import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
 import { resolveProbeResult, type ProbeResult } from './probe-result.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
-import type { DecisionSequenceSatisfiability } from './decision-sequence-satisfiability.js';
+import type { DecisionSequenceSatisfiability } from './decision-sequence-analysis.js';
 import type {
   ChoiceOption,
   ChoicePendingChooseNRequest,

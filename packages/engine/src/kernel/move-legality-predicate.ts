@@ -1,4 +1,5 @@
 import type { GameDefRuntime } from './gamedef-runtime.js';
+import { resolveDecisionContinuation, type DecisionContinuationResult } from './microturn/continuation.js';
 import {
   resolveStrongestPotentialRequiredFreeOperationOutcomeGrant,
   resolveStrongestRequiredFreeOperationOutcomeGrant,
@@ -8,7 +9,6 @@ import {
   hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
 import { createSeatResolutionContext } from './identity.js';
-import { resolveMoveDecisionSequence, type ResolveMoveDecisionSequenceResult } from './move-decision-sequence.js';
 import type { IllegalMoveContext } from './runtime-error.js';
 import { ILLEGAL_MOVE_REASONS, type IllegalMoveReason } from './runtime-reasons.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -97,9 +97,9 @@ export const evaluateMoveLegality = (
   move: Move,
   runtime?: GameDefRuntime,
 ): LegalityVerdict => {
-  let sequence: ResolveMoveDecisionSequenceResult;
+  let sequence: DecisionContinuationResult;
   try {
-    sequence = resolveMoveDecisionSequence(
+    sequence = resolveDecisionContinuation(
       def,
       state,
       move,

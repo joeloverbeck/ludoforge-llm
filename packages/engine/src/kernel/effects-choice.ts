@@ -17,6 +17,7 @@ import { normalizeChoiceDomain, toChoiceComparableValue, type MembershipScalar }
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { toTraceProvenanceContext } from './effect-context.js';
+import type { SuspendedChoiceBindingOption } from './microturn/types.js';
 import { extractBindingCountBounds } from './zone-filter-constraint-extraction.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { ReadContext } from './eval-context.js';
@@ -568,6 +569,15 @@ const buildComparableDomainBindingMap = (
   return bindingMap;
 };
 
+const toSuspendedBindingOptions = (
+  normalizedOptions: readonly MembershipScalar[],
+  comparableBindingMap: ReadonlyMap<MembershipScalar, unknown>,
+): readonly SuspendedChoiceBindingOption[] =>
+  normalizedOptions.map((comparable) => ({
+    comparable: comparable as MoveParamScalar,
+    binding: comparableBindingMap.get(comparable),
+  }));
+
 export const applyChooseOne = (
   effect: Extract<EffectAST, { readonly chooseOne: unknown }>,
   env: EffectEnv,
@@ -622,6 +632,21 @@ export const applyChooseOne = (
             illegalReason: null,
           })),
           targetKinds,
+        },
+        suspendedFrame: {
+          state: cursor.state,
+          rng: cursor.rng,
+          actorPlayer: env.actorPlayer,
+          bindings: cursor.bindings,
+          ...(env.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: env.freeOperationOverlay }),
+          leaf: {
+            kind: 'chooseOne',
+            decisionKey,
+            bind: resolvedBind,
+            decisionScope: scopeAdvance.scope,
+            bindingOptions: toSuspendedBindingOptions(normalizedOptions, comparableBindingMap),
+          },
+          resumeStack: [],
         },
       };
     }
@@ -852,6 +877,21 @@ export const applyChooseN = (
         bindings: cursor.bindings,
         decisionScope: scopeAdvance.scope,
         pendingChoice,
+        suspendedFrame: {
+          state: cursor.state,
+          rng: cursor.rng,
+          actorPlayer: env.actorPlayer,
+          bindings: cursor.bindings,
+          ...(env.freeOperationOverlay === undefined ? {} : { freeOperationOverlay: env.freeOperationOverlay }),
+          leaf: {
+            kind: 'chooseN',
+            decisionKey,
+            bind,
+            decisionScope: scopeAdvance.scope,
+            bindingOptions: toSuspendedBindingOptions(normalizedOptions, comparableBindingMap),
+          },
+          resumeStack: [],
+        },
       };
     }
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.CHOICE_RUNTIME_VALIDATION_FAILED, `chooseN missing move param binding: ${bind} (${decisionKey})`, {

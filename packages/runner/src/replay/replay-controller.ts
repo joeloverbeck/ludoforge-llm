@@ -97,7 +97,7 @@ export function createReplayController(
   };
 
   const applyMoveWithTrace = async (move: Move): Promise<void> => {
-    const result = await bridge.applyMove(move, { trace: true }, nextStamp());
+    const result = await bridge.applyReplayMove(move, { trace: true }, nextStamp());
     lastEffectTrace = result.effectTrace ?? [];
     lastTriggerFirings = result.triggerFirings;
   };

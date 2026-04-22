@@ -1,6 +1,6 @@
 import type { GameStore } from '../store/game-store.js';
 
-export type ChoicePanelMode = 'choicePending' | 'choiceConfirm' | 'choiceInvalid';
+export type ChoicePanelMode = 'choicePending' | 'choiceInvalid';
 
 export type BottomBarState =
   | { readonly kind: 'hidden' }
@@ -29,8 +29,6 @@ export function deriveBottomBarState(
     case 'discreteMany':
     case 'numeric':
       return { kind: 'choicePending' };
-    case 'confirmReady':
-      return { kind: 'choiceConfirm' };
     case 'invalid':
       return { kind: 'choiceInvalid' };
     case 'none':

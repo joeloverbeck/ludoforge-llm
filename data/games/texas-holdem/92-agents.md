@@ -3,14 +3,6 @@
 ```yaml
 agents:
   library:
-    candidateFeatures:
-      raiseAmount:
-        type: number
-        expr:
-          coalesce:
-            - { ref: candidate.param.raiseAmount }
-            - 0
-
     stateFeatures:
       callAmount:
         type: number
@@ -98,7 +90,7 @@ agents:
             ref: candidate.tag.fold
       foldWhenBadPotOdds:
         scopes: [move]
-        weight: 200
+        weight: 150
         value:
           boolToNumber:
             and:
@@ -111,12 +103,6 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.raise
-      preferLargerRaise:
-        scopes: [move]
-        weight: 0.002
-        value:
-          ref: feature.raiseAmount
-
     tieBreakers:
       stableMoveKey:
         kind: stableMoveKey
@@ -137,7 +123,6 @@ agents:
           - avoidFold
           - foldWhenBadPotOdds
           - alwaysRaise
-          - preferLargerRaise
         tieBreakers:
           - stableMoveKey
 

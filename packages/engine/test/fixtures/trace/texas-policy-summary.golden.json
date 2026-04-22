@@ -11,17 +11,10 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "7cd681cf141998631c959fb931562980d76b0e20b2281336c255fe43215cd49d",
+    "profileFingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588",
     "initialCandidateCount": 12,
     "selectedStableMoveKey": "fold|{}|false|unclassified",
     "finalScore": 100,
-    "phase1Score": 100,
-    "phase2Score": 100,
-    "phase1ActionRanking": [
-      "fold",
-      "raise",
-      "call"
-    ],
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {
@@ -43,9 +36,9 @@
       "temperature": 0.5,
       "candidateCount": 3,
       "samplingProbabilities": [
-        4.248353777202354e-18,
-        0.9999998874648379,
-        1.12535162055095e-7
+        4.248354246535078e-18,
+        0.9999999979388463,
+        2.0611536181902033e-9
       ],
       "selectedIndex": 1
     },

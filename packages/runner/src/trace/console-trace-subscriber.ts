@@ -8,9 +8,6 @@ function formatAgentLabel(event: MoveAppliedEvent): string {
   if (event.agentDecision === undefined) {
     return '';
   }
-  if (event.agentDecision.kind === 'builtin') {
-    return ` [builtin:${event.agentDecision.agent.builtinId}]`;
-  }
   const profileLabel = event.agentDecision.resolvedProfileId ?? event.agentDecision.requestedProfileId ?? 'unresolved';
   return ` [policy:${profileLabel}]`;
 }
@@ -93,15 +90,10 @@ function formatMoveApplied(event: MoveAppliedEvent): void {
 
   if (event.agentDecision !== undefined) {
     console.group('▶ Agent Decision');
-    if (event.agentDecision.kind === 'builtin') {
-      const selectionLabel = event.agentDecision.selectedStableMoveKey ?? `#${String(event.agentDecision.selectedIndex ?? 0)}`;
-      console.log(`builtin:${event.agentDecision.agent.builtinId} | ${String(event.agentDecision.candidateCount)} candidates | selected ${selectionLabel}`);
-    } else {
-      const fallbackLabel = event.agentDecision.emergencyFallback ? ' | emergency fallback' : '';
-      console.log(
-        `policy:${event.agentDecision.resolvedProfileId ?? 'unresolved'} | ${String(event.agentDecision.initialCandidateCount)} candidates | selected ${event.agentDecision.selectedStableMoveKey ?? 'n/a'}${fallbackLabel}`,
-      );
-    }
+    const fallbackLabel = event.agentDecision.emergencyFallback ? ' | emergency fallback' : '';
+    console.log(
+      `policy:${event.agentDecision.resolvedProfileId ?? 'unresolved'} | ${String(event.agentDecision.initialCandidateCount)} candidates | selected ${event.agentDecision.selectedStableMoveKey ?? 'n/a'}${fallbackLabel}`,
+    );
     console.groupEnd();
   }
 

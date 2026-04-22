@@ -65,7 +65,7 @@ describe('action-announcement-presentation', () => {
       {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+        actorController: createAgentSeatController(),
         move: { actionId: asActionId('tick'), params: { amount: 200 } },
       },
     );
@@ -95,7 +95,7 @@ describe('action-announcement-presentation', () => {
       {
         sequence: 2,
         actorId: asPlayerId(1),
-        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+        actorController: createAgentSeatController(),
         move: { actionId: asActionId('tick'), params: {} },
       },
     );
@@ -118,7 +118,7 @@ describe('action-announcement-presentation', () => {
       appliedMoveEvent: {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+        actorController: createAgentSeatController(),
         move: { actionId: asActionId('raise'), params: { amount: 200 } },
       },
     });
@@ -149,7 +149,7 @@ describe('action-announcement-presentation', () => {
       appliedMoveEvent: {
         sequence: 1,
         actorId: asPlayerId(1),
-        actorController: createAgentSeatController({ kind: 'builtin', builtinId: 'random' }),
+        actorController: createAgentSeatController(),
         move: { actionId: asActionId('raise'), params: {} },
       },
     });

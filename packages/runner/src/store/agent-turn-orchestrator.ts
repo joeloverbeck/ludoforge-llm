@@ -1,17 +1,16 @@
 import type {
   AgentDecisionTrace,
-  ClassifiedMove,
   GameDef,
   GameDefRuntime,
   GameState,
   PlayerId,
   Rng,
-  TrustedExecutableMove,
 } from '@ludoforge/engine/runtime';
 import { createGameDefRuntime, createRng } from '@ludoforge/engine/runtime';
+import type { Decision, MicroturnState } from '../../../engine/src/kernel/microturn/types.js';
 
 import { isAgentSeatController, type SeatController } from '../seat/seat-controller.js';
-import { selectAgentMove } from './ai-move-policy.js';
+import { selectAgentDecision } from './ai-move-policy.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -24,17 +23,16 @@ export interface InitializeAgentTurnSessionInput {
 export interface ResolveAgentTurnStepInput {
   readonly controller: SeatController | undefined;
   readonly def: GameDef;
-  readonly legalMoves: readonly ClassifiedMove[];
-  readonly playerId: PlayerId;
+  readonly microturn: MicroturnState;
   readonly state: GameState;
 }
 
 export type AgentTurnStepResult =
   | { readonly kind: 'human-turn' }
-  | { readonly kind: 'illegal-template'; readonly error: unknown }
-  | { readonly kind: 'no-legal-moves' }
+  | { readonly kind: 'illegal-decision'; readonly error: unknown }
+  | { readonly kind: 'no-legal-actions' }
   | { readonly kind: 'no-session' }
-  | { readonly kind: 'selected-move'; readonly move: TrustedExecutableMove; readonly agentDecision?: AgentDecisionTrace };
+  | { readonly kind: 'selected-decision'; readonly decision: Decision; readonly agentDecision?: AgentDecisionTrace };
 
 export interface AgentTurnOrchestrator {
   resetSession(): void;
@@ -80,37 +78,37 @@ export function createAgentTurnOrchestrator(): AgentTurnOrchestrator {
         return { kind: 'human-turn' };
       }
 
-      const rng = agentRngByPlayer.get(input.playerId);
+      const playerId = input.state.activePlayer;
+      const rng = agentRngByPlayer.get(playerId);
       if (rng === undefined) {
         return {
-          kind: 'illegal-template',
-          error: `Missing agent RNG for player ${String(input.playerId)}.`,
+          kind: 'illegal-decision',
+          error: `Missing agent RNG for player ${String(playerId)}.`,
         };
       }
 
-      let selection: ReturnType<typeof selectAgentMove>;
+      let selection: ReturnType<typeof selectAgentDecision>;
       try {
-        selection = selectAgentMove({
+        selection = selectAgentDecision({
           controller: input.controller,
           def: input.def,
           state: input.state,
-          playerId: input.playerId,
-          legalMoves: input.legalMoves,
+          microturn: input.microturn,
           rng,
           runtime,
         });
       } catch (error) {
-        return { kind: 'illegal-template', error };
+        return { kind: 'illegal-decision', error };
       }
 
       if (selection === null) {
-        return { kind: 'no-legal-moves' };
+        return { kind: 'no-legal-actions' };
       }
 
-      agentRngByPlayer.set(input.playerId, selection.rng);
+      agentRngByPlayer.set(playerId, selection.rng);
       return {
-        kind: 'selected-move',
-        move: selection.move,
+        kind: 'selected-decision',
+        decision: selection.decision,
         ...(selection.agentDecision === undefined ? {} : { agentDecision: selection.agentDecision }),
       };
     },

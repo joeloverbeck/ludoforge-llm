@@ -1133,11 +1133,220 @@ export const GameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
+    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    nextFrameId: NumberSchema,
+    nextTurnId: NumberSchema,
+    activeDeciderSeatId: z.union([StringSchema, z.literal('__chance'), z.literal('__kernel')]),
   })
   .strict();
 
 export const MoveParamScalarSchema = z.union([NumberSchema, StringSchema, BooleanSchema]);
 export const MoveParamValueSchema = z.union([MoveParamScalarSchema, z.array(MoveParamScalarSchema)]);
+export const ActiveDeciderSeatIdSchema = z.union([StringSchema, z.literal('__chance'), z.literal('__kernel')]);
+
+export const ChooseOptionSchema = z
+  .object({
+    value: MoveParamValueSchema,
+    legality: z.union([z.literal('legal'), z.literal('illegal'), z.literal('unknown')]),
+    illegalReason: StringSchema.nullable(),
+    resolution: z.union([
+      z.literal('exact'),
+      z.literal('provisional'),
+      z.literal('stochastic'),
+      z.literal('ambiguous'),
+    ]).optional(),
+    metadata: z.record(StringSchema, z.unknown()).optional(),
+  })
+  .strict();
+
+export const StochasticDistributionEntrySchema = z
+  .object({
+    value: MoveParamValueSchema,
+    weight: NumberSchema,
+  })
+  .strict();
+
+export const StochasticDistributionSchema = z
+  .object({
+    outcomes: z.array(StochasticDistributionEntrySchema),
+  })
+  .strict();
+
+export const EffectExecutionFrameSnapshotSchema = z
+  .object({
+    programCounter: NumberSchema,
+    boundedIterationCursors: z.record(StringSchema, NumberSchema),
+    localBindings: z.record(StringSchema, MoveParamValueSchema),
+    pendingTriggerQueue: z.array(StringSchema),
+    decisionHistory: z.array(z.lazy(() => CompoundTurnTraceEntrySchema)).optional(),
+    suspendedFrame: z.unknown().optional(),
+  })
+  .strict();
+
+export const ActionSelectionDecisionSchema = z
+  .object({
+    kind: z.literal('actionSelection'),
+    actionId: StringSchema,
+    move: z.object({
+      actionId: StringSchema,
+      params: z.record(StringSchema, MoveParamValueSchema),
+      freeOperation: BooleanSchema.optional(),
+      actionClass: StringSchema.optional(),
+      compound: z.unknown().optional(),
+    }).strict().optional(),
+  })
+  .strict();
+
+export const ChooseOneDecisionSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    decisionKey: StringSchema,
+    value: MoveParamValueSchema,
+  })
+  .strict();
+
+export const ChooseNStepDecisionSchema = z
+  .object({
+    kind: z.literal('chooseNStep'),
+    decisionKey: StringSchema,
+    command: z.union([z.literal('add'), z.literal('remove'), z.literal('confirm')]),
+    value: MoveParamScalarSchema.optional(),
+  })
+  .strict();
+
+export const StochasticResolveDecisionSchema = z
+  .object({
+    kind: z.literal('stochasticResolve'),
+    decisionKey: StringSchema,
+    value: MoveParamValueSchema,
+  })
+  .strict();
+
+export const OutcomeGrantResolveDecisionSchema = z
+  .object({
+    kind: z.literal('outcomeGrantResolve'),
+    grantId: StringSchema,
+  })
+  .strict();
+
+export const TurnRetirementDecisionSchema = z
+  .object({
+    kind: z.literal('turnRetirement'),
+    retiringTurnId: NumberSchema,
+  })
+  .strict();
+
+export const DecisionSchema = z.union([
+  ActionSelectionDecisionSchema,
+  ChooseOneDecisionSchema,
+  ChooseNStepDecisionSchema,
+  StochasticResolveDecisionSchema,
+  OutcomeGrantResolveDecisionSchema,
+  TurnRetirementDecisionSchema,
+]);
+
+export const CompoundTurnTraceEntrySchema = z
+  .object({
+    seatId: ActiveDeciderSeatIdSchema,
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    frameId: NumberSchema,
+  })
+  .strict();
+
+export const ActionSelectionContextSchema = z
+  .object({
+    kind: z.literal('actionSelection'),
+    seatId: StringSchema,
+    eligibleActions: z.array(StringSchema),
+  })
+  .strict();
+
+export const ChooseOneContextSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    seatId: StringSchema,
+    decisionKey: StringSchema,
+    options: z.array(ChooseOptionSchema),
+  })
+  .strict();
+
+export const ChooseNStepContextSchema = z
+  .object({
+    kind: z.literal('chooseNStep'),
+    seatId: StringSchema,
+    decisionKey: StringSchema,
+    options: z.array(ChooseOptionSchema),
+    selectedSoFar: z.array(MoveParamScalarSchema),
+    cardinality: z.object({ min: NumberSchema, max: NumberSchema }).strict(),
+    stepCommands: z.array(z.union([z.literal('add'), z.literal('remove'), z.literal('confirm')])),
+    templateHint: z.object({
+      normalizedDomain: z.array(MoveParamScalarSchema),
+      prioritizedTierEntries: z.array(
+        z.array(
+          z.object({
+            value: MoveParamScalarSchema,
+            qualifier: z.union([StringSchema, NumberSchema, BooleanSchema]).optional(),
+          }).strict(),
+        ),
+      ).nullable(),
+      qualifierMode: z.union([z.literal('none'), z.literal('byQualifier')]),
+    }).strict().optional(),
+  })
+  .strict();
+
+export const StochasticResolveContextSchema = z
+  .object({
+    kind: z.literal('stochasticResolve'),
+    seatId: z.literal('__chance'),
+    decisionKey: StringSchema,
+    distribution: StochasticDistributionSchema,
+  })
+  .strict();
+
+export const OutcomeGrantResolveContextSchema = z
+  .object({
+    kind: z.literal('outcomeGrantResolve'),
+    seatId: z.literal('__kernel'),
+    grant: z.object({ grantId: StringSchema }).passthrough(),
+  })
+  .strict();
+
+export const TurnRetirementContextSchema = z
+  .object({
+    kind: z.literal('turnRetirement'),
+    seatId: z.literal('__kernel'),
+    retiringTurnId: NumberSchema,
+  })
+  .strict();
+
+export const DecisionContextSchema = z.union([
+  ActionSelectionContextSchema,
+  ChooseOneContextSchema,
+  ChooseNStepContextSchema,
+  StochasticResolveContextSchema,
+  OutcomeGrantResolveContextSchema,
+  TurnRetirementContextSchema,
+]);
+
+export const DecisionStackFrameSchema = z
+  .object({
+    frameId: NumberSchema,
+    parentFrameId: NumberSchema.nullable(),
+    turnId: NumberSchema,
+    context: DecisionContextSchema,
+    accumulatedBindings: z.record(StringSchema, MoveParamValueSchema),
+    effectFrame: EffectExecutionFrameSnapshotSchema,
+  })
+  .strict();
 
 export const CompoundMovePayloadSchema: z.ZodType = z.lazy(() =>
   z
@@ -1388,6 +1597,51 @@ export const TriggerLogEntrySchema = z.union([
   OperationCompoundStagesReplacedTraceEntrySchema,
 ]);
 
+export const ConditionTraceEntrySchema = z
+  .object({
+    kind: z.literal('conditionEval'),
+    seq: IntegerSchema,
+    condition: ConditionASTSchema,
+    result: BooleanSchema,
+    context: z.union([
+      z.literal('actionPre'),
+      z.literal('triggerWhen'),
+      z.literal('triggerMatch'),
+      z.literal('ifBranch'),
+      z.literal('costValidation'),
+      z.literal('playCondition'),
+    ]),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
+export const DecisionTraceEntrySchema = z
+  .object({
+    kind: z.literal('decision'),
+    seq: IntegerSchema,
+    decisionKey: StringSchema,
+    type: z.union([z.literal('chooseOne'), z.literal('chooseN')]),
+    player: IntegerSchema,
+    options: z.array(z.union([NumberSchema, StringSchema, BooleanSchema, z.array(z.union([NumberSchema, StringSchema, BooleanSchema]))])),
+    selected: z.array(z.union([NumberSchema, StringSchema, BooleanSchema])),
+    min: IntegerSchema.optional(),
+    max: IntegerSchema.optional(),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
+export const SelectorTraceEntrySchema = z
+  .object({
+    kind: z.literal('selectorResolution'),
+    seq: IntegerSchema,
+    selectorType: z.union([z.literal('player'), z.literal('zone'), z.literal('token')]),
+    selectorExpr: z.unknown(),
+    candidateCount: IntegerSchema,
+    resolvedIds: z.array(StringSchema),
+    provenance: EffectTraceProvenanceSchema,
+  })
+  .strict();
+
 const AgentDecisionFailureSummarySchema = z
   .object({
     code: StringSchema,
@@ -1441,39 +1695,6 @@ const PolicyCandidateDecisionTraceSchema = z
   })
   .strict();
 
-const PolicyMovePreparationTraceSchema = z
-  .object({
-    actionId: StringSchema,
-    stableMoveKey: StringSchema,
-    initialClassification: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('pending'),
-      z.literal('rejected'),
-    ]),
-    finalClassification: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('rejected'),
-    ]),
-    enteredTrustedMoveIndex: BooleanSchema,
-    skippedAsDuplicate: BooleanSchema.optional(),
-    templateCompletionAttempts: NumberSchema.optional(),
-    templateCompletionOutcome: z.union([
-      z.literal('complete'),
-      z.literal('stochastic'),
-      z.literal('failed'),
-    ]).optional(),
-    rejection: z.union([
-      z.literal('structurallyUnsatisfiable'),
-      z.literal('drawDeadEnd'),
-      z.literal('notViable'),
-      z.literal('notDecisionComplete'),
-    ]).optional(),
-    warnings: z.array(RuntimeWarningSchema).optional(),
-  })
-  .strict();
-
 const PolicyPruningStepTraceSchema = z
   .object({
     ruleId: StringSchema,
@@ -1501,20 +1722,6 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
   })
   .strict();
 
-const PolicyCompletionStatisticsSchema = z
-  .object({
-    totalClassifiedMoves: NumberSchema,
-    completedCount: NumberSchema,
-    stochasticCount: NumberSchema,
-    rejectedNotViable: NumberSchema,
-    templateCompletionAttempts: NumberSchema,
-    templateCompletionSuccesses: NumberSchema,
-    templateCompletionStructuralFailures: NumberSchema,
-    duplicatesRemoved: NumberSchema,
-    completionsByActionId: z.record(StringSchema, NumberSchema).optional(),
-  })
-  .strict();
-
 const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
@@ -1535,55 +1742,100 @@ const PolicySelectionTraceSchema = z
   })
   .strict();
 
-const AgentDecisionTraceSchema = z.union([
-  z
-    .object({
-      kind: z.literal('builtin'),
-      agent: z.object({ kind: z.literal('builtin'), builtinId: z.union([z.literal('random'), z.literal('greedy')]) }).strict(),
-      candidateCount: NumberSchema,
-      selectedIndex: NumberSchema.optional(),
-      selectedStableMoveKey: StringSchema.optional(),
-    })
-    .strict(),
-  z
-    .object({
-      kind: z.literal('policy'),
-      agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
-      seatId: StringSchema.nullable(),
-      requestedProfileId: StringSchema.nullable(),
-      resolvedProfileId: StringSchema.nullable(),
-      profileFingerprint: StringSchema.nullable(),
-      initialCandidateCount: NumberSchema,
-      selectedStableMoveKey: StringSchema.nullable(),
-      phase1Score: NumberSchema.nullable().optional(),
-      phase2Score: NumberSchema.nullable().optional(),
-      phase1ActionRanking: z.array(StringSchema).optional(),
-      finalScore: NumberSchema.nullable(),
-      pruningSteps: z.array(PolicyPruningStepTraceSchema),
-      tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
-      previewUsage: PolicyPreviewUsageTraceSchema,
-      selection: PolicySelectionTraceSchema.optional(),
-      emergencyFallback: BooleanSchema,
-      failure: AgentDecisionFailureSummarySchema.nullable(),
-      stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
-      completionStatistics: PolicyCompletionStatisticsSchema.optional(),
-      movePreparations: z.array(PolicyMovePreparationTraceSchema).optional(),
-      candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
-    })
-    .strict(),
-]);
+const AgentDecisionTraceSchema = z
+  .object({
+    kind: z.literal('policy'),
+    agent: z.object({ kind: z.literal('policy'), profileId: StringSchema.optional() }).strict(),
+    seatId: StringSchema.nullable(),
+    requestedProfileId: StringSchema.nullable(),
+    resolvedProfileId: StringSchema.nullable(),
+    profileFingerprint: StringSchema.nullable(),
+    initialCandidateCount: NumberSchema,
+    selectedStableMoveKey: StringSchema.nullable(),
+    phase1Score: NumberSchema.nullable().optional(),
+    phase2Score: NumberSchema.nullable().optional(),
+    phase1ActionRanking: z.array(StringSchema).optional(),
+    finalScore: NumberSchema.nullable(),
+    pruningSteps: z.array(PolicyPruningStepTraceSchema),
+    tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
+    previewUsage: PolicyPreviewUsageTraceSchema,
+    selection: PolicySelectionTraceSchema.optional(),
+    emergencyFallback: BooleanSchema,
+    failure: AgentDecisionFailureSummarySchema.nullable(),
+    stateFeatures: z.record(z.string(), z.union([NumberSchema, StringSchema, BooleanSchema])).optional(),
+    candidates: z.array(PolicyCandidateDecisionTraceSchema).optional(),
+  })
+  .strict();
 
-export const MoveLogSchema = z
+export const SeatStandingSnapshotSchema = z
+  .object({
+    seat: StringSchema,
+    margin: NumberSchema,
+    perPlayerVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])).optional(),
+    tokenCountOnBoard: NumberSchema.optional(),
+  })
+  .strict();
+
+export const ZoneSummarySchema = z
+  .object({
+    zoneId: StringSchema,
+    zoneVars: z.record(StringSchema, NumberSchema).optional(),
+    tokenCountBySeat: z.record(StringSchema, NumberSchema).optional(),
+  })
+  .strict();
+
+export const DecisionPointSnapshotSchema = z
+  .object({
+    turnCount: NumberSchema,
+    phaseId: StringSchema,
+    activePlayer: IntegerSchema,
+    seatStandings: z.array(SeatStandingSnapshotSchema),
+  })
+  .strict();
+
+export const MicroturnSnapshotSchema = DecisionPointSnapshotSchema.extend({
+  decisionContextKind: z.union([
+    z.literal('actionSelection'),
+    z.literal('chooseOne'),
+    z.literal('chooseNStep'),
+    z.literal('stochasticResolve'),
+    z.literal('outcomeGrantResolve'),
+    z.literal('turnRetirement'),
+  ]),
+  frameId: NumberSchema,
+  turnId: NumberSchema,
+  compoundTurnTrace: z.array(CompoundTurnTraceEntrySchema),
+  globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])).optional(),
+  zoneSummaries: z.array(ZoneSummarySchema).optional(),
+}).strict();
+
+export const DecisionLogSchema = z
   .object({
     stateHash: z.bigint(),
-    player: IntegerSchema,
-    move: MoveSchema,
-    legalMoveCount: NumberSchema,
+    seatId: ActiveDeciderSeatIdSchema,
+    playerId: IntegerSchema.optional(),
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    turnId: NumberSchema,
+    turnRetired: BooleanSchema,
+    legalActionCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    conditionTrace: z.array(ConditionTraceEntrySchema).optional(),
+    decisionTrace: z.array(DecisionTraceEntrySchema).optional(),
+    selectorTrace: z.array(SelectorTraceEntrySchema).optional(),
     agentDecision: AgentDecisionTraceSchema.optional(),
+    snapshot: MicroturnSnapshotSchema.optional(),
   })
   .strict();
 
@@ -1611,11 +1863,22 @@ export const GameTraceSchema = z
   .object({
     gameDefId: StringSchema,
     seed: NumberSchema,
-    moves: z.array(MoveLogSchema),
+    decisions: z.array(DecisionLogSchema),
+    compoundTurns: z.array(z.object({
+      turnId: NumberSchema,
+      seatId: ActiveDeciderSeatIdSchema,
+      decisionIndexRange: z.object({
+        start: NumberSchema,
+        end: NumberSchema,
+      }).strict(),
+      microturnCount: NumberSchema,
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+    }).strict()),
     finalState: GameStateSchema,
     result: TerminalResultSchema.nullable(),
     turnsCount: NumberSchema,
     stopReason: SimulationStopReasonSchema,
+    traceProtocolVersion: z.literal('spec-140'),
   })
   .strict();
 
@@ -1695,20 +1958,40 @@ export const SerializedGameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
+    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    nextFrameId: NumberSchema,
+    nextTurnId: NumberSchema,
+    activeDeciderSeatId: ActiveDeciderSeatIdSchema,
   })
   .strict();
 
-export const SerializedMoveLogSchema = z
+export const SerializedDecisionLogSchema = z
   .object({
     stateHash: HexBigIntSchema,
-    player: IntegerSchema,
-    move: MoveSchema,
-    legalMoveCount: NumberSchema,
+    seatId: ActiveDeciderSeatIdSchema,
+    playerId: IntegerSchema.optional(),
+    decisionContextKind: z.union([
+      z.literal('actionSelection'),
+      z.literal('chooseOne'),
+      z.literal('chooseNStep'),
+      z.literal('stochasticResolve'),
+      z.literal('outcomeGrantResolve'),
+      z.literal('turnRetirement'),
+    ]),
+    decisionKey: StringSchema.nullable(),
+    decision: DecisionSchema,
+    turnId: NumberSchema,
+    turnRetired: BooleanSchema,
+    legalActionCount: NumberSchema,
     deltas: z.array(StateDeltaSchema),
     triggerFirings: z.array(TriggerLogEntrySchema),
     warnings: z.array(RuntimeWarningSchema),
     effectTrace: z.array(EffectTraceEntrySchema).optional(),
+    conditionTrace: z.array(ConditionTraceEntrySchema).optional(),
+    decisionTrace: z.array(DecisionTraceEntrySchema).optional(),
+    selectorTrace: z.array(SelectorTraceEntrySchema).optional(),
     agentDecision: AgentDecisionTraceSchema.optional(),
+    snapshot: MicroturnSnapshotSchema.optional(),
   })
   .strict();
 
@@ -1716,11 +1999,22 @@ export const SerializedGameTraceSchema = z
   .object({
     gameDefId: StringSchema,
     seed: NumberSchema,
-    moves: z.array(SerializedMoveLogSchema),
+    decisions: z.array(SerializedDecisionLogSchema),
+    compoundTurns: z.array(z.object({
+      turnId: NumberSchema,
+      seatId: ActiveDeciderSeatIdSchema,
+      decisionIndexRange: z.object({
+        start: NumberSchema,
+        end: NumberSchema,
+      }).strict(),
+      microturnCount: NumberSchema,
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+    }).strict()),
     finalState: SerializedGameStateSchema,
     result: TerminalResultSchema.nullable(),
     turnsCount: NumberSchema,
     stopReason: SimulationStopReasonSchema,
+    traceProtocolVersion: z.literal('spec-140'),
   })
   .strict();
 

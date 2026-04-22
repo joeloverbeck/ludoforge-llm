@@ -2,10 +2,9 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
-  type Agent,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
@@ -39,8 +38,13 @@ const compileTexasDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-const createRandomAgents = (count: number): readonly Agent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
+const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+
+const createFitlPolicyAgents = (): readonly PolicyAgent[] =>
+  FITL_POLICY_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
+
+const createTexasPolicyAgents = (count: number): readonly PolicyAgent[] =>
+  Array.from({ length: count }, () => new PolicyAgent({ traceLevel: 'summary' }));
 
 const FITL_PLAYER_COUNT = 4;
 const TEXAS_PLAYER_COUNT = 6;
@@ -69,17 +73,19 @@ type RunOutcome = {
 
 /**
  * Run a game and capture either its final hash or its error message.
- * FITL has known rules gaps that cause runtime errors during random play —
- * determinism means the same seed produces the same error, not that every seed succeeds.
  */
 const runOnce = (
   def: ValidatedGameDef,
   seed: number,
+  agentsFactory: () => readonly PolicyAgent[],
   playerCount: number,
 ): RunOutcome => {
   try {
-    const agents = createRandomAgents(playerCount);
-    const trace = runGame(def, seed, agents, MAX_TURNS, playerCount, { skipDeltas: true });
+    const agents = agentsFactory();
+    const trace = runGame(def, seed, agents, MAX_TURNS, playerCount, {
+      skipDeltas: true,
+      traceRetention: 'finalStateOnly',
+    });
     return { kind: 'ok', hash: trace.finalState.stateHash };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : String(err);
@@ -90,13 +96,14 @@ const runOnce = (
 const assertDeterministic = (
   def: ValidatedGameDef,
   seed: number,
+  agentsFactory: () => readonly PolicyAgent[],
   playerCount: number,
   label: string,
 ): void => {
-  const baseline = runOnce(def, seed, playerCount);
+  const baseline = runOnce(def, seed, agentsFactory, playerCount);
 
   for (let replay = 1; replay < REPLAY_COUNT; replay += 1) {
-    const candidate = runOnce(def, seed, playerCount);
+    const candidate = runOnce(def, seed, agentsFactory, playerCount);
     assert.equal(
       baseline.kind,
       candidate.kind,
@@ -129,7 +136,7 @@ describe('draft-state determinism parity', () => {
 
     for (const seed of FITL_SEEDS) {
       it(`seed ${seed}`, () => {
-        assertDeterministic(def, seed, FITL_PLAYER_COUNT, 'FITL');
+        assertDeterministic(def, seed, createFitlPolicyAgents, FITL_PLAYER_COUNT, 'FITL');
       });
     }
   });
@@ -139,7 +146,7 @@ describe('draft-state determinism parity', () => {
 
     for (const seed of TEXAS_SEEDS) {
       it(`seed ${seed}`, () => {
-        assertDeterministic(def, seed, TEXAS_PLAYER_COUNT, 'Texas');
+        assertDeterministic(def, seed, () => createTexasPolicyAgents(TEXAS_PLAYER_COUNT), TEXAS_PLAYER_COUNT, 'Texas');
       });
     }
   });

@@ -523,36 +523,7 @@
         }
       }
     },
-    "candidateFeatures": {
-      "raiseAmount": {
-        "type": "number",
-        "costClass": "candidate",
-        "expr": {
-          "kind": "op",
-          "op": "coalesce",
-          "args": [
-            {
-              "kind": "ref",
-              "ref": {
-                "kind": "candidateParam",
-                "id": "raiseAmount"
-              }
-            },
-            {
-              "kind": "literal",
-              "value": 0
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      }
-    },
+    "candidateFeatures": {},
     "candidateAggregates": {},
     "pruningRules": {},
     "considerations": {
@@ -736,33 +707,6 @@
           "aggregates": [],
           "strategicConditions": []
         }
-      },
-      "preferLargerRaise": {
-        "scopes": [
-          "move"
-        ],
-        "costClass": "candidate",
-        "weight": {
-          "kind": "literal",
-          "value": 0.002
-        },
-        "value": {
-          "kind": "ref",
-          "ref": {
-            "kind": "library",
-            "refKind": "candidateFeature",
-            "id": "raiseAmount"
-          }
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [
-            "raiseAmount"
-          ],
-          "aggregates": [],
-          "strategicConditions": []
-        }
       }
     },
     "tieBreakers": {
@@ -790,8 +734,7 @@
           "preferCall",
           "avoidFold",
           "foldWhenBadPotOdds",
-          "alwaysRaise",
-          "preferLargerRaise"
+          "alwaysRaise"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -812,24 +755,21 @@
           "facingBet",
           "potOddsFavorable"
         ],
-        "candidateFeatures": [
-          "raiseAmount"
-        ],
+        "candidateFeatures": [],
         "candidateAggregates": [],
         "considerations": [
           "preferCheck",
           "preferCall",
           "avoidFold",
           "foldWhenBadPotOdds",
-          "alwaysRaise",
-          "preferLargerRaise"
+          "alwaysRaise"
         ]
       },
-      "fingerprint": "7cd681cf141998631c959fb931562980d76b0e20b2281336c255fe43215cd49d"
+      "fingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "a73e785afa2a6914eab0a6dc3998b28619b0f8c936972620e4c514adf9d2e54e"
+  "catalogFingerprint": "1ca55abd5f035de1c097f11f47a42ac1e216501eb67a544bad7faedd2daabcaa"
 }

@@ -76,18 +76,18 @@ export const deserializeGameState = (state: SerializedGameState): GameState => {
 
 export const serializeTrace = (trace: GameTrace): SerializedGameTrace => ({
   ...trace,
-  moves: trace.moves.map((move) => ({
-    ...move,
-    stateHash: toHexBigInt(move.stateHash),
+  decisions: trace.decisions.map((decision) => ({
+    ...decision,
+    stateHash: toHexBigInt(decision.stateHash),
   })),
   finalState: serializeGameState(trace.finalState),
 });
 
 export const deserializeTrace = (trace: SerializedGameTrace): GameTrace => ({
   ...trace,
-  moves: trace.moves.map((move, index) => ({
-    ...move,
-    stateHash: fromHexBigInt(move.stateHash, `moves[${index}].stateHash`),
+  decisions: trace.decisions.map((decision, index) => ({
+    ...decision,
+    stateHash: fromHexBigInt(decision.stateHash, `decisions[${index}].stateHash`),
   })),
   finalState: deserializeGameState(trace.finalState),
 });

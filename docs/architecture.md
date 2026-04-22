@@ -6,7 +6,7 @@ Engine source modules are under `packages/engine/src/`, with a separate runner p
 |-----------|---------|
 | `packages/engine/src/kernel/` | Pure, deterministic game engine — state init, legal move enumeration, condition eval, effect application, trigger dispatch, terminal detection, spatial queries, derived values |
 | `packages/engine/src/cnl/` | Game Spec parsing (Markdown + YAML blocks, YAML 1.2 strict), validation, macro expansion (including board generation), compilation to GameDef JSON |
-| `packages/engine/src/agents/` | Bot implementations (RandomAgent, GreedyAgent) conforming to a strict `Agent` interface |
+| `packages/engine/src/agents/` | Policy-agent runtime, diagnostics, and factory helpers conforming to a strict `Agent` interface |
 | `packages/engine/src/sim/` | Simulation runner, trace logging, state delta engine |
 | `packages/engine/src/cli/` | Developer commands (stub — not yet implemented) |
 | `packages/engine/schemas/` | JSON Schemas for GameDef, Trace, EvalReport |
@@ -44,26 +44,19 @@ They are not fully isolated stacks. Both flows reuse shared Pixi bootstrapping f
 - **Bounded iteration only**: `forEach` over finite collections, `repeat N` with compile-time bounds, no general recursion, trigger chains capped at depth K
 - **Small instruction set**: mechanics emerge from composition, not bespoke primitives
 
-## Legal Move Admission Contract
+## Microturn Protocol
 
-Legal move enumeration now enforces constructibility as part of legality instead of treating it as a client-side follow-up concern.
+The kernel publishes one atomic decision at a time. `publishMicroturn(def, state)` returns a `MicroturnState` whose legal actions are all directly executable. `applyDecision(def, state, decision)` advances exactly one decision, possibly opening sub-decisions via the decision stack. `advanceAutoresolvable(def, state, rng)` auto-applies chance / grant / turn-retirement microturns until the next player decision.
 
-- **Admission verdicts**: decision-sequence admission distinguishes `satisfiable`, `unsatisfiable`, `unknown`, and `explicitStochastic`.
-- **Published move shapes**:
-  - complete move: fully bound and immediately executable
-  - stochastic move: admitted with a kernel-owned stochastic continuation and no completion certificate
-  - incomplete template: admitted only when paired with a kernel-produced completion certificate
-- **Mixed deterministic-to-stochastic paths**: when a deterministic prefix is required to reach a later stochastic boundary, legal-move publication materializes that prefix first so the public move is the stochastic continuation itself rather than a pre-stochastic template.
-- **Unknown is not public legality**: `unknown` admission states are rejected before publication. Clients never receive an incomplete move that still depends on uncertified search.
-- **Certificate side channel**: `enumerateLegalMoves(...)` returns admitted moves plus a kernel-internal `certificateIndex` keyed by move identity. The engine and simulator consume this side channel, but the runner worker bridge strips it before the structured-clone boundary so it does not become part of the public worker contract.
+Compound human-visible turns are derived post-hoc from the decision sequence by `turnId` grouping. See `GameTrace.compoundTurns[]`.
 
-### Agent Fallback
+The decision stack is the kernel-owned control structure for in-progress microturn chains. Each `DecisionStackFrame` carries the active decision context, accumulated bindings, a turn-scoped frame identifier, and the suspended effect-execution snapshot needed to resume nested choices without reconstructing client-side search state. Parent/child frame links preserve nesting order while keeping the publication surface atomic: clients only ever receive the top-frame microturn.
 
-Agents still attempt their normal bounded retry/completion flow first. If a published incomplete template exhausts its retry budget without producing a completion or stochastic continuation, the agent materializes the precomputed certificate instead of doing new search. Certificate materialization is deterministic and does not advance RNG beyond the already-consumed retry attempts.
+Suspend/resume is explicit. When effect execution reaches a player choice, choose-N step, stochastic branch, or kernel-owned continuation boundary, the kernel snapshots the current effect frame and publishes the next atomic decision context instead of exposing a partially executable compound move. Resuming that frame after `applyDecision(...)` continues the exact bounded effect program with deterministic local bindings and trigger queue state intact.
 
-### Admission Search Shape
+Hidden-information projection remains part of the same protocol rather than a separate legality layer. `publishMicroturn(...)` derives the observation for the active decider at that exact microturn scope, so legal actions, visible state, and agent input stay aligned under one kernel authority. Chance and kernel-owned microturns keep omniscient access internally, while player-facing publication respects seat visibility rules.
 
-The satisfiability classifier performs a bounded DFS over the remaining decision frontier. It records per-invocation memo entries and nogoods so repeated subproblems are short-circuited deterministically. When a satisfiable path is found, the classifier emits the canonical completion certificate for that path; when a stochastic boundary is encountered, it emits the `explicitStochastic` verdict. If a deterministic prefix is needed to reach that boundary, publication materializes the prefix before exposing the move.
+Trace output follows the same granularity. `DecisionLog[]` records one entry per applied microturn, including the decision-context kind, decision payload, turn/frame identifiers, and any trace extras. Analytics-side compound turn summaries are derived later from those atomic logs by `turnId`; they are useful for presentation and reporting, but they are not a second authoritative rules surface.
 
 ## Key Data Flow
 

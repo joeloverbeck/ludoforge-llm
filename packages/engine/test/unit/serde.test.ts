@@ -7,6 +7,8 @@ import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpe
 import { readFixtureJson, readFixtureText } from '../helpers/fixture-reader.js';
 import {
   asActionId,
+  asSeatId,
+  asTurnId,
   asPhaseId,
   asPlayerId,
   deserializeGameState,
@@ -16,6 +18,32 @@ import {
   serializeTrace,
 } from '../../src/kernel/index.js';
 import type { GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
+
+const makeDecisionLog = (
+  turn: number,
+  player: number,
+  actionId: string,
+  legalActionCount: number,
+  deltas: GameTrace['decisions'][number]['deltas'],
+  triggerFirings: GameTrace['decisions'][number]['triggerFirings'] = [],
+): GameTrace['decisions'][number] => ({
+  stateHash: BigInt(turn),
+  seatId: asSeatId(String(player)),
+  playerId: asPlayerId(player),
+  decisionContextKind: 'actionSelection',
+  decisionKey: null,
+  decision: {
+    kind: 'actionSelection',
+    actionId: asActionId(actionId),
+    move: { actionId: asActionId(actionId), params: actionId === 'playCard' ? { amount: 1 } : {} },
+  },
+  turnId: asTurnId(turn),
+  turnRetired: true,
+  legalActionCount,
+  deltas,
+  triggerFirings,
+  warnings: [],
+});
 
 const gameStateFixture: GameState = {
   globalVars: { round: 1 },
@@ -42,29 +70,9 @@ const gameStateFixture: GameState = {
 const traceFixture: GameTrace = {
   gameDefId: 'demo',
   seed: 7,
-  moves: [
-    {
-      stateHash: 0x0001n,
-      player: asPlayerId(0),
-      move: {
-        actionId: asActionId('playCard'),
-        params: { amount: 1 },
-      },
-      legalMoveCount: 3,
-      deltas: [{ path: 'globalVars.round', before: 0, after: 1 }],
-      triggerFirings: [],
-      warnings: [],
-    },
-    {
-      stateHash: 0x00ff00n,
-      player: asPlayerId(1),
-      move: {
-        actionId: asActionId('pass'),
-        params: {},
-      },
-      legalMoveCount: 2,
-      deltas: [],
-      triggerFirings: [
+  decisions: [
+    makeDecisionLog(1, 0, 'playCard', 3, [{ path: 'globalVars.round', before: 0, after: 1 }]),
+    makeDecisionLog(2, 1, 'pass', 2, [], [
         {
           kind: 'turnFlowLifecycle',
           step: 'promoteLookaheadToPlayed',
@@ -72,14 +80,17 @@ const traceFixture: GameTrace = {
           before: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
           after: { playedCardId: 'card-2', lookaheadCardId: 'card-3', leaderCardId: null },
         },
-      ],
-      warnings: [],
-    },
+      ]),
+  ],
+  compoundTurns: [
+    { turnId: asTurnId(1), seatId: asSeatId('0'), decisionIndexRange: { start: 0, end: 1 }, microturnCount: 1, turnStopReason: 'retired' },
+    { turnId: asTurnId(2), seatId: asSeatId('1'), decisionIndexRange: { start: 1, end: 2 }, microturnCount: 1, turnStopReason: 'terminal' },
   ],
   finalState: gameStateFixture,
   result: { type: 'draw' },
   turnsCount: 2,
   stopReason: 'terminal',
+  traceProtocolVersion: 'spec-140',
 };
 
 describe('kernel bigint serialization codecs', () => {
@@ -130,8 +141,8 @@ describe('kernel bigint serialization codecs', () => {
     const deserialized = deserializeTrace(serialized);
 
     assert.deepEqual(
-      deserialized.moves.map((move) => move.stateHash),
-      traceFixture.moves.map((move) => move.stateHash),
+      deserialized.decisions.map((move) => move.stateHash),
+      traceFixture.decisions.map((move) => move.stateHash),
     );
     assert.equal(deserialized.finalState.stateHash, traceFixture.finalState.stateHash);
     assert.deepEqual(deserialized.finalState.rng.state, traceFixture.finalState.rng.state);
@@ -141,12 +152,12 @@ describe('kernel bigint serialization codecs', () => {
 
   it('rejects invalid hex values with deterministic error text', () => {
     const serializedTrace = serializeTrace(traceFixture);
-    const firstMove = serializedTrace.moves.at(0);
+    const firstMove = serializedTrace.decisions.at(0);
     assert.ok(firstMove);
 
     const invalidSerializedTrace: SerializedGameTrace = {
       ...serializedTrace,
-      moves: [
+      decisions: [
         {
           ...firstMove,
           stateHash: '0xFF',
@@ -156,7 +167,7 @@ describe('kernel bigint serialization codecs', () => {
 
     assert.throws(
       () => deserializeTrace(invalidSerializedTrace),
-      /Invalid hex bigint at moves\[0\]\.stateHash: 0xFF/,
+      /Invalid hex bigint at decisions\[0\]\.stateHash: 0xFF/,
     );
   });
 

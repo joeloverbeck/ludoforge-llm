@@ -5,7 +5,7 @@ import {
   type WitnessSearchBudget,
   type WitnessSearchTierContext,
 } from './choose-n-option-resolution.js';
-import type { DecisionSequenceSatisfiability } from './decision-sequence-satisfiability.js';
+import type { DecisionSequenceSatisfiability } from './decision-sequence-analysis.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from './move-enumeration-budgets.js';
 import { optionKey } from './legal-choices.js';
 import type {

@@ -7,6 +7,8 @@ import { assertNoDiagnostics, assertNoErrors } from '../../helpers/diagnostic-he
 import { readFixtureText } from '../../helpers/fixture-reader.js';
 import {
   assertValidatedGameDef,
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
   asActionId,
   asPhaseId,
   nextInt,
@@ -15,19 +17,18 @@ import {
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGames } from '../../../src/sim/index.js';
-import { trustedMove } from '../../helpers/classified-move-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
-const rngDrivenAgent: Agent = {
-  chooseMove(input) {
-    const [index, nextRng] = nextInt(input.rng, 0, input.legalMoves.length - 1);
-    const move = input.legalMoves[index]?.move;
-    if (move === undefined) {
-      throw new Error('rngDrivenAgent requires at least one legal move');
+const rngDrivenAgent = {
+  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+    const [index, nextRng] = nextInt(input.rng, 0, input.microturn.legalActions.length - 1);
+    const decision = input.microturn.legalActions[index];
+    if (decision === undefined) {
+      throw new Error('rngDrivenAgent requires at least one legal action');
     }
-    return { move: trustedMove(move, input.state.stateHash), rng: nextRng };
+    return { decision, rng: nextRng };
   },
-};
+} as Agent;
 
 const createDef = (): ValidatedGameDef =>
   assertValidatedGameDef({

@@ -5,12 +5,15 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStore, type StoreApi } from 'zustand/vanilla';
 import { asPlayerId } from '@ludoforge/engine/runtime';
+import type { DecisionKey } from '@ludoforge/engine/runtime';
 
 import type { GameBridge } from '../../src/bridge/game-bridge.js';
 import { VisualConfigProvider } from '../../src/config/visual-config-provider.js';
 import type { GameStore } from '../../src/store/game-store.js';
 import { GameContainer } from '../../src/ui/GameContainer.js';
 import { makeRenderModelFixture as makeRenderModel } from './helpers/render-model-fixture.js';
+
+const asDecisionKey = (value: string): DecisionKey => value as DecisionKey;
 
 const testDoubles = vi.hoisted(() => ({
   actionTooltipState: {
@@ -448,7 +451,7 @@ describe('GameContainer chrome state', () => {
       {
         name: 'transition out of actions',
         nextRenderModel: makeActionRenderModel({
-          choiceUi: { kind: 'confirmReady' },
+          choiceUi: { kind: 'discreteOne', decisionKey: asDecisionKey('next'), options: [] },
         }),
       },
     ] as const;

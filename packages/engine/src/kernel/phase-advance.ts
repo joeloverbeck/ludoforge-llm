@@ -313,7 +313,7 @@ const assignRunningHash = (
 const snapshotForHash = (state: GameState, tracker: DraftTracker | undefined): GameState =>
   tracker === undefined ? state : { ...state };
 
-const resolveCardDrivenCoupContext = (
+export const resolveCardDrivenCoupContext = (
   def: GameDef,
   state: GameState,
 ): {

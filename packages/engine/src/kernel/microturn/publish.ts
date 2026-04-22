@@ -478,7 +478,34 @@ export const toChooseNStepDecisions = (
       // terminal confirm step must additionally prove that the resulting move
       // continuation remains bridgeable as a supported action move.
       if (!advanced.done) {
-        return true;
+        const nextSelectedKeys = new Set(
+          advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
+        );
+        const hasRemainingAdd = advanced.nextContext.options.some((option) =>
+          option.legality !== 'illegal'
+          && !Array.isArray(option.value)
+          && !nextSelectedKeys.has(JSON.stringify([typeof option.value, option.value])),
+        );
+        if (hasRemainingAdd) {
+          return true;
+        }
+        if (!advanced.nextContext.stepCommands.includes('confirm')) {
+          return false;
+        }
+        const candidateMove: Move = {
+          ...baseMove,
+          params: {
+            ...baseMove.params,
+            [context.decisionKey]: advanced.nextContext.selectedSoFar,
+          },
+        };
+        return isSupportedFrameContinuationMove(
+          def,
+          state,
+          effectFrame,
+          candidateMove,
+          runtime,
+        );
       }
 
       const candidateMove: Move = {

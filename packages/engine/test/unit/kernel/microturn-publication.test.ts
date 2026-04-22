@@ -154,9 +154,9 @@ describe('microturn publication', () => {
     assert.equal(afterChoice.log.turnRetired, true);
   });
 
-  it('publishes executable intermediate chooseNStep add decisions for exact-cardinality selections', () => {
+  it('auto-completes exact-cardinality chooseN selections when the final set is uniquely determined', () => {
     const action: ActionDef = {
-      id: asActionId('choose-three'),
+      id: asActionId('choose-all'),
       actor: 'active',
       executor: 'actor',
       phase: [asPhaseId('main')],
@@ -165,6 +165,74 @@ describe('microturn publication', () => {
       cost: [],
       effects: [
         chooseNExactEffect('$targets', ['A', 'B', 'C'], 3),
+        eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } }),
+      ],
+      limits: [],
+    };
+    const def = makeBaseDef([action]);
+    const runtime = createGameDefRuntime(def);
+    let state = makeBaseState(def);
+
+    const actionSelection = publishMicroturn(def, state, runtime);
+    state = applyDecision(def, state, actionSelection.legalActions[0]!, undefined, runtime).state;
+
+    assert.equal(state.globalVars.resources, 1);
+    assert.equal(state.turnCount, 0);
+    assert.deepEqual(state.decisionStack, []);
+  });
+
+  it('preserves auto-completed exact-cardinality bindings when later pending decisions still remain', () => {
+    const action: ActionDef = {
+      id: asActionId('forced-then-followup'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        chooseNExactEffect('$targets', ['A'], 1),
+        chooseOneEffect('$followup', ['done']),
+        eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } }),
+      ],
+      limits: [],
+    };
+    const def = makeBaseDef([action]);
+    const runtime = createGameDefRuntime(def);
+    let state = makeBaseState(def);
+
+    const actionSelection = publishMicroturn(def, state, runtime);
+    state = applyDecision(def, state, actionSelection.legalActions[0]!, undefined, runtime).state;
+
+    const followup = publishMicroturn(def, state, runtime);
+    assert.equal(followup.kind, 'chooseOne');
+    const accumulatedBindings = state.decisionStack?.[0]?.accumulatedBindings as Readonly<Record<string, unknown>> | undefined;
+    assert.ok(
+      Object.keys(accumulatedBindings ?? {}).some((key) => key.includes('$targets')),
+      'expected carried root bindings to retain the auto-completed decision key',
+    );
+
+    const done = followup.legalActions.find(
+      (entry) => entry.kind === 'chooseOne' && entry.value === 'done',
+    );
+    assert.ok(done);
+    state = applyDecision(def, state, done, undefined, runtime).state;
+
+    assert.equal(state.globalVars.resources, 1);
+    assert.deepEqual(state.decisionStack, []);
+  });
+
+  it('publishes executable intermediate chooseNStep add decisions when exact-cardinality selection still has real choice', () => {
+    const action: ActionDef = {
+      id: asActionId('choose-two-of-three'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [
+        chooseNExactEffect('$targets', ['A', 'B', 'C'], 2),
         eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } }),
       ],
       limits: [],
@@ -214,21 +282,8 @@ describe('microturn publication', () => {
     assert.equal(chooseN.kind, 'chooseNStep');
     assert.equal(
       chooseN.legalActions.filter((entry) => entry.kind === 'chooseNStep' && entry.command === 'add').length,
-      1,
+      0,
     );
-    assert.equal(
-      chooseN.legalActions.some((entry) => entry.kind === 'chooseNStep' && entry.command === 'confirm'),
-      false,
-    );
-
-    const addC = chooseN.legalActions.find(
-      (entry) => entry.kind === 'chooseNStep' && entry.command === 'add' && entry.value === 'C',
-    );
-    assert.ok(addC);
-    state = applyDecision(def, state, addC, undefined, runtime).state;
-
-    chooseN = publishMicroturn(def, state, runtime);
-    assert.equal(chooseN.kind, 'chooseNStep');
     assert.equal(
       chooseN.legalActions.some((entry) => entry.kind === 'chooseNStep' && entry.command === 'confirm'),
       true,

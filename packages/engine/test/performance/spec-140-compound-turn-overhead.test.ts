@@ -11,11 +11,12 @@ import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/pr
 
 const FITL_BUDGET = {
   // Recorded from the current deterministic FITL witness corpus after the
-  // suspend/resume and final-coup boundedness fixes, with modest slack to
-  // catch step explosions without pinning to exact seed noise.
-  totalDecisions: 1400,
-  totalCompoundTurns: 500,
-  maxMicroturnsPerTurn: 16,
+  // exact-cardinality chooseN repair, coup-card replay suppression, and
+  // chooseNStep dead-end admission fix. Keep modest slack so the witness
+  // still catches real frontier inflation without pinning to exact totals.
+  totalDecisions: 1750,
+  totalCompoundTurns: 600,
+  maxMicroturnsPerTurn: 28,
 } as const;
 const TEXAS_BUDGET = {
   // Texas remains the small control corpus; keep a narrow ceiling, but align

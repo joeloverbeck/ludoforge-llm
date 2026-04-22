@@ -32,7 +32,7 @@ import { resolveFreeOperationGrantSeatToken } from './free-operation-seat-resolu
 import { buildMoveRuntimeBindings } from './move-runtime-bindings.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
-import { applyCoupPhaseEntryReset } from './phase-advance.js';
+import { applyCoupPhaseEntryReset, resolveCardDrivenCoupContext } from './phase-advance.js';
 import { resolveTurnFlowActionClass } from './turn-flow-action-class.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import {
@@ -1024,6 +1024,7 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const before = runtime.currentCard;
   const acted = new Set(before.actedSeats);
+  const moveClass = resolveTurnFlowActionClass(def, move);
   if (!inCoupPhase || isPassAction(def, move)) {
     acted.add(activeSeat);
   }
@@ -1050,7 +1051,6 @@ export const applyTurnFlowEligibilityAfterMove = (
     nonPassCount += 1;
   }
 
-  const moveClass = resolveTurnFlowActionClass(def, move);
   const firstActionClass =
     before.firstActionClass ??
     (before.nonPassCount === 0 && moveClass !== 'pass' ? normalizeFirstActionClass(moveClass) : null);
@@ -1091,6 +1091,7 @@ export const applyTurnFlowEligibilityAfterMove = (
   const immediateCoupEntryPhase: GameState['currentPhase'] | undefined =
     !inCoupPhase
     && isPlayedCardCoup(def, rewardState)
+    && (resolveCardDrivenCoupContext(def, rewardState)?.coupActive ?? false)
     && moveClass === 'event'
       ? def.turnOrder?.type === 'cardDriven'
         ? def.turnOrder.config.coupPlan?.phases[0]?.id as GameState['currentPhase'] | undefined

@@ -227,6 +227,19 @@ const withAccumulatedBinding = (
   };
 };
 
+const withAccumulatedBindingsFromMove = (
+  frame: DecisionStackFrame,
+  move: Move,
+): DecisionStackFrame => ({
+  ...frame,
+  accumulatedBindings: {
+    ...frame.accumulatedBindings,
+    ...Object.fromEntries(
+      Object.entries(move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
+    ),
+  },
+});
+
 const entryForDecision = (
   microturn: ReturnType<typeof publishMicroturn>,
   decision: Decision,
@@ -277,7 +290,10 @@ const spawnPendingFrame = (
   if (rootFrame === undefined) {
     throw new Error('MICROTURN_ROOT_FRAME_MISSING');
   }
-  const updatedRoot = appendTraceEntry(rootFrame, entryForDecision(microturn, decision));
+  const updatedRoot = withAccumulatedBindingsFromMove(
+    appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
+    continuation.move,
+  );
   const frameId = canonicalState.nextFrameId ?? asDecisionFrameId(0);
   const nextFrame: DecisionStackFrame = continuation.stochasticDecision !== undefined
     ? {
@@ -401,7 +417,9 @@ export const applyPublishedDecision = (
       parentFrameId: null,
       turnId,
       context: microturn.decisionContext,
-      accumulatedBindings: {},
+      accumulatedBindings: Object.fromEntries(
+        Object.entries(continuation.move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
+      ),
       effectFrame: {
         ...emptyEffectFrame(),
         decisionHistory: [rootEntry],

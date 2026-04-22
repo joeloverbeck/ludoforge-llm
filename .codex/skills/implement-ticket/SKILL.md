@@ -83,6 +83,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
      1. compare the failing witness against nearby control cases or previously stable exemplars in the same harness
      2. check whether the owned implementation actually changed the measured hot path or only invalidated an old stored baseline
      3. rebaseline only when the evidence shows the harness expectations are stale while the live runtime contract remains correct
+     4. once the previously failing witness now terminates honestly, classify the remaining gap explicitly as either `correctness/pathology still unresolved` or `budget now stale after the fix`; only rebaseline in the second case
    - Record that classification explicitly in working notes and the active ticket correction ledger so rebasing does not look like silently relaxing a performance guard.
 
 ### Phase 1: Read and Understand

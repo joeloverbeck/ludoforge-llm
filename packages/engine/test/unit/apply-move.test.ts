@@ -2174,6 +2174,140 @@ phase: [asPhaseId('main')],
     assert.equal(eligibilityEntries.length, 0, 'no eligibility trace entries for free operations');
   });
 
+  it('does not re-enter coup phases when a coup card is already at the max consecutive-round limit', () => {
+    const def: GameDef = asTaggedGameDef({
+      metadata: { id: 'suppressed-coup-event-reentry', players: { min: 2, max: 2 } },
+      seats: [{ id: '0' }, { id: '1' }],
+      constants: {},
+      globalVars: [],
+      perPlayerVars: [],
+      zones: [
+        { id: 'played:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'lookahead:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+        { id: 'leader:none', owner: 'none', visibility: 'public', ordering: 'stack' },
+      ],
+      tokenTypes: [],
+      setup: [],
+      turnStructure: {
+        phases: [{ id: asPhaseId('main') }, { id: asPhaseId('coupVictory') }],
+      },
+      turnOrder: {
+        type: 'cardDriven',
+        config: {
+          turnFlow: {
+            cardLifecycle: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+            eligibility: { seats: ['0', '1'] },
+            windows: [],
+            actionClassByActionId: { event: 'event', pass: 'pass' },
+            optionMatrix: [],
+            passRewards: [],
+            durationWindows: ['turn', 'nextTurn', 'round', 'cycle'],
+          },
+          coupPlan: {
+            phases: [{ id: asPhaseId('coupVictory') }],
+            maxConsecutiveRounds: 1,
+          },
+        },
+      },
+      eventDecks: [
+        {
+          id: 'deck',
+          drawZone: 'lookahead:none',
+          discardZone: 'played:none',
+          cards: [
+            {
+              id: 'card-coup',
+              sideMode: 'single',
+              order: 1,
+              tags: ['coup'],
+              unshaded: { text: 'No-op coup event', effects: [] },
+            },
+          ],
+        },
+      ],
+      actions: [
+        {
+          id: asActionId('event'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+          capabilities: ['cardEvent'],
+        },
+        {
+          id: asActionId('pass'),
+          actor: 'active',
+          executor: 'actor',
+          phase: [asPhaseId('main')],
+          params: [],
+          pre: null,
+          cost: [],
+          effects: [],
+          limits: [],
+        },
+      ],
+      triggers: [],
+      terminal: { conditions: [] },
+    });
+
+    const state: GameState = {
+      globalVars: {},
+      perPlayerVars: {},
+      zoneVars: {},
+      playerCount: 2,
+      zones: {
+        'played:none': [{ id: asTokenId('tok-card-coup'), type: 'eventCard', props: { cardId: 'card-coup', isCoup: true, eventDeckId: 'deck' } }],
+        'lookahead:none': [],
+        'leader:none': [],
+      },
+      nextTokenOrdinal: 0,
+      currentPhase: asPhaseId('main'),
+      activePlayer: asPlayerId(0),
+      turnCount: 1,
+      rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0n, 1n] },
+      stateHash: 0n,
+      _runningHash: 0n,
+      actionUsage: {},
+      turnOrderState: {
+        type: 'cardDriven',
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          consecutiveCoupRounds: 1,
+        },
+      },
+      markers: {},
+      reveals: undefined,
+      globalMarkers: undefined,
+      activeLastingEffects: undefined,
+      interruptPhaseStack: undefined,
+    };
+
+    const result = applyMove(def, state, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-coup', eventDeckId: 'deck', side: 'unshaded' },
+    });
+    const runtime = requireCardDrivenRuntime(result.state);
+
+    assert.equal(result.state.currentPhase, asPhaseId('main'));
+    assert.deepEqual(runtime.currentCard.actedSeats, ['0']);
+    assert.equal(runtime.currentCard.firstEligible, '1');
+    assert.equal(runtime.currentCard.secondEligible, null);
+    assert.equal(runtime.consecutiveCoupRounds, 1);
+  });
+
   it('consumes exactly one matching grant instance per free operation use', () => {
     const def: GameDef = asTaggedGameDef({
       metadata: { id: 'free-op-consume-single-grant', players: { min: 4, max: 4 } },

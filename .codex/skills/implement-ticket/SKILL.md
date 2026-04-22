@@ -114,6 +114,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 7. Verify every referenced artifact against the live codebase with targeted reads and `rg`. Load `references/triage-and-resolution.md` (Artifact Verification Checklist section) for what to validate — file existence, exports/signatures, callsite ownership, claimed dead fallbacks, widened compilation families, and auto-synthesized outputs.
 8. Build a discrepancy list and classify each item per `references/triage-and-resolution.md` (Stale-vs-Blocking Triage). When legality/admissibility and sampled completion surfaces disagree, follow the Legality/Admissibility Contradiction Playbook in that reference before widening retries, adding fallbacks, or rewriting the boundary.
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
+   - When a broad acceptance lane fails or stalls inside a corpus that repo doctrine already classifies as advisory, non-blocking, or separately owned (for example via `docs/FOUNDATIONS.md`, lane-taxonomy tests, or CI workflow intent), verify that ownership before treating the surfaced file as a production-fix or harness-fix requirement. If the repo doctrine says the corpus should not block the owned ticket, prefer a truthful proof-boundary correction over repairing the advisory witness just to preserve the stale lane shape.
    - When an upstream result can be reclassified downstream (for example `completed` becoming a rejected or dead-end candidate later in the pipeline), verify that the ticket-owned diagnostic payload or invariant survives that handoff before changing retry policy, adding fallbacks, or rewriting the ticket boundary. Do not assume the first result surface is the only place the owned invariant must remain observable.
    - For investigation tickets that specify *how* to measure something, explicitly check whether the ticket's proposed probe method exercises the same live semantic seam as the subsystem being characterized. If the requested method and the live kernel/runner/agent seam differ, stop and reconcile that before generating durable evidence artifacts.
    - Explicitly check that each ticket/spec-required key input, identifier, or artifact is actually owned by the module boundary you are about to change. If a requirement depends on data that this seam does not legitimately receive or control, stop for 1-3-1 before coding rather than widening the API or silently weakening the requirement ad hoc.
@@ -238,6 +239,8 @@ When a standalone acceptance command starts cleanly but does not return a final 
 
 In this repo, when the ticket names `pnpm -F @ludoforge/engine test`, inspect `packages/engine/scripts/run-tests.mjs` or the active lane manifest early enough to see whether the default lane tails into `policy-profile-quality` witnesses. If the owned ticket is not itself about policy-profile quality and the run later narrows to a long single-file convergence witness with only heartbeat progress, preserve that evidence explicitly in the ticket outcome instead of assuming the broad lane will soon return.
 
+If that same inspection or direct witness repro shows the surfaced corpus is architecturally non-blocking or separately owned, do not keep treating it as mandatory blocking acceptance proof just because the current broad lane still includes it. Correct the lane ownership or ticket proof story first, then rerun proof against the truthful boundary.
+
 For long-running package lanes that already printed `ok` lines for the ticket-owned retained regressions and later files, do one explicit progress triage before waiting indefinitely:
 
 1. identify the last printed passing file and whether the runner is now only emitting repeated quiet-progress notices
@@ -290,6 +293,12 @@ If a ticket originally owned a specific noisy tail inside that broad lane and li
 1. record that shift explicitly in the active ticket outcome rather than continuing to describe the original owned tail as unresolved
 2. keep the owned ticket `COMPLETED` only when the corrected slice is covered by direct focused witnesses or another deterministic owned proof
 3. describe the remaining broad-lane non-final state by its new live location or witness class so the next follow-up, if any, starts from the truthful boundary
+
+Compact closeout pattern for this case:
+
+- `ticket corrections applied`: `<old blocking surface> -> <truthful owned boundary>`
+- `subsumed proof`: `<named broad lane> -> owned witness proof plus explicit note that later quiet-progress moved to <new file or witness class>`
+- `proof gaps`: `<new non-final tail outside owned scope>` or `none` if a different ticket already owns it
 
 For long tickets whose final proof requires multiple expensive lanes after ticket-artifact rewrites, choose the final-proof choreography explicitly instead of rerunning ad hoc:
 

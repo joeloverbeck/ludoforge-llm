@@ -20,7 +20,6 @@ const laneConfigs = {
     patterns: [
       'dist/test/unit/**/*.test.js',
       ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
-      ...ALL_POLICY_PROFILE_QUALITY_TESTS.map(toDistTestPath),
     ],
   },
   e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },

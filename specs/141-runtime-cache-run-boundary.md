@@ -3,9 +3,9 @@
 **Status**: Draft  
 **Priority**: P1  
 **Complexity**: M  
-**Dependencies**: Spec 03, Spec 78, Spec 80, Spec 140  
+**Dependencies**: Spec 03 [deterministic-primitives] (archived), Spec 78 [draft-state-for-effect-execution] (archived), Spec 80 [incremental-zobrist-hashing] (archived), Spec 140 [microturn-native-decision-protocol] (archived)  
 **Estimated effort**: 2-4 days  
-**Source**: `tickets/FITLDETBOUND-001.md`, `archive/tickets/MICROPERFBOUND-001.md`, post-Spec-140 boundedness investigation on 2026-04-21 and repeated-run boundedness follow-through on 2026-04-22
+**Source**: `archive/tickets/FITLDETBOUND-001.md`, `archive/tickets/MICROPERFBOUND-001.md`, post-Spec-140 boundedness investigation on 2026-04-21 and repeated-run boundedness follow-through on 2026-04-22
 
 ## Overview
 
@@ -98,7 +98,7 @@ The default safe contract is:
 This applies to:
 
 - `runGame(...)`
-- determinism/property helper loops
+- determinism/property helper loops (the current concrete instance is `runVerifiedGame` in `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts`, which advances turns by calling `publishMicroturn` + `applyPublishedDecision` directly)
 - future replay/profiling helpers that simulate many turns or full games
 - repeated-run focused witnesses that reuse compiled runtime structure while probing boundedness, publication, or turn-flow behavior
 
@@ -124,12 +124,13 @@ Each runtime cache must define:
 
 Examples:
 
-- Zobrist key memoization is `runLocal` unless a stronger proof establishes a bounded structural key universe.
-- compiled metadata lookup tables are `sharedStructural`.
+- Zobrist key memoization (`zobristTable.keyCache`) is `runLocal` unless a stronger proof establishes a bounded structural key universe. This is the only runtime member currently reset by `forkGameDefRuntimeForRun(...)`.
+- Compiled metadata lookup tables (`adjacencyGraph`, `runtimeTableIndex`, `alwaysCompleteActionIds`, `firstDecisionDomains`, `compiledLifecycleEffects`) are `sharedStructural`.
+- `ruleCardCache` is a worked example of the "bounded structural key universe" path: its keys `(actionId, eventCard.id)` are compile-time finite under a given GameDef, and its values are pure functions of the GameDef. The audit must either formalize that proof and classify it `sharedStructural`, or reclassify it `runLocal` and extend `forkGameDefRuntimeForRun(...)` to reset it. Either outcome is acceptable; leaving it implicitly mutable is not.
 
 ### 5. Determinism helpers cannot bypass the boundary
 
-Helpers that avoid `runGame(...)` for performance reasons must still honor the same run-local runtime policy. A direct helper loop is not allowed to silently weaken the runtime-boundary contract.
+Helpers that avoid `runGame(...)` for performance reasons must still honor the same run-local runtime policy. A direct helper loop is not allowed to silently weaken the runtime-boundary contract. `runVerifiedGame` is the current canonical example: it bypasses `runGame(...)` for Zobrist-incremental property coverage and today honors the fork contract by calling `forkGameDefRuntimeForRun(runtime)` at the run boundary. The contract must remain explicit so future helpers inherit the same discipline by rule, not by imitation.
 
 ### 6. Entry-point equivalence is part of the boundary
 
@@ -153,15 +154,15 @@ The contract is not “shared runtime plus helper-specific shortcuts happen to b
 
 ### API surface
 
-- Audit all run-like helpers and simulation entry points for runtime-boundary compliance.
+- Audit all run-like helpers and simulation entry points for runtime-boundary compliance. The concrete audit target in the codebase today is `runVerifiedGame` in `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts`; any new helper added in the same class must inherit the same contract.
 - Normalize them onto one safe contract for shared runtime inputs.
 - Audit helper-local mutable state that can survive across repeated runs or change which authoritative path is exercised.
 
 ### Verification
 
-- Add focused unit tests proving that repeated runs with one shared runtime do not accumulate run-local cache state.
+- Extend the existing baseline (`packages/engine/test/unit/sim/simulator.test.ts::'treats shared runtime zobrist caches as per-run state'`) into per-member classification assertions for every mutable runtime member, proving that repeated runs with one shared runtime do not accumulate run-local cache state beyond the declared ownership class. The current test covers `zobristTable.keyCache` only; the classification audit defines the remaining assertions.
 - Add determinism/property witnesses proving that forked runtime use yields the same observable results as fresh runtime creation.
-- Add regression coverage for at least one custom helper path that does not call `runGame(...)`.
+- Add regression coverage for at least one custom helper path that does not call `runGame(...)` — `runVerifiedGame` is the current instance.
 - Add at least one repeated-run witness that compares a focused helper path against the canonical run path on the same corpus and asserts equivalent stop-surface behavior, not just “no cache growth.”
 
 ## Acceptance Criteria
@@ -185,3 +186,12 @@ The contract is not “shared runtime plus helper-specific shortcuts happen to b
 - Runtime member ownership audit and annotation sweep
 - Shared-runtime API contract cleanup across simulator and helper surfaces
 - Optional cache-specific hardening where a `runLocal` cache still needs tighter internal bounds
+
+## Tickets
+
+Decomposed on 2026-04-22:
+
+- `tickets/141RUNCACHE-001.md` — Runtime member ownership classification and per-member cache tests
+- `tickets/141RUNCACHE-002.md` — Run-like helper API surface audit and contract normalization
+- `tickets/141RUNCACHE-003.md` — Forked-vs-fresh runtime parity witness
+- `tickets/141RUNCACHE-004.md` — Helper path vs canonical run path equivalence witness

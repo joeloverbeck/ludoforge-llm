@@ -58,6 +58,28 @@ Hidden-information projection remains part of the same protocol rather than a se
 
 Trace output follows the same granularity. `DecisionLog[]` records one entry per applied microturn, including the decision-context kind, decision payload, turn/frame identifiers, and any trace extras. Analytics-side compound turn summaries are derived later from those atomic logs by `turnId`; they are useful for presentation and reporting, but they are not a second authoritative rules surface.
 
+## Runtime Ownership
+
+`GameDefRuntime` mixes two ownership classes:
+
+- `sharedStructural`: runtime artifacts that are pure functions of the compiled `GameDef` and may be reused across arbitrarily many runs
+- `runLocal`: mutable memo state that must start clean for each run
+
+The current runtime contract is:
+
+| Member | Ownership | Notes |
+|---|---|---|
+| `adjacencyGraph` | `sharedStructural` | Pure function of `def.zones` |
+| `runtimeTableIndex` | `sharedStructural` | Pure function of `def` |
+| `zobristTable.seed` / `fingerprint` / `seedHex` / `sortedKeys` | `sharedStructural` | Structural Zobrist metadata |
+| `zobristTable.keyCache` | `runLocal` | Lazy memo table reset at each run boundary |
+| `alwaysCompleteActionIds` | `sharedStructural` | Compiled once from `def` |
+| `firstDecisionDomains` | `sharedStructural` | Compiled once from `def` |
+| `ruleCardCache` | `sharedStructural` | Lazily populated, but keyed only by bounded structural inputs under one compiled `GameDef` |
+| `compiledLifecycleEffects` | `sharedStructural` | Compiled once from `def` |
+
+`forkGameDefRuntimeForRun(...)` is the run-boundary guard. It preserves every `sharedStructural` reference and resets only `zobristTable.keyCache`. Callers may safely reuse a compiled runtime across many runs only through that ownership contract.
+
 ## Key Data Flow
 
 ```

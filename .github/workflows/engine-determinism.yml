@@ -58,7 +58,6 @@ jobs:
             shard_label: regression witnesses
             test_paths: |
               dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js
-              dist/test/policy-profile-quality/fitl-seed-stability.test.js
           - shard_id: arvn-evolved-seed-1000
             shard_label: arvn evolved seed 1000
             test_paths: |
@@ -80,7 +79,7 @@ jobs:
           POLICY_PROFILE_QUALITY_TEST_PATHS: ${{ matrix.test_paths }}
         run: |
           mapfile -t test_paths <<< "$POLICY_PROFILE_QUALITY_TEST_PATHS"
-          node scripts/run-tests.mjs "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
+          node scripts/run-tests.mjs --lane policy-profile-quality "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
       - name: Upload shard policy-profile-quality log
         if: always()
         uses: actions/upload-artifact@v4
@@ -89,6 +88,37 @@ jobs:
           path: |
             policy-profile-quality-${{ matrix.shard_id }}.log
             policy-profile-quality-report-${{ matrix.shard_id }}.ndjson
+          retention-days: 7
+
+  policy-profile-quality-long-tail:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - name: Run policy-profile-quality long-tail witness
+        working-directory: packages/engine
+        env:
+          ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report-long-tail.ndjson
+        run: |
+          node scripts/run-tests.mjs --lane policy-profile-quality dist/test/policy-profile-quality/fitl-seed-stability.test.js \
+            2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-long-tail.log"
+      - name: Upload long-tail policy-profile-quality log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: policy-profile-quality-shard-long-tail
+          path: |
+            policy-profile-quality-long-tail.log
+            policy-profile-quality-report-long-tail.ndjson
           retention-days: 7
 
   policy-profile-quality-report:

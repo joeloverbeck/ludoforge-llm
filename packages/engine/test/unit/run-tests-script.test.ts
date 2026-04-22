@@ -76,6 +76,20 @@ describe('run-tests script', () => {
     assert.equal(plan.patterns.every((pattern) => pattern.startsWith('dist/test/policy-profile-quality/')), true);
   });
 
+  it('preserves an explicit lane when running a focused path subset', async () => {
+    const { buildExecutionPlan } = await loadRunTestsModule();
+
+    const plan = buildExecutionPlan([
+      '--lane',
+      'policy-profile-quality',
+      'dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js',
+    ]);
+
+    assert.equal(plan.lane, 'policy-profile-quality');
+    assert.equal(plan.execution, 'batched');
+    assert.deepEqual(plan.patterns, ['dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js']);
+  });
+
   it('runs batched lanes with the test-class reporter attached', async () => {
     const { runExecutionPlan } = await loadRunTestsModule();
     const spawnCalls: Array<{

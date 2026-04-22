@@ -656,20 +656,8 @@ test('preserves outer pipeline tails when a resumed chooseOne leads to a nested 
   const actionSelection = publishMicroturn(def, state, runtime);
   state = applyDecision(def, state, actionSelection.legalActions[0]!, undefined, runtime).state;
 
-  let chooseTargetSpace = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
-  const addKontum = requireDecision(
-    chooseTargetSpace,
-    (decision) => decision.kind === 'chooseNStep' && decision.command === 'add' && decision.value === 'kontum',
-  );
-  state = applyDecision(def, state, addKontum, undefined, runtime).state;
-  chooseTargetSpace = requireChooseNStepMicroturn(publishMicroturn(def, state, runtime));
-  const confirmTargetSpace = requireDecision(
-    chooseTargetSpace,
-    (decision) => decision.kind === 'chooseNStep' && decision.command === 'confirm',
-  );
-  state = applyDecision(def, state, confirmTargetSpace, undefined, runtime).state;
-
   const chooseMode = publishMicroturn(def, state, runtime);
+  assert.equal(chooseMode.kind, 'chooseOne');
   const chooseRangers = requireDecision(
     chooseMode,
     (decision) => decision.kind === 'chooseOne' && decision.value === 'rangers',

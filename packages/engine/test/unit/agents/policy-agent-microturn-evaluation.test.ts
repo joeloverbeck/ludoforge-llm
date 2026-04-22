@@ -95,20 +95,53 @@ const createExactChooseNDef = (): GameDef => assertValidatedGameDef({
       params: [],
       pre: null,
       cost: [],
-      effects: [
-        eff({
-          chooseN: {
-            internalDecisionId: 'decision:$targets',
-            bind: '$targets',
-            options: { query: 'enums', values: ['A', 'B', 'C'] },
-            n: 3,
-          },
-        }),
-        eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
-      ],
+      effects: [],
       limits: [],
     },
   ] satisfies ActionDef[],
+  actionPipelines: [{
+    id: 'choose-three-profile',
+    actionId: asActionId('choose-three'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [
+      {
+        effects: [
+          eff({
+            chooseOne: {
+              internalDecisionId: 'decision:$mode',
+              bind: '$mode',
+              options: { query: 'enums', values: ['full', 'skip'] },
+            },
+          }) as ActionPipelineDef['stages'][number]['effects'][number],
+        ],
+      },
+      {
+        effects: [
+          eff({
+            if: {
+              when: { op: '==', left: { _t: 2 as const, ref: 'binding', name: '$mode' }, right: 'full' },
+              then: [
+                eff({
+                  chooseN: {
+                    internalDecisionId: 'decision:$targets',
+                    bind: '$targets',
+                    options: { query: 'enums', values: ['A', 'B', 'C'] },
+                    n: 3,
+                  },
+                }),
+                eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
+              ],
+              else: [],
+            },
+          }) as ActionPipelineDef['stages'][number]['effects'][number],
+        ],
+      },
+    ],
+    atomicity: 'partial',
+  }],
   triggers: [],
   terminal: { conditions: [] },
 });
@@ -139,6 +172,13 @@ describe('policy agent microturn evaluation', () => {
     const actionSelection = publishMicroturn(def, state);
     const selected = agent.chooseDecision({ def, state, microturn: actionSelection, rng: createRng(17n) });
     state = applyDecision(def, state, selected.decision, undefined).state;
+
+    let chooseMode = publishMicroturn(def, state);
+    assert.equal(chooseMode.kind, 'chooseOne');
+    let modeDecision = agent.chooseDecision({ def, state, microturn: chooseMode, rng: createRng(18n) });
+    assert.equal(modeDecision.decision.kind, 'chooseOne');
+    assert.equal(modeDecision.decision.value, 'full');
+    state = applyDecision(def, state, modeDecision.decision, undefined).state;
 
     let chooseN = publishMicroturn(def, state);
     let step = agent.chooseDecision({ def, state, microturn: chooseN, rng: createRng(19n) });

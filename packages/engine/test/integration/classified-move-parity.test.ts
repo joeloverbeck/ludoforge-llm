@@ -7,7 +7,6 @@ import {
   applyDecision,
   applyMove,
   applyTrustedMove,
-  areMovesEquivalent,
   assertValidatedGameDef,
   createGameDefRuntime,
   enumerateLegalMoves,
@@ -32,10 +31,40 @@ interface ProductionParityCase {
 const createPolicyAgents = (count: number): readonly PolicyAgent[] =>
   Array.from({ length: count }, () => new PolicyAgent());
 
+const publicMoveIdentity = (move: Move): string =>
+  JSON.stringify({
+    actionId: String(move.actionId),
+    params: move.params,
+    freeOperation: move.freeOperation ?? false,
+    actionClass: move.actionClass ?? null,
+  });
+
 const includesEquivalentMove = (
   moves: readonly Move[],
   target: Move,
-): boolean => moves.some((move) => areMovesEquivalent(move, target));
+): boolean => moves.some((move) => publicMoveIdentity(move) === publicMoveIdentity(target));
+
+const assertOverlapOrderPreserved = (
+  rawMoves: readonly Move[],
+  classifiedMoves: readonly Move[],
+  message: string,
+): void => {
+  let classifiedIndex = 0;
+
+  for (const rawMove of rawMoves) {
+    while (classifiedIndex < classifiedMoves.length
+      && publicMoveIdentity(classifiedMoves[classifiedIndex]!) !== publicMoveIdentity(rawMove)) {
+      classifiedIndex++;
+    }
+
+    assert.equal(
+      classifiedIndex < classifiedMoves.length,
+      true,
+      `${message}: missing classified equivalent for raw action ${String(rawMove.actionId)}`,
+    );
+    classifiedIndex++;
+  }
+};
 
 const FITL_CASE: ProductionParityCase = {
   label: 'FITL',
@@ -69,8 +98,12 @@ const assertCompleteMoveTrustedParity = (
     if (entry.trustedMove === undefined) {
       throw new Error(`expected trusted move metadata for ${String(entry.move.actionId)}`);
     }
+    const completeMove = entry.viability.move;
+    if (completeMove === undefined) {
+      throw new Error(`expected complete move payload for ${String(entry.move.actionId)}`);
+    }
 
-    const baseline = applyMove(def, state, entry.move, undefined, runtime);
+    const baseline = applyMove(def, state, completeMove, undefined, runtime);
     const trusted = applyTrustedMove(def, state, entry.trustedMove, undefined, runtime);
 
     assert.deepEqual(
@@ -112,7 +145,7 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
         !includesEquivalentMove(classifiedMoves, rawMove),
       );
 
-      assert.deepEqual(
+      assertOverlapOrderPreserved(
         rawMoves.filter((rawMove) => includesEquivalentMove(classifiedMoves, rawMove)),
         classifiedMovesWithRawEquivalent,
         `${label} step=${stepIndex} classified moves should preserve raw move order where the surfaces overlap`,

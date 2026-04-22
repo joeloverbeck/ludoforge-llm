@@ -124,17 +124,39 @@ function computeAllSeatMargins(def, runtime, state) {
 }
 
 // ---------------------------------------------------------------------------
-// Summarize all moves: group by seat, count actions
+// Trace helpers
 // ---------------------------------------------------------------------------
+function stringifyForJson(value) {
+  return JSON.stringify(value, (_key, innerValue) =>
+    (typeof innerValue === 'bigint' ? `${innerValue}n` : innerValue), 2);
+}
+
+function getDecisionActionId(entry) {
+  if (entry.decision?.kind === 'actionSelection') {
+    return entry.decision.actionId ?? entry.decision.move?.actionId ?? 'unknown';
+  }
+  return entry.decision?.kind ?? 'unknown';
+}
+
+function getDecisionActionClass(entry) {
+  if (entry.decision?.kind !== 'actionSelection') {
+    return null;
+  }
+  return entry.decision.move?.actionClass ?? null;
+}
+
 function summarizeAllMoves(trace, def) {
   const bySeat = {};
   for (const seat of def.seats ?? []) {
     bySeat[seat.id.toLowerCase()] = {};
   }
-  for (const m of trace.moves) {
-    const playerIdx = Number(m.player);
+  for (const entry of trace.decisions ?? []) {
+    if (entry.playerId === undefined) {
+      continue;
+    }
+    const playerIdx = Number(entry.playerId);
     const seatId = def.seats?.[playerIdx]?.id?.toLowerCase() ?? `p${playerIdx}`;
-    const actionId = m.move?.actionId ?? 'unknown';
+    const actionId = getDecisionActionId(entry);
     bySeat[seatId] = bySeat[seatId] ?? {};
     bySeat[seatId][actionId] = (bySeat[seatId][actionId] ?? 0) + 1;
   }
@@ -345,12 +367,15 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
     }
     totalMargin += evolvedMargin;
 
-    const evolvedMoves = trace.moves
-      .filter((m) => Number(m.player) === evolvedPlayerIndex)
-      .map((m) => ({
-        move: m.move,
-        legalMoveCount: m.legalMoveCount,
-        agentDecision: m.agentDecision ?? null,
+    const playerDecisions = (trace.decisions ?? []).filter((entry) => entry.playerId !== undefined);
+    const evolvedMoves = playerDecisions
+      .filter((entry) => Number(entry.playerId) === evolvedPlayerIndex)
+      .map((entry) => ({
+        move: entry.decision?.kind === 'actionSelection' ? entry.decision.move : null,
+        decisionKind: entry.decision?.kind ?? null,
+        actionId: getDecisionActionId(entry),
+        legalMoveCount: entry.legalActionCount ?? 0,
+        agentDecision: entry.agentDecision ?? null,
       }));
     const evolvedMovesWithMargins = enrichEvolvedMovesWithMargins(evolvedMoves, evolvedMargin);
 
@@ -370,7 +395,7 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
     const allMargins = computeAllSeatMargins(def, runtime, trace.finalState);
     const marginStr = Object.entries(allMargins).map(([s, m]) => `${s}=${m}`).join(', ');
     process.stderr.write(
-      `  seed ${seed}: ${trace.moves.length} moves, margins=[${marginStr}], ` +
+      `  seed ${seed}: ${(trace.decisions ?? []).length} decisions, margins=[${marginStr}], ` +
       `won=${evolvedWon}, stop=${trace.stopReason}\n`,
     );
 
@@ -386,19 +411,19 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
       const movesBySeat = summarizeAllMoves(trace, def);
 
       // Enriched: opponent moves (non-evolved) with action summaries
-      const opponentMoves = trace.moves
-        .filter((m) => Number(m.player) !== evolvedPlayerIndex)
-        .map((m) => ({
-          seat: def.seats?.[Number(m.player)]?.id?.toLowerCase() ?? `p${m.player}`,
-          actionId: m.move?.actionId ?? 'unknown',
-          actionClass: m.move?.actionClass,
+      const opponentMoves = playerDecisions
+        .filter((entry) => Number(entry.playerId) !== evolvedPlayerIndex)
+        .map((entry) => ({
+          seat: def.seats?.[Number(entry.playerId)]?.id?.toLowerCase() ?? `p${entry.playerId}`,
+          actionId: getDecisionActionId(entry),
+          actionClass: getDecisionActionClass(entry),
         }));
 
       const traceSummary = {
         seed,
         stopReason: trace.stopReason,
         turnsCount: trace.turnsCount,
-        totalMoves: trace.moves.length,
+        totalMoves: (trace.decisions ?? []).length,
         result: trace.result
           ? {
               type: trace.result.type,
@@ -419,9 +444,9 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
 
       if (TRACE_ALL) {
         mkdirSync(traceDir, { recursive: true });
-        writeFileSync(join(traceDir, `trace-${seed}.json`), JSON.stringify(traceSummary, null, 2));
+        writeFileSync(join(traceDir, `trace-${seed}.json`), stringifyForJson(traceSummary));
       } else {
-        writeFileSync(join(HERE, 'last-trace.json'), JSON.stringify(traceSummary, null, 2));
+        writeFileSync(join(HERE, 'last-trace.json'), stringifyForJson(traceSummary));
         traceSaved = true;
       }
     }

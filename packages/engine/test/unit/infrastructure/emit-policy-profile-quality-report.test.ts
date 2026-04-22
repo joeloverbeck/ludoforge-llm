@@ -19,6 +19,12 @@ type ReportModule = {
   readonly buildNoReportComment: (inputPath: string) => string;
   readonly parsePolicyProfileQualityReport: (reportText: string) => PolicyProfileQualityRecord[];
   readonly buildPolicyProfileQualityAnnotations: (records: PolicyProfileQualityRecord[]) => string[];
+  readonly resolvePullRequestCommentTarget: (
+    env?: NodeJS.ProcessEnv,
+    options?: {
+      readonly readFileSyncImpl?: (path: string, encoding: string) => string;
+    },
+  ) => { readonly prNumber: string; readonly repo: string | null } | null;
   readonly buildPolicyProfileQualityComment: (
     records: PolicyProfileQualityRecord[],
     baselineRecords?: PolicyProfileQualityRecord[],
@@ -161,6 +167,29 @@ describe('emit-policy-profile-quality-report script', () => {
     assert.match(comment, /No policy-profile-quality report was produced for this run\./u);
     assert.match(comment, /missing-report\.ndjson/u);
     assert.match(comment, /Determinism corpus is the blocking gate\./u);
+  });
+
+  it('resolves the PR comment target from the GitHub event payload without relying on the current branch', async () => {
+    const { resolvePullRequestCommentTarget } = await loadModule();
+
+    const target = resolvePullRequestCommentTarget(
+      {
+        GITHUB_EVENT_PATH: '/tmp/event.json',
+        GITHUB_REPOSITORY: 'joeloverbeck/ludoforge-llm',
+      },
+      {
+        readFileSyncImpl: () =>
+          JSON.stringify({
+            pull_request: { number: 224 },
+            repository: { full_name: 'joeloverbeck/ludoforge-llm' },
+          }),
+      },
+    );
+
+    assert.deepEqual(target, {
+      prNumber: '224',
+      repo: 'joeloverbeck/ludoforge-llm',
+    });
   });
 
   it('writes annotations and markdown to stdout and posts the sticky comment when enabled', async () => {

@@ -136,9 +136,54 @@ export function buildPolicyProfileQualityComment(records, baselineRecords = []) 
   return `${lines.join('\n')}\n`;
 }
 
-function postStickyPullRequestComment(commentBody) {
+export function resolvePullRequestCommentTarget(
+  env = process.env,
+  options = {},
+) {
+  const readFileSyncImpl = options.readFileSyncImpl ?? readFileSync;
+  const eventPath = env.GITHUB_EVENT_PATH;
+  const fallbackRepo = typeof env.GITHUB_REPOSITORY === 'string' && env.GITHUB_REPOSITORY.length > 0
+    ? env.GITHUB_REPOSITORY
+    : null;
+
+  if (typeof eventPath !== 'string' || eventPath.length === 0) {
+    return null;
+  }
+
   try {
-    execFileSync('gh', ['pr', 'comment', '--edit-last', '--create-if-none', '--body', commentBody], {
+    const payload = JSON.parse(readFileSyncImpl(eventPath, 'utf8'));
+    const pullRequestNumber = payload?.pull_request?.number;
+    if (!Number.isSafeInteger(pullRequestNumber) || pullRequestNumber <= 0) {
+      return null;
+    }
+
+    const repo =
+      typeof payload?.repository?.full_name === 'string' && payload.repository.full_name.length > 0
+        ? payload.repository.full_name
+        : fallbackRepo;
+
+    return {
+      prNumber: String(pullRequestNumber),
+      repo,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function postStickyPullRequestComment(commentBody) {
+  const target = resolvePullRequestCommentTarget();
+  const args = ['pr', 'comment'];
+  if (target !== null) {
+    args.push(target.prNumber);
+    if (target.repo !== null) {
+      args.push('--repo', target.repo);
+    }
+  }
+  args.push('--edit-last', '--create-if-none', '--body', commentBody);
+
+  try {
+    execFileSync('gh', args, {
       stdio: ['ignore', 'inherit', 'inherit'],
       env: { ...process.env, GH_TOKEN: process.env.GH_TOKEN ?? process.env.GITHUB_TOKEN ?? '' },
     });

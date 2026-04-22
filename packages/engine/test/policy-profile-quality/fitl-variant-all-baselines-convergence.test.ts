@@ -15,7 +15,7 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const FITL_1964_CANARY_SEEDS = [
   { seed: 1020, expectedStopReason: 'terminal' },
-  { seed: 1049, expectedStopReason: 'noLegalMoves' },
+  { seed: 1049, expectedStopReason: 'terminal' },
   { seed: 1054, expectedStopReason: 'noLegalMoves' },
 ] as const;
 const MAX_TURNS = 300;

@@ -1,4 +1,4 @@
-// @test-class: convergence-witness
+// @test-class: architectural-invariant
 // @witness: fitl-seed-5000-shared-runtime-repeated-run
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';

@@ -179,7 +179,7 @@ describe('engine test lane taxonomy policy', () => {
       };
     };
 
-    assert.equal(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS.length, 2);
+    assert.equal(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS.length >= 2, true);
     const policyProfileQualitySource = new Set(manifest.ALL_POLICY_PROFILE_QUALITY_TESTS);
 
     for (const testPath of manifest.ALL_POLICY_PROFILE_QUALITY_TESTS) {

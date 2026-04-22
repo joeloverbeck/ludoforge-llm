@@ -1,8 +1,5 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../src/agents/index.js';
@@ -10,6 +7,7 @@ import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/i
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
+import { findPatternMatches } from '../helpers/source-search-guard.js';
 
 const ACTIVE_PROFILE_FILES = [
   'data/games/fire-in-the-lake/92-agents.md',
@@ -24,33 +22,8 @@ const RETIRED_PATTERNS = [
 ] as const;
 const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
 
-const resolveRepoRoot = (): string => {
-  let cursor = process.cwd();
-  for (let depth = 0; depth < 8; depth += 1) {
-    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
-      return cursor;
-    }
-    cursor = join(cursor, '..');
-  }
-  return process.cwd();
-};
-
-const REPO_ROOT = resolveRepoRoot();
-
 const grepMatches = (pattern: string): string => {
-  try {
-    return execFileSync('rg', ['-n', pattern, ...ACTIVE_PROFILE_FILES], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    const status = (error as { status?: number }).status;
-    if (status === 1) {
-      return '';
-    }
-    throw error;
-  }
+  return findPatternMatches(new RegExp(pattern, 'u'), ACTIVE_PROFILE_FILES);
 };
 
 describe('Spec 140 profile migration correctness', () => {

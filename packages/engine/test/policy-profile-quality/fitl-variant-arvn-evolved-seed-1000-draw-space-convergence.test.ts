@@ -1,14 +1,21 @@
 // @test-class: convergence-witness
-// @witness: spec-132-template-completion-contract
+// @profile-variant: arvn-evolved
+
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/simulator.js';
+import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
-describe('FITL seed 1000 historical draw-space regression', () => {
+const TEST_FILE = fileURLToPath(import.meta.url);
+const MAX_TURNS = 600;
+const PLAYER_COUNT = 4;
+
+describe('FITL arvn-evolved seed 1000 draw-space convergence witness', () => {
   it('keeps the former draw-space witness bounded and non-throwing', { timeout: 15_000 }, () => {
     const { compiled } = compileProductionSpec();
     const def = assertValidatedGameDef(compiled.gameDef);
@@ -21,22 +28,22 @@ describe('FITL seed 1000 historical draw-space regression', () => {
       return new PolicyAgent({ profileId, traceLevel: 'summary' });
     });
 
-    const trace = runGame(def, 1000, agents, 200, 4, undefined, runtime);
+    const trace = runGame(def, 1000, agents, MAX_TURNS, PLAYER_COUNT, undefined, runtime);
+    const passed = trace.stopReason === 'terminal' || trace.stopReason === 'noLegalMoves';
+    emitPolicyProfileQualityRecord({
+      file: TEST_FILE,
+      variantId: 'arvn-evolved',
+      seed: 1000,
+      passed,
+      stopReason: trace.stopReason,
+      decisions: trace.decisions.length,
+    });
 
-    // The regression guard is "bounded and non-throwing" — `runGame` returns
-    // a trace rather than throwing, which already proves the former
-    // draw-space crash is gone. Accept any terminal/maxTurns/noLegalMoves
-    // outcome; the exact trajectory depends on admissibility semantics and
-    // must not be pinned to a single shape (Spec 17 §4 conformance can
-    // legitimately prune previously-surfaced spurious moves).
     assert.equal(
-      trace.stopReason === 'terminal'
-        || trace.stopReason === 'maxTurns'
-        || trace.stopReason === 'noLegalMoves',
+      passed,
       true,
-      `seed 1000 must terminate cleanly, got ${trace.stopReason}`,
+      `seed 1000 should terminate without exhausting the profile-quality turn budget, got ${trace.stopReason}`,
     );
     assert.ok(trace.decisions.length > 0, 'seed 1000 must produce at least one move');
-    assert.ok(trace.decisions.length <= 200, 'seed 1000 must stay within the maxTurns budget');
   });
 });

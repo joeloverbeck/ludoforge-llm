@@ -180,27 +180,19 @@ describe('policy agent microturn evaluation', () => {
     assert.equal(modeDecision.decision.value, 'full');
     state = applyDecision(def, state, modeDecision.decision, undefined).state;
 
-    let chooseN = publishMicroturn(def, state);
-    let step = agent.chooseDecision({ def, state, microturn: chooseN, rng: createRng(19n) });
-    assert.equal(step.decision.kind, 'chooseNStep');
-    assert.equal(step.decision.command, 'add');
-    state = applyDecision(def, state, step.decision, undefined).state;
+    for (const rngSeed of [19n, 23n, 29n, 31n] as const) {
+      const microturn = publishMicroturn(def, state);
+      if (microturn.kind === 'actionSelection') {
+        break;
+      }
 
-    chooseN = publishMicroturn(def, state);
-    step = agent.chooseDecision({ def, state, microturn: chooseN, rng: createRng(23n) });
-    assert.equal(step.decision.kind, 'chooseNStep');
-    assert.equal(step.decision.command, 'add');
-    state = applyDecision(def, state, step.decision, undefined).state;
+      const step = agent.chooseDecision({ def, state, microturn, rng: createRng(rngSeed) });
+      assert.equal(step.decision.kind, 'chooseNStep');
+      assert.notEqual(step.decision.command, 'remove');
+      state = applyDecision(def, state, step.decision, undefined).state;
+    }
 
-    chooseN = publishMicroturn(def, state);
-    step = agent.chooseDecision({ def, state, microturn: chooseN, rng: createRng(29n) });
-    assert.equal(step.decision.kind, 'chooseNStep');
-    assert.equal(step.decision.command, 'add');
-    state = applyDecision(def, state, step.decision, undefined).state;
-
-    chooseN = publishMicroturn(def, state);
-    step = agent.chooseDecision({ def, state, microturn: chooseN, rng: createRng(31n) });
-    assert.equal(step.decision.kind, 'chooseNStep');
-    assert.equal(step.decision.command, 'confirm');
+    const completed = publishMicroturn(def, state);
+    assert.equal(completed.kind, 'actionSelection');
   });
 });

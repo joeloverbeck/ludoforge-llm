@@ -11,6 +11,7 @@ import {
   pickDeterministicChoiceValue,
 } from '../choice-option-policy.js';
 import type { GameDefRuntime } from '../gamedef-runtime.js';
+import { resolveForcedPendingSelection } from './forced-pending-selection.js';
 import { classifyMissingBindingProbeError, type MissingBindingPolicyContext } from '../missing-binding-policy.js';
 import { resolveMoveEnumerationBudgets, type MoveEnumerationBudgets } from '../move-enumeration-budgets.js';
 import type { PerfProfiler } from '../perf-profiler.js';
@@ -23,7 +24,6 @@ import type {
   GameDef,
   GameState,
   Move,
-  MoveParamScalar,
   MoveParamValue,
   RuntimeWarning,
 } from '../types.js';
@@ -63,48 +63,6 @@ export type DecisionContinuationAnalysisResult = DecisionSequenceAnalysisResult;
 
 const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefined =>
   pickDeterministicChoiceValue(request);
-
-const choiceValueKey = (value: unknown): string => JSON.stringify([typeof value, value]);
-
-export const resolveForcedPendingSelection = (request: ChoicePendingRequest): MoveParamValue | undefined => {
-  if (request.type !== 'chooseN') {
-    return undefined;
-  }
-
-  const selectedKeys = new Set(request.selected.map((value) => choiceValueKey(value)));
-  const seenRemainingKeys = new Set<string>();
-  const remainingSelectable = request.options
-    .filter((option) => option.legality !== 'illegal')
-    .map((option) => option.value)
-    .filter((value): value is MoveParamScalar => !Array.isArray(value))
-    .filter((value) => {
-      const key = choiceValueKey(value);
-      if (selectedKeys.has(key) || seenRemainingKeys.has(key)) {
-        return false;
-      }
-      seenRemainingKeys.add(key);
-      return true;
-    });
-  const min = request.min ?? 0;
-  const max = request.max ?? (request.selected.length + remainingSelectable.length);
-
-  if (remainingSelectable.length === 0 && request.canConfirm) {
-    return [...request.selected];
-  }
-
-  if (request.decisionPlayer !== undefined) {
-    return undefined;
-  }
-
-  if (min !== max) {
-    return undefined;
-  }
-
-  const requiredRemaining = Math.max(0, min - request.selected.length);
-  return remainingSelectable.length === requiredRemaining
-    ? [...request.selected, ...remainingSelectable]
-    : undefined;
-};
 
 const probeDecisionContinuationAdmissionClassification = (
   def: GameDef,

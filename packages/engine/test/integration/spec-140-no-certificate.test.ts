@@ -1,9 +1,8 @@
 // @test-class: architectural-invariant
 import * as assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
 import { describe, it } from 'node:test';
+
+import { findPatternMatches } from '../helpers/source-search-guard.js';
 
 const RETIRED_SYMBOLS = [
   'CompletionCertificate',
@@ -12,33 +11,8 @@ const RETIRED_SYMBOLS = [
   'certificateIndex',
 ] as const;
 
-const resolveRepoRoot = (): string => {
-  let cursor = process.cwd();
-  for (let depth = 0; depth < 8; depth += 1) {
-    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
-      return cursor;
-    }
-    cursor = join(cursor, '..');
-  }
-  return process.cwd();
-};
-
-const REPO_ROOT = resolveRepoRoot();
-
 const grepMatches = (pattern: string): string => {
-  try {
-    return execFileSync('rg', ['-n', pattern, 'packages/engine/src'], {
-      cwd: REPO_ROOT,
-      encoding: 'utf8',
-      stdio: ['ignore', 'pipe', 'pipe'],
-    });
-  } catch (error) {
-    const status = (error as { status?: number }).status;
-    if (status === 1) {
-      return '';
-    }
-    throw error;
-  }
+  return findPatternMatches(new RegExp(pattern, 'u'), ['packages/engine/src']);
 };
 
 describe('Spec 140 no-certificate invariant', () => {

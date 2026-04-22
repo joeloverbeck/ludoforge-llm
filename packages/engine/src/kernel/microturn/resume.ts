@@ -17,8 +17,8 @@ import type {
   Rng,
   RuntimeWarning,
 } from '../types.js';
+import { resolveForcedPendingSelection } from './forced-pending-selection.js';
 import {
-  resolveForcedPendingSelection,
   type DecisionContinuationResult,
 } from './continuation.js';
 import type {

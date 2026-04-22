@@ -28,6 +28,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 - Treat any code, test, fixture, generated-artifact, or ticket-text edit made after a proof lane as proof-invalidating for every affected acceptance command. Rerun the impacted focused/package/workspace lanes after those edits land; do not cite the earlier green run as final.
 - When a ticket owns regenerated fixtures or other generated artifacts and the repo provides a nearby helper script, validate that helper against the current live runtime/API seam before relying on it as the authoritative regen path. If the helper partially rewrites owned artifacts and then fails, treat the entire owned artifact set as dirty, regenerate it again through a known-live seam, and only then continue toward final proof.
+- If you become materially stuck after a partial repair, or you now have multiple plausible fixes with different tradeoffs and the next step is no longer clearly user-authorized, stop for the repo's `1-3-1` workflow instead of continuing to iterate. State the problem, give 3 options, recommend 1, and wait for confirmation before implementing another path.
 
 ## Final-Proof Gate
 
@@ -91,6 +92,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - If the supplied path is missing, search for the nearest active ticket by normalized ticket id or stem before widening scope. If exactly one plausible replacement exists, use it and record `ticket entry correction: <requested path> -> <resolved ticket>` in working notes; if resolution is ambiguous, stop and clarify.
 3. Read referenced specs, docs, and `Deps`. Read `AGENTS.md` and respect worktree discipline (all reads, edits, greps, moves, and verification commands use the worktree root when the ticket lives under `.claude/worktrees/<name>/`).
    - If equivalent `AGENTS.md` instructions are already in session context, rely on that context but still prefer the file when repo-local details might differ or the ticket references on-disk policy.
+   - If the user explicitly points at rulebooks, rules directories, production game data, or other rule-authoritative assets, verify early whether the live bug may belong in authored spec/policy data rather than assuming the fix is engine-only. In this repo, game-backed regressions can widen from runtime code into `data/games/<game>/...` or similar GameSpecDoc-owned surfaces while still remaining the truthful ticket boundary.
 4. Inspect repo state (e.g., `git status --short`) early. Call out unrelated dirty files, pre-existing failures, or concurrent work so your diff stays isolated.
 5. Extract all concrete references: file paths, functions, types, classes, modules, tests, scripts, and artifacts the ticket expects.
    - When a draft or recently edited ticket names specific files, prefer a quick path-validation pass (`rg --files`, targeted `find`, or equivalent) before opening the file directly if there is any sign of path drift.
@@ -163,6 +165,13 @@ Load `references/implementation-general.md` by default for non-bounded tickets, 
 If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, or production-proof/regression ticket, load `references/specialized-ticket-types.md`.
 
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`. Covers in-memory vs serialized decisions, post-migration sweeps, identifier consumer sweeps, interim shared-contract state for staged tickets, and historical benchmark worktree handling.
+
+For named-witness regression tickets that cite a small seed/case matrix, add one cheap direct witness loop between candidate fixes and the heavier acceptance lanes:
+
+1. rerun the exact named seeds/cases directly through the most authoritative live seam available
+2. use that matrix to classify `still broken`, `partially repaired`, or `fully repaired on owned witnesses`
+3. if the result is only `partially repaired`, stop for `1-3-1` before continuing when the remaining fix path is no longer obvious
+4. only return to the heavier focused/package/workspace acceptance lanes once the named witness matrix matches the intended boundary
 
 ### Synthetic Fixture Checklist
 
@@ -323,6 +332,8 @@ As part of the final acceptance sweep, explicitly compare `What to Change` / `Fi
 If that sweep finds ticket-named files that were intentionally left untouched because reassessment proved no live change was required, do not quietly leave the mismatch behind. Record the correction in the active ticket closeout so the final artifact explains why those paths remained unchanged.
 
 If that sweep finds additional live-diff files or generated artifacts that were not named in the ticket, treat that as the same class of ticket drift as an untouched named file. Update the active ticket before closeout so the touched-file scope explains both omitted additions and omitted removals.
+
+When a ticket that initially looked code-only widens during live reassessment into authored game data, policy catalogs, or other rule-authoritative assets, do not leave that ownership change implicit. Update `Files to Touch` / `What to Change` before final proof so the closeout truthfully records the mixed code-plus-authored-data boundary.
 
 When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
 

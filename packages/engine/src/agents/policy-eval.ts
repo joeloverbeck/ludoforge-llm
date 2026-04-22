@@ -171,6 +171,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly move: Move;
   readonly stableMoveKey: string;
   readonly actionId: string;
+  readonly canonicalIndex: number;
   readonly prunedBy: string[];
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
@@ -766,10 +767,12 @@ function selectRepresentativeCandidatesByActionId(
   }
 
   let nextRng = rng;
+  const representativeTieBreakerIds = tieBreakerIds.filter((tieBreakerId) =>
+    catalog.library.tieBreakers[tieBreakerId]?.kind !== 'stableMoveKey');
   const representatives = [...actionGroups.values()].map((groupCandidates) => {
     const bestScore = groupCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
     let bestCandidates = groupCandidates.filter((candidate) => candidate.score === bestScore);
-    for (const tieBreakerId of tieBreakerIds) {
+    for (const tieBreakerId of representativeTieBreakerIds) {
       if (bestCandidates.length <= 1) {
         break;
       }
@@ -777,21 +780,22 @@ function selectRepresentativeCandidatesByActionId(
       bestCandidates = [...tieBreakResult.candidates];
       nextRng = tieBreakResult.rng;
     }
-    return bestCandidates[0] ?? groupCandidates[0]!;
+    return [...bestCandidates].sort((left, right) => left.canonicalIndex - right.canonicalIndex)[0] ?? groupCandidates[0]!;
   });
 
   return {
-    candidates: representatives.sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey)),
+    candidates: representatives.sort((left, right) => left.canonicalIndex - right.canonicalIndex),
     rng: nextRng,
   };
 }
 
 function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): CandidateEntry[] {
   return legalMoves
-    .map((move) => ({
+    .map((move, canonicalIndex) => ({
       move,
       stableMoveKey: toMoveIdentityKey(def, move),
       actionId: String(move.actionId),
+      canonicalIndex,
       prunedBy: [],
       scoreContributions: [],
       previewRefIds: new Set<string>(),

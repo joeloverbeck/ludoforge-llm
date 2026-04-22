@@ -90,7 +90,7 @@ agents:
             ref: candidate.tag.fold
       foldWhenBadPotOdds:
         scopes: [move]
-        weight: 200
+        weight: 150
         value:
           boolToNumber:
             and:

@@ -1,6 +1,6 @@
 # TEXPOLBOUND-001: Restore Texas Authored-Policy Tournament Boundedness and Multi-Hand Progress
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — Texas tournament flow witness, microturn decision application, authored-policy simulation
@@ -71,8 +71,10 @@ Candidate areas include:
 - `packages/engine/src/kernel/**` (modify)
 - `packages/engine/src/sim/**` (modify)
 - `packages/engine/src/agents/**` (modify, if the first wrong authored-policy choice originates there)
+- `data/games/texas-holdem/92-agents.md` (modify if the live authored policy encoding itself is the remaining tournament-boundary cause)
 - `packages/engine/test/e2e/texas-holdem-card-lifecycle.test.ts` (modify only if coverage needs sharpening after the engine fix)
 - `packages/engine/test/e2e/texas-holdem-tournament.test.ts` (modify only if coverage needs sharper diagnostics, not weaker expectations)
+- `packages/engine/test/unit/agents/policy-eval-grouping.test.ts` (add focused regression proof for grouped parameterized move selection)
 
 ## Out of Scope
 
@@ -106,3 +108,12 @@ Candidate areas include:
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/e2e/texas-holdem-card-lifecycle.test.js`
 3. `pnpm -F @ludoforge/engine exec node --test dist/test/e2e/texas-holdem-tournament.test.js`
 4. `pnpm -F @ludoforge/engine test:e2e:all`
+
+## Outcome
+
+- Completion date: 2026-04-22
+- `ticket corrections applied`: `engine-only repair -> generic policy-agent action-selection correction plus authored Texas policy weight correction`
+- `implemented`: removed action-id grouping from live action-selection policy evaluation, preserved deterministic grouped-representative behavior under unit proof, and reduced the authored Texas `foldWhenBadPotOdds` weight so 6/10-player tournaments no longer degenerate into perpetual preflop fold trains.
+- `deviations from original plan`: the live fix did not require kernel or simulator changes; the truthful boundary was generic policy-agent selection plus authored Texas policy data.
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-eval-grouping.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/e2e/texas-holdem-card-lifecycle.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/e2e/texas-holdem-tournament.test.js`; `pnpm -F @ludoforge/engine test:e2e:all`
+- `proof gaps`: none

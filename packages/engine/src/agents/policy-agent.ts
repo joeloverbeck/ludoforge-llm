@@ -189,7 +189,6 @@ export class PolicyAgent implements Agent {
       legalMoves: actionDecisions.map((decision) => decision.move).filter((move): move is NonNullable<typeof move> => move !== undefined),
       trustedMoveIndex: new Map(),
       rng: input.rng,
-      selectionGrouping: 'actionId',
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),

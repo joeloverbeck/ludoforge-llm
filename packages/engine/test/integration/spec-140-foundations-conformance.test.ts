@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -120,7 +120,7 @@ describe('Spec 140 foundations conformance', () => {
       const trace = runGame(
         texasDef,
         seed,
-        Array.from({ length: TEXAS_PLAYER_COUNT }, () => new RandomAgent()),
+        Array.from({ length: TEXAS_PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'summary' })),
         MAX_TURNS,
         TEXAS_PLAYER_COUNT,
         { skipDeltas: true },

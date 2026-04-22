@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -13,6 +12,7 @@ import {
 import { createPerfProfiler } from '../../src/kernel/perf-profiler.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { createSeededChoiceAgents } from '../helpers/test-agents.js';
 import {
   compileProductionSpec,
   compileTexasProductionSpec,
@@ -41,9 +41,6 @@ const compileTexasDef = (): ValidatedGameDef => {
   }
   return assertValidatedGameDef(compiled.gameDef);
 };
-
-const createRandomAgents = (count: number): readonly Agent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
 
 /**
  * Create a runtime with an empty compiledLifecycleEffects map.
@@ -75,8 +72,7 @@ const median = (sorted: readonly number[]): number => {
 };
 
 /**
- * Run a single game, returning elapsed ms or null if the game hit an error
- * (e.g., stall loop with RandomAgent on certain seeds).
+ * Run a single game, returning elapsed ms or null if the game hit an error.
  */
 const runSingleGame = (
   def: ValidatedGameDef,
@@ -85,7 +81,7 @@ const runSingleGame = (
   maxTurns: number,
   runtime: GameDefRuntime,
 ): number | null => {
-  const agents = createRandomAgents(playerCount);
+  const agents = createSeededChoiceAgents(playerCount);
   const start = performance.now();
   try {
     runGame(def, seed, agents, maxTurns, playerCount, { skipDeltas: true }, runtime);
@@ -105,7 +101,7 @@ const runBenchmark = (
 ): BenchmarkResult => {
   // Warm up — JIT, caches
   try {
-    const warmAgents = createRandomAgents(playerCount);
+    const warmAgents = createSeededChoiceAgents(playerCount);
     runGame(def, 999, warmAgents, maxTurns, playerCount, { skipDeltas: true }, runtime);
   } catch {
     // Warm-up failure is non-fatal
@@ -223,7 +219,7 @@ describe('compiled vs interpreted effect path benchmark', () => {
     const def = compileTexasDef();
     const runtime = createGameDefRuntime(def);
     const profiler = createPerfProfiler();
-    const agents = createRandomAgents(TEXAS_PLAYER_COUNT);
+    const agents = createSeededChoiceAgents(TEXAS_PLAYER_COUNT);
 
     runGame(def, 42, agents, TEXAS_MAX_TURNS, TEXAS_PLAYER_COUNT, {
       skipDeltas: true,
@@ -249,7 +245,7 @@ describe('compiled vs interpreted effect path benchmark', () => {
     const def = compileFitlDef();
     const runtime = createGameDefRuntime(def);
     const profiler = createPerfProfiler();
-    const agents = createRandomAgents(FITL_PLAYER_COUNT);
+    const agents = createSeededChoiceAgents(FITL_PLAYER_COUNT);
 
     runGame(def, 42, agents, FITL_MAX_TURNS, FITL_PLAYER_COUNT, {
       skipDeltas: true,

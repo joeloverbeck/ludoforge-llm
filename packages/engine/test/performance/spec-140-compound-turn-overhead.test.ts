@@ -2,10 +2,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { createSeededChoiceAgents } from '../helpers/test-agents.js';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_BUDGET = {
@@ -36,7 +37,7 @@ describe('Spec 140 compound-turn overhead', () => {
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
     const corpus = [
-      runGame(def, 123, Array.from({ length: 4 }, () => new RandomAgent()), 200, 4, { skipDeltas: true }, runtime),
+      runGame(def, 123, createSeededChoiceAgents(4), 200, 4, { skipDeltas: true }, runtime),
       runGame(
         def,
         1005,
@@ -81,7 +82,15 @@ describe('Spec 140 compound-turn overhead', () => {
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
     const corpus = [2000, 2001].map((seed) =>
-      runGame(def, seed, Array.from({ length: 4 }, () => new RandomAgent()), 20, 4, { skipDeltas: true }, runtime));
+      runGame(
+        def,
+        seed,
+        Array.from({ length: 4 }, () => new PolicyAgent({ traceLevel: 'summary' })),
+        20,
+        4,
+        { skipDeltas: true },
+        runtime,
+      ));
 
     const totalDecisions = corpus.reduce((sum, trace) => sum + trace.decisions.length, 0);
     const totalCompoundTurns = corpus.reduce((sum, trace) => sum + trace.compoundTurns.length, 0);

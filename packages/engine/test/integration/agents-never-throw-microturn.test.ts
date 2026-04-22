@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { GreedyAgent, PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   asActionId,
   asPhaseId,
@@ -19,6 +19,11 @@ import {
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
+import {
+  chooseNProgressAgent,
+  createSeededChoiceAgent,
+  firstLegalAgent,
+} from '../helpers/test-agents.js';
 
 const phaseId = asPhaseId('main');
 
@@ -155,8 +160,9 @@ const CASES = [
 ] as const;
 
 const AGENTS: readonly { readonly label: string; readonly agent: Agent }[] = [
-  { label: 'random', agent: new RandomAgent() },
-  { label: 'greedy', agent: new GreedyAgent() },
+  { label: 'first-legal', agent: firstLegalAgent },
+  { label: 'seeded-choice', agent: createSeededChoiceAgent() },
+  { label: 'choose-n-progress', agent: chooseNProgressAgent },
   { label: 'policy-default', agent: new PolicyAgent({ traceLevel: 'summary' }) },
 ] as const;
 
@@ -195,8 +201,8 @@ describe('agents never throw with non-empty published microturn actions', () => 
     assert.ok(microturn.legalActions.length > 0);
 
     const agents: readonly Agent[] = [
-      new RandomAgent(),
-      new GreedyAgent(),
+      firstLegalAgent,
+      createSeededChoiceAgent(),
       new PolicyAgent({ profileId: 'us-baseline', traceLevel: 'summary' }),
     ];
     for (const [index, agent] of agents.entries()) {

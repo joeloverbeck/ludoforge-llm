@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
@@ -22,12 +22,12 @@ const FITL_MAX_TURNS = 200;
 const FITL_PLAYER_COUNT = 4;
 
 const TEXAS_DETERMINISM_SEEDS = Array.from({ length: 10 }, (_, index) => 2000 + index);
-const TEXAS_RANDOM_MAX_TURNS = 200;
-const TEXAS_RANDOM_PLAYER_COUNT = 6;
+const TEXAS_POLICY_MAX_TURNS = 200;
+const TEXAS_POLICY_PLAYER_COUNT = 6;
 const FITL_FALLBACK_INERT_REPRESENTATIVE_SEED = 1005;
 const TEXAS_POLICY_REPRESENTATIVE_SEED = 2000;
-const TEXAS_POLICY_MAX_TURNS = 12;
-const TEXAS_POLICY_PLAYER_COUNT = 4;
+const TEXAS_VERBOSE_POLICY_MAX_TURNS = 12;
+const TEXAS_VERBOSE_POLICY_PLAYER_COUNT = 4;
 
 const serializeFinalState = (state: Parameters<typeof serializeGameState>[0]): string =>
   JSON.stringify(serializeGameState(state));
@@ -82,13 +82,13 @@ describe('Spec 140 replay identity', () => {
       fitlRuntime,
     );
 
-  const runTexasRandom = (seed: number) =>
+  const runTexasPolicy = (seed: number) =>
     runGame(
       texasDef,
       seed,
-      Array.from({ length: TEXAS_RANDOM_PLAYER_COUNT }, () => new RandomAgent()),
-      TEXAS_RANDOM_MAX_TURNS,
-      TEXAS_RANDOM_PLAYER_COUNT,
+      Array.from({ length: TEXAS_POLICY_PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'summary' })),
+      TEXAS_POLICY_MAX_TURNS,
+      TEXAS_POLICY_PLAYER_COUNT,
       { skipDeltas: true },
       texasRuntime,
     );
@@ -97,9 +97,9 @@ describe('Spec 140 replay identity', () => {
     runGame(
       texasDef,
       seed,
-      Array.from({ length: TEXAS_POLICY_PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'verbose' })),
-      TEXAS_POLICY_MAX_TURNS,
-      TEXAS_POLICY_PLAYER_COUNT,
+      Array.from({ length: TEXAS_VERBOSE_POLICY_PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'verbose' })),
+      TEXAS_VERBOSE_POLICY_MAX_TURNS,
+      TEXAS_VERBOSE_POLICY_PLAYER_COUNT,
       { skipDeltas: true },
       texasRuntime,
     );
@@ -121,8 +121,8 @@ describe('Spec 140 replay identity', () => {
 
   it('keeps the Texas determinism corpus byte-identical under the current contract', () => {
     for (const seed of TEXAS_DETERMINISM_SEEDS) {
-      const left = runTexasRandom(seed);
-      const right = runTexasRandom(seed);
+      const left = runTexasPolicy(seed);
+      const right = runTexasPolicy(seed);
       assert.equal(left.traceProtocolVersion, 'spec-140');
       assert.deepEqual(left.decisions, right.decisions);
       assert.deepEqual(left.compoundTurns, right.compoundTurns);

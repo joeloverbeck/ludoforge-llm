@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — agent exports, descriptors, schemas, and trace contract
-**Deps**: `tickets/AGENTSUNSET-001.md`
+**Deps**: `archive/tickets/AGENTSUNSET-001.md`
 
 ## Problem
 

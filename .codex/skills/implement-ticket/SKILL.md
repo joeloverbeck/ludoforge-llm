@@ -215,7 +215,8 @@ If the first broader proof lane fails on a newly added or modified test, do one 
 
 1. isolate the failing owned test file or the narrowest direct harness that reproduces the failure
 2. fix the issue against that focused lane first
-3. rerun the broader package/workspace lane only after the focused proof is green
+3. if the broader lane is still running when you decide to probe the focused repro, wait for it to finish or terminate it cleanly before starting the heavy focused command; do not overlap two heavy proof lanes against the same package or artifact set
+4. rerun the broader package/workspace lane only after the focused proof is green
 
 When a broader proof lane fails on a surface that may be unrelated to the owned ticket slice, classify it before widening implementation:
 
@@ -231,8 +232,9 @@ For long-running package lanes that already printed `ok` lines for the ticket-ow
 
 1. identify the last printed passing file and whether the runner is now only emitting repeated quiet-progress notices
 2. probe the most likely expensive tail file directly with a bounded single-file run when proportionate
-3. if that direct file run returns cleanly but the package lane still does not hand back a final shell prompt after repeated quiet-progress cycles, record the package lane as `harness-noisy / not final-confirmed` rather than blocking closeout indefinitely
-4. cite the directly observed retained-regression passes plus any successful single-file tail probe separately from the noisy package-lane result
+3. before launching that heavy tail-file probe, ensure the original broad lane is no longer running; if it is still live, either keep waiting on it or terminate it cleanly first instead of overlapping both commands
+4. if that direct file run returns cleanly but the package lane still does not hand back a final shell prompt after repeated quiet-progress cycles, record the package lane as `harness-noisy / not final-confirmed` rather than blocking closeout indefinitely
+5. cite the directly observed retained-regression passes plus any successful single-file tail probe separately from the noisy package-lane result
 
 This preserves truthful proof language without requiring unbounded waiting on runner noise.
 
@@ -242,6 +244,7 @@ When a broad package/workspace lane becomes `harness-noisy / not final-confirmed
 2. rerun that owned witness after the final code and ticket-artifact edits land
 3. record it distinctly in the ticket outcome as the primary proof artifact for the owned behavior, separate from the non-final broad lane
 4. do not describe the noisy broad lane as fully green unless it actually returns a final harness summary
+5. before any later rebuild or rerun that touches the same produced artifacts, confirm the abandoned/noisy broad lane is no longer running; stop it first if needed so the next proof step starts from one live heavy verification lane
 
 When a **single focused proof file** emits only an initial harness header (for example `TAP version 13`) and then stays silent, do not immediately classify it as the same package-lane noise pattern. First inspect the file or its obvious helper corpus to determine whether the lane legitimately fronts a heavy deterministic workload (large replay corpus, repeated production-spec compile, benchmark-scale fixture setup, or similar). If the workload is plausibly heavy:
 
@@ -263,7 +266,8 @@ For durable closeout, use this rule when final proof mixes green owned witnesses
 
 1. `COMPLETED` is still truthful when the owned implementation slice is proven by direct focused witnesses or equivalent deterministic owned proofs, and each non-final named broad lane is explicitly recorded as noisy/non-final rather than claimed green
 2. do not mark `COMPLETED` when the only proof of the owned change depends on a lane that never returned a final result
-3. if the ticket explicitly requires a final green result from a named broad lane and no narrower owned witness can satisfy that requirement truthfully, leave the ticket open or blocked instead of inferring success
+3. if the ticket explicitly names a broad package/workspace lane as an acceptance command and that lane did not reach a final confirmed result in the current proof set, treat that command as `not yet proven` unless the active ticket is first corrected to record a truthful narrower proof substitution
+4. if the ticket explicitly requires a final green result from a named broad lane and no narrower owned witness can satisfy that requirement truthfully, leave the ticket open or blocked instead of inferring success
 
 For long tickets whose final proof requires multiple expensive lanes after ticket-artifact rewrites, choose the final-proof choreography explicitly instead of rerunning ad hoc:
 

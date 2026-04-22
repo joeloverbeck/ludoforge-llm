@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
   type ValidatedGameDef,
@@ -35,8 +35,13 @@ const compileFitlDef = (): ValidatedGameDef => {
   return assertValidatedGameDef(compiled.gameDef);
 };
 
-const createRandomAgents = (count: number): readonly RandomAgent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
+const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
+
+const createFitlPolicyAgents = (): readonly PolicyAgent[] =>
+  FITL_POLICY_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
+
+const createTexasPolicyAgents = (count: number): readonly PolicyAgent[] =>
+  Array.from({ length: count }, () => new PolicyAgent({ traceLevel: 'summary' }));
 
 describe('Zobrist incremental parity — Texas Hold\'em', () => {
   const TEXAS_PLAYER_COUNT = 4;
@@ -48,7 +53,7 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
 
   for (const seed of TEXAS_SEEDS) {
     it(`seed=${seed}: incremental hash matches full recompute every move`, () => {
-      const agents = createRandomAgents(TEXAS_PLAYER_COUNT);
+      const agents = createTexasPolicyAgents(TEXAS_PLAYER_COUNT);
 
       // Run with verification enabled — throws HASH_DRIFT on mismatch
       const trace = runGame(def, seed, agents, TEXAS_MAX_TURNS, TEXAS_PLAYER_COUNT, {
@@ -70,7 +75,7 @@ describe('Zobrist incremental parity — FITL', () => {
 
   for (const seed of FITL_SEEDS) {
     it(`seed=${seed}: incremental hash matches full recompute every move`, () => {
-      const agents = createRandomAgents(FITL_PLAYER_COUNT);
+      const agents = createFitlPolicyAgents();
 
       const trace = runGame(def, seed, agents, FITL_MAX_TURNS, FITL_PLAYER_COUNT, {
         kernel: { verifyIncrementalHash: true },
@@ -86,7 +91,7 @@ describe('Zobrist incremental parity — interval mode', () => {
   const runtime = createGameDefRuntime(def);
 
   it('verifies every 5th move without error', () => {
-    const agents = createRandomAgents(4);
+    const agents = createTexasPolicyAgents(4);
 
     const trace = runGame(def, 42, agents, 100, 4, {
       kernel: { verifyIncrementalHash: { interval: 5 } },

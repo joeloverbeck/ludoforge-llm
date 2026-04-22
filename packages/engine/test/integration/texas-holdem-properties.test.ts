@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
   applyMove,
   assertValidatedGameDef,
@@ -93,7 +93,7 @@ const runShortTournament = (def: ValidatedGameDef, seed: number): GameTrace =>
   runGame(
     def,
     seed,
-    Array.from({ length: PLAYER_COUNT }, () => new RandomAgent()),
+    Array.from({ length: PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'summary' })),
     MAX_TURNS,
     PLAYER_COUNT,
   );

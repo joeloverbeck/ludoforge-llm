@@ -2,29 +2,18 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { PolicyAgent } from '../../src/agents/index.js';
 import {
-  type AgentMicroturnDecisionInput,
-  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   asActionId,
   asPhaseId,
   initialState,
-  type Agent,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 import { eff } from '../helpers/effect-tag-helper.js';
-
-const firstLegalAgent = {
-  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
-    const decision = input.microturn.legalActions[0];
-    if (decision === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal action');
-    }
-    return { decision, rng: input.rng };
-  },
-} as Agent;
+import { firstLegalAgent } from '../helpers/test-agents.js';
 
 const createLoopingLifecycleDef = (): ValidatedGameDef =>
   assertValidatedGameDef({
@@ -79,7 +68,10 @@ describe('compiled effect verification integration', () => {
   it('runs a short Texas Holdem simulation with verification enabled', () => {
     const texasDef = compileTexasProductionSpec().compiled.gameDef as ValidatedGameDef;
 
-    const trace = runGame(texasDef, 41, [firstLegalAgent, firstLegalAgent], 6, 2, {
+    const trace = runGame(texasDef, 41, [
+      new PolicyAgent({ traceLevel: 'summary' }),
+      new PolicyAgent({ traceLevel: 'summary' }),
+    ], 6, 2, {
       kernel: { verifyCompiledEffects: true },
     });
 

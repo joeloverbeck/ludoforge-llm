@@ -1,4 +1,3 @@
-import { RandomAgent } from '../../src/agents/index.js';
 import {
   advanceAutoresolvable,
   applyPublishedDecision,
@@ -19,6 +18,7 @@ import {
   compileProductionSpec,
   compileTexasProductionSpec,
 } from './production-spec-helpers.js';
+import { createSeededChoiceAgents } from './test-agents.js';
 
 export const TEXAS_PLAYER_COUNT = 4;
 export const TEXAS_MAX_TURNS = 80;
@@ -39,9 +39,6 @@ export const DIVERSE_SEEDS = [
  */
 export const FITL_SHORT_DIVERSE_SEEDS = [1, 4, 8, 12, 16, 20, 24, 44444] as const;
 export const FITL_MEDIUM_DIVERSE_SEEDS = [2, 7, 13, 17, 1000, 12345] as const;
-
-const createRandomAgents = (count: number): readonly RandomAgent[] =>
-  Array.from({ length: count }, () => new RandomAgent());
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
 
@@ -87,7 +84,7 @@ export const compileFitlDef = (): ValidatedGameDef => {
 
 /**
  * Re-throw HASH_DRIFT (the contract under test), but swallow unrelated runtime
- * errors from known random-play gaps so coverage stays focused on hash parity.
+ * errors so coverage stays focused on hash parity.
  * The broad property sweep samples this invariant periodically; the exact
  * move-by-move oracle lives in `zobrist-incremental-parity.test.ts`.
  */
@@ -98,7 +95,7 @@ export const runVerifiedGame = (
   maxTurns: number,
   runtime: GameDefRuntime,
 ): number => {
-  const agents = createRandomAgents(playerCount);
+  const agents = createSeededChoiceAgents(playerCount);
   const kernelOptions = {
     verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
   } as const;

@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
 import { synthesizeCompoundTurnSummaries } from '../../src/sim/compound-turns.js';
 import { runGame } from '../../src/sim/index.js';
@@ -57,7 +57,7 @@ describe('Spec 140 compound-turn summary correctness', () => {
     const trace = runGame(
       def,
       2000,
-      Array.from({ length: 4 }, () => new RandomAgent()),
+      Array.from({ length: 4 }, () => new PolicyAgent({ traceLevel: 'summary' })),
       20,
       4,
       { skipDeltas: true },

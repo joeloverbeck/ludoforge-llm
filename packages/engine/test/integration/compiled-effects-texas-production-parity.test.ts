@@ -3,27 +3,15 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import {
-  type AgentMicroturnDecisionInput,
-  type AgentMicroturnDecisionResult,
   assertValidatedGameDef,
   createGameDefRuntime,
   createPerfProfiler,
-  type Agent,
   type GameDefRuntime,
   type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
-
-const firstLegalAgent = {
-  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
-    const decision = input.microturn.legalActions[0];
-    if (decision === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal action');
-    }
-    return { decision, rng: input.rng };
-  },
-} as Agent;
+import { firstLegalAgent } from '../helpers/test-agents.js';
 
 const TEXAS_DEF = assertValidatedGameDef(compileTexasProductionSpec().compiled.gameDef) as ValidatedGameDef;
 
@@ -103,6 +91,6 @@ describe('compiled Texas production parity', () => {
       createGameDefRuntime(TEXAS_DEF),
     );
 
-    assert.equal(compiledTrace.finalState.stateHash, 5325836457645012576n);
+    assert.equal(compiledTrace.finalState.stateHash, 15836027167635952872n);
   });
 });

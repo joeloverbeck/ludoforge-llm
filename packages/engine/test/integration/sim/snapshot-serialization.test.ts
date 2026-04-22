@@ -13,13 +13,14 @@ import {
   createGameDefRuntime,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
-import { RandomAgent } from '../../../src/agents/index.js';
+import { PolicyAgent } from '../../../src/agents/index.js';
 import { enrichTrace, runGame, writeEnrichedTrace } from '../../../src/sim/index.js';
 import { extractDecisionPointSnapshot } from '../../../src/sim/index.js';
 import type { StandardDecisionPointSnapshot } from '../../../src/sim/snapshot-types.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import { compileProductionSpec } from '../../helpers/production-spec-helpers.js';
+import { createSeededChoiceAgents } from '../../helpers/test-agents.js';
 
 // ---------------------------------------------------------------------------
 // Minimal two-player fixture with margins and victory standings
@@ -76,7 +77,7 @@ const makeDef = (): ValidatedGameDef =>
 describe('snapshot serialization round-trip', () => {
   it('snapshots survive enrichTrace → writeEnrichedTrace → JSON parse without data loss', () => {
     const def = makeDef();
-    const agents = [new RandomAgent(), new RandomAgent()];
+    const agents = createSeededChoiceAgents(2);
 
     const trace = runGame(def, 42, agents, 20, 2, { snapshotDepth: 'standard' });
 
@@ -116,7 +117,7 @@ describe('snapshot serialization round-trip', () => {
 
   it('snapshot field values match direct state inspection after round-trip', () => {
     const def = makeDef();
-    const agents = [new RandomAgent(), new RandomAgent()];
+    const agents = createSeededChoiceAgents(2);
 
     const trace = runGame(def, 99, agents, 20, 2, { snapshotDepth: 'standard' });
     const firstMove = trace.decisions[0];
@@ -140,7 +141,7 @@ describe('snapshot serialization round-trip', () => {
 
   it('no BigInt or non-JSON-serializable values appear in snapshot objects', () => {
     const def = makeDef();
-    const agents = [new RandomAgent(), new RandomAgent()];
+    const agents = createSeededChoiceAgents(2);
 
     const trace = runGame(def, 77, agents, 20, 2, { snapshotDepth: 'verbose' });
     for (const moveLog of trace.decisions) {
@@ -163,7 +164,7 @@ describe('snapshot property tests', () => {
   it('extractDecisionPointSnapshot is a pure read-only operation (hash before === hash after)', () => {
     const def = makeDef();
     const runtime = createGameDefRuntime(def);
-    const agents = [new RandomAgent(), new RandomAgent()];
+    const agents = createSeededChoiceAgents(2);
 
     // Run a short game to get mid-game state for testing
     const midTrace = runGame(def, 456, agents, 3, 2, undefined, runtime);
@@ -179,7 +180,7 @@ describe('snapshot property tests', () => {
 
   it('snapshotDepth "none" produces DecisionLog entries where snapshot is strictly undefined', () => {
     const def = makeDef();
-    const agents = [new RandomAgent(), new RandomAgent()];
+    const agents = createSeededChoiceAgents(2);
 
     // Default options (no snapshotDepth = 'none')
     const traceDefault = runGame(def, 55, agents, 20, 2);
@@ -208,7 +209,7 @@ describe('FITL snapshot golden test', () => {
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
     const seatCount = def.seats?.length ?? 2;
-    const agents = Array.from({ length: seatCount }, () => new RandomAgent());
+    const agents = Array.from({ length: seatCount }, () => new PolicyAgent({ traceLevel: 'summary' }));
 
     const trace = runGame(def, 2024, agents, 10, seatCount, { snapshotDepth: 'standard' }, runtime);
 

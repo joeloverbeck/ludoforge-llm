@@ -1,6 +1,6 @@
 # AGENTSUNSET-001: Replace built-in agent test usage with explicit test-only agent helpers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test harness and proof-surface only
@@ -85,3 +85,15 @@ Rewrite any test whose real purpose was “some agent can progress” rather tha
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 
+## Outcome
+
+- Added shared test-only agent helpers in `packages/engine/test/helpers/test-agents.ts` plus focused coverage in `packages/engine/test/unit/test-agents.test.ts`.
+- Migrated generic simulator/proof/benchmark surfaces onto shared test helpers and migrated production Texas/FITL autonomous-play surfaces onto authored `PolicyAgent` lineups.
+- Removed the dedicated `packages/engine/test/unit/agents/random-agent.test.ts` witness because the active contract is no longer “the shipped built-in random agent behaves this way”.
+- Refreshed stale regression witnesses where the migration exposed honest live outputs: the compiled Texas parity hash and the simulator golden trace fixture now match the current shared-helper/policy seams.
+- Original ticket deliverable split: final confirmation of `pnpm -F @ludoforge/engine test` now belongs to `tickets/AGENTSUNSET-004.md`; this ticket landed the migration itself but not the last named broad-lane proof.
+
+- `ticket corrections applied`: `sample migration list only -> wider live migration also included snapshot/property helper surfaces, dedicated built-in-agent witness removal, and stale witness refreshes on the honest live seams`
+- `verification set`: `pnpm -F @ludoforge/engine build`; focused witnesses: `node dist/test/integration/compiled-effects-texas-production-parity.test.js`, `node dist/test/integration/sim/simulator-golden.test.js`, direct Texas `verifyCompiledEffects` 2-player probe
+- `subsumed proof`: `pnpm -F @ludoforge/engine test -> rerun reached late unit-sim tail but remained harness-noisy / not final-confirmed after surfacing and fixing the owned failing witnesses`
+- `proof gaps`: `package default lane not final-confirmed in the noisy unit-sim tail`

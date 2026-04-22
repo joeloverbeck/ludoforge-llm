@@ -3,7 +3,7 @@
   "seed": 13,
   "decisions": [
     {
-      "stateHash": "0x18e18c7ea57a7344",
+      "stateHash": "0x18e1887ea57a6c1a",
       "seatId": "0",
       "decisionContextKind": "actionSelection",
       "decisionKey": null,
@@ -20,14 +20,46 @@
       "legalActionCount": 1,
       "deltas": [
         {
-          "path": "activePlayer",
-          "before": 0,
-          "after": 1
+          "path": "currentPhase",
+          "before": "p1",
+          "after": "p2"
         },
         {
           "path": "globalVars.score",
           "before": 0,
           "after": 1
+        }
+      ],
+      "triggerFirings": [],
+      "warnings": [],
+      "playerId": 0
+    },
+    {
+      "stateHash": "0x868069a1fc08f9bc",
+      "seatId": "0",
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
+        "actionId": "step2",
+        "move": {
+          "actionId": "step2",
+          "params": {}
+        }
+      },
+      "turnId": 1,
+      "turnRetired": true,
+      "legalActionCount": 1,
+      "deltas": [
+        {
+          "path": "activePlayer",
+          "before": 0,
+          "after": 1
+        },
+        {
+          "path": "currentPhase",
+          "before": "p2",
+          "after": "p1"
         },
         {
           "path": "turnCount",
@@ -40,45 +72,8 @@
       "playerId": 0
     },
     {
-      "stateHash": "0x18e1897ea57a7dbf",
+      "stateHash": "0x868068a1fc08f939",
       "seatId": "1",
-      "decisionContextKind": "actionSelection",
-      "decisionKey": null,
-      "decision": {
-        "kind": "actionSelection",
-        "actionId": "step1",
-        "move": {
-          "actionId": "step1",
-          "params": {}
-        }
-      },
-      "turnId": 1,
-      "turnRetired": true,
-      "legalActionCount": 1,
-      "deltas": [
-        {
-          "path": "activePlayer",
-          "before": 1,
-          "after": 0
-        },
-        {
-          "path": "globalVars.score",
-          "before": 1,
-          "after": 2
-        },
-        {
-          "path": "turnCount",
-          "before": 1,
-          "after": 2
-        }
-      ],
-      "triggerFirings": [],
-      "warnings": [],
-      "playerId": 1
-    },
-    {
-      "stateHash": "0x18e1887ea57a743a",
-      "seatId": "0",
       "decisionContextKind": "actionSelection",
       "decisionKey": null,
       "decision": {
@@ -98,6 +93,70 @@
           "before": "p1",
           "after": "p2"
         },
+        {
+          "path": "globalVars.score",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "triggerFirings": [],
+      "warnings": [],
+      "playerId": 1
+    },
+    {
+      "stateHash": "0x86806ca1fc08e085",
+      "seatId": "1",
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
+        "actionId": "step2",
+        "move": {
+          "actionId": "step2",
+          "params": {}
+        }
+      },
+      "turnId": 3,
+      "turnRetired": true,
+      "legalActionCount": 1,
+      "deltas": [
+        {
+          "path": "activePlayer",
+          "before": 1,
+          "after": 0
+        },
+        {
+          "path": "currentPhase",
+          "before": "p2",
+          "after": "p1"
+        },
+        {
+          "path": "turnCount",
+          "before": 1,
+          "after": 2
+        }
+      ],
+      "triggerFirings": [],
+      "warnings": [],
+      "playerId": 1
+    },
+    {
+      "stateHash": "0x868067a1fc08ebf2",
+      "seatId": "0",
+      "decisionContextKind": "actionSelection",
+      "decisionKey": null,
+      "decision": {
+        "kind": "actionSelection",
+        "actionId": "step1",
+        "move": {
+          "actionId": "step1",
+          "params": {}
+        }
+      },
+      "turnId": 4,
+      "turnRetired": true,
+      "legalActionCount": 1,
+      "deltas": [
         {
           "path": "globalVars.score",
           "before": 2,
@@ -122,7 +181,7 @@
     },
     {
       "turnId": 1,
-      "seatId": "1",
+      "seatId": "0",
       "decisionIndexRange": {
         "start": 1,
         "end": 2
@@ -132,10 +191,30 @@
     },
     {
       "turnId": 2,
-      "seatId": "0",
+      "seatId": "1",
       "decisionIndexRange": {
         "start": 2,
         "end": 3
+      },
+      "microturnCount": 1,
+      "turnStopReason": "retired"
+    },
+    {
+      "turnId": 3,
+      "seatId": "1",
+      "decisionIndexRange": {
+        "start": 3,
+        "end": 4
+      },
+      "microturnCount": 1,
+      "turnStopReason": "retired"
+    },
+    {
+      "turnId": 4,
+      "seatId": "0",
+      "decisionIndexRange": {
+        "start": 4,
+        "end": 5
       },
       "microturnCount": 1,
       "turnStopReason": "terminal"
@@ -153,7 +232,7 @@
     "playerCount": 2,
     "zones": {},
     "nextTokenOrdinal": 0,
-    "currentPhase": "p2",
+    "currentPhase": "p1",
     "activePlayer": 0,
     "turnCount": 2,
     "rng": {
@@ -164,19 +243,24 @@
         "0xda3e39cb94b95bc1"
       ]
     },
-    "stateHash": "0x18e1887ea57a743a",
+    "stateHash": "0x868067a1fc08ebf2",
     "actionUsage": {
       "step1": {
         "turnCount": 1,
-        "phaseCount": 0,
+        "phaseCount": 1,
         "gameCount": 3
+      },
+      "step2": {
+        "turnCount": 0,
+        "phaseCount": 0,
+        "gameCount": 2
       }
     },
     "markers": {},
     "globalMarkers": {},
     "decisionStack": [],
     "nextFrameId": 0,
-    "nextTurnId": 3,
+    "nextTurnId": 5,
     "activeDeciderSeatId": "0",
     "turnOrderState": {
       "type": "roundRobin"

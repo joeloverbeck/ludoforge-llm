@@ -2,10 +2,11 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent, RandomAgent } from '../../src/agents/index.js';
+import { PolicyAgent } from '../../src/agents/index.js';
 import { assertValidatedGameDef, createGameDefRuntime } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
+import { createSeededChoiceAgents } from '../helpers/test-agents.js';
 import { compileProductionSpec, deriveFitlPopulationZeroSpaces } from '../helpers/production-spec-helpers.js';
 
 /**
@@ -47,8 +48,8 @@ describe('Spec 140 bounded termination', () => {
     assert.ok(populationZeroSpaces.length > 0, 'Expected FITL production map to expose population-0 spaces');
   });
 
-  it('keeps the historical random-agent seed 123 canary bounded', () => {
-    const agents = Array.from({ length: PLAYER_COUNT }, () => new RandomAgent());
+  it('keeps the seeded-choice canary bounded on the live FITL production surface', () => {
+    const agents = createSeededChoiceAgents(PLAYER_COUNT);
     const trace = runGame(def, 123, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, runtime);
 
     assert.ok(ALLOWED_STOP_REASONS.has(trace.stopReason), `stop=${trace.stopReason} after ${trace.decisions.length} decisions`);

@@ -4,25 +4,13 @@ import { describe, it } from 'node:test';
 
 import {
   assertValidatedGameDef,
-  type AgentMicroturnDecisionInput,
-  type AgentMicroturnDecisionResult,
   asActionId,
   asPhaseId,
-  type Agent,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
-
-const firstLegalAgent = {
-  chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
-    const decision = input.microturn.legalActions[0];
-    if (decision === undefined) {
-      throw new Error('firstLegalAgent requires at least one legal action');
-    }
-    return { decision, rng: input.rng };
-  },
-} as Agent;
+import { firstLegalAgent } from '../../helpers/test-agents.js';
 
 const createDef = (options?: {
   readonly withAction?: boolean;

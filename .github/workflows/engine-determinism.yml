@@ -74,12 +74,13 @@ jobs:
       - run: pnpm -F @ludoforge/engine build
       - name: Run policy-profile-quality shard
         id: policy-profile-quality-run
+        working-directory: packages/engine
         env:
           ENGINE_POLICY_PROFILE_QUALITY_REPORT_PATH: ${{ github.workspace }}/policy-profile-quality-report-${{ matrix.shard_id }}.ndjson
           POLICY_PROFILE_QUALITY_TEST_PATHS: ${{ matrix.test_paths }}
         run: |
           mapfile -t test_paths <<< "$POLICY_PROFILE_QUALITY_TEST_PATHS"
-          node packages/engine/scripts/run-tests.mjs "${test_paths[@]}" 2>&1 | tee "policy-profile-quality-${{ matrix.shard_id }}.log"
+          node scripts/run-tests.mjs "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
       - name: Upload shard policy-profile-quality log
         if: always()
         uses: actions/upload-artifact@v4

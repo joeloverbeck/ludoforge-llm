@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import {
   applyDecision,
+  applyPublishedDecision,
   asActionId,
   asTokenId,
   asDecisionFrameId,
@@ -14,6 +15,7 @@ import {
   createGameDefRuntime,
   publishMicroturn,
   resolveActiveDeciderSeatIdForPlayer,
+  toStochasticDecisionStackContext,
   type ActionDef,
   type DecisionStackFrame,
   type GameDef,
@@ -501,5 +503,48 @@ describe('microturn publication', () => {
     assert.equal(applied.state.activePlayer, asPlayerId(1));
     assert.deepEqual(applied.state.decisionStack, []);
     assert.equal(applied.log.turnRetired, true);
+  });
+
+  it('throws a permanent stochastic distribution invariant when publication cannot derive a single-bind frontier', () => {
+    assert.throws(
+      () => toStochasticDecisionStackContext({
+        move: { actionId: asActionId('gain'), params: {} },
+        complete: false,
+        warnings: [],
+        stochasticDecision: {
+          kind: 'pendingStochastic',
+          complete: false,
+          source: 'rollRandom',
+          alternatives: [],
+          outcomes: [
+            { bindings: { '$left': 'A', '$right': 'B' } },
+          ],
+        },
+      }),
+      /MICROTURN_STOCHASTIC_DISTRIBUTION_REQUIRES_SINGLE_BIND/,
+    );
+  });
+
+  it('throws a permanent apply-side contract error for unsupported decision kinds', () => {
+    const action: ActionDef = {
+      id: asActionId('gain'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [eff({ addVar: { scope: 'global', var: 'resources', delta: 1 } })],
+      limits: [],
+    };
+    const def = makeBaseDef([action]);
+    const runtime = createGameDefRuntime(def);
+    const state = makeBaseState(def);
+    const microturn = publishMicroturn(def, state, runtime);
+
+    assert.throws(
+      () => applyPublishedDecision(def, state, microturn, { kind: 'badKind' } as never, undefined, runtime),
+      /MICROTURN_DECISION_KIND_UNSUPPORTED/,
+    );
   });
 });

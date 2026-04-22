@@ -53,5 +53,7 @@ export const advanceAutoresolvable = (
     }
   }
 
-  throw new Error(`UNSUPPORTED_AUTO_RESOLVE_THIS_TICKET: exceeded MAX_AUTO_RESOLVE_CHAIN=${MAX_AUTO_RESOLVE_CHAIN}`);
+  throw new Error(
+    `MICROTURN_AUTO_RESOLVE_BUDGET_EXCEEDED: exceeded MAX_AUTO_RESOLVE_CHAIN=${MAX_AUTO_RESOLVE_CHAIN}`,
+  );
 };

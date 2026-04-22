@@ -1,6 +1,6 @@
 # 140MICRODECPRO-017: Retire staged `UNSUPPORTED_*_THIS_TICKET` microturn error surfaces
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — microturn publication/apply/advance runtime-contract error surfaces
@@ -108,3 +108,22 @@ Add or update the narrowest tests needed to prove:
 1. `rg -n "UNSUPPORTED_CONTEXT_KIND_THIS_TICKET|UNSUPPORTED_AUTO_RESOLVE_THIS_TICKET" packages/engine/src/kernel/microturn`
 2. `pnpm -F @ludoforge/engine build`
 3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-publication.test.js`
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/stochastic-auto-advance.test.js`
+
+## Outcome
+
+Completed: 2026-04-22
+
+Replaced the staged `UNSUPPORTED_*_THIS_TICKET` throw vocabulary in the shared microturn core with permanent runtime-contract surfaces:
+
+- `publish.ts` now reports constructibility and unsupported-context failures with stable `MICROTURN_*` invariant names while preserving the informative bridgeability detail that downstream classifier helpers already recognize.
+- `apply.ts` now reports permanent apply-side continuation and unsupported-decision contract failures instead of rollout-era ticket-stage wording.
+- `advance.ts` now reports bounded auto-resolve exhaustion as `MICROTURN_AUTO_RESOLVE_BUDGET_EXCEEDED`.
+
+Focused regression coverage now pins the permanent publication/apply error surface in `packages/engine/test/unit/kernel/microturn-publication.test.ts`. The adjacent auto-resolve seam kept its existing behavioral witness in `packages/engine/test/unit/kernel/stochastic-auto-advance.test.ts`; the rename itself was verified by source grep because the budget-exhaustion branch is intentionally hard to reach through a truthful small fixture.
+
+## Verification Outcome
+
+- ticket corrections applied: `focused microturn unit proof for the changed surface passes -> final proof uses the existing publication witness plus the adjacent stochastic auto-advance witness because advance.ts also changed`
+- verification set: `rg -n "UNSUPPORTED_CONTEXT_KIND_THIS_TICKET|UNSUPPORTED_AUTO_RESOLVE_THIS_TICKET" packages/engine/src/kernel/microturn`; `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-publication.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/stochastic-auto-advance.test.js`
+- proof gaps: none

@@ -347,7 +347,7 @@ const continueResolvedMove = (
 ): ApplyDecisionResult => {
   const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, runtime);
   if (continuation.illegal !== undefined) {
-    throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
+    throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
   }
   if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
     return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, runtime);
@@ -402,7 +402,7 @@ export const applyPublishedDecision = (
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
     const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
     if (continuation.illegal !== undefined) {
-      throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${decision.kind}`);
+      throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
     }
     if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
       return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
@@ -669,5 +669,5 @@ export const applyPublishedDecision = (
     };
   }
 
-  throw new Error(`UNSUPPORTED_CONTEXT_KIND_THIS_TICKET:${JSON.stringify(decision)}`);
+  throw new Error(`MICROTURN_DECISION_KIND_UNSUPPORTED:${JSON.stringify(decision)}`);
 };

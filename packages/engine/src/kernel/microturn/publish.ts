@@ -46,8 +46,11 @@ import {
   type TurnRetirementDecision,
 } from './types.js';
 
-export const UNSUPPORTED_CONTEXT_KIND_THIS_TICKET = 'UNSUPPORTED_CONTEXT_KIND_THIS_TICKET';
-export const UNSUPPORTED_AUTO_RESOLVE_THIS_TICKET = 'UNSUPPORTED_AUTO_RESOLVE_THIS_TICKET';
+const microturnConstructibilityInvariant = (detail: string): Error =>
+  new Error(`MICROTURN_CONSTRUCTIBILITY_INVARIANT: ${detail}`);
+
+const microturnContextKindUnsupported = (kind: string): Error =>
+  new Error(`MICROTURN_CONTEXT_KIND_UNSUPPORTED:${kind}`);
 
 export const getRuntime = (def: GameDef, runtime?: GameDefRuntime): GameDefRuntime =>
   runtime ?? createGameDefRuntime(def);
@@ -587,7 +590,7 @@ const publishActionSelection = (
 ): MicroturnState => {
   const supportedMoves = supportedActionMovesForState(def, state, runtime);
   if (supportedMoves.length === 0) {
-    throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: no simple actionSelection moves are currently bridgeable`);
+    throw microturnConstructibilityInvariant('no simple actionSelection moves are currently bridgeable');
   }
   const seatId = publishedSeatId(state, activeSeatForPlayer(def, state));
   const decisionContext: ActionSelectionContext = {
@@ -624,7 +627,7 @@ const publishStackTop = (
       ),
     );
     if (legalActions.length === 0) {
-      throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: actionSelection context has no bridgeable continuations`);
+      throw microturnConstructibilityInvariant('actionSelection context has no bridgeable continuations');
     }
     return {
       kind: 'actionSelection',
@@ -659,7 +662,7 @@ const publishStackTop = (
       .filter(({ move }) => isSupportedFrameContinuationMove(def, state, top.effectFrame, move, runtime))
       .map(({ decision }) => decision);
     if (legalActions.length === 0) {
-      throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: chooseOne context has no bridgeable continuations`);
+      throw microturnConstructibilityInvariant('chooseOne context has no bridgeable continuations');
     }
     return {
       kind: 'chooseOne',
@@ -677,7 +680,7 @@ const publishStackTop = (
     const baseMove = rebuildMoveFromFrame(root);
     const legalActions = toChooseNStepDecisions(def, state, baseMove, context, top.effectFrame, runtime);
     if (legalActions.length === 0) {
-      throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: chooseNStep context has no bridgeable continuations`);
+      throw microturnConstructibilityInvariant('chooseNStep context has no bridgeable continuations');
     }
     return {
       kind: 'chooseNStep',
@@ -716,7 +719,7 @@ const publishStackTop = (
       compoundTurnTrace,
     };
   }
-  throw new Error(`${UNSUPPORTED_CONTEXT_KIND_THIS_TICKET}: ${top.context.kind}`);
+  throw microturnContextKindUnsupported(top.context.kind);
 };
 
 export const publishMicroturn = (
@@ -771,7 +774,9 @@ export const toStochasticDecisionStackContext = (
 ): StochasticResolveContext => {
   const stochastic = toStochasticDistribution(continuation);
   if (stochastic === null) {
-    throw new Error('UNSUPPORTED_CONTEXT_KIND_THIS_TICKET: stochastic continuation does not expose a single-bind distribution');
+    throw new Error(
+      'MICROTURN_STOCHASTIC_DISTRIBUTION_REQUIRES_SINGLE_BIND: stochastic continuation does not expose a single-bind distribution',
+    );
   }
   return toStochasticResolveContext(stochastic.decisionKey, stochastic.distribution);
 };

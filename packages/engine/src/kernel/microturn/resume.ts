@@ -17,7 +17,10 @@ import type {
   Rng,
   RuntimeWarning,
 } from '../types.js';
-import type { DecisionContinuationResult } from './continuation.js';
+import {
+  resolveForcedPendingSelection,
+  type DecisionContinuationResult,
+} from './continuation.js';
 import type {
   SuspendedChoiceBindingOption,
   SuspendedEffectFrameSnapshot,
@@ -163,6 +166,71 @@ const findAction = (def: GameDef, actionId: Move['actionId']): ActionDef => {
     throw new Error(`MICROTURN_SUSPENDED_PIPELINE_ACTION_MISSING:${String(actionId)}`);
   }
   return action;
+};
+
+const withResolvedSuspendedDecision = (
+  move: Move,
+  request: ChoicePendingRequest,
+  selected: MoveParamScalar | readonly MoveParamScalar[],
+): Move => {
+  if (request.decisionPath === 'compound.specialActivity') {
+    if (move.compound === undefined) {
+      throw new Error('MICROTURN_SUSPENDED_COMPOUND_CHOICE_MOVE_MISSING');
+    }
+    return {
+      ...move,
+      compound: {
+        ...move.compound,
+        specialActivity: {
+          ...move.compound.specialActivity,
+          params: {
+            ...move.compound.specialActivity.params,
+            [request.decisionKey]: selected,
+          },
+        },
+      },
+    };
+  }
+
+  return {
+    ...move,
+    params: {
+      ...move.params,
+      [request.decisionKey]: selected,
+    },
+  };
+};
+
+const finalizeResumedPendingDecision = (
+  def: GameDef,
+  move: Move,
+  nextDecision: ChoicePendingRequest,
+  warnings: readonly RuntimeWarning[],
+  runtime: GameDefRuntime,
+  onChooseNTemplateCreated?: (template: ChooseNTemplate) => void,
+): DecisionContinuationResult => {
+  const forcedSelection = resolveForcedPendingSelection(nextDecision);
+  if (forcedSelection === undefined || nextDecision.suspendedFrame === undefined) {
+    return {
+      complete: false,
+      move,
+      nextDecision,
+      warnings,
+      ...(nextDecision.suspendedFrame === undefined ? {} : { suspendedFrame: nextDecision.suspendedFrame }),
+    };
+  }
+
+  const continued = resumeSuspendedEffectFrame(
+    def,
+    nextDecision.suspendedFrame,
+    withResolvedSuspendedDecision(move, nextDecision, forcedSelection as MoveParamScalar | readonly MoveParamScalar[]),
+    runtime,
+    onChooseNTemplateCreated,
+  );
+  return {
+    ...continued,
+    warnings: [...warnings, ...continued.warnings],
+  };
 };
 
 const resumePipelineTail = (
@@ -348,15 +416,7 @@ export const resumeSuspendedEffectFrame = (
       warnings.push(...resumed.warnings);
       if (resumed.nextDecision !== undefined) {
         const nextDecision = appendRemainingResumeFrames(resumed.nextDecision, remainingFrames);
-        return {
-          complete: false,
-          move,
-          nextDecision,
-          warnings,
-          ...(nextDecision.suspendedFrame === undefined
-            ? {}
-            : { suspendedFrame: nextDecision.suspendedFrame }),
-        };
+        return finalizeResumedPendingDecision(def, move, nextDecision, warnings, resolvedRuntime, onChooseNTemplateCreated);
       }
       currentState = resumed.state;
       currentRng = resumed.rng;
@@ -391,11 +451,14 @@ export const resumeSuspendedEffectFrame = (
       if ('complete' in pipelineResult) {
         if (pipelineResult.nextDecision !== undefined) {
           const nextDecision = appendRemainingResumeFrames(pipelineResult.nextDecision, remainingFrames);
-          return {
-            ...pipelineResult,
+          return finalizeResumedPendingDecision(
+            def,
+            pipelineResult.move,
             nextDecision,
-            ...(nextDecision.suspendedFrame === undefined ? {} : { suspendedFrame: nextDecision.suspendedFrame }),
-          };
+            pipelineResult.warnings,
+            resolvedRuntime,
+            onChooseNTemplateCreated,
+          );
         }
         return pipelineResult;
       }
@@ -431,15 +494,7 @@ export const resumeSuspendedEffectFrame = (
           }),
           remainingFrames,
         );
-        return {
-          complete: false,
-          move,
-          nextDecision,
-          warnings,
-          ...(nextDecision.suspendedFrame === undefined
-            ? {}
-            : { suspendedFrame: nextDecision.suspendedFrame }),
-        };
+        return finalizeResumedPendingDecision(def, move, nextDecision, warnings, resolvedRuntime, onChooseNTemplateCreated);
       }
       currentState = resumed.state;
       currentRng = resumed.rng;

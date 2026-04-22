@@ -66,7 +66,7 @@ const defaultChoose = (request: ChoicePendingRequest): MoveParamValue | undefine
 
 const choiceValueKey = (value: unknown): string => JSON.stringify([typeof value, value]);
 
-const resolveForcedPendingSelection = (request: ChoicePendingRequest): MoveParamValue | undefined => {
+export const resolveForcedPendingSelection = (request: ChoicePendingRequest): MoveParamValue | undefined => {
   if (request.type !== 'chooseN') {
     return undefined;
   }
@@ -87,6 +87,14 @@ const resolveForcedPendingSelection = (request: ChoicePendingRequest): MoveParam
     });
   const min = request.min ?? 0;
   const max = request.max ?? (request.selected.length + remainingSelectable.length);
+
+  if (remainingSelectable.length === 0 && request.canConfirm) {
+    return [...request.selected];
+  }
+
+  if (request.decisionPlayer !== undefined) {
+    return undefined;
+  }
 
   if (min !== max) {
     return undefined;

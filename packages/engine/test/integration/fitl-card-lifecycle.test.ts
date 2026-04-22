@@ -72,20 +72,22 @@ describe('FITL card lifecycle integration', () => {
     assert.equal(start.zones['lookahead:none']?.[0]?.id, 'tok_card_2');
 
     const first = applyMove(def, start, legalMoves(def, start)[0]!);
-    assert.deepEqual(lifecycleSteps(first.triggerFirings), ['promoteLookaheadToPlayed', 'revealLookahead']);
-    assert.equal(first.state.zones['played:none']?.[0]?.id, 'tok_card_2');
-    assert.equal(first.state.zones['lookahead:none']?.[0]?.id, 'tok_card_1');
-
-    const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
-    assert.deepEqual(lifecycleSteps(second.triggerFirings), [
+    assert.deepEqual(lifecycleSteps(first.triggerFirings), [
+      'promoteLookaheadToPlayed',
+      'revealLookahead',
       'coupToLeader',
       'coupHandoff',
       'promoteLookaheadToPlayed',
       'revealLookahead',
-      'promoteLookaheadToPlayed',
     ]);
+    assert.equal(first.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
+    assert.equal(first.state.zones['played:none']?.[0]?.id, 'tok_card_1');
+    assert.equal(first.state.zones['lookahead:none']?.[0]?.id, 'tok_card_0');
+
+    const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
+    assert.deepEqual(lifecycleSteps(second.triggerFirings), ['promoteLookaheadToPlayed']);
     assert.equal(second.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
-    assert.equal(second.state.zones['played:none']?.[0]?.id, 'tok_card_0');
+    assert.equal(second.state.zones['played:none']?.[0], undefined);
     assert.equal(second.state.zones['lookahead:none']?.[0], undefined);
   });
 
@@ -126,15 +128,20 @@ describe('FITL card lifecycle integration', () => {
 
     // With effectiveTurnPhases filtering to only coup phases during coup rounds,
     // the 'victory' coup phase has no actions → coup round auto-completes in one move.
-    // The first pass triggers: card boundary + coup auto-complete + coup triggers + next boundary.
+    // The first pass promotes the revealed coup into leader, immediately hands off into
+    // the next regular card, and then draws the next lookahead.
     assert.deepEqual(lifecycleSteps(first.triggerFirings), [
-      'promoteLookaheadToPlayed', 'revealLookahead',
-      'coupToLeader', 'coupHandoff',
-      'promoteLookaheadToPlayed', 'revealLookahead',
+      'promoteLookaheadToPlayed',
+      'revealLookahead',
+      'coupToLeader',
+      'coupHandoff',
+      'promoteLookaheadToPlayed',
+      'revealLookahead',
+      'promoteLookaheadToPlayed',
     ]);
-    // Second coup card: maxConsecutiveRounds=1 suppresses the coup handoff,
-    // so only a regular card promote fires (no revealLookahead — deck exhausted).
-    assert.deepEqual(lifecycleSteps(second.triggerFirings), ['promoteLookaheadToPlayed']);
+    // maxConsecutiveRounds=1 suppresses the second coup handoff entirely, so no
+    // additional lifecycle entries fire after the first boundary sequence exhausts the deck.
+    assert.deepEqual(lifecycleSteps(second.triggerFirings), []);
     // Third move: no more cards to promote.
     assert.deepEqual(lifecycleSteps(third.triggerFirings), []);
     assert.equal(third.state.zones['leader:none']?.length, 1);

@@ -10,6 +10,7 @@ import {
 } from './test-lane-manifest.mjs';
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
+const DEFAULT_FITL_RULES_TIMEOUT_MS = 5 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
 const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];
 const TEST_PROGRESS_LANE_ENV = 'ENGINE_TEST_PROGRESS_LANE';
@@ -29,7 +30,11 @@ const laneConfigs = {
   'integration:core': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:core').map(toDistTestPath) },
   'integration:game-packages': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath) },
   'integration:fitl-events': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath) },
-  'integration:fitl-rules': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath) },
+  'integration:fitl-rules': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
+    timeoutMs: DEFAULT_FITL_RULES_TIMEOUT_MS,
+  },
   'integration:texas-cross-game': {
     execution: 'batched',
     patterns: listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
@@ -121,11 +126,15 @@ export function buildExecutionPlan(argv, env = process.env) {
     lane,
     execution: laneConfig.execution,
     patterns: laneConfig.patterns,
-    ...(lane === 'determinism'
-      ? {
-          timeoutMs: toPositiveInteger(env.ENGINE_DETERMINISM_TEST_TIMEOUT_MS) ?? laneConfig.timeoutMs,
-        }
-      : {}),
+    ...(laneConfig.timeoutMs === undefined
+      ? {}
+      : {
+          timeoutMs: lane === 'determinism'
+            ? toPositiveInteger(env.ENGINE_DETERMINISM_TEST_TIMEOUT_MS) ?? laneConfig.timeoutMs
+            : lane === 'integration:fitl-rules'
+              ? toPositiveInteger(env.ENGINE_FITL_RULES_TEST_TIMEOUT_MS) ?? laneConfig.timeoutMs
+              : laneConfig.timeoutMs,
+        }),
   };
 }
 

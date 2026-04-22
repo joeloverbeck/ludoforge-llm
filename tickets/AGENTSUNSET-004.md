@@ -45,7 +45,7 @@ Once the lane is final-confirmed or truthfully narrowed, update the archived `AG
 - `packages/engine/test/unit/sim/simulator.test.ts` (modify if needed)
 - `packages/engine/test/integration/compiled-effects-verification.test.ts` (modify if needed)
 - `packages/engine/scripts/run-tests.mjs` (modify if runner/reporting drift is proven)
-- `archive/archive/tickets/AGENTSUNSET-001.md` (modify only if closeout wording needs final proof amendment)
+- `archive/tickets/AGENTSUNSET-001.md` (modify only if closeout wording needs final proof amendment)
 
 ## Out of Scope
 

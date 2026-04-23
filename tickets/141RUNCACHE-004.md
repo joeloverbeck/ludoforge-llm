@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — possibly extend `runVerifiedGame` return shape or add a sibling helper; new test file
-**Deps**: `tickets/141RUNCACHE-002.md`
+**Deps**: `archive/tickets/141RUNCACHE-002.md`
 
 ## Problem
 

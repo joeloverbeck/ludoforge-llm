@@ -38,6 +38,26 @@ export interface GameDefRuntime {
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
 
+declare const forkedGameDefRuntimeForRunBrand: unique symbol;
+
+export type ForkedGameDefRuntimeForRun = GameDefRuntime & {
+  readonly [forkedGameDefRuntimeForRunBrand]: true;
+};
+
+/**
+ * Type-level marker for helpers that require a runtime already isolated to one run.
+ *
+ * The current pattern is intentionally lightweight: callers either pass a shared
+ * `GameDefRuntime` to a helper that forks internally, or they accept/brand a
+ * `ForkedGameDefRuntimeForRun` explicitly to make that precondition visible in
+ * the helper signature.
+ */
+export function assertGameDefRuntimeForkedForRun(
+  runtime: GameDefRuntime,
+): asserts runtime is ForkedGameDefRuntimeForRun {
+  void runtime;
+}
+
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
   const compiledLifecycleEffects = compileAllLifecycleEffects(def);
   const alwaysCompleteActionIds = computeAlwaysCompleteActionIds(def);
@@ -65,12 +85,12 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * game boundaries so long-lived callers do not accumulate cross-run feature
  * keys.
  */
-export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): GameDefRuntime {
+export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {
     ...runtime,
     zobristTable: {
       ...runtime.zobristTable,
       keyCache: new Map(),
     },
-  };
+  } as ForkedGameDefRuntimeForRun;
 }

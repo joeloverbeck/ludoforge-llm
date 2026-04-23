@@ -87,6 +87,17 @@ export const compileFitlDef = (): ValidatedGameDef => {
  * errors so coverage stays focused on hash parity.
  * The broad property sweep samples this invariant periodically; the exact
  * move-by-move oracle lives in `zobrist-incremental-parity.test.ts`.
+ *
+ * Run-boundary contract:
+ * like `runGame`, callers may pass a shared `GameDefRuntime` reused across
+ * many invocations. `runVerifiedGame` forks that runtime via
+ * `forkGameDefRuntimeForRun(...)` before execution so `runLocal` members
+ * restart from their declared initial state while `sharedStructural` members
+ * remain shared by reference. This helper bypasses `runGame` and advances via
+ * `publishMicroturn(...)` plus `applyPublishedDecision(...)` directly, but
+ * that bypass inherits the same run-boundary contract rather than weakening
+ * it. Helpers that do not fork internally must require an explicit
+ * pre-forked-runtime assertion instead.
  */
 export const runVerifiedGame = (
   def: ValidatedGameDef,

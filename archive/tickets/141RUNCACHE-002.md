@@ -1,6 +1,6 @@
 # 141RUNCACHE-002: Run-like helper API surface audit and contract normalization
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/sim/simulator.ts` (JSDoc), helper files (JSDoc, possibly assertions)
@@ -21,7 +21,7 @@ Additionally, the spec requires an audit of helper-local mutable state — closu
 
 1. `runGame` signature and fork behavior verified at `packages/engine/src/sim/simulator.ts:74-88` during Spec 141 reassessment.
 2. `runVerifiedGame` signature and fork behavior verified at `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts:91-160` during Spec 141 reassessment.
-3. No other direct kernel helpers that reuse a runtime across runs were located. Confirm during implementation via `grep -rn "GameDefRuntime" packages/engine/src packages/engine/test` filtered to call sites (not imports).
+3. The public run-like helper surface is `runGame`, `runGames`, and `runVerifiedGame`. `runGames` also accepts `GameDefRuntime` and advances state transitively through `runGame`, so it inherits the same contract and requires the same JSDoc coverage.
 4. This ticket's JSDoc and assertions build on the ownership-class vocabulary introduced in 141RUNCACHE-001 — references to `sharedStructural` / `runLocal` in the contract docs must match the classification from ticket 001.
 
 ## Architecture Check
@@ -44,6 +44,7 @@ Enumerate every public export (src and test/helpers) that receives a `GameDefRun
 Seed list (confirmed during Spec 141 reassessment; audit may surface more):
 
 - `runGame` — `packages/engine/src/sim/simulator.ts:74`
+- `runGames` — `packages/engine/src/sim/simulator.ts:222`
 - `runVerifiedGame` — `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts:91`
 - `createFitlRuntime`, `createTexasRuntime` — same helper file (construct, do not advance)
 
@@ -94,7 +95,7 @@ For helpers that require an already-forked runtime (if any exist or are added in
 ### Invariants
 
 1. Every public helper accepting `GameDefRuntime` carries a JSDoc declaring its run-boundary behavior.
-2. No helper-local mutable state survives across runs in a way that changes authoritative behavior.
+2. No helper-local mutable state survives across runs in a way that changes authoritative behavior; the audit found only structural module caches or per-call locals in the owned surface.
 3. `runGame` and `runVerifiedGame` cite the same canonical contract language; any future helper that accepts a runtime either mirrors the JSDoc or asserts pre-forked input.
 
 ## Test Plan
@@ -108,3 +109,19 @@ For helpers that require an already-forked runtime (if any exist or are added in
 1. `pnpm turbo lint` (JSDoc must not trigger linter warnings)
 2. `pnpm turbo typecheck`
 3. `pnpm turbo test` (sanity — no behavioral change expected)
+
+## Outcome
+
+Completion date: 2026-04-22
+
+- `ticket corrections applied`: public helper surface `runGame` + `runVerifiedGame` -> `runGame` + `runGames` + `runVerifiedGame`; `pnpm turbo lint` / `typecheck` / `test` -> package-local engine `build`, focused simulator witness, focused `runVerifiedGame` determinism witness, engine `lint`, and engine `typecheck` for the owned engine slice.
+- `audit findings`: `packages/engine/src/kernel` and `packages/engine/src/sim` retain only structural module caches (`WeakMap` / lookup memo tables such as adjacency, selector, and dispatch caches) or per-call locals in the owned boundary; no helper-local run state outside `GameDefRuntime` required relocation.
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-texas.test.js`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine typecheck`
+- `proof gaps`: none
+
+Implemented the Spec 141 run-boundary contract normalization for the live public helper surface:
+
+- added canonical run-boundary JSDoc to `runGame`
+- documented `runGames` as the batch helper that inherits `runGame`'s fork-per-run contract
+- mirrored the same contract on `runVerifiedGame`, including its direct `publishMicroturn` + `applyPublishedDecision` bypass
+- added a reusable `ForkedGameDefRuntimeForRun` marker plus `assertGameDefRuntimeForkedForRun(...)` pattern for future helpers that want to require pre-forked runtimes explicitly

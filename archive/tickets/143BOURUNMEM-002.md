@@ -1,6 +1,6 @@
 # 143BOURUNMEM-002: Lifetime-class audit and authoritative classification
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — audit + documentation only; no engine source changes
@@ -104,3 +104,24 @@ If the audit surfaces classification discrepancies with Spec 143 Section 1's sta
 1. `pnpm turbo typecheck` — no engine source changed, should pass.
 2. `pnpm turbo lint` — doc-only changes should not introduce lint errors.
 3. Full suite sanity: `pnpm turbo test`.
+
+## Outcome
+
+- Completed: 2026-04-23
+- Extended [docs/architecture.md](/home/joeloverbeck/projects/ludoforge-llm/docs/architecture.md) in its existing `Runtime Ownership` section instead of creating a new sibling doc, because that file already owned the repo's runtime-lifetime contract.
+- Added an authoritative Spec 143 lifetime-class audit covering every starter-table structure plus the 001 gap rows:
+  - `GameDefRuntime` structural tables
+  - `zobristTable.keyCache`
+  - token-state index
+  - policy preview / evaluation contexts
+  - chooseN `probeCache` / `legalityCache`
+  - `DecisionStackFrame` field split
+  - granted-operation / decision-preview helper state
+  - parsed GameSpec / `sourceMap.byPath` compile-load scaffolding
+  - V8 / module context baseline populations around staged CNL loading and compilation
+- Updated [reports/spec-143-heap-snapshot.md](/home/joeloverbeck/projects/ludoforge-llm/reports/spec-143-heap-snapshot.md) with a `Classification Extensions` section that points readers at the authoritative audit and records that the snapshot-only gaps are flat compile/load baseline cost rather than the growing runtime retainer behind the motivating OOM.
+- Confirmed the starter-table classifications rather than overturning them: the main live gaps are scope-boundary enforcement for decision-local helpers (`143BOURUNMEM-004`) and any later baseline-load reduction work outside the 003/004 runtime-compaction slice.
+
+- ticket corrections applied: `docs/architecture-memory.md` as the default doc home -> extended the existing `docs/architecture.md` runtime-ownership section per the ticket's own allowed alternative
+- verification set: `pnpm turbo typecheck`; `pnpm turbo lint`; `pnpm turbo test`; `pnpm run check:ticket-deps`
+- proof gaps: `pnpm turbo test` is currently blocked by an unrelated runner failure at `packages/runner/test/ui/App.test.ts:484` ("opens pre-game config directly when bootstrapped from a browser entry request"), which remained on `route-loading-screen` instead of reaching `pre-game-config-screen`. The doc-only changes in this ticket do not touch runner source. `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm run check:ticket-deps` passed.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel (chooseN session, microturn types/apply/publish), agents (policy preview, granted-operation helpers). Exact surface refined against 002's authoritative classification.
-**Deps**: `tickets/143BOURUNMEM-002.md`
+**Deps**: `archive/tickets/143BOURUNMEM-002.md`
 
 ## Problem
 

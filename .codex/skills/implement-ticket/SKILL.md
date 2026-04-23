@@ -259,6 +259,14 @@ Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria`
 3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
 4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
 
+When a ticket-named **broad verification lane** (for example `pnpm turbo test`, workspace lint, or another multi-package suite) fails outside the owned diff, do not silently collapse that result into a vague "repo is red" note. Classify the failure explicitly before closeout:
+
+1. identify the first failing owned path/test and decide whether it is inside the ticket's touched boundary
+2. record the lane as either `owned failure` or `repo-preexisting unrelated blocker`
+3. if it is `owned failure`, the ticket is not acceptance-proven; continue fixing or stop for `1-3-1` if the next path is unclear
+4. if it is `repo-preexisting unrelated blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, state that the owned slice did not touch that surface, and preserve the proof gap explicitly instead of claiming the broad lane passed
+5. only treat the ticket as closeable with that documented proof gap when the remaining acceptance evidence still truthfully proves the owned boundary and `AGENTS.md` does not require fixing the unrelated blocker as part of the ticket
+
 After any acceptance or proof lane goes green, preserve that result only while the proved surface stays unchanged:
 
 1. if you edit code, tests, fixtures, generated artifacts, or the active ticket text in a way that changes the acceptance story, immediately mark the affected earlier proof results as stale

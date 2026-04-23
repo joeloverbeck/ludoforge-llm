@@ -109,6 +109,15 @@ Surfaced by the snapshot but not named in the starter table:
 
 These are the explicit gaps for `143BOURUNMEM-002`: either classify them as non-runtime baseline cost outside the lifetime-class audit, or extend the audit table so the evidence and taxonomy stay aligned.
 
+## Classification Extensions
+
+The authoritative follow-on audit now lives in [docs/architecture.md](/home/joeloverbeck/projects/ludoforge-llm/docs/architecture.md) under `Runtime Ownership -> Lifetime Classes` and `Authoritative Classification`.
+
+That audit does two things this report intentionally did not do on its own:
+
+- confirms the starter-table rows from Spec 143 against concrete lifecycle paths in engine source
+- classifies the snapshot-only gaps here as flat compile/load baseline cost (`run-local-structural`), not as the growing per-decision runtime owner behind the motivating OOM
+
 ## Bottom Line
 
 - The motivating witness is still live: the higher-turn repro continues to OOM on current `HEAD`.

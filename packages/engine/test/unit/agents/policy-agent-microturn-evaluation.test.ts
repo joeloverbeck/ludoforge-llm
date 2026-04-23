@@ -164,6 +164,23 @@ describe('policy agent microturn evaluation', () => {
     assert.ok(followup.legalActions.some((decision) => JSON.stringify(decision) === JSON.stringify(completionDecision.decision)));
   });
 
+  it('keeps chooseOne fallback on a bounded structural path when guided matching is disabled', () => {
+    const def = createDef();
+    const state = initialState(def, 7, 2).state;
+    const agent = new PolicyAgent({ traceLevel: 'summary', disableGuidedChooser: true });
+
+    const actionSelection = publishMicroturn(def, state);
+    const selected = agent.chooseDecision({ def, state, microturn: actionSelection, rng: createRng(11n) });
+    const afterAction = applyDecision(def, state, selected.decision, undefined).state;
+    const followup = publishMicroturn(def, afterAction);
+    assert.equal(followup.kind, 'chooseOne');
+
+    const completionDecision = agent.chooseDecision({ def, state: afterAction, microturn: followup, rng: createRng(13n) });
+    assert.equal(completionDecision.decision.kind, 'chooseOne');
+    assert.ok(followup.legalActions.some((decision) => JSON.stringify(decision) === JSON.stringify(completionDecision.decision)));
+    assert.equal(completionDecision.agentDecision?.kind, 'policy');
+  });
+
   it('prefers progress over remove-thrashing on exact-cardinality chooseNStep frontiers', () => {
     const def = createExactChooseNDef();
     const agent = new PolicyAgent({ traceLevel: 'summary' });

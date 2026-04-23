@@ -126,25 +126,36 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
-  const metricCacheByState = new Map<bigint, Map<string, number>>();
-  const victorySurfaceByState = new Map<bigint, PolicyVictorySurface>();
+  const rootStateHash = input.state.stateHash;
+  const rootMetricCache = new Map<string, number>();
+  let transientMetricCache: { readonly stateHash: bigint; readonly cache: Map<string, number> } | null = null;
+  let rootVictorySurface: PolicyVictorySurface | null = null;
+  let transientVictorySurface: { readonly stateHash: bigint; readonly surface: PolicyVictorySurface } | null = null;
 
   function getMetricCache(state: GameState): Map<string, number> {
-    let cache = metricCacheByState.get(state.stateHash);
-    if (cache === undefined) {
-      cache = new Map<string, number>();
-      metricCacheByState.set(state.stateHash, cache);
+    if (state.stateHash === rootStateHash) {
+      return rootMetricCache;
     }
+    if (transientMetricCache?.stateHash === state.stateHash) {
+      return transientMetricCache.cache;
+    }
+    const cache = new Map<string, number>();
+    transientMetricCache = { stateHash: state.stateHash, cache };
     return cache;
   }
 
   function getVictorySurface(state: GameState): PolicyVictorySurface {
-    let surface = victorySurfaceByState.get(state.stateHash);
-    if (surface !== undefined) {
-      return surface;
+    if (state.stateHash === rootStateHash) {
+      if (rootVictorySurface === null) {
+        rootVictorySurface = buildPolicyVictorySurface(input.def, state, input.runtime);
+      }
+      return rootVictorySurface;
     }
-    surface = buildPolicyVictorySurface(input.def, state, input.runtime);
-    victorySurfaceByState.set(state.stateHash, surface);
+    if (transientVictorySurface?.stateHash === state.stateHash) {
+      return transientVictorySurface.surface;
+    }
+    const surface = buildPolicyVictorySurface(input.def, state, input.runtime);
+    transientVictorySurface = { stateHash: state.stateHash, surface };
     return surface;
   }
 
@@ -306,8 +317,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       }
       disposed = true;
       previewRuntime.dispose();
-      metricCacheByState.clear();
-      victorySurfaceByState.clear();
+      rootMetricCache.clear();
+      transientMetricCache?.cache.clear();
+      transientMetricCache = null;
+      rootVictorySurface = null;
+      transientVictorySurface = null;
     },
   };
 }

@@ -13,7 +13,6 @@ import {
   publishMicroturn,
   resolveActiveDeciderSeatIdForPlayer,
   type ActionDef,
-  type DecisionStackFrame,
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
@@ -23,10 +22,10 @@ import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 const phaseId = asPhaseId('main');
 
 const createDef = (): GameDef => asTaggedGameDef({
-  metadata: { id: 'atomic-legal-actions', players: { min: 2, max: 2 } },
+  metadata: { id: 'decision-stack-frame-shape', players: { min: 2, max: 2 } },
   seats: [{ id: '0' }, { id: '1' }],
   constants: {},
-  globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 10 }],
+  globalVars: [],
   perPlayerVars: [],
   zones: [{ id: 'board:none', owner: 'none', visibility: 'public', ordering: 'set' }],
   tokenTypes: [],
@@ -43,12 +42,20 @@ const createDef = (): GameDef => asTaggedGameDef({
     effects: [
       eff({
         chooseOne: {
-          internalDecisionId: 'decision:$pick',
-          bind: '$pick',
-          options: { query: 'enums', values: ['a', 'b'] },
+          internalDecisionId: 'decision:$branch',
+          bind: '$branch',
+          options: { query: 'enums', values: ['left'] },
         },
       }),
-      eff({ addVar: { scope: 'global', var: 'score', delta: 1 } }),
+      eff({
+        chooseN: {
+          internalDecisionId: 'decision:$targets',
+          bind: '$targets',
+          options: { query: 'enums', values: ['a', 'b'] },
+          min: 1,
+          max: 2,
+        },
+      }),
     ],
     limits: [],
   } satisfies ActionDef],
@@ -57,7 +64,7 @@ const createDef = (): GameDef => asTaggedGameDef({
 });
 
 const createState = (def: GameDef): GameState => ({
-  globalVars: { score: 0 },
+  globalVars: {},
   perPlayerVars: {},
   zoneVars: {},
   playerCount: 2,
@@ -82,47 +89,38 @@ const createState = (def: GameDef): GameState => ({
   activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, 0),
 });
 
-describe('atomic legal actions', () => {
-  it('applies every published actionSelection, chooseOne, and turnRetirement decision directly', () => {
+describe('decision stack frame shape', () => {
+  it('retains continuation bindings only on the root frame', () => {
     const def = createDef();
     const runtime = createGameDefRuntime(def);
 
     const initial = createState(def);
     const actionSelection = publishMicroturn(def, initial, runtime);
-    for (const decision of actionSelection.legalActions) {
-      const decisionRecord = decision as unknown as Record<string, unknown>;
-      assert.equal('certificateIndex' in decisionRecord, false);
-      assert.equal('template' in decisionRecord, false);
-      assert.doesNotThrow(() => {
-        applyDecision(def, initial, decision, undefined, runtime);
-      });
-    }
-
     const afterAction = applyDecision(def, initial, actionSelection.legalActions[0]!, undefined, runtime).state;
-    const chooseOne = publishMicroturn(def, afterAction, runtime);
-    for (const decision of chooseOne.legalActions) {
-      assert.doesNotThrow(() => {
-        applyDecision(def, afterAction, decision, undefined, runtime);
-      });
-    }
 
-    const retirementFrame: DecisionStackFrame = {
-      frameId: asDecisionFrameId(0),
-      parentFrameId: null,
-      turnId: asTurnId(0),
-      context: { kind: 'turnRetirement', seatId: '__kernel', retiringTurnId: asTurnId(0) },
-      effectFrame: { programCounter: 0, boundedIterationCursors: {}, localBindings: {}, pendingTriggerQueue: [] },
-    };
-    const retirementState = {
-      ...createState(def),
-      decisionStack: [retirementFrame],
-      activeDeciderSeatId: '__kernel' as const,
-    };
-    const retirement = publishMicroturn(def, retirementState, runtime);
-    for (const decision of retirement.legalActions) {
-      assert.doesNotThrow(() => {
-        applyDecision(def, retirementState, decision, undefined, runtime);
-      });
-    }
+    assert.equal(afterAction.decisionStack?.length, 2);
+    assert.deepEqual(afterAction.decisionStack?.[0]?.continuationBindings, {});
+    assert.equal(afterAction.decisionStack?.[1]?.continuationBindings, undefined);
+
+    const chooseOne = publishMicroturn(def, afterAction, runtime);
+    const branch = chooseOne.legalActions.find((entry) => entry.kind === 'chooseOne');
+    assert.ok(branch);
+    const afterChooseOne = applyDecision(def, afterAction, branch!, undefined, runtime).state;
+
+    assert.equal(afterChooseOne.decisionStack?.length, 2);
+    assert.equal(afterChooseOne.decisionStack?.[1]?.continuationBindings, undefined);
+
+    const chooseN = publishMicroturn(def, afterChooseOne, runtime);
+    const addDecision = chooseN.legalActions.find(
+      (entry) => entry.kind === 'chooseNStep' && entry.command === 'add' && entry.value === 'a',
+    );
+    assert.ok(addDecision);
+    const afterAdd = applyDecision(def, afterChooseOne, addDecision!, undefined, runtime).state;
+
+    assert.deepEqual(afterAdd.decisionStack?.[0]?.continuationBindings, {
+      '$branch': 'left',
+      '$targets': ['a'],
+    });
+    assert.equal(afterAdd.decisionStack?.[1]?.continuationBindings, undefined);
   });
 });

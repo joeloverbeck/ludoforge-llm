@@ -100,7 +100,7 @@ Run the determinism-tier engine proof after the cache-key refactor to confirm re
 - Implemented: large-domain fallback keys now use stable domain indices rather than raw option payload strings, so oversized chooseN values no longer get retained verbatim in probe-cache identity.
 - Implemented: added focused boundedness coverage in `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` and extended existing selection-key tests to pin the non-raw fallback encoding.
 - Blocker: the required determinism-tier proof still OOMs on a serial rerun of `dist/test/determinism/draft-state-determinism-parity.test.js` after about 3m19s, so this ticket is not acceptance-proven yet.
-- Remaining ownership: `tickets/143BOURUNMEM-004.md` owns the remaining production retained-state fix behind the determinism OOM; `tickets/143BOURUNMEM-005.md` owns the later FITL heap-boundedness witness once 004 lands.
+- Remaining ownership: `archive/tickets/143BOURUNMEM-004.md` owns the remaining production retained-state fix behind the determinism OOM; `tickets/143BOURUNMEM-005.md` owns the later FITL heap-boundedness witness once 004 lands.
 
 - ticket corrections applied: `broader 002 follow-on surface -> remaining live 003 seam is shared chooseN selection-key compaction plus witness-search probe-cache migration`
 - verification set: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine test:unit`; `pnpm -F @ludoforge/engine test:determinism`

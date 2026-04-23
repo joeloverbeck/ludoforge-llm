@@ -275,7 +275,7 @@ export const rebuildMoveFromFrame = (frame: DecisionStackFrame): Move => ({
   ...rebuildMoveFromTrace(rootDecisionHistory(frame)),
   params: {
     ...rebuildMoveFromTrace(rootDecisionHistory(frame)).params,
-    ...frame.accumulatedBindings,
+    ...(frame.continuationBindings ?? {}),
   },
 });
 
@@ -756,7 +756,6 @@ export const createChooseOneFrame = (
   parentFrameId: asDecisionFrameId(parentFrameId),
   turnId: asTurnId(turnId),
   context: toChooseOneContext(request, seatId),
-  accumulatedBindings: {},
   effectFrame: createRootFrameSnapshot(history),
 });
 

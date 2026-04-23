@@ -7,8 +7,10 @@ import {
   asActionId,
   asPhaseId,
   asPlayerId,
+  createTrustedExecutableMove,
   initialState,
   type AgentPolicyCatalog,
+  type CompiledEventAnnotationIndex,
   type CompiledAgentProfile,
   type CompiledSurfaceVisibility,
   type CompiledCardMetadataIndex,
@@ -271,6 +273,97 @@ describe('createPolicyRuntimeProviders', () => {
     assert.equal(providers.previewSurface.getOutcome(candidate), 'failed');
     assert.equal(providers.previewSurface.getFailureReason(candidate), 'previewRuntimeDisposed');
     assert.equal(providers.previewSurface.hasPreviewData(candidate), false);
+  });
+
+  it('does not simulate granted operations for generic preview state reads', () => {
+    const catalog = createMinimalCatalog();
+    const annotationIndex: CompiledEventAnnotationIndex = {
+      entries: {
+        'card-1': {
+          cardId: 'card-1',
+          unshaded: {
+            tokenPlacements: {},
+            tokenRemovals: {},
+            tokenCreations: {},
+            tokenDestructions: {},
+            markerModifications: 0,
+            globalMarkerModifications: 0,
+            globalVarModifications: 0,
+            perPlayerVarModifications: 0,
+            varTransfers: 0,
+            drawCount: 0,
+            shuffleCount: 0,
+            grantsOperation: true,
+            grantOperationSeats: ['self'],
+            hasEligibilityOverride: false,
+            hasLastingEffect: false,
+            hasBranches: false,
+            hasPhaseControl: false,
+            hasDecisionPoints: false,
+            effectNodeCount: 0,
+          },
+        },
+      },
+    };
+    const def = {
+      ...createDef(catalog),
+      actions: [{
+        id: asActionId('event'),
+        actor: 'active' as const,
+        executor: 'actor' as const,
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      }],
+      cardAnnotationIndex: annotationIndex,
+    };
+    const state = initialState(def, 1, 2).state;
+    const candidate = {
+      move: {
+        actionId: asActionId('event'),
+        params: {
+          eventCardId: 'card-1',
+          side: 'unshaded',
+        },
+      },
+      stableMoveKey: 'event|card-1',
+      actionId: 'event',
+    };
+    let grantedOperationCalls = 0;
+    const providers = createPolicyRuntimeProviders({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog,
+      previewDependencies: {
+        classifyCandidate: (_def, baseState, move) => ({
+          kind: 'playable',
+          move: createTrustedExecutableMove(move, baseState.stateHash, 'enumerateLegalMoves'),
+        }),
+        classifyPlayableMoveCandidate: (_def, baseState, move) => ({
+          kind: 'playable',
+          move: createTrustedExecutableMove(move, baseState.stateHash, 'enumerateLegalMoves'),
+        }),
+        applyMove: (_def, baseState) => ({ state: baseState }),
+        evaluateGrantedOperation: () => {
+          grantedOperationCalls += 1;
+          return undefined;
+        },
+      },
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    assert.equal(providers.previewSurface.getOutcome(candidate), 'ready');
+    assert.equal(providers.previewSurface.getPreviewState(candidate), state);
+    assert.equal(grantedOperationCalls, 0);
+
+    assert.equal(providers.previewSurface.getGrantedOperation(candidate), undefined);
+    assert.equal(grantedOperationCalls, 1);
   });
 });
 

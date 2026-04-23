@@ -179,6 +179,14 @@ If the change involves a mid-migration state or ticket rewrite, load `references
 
 Load `references/triage-and-resolution.md` (Stop Conditions and Boundary Resets section) for the full resolve-before-coding discipline: stop conditions (factually wrong ticket, unverifiable bug claim, scope gaps, semantic acceptance drift), 1-3-1 workflow, authoritative-boundary restatement, rewritten-clause sanity check, proof-shape classification, partial-completion/new-blocker handling, and acceptance-lane blocker classification.
 
+When a bounded implementation slice lands but the ticket's named broader acceptance lane still fails on reproducible live evidence, do not treat the earlier local green run as completion by default. Classify the failing lane explicitly before deciding whether to continue:
+
+1. `same-ticket owned under FOUNDATIONS`: the red lane still proves root-cause-incomplete work owned by the active ticket; stop for 1-3-1 unless the user has already authorized the broader completion boundary
+2. `sibling-owned or separately owned`: the failing lane is real but belongs to another active ticket, advisory corpus, or explicitly non-blocking proof family; correct the active ticket/spec boundary and record the ownership handoff before closeout
+3. `draft lane shape is stale`: the named lane no longer matches the truthful owned invariant even though the owned implementation is complete; rewrite the ticket's proof description before final proof rather than repairing the wrong lane shape
+
+Treat this as an acceptance-lane reclassification step, not as ordinary test noise. The ticket cannot close truthfully until the active artifact, proof lane, and ownership story all agree.
+
 When the user approves a non-implementation boundary rewrite after 1-3-1, use this cleanup order before durable series edits:
 
 1. Classify any in-progress code/test/schema/artifact diff for the abandoned path as exploratory or abandoned implementation work.
@@ -186,6 +194,16 @@ When the user approves a non-implementation boundary rewrite after 1-3-1, use th
 3. Rewrite the active ticket to its truthful durable state (`BLOCKED`, narrowed historical draft, corrected boundary, etc.).
 4. Create or update successor tickets and dependent sibling tickets/specs in the same turn so the active series tells one consistent ownership story.
 5. Run the narrowest consistency proof for the rewrite itself (for example dependency or archival checks) after the artifact rewrite lands.
+
+When the user approves continuing under the **same ticket** after a `FOUNDATIONS`-driven widening, do not remain in the earlier bounded-local completion posture. Use this re-entry order before more implementation work:
+
+1. restate the widened active-ticket boundary explicitly and mark the earlier bounded proof as `partial`, `superseded`, or another truthful non-final state
+2. update the active ticket/spec/dependency artifacts first if their current wording still reflects the narrower slice or stale proof lane
+3. emit a fresh working-notes checkpoint for the widened same-ticket scope rather than continuing on the old local-slice checkpoint
+4. re-read the widened proof surface and any newly in-scope files, commands, or neighboring failing suites before coding
+5. only then resume implementation and verification under the widened acceptance surface
+
+Use this path when the user explicitly authorizes the widened same-ticket boundary. Do not force an unnecessary successor-ticket split once the user has chosen completion under the active ticket.
 
 When the user approves continuing under a successor ticket in the same session, use this re-entry order before more implementation work:
 
@@ -216,6 +234,16 @@ For representative-corpus proof tickets that do **not** bind to exact seeds/case
 2. classify each candidate as `owned invariant exercised cleanly` or `candidate blocked by unrelated live failure`
 3. keep the smallest representative passing subset that still covers the ticket's stated surface
 4. record any dropped candidate and replacement in the ticket outcome before final proof so the closeout explains why the final corpus changed
+
+### Same-Ticket Widened Continuation Checklist
+
+When `docs/FOUNDATIONS.md` and live proof require the active ticket to widen in place, run this short checklist before treating any later proof as final:
+
+1. confirm the earlier bounded seam is no longer sufficient for ticket completion
+2. restate the widened owned outcome in commentary and working notes
+3. update the active ticket's boundary/proof wording before the final proof pass if it still reflects the narrower slice
+4. run the widened proof surface that now owns completion
+5. close the ticket only once that authoritative acceptance lane is green
 
 ### Synthetic Fixture Checklist
 

@@ -85,7 +85,7 @@ const createStateWithOversizedDecisionStackFrame = (): GameState => {
         decisionKey: 'decision:test::$target' as never,
         options: [],
       },
-      accumulatedBindings: {
+      continuationBindings: {
         'decision:test::$target': oversizedValue,
       } as never,
       effectFrame: {
@@ -250,7 +250,7 @@ describe('Zobrist incremental edge cases', () => {
       assert.notEqual(key1, key2, 'different values should produce different keys');
     });
 
-    it('stores decision stack frame keys as bounded digests instead of raw serialized frames', () => {
+    it('hashes decision stack frames via bounded digests without interning them into the Zobrist cache', () => {
       const state = createStateWithOversizedDecisionStackFrame();
       const hash1 = computeFullHash(table, state);
       const hash2 = computeFullHash(table, state);
@@ -258,12 +258,25 @@ describe('Zobrist incremental edge cases', () => {
       assert.equal(hash1, hash2, 'same oversized decision stack frame should hash deterministically');
 
       const decisionStackKeys = [...table.keyCache.keys()].filter((key) => key.startsWith('kind=decisionStackFrame|'));
-      assert.equal(decisionStackKeys.length, 1, 'expected one cached decision stack frame key');
+      assert.equal(decisionStackKeys.length, 0, 'decision stack frame keys should not be interned into the run-local Zobrist cache');
+    });
 
-      const cachedKey = decisionStackKeys[0]!;
-      assert.match(cachedKey, /^kind=decisionStackFrame\|slot=0\|digest=[0-9a-f]{16}:[0-9a-f]{16}$/);
-      assert.ok(cachedKey.length < 96, `expected bounded cached key length, received ${cachedKey.length}`);
-      assert.doesNotMatch(cachedKey, /cam-ranh:none/, 'raw oversized bindings must not be interned into the Zobrist cache');
+    it('does not intern runtime-valued feature keys into the Zobrist cache', () => {
+      const before = table.keyCache.size;
+      const dynamicFeatures: readonly ZobristFeature[] = [
+        { kind: 'globalVar', varName: 'score', value: 42 },
+        { kind: 'turnCount', value: 7 },
+        { kind: 'nextFrameId', value: 9 },
+        { kind: 'nextTurnId', value: 11 },
+      ];
+
+      dynamicFeatures.forEach((feature) => {
+        const key1 = zobristKey(table, feature);
+        const key2 = zobristKey(table, feature);
+        assert.equal(key1, key2, 'runtime-valued features must still hash deterministically');
+      });
+
+      assert.equal(table.keyCache.size, before, 'runtime-valued keys should not be interned into the run-local Zobrist cache');
     });
   });
 });

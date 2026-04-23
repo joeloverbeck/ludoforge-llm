@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import {
   createChooseNTemplate,
   createChooseNSession,
+  disposeChooseNSession,
   advanceChooseNWithSession,
   isSessionValid,
   rebuildPendingFromTemplate,
@@ -112,6 +113,23 @@ describe('isSessionValid', () => {
     assert.equal(isSessionValid(session, 0), false);
     assert.equal(isSessionValid(session, 2), false);
     assert.equal(isSessionValid(session, 100), false);
+  });
+});
+
+describe('disposeChooseNSession', () => {
+  it('clears session-local caches at scope exit', () => {
+    const session = makeSession(['a', 'b', 'c']);
+    advanceChooseNWithSession(session, { type: 'add', value: 'a' });
+    session.probeCache.set(toSelectionKey(session.template.domainIndex, ['a']), { kind: 'confirmable' });
+
+    assert.equal(session.legalityCache.size > 0, true);
+    assert.equal(session.probeCache.size > 0, true);
+
+    disposeChooseNSession(session);
+
+    assert.equal(session.legalityCache.size, 0);
+    assert.equal(session.probeCache.size, 0);
+    assert.deepEqual(session.currentSelected, ['a']);
   });
 });
 

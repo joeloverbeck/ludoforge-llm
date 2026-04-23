@@ -1,6 +1,6 @@
 # 143BOURUNMEM-004: Scope-boundary enforcement for decision-local-transient helpers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel (chooseN session, microturn types/apply/publish), agents (policy preview, granted-operation helpers). Exact surface refined against 002's authoritative classification.
@@ -103,6 +103,17 @@ Exact list depends on 002's classification. Likely surface:
 
 ### Commands
 
-1. Targeted: `pnpm -F @ludoforge/engine test -- --test-name-pattern=scope-drop`, `--test-name-pattern=frame-shape`
-2. Full determinism: `pnpm -F @ludoforge/engine test:e2e`
-3. Full suite: `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck`
+1. Build + targeted focused proofs: `pnpm -F @ludoforge/engine build`, then `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/decision-local-scope-drop.test.js dist/test/unit/kernel/decision-stack-frame-shape.test.js dist/test/unit/schema-artifacts-sync.test.js`
+2. Full determinism-tier proof: `pnpm -F @ludoforge/engine test:e2e`
+3. Full engine suite and package/workspace checks: `pnpm -F @ludoforge/engine test:all`, `pnpm turbo lint`, `pnpm turbo typecheck`
+
+## Outcome
+
+Completion date: 2026-04-24
+
+- Implemented: root-only `continuationBindings` replaced child-frame `accumulatedBindings` retention in the decision stack, with runtime/schema/test migration across `packages/engine/src/kernel/microturn/*`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/schemas/Trace.schema.json`.
+- Implemented: explicit chooseN scope-exit cleanup via `disposeChooseNSession(...)`, plus focused regression coverage in `packages/engine/test/unit/kernel/decision-local-scope-drop.test.ts` and `packages/engine/test/unit/kernel/decision-stack-frame-shape.test.ts`.
+- Implemented: the remaining Foundations-aligned root-cause fix widened beyond the original local slice into policy preview/runtime ownership and bounded runtime-value hashing. The landed seam keeps generic preview state reads atomic/bounded, makes granted-operation preview lazy instead of eager, adds bounded structural fallback for chooseOne agent evaluation, and avoids interning runtime-valued Zobrist features into the run-local cache.
+- Deviations from original plan: the initial bounded local implementation was not sufficient because the ticket's named broad acceptance lane still failed on isolated Spec 140 OOM witnesses. Per `docs/FOUNDATIONS.md`, the owned boundary widened in-place and the proof surface was updated to the truthful final set above rather than the draft `--test-name-pattern`/`pnpm turbo test` command mix.
+- Remaining active follow-ons: `tickets/143BOURUNMEM-005.md`, `tickets/143BOURUNMEM-006.md`, and `tickets/143BOURUNMEM-007.md` still own the spec's long-run/advisory witness work. No additional production-code follow-up was evidenced during this review.
+- Verification results: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/decision-local-scope-drop.test.js dist/test/unit/kernel/decision-stack-frame-shape.test.js dist/test/unit/schema-artifacts-sync.test.js`; `pnpm -F @ludoforge/engine test:e2e`; `pnpm -F @ludoforge/engine test:all`; `pnpm turbo lint`; `pnpm turbo typecheck`.

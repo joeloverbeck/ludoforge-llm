@@ -247,7 +247,23 @@ export interface ChooseNSession {
   readonly revision: number;
   readonly decisionKey: DecisionKey;
   readonly template: ChooseNTemplate;
+  /**
+   * Owner scope: one chooseN session.
+   * Key shape: selection fingerprint for singleton probes.
+   * Maximum retained population: bounded by the session's explored
+   * selection surface, not by decisions across the whole run.
+   * Drop rule: cleared via `disposeChooseNSession(...)` before the
+   * session owner discards the session.
+   */
   readonly probeCache: Map<SelectionKey, SingletonProbeOutcome>;
+  /**
+   * Owner scope: one chooseN session.
+   * Key shape: selection fingerprint to rebuilt option legality results.
+   * Maximum retained population: bounded by the session's explored
+   * candidate surface, not by decisions across the whole run.
+   * Drop rule: cleared via `disposeChooseNSession(...)` before the
+   * session owner discards the session.
+   */
   readonly legalityCache: Map<SelectionKey, readonly ChoiceOption[]>;
   currentSelected: readonly MoveParamScalar[];
   currentPending: ChoicePendingChooseNRequest;
@@ -286,6 +302,18 @@ export const isSessionValid = (
   session: ChooseNSession,
   currentRevision: number,
 ): boolean => session.revision === currentRevision;
+
+/**
+ * Explicit scope-exit hook for decision-local chooseN session helpers.
+ *
+ * The session owner should call this before dropping an expired or
+ * completed session so probe and legality caches do not rely on GC
+ * alone for boundedness.
+ */
+export const disposeChooseNSession = (session: ChooseNSession): void => {
+  session.probeCache.clear();
+  session.legalityCache.clear();
+};
 
 // ── Session-aware toggle types ────────────────────────────────────
 

@@ -218,8 +218,35 @@ export const createZobristTable = (def: GameDef): ZobristTable => {
   return { seed, fingerprint, seedHex: seed.toString(16), keyCache: new Map(), sortedKeys: buildSortedKeys(def) };
 };
 
+const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
+  switch (feature.kind) {
+    case 'tokenPlacement':
+    case 'activePlayer':
+    case 'currentPhase':
+    case 'markerState':
+    case 'globalMarkerState':
+    case 'interruptPhaseFrame':
+    case 'revealGrant':
+    case 'activeDeciderSeatId':
+      return true;
+    case 'globalVar':
+    case 'perPlayerVar':
+    case 'turnCount':
+    case 'actionUsage':
+    case 'lastingEffect':
+    case 'zoneVar':
+    case 'decisionStackFrame':
+    case 'nextFrameId':
+    case 'nextTurnId':
+      return false;
+  }
+};
+
 export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
   const encoded = encodeFeature(feature);
+  if (!shouldCacheFeatureKey(feature)) {
+    return fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+  }
   const cached = table.keyCache.get(encoded);
   if (cached !== undefined) {
     return cached;

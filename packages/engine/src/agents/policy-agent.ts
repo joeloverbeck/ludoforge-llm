@@ -1,4 +1,3 @@
-import { applyPublishedDecision } from '../kernel/microturn/apply.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision } from '../kernel/microturn/types.js';
 import { perfDynEnd, perfStart } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
@@ -17,7 +16,6 @@ import {
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
-import { evaluateState } from './evaluate-state.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 
 export interface PolicyAgentConfig {
@@ -98,11 +96,7 @@ const chooseStructuralFrontierDecision = (
   resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
   profileIdOverride: string | undefined,
   traceLevel: PolicyDecisionTraceLevel,
-): AgentMicroturnDecisionResult | null => {
-  if (input.microturn.kind !== 'chooseNStep') {
-    return null;
-  }
-
+): AgentMicroturnDecisionResult => {
   const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => ({
     decision,
     stableMoveKey: frontierDecisionKey(input.def, decision),
@@ -285,60 +279,7 @@ export class PolicyAgent implements Agent {
       };
     }
 
-    const structuralChoice = chooseStructuralFrontierDecision(input, resolvedProfile, this.profileId, this.traceLevel);
-    if (structuralChoice !== null) {
-      return structuralChoice;
-    }
-
-    const frontierHeapBefore = heapUsedMb();
-    logPolicyOomTrace('frontier:preview-start', input);
-    const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => {
-      const nextState = applyPublishedDecision(
-        input.def,
-        input.state,
-        input.microturn,
-        decision,
-        undefined,
-        input.runtime,
-      ).state;
-      return {
-        decision,
-        stableMoveKey: frontierDecisionKey(input.def, decision),
-        score: evaluateState(input.def, nextState, input.state.activePlayer, input.runtime),
-        progressBias: chooseNStepProgressBias(input, decision),
-      };
-    });
-    logPolicyOomTrace(
-      'frontier:preview-done',
-      input,
-      ` heapDeltaMb=${heapUsedMb() - frontierHeapBefore}`,
-    );
-    const bestScore = Math.max(...frontier.map((candidate) => candidate.score));
-    const bestByScore = frontier.filter((candidate) => candidate.score === bestScore);
-    const bestProgressBias = Math.max(...bestByScore.map((candidate) => candidate.progressBias));
-    const bestCandidates = bestByScore.filter((candidate) => candidate.progressBias === bestProgressBias);
-    const { item: selected, rng } = pickRandom(bestCandidates, input.rng);
-    const metadata: PolicyEvaluationMetadata = {
-      seatId: resolvedProfile?.seatId ?? null,
-      requestedProfileId: this.profileId ?? null,
-      profileId: resolvedProfile?.profileId ?? null,
-      profileFingerprint: resolvedProfile?.profile.fingerprint ?? null,
-      canonicalOrder: frontier.map((candidate) => candidate.stableMoveKey),
-      candidates: traceCandidatesForFrontier(this.traceLevel, frontier),
-      pruningSteps: [],
-      tieBreakChain: [],
-      previewUsage: emptyPreviewUsage(),
-      selectedStableMoveKey: selected.stableMoveKey,
-      finalScore: selected.score,
-      usedFallback: false,
-      failure: null,
-    };
-
-    return {
-      decision: selected.decision,
-      rng,
-      agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel),
-    };
+    return chooseStructuralFrontierDecision(input, resolvedProfile, this.profileId, this.traceLevel);
   }
 
   private matchGuidedCompletionDecision(

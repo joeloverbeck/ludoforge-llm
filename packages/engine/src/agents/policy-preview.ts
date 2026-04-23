@@ -123,18 +123,22 @@ type PreviewOutcome =
   | {
       readonly kind: 'ready';
       readonly state: GameState;
+      readonly trustedMove: TrustedExecutableMove;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
-      readonly grantedOperation?: PolicyPreviewGrantedOperation;
+      grantedOperationResolved: boolean;
+      grantedOperation: PolicyPreviewGrantedOperation | undefined;
     }
   | {
       readonly kind: 'stochastic';
       readonly state: GameState;
+      readonly trustedMove: TrustedExecutableMove;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
-      readonly grantedOperation?: PolicyPreviewGrantedOperation;
+      grantedOperationResolved: boolean;
+      grantedOperation: PolicyPreviewGrantedOperation | undefined;
     }
   | {
       readonly kind: 'unknown';
@@ -205,6 +209,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     ...defaultDependencies,
     ...input.dependencies,
   } satisfies Required<PolicyPreviewDependencies>;
+  /**
+   * Owner scope: one policy preview runtime, itself owned by a single
+   * policy-evaluation/publication pass.
+   * Key shape: `candidate.stableMoveKey`.
+   * Maximum retained population: bounded by the candidates previewed
+   * during this evaluation scope.
+   * Drop rule: cleared in `dispose()` before the owning runtime
+   * providers are discarded.
+   */
   const cache = new Map<string, PreviewOutcome>();
   let disposed = false;
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
@@ -332,7 +345,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       }
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'ready' || outcome.kind === 'stochastic'
-        ? outcome.grantedOperation
+        ? getGrantedOperation(outcome)
         : undefined;
     },
     hasPreviewData(candidate) {
@@ -413,17 +426,17 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         return { kind: 'unknown', reason: 'random' };
       }
 
-      const grantedOperationResult = tryApplyGrantedOperationPreview(trustedMove, previewState);
-      const finalState = grantedOperationResult?.state ?? previewState;
-      const rngDiverged = !rngStatesEqual(finalState.rng, input.state.rng);
-      const observation = deps.derivePlayerObservation(input.def, finalState, input.playerId);
+      const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
+      const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
       return {
         kind: rngDiverged ? 'stochastic' : 'ready',
-        state: finalState,
+        state: previewState,
+        trustedMove,
         hiddenSamplingZones: observation.hiddenSamplingZones,
         metricCache: new Map<string, number>(),
         victorySurface: null,
-        ...(grantedOperationResult === undefined ? {} : { grantedOperation: grantedOperationResult.grantedOperation }),
+        grantedOperationResolved: false,
+        grantedOperation: undefined,
       };
     } catch (error) {
       return {
@@ -432,6 +445,16 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         failureReason: truncatePreviewFailureReason(error),
       };
     }
+  }
+
+  function getGrantedOperation(
+    preview: Extract<PreviewOutcome, { readonly kind: 'ready' } | { readonly kind: 'stochastic' }>,
+  ): PolicyPreviewGrantedOperation | undefined {
+    if (!preview.grantedOperationResolved) {
+      preview.grantedOperationResolved = true;
+      preview.grantedOperation = tryApplyGrantedOperationPreview(preview.trustedMove, preview.state)?.grantedOperation;
+    }
+    return preview.grantedOperation;
   }
 
   function tryApplyGrantedOperationPreview(

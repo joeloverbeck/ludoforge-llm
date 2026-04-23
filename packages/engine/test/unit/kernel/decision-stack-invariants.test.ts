@@ -104,7 +104,7 @@ describe('decision stack invariants', () => {
     assert.equal(actionStack[0]?.parentFrameId, null);
     assert.equal(actionStack[1]?.parentFrameId, actionStack[0]?.frameId ?? null);
     assert.equal(actionStack[0]?.turnId, actionStack[1]?.turnId);
-    assert.deepEqual(actionStack[1]?.accumulatedBindings, {});
+    assert.equal(actionStack[1]?.continuationBindings, undefined);
 
     const chooseOne = publishMicroturn(def, afterAction, runtime);
     const branch = chooseOne.legalActions.find((entry) => entry.kind === 'chooseOne');
@@ -118,7 +118,7 @@ describe('decision stack invariants', () => {
     assert.equal(chooseOneStack[1]?.frameId, asDecisionFrameId(2));
     assert.equal(chooseOneStack[1]?.parentFrameId, chooseOneStack[0]?.frameId ?? null);
     assert.equal(chooseOneStack[0]?.turnId, chooseOneStack[1]?.turnId);
-    assert.deepEqual(chooseOneStack[1]?.accumulatedBindings, {});
+    assert.equal(chooseOneStack[1]?.continuationBindings, undefined);
 
     let chooseN = publishMicroturn(def, afterChooseOne, runtime);
     const addDecision = chooseN.legalActions.find(
@@ -131,7 +131,7 @@ describe('decision stack invariants', () => {
     assert.equal(afterAdd.nextTurnId, afterChooseOne.nextTurnId);
     assert.equal(afterAddStack[1]?.parentFrameId, afterAddStack[0]?.frameId ?? null);
     assert.equal(afterAddStack[0]?.turnId, afterAddStack[1]?.turnId);
-    assert.deepEqual(afterAddStack[1]?.accumulatedBindings, {});
+    assert.equal(afterAddStack[1]?.continuationBindings, undefined);
 
     chooseN = publishMicroturn(def, afterAdd, runtime);
     const confirmDecision = chooseN.legalActions.find(

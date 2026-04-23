@@ -6489,7 +6489,7 @@
                   }
                 ]
               },
-              "accumulatedBindings": {
+              "continuationBindings": {
                 "type": "object",
                 "propertyNames": {
                   "type": "string"
@@ -6939,7 +6939,6 @@
               "parentFrameId",
               "turnId",
               "context",
-              "accumulatedBindings",
               "effectFrame"
             ],
             "additionalProperties": false

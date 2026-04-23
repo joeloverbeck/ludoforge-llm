@@ -91,6 +91,7 @@ export interface PolicyRuntimeProviders {
   readonly currentSurface: PolicyCurrentSurfaceProvider;
   readonly previewSurface: PolicyPreviewSurfaceProvider;
   readonly completion?: PolicyCompletionProvider;
+  dispose(): void;
 }
 
 export interface CreatePolicyRuntimeProvidersInput {
@@ -163,6 +164,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       return getVictorySurface(state);
     },
   };
+  let disposed = false;
 
   return {
     intrinsics: {
@@ -298,6 +300,15 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             input.completion.optionValue,
           ),
         }),
+    dispose() {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      previewRuntime.dispose();
+      metricCacheByState.clear();
+      victorySurfaceByState.clear();
+    },
   };
 }
 

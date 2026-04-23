@@ -12,6 +12,7 @@
  * This module keeps the growing resolver logic out of legal-choices.ts.
  */
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
+import { toSelectionKey, type SelectionKey } from './choose-n-selection-key.js';
 import { isEffectRuntimeReason } from './effect-error.js';
 import { optionKey } from './legal-choices.js';
 import type { PrioritizedTierEntry } from './prioritized-tier-legality.js';
@@ -439,9 +440,15 @@ export interface WitnessSearchStats {
   nodesVisited: number;
 }
 
-/** Canonical selection key: sorted option keys joined by '|'. */
-const selectionCacheKey = (selection: readonly unknown[]): string =>
-  selection.map((v) => optionKey(v)).sort().join('|');
+const buildSelectionDomainIndex = (
+  values: readonly MoveParamScalar[],
+): ReadonlyMap<string, number> => {
+  const index = new Map<string, number>();
+  for (let i = 0; i < values.length; i++) {
+    index.set(optionKey(values[i]), i);
+  }
+  return index;
+};
 
 // ── Witness search probe helper ───────────────────────────────────────
 
@@ -455,11 +462,12 @@ const probeAndClassifySelection = (
   partialMove: Move,
   decisionKey: string,
   selection: Move['params'][string],
-  probeCache: Map<string, SingletonProbeOutcome>,
+  selectionDomainIndex: ReadonlyMap<string, number>,
+  probeCache: Map<SelectionKey, SingletonProbeOutcome>,
   budget: WitnessSearchBudget,
   stats: WitnessSearchStats | undefined,
 ): { readonly outcome: SingletonProbeOutcome; readonly cached: boolean } | 'budget' => {
-  const cacheKey = selectionCacheKey(selection as readonly unknown[]);
+  const cacheKey = toSelectionKey(selectionDomainIndex, selection as readonly MoveParamScalar[]);
   const cached = probeCache.get(cacheKey);
   if (cached !== undefined) {
     if (stats !== undefined) {
@@ -546,7 +554,8 @@ const witnessSearchForOption = (
   min: number,
   max: number,
   budget: WitnessSearchBudget,
-  probeCache: Map<string, SingletonProbeOutcome>,
+  selectionDomainIndex: ReadonlyMap<string, number>,
+  probeCache: Map<SelectionKey, SingletonProbeOutcome>,
   stats: WitnessSearchStats | undefined,
   tierContext: WitnessSearchTierContext | undefined,
 ): WitnessOutcome => {
@@ -586,6 +595,7 @@ const witnessSearchForOption = (
         partialMove,
         decisionKey,
         selection,
+        selectionDomainIndex,
         probeCache,
         budget,
         stats,
@@ -673,7 +683,10 @@ export const runWitnessSearch = (
   }
 
   // Probe cache shared across all options within this invocation.
-  const probeCache = new Map<string, SingletonProbeOutcome>();
+  const probeCache = new Map<SelectionKey, SingletonProbeOutcome>();
+  const selectionDomainIndex = buildSelectionDomainIndex(
+    uniqueOptions as readonly MoveParamScalar[],
+  );
 
   const min = request.min ?? 0;
   const max = request.max ?? uniqueOptions.length;
@@ -715,6 +728,7 @@ export const runWitnessSearch = (
       min,
       max,
       budget,
+      selectionDomainIndex,
       probeCache,
       stats,
       tierContext,

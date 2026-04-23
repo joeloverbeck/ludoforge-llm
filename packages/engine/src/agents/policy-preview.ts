@@ -82,6 +82,7 @@ export interface CreatePolicyPreviewRuntimeInput {
 }
 
 export interface PolicyPreviewRuntime {
+  dispose(): void;
   resolveSurface(
     candidate: PolicyPreviewCandidate,
     ref: CompiledPreviewSurfaceRef,
@@ -205,6 +206,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     ...input.dependencies,
   } satisfies Required<PolicyPreviewDependencies>;
   const cache = new Map<string, PreviewOutcome>();
+  let disposed = false;
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
   const surfaceContext: SurfaceResolutionContext = {
     def: input.def,
@@ -218,7 +220,23 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   };
 
   return {
+    dispose() {
+      if (disposed) {
+        return;
+      }
+      disposed = true;
+      for (const outcome of cache.values()) {
+        if (outcome.kind === 'ready' || outcome.kind === 'stochastic') {
+          outcome.metricCache.clear();
+          outcome.victorySurface = null;
+        }
+      }
+      cache.clear();
+    },
     resolveSurface(candidate, ref, seatContext) {
+      if (disposed) {
+        return { kind: 'unknown', reason: 'failed', failureReason: 'previewRuntimeDisposed' };
+      }
       const preview = getPreviewOutcome(candidate);
       if (preview.kind !== 'ready' && preview.kind !== 'stochastic') {
         return preview;
@@ -287,25 +305,40 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
             : { kind: 'unavailable' };
     },
     getPreviewState(candidate) {
+      if (disposed) {
+        return undefined;
+      }
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'ready' || outcome.kind === 'stochastic'
         ? outcome.state
         : undefined;
     },
     getOutcome(candidate) {
+      if (disposed) {
+        return 'failed';
+      }
       return toPreviewTraceOutcome(getPreviewOutcome(candidate));
     },
     getFailureReason(candidate) {
+      if (disposed) {
+        return 'previewRuntimeDisposed';
+      }
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'unknown' ? outcome.failureReason : undefined;
     },
     getGrantedOperation(candidate) {
+      if (disposed) {
+        return undefined;
+      }
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'ready' || outcome.kind === 'stochastic'
         ? outcome.grantedOperation
         : undefined;
     },
     hasPreviewData(candidate) {
+      if (disposed) {
+        return false;
+      }
       const candidateActionId = candidate.actionId ?? String(candidate.move.actionId);
       return input.trustedMoveIndex.has(candidate.stableMoveKey)
         || input.phase1ActionPreviewIndex?.has(candidateActionId) === true;
@@ -313,6 +346,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   };
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
+    if (disposed) {
+      return { kind: 'unknown', reason: 'failed', failureReason: 'previewRuntimeDisposed' };
+    }
     const cached = cache.get(candidate.stableMoveKey);
     if (cached !== undefined) {
       return cached;

@@ -1,98 +1,107 @@
 # 143BOURUNMEM-003: Canonical-identity compaction for oversized serialized retained structures
 
-**Status**: PENDING
+**Status**: BLOCKED
 **Priority**: HIGH
-**Effort**: Large
-**Engine Changes**: Yes — kernel (chooseN session, zobrist, microturn types), agents (policy preview). Exact surface refined against 002's authoritative classification.
+**Effort**: Medium
+**Engine Changes**: Yes — kernel chooseN canonical-identity helpers and witness-search probe caching. Exact surface refined against 002's authoritative classification.
 **Deps**: `archive/tickets/143BOURUNMEM-002.md`
 
 ## Problem
 
-Spec 143 Design Section 2: "Serialized payloads are not acceptable live identities when smaller canonical forms exist. The engine must not use full serialized decision/context/pipeline payloads as long-lived live identities unless the serialization is itself the minimal canonical state artifact." The spec cites specific examples (full serialized decision-stack frames retained as cache keys; preview/session/cache keys that embed large replay-like payloads or whole parameter documents when a smaller canonical projection would uniquely identify the same semantic boundary). 002's authoritative classification flags the specific offending sites.
+Spec 143 Design Section 2 says serialized payloads are not acceptable live identities when smaller canonical forms exist. Ticket 002's authoritative classification narrowed where that still applies on the live repo:
 
-This ticket replaces the flagged oversized identities with bounded canonical forms. The existing `decisionStackFrame` Zobrist feature already exemplifies the pattern: `packages/engine/src/kernel/zobrist.ts:136-137` encodes frames as `kind=decisionStackFrame|slot=${feature.slot}|digest=${feature.digest}` — a compact, bounded digest rather than a full serialized frame string. The spec's Problem section notes that change "removed real waste but did not solve the OOM"; extending the same pattern to the remaining oversized identities is the goal here.
+- `decisionStackFrame` Zobrist keys are already compact digests
+- policy preview/evaluation contexts are already keyed by compact `stableMoveKey`
+- chooseN session caches already use `SelectionKey`
+
+The remaining live 003 seam is chooseN witness-search probe caching in `packages/engine/src/kernel/choose-n-option-resolution.ts`, which still maintains its own sorted-string selection-key path instead of the shared chooseN canonicalization. That fallback string path can retain oversized raw option payloads for large domains when a smaller canonical index-based form already exists.
 
 ## Assumption Reassessment (2026-04-23)
 
-1. The chooseN caches (`probeCache`, `legalityCache`) at `packages/engine/src/kernel/choose-n-session.ts:292-293` use `SelectionKey` as the map key — whether that key is itself compact or a serialized form of selection state is a detail 002 classifies.
-2. The `decisionStackFrame` Zobrist encoding already uses a bounded `digest` field (confirmed at `zobrist.ts:136-137`). This is the precedent pattern this ticket extends.
-3. Foundation 13 (Artifact Identity and Reproducibility): canonical-form keys MUST preserve replay identity. Any change here must leave GameDef hashes, replay fixtures, and zobrist-derived keys bit-identical — only the internal cache key shape changes, not the externally observable state hash. Determinism corpus at `packages/engine/test/determinism/` is the proof surface.
-4. Spec 143 Foundations Alignment explicitly surfaces this Foundation 13 constraint.
+1. The chooseN session caches (`probeCache`, `legalityCache`) at `packages/engine/src/kernel/choose-n-session.ts:292-293` already use `SelectionKey`, and 002 classifies them as compact enough for the current audit.
+2. The `decisionStackFrame` Zobrist encoding already uses a bounded `digest` field (confirmed at `zobrist.ts:136-137`), and 002 classifies policy preview cache keys as already compact via `stableMoveKey`.
+3. The remaining live 003 seam is the chooseN witness-search probe cache in `packages/engine/src/kernel/choose-n-option-resolution.ts`, which still maintained its own sorted-string selection key instead of the shared compact canonicalization.
+4. Foundation 13 (Artifact Identity and Reproducibility): canonical-form key changes here must leave GameDef hashes, replay fixtures, and externally observable state hashes bit-identical. The determinism corpus is the proof surface.
 
 ## Architecture Check
 
-1. **Pattern extension, not new invention**: the `decisionStackFrame` digest pattern (bounded canonical identity over what was previously a full serialization) is the architectural template. Extending it to other retained identities flagged by 002 uses a known, tested pattern rather than a greenfield design.
-2. **Agnostic boundaries preserved**: all changes are in `packages/engine/src/kernel/` and `packages/engine/src/agents/` — no per-game branches introduced. Canonicalization logic is generic over the identity shape (Foundation 1).
-3. **Foundation 13 preserved**: canonical-identity changes are internal to cache-key representations; the externally observable state hash (used by replay fixtures and GameDef identity) must remain bit-identical. The determinism test corpus is the authoritative proof.
-4. **No backwards-compatibility shims** (Foundation 14): old oversized-key code paths are removed outright; cache-key shapes are changed atomically across their owning module and consumers. If a cache is serialized or persisted across runs, the change must include matching updates to any serialized fixture.
-5. **Reviewability under mechanical uniformity**: if the audit flags multiple cache-key sites with the same refactor shape (replace full serialization with compact digest), the diff can be Large but reviewable per the Foundation 14 mechanical-uniformity exception.
+1. **Pattern extension, not new invention**: 002 already established `SelectionKey` as the compact canonical representation for chooseN session caches. This ticket reuses that same representation for witness-search probe caching instead of keeping a second raw-string encoding path.
+2. **Agnostic boundaries preserved**: all live changes are in `packages/engine/src/kernel/` plus focused engine tests. No game-specific logic or agent-only branches are introduced (Foundation 1).
+3. **Foundation 13 preserved**: the change is internal to transient cache-key representations; externally observable state hashes and replay identity remain unchanged. The determinism corpus remains the authoritative proof.
+4. **No backwards-compatibility shims** (Foundation 14): the old string-key helper path is removed rather than preserved in parallel.
 
 ## What to Change
 
-The exact per-structure work is refined against 002's audit findings. At minimum, expect these areas:
+### 1. Shared chooseN canonical key helper
 
-### 1. ChooseN cache keys (`packages/engine/src/kernel/choose-n-session.ts`)
+Extract the chooseN `SelectionKey` canonicalization into a shared kernel helper so both session caches and witness-search probe caching use the same bounded representation.
 
-If 002 flags `probeCache` or `legalityCache` `SelectionKey` shape as oversized, replace the serialized form with a compact canonical form (e.g., structural id + bounded parameter fingerprint). Update all construction and lookup sites atomically.
+### 2. Witness-search probe cache compaction (`packages/engine/src/kernel/choose-n-option-resolution.ts`)
 
-### 2. Policy preview / evaluation context keys (`packages/engine/src/agents/policy-preview.ts`)
+Replace the local sorted-string `probeCache` key path with the shared compact canonical form. For larger domains, the fallback key must be derived from stable domain indices rather than raw option payload strings.
 
-If 002 flags policy preview context retention as holding oversized serialized state, replace with the bounded canonical projection (typically: scope id + bounded decision-context digest).
+### 3. Focused boundedness tests
 
-### 3. Zobrist feature encoding (`packages/engine/src/kernel/zobrist.ts`)
+Add focused engine tests proving the shared canonical helper does not retain oversized raw option payloads in its fallback encoding and remains deterministic/order-independent across session and witness-search usage.
 
-If 002 surfaces additional Zobrist features whose encoded identity still uses full serialization (beyond the already-compacted `decisionStackFrame`), extend the digest pattern. Verify the `keyCache` bound is independent of simulation length, not decision count.
+### 4. Determinism corpus validation
 
-### 4. Decision-stack frame field identity (`packages/engine/src/kernel/microturn/types.ts`)
-
-If 002 flags any `DecisionStackFrame` field as retained identity that should be a bounded projection (e.g., `accumulatedBindings` redundantly serialized elsewhere), remove the redundancy and keep only the canonical form. Note: the broader field-split work (continuation-required vs preview/search) is 004's scope — this ticket addresses **identity** compaction, not **scope** reclassification.
-
-### 5. Determinism corpus validation (every sub-change above)
-
-After each canonical-identity change, run `packages/engine/test/determinism/` to assert replay identity is preserved. Any determinism regression is a Foundation 13 violation and blocks the ticket.
+Run the determinism-tier engine proof after the cache-key refactor to confirm replay identity is unchanged.
 
 ## Files to Touch
 
-Exact list depends on 002's classification. Likely surface:
-
-- `packages/engine/src/kernel/choose-n-session.ts` (modify) — cache key shapes
-- `packages/engine/src/kernel/choose-n-option-resolution.ts` (modify) — option-resolution key construction
-- `packages/engine/src/agents/policy-preview.ts` (modify) — context identity compaction
-- `packages/engine/src/kernel/zobrist.ts` (modify) — additional feature digests if flagged
-- `packages/engine/src/kernel/microturn/types.ts` (modify) — redundant identity fields if flagged
-- `packages/engine/test/` (modify) — any existing tests that construct the old key shape directly (blast radius from 002's audit)
+- `packages/engine/src/kernel/choose-n-selection-key.ts` (new) — shared compact canonicalization for chooseN selection keys
+- `packages/engine/src/kernel/choose-n-session.ts` (modify) — consume the shared helper
+- `packages/engine/src/kernel/choose-n-option-resolution.ts` (modify) — witness-search probe-cache key construction
+- `packages/engine/test/unit/kernel/choose-n-selection-keys.test.ts` (modify) — shared-helper coverage
+- `packages/engine/test/unit/kernel/choose-n-session.test.ts` (modify) — import/update shared helper seam
+- `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` (new) — focused bounded canonical-identity regression
 
 ## Out of Scope
 
 - Scope-boundary drop/reset enforcement (covered by 004) — this ticket does not change when a cache or helper is dropped, only the shape of its keys.
 - Decision-stack frame field split into persistent-authoritative vs decision-local-transient (covered by 004 per spec Section 6) — this ticket addresses identity shape, not lifetime class.
-- New witness tests (covered by 005/006/007).
+- New long-run advisory witnesses (covered by 005/006/007).
 
 ## Acceptance Criteria
 
 ### Tests That Must Pass
 
-1. Full determinism corpus: `pnpm -F @ludoforge/engine test:e2e` (or the equivalent determinism-tier command) — replay identity must be bit-identical before and after the canonical-identity changes.
-2. Full engine suite: `pnpm -F @ludoforge/engine test:all`.
-3. No regression in replay fixtures under `packages/engine/test/fixtures/` — stored state hashes and zobrist-derived keys remain unchanged.
-4. Any existing test that constructed the old key shape directly is migrated to the new shape in the same commit (Foundation 14).
+1. Determinism-tier engine proof: `pnpm -F @ludoforge/engine test:determinism` — replay identity must remain bit-identical before and after the canonical-identity change.
+2. Engine unit suite: `pnpm -F @ludoforge/engine test:unit`.
+3. The new focused boundedness tests prove the shared chooseN canonical key does not retain oversized raw option payloads when a smaller canonical index form exists.
+4. Any existing test that constructed the old helper path directly is migrated to the shared helper in the same commit (Foundation 14).
 
 ### Invariants
 
-1. No long-lived engine cache key retains a full serialized decision/context/pipeline payload when a bounded canonical form exists.
-2. GameDef hashes, replay fixtures, and externally observable zobrist keys are bit-identical before and after.
-3. Cache-key size is bounded by the feature domain, not by simulation length or decision count.
+1. No chooseN probe-cache key retains full raw option payload strings when a bounded canonical form exists.
+2. GameDef hashes, replay fixtures, and externally observable zobrist/state hashes are bit-identical before and after.
+3. Selection-key size is bounded by domain structure rather than raw option payload size.
 4. Foundation 1: no FITL-specific branch introduced by the canonicalization logic.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` (new) — property test asserting that for a growing simulation, cache-key byte length stays bounded (not proportional to state size or decision count). Engine-generic test construction; not FITL-specific.
-2. Migrate any existing test that constructs the old key shape to the new shape (blast radius depends on 002).
+1. `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` (new) — focused regression asserting the shared chooseN canonical key remains compact even when option payload strings are oversized.
+2. `packages/engine/test/unit/kernel/choose-n-selection-keys.test.ts` (modified) — fallback-key regression proving large-domain keys use stable domain indices instead of raw option payload strings.
+3. `packages/engine/test/unit/kernel/choose-n-session.test.ts` (modified) — import/update the shared helper seam.
 
 ### Commands
 
-1. Targeted: `pnpm -F @ludoforge/engine test -- --test-name-pattern=canonical-identity`
-2. Full determinism: `pnpm -F @ludoforge/engine test:e2e`
-3. Full suite: `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck`
+1. Build: `pnpm -F @ludoforge/engine build`
+2. Targeted: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`
+3. Determinism-tier proof: `pnpm -F @ludoforge/engine test:determinism`
+4. Package checks: `pnpm -F @ludoforge/engine test:unit`, `pnpm -F @ludoforge/engine lint`, `pnpm -F @ludoforge/engine typecheck`
+
+## Outcome
+
+- Implemented: extracted shared chooseN canonical key logic into `packages/engine/src/kernel/choose-n-selection-key.ts` and switched witness-search probe caching to that shared compact representation.
+- Implemented: large-domain fallback keys now use stable domain indices rather than raw option payload strings, so oversized chooseN values no longer get retained verbatim in probe-cache identity.
+- Implemented: added focused boundedness coverage in `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` and extended existing selection-key tests to pin the non-raw fallback encoding.
+- Blocker: the required determinism-tier proof still OOMs on a serial rerun of `dist/test/determinism/draft-state-determinism-parity.test.js` after about 3m19s, so this ticket is not acceptance-proven yet.
+- Remaining ownership: `tickets/143BOURUNMEM-004.md` owns the remaining production retained-state fix behind the determinism OOM; `tickets/143BOURUNMEM-005.md` owns the later FITL heap-boundedness witness once 004 lands.
+
+- ticket corrections applied: `broader 002 follow-on surface -> remaining live 003 seam is shared chooseN selection-key compaction plus witness-search probe-cache migration`
+- verification set: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine test:unit`; `pnpm -F @ludoforge/engine test:determinism`
+- proof gaps: `pnpm -F @ludoforge/engine test:determinism` fails on `dist/test/determinism/draft-state-determinism-parity.test.js` with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory` during both the initial run and a serial rerun

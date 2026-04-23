@@ -448,6 +448,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       });
     }
 
+    let evaluationForDispose: PolicyEvaluationContext | undefined;
     try {
       const previewDependencies = {
         ...createGrantedOperationPreviewDependencies(input.def, profileId),
@@ -465,6 +466,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         previewDependencies,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       }, candidates);
+      evaluationForDispose = evaluation;
       let activeCandidates = [...candidates];
       const pruningSteps: PolicyEvaluationPruningStep[] = [];
       const tieBreakChain: PolicyEvaluationTieBreakStep[] = [];
@@ -693,6 +695,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         failure,
         profile.fingerprint,
       );
+    } finally {
+      evaluationForDispose?.dispose();
     }
   } finally {
     policyEvalDepth -= 1;

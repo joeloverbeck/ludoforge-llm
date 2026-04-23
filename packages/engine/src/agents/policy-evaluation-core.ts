@@ -248,6 +248,17 @@ export class PolicyEvaluationContext {
     });
   }
 
+  dispose(): void {
+    this.stateFeatureCacheByState.clear();
+    this.candidateFeatureCache.clear();
+    this.aggregateCache.clear();
+    this.strategicConditionCache.clear();
+    this.zoneReadContextsByState.clear();
+    this.currentCandidates = [];
+    this.currentSeatContext = undefined;
+    this.runtimeProviders.dispose();
+  }
+
   invalidateAggregates(): void {
     this.aggregateCache.clear();
   }

@@ -31,6 +31,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
 - Treat any code, test, fixture, generated-artifact, or ticket-text edit made after a proof lane as proof-invalidating for every affected acceptance command. Rerun the impacted focused/package/workspace lanes after those edits land; do not cite the earlier green run as final.
 - When a ticket owns regenerated fixtures or other generated artifacts and the repo provides a nearby helper script, validate that helper against the current live runtime/API seam before relying on it as the authoritative regen path. If the helper partially rewrites owned artifacts and then fails, treat the entire owned artifact set as dirty, regenerate it again through a known-live seam, and only then continue toward final proof.
+- If live evidence proves the remaining implementation work belongs to a sibling ticket in the same active series, do not drift into that sibling implicitly. First restate the new owner, get any required user authorization for the boundary change, verify that the successor and affected sibling tickets already tell the truthful ownership story (or update them first), then emit a fresh working-notes checkpoint before continuing under the successor boundary.
 - If you become materially stuck after a partial repair, or you now have multiple plausible fixes with different tradeoffs and the next step is no longer clearly user-authorized, stop for the repo's `1-3-1` workflow instead of continuing to iterate. State the problem, give 3 options, recommend 1, and wait for confirmation before implementing another path.
 
 ## Final-Proof Gate
@@ -167,6 +168,7 @@ If the change involves a mid-migration state or ticket rewrite, load `references
 
 10. If correcting one ticket changes ownership within an active series, load `references/implementation-general.md` (Series Consistency section) and follow the sibling coherence rules.
     - If the active ticket absorbs work originally owned by sibling draft tickets, plan the sibling-ticket status rewrite as part of closeout, not as optional cleanup after acceptance. The series artifact should tell the same ownership story as the final code and proof set.
+    - If reassessment instead proves that the remaining implementation work belongs to a sibling ticket rather than the currently active one, stop and make that handoff explicit. Restate the successor owner, confirm the user has authorized that boundary change when required, update the successor and any affected sibling/spec artifacts before more code changes, then emit a fresh working-notes checkpoint and continue under the successor ticket's proof surface.
     - If the active ticket's corrected live contract changes the interface, call shape, touched-file expectation, or verification assumption used by dependent active tickets in the same series, update those dependent tickets in the same turn before final proof so the active series remains internally consistent.
     - If that same boundary correction invalidates design language, assumptions, or the ticket list in an active spec, update the active spec in the same turn before final proof so tickets and specs stay parity-aligned.
     - If the active ticket uncovers a broader architectural gap that extends beyond the owned implementation slice but is now evidenced concretely by live code, tests, or rules artifacts, do not leave that discovery implicit. Propose or draft the narrowest truthful follow-on spec/design artifact before final closeout when the user wants series artifacts kept current, or record it explicitly as required follow-up ownership when the user prefers to defer spec work.
@@ -184,6 +186,14 @@ When the user approves a non-implementation boundary rewrite after 1-3-1, use th
 3. Rewrite the active ticket to its truthful durable state (`BLOCKED`, narrowed historical draft, corrected boundary, etc.).
 4. Create or update successor tickets and dependent sibling tickets/specs in the same turn so the active series tells one consistent ownership story.
 5. Run the narrowest consistency proof for the rewrite itself (for example dependency or archival checks) after the artifact rewrite lands.
+
+When the user approves continuing under a successor ticket in the same session, use this re-entry order before more implementation work:
+
+1. restate the successor ticket as the active owner and classify the prior ticket's remaining gap truthfully (`completed local slice`, `blocked`, `follow-up required`, or similar)
+2. verify that the successor ticket, affected siblings, and active spec already reflect the reassessed ownership boundary; update them first if not
+3. emit a fresh working-notes checkpoint for the successor slice rather than continuing on stale notes from the prior ticket
+4. re-read any successor-specific files, commands, or proof lanes that were not authoritative under the prior ticket
+5. only then resume coding and verification under the successor ticket's acceptance surface
 
 ## Implementation Rules
 

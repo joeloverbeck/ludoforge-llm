@@ -8,11 +8,10 @@ import {
   advanceChooseNWithSession,
   isSessionValid,
   rebuildPendingFromTemplate,
-  toSelectionKey,
   type ChooseNSession,
   type ChooseNTemplate,
-  type SelectionKey,
 } from '../../../src/kernel/choose-n-session.js';
+import { toSelectionKey, type SelectionKey } from '../../../src/kernel/choose-n-selection-key.js';
 import type { SingletonProbeOutcome } from '../../../src/kernel/choose-n-option-resolution.js';
 import type { DecisionKey } from '../../../src/kernel/decision-scope.js';
 import type {

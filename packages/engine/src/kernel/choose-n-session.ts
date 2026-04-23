@@ -14,6 +14,7 @@
  * behavior of buildChooseNPendingChoice in effects-choice.ts.
  */
 import { canConfirmChooseNSelection } from './choose-n-cardinality.js';
+import { toSelectionKey, type SelectionKey } from './choose-n-selection-key.js';
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { optionKey } from './legal-choices.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
@@ -226,49 +227,6 @@ export const isChooseNSessionEligible = (
   }
 
   return true;
-};
-
-// ── Canonical selection keys ──────────────────────────────────────
-
-/**
- * A canonical set key for probe and legality caches.
- *
- * - For domains up to 64 options: bigint bitset (set bit per option's
- *   domain index). Efficient equality and hashing.
- * - For larger domains: sorted option key string.
- *
- * Internal only — public `selected` order is unchanged by this.
- */
-export type SelectionKey = bigint | string;
-
-/** Maximum domain size for the bigint bitset representation. */
-const MAX_BITSET_DOMAIN_SIZE = 64;
-
-/**
- * Compute a canonical SelectionKey for a set of selected values.
- *
- * Deterministic: same selected set (regardless of order) → same key.
- */
-export const toSelectionKey = (
-  domainIndex: ReadonlyMap<string, number>,
-  selected: readonly MoveParamScalar[],
-): SelectionKey => {
-  if (domainIndex.size <= MAX_BITSET_DOMAIN_SIZE) {
-    let bits = 0n;
-    for (const value of selected) {
-      const idx = domainIndex.get(optionKey(value));
-      if (idx !== undefined) {
-        bits |= 1n << BigInt(idx);
-      }
-    }
-    return bits;
-  }
-
-  // Large domain: sorted string key.
-  return selected
-    .map((v) => optionKey(v))
-    .sort()
-    .join('|');
 };
 
 // ── ChooseNSession ────────────────────────────────────────────────

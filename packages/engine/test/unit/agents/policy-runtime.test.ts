@@ -221,6 +221,57 @@ describe('createPolicyRuntimeProviders', () => {
     assert.equal(previewState?.globalVars.score, 4);
     assert.equal(providers.previewSurface.getOutcome(candidate), 'ready');
   });
+
+  it('drops preview-local cached state when the provider scope is disposed', () => {
+    const catalog = createMinimalCatalog();
+    const def = {
+      ...createDef(catalog),
+      globalVars: [{ name: 'score', type: 'int' as const, init: 1, min: -10, max: 10 }],
+      actions: [{
+        id: asActionId('advance'),
+        actor: 'active' as const,
+        executor: 'actor' as const,
+        phase: [phaseId],
+        params: [],
+        pre: null,
+        cost: [],
+        effects: [],
+        limits: [],
+      }],
+    };
+    const state = initialState(def, 1, 2).state;
+    const candidate = {
+      move: { actionId: asActionId('advance'), params: {} },
+      stableMoveKey: 'advance|{}|false|unclassified',
+      actionId: 'advance',
+    };
+    const providers = createPolicyRuntimeProviders({
+      def,
+      state,
+      playerId: asPlayerId(0),
+      seatId: 'us',
+      trustedMoveIndex: new Map(),
+      catalog,
+      previewDependencies: {
+        applyMove: (_def, baseState) => ({
+          state: {
+            ...baseState,
+            globalVars: { ...baseState.globalVars, score: 4 },
+          },
+        }),
+      },
+      runtimeError: (code, message) => new Error(`${code}: ${message}`),
+    });
+
+    assert.equal(providers.previewSurface.getPreviewState(candidate)?.globalVars.score, 4);
+
+    providers.dispose();
+
+    assert.equal(providers.previewSurface.getPreviewState(candidate), undefined);
+    assert.equal(providers.previewSurface.getOutcome(candidate), 'failed');
+    assert.equal(providers.previewSurface.getFailureReason(candidate), 'previewRuntimeDisposed');
+    assert.equal(providers.previewSurface.hasPreviewData(candidate), false);
+  });
 });
 
 describe('activeCard surface resolution', () => {

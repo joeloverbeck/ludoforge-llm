@@ -71,6 +71,18 @@ const isNoBridgeableMicroturnError = (error: unknown): boolean =>
     || error.message.includes('has no bridgeable continuations')
   );
 
+/**
+ * Run-boundary contract:
+ * callers may pass a shared `GameDefRuntime` reused across many `runGame`
+ * invocations. `runGame` forks that runtime via
+ * `forkGameDefRuntimeForRun(...)` before execution so `runLocal` members
+ * restart from their declared initial state while `sharedStructural` members
+ * remain shared by reference. The caller-supplied runtime is never mutated by
+ * `runGame`. Any helper that advances state with a caller-supplied runtime
+ * must honor the same contract: fork internally, or require a pre-forked
+ * runtime via the explicit `ForkedGameDefRuntimeForRun` assertion pattern in
+ * `gamedef-runtime.ts`.
+ */
 export const runGame = (
   def: ValidatedGameDef,
   seed: number,
@@ -219,6 +231,13 @@ export const runGame = (
   };
 };
 
+/**
+ * Batch variant of `runGame`.
+ *
+ * Inherits the canonical `runGame` run-boundary contract for every seed in the
+ * batch. When callers provide a shared `GameDefRuntime`, each underlying
+ * `runGame` invocation forks it independently before advancing state.
+ */
 export const runGames = (
   def: ValidatedGameDef,
   seeds: readonly number[],

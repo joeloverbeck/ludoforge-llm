@@ -1164,6 +1164,31 @@ const recoverCollapsedStochasticRequest = (
     return request;
   }
 
+  const mergeRecoveredPendingChoices = (
+    recoveredPendingChoices: readonly ChoicePendingRequest[],
+  ): readonly ChoicePendingRequest[] => {
+    const groups = new Map<string, ChoicePendingRequest[]>();
+    for (const pending of recoveredPendingChoices) {
+      const groupKey = JSON.stringify({
+        decisionKey: pending.decisionKey,
+        type: pending.type,
+        name: pending.name,
+        decisionPlayer: pending.decisionPlayer ?? null,
+        decisionPath: pending.decisionPath ?? null,
+      });
+      const existing = groups.get(groupKey);
+      if (existing === undefined) {
+        groups.set(groupKey, [pending]);
+      } else {
+        existing.push(pending);
+      }
+    }
+
+    return [...groups.entries()]
+      .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+      .flatMap(([, pendingChoices]) => mergePendingChoiceRequests(pendingChoices));
+  };
+
   const recoveredPendingChoices: ChoicePendingRequest[] = [];
   for (const outcome of request.outcomes) {
     const probeMove: Move = {
@@ -1198,7 +1223,7 @@ const recoverCollapsedStochasticRequest = (
     return request;
   }
 
-  const mergedPendingChoices = mergePendingChoiceRequests(recoveredPendingChoices);
+  const mergedPendingChoices = mergeRecoveredPendingChoices(recoveredPendingChoices);
   return mergedPendingChoices.length === 1
     ? mergedPendingChoices[0]!
     : {

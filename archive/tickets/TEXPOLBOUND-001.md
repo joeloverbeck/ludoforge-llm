@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — Texas tournament flow witness, microturn decision application, authored-policy simulation
-**Deps**: `docs/FOUNDATIONS.md`, `archive/specs/140-microturn-native-decision-protocol.md`, `specs/141-runtime-cache-run-boundary.md`
+**Deps**: `docs/FOUNDATIONS.md`, `archive/specs/140-microturn-native-decision-protocol.md`, `archive/specs/141-runtime-cache-run-boundary.md`
 
 ## Problem
 
@@ -111,6 +111,7 @@ Candidate areas include:
 
 ## Outcome
 
+- Outcome amended: 2026-04-23
 - Completion date: 2026-04-22
 - `ticket corrections applied`: `engine-only repair -> generic policy-agent action-selection correction plus authored Texas policy weight correction`
 - `implemented`: removed action-id grouping from live action-selection policy evaluation, preserved deterministic grouped-representative behavior under unit proof, and reduced the authored Texas `foldWhenBadPotOdds` weight so 6/10-player tournaments no longer degenerate into perpetual preflop fold trains.

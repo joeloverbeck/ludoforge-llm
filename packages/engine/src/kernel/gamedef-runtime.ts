@@ -14,25 +14,48 @@ import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 
-/**
- * Pre-computed, immutable runtime structures derived from a GameDef.
- * These are pure functions of the definition and never change during a game.
- * Creating this once and threading it through kernel calls avoids redundant
- * rebuilds of the adjacency graph, runtime table index, and Zobrist table
- * on every move.
- *
- * `ruleCardCache` is a lazily populated memo cache for RuleCard instances.
- * Each RuleCard is a pure function of (GameDef, actionId) — immutable once
- * computed. The Map itself is mutable for lazy population only.
- */
 export interface GameDefRuntime {
+  /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */
   readonly adjacencyGraph: AdjacencyGraph;
+  /** `sharedStructural`: pure function of `def`; never mutated after runtime creation. */
   readonly runtimeTableIndex: RuntimeTableIndex;
+  /**
+   * Mixed ownership: structural Zobrist metadata is `sharedStructural`, while
+   * `zobristTable.keyCache` is `runLocal` and must start empty for each run.
+   */
   readonly zobristTable: ZobristTable;
+  /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly alwaysCompleteActionIds: ReadonlySet<ActionId>;
+  /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly firstDecisionDomains: FirstDecisionRuntimeCompilation;
+  /**
+   * `sharedStructural`: lazily populated, but the key universe is bounded by
+   * the compiled GameDef (`actionId` plus action-class or `eventCard.id`).
+   * Cached RuleCard values are pure functions of that structural input.
+   */
   readonly ruleCardCache: Map<string, RuleCard>;
+  /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
+}
+
+declare const forkedGameDefRuntimeForRunBrand: unique symbol;
+
+export type ForkedGameDefRuntimeForRun = GameDefRuntime & {
+  readonly [forkedGameDefRuntimeForRunBrand]: true;
+};
+
+/**
+ * Type-level marker for helpers that require a runtime already isolated to one run.
+ *
+ * The current pattern is intentionally lightweight: callers either pass a shared
+ * `GameDefRuntime` to a helper that forks internally, or they accept/brand a
+ * `ForkedGameDefRuntimeForRun` explicitly to make that precondition visible in
+ * the helper signature.
+ */
+export function assertGameDefRuntimeForkedForRun(
+  runtime: GameDefRuntime,
+): asserts runtime is ForkedGameDefRuntimeForRun {
+  void runtime;
 }
 
 export function createGameDefRuntime(def: GameDef): GameDefRuntime {
@@ -53,16 +76,21 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
 /**
  * Fork a structural runtime into a per-run instance.
  *
- * Structural runtime artifacts remain shared, but the Zobrist key memo table
- * is reset at game boundaries so long-lived callers do not accumulate
- * cross-run feature keys.
+ * Structural runtime artifacts remain shared across runs:
+ * `adjacencyGraph`, `runtimeTableIndex`, `alwaysCompleteActionIds`,
+ * `firstDecisionDomains`, `ruleCardCache`, `compiledLifecycleEffects`, and the
+ * structural Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
+ *
+ * The only `runLocal` member is `zobristTable.keyCache`, which is reset at
+ * game boundaries so long-lived callers do not accumulate cross-run feature
+ * keys.
  */
-export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): GameDefRuntime {
+export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {
     ...runtime,
     zobristTable: {
       ...runtime.zobristTable,
       keyCache: new Map(),
     },
-  };
+  } as ForkedGameDefRuntimeForRun;
 }

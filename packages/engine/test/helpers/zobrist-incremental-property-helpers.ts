@@ -9,6 +9,7 @@ import {
   publishMicroturn,
   terminalResult,
   type ValidatedGameDef,
+  type SimulationStopReason,
 } from '../../src/kernel/index.js';
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import type { GameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
@@ -39,8 +40,30 @@ export const DIVERSE_SEEDS = [
  */
 export const FITL_SHORT_DIVERSE_SEEDS = [1, 4, 8, 12, 16, 20, 24, 44444] as const;
 export const FITL_MEDIUM_DIVERSE_SEEDS = [2, 7, 13, 17, 1000, 12345] as const;
+export const TEXAS_PARITY_SEEDS = [1000, 3000, 8888, 12345] as const;
+export const FITL_PARITY_SEEDS = [
+  FITL_SHORT_DIVERSE_SEEDS[0],
+  FITL_SHORT_DIVERSE_SEEDS[1],
+  FITL_SHORT_DIVERSE_SEEDS[2],
+  FITL_SHORT_DIVERSE_SEEDS[3],
+] as const;
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
+
+export type RunVerifiedGameDiagnostics =
+  | {
+    readonly outcome: 'completed';
+    readonly decisionCount: number;
+    readonly stopReason: SimulationStopReason;
+    readonly finalStateHash: bigint;
+    readonly turnsCount: number;
+  }
+  | {
+    readonly outcome: 'swallowedKernelRuntimeError';
+    readonly decisionCount: 0;
+    readonly errorCode: string;
+    readonly errorMessage: string;
+  };
 
 const resolvePlayerIndexForSeat = (
   def: ValidatedGameDef,
@@ -87,6 +110,17 @@ export const compileFitlDef = (): ValidatedGameDef => {
  * errors so coverage stays focused on hash parity.
  * The broad property sweep samples this invariant periodically; the exact
  * move-by-move oracle lives in `zobrist-incremental-parity.test.ts`.
+ *
+ * Run-boundary contract:
+ * like `runGame`, callers may pass a shared `GameDefRuntime` reused across
+ * many invocations. `runVerifiedGame` forks that runtime via
+ * `forkGameDefRuntimeForRun(...)` before execution so `runLocal` members
+ * restart from their declared initial state while `sharedStructural` members
+ * remain shared by reference. This helper bypasses `runGame` and advances via
+ * `publishMicroturn(...)` plus `applyPublishedDecision(...)` directly, but
+ * that bypass inherits the same run-boundary contract rather than weakening
+ * it. Helpers that do not fork internally must require an explicit
+ * pre-forked-runtime assertion instead.
  */
 export const runVerifiedGame = (
   def: ValidatedGameDef,
@@ -94,7 +128,15 @@ export const runVerifiedGame = (
   playerCount: number,
   maxTurns: number,
   runtime: GameDefRuntime,
-): number => {
+): number => runVerifiedGameWithDiagnostics(def, seed, playerCount, maxTurns, runtime).decisionCount;
+
+export const runVerifiedGameWithDiagnostics = (
+  def: ValidatedGameDef,
+  seed: number,
+  playerCount: number,
+  maxTurns: number,
+  runtime: GameDefRuntime,
+): RunVerifiedGameDiagnostics => {
   const agents = createSeededChoiceAgents(playerCount);
   const kernelOptions = {
     verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
@@ -118,7 +160,13 @@ export const runVerifiedGame = (
       decisionCount += autoResult.autoResolvedLogs.length;
 
       if (terminalResult(def, state, runRuntime) !== null || state.turnCount >= maxTurns) {
-        return decisionCount;
+        return {
+          outcome: 'completed',
+          decisionCount,
+          stopReason: terminalResult(def, state, runRuntime) !== null ? 'terminal' : 'maxTurns',
+          finalStateHash: state.stateHash,
+          turnsCount: state.turnCount,
+        };
       }
 
       let microturn;
@@ -126,13 +174,25 @@ export const runVerifiedGame = (
         microturn = publishMicroturn(def, state, runRuntime);
       } catch (error) {
         if (isNoBridgeableMicroturnError(error)) {
-          return decisionCount;
+          return {
+            outcome: 'completed',
+            decisionCount,
+            stopReason: 'noLegalMoves',
+            finalStateHash: state.stateHash,
+            turnsCount: state.turnCount,
+          };
         }
         throw error;
       }
 
       if (microturn.legalActions.length === 0) {
-        return decisionCount;
+        return {
+          outcome: 'completed',
+          decisionCount,
+          stopReason: 'noLegalMoves',
+          finalStateHash: state.stateHash,
+          turnsCount: state.turnCount,
+        };
       }
 
       const player = resolvePlayerIndexForSeat(def, microturn.seatId);
@@ -155,7 +215,20 @@ export const runVerifiedGame = (
     if (isKernelRuntimeError(err) && err.code === 'HASH_DRIFT') {
       throw err;
     }
-    return 0;
+    if (isKernelRuntimeError(err)) {
+      return {
+        outcome: 'swallowedKernelRuntimeError',
+        decisionCount: 0,
+        errorCode: err.code,
+        errorMessage: err.message,
+      };
+    }
+    return {
+      outcome: 'swallowedKernelRuntimeError',
+      decisionCount: 0,
+      errorCode: 'NON_KERNEL_RUNTIME_ERROR',
+      errorMessage: err instanceof Error ? err.message : String(err),
+    };
   }
 };
 

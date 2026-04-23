@@ -14,6 +14,7 @@ import {
   computeFullHash,
   createGameDefRuntime,
   enumerateLegalMoves,
+  forkGameDefRuntimeForRun,
   createZobristTable,
   initialState,
   publishMicroturn,
@@ -244,11 +245,41 @@ describe('runGame', () => {
     assert.equal(trace.finalState.globalVars.score, 1);
   });
 
+  it('classifies GameDefRuntime members as sharedStructural or runLocal across forks', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const sharedRuntime = createGameDefRuntime(def);
+    sharedRuntime.zobristTable.keyCache.set('score=1', 1n);
+    const forkedRuntime = forkGameDefRuntimeForRun(sharedRuntime);
+
+    const sharedStructuralRows = [
+      ['adjacencyGraph', forkedRuntime.adjacencyGraph, sharedRuntime.adjacencyGraph],
+      ['runtimeTableIndex', forkedRuntime.runtimeTableIndex, sharedRuntime.runtimeTableIndex],
+      ['alwaysCompleteActionIds', forkedRuntime.alwaysCompleteActionIds, sharedRuntime.alwaysCompleteActionIds],
+      ['firstDecisionDomains', forkedRuntime.firstDecisionDomains, sharedRuntime.firstDecisionDomains],
+      ['ruleCardCache', forkedRuntime.ruleCardCache, sharedRuntime.ruleCardCache],
+      ['compiledLifecycleEffects', forkedRuntime.compiledLifecycleEffects, sharedRuntime.compiledLifecycleEffects],
+      ['zobristTable.seed', forkedRuntime.zobristTable.seed, sharedRuntime.zobristTable.seed],
+      ['zobristTable.fingerprint', forkedRuntime.zobristTable.fingerprint, sharedRuntime.zobristTable.fingerprint],
+      ['zobristTable.seedHex', forkedRuntime.zobristTable.seedHex, sharedRuntime.zobristTable.seedHex],
+      ['zobristTable.sortedKeys', forkedRuntime.zobristTable.sortedKeys, sharedRuntime.zobristTable.sortedKeys],
+    ] as const;
+
+    for (const [label, actual, expected] of sharedStructuralRows) {
+      assert.equal(actual, expected, `${label} should remain sharedStructural across forks`);
+    }
+
+    assert.notEqual(
+      forkedRuntime.zobristTable.keyCache,
+      sharedRuntime.zobristTable.keyCache,
+      'zobristTable.keyCache should fork per run',
+    );
+    assert.equal(forkedRuntime.zobristTable.keyCache.size, 0);
+    assert.equal(sharedRuntime.zobristTable.keyCache.size, 1);
+  });
+
   it('treats shared runtime zobrist caches as per-run state', () => {
     const def = createDef({ terminalAtScore: 1 });
     const sharedRuntime = createGameDefRuntime(def);
-
-    assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
     const first = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
     const second = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
 

@@ -364,6 +364,92 @@ phase: [asPhaseId('main')],
     );
   });
 
+  it('keeps stochastic alternatives when outcome recovery reaches different frontier depths', () => {
+    const action: ActionDef = {
+      id: asActionId('random-mixed-frontier-op'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [asPhaseId('main')],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    };
+
+    const profile: ActionPipelineDef = {
+      id: 'random-mixed-frontier-profile',
+      actionId: asActionId('random-mixed-frontier-op'),
+      legality: null,
+      costValidation: null,
+      costEffects: [],
+      targeting: {},
+      stages: [
+        {
+          effects: [
+            eff({
+              rollRandom: {
+                bind: '$roll',
+                min: 1,
+                max: 2,
+                in: [],
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+        {
+          effects: [
+            eff({
+              if: {
+                when: { op: '==', left: { _t: 2, ref: 'binding', name: '$roll' }, right: 1 },
+                then: [
+                  eff({
+                    chooseN: {
+                      internalDecisionId: 'decision:$targets',
+                      bind: '$targets',
+                      options: { query: 'enums', values: ['a', 'b', 'c'] },
+                      min: 0,
+                      max: 2,
+                    },
+                  }) as GameDef['actions'][number]['effects'][number],
+                ],
+                else: [
+                  eff({
+                    chooseOne: {
+                      internalDecisionId: 'decision:$owner',
+                      bind: '$owner',
+                      options: { query: 'enums', values: ['us', 'arvn'] },
+                    },
+                  }) as GameDef['actions'][number]['effects'][number],
+                ],
+              },
+            }) as GameDef['actions'][number]['effects'][number],
+          ],
+        },
+      ],
+      atomicity: 'partial',
+    };
+
+    const def = makeBaseDef({ actions: [action], actionPipelines: [profile] });
+    const result = resolveDecisionContinuation(def, makeBaseState(), makeMove('random-mixed-frontier-op'), {
+      choose: () => undefined,
+    });
+
+    assert.equal(result.complete, false);
+    assert.equal(result.nextDecision, undefined);
+    assert.equal(result.stochasticDecision?.kind, 'pendingStochastic');
+    assert.deepEqual(
+      result.nextDecisionSet?.map((request) => ({
+        decisionKey: request.decisionKey,
+        type: request.type,
+      })),
+      [
+        { decisionKey: '$owner', type: 'chooseOne' },
+        { decisionKey: '$targets', type: 'chooseN' },
+      ],
+    );
+  });
+
   it('returns incomplete for unsatisfiable chooseN', () => {
     const action: ActionDef = {
       id: asActionId('unsat-op'),

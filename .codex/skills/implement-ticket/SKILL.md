@@ -24,6 +24,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - If a ticket's named `Files to Touch` / `What to Change` list includes paths that reassessment proves do not require edits, do not silently ignore that mismatch. Either make the required change, or record the boundary correction in the active ticket before closeout so the untouched path is explained truthfully.
 - If the final diff includes newly touched files or generated artifacts that the ticket did not name, do not leave that mismatch implicit. Update the active ticket's touched-file scope before closeout so the recorded boundary matches the live diff in both directions.
 - Before marking a ticket complete, compare the ticket's named verification commands against the final proof set. Either run each named command directly or record, in the active ticket outcome, the exact broader lane that subsumed it.
+- When a proof/regression ticket calls for a **small representative corpus** rather than a historically fixed witness set, preflight each candidate seed/case once through the authoritative live path before hardcoding the final witness subset. If one candidate fails for an unrelated live bug outside the owned invariant, replace it with an equivalently representative passing candidate and record that correction in the active ticket before final proof; this is ordinary reassessment, not a 1-3-1 boundary reset, as long as the ticket did not require the original candidate specifically.
 - When a ticket names wildcard acceptance checks or grep-based emptiness proofs, validate early whether the literal pattern matches the true owned boundary. If the pattern overreaches into intentional derived surfaces outside the mutable slice, narrow the proof to the truthful owned invariant and record that correction in the active ticket before final closeout.
 - When an acceptance command is a grep-based emptiness proof (`returns zero hits`, `returns empty`, or equivalent), remember that `rg` exits with status `1` when it finds no matches. Treat that combination as a passing proof result when the command otherwise ran cleanly; reserve failure classification for actual matches, stderr/tooling errors, or an over-broad pattern that still needs boundary correction.
 - Before any “final” acceptance run, stop and ask: `Will the active ticket artifact change after this proof lane?` If yes, update the ticket first and only then run the final acceptance-proof set.
@@ -84,6 +85,7 @@ When ticket triage confirms a **bounded local refactor**, use this lean path unl
    - Prefer the smallest credible candidate search first: already-curated nearby seeds/cases, the previous witness family, or explicitly referenced historical candidates before broad brute-force probing.
    - Capture exact old-vs-new witness evidence during reassessment so the ticket correction can cite why the original witness drifted under the live code.
    - Update the active ticket's correction ledger and witness description before the final acceptance-proof pass so the last green run matches the re-blessed artifact.
+   - If the ticket only asked for a representative sample (`roughly 4-6 seeds`, `small cross-game corpus`, or similar) and did not bind ownership to exact candidates, first do a cheap fresh-path probe of the candidate pool. Keep the final set small, representative, and passing on the owned invariant; exclude unrelated failing candidates and record the substitution explicitly in the ticket outcome.
    - When the stale witness is a recorded benchmark or performance ceiling rather than a semantic correctness example, first distinguish `stale recorded budget` from `live runtime regression`:
      1. compare the failing witness against nearby control cases or previously stable exemplars in the same harness
      2. check whether the owned implementation actually changed the measured hot path or only invalidated an old stored baseline
@@ -180,6 +182,13 @@ For named-witness regression tickets that cite a small seed/case matrix, add one
 2. use that matrix to classify `still broken`, `partially repaired`, or `fully repaired on owned witnesses`
 3. if the result is only `partially repaired`, stop for `1-3-1` before continuing when the remaining fix path is no longer obvious
 4. only return to the heavier focused/package/workspace acceptance lanes once the named witness matrix matches the intended boundary
+
+For representative-corpus proof tickets that do **not** bind to exact seeds/cases, use this compact preflight before writing or finalizing the durable witness set:
+
+1. probe each candidate once through the authoritative fresh path
+2. classify each candidate as `owned invariant exercised cleanly` or `candidate blocked by unrelated live failure`
+3. keep the smallest representative passing subset that still covers the ticket's stated surface
+4. record any dropped candidate and replacement in the ticket outcome before final proof so the closeout explains why the final corpus changed
 
 ### Synthetic Fixture Checklist
 

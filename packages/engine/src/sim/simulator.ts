@@ -28,6 +28,30 @@ import type { SimulationOptions } from './sim-options.js';
 import { extractMicroturnSnapshot } from './snapshot.js';
 
 const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
+const OOM_TRACE_INTERVAL = 25;
+
+const shouldLogOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
+
+const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+
+const maybeLogOomTrace = (
+  label: string,
+  state: GameTrace['finalState'],
+  decisions: number,
+  runtime?: GameDefRuntime,
+): void => {
+  if (!shouldLogOomTrace()) {
+    return;
+  }
+  if (decisions % OOM_TRACE_INTERVAL !== 0) {
+    return;
+  }
+  const zobristKeyCacheSize = runtime?.zobristTable.keyCache.size ?? 0;
+  const decisionStackDepth = state.decisionStack?.length ?? 0;
+  console.error(
+    `[oom-trace] ${label} turn=${state.turnCount} decisions=${decisions} heapMb=${heapUsedMb()} zobristKeys=${zobristKeyCacheSize} stackDepth=${decisionStackDepth}`,
+  );
+};
 
 
 const validateSeed = (seed: number): void => {
@@ -122,8 +146,10 @@ export const runGame = (
   let result: TerminalResult | null = null;
   let stopReason: SimulationStopReason;
   let currentChanceRng = chanceRng;
+  let appliedDecisionCount = 0;
 
   while (true) {
+    maybeLogOomTrace('loop-start', state, appliedDecisionCount, resolvedRuntime);
     const t0_auto = perfStart(profiler);
     const autoResult = advanceAutoresolvable(validatedDef, state, currentChanceRng, resolvedRuntime);
     perfEnd(profiler, 'simLegalMoves', t0_auto);
@@ -202,6 +228,7 @@ export const runGame = (
     );
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
+    appliedDecisionCount += 1;
 
     const t0_delta = perfStart(profiler);
     const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);

@@ -4,9 +4,11 @@ import { describe, it } from 'node:test';
 
 import {
   addToRunningHash,
+  asDecisionFrameId,
   asPhaseId,
   asPlayerId,
   asTokenId,
+  asTurnId,
   asZoneId,
   computeFullHash,
   createMutableState,
@@ -68,6 +70,36 @@ const createMinimalState = (): GameState => ({
   activeLastingEffects: undefined,
   interruptPhaseStack: undefined,
 });
+
+const createStateWithOversizedDecisionStackFrame = (): GameState => {
+  const oversizedValue = 'cam-ranh:none'.repeat(2_048);
+  return {
+    ...createMinimalState(),
+    decisionStack: [{
+      frameId: asDecisionFrameId(1),
+      parentFrameId: null,
+      turnId: asTurnId(1),
+      context: {
+        kind: 'chooseOne',
+        seatId: 'seat:0' as never,
+        decisionKey: 'decision:test::$target' as never,
+        options: [],
+      },
+      accumulatedBindings: {
+        'decision:test::$target': oversizedValue,
+      } as never,
+      effectFrame: {
+        programCounter: 0,
+        boundedIterationCursors: {},
+        localBindings: {},
+        pendingTriggerQueue: [],
+      },
+    }],
+    nextFrameId: asDecisionFrameId(2),
+    nextTurnId: asTurnId(2),
+    activeDeciderSeatId: 'seat:0' as never,
+  };
+};
 
 describe('Zobrist incremental edge cases', () => {
   const def = createMinimalGameDef();
@@ -216,6 +248,22 @@ describe('Zobrist incremental edge cases', () => {
       const key1 = zobristKey(table, feature1);
       const key2 = zobristKey(table, feature2);
       assert.notEqual(key1, key2, 'different values should produce different keys');
+    });
+
+    it('stores decision stack frame keys as bounded digests instead of raw serialized frames', () => {
+      const state = createStateWithOversizedDecisionStackFrame();
+      const hash1 = computeFullHash(table, state);
+      const hash2 = computeFullHash(table, state);
+
+      assert.equal(hash1, hash2, 'same oversized decision stack frame should hash deterministically');
+
+      const decisionStackKeys = [...table.keyCache.keys()].filter((key) => key.startsWith('kind=decisionStackFrame|'));
+      assert.equal(decisionStackKeys.length, 1, 'expected one cached decision stack frame key');
+
+      const cachedKey = decisionStackKeys[0]!;
+      assert.match(cachedKey, /^kind=decisionStackFrame\|slot=0\|digest=[0-9a-f]{16}:[0-9a-f]{16}$/);
+      assert.ok(cachedKey.length < 96, `expected bounded cached key length, received ${cachedKey.length}`);
+      assert.doesNotMatch(cachedKey, /cam-ranh:none/, 'raw oversized bindings must not be interned into the Zobrist cache');
     });
   });
 });

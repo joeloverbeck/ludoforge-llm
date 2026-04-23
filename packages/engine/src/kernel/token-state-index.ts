@@ -8,7 +8,9 @@ export interface TokenStateIndexEntry {
   readonly occurrenceZoneIds: readonly string[];
 }
 
-const tokenStateIndexByState = new WeakMap<GameState, ReadonlyMap<string, TokenStateIndexEntry>>();
+const NO_DUPLICATE_OCCURRENCE_ZONE_IDS: readonly string[] = Object.freeze([]);
+
+const tokenStateIndexByZones = new WeakMap<GameState['zones'], ReadonlyMap<string, TokenStateIndexEntry>>();
 
 function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
   const index = new Map<string, TokenStateIndexEntry>();
@@ -26,14 +28,16 @@ function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateI
           index: tokenIndex,
           token,
           occurrenceCount: 1,
-          occurrenceZoneIds: [zoneId],
+          occurrenceZoneIds: NO_DUPLICATE_OCCURRENCE_ZONE_IDS,
         });
         continue;
       }
       index.set(tokenId, {
         ...existing,
         occurrenceCount: existing.occurrenceCount + 1,
-        occurrenceZoneIds: [...existing.occurrenceZoneIds, zoneId],
+        occurrenceZoneIds: existing.occurrenceCount === 1
+          ? [existing.zoneId, zoneId]
+          : [...existing.occurrenceZoneIds, zoneId],
       });
     }
   }
@@ -41,12 +45,12 @@ function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateI
 }
 
 export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
-  const cached = tokenStateIndexByState.get(state);
+  const cached = tokenStateIndexByZones.get(state.zones);
   if (cached !== undefined) {
     return cached;
   }
   const built = buildTokenStateIndex(state);
-  tokenStateIndexByState.set(state, built);
+  tokenStateIndexByZones.set(state.zones, built);
   return built;
 }
 
@@ -60,5 +64,5 @@ export function getTokenStateIndexEntry(state: GameState, tokenId: string): Toke
  * lookups rebuild the index from the (now-mutated) zone arrays.
  */
 export function invalidateTokenStateIndex(state: GameState): void {
-  tokenStateIndexByState.delete(state);
+  tokenStateIndexByZones.delete(state.zones);
 }

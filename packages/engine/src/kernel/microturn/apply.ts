@@ -301,7 +301,7 @@ const spawnPendingFrame = (
       parentFrameId: updatedRoot.frameId,
       turnId: updatedRoot.turnId,
       context: toStochasticDecisionStackContext(continuation),
-      accumulatedBindings: updatedRoot.accumulatedBindings,
+      accumulatedBindings: {},
       effectFrame: {
         ...emptyEffectFrame(),
         ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -316,7 +316,7 @@ const spawnPendingFrame = (
           pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
           continuation.nextChooseNTemplate,
         ),
-        accumulatedBindings: updatedRoot.accumulatedBindings,
+        accumulatedBindings: {},
         effectFrame: {
           ...emptyEffectFrame(),
           ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -520,6 +520,7 @@ export const applyPublishedDecision = (
       const nextTop: DecisionStackFrame = {
         ...top,
         context: advanced.nextContext,
+        accumulatedBindings: {},
       };
       const nextState = updateHash(def, {
         ...canonicalState,

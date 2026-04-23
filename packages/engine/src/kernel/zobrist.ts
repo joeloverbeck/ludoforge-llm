@@ -134,7 +134,7 @@ const encodeFeature = (feature: ZobristFeature): string => {
     case 'zoneVar':
       return `kind=zoneVar|zoneId=${feature.zoneId}|varName=${feature.varName}|value=${feature.value}`;
     case 'decisionStackFrame':
-      return `kind=decisionStackFrame|slot=${feature.slot}|encoded=${feature.encoded}`;
+      return `kind=decisionStackFrame|slot=${feature.slot}|digest=${feature.digest}`;
     case 'nextFrameId':
       return `kind=nextFrameId|value=${feature.value}`;
     case 'nextTurnId':
@@ -165,6 +165,16 @@ const canonicalizeHashValue = (value: unknown): string => {
     return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeHashValue(entry)}`).join(',')}}`;
   }
   return JSON.stringify(String(value));
+};
+
+const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
+const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+
+const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
+  const encoded = canonicalizeHashValue(frame);
+  const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
+  const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
+  return `${digestA}:${digestB}`;
 };
 
 const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {
@@ -448,7 +458,7 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
     hash ^= zobristKey(table, {
       kind: 'decisionStackFrame',
       slot,
-      encoded: canonicalizeHashValue(frame),
+      digest: digestDecisionStackFrame(frame),
     });
   });
 

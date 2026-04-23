@@ -34,6 +34,33 @@ interface FrontierCandidate {
   readonly progressBias: number;
 }
 
+const POLICY_TRACE_INTERVAL = 25;
+let policyChooseCallCount = 0;
+
+const shouldLogPolicyOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
+
+const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+
+const shouldEmitPolicyTrace = (legalActionCount: number): boolean => {
+  if (!shouldLogPolicyOomTrace()) {
+    return false;
+  }
+  return legalActionCount >= 8 || policyChooseCallCount % POLICY_TRACE_INTERVAL === 0;
+};
+
+const logPolicyOomTrace = (
+  label: string,
+  input: AgentMicroturnDecisionInput,
+  extras = '',
+): void => {
+  if (!shouldEmitPolicyTrace(input.microturn.legalActions.length)) {
+    return;
+  }
+  console.error(
+    `[oom-trace] policy:${label} turn=${input.state.turnCount} kind=${input.microturn.kind} legal=${input.microturn.legalActions.length} heapMb=${heapUsedMb()}${extras}`,
+  );
+};
+
 const traceCandidatesForFrontier = (
   traceLevel: PolicyDecisionTraceLevel,
   frontier: readonly FrontierCandidate[],
@@ -163,6 +190,8 @@ export class PolicyAgent implements Agent {
       throw new Error('PolicyAgent.chooseDecision called with empty legalActions');
     }
 
+    policyChooseCallCount += 1;
+    logPolicyOomTrace('choose:start', input);
     const t0Eval = perfStart(input.profiler);
     const result = input.microturn.kind === 'actionSelection'
       ? this.chooseActionSelectionDecision(input)
@@ -178,10 +207,12 @@ export class PolicyAgent implements Agent {
       (decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> =>
         decision.kind === 'actionSelection' && decision.move !== undefined,
     );
+    logPolicyOomTrace('actionSelection:prepared', input, ` actionMoves=${actionDecisions.length}`);
     if (actionDecisions.length === 0) {
       return this.chooseFrontierDecision(input);
     }
 
+    const evalHeapBefore = heapUsedMb();
     const evaluation = evaluatePolicyMove({
       def: input.def,
       state: input.state,
@@ -193,6 +224,11 @@ export class PolicyAgent implements Agent {
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     });
+    logPolicyOomTrace(
+      'actionSelection:evaluated',
+      input,
+      ` actionMoves=${actionDecisions.length} heapDeltaMb=${heapUsedMb() - evalHeapBefore} finalScore=${evaluation.metadata.finalScore ?? 'null'}`,
+    );
     const selectedMoveKey = toMoveIdentityKey(input.def, evaluation.move);
     const selectedDecision = actionDecisions.find(
       (decision) => decision.move !== undefined && toMoveIdentityKey(input.def, decision.move) === selectedMoveKey,
@@ -254,6 +290,8 @@ export class PolicyAgent implements Agent {
       return structuralChoice;
     }
 
+    const frontierHeapBefore = heapUsedMb();
+    logPolicyOomTrace('frontier:preview-start', input);
     const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => {
       const nextState = applyPublishedDecision(
         input.def,
@@ -270,6 +308,11 @@ export class PolicyAgent implements Agent {
         progressBias: chooseNStepProgressBias(input, decision),
       };
     });
+    logPolicyOomTrace(
+      'frontier:preview-done',
+      input,
+      ` heapDeltaMb=${heapUsedMb() - frontierHeapBefore}`,
+    );
     const bestScore = Math.max(...frontier.map((candidate) => candidate.score));
     const bestByScore = frontier.filter((candidate) => candidate.score === bestScore);
     const bestProgressBias = Math.max(...bestByScore.map((candidate) => candidate.progressBias));

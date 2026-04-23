@@ -2,20 +2,28 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
+import { PolicyAgent } from '../../src/agents/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import {
+  applyDecision,
   asActionId,
+  assertValidatedGameDef,
   asPlayerId,
   asTokenId,
+  createGameDefRuntime,
+  createRng,
   initialState,
+  publishMicroturn,
   type GameDef,
   type GameState,
   type Move,
   type Token,
+  type ValidatedGameDef,
 } from '../../src/kernel/index.js';
 import { evaluateZoneFilterForMove } from '../../src/kernel/free-operation-grant-authorization.js';
+import { runGame } from '../../src/sim/index.js';
 
 const CARD_ID = 'card-71';
 const HUE = 'hue:none';
@@ -37,11 +45,11 @@ const makeToken = (
   },
 });
 
-const compileDef = (): GameDef => {
+const compileDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileProductionSpec();
   assertNoErrors(parsed);
   assert.notEqual(compiled.gameDef, null);
-  return compiled.gameDef!;
+  return assertValidatedGameDef(compiled.gameDef!);
 };
 
 const setupState = (def: GameDef): GameState => {
@@ -69,6 +77,37 @@ const setupState = (def: GameDef): GameState => {
 };
 
 const DEF = compileDef();
+const PLAYER_COUNT = 4;
+const FAILING_MARCH_GUERRILLA_KEY =
+  'decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@quang-nam:none[0]';
+
+const findSeed1006MarchWitnessMicroturn = (): ReturnType<typeof publishMicroturn> => {
+  const def = DEF;
+  const runtime = createGameDefRuntime(def);
+  const agent = new PolicyAgent({ traceLevel: 'summary' });
+  let state = initialState(def, 1006, PLAYER_COUNT).state;
+  let rng = createRng(1006n);
+
+  for (let step = 0; step < 220; step += 1) {
+    const microturn = publishMicroturn(def, state, runtime);
+    if (
+      microturn.kind === 'chooseNStep'
+      && microturn.legalActions.some(
+        (decision) =>
+          decision.kind === 'chooseNStep'
+          && decision.decisionKey === FAILING_MARCH_GUERRILLA_KEY,
+      )
+    ) {
+      return microturn;
+    }
+
+    const selected = agent.chooseDecision({ def, state, microturn, rng, runtime });
+    rng = selected.rng;
+    state = applyDecision(def, state, selected.decision, undefined, runtime).state;
+  }
+
+  assert.fail('Expected to reach the seed-1006 required free-operation March witness within 220 decisions');
+};
 
 describe('FITL march free operation probe', () => {
   it('treats per-zone binding gaps as deferred during turn-flow eligibility probing', () => {
@@ -108,5 +147,29 @@ describe('FITL march free operation probe', () => {
 
     assert.equal(result.status, 'resolved');
     assert.equal(result.matched, true);
+  });
+
+  it('does not publish the empty required free-operation March confirm on the live seed-1006 witness', () => {
+    const microturn = findSeed1006MarchWitnessMicroturn();
+
+    assert.equal(
+      microturn.legalActions.some(
+        (decision) =>
+          decision.kind === 'chooseNStep'
+          && decision.decisionKey === FAILING_MARCH_GUERRILLA_KEY
+          && decision.command === 'confirm',
+      ),
+      false,
+      'publication must suppress the empty guerrilla confirm that only leads to an unresolved required free-operation grant',
+    );
+  });
+
+  it('keeps FITL seed 1006 executable through the former required free-operation March witness', () => {
+    const runtime = createGameDefRuntime(DEF);
+    const agents = Array.from({ length: PLAYER_COUNT }, () => new PolicyAgent({ traceLevel: 'summary' }));
+
+    assert.doesNotThrow(() => {
+      runGame(DEF, 1006, agents, 20, PLAYER_COUNT, undefined, runtime);
+    });
   });
 });

@@ -1,76 +1,68 @@
 # FITL ARVN Evolution Seed Report
 
-Date: 2026-04-22
+Date: 2026-04-23
 
 ## Scope
 
-I checked the current campaign seed tier, then extended the sweep to the full `1000..1014` range you said is normally used during the ramp-up. I also kept the earlier ARVN-evolved policy-quality witness seeds that previously expected `noLegalMoves`.
+I rebuilt `@ludoforge/engine` from the current tree, reran the live ARVN evolution tournament sweep for `1000..1014`, and reran the ARVN-evolved witness seeds `1020`, `1049`, and `1054`.
 
 - Live campaign seed tier on disk: `campaigns/fitl-arvn-agent-evolution/seed-tier.txt` is currently `1`
 - Requested campaign sweep recorded here: `1000..1014`
 - Additional witness seeds checked: `1020`, `1049`, `1054`
+- Authority for the summary tables below: the current `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` / direct `runGame(...)` path against the rebuilt engine
 
 ## Summary
 
-Across the requested `1000..1014` range, two seeds currently end with `noLegalMoves`: `1001` and `1006`.
+The architectural changes did affect the recorded seed results.
 
-All other checked seeds in `1000..1014` terminate normally with VC wins.
+Across the requested `1000..1014` range:
+
+- `1001` still ends with `noLegalMoves`
+- `1006` no longer lands as the old `noLegalMoves` witness and now throws a runtime `ILLEGAL_MOVE`
+- every other rerun seed in `1000..1014` terminates normally with a VC win
 
 The current results for the campaign range are:
 
 | Seed | Why checked | Stop reason | Turns | Decisions | Winner | ARVN margin |
 | --- | --- | --- | ---: | ---: | --- | ---: |
-| 1000 | Current evolution tier | `terminal` | 5 | 547 | `vc` | -3 |
-| 1001 | Requested range | `noLegalMoves` | 2 | 251 | - | -15 |
-| 1002 | Requested range | `terminal` | 5 | 580 | `vc` | 2 |
-| 1003 | Requested range | `terminal` | 4 | 488 | `vc` | -27 |
-| 1004 | Requested range | `terminal` | 5 | 592 | `vc` | -16 |
-| 1005 | Requested range | `terminal` | 5 | 596 | `vc` | -16 |
-| 1006 | Requested range | `noLegalMoves` | 1 | 186 | - | -23 |
-| 1007 | Requested range | `terminal` | 5 | 538 | `vc` | -15 |
-| 1008 | Requested range | `terminal` | 5 | 518 | `vc` | 4 |
-| 1009 | Requested range | `terminal` | 5 | 594 | `vc` | -5 |
-| 1010 | Requested range | `terminal` | 5 | 604 | `vc` | -7 |
-| 1011 | Requested range | `terminal` | 5 | 571 | `vc` | -20 |
-| 1012 | Requested range | `terminal` | 5 | 548 | `vc` | -13 |
-| 1013 | Requested range | `terminal` | 5 | 615 | `vc` | -10 |
-| 1014 | Requested range | `terminal` | 5 | 547 | `vc` | -15 |
+| 1000 | Current evolution tier | `terminal` | 5 | 524 | `vc` | -3 |
+| 1001 | Requested range | `noLegalMoves` | 2 | 245 | - | -15 |
+| 1002 | Requested range | `terminal` | 5 | 572 | `vc` | 2 |
+| 1003 | Requested range | `terminal` | 4 | 482 | `vc` | -27 |
+| 1004 | Requested range | `terminal` | 5 | 575 | `vc` | -16 |
+| 1005 | Requested range | `terminal` | 5 | 582 | `vc` | -16 |
+| 1006 | Requested range | `error` | - | - | - | - |
+| 1007 | Requested range | `terminal` | 5 | 533 | `vc` | -15 |
+| 1008 | Requested range | `terminal` | 5 | 503 | `vc` | 4 |
+| 1009 | Requested range | `terminal` | 5 | 581 | `vc` | -5 |
+| 1010 | Requested range | `terminal` | 5 | 590 | `vc` | -7 |
+| 1011 | Requested range | `terminal` | 5 | 570 | `vc` | -20 |
+| 1012 | Requested range | `terminal` | 5 | 544 | `vc` | -13 |
+| 1013 | Requested range | `terminal` | 5 | 595 | `vc` | -10 |
+| 1014 | Requested range | `terminal` | 5 | 534 | `vc` | -15 |
 
 The additional witness-seed results are:
 
 | Seed | Why checked | Stop reason | Turns | Decisions | Winner | ARVN margin |
 | --- | --- | --- | ---: | ---: | --- | ---: |
-| 1020 | ARVN-evolved witness seed | `terminal` | 5 | 458 | `vc` | -16 |
-| 1049 | ARVN-evolved witness seed | `terminal` | 0 | 45 | `vc` | -15 |
-| 1054 | ARVN-evolved witness seed | `terminal` | 5 | 543 | `vc` | -7 |
-
-The old convergence-witness expectation that `1049` and `1054` should end in `noLegalMoves` is stale relative to the current codebase:
-
-- `packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts`
-- `packages/engine/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.ts`
-
-Both tests still expect:
-
-- `1020 -> terminal`
-- `1049 -> noLegalMoves`
-- `1054 -> noLegalMoves`
-
-But the current direct simulator runs produced terminal VC wins for all three.
+| 1020 | ARVN-evolved witness seed | `terminal` | 5 | 444 | `vc` | -16 |
+| 1049 | ARVN-evolved witness seed | `terminal` | 0 | 42 | `vc` | -15 |
+| 1054 | ARVN-evolved witness seed | `terminal` | 5 | 528 | `vc` | -7 |
 
 ## Campaign-range notes
 
 ### Seed 1000
 
-- This is the only seed the live evolution harness would use right now.
-- It terminates normally.
+- This is still the only seed the live evolution harness would use right now.
+- It still terminates normally.
 - Final margins: `us=-11`, `arvn=-3`, `nva=-14`, `vc=6`
 
 ### Seed 1001
 
-- Reproduces `noLegalMoves`.
+- Still reproduces `noLegalMoves`.
 - Final margins at stop: `us=-8`, `arvn=-15`, `nva=-14`, `vc=11`
-- The failure happens on NVA's turn at `turnCount=2`.
-- The publish step fails with:
+- The failure still happens on NVA's turn at `turnCount=2`.
+- The publish step still fails with:
   - `MICROTURN_CONSTRUCTIBILITY_INVARIANT: chooseNStep context has no bridgeable continuations`
 - Last successful player decision before the failure:
   - seat: `nva`
@@ -78,105 +70,60 @@ But the current direct simulator runs produced terminal VC wins for all three.
   - published legal action count: `28`
   - selected stable move key:
     - `chooseNStep:decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces:confirm:null`
-  - pre-decision snapshot:
-    - `turnCount=2`
-    - `phaseId=main`
-    - `activePlayer=2`
-    - seat standings: `us=-8`, `arvn=-15`, `nva=-14`, `vc=11`
-    - notable globals: `nvaResources=30`, `aid=12`, `patronage=23`, `trail=4`, `leaderBoxCardCount=3`
 
 ### Seed 1006
 
-- Reproduces `noLegalMoves`.
-- Final margins at stop: `us=-6`, `arvn=-23`, `nva=-14`, `vc=4`
-- The failure happens on NVA's turn at `turnCount=1`.
-- The publish step fails with:
-  - `MICROTURN_CONSTRUCTIBILITY_INVARIANT: chooseNStep context has no bridgeable continuations`
-- Last successful player decision before the failure:
-  - seat: `nva`
-  - decision kind: `chooseNStep`
-  - published legal action count: `5`
-  - selected stable move key:
-    - `chooseNStep:decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@tay-ninh:none[0]:confirm:null`
-  - pre-decision snapshot:
-    - `turnCount=1`
-    - `phaseId=main`
-    - `activePlayer=2`
-    - seat standings: `us=-6`, `arvn=-23`, `nva=-14`, `vc=4`
-    - notable globals: `nvaResources=32`, `vcResources=3`, `arvnResources=40`, `aid=10`, `patronage=15`, `trail=4`, `leaderBoxCardCount=1`
+- The older April 22 `noLegalMoves` note is no longer current.
+- In the live tournament rerun, this seed now fails as a runtime error before a normal stop reason is recorded.
+- Direct reruns currently throw:
+  - `Illegal move: actionId=march reason=moveNotLegalInCurrentState`
+  - detail: `active seat has unresolved required free-operation grants`
+- The failing move still sits inside NVA `march` / `chooseNStep` flow around `tay-ninh:none`, but the failure class is now `ILLEGAL_MOVE`, not the earlier bridgeability-only `noLegalMoves` result.
 
 ### Other campaign-range seeds
 
-- `1002`, `1003`, `1004`, `1005`, `1007`, `1008`, `1009`, `1010`, `1011`, `1012`, `1013`, and `1014` all terminated normally with VC wins.
-- Only `1002` and `1008` gave ARVN a positive final margin (`2` and `4` respectively), but neither crossed the win threshold before the VC terminal result.
+- `1002`, `1003`, `1004`, `1005`, `1007`, `1008`, `1009`, `1010`, `1011`, `1012`, `1013`, and `1014` all still terminate normally with VC wins.
+- Only `1002` and `1008` still give ARVN a positive final margin (`2` and `4` respectively), but neither crosses the win threshold before the VC terminal result.
+- The main drift across these seeds is in decision counts, not winner class.
 
 ## Witness-seed notes
 
 ### Seed 1020
 
-- Still terminates normally, matching the old witness on stop-reason class.
+- Still terminates normally, matching the ARVN-evolved witness expectation on stop-reason class.
 - Final margins: `us=-9`, `arvn=-16`, `nva=-14`, `vc=2`
 
 ### Seed 1049
 
-- No `noLegalMoves` reproduction.
-- It now terminates immediately on turn `0` with a VC win after `45` microturn decisions.
-- Last recorded decision before termination:
-  - `playerId=0`
-  - decision kind/action: `chooseNStep`
-  - published legal action count: `2`
-  - pre-decision snapshot: `turnCount=0`, `phaseId=main`, `activePlayer=0`
-- Final margins: `us=-12`, `arvn=-15`, `nva=-14`, `vc=1`
+- Under direct `runGame(...)`, this still terminates immediately on turn `0` with a VC win.
+- Current direct-run metrics: `42` decisions, final margins `us=-12`, `arvn=-15`, `nva=-14`, `vc=1`
+- However, the focused stepwise diagnostic path now diverges:
+  - `node campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs --seed 1049 --max-turns 200 --evolved-seat arvn`
+  - current result there: `stopReason=noLegalMoves` after `237` decisions
+  - failure class: `MICROTURN_CONSTRUCTIBILITY_INVARIANT`
+- That means the direct tournament path and the manual microturn diagnostic path are no longer interchangeable for this seed.
 
 ### Seed 1054
 
-- No `noLegalMoves` reproduction.
-- It terminates normally with a VC win on turn `5`.
-- Last recorded decision before termination:
-  - `playerId=3`
-  - action: `attack`
-  - published legal action count: `4`
-  - pre-decision snapshot: `turnCount=5`, `phaseId=main`, `activePlayer=3`
-- Final margins: `us=-6`, `arvn=-7`, `nva=-15`, `vc=0`
+- Still terminates normally with a VC win on turn `5`.
+- Current direct-run metrics: `528` decisions, final margins `us=-6`, `arvn=-7`, `nva=-15`, `vc=0`
 
-## `noLegalMoves` pattern in the requested range
+## Current Interpretation
 
-For the current `1000..1014` sweep, both `noLegalMoves` cases share the same immediate symptom:
+The old report conclusions need to be narrowed:
 
-- active seat at failure: `nva`
-- failure class: `MICROTURN_CONSTRUCTIBILITY_INVARIANT`
-- message: `chooseNStep context has no bridgeable continuations`
+- The campaign tooling itself is no longer stale for this report. `run-tournament.mjs` runs successfully against the current engine.
+- The direct ARVN-evolved witness expectations in `packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts` are currently aligned with the rebuilt engine for `1020`, `1049`, and `1054`.
+- The meaningful drift is elsewhere:
+  - campaign decision counts shifted across most seeds
+  - seed `1006` changed failure class from the earlier reported `noLegalMoves` witness to a runtime `ILLEGAL_MOVE`
+  - seed `1049` now exposes a discrepancy between direct `runGame(...)` and the stepwise diagnostic script
 
-That is narrower and more useful than the earlier broad concern of "some seeds end in no legal move". In the current codebase, the reproduced failures are specifically NVA-side `chooseNStep` bridgeability failures.
+## Practical Conclusion
 
-## Tooling status
+The seed report should now be read as follows:
 
-Two campaign scripts are stale against the current engine/agent APIs:
-
-### `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs`
-
-The runner still reads `trace.moves`, but the current simulator returns `trace.decisions`. The live run fails at:
-
-- `run-tournament.mjs:348-354`
-- `run-tournament.mjs:373`
-- `run-tournament.mjs:389-401`
-
-Observed failure on seed `1000`:
-
-`Seed 1000 error: Cannot read properties of undefined (reading 'filter')`
-
-### `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs`
-
-The diagnostic script still calls `agent.chooseMove(...)`, but the current `PolicyAgent` exposes `chooseDecision(...)`.
-
-Relevant stale call:
-
-- `diagnose-nolegalmoves.mjs:101-105`
-
-Observed failure on both `1049` and `1054`:
-
-`Agent threw at move 0: agent.chooseMove is not a function`
-
-## Practical conclusion
-
-Before resuming `campaigns/fitl-arvn-agent-evolution/*` as-is, the campaign tooling should be updated to the current simulator and agent interfaces. Separately, the old convergence-witness expectations for seeds `1049` and `1054` should be re-baselined, because they no longer describe the current runtime behavior.
+- authoritative rerun results are the direct tournament / `runGame(...)` results in the tables above
+- `1001` remains the clean reproduced `noLegalMoves` campaign witness
+- `1006` is now a stronger signal than before, because it no longer fails as a simple terminal classification issue and instead trips a runtime legality bug
+- `1049` should not be treated as a stable debugging witness without first deciding whether the report should trust direct `runGame(...)` or the manual microturn diagnostic path for that seed

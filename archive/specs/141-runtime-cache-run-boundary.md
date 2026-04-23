@@ -1,6 +1,6 @@
 # Spec 141: Runtime Cache Ownership and Run Boundaries
 
-**Status**: Draft  
+**Status**: COMPLETED  
 **Priority**: P1  
 **Complexity**: M  
 **Dependencies**: Spec 03 [deterministic-primitives] (archived), Spec 78 [draft-state-for-effect-execution] (archived), Spec 80 [incremental-zobrist-hashing] (archived), Spec 140 [microturn-native-decision-protocol] (archived)  
@@ -195,3 +195,10 @@ Decomposed on 2026-04-22:
 - `tickets/141RUNCACHE-002.md` — Run-like helper API surface audit and contract normalization
 - `tickets/141RUNCACHE-003.md` — Forked-vs-fresh runtime parity witness
 - `tickets/141RUNCACHE-004.md` — Helper path vs canonical run path equivalence witness
+
+## Outcome
+
+- completion date: 2026-04-23
+- what actually changed: the runtime-ownership and run-boundary design landed through archived tickets `141RUNCACHE-001` through `141RUNCACHE-004`, covering runtime-member classification, helper contract normalization, forked-vs-fresh parity, and helper-vs-canonical parity.
+- deviations from original plan: the implementation landed as the intended four-ticket decomposition rather than as a single spec-sized patch; final proof used truthful package-local engine build/test/lint/typecheck lanes and focused `node --test dist/...` witnesses instead of broader draft commands.
+- verification results: `archive/tickets/141RUNCACHE-001.md`, `archive/tickets/141RUNCACHE-002.md`, `archive/tickets/141RUNCACHE-003.md`, and `archive/tickets/141RUNCACHE-004.md` record completed implementation outcomes with passing verification for the full Spec 141 owned boundary.

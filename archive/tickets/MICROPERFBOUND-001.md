@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — microturn publication, microturn application, turn-flow coup handoff gating, repeated-run boundedness witnesses
-**Deps**: `docs/FOUNDATIONS.md`, `archive/specs/140-microturn-native-decision-protocol.md`, `specs/141-runtime-cache-run-boundary.md`
+**Deps**: `docs/FOUNDATIONS.md`, `archive/specs/140-microturn-native-decision-protocol.md`, `archive/specs/141-runtime-cache-run-boundary.md`
 
 ## Problem
 
@@ -129,6 +129,7 @@ Use the stalled FITL repeated-run reproduction as the witness for runtime-bounda
 
 ## Outcome
 
+- Outcome amended: 2026-04-23
 - Completed: 2026-04-22
 - What changed:
   - Landed the shared-seam runtime repair in `packages/engine/src/kernel/microturn/continuation.ts`, `packages/engine/src/kernel/microturn/apply.ts`, `packages/engine/src/kernel/microturn/publish.ts`, `packages/engine/src/kernel/phase-advance.ts`, and `packages/engine/src/kernel/turn-flow-eligibility.ts`.

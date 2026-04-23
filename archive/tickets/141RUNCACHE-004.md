@@ -1,6 +1,6 @@
 # 141RUNCACHE-004: Helper path vs canonical run path equivalence witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — possibly extend `runVerifiedGame` return shape or add a sibling helper; new test file
@@ -45,7 +45,7 @@ Recommendation: Option A, with a minimal extension. Keeping the parity path stru
 
 ### 2. New test: helper vs canonical parity
 
-Create `packages/engine/test/integration/helper-vs-canonical-parity.test.ts`:
+Create `packages/engine/test/determinism/helper-vs-canonical-run-parity.test.ts`:
 
 ```ts
 // @test-class: architectural-invariant
@@ -76,7 +76,7 @@ FITL and Texas — same compile helpers as 141RUNCACHE-003. Use a small represen
 
 ## Files to Touch
 
-- `packages/engine/test/integration/helper-vs-canonical-parity.test.ts` (new)
+- `packages/engine/test/determinism/helper-vs-canonical-run-parity.test.ts` (new)
 - `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts` (modify — if Option A: add diagnostic-returning sibling)
 
 ## Out of Scope
@@ -104,12 +104,22 @@ FITL and Texas — same compile helpers as 141RUNCACHE-003. Use a small represen
 
 ### New/Modified Tests
 
-1. `packages/engine/test/integration/helper-vs-canonical-parity.test.ts` (new) — architectural-invariant; exercises Spec 141 Design §6 entry-point equivalence.
+1. `packages/engine/test/determinism/helper-vs-canonical-run-parity.test.ts` (new) — architectural-invariant; exercises Spec 141 Design §6 entry-point equivalence.
 2. `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts` (modify, if Option A) — add sibling helper with richer return shape.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test` (targeted — includes the new integration test)
-2. `pnpm turbo test` (full suite)
-3. `pnpm turbo lint`
-4. `pnpm turbo typecheck`
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/helper-vs-canonical-run-parity.test.js`
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-texas.test.js`
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js`
+5. `pnpm -F @ludoforge/engine lint`
+6. `pnpm -F @ludoforge/engine typecheck`
+7. `pnpm -F @ludoforge/engine test:all`
+
+## Outcome
+
+- completion date: 2026-04-23
+- `ticket corrections applied`: new witness path corrected from draft `packages/engine/test/integration/helper-vs-canonical-parity.test.ts` to the live determinism-family file `packages/engine/test/determinism/helper-vs-canonical-run-parity.test.ts`; draft `pnpm -F @ludoforge/engine test` plus workspace-wide `pnpm turbo test/lint/typecheck` replaced with package-local engine `build`, concrete dist test witnesses, engine `lint`, engine `typecheck`, and engine `test:all` for the owned engine-only slice.
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/helper-vs-canonical-run-parity.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-texas.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine test:all`
+- `proof gaps`: none

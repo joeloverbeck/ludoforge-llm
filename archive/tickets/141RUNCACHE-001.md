@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/gamedef-runtime.ts`, possibly `forkGameDefRuntimeForRun`
-**Deps**: `specs/141-runtime-cache-run-boundary.md`
+**Deps**: `archive/specs/141-runtime-cache-run-boundary.md`
 
 ## Problem
 
@@ -115,6 +115,7 @@ Append a short subsection to `docs/architecture.md` (or the nearest kernel archi
 
 ## Outcome
 
+- Outcome amended: 2026-04-23
 - `ticket corrections applied`: `pnpm -F @ludoforge/engine test` -> `pnpm -F @ludoforge/engine build` plus focused `node --test dist/test/unit/sim/simulator.test.js`; `pnpm turbo typecheck` / `lint` / `test` -> package-local engine `typecheck` / `lint` / `test:all` for the owned kernel slice.
 - `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator.test.js`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine test:all`
 - `proof gaps`: none

@@ -240,3 +240,4 @@ Decomposed 2026-04-23 under namespace `143BOURUNMEM`:
 - `tickets/143BOURUNMEM-005.md` — Long-run heap-boundedness witness (FITL motivating corpus)
 - `tickets/143BOURUNMEM-006.md` — Advisory long-run per-decision cost witness
 - `tickets/143BOURUNMEM-007.md` — Engine-generic decision-local-helper drop/compact regression
+- `tickets/143BOURUNMEM-008.md` — Remaining FITL medium-diverse determinism OOM prerequisite

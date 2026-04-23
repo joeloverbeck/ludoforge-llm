@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — new test file only
-**Deps**: `tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`
+**Deps**: `tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`, `tickets/143BOURUNMEM-008.md`
 
 ## Problem
 
@@ -17,7 +17,7 @@ Spec 143 Design Section 4 explicitly couples long-run heap growth and long-run p
 1. `packages/engine/test/policy-profile-quality/` is the correct home per Spec 143 Required Changes §Runtime-cost proof surface (bullet 2): "Same home and same advisory channel as the heap-boundedness witness." Confirmed during reassessment.
 2. The `POLICY_PROFILE_QUALITY_REGRESSION` warning channel is the documented advisory mechanism (FOUNDATIONS.md Appendix).
 3. Per-decision cost measurement is empirical and subject to ambient variation (CPU scheduling, GC, Node version). The test must measure drift (later-decision time vs earlier-decision time within the same run), not absolute values — this cancels ambient bias.
-4. After 003 and 004 land, later-decision time should not climb pathologically as the simulation progresses. This ticket's witness proves that.
+4. After 003, 004, and the remaining medium-diverse determinism prerequisite in 008 land, later-decision time should not climb pathologically as the simulation progresses. This ticket's witness proves that.
 
 ## Architecture Check
 
@@ -53,7 +53,7 @@ Set the drift ceiling as a named constant with inline rationale, e.g.:
 const COST_DRIFT_CEILING = 2.0;
 ```
 
-Calibrate using post-003/004 measurements; do NOT use pre-fix measurements as the baseline.
+Calibrate using post-003/004/008 measurements; do NOT use pre-fix measurements as the baseline.
 
 ### 3. Noise handling
 
@@ -75,7 +75,7 @@ Calibrate using post-003/004 measurements; do NOT use pre-fix measurements as th
 
 ### Tests That Must Pass
 
-1. The new `fitl-spec-143-cost-stability.test.ts` passes after 003 and 004 land (drift under the calibrated ceiling on seed 1002, four baselines, terminal run).
+1. The new `fitl-spec-143-cost-stability.test.ts` passes after 003, 004, and 008 land (drift under the calibrated ceiling on seed 1002, four baselines, terminal run).
 2. Full policy-profile-quality suite: `pnpm -F @ludoforge/engine test -- test/policy-profile-quality`.
 3. Full engine suite: `pnpm -F @ludoforge/engine test:all`.
 4. No regression in existing policy-profile-quality tests or 005's heap witness.

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — new test file only
-**Deps**: `tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`
+**Deps**: `tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`, `tickets/143BOURUNMEM-008.md`
 
 ## Problem
 
@@ -18,8 +18,8 @@ This ticket adds the heap-boundedness witness under `packages/engine/test/policy
 
 1. `packages/engine/test/policy-profile-quality/` exists and hosts similar policy-profile witnesses including `fitl-variant-all-baselines-convergence.test.ts` (model for this witness), `fitl-variant-arvn-evolved-convergence.test.ts`, and `fitl-seed-2057-regression.test.ts`. Confirmed during Spec 143 reassessment.
 2. The `POLICY_PROFILE_QUALITY_REGRESSION` warning channel is the documented advisory mechanism (FOUNDATIONS.md Appendix). Failures in `policy-profile-quality/` emit warnings and a non-blocking CI summary rather than a blocking determinism failure.
-3. After 003 and 004 land, the motivating witness (seed 1002, four baselines) should complete without OOM and with bounded heap growth. This ticket's witness proves that.
-4. Without 003 and 004, this test would OOM — matching the spec's Problem statement. That is why this ticket is Wave 4 (after the fixes, not before).
+3. After 003, 004, and the remaining medium-diverse determinism prerequisite in 008 land, the motivating witness (seed 1002, four baselines) should complete without OOM and with bounded heap growth. This ticket's witness proves that.
+4. Before the full 003/004/008 fix stack lands, this test is still expected to OOM or otherwise fail to prove the boundedness contract — matching the spec's Problem statement. That is why this ticket stays downstream of the production/runtime fixes rather than serving as the proof source for them.
 
 ## Architecture Check
 
@@ -48,12 +48,12 @@ Set the heap-growth ceiling as a named constant with inline rationale, e.g.:
 
 ```ts
 // Heap-growth ceiling for the spec-143 witness.
-// Baseline (post-003/004): ~X MB for seed 1002, four baselines, terminal run.
+// Baseline (post-003/004/008): ~X MB for seed 1002, four baselines, terminal run.
 // Ceiling: baseline × 2 — absorbs GC variation without masking a 2× regression.
 const HEAP_GROWTH_CEILING_MB = …;
 ```
 
-The exact value is derived from running the witness after 003/004 on the implementer's machine and 001's snapshot. Calibration must NOT be driven by the pre-fix OOM measurement.
+The exact value is derived from running the witness after 003/004/008 on the implementer's machine and 001's snapshot. Calibration must NOT be driven by the pre-fix OOM measurement.
 
 ### 3. Optional: peak-heap assertion
 
@@ -74,7 +74,7 @@ If 003/004's canonical-identity compaction bounds peak heap in addition to growt
 
 ### Tests That Must Pass
 
-1. The new `fitl-spec-143-heap-boundedness.test.ts` passes after 003 and 004 land (heap growth under the calibrated ceiling on seed 1002, four baselines, terminal run).
+1. The new `fitl-spec-143-heap-boundedness.test.ts` passes after 003, 004, and 008 land (heap growth under the calibrated ceiling on seed 1002, four baselines, terminal run).
 2. Full policy-profile-quality suite: `pnpm -F @ludoforge/engine test -- test/policy-profile-quality` (or the equivalent filtered command).
 3. Full engine suite: `pnpm -F @ludoforge/engine test:all`.
 4. No regression in existing policy-profile-quality tests (e.g., `fitl-variant-all-baselines-convergence.test.ts` continues to pass under its own contract).

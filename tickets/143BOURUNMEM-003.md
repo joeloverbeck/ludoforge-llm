@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel chooseN canonical-identity helpers and witness-search probe caching. Exact surface refined against 002's authoritative classification.
-**Deps**: `archive/tickets/143BOURUNMEM-002.md`
+**Deps**: `archive/tickets/143BOURUNMEM-002.md`, `tickets/143BOURUNMEM-008.md`
 
 ## Problem
 
@@ -99,9 +99,9 @@ Run the determinism-tier engine proof after the cache-key refactor to confirm re
 - Implemented: extracted shared chooseN canonical key logic into `packages/engine/src/kernel/choose-n-selection-key.ts` and switched witness-search probe caching to that shared compact representation.
 - Implemented: large-domain fallback keys now use stable domain indices rather than raw option payload strings, so oversized chooseN values no longer get retained verbatim in probe-cache identity.
 - Implemented: added focused boundedness coverage in `packages/engine/test/unit/kernel/canonical-identity-bounds.test.ts` and extended existing selection-key tests to pin the non-raw fallback encoding.
-- Blocker: the required determinism-tier proof still OOMs on a serial rerun of `dist/test/determinism/draft-state-determinism-parity.test.js` after about 3m19s, so this ticket is not acceptance-proven yet.
-- Remaining ownership: `archive/tickets/143BOURUNMEM-004.md` owns the remaining production retained-state fix behind the determinism OOM; `tickets/143BOURUNMEM-005.md` owns the later FITL heap-boundedness witness once 004 lands.
+- Blocker: the old `draft-state-determinism-parity` OOM no longer reproduces, but the required determinism-tier proof still fails later in the lane on `dist/test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.js` with `FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory`, so this ticket is still not acceptance-proven.
+- Remaining ownership: `tickets/143BOURUNMEM-008.md` now owns the remaining production/runtime fix behind the medium-diverse determinism OOM; `tickets/143BOURUNMEM-005.md` and `tickets/143BOURUNMEM-006.md` still own the later advisory heap/cost witnesses once that prerequisite lands.
 
-- ticket corrections applied: `broader 002 follow-on surface -> remaining live 003 seam is shared chooseN selection-key compaction plus witness-search probe-cache migration`
-- verification set: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine test:unit`; `pnpm -F @ludoforge/engine test:determinism`
-- proof gaps: `pnpm -F @ludoforge/engine test:determinism` fails on `dist/test/determinism/draft-state-determinism-parity.test.js` with `FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory` during both the initial run and a serial rerun
+- ticket corrections applied: `broader 002 follow-on surface -> remaining live 003 seam is shared chooseN selection-key compaction plus witness-search probe-cache migration`; `draft-state determinism OOM blocker -> current blocker is medium-diverse FITL Zobrist property OOM after earlier determinism files pass`
+- verification set: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine test:unit` (returns `0 tests` under the current package script in this environment); `pnpm -F @ludoforge/engine test:determinism`
+- proof gaps: `pnpm -F @ludoforge/engine test:determinism` now gets through `draft-state-determinism-parity`, `fitl-policy-agent-canary-determinism`, `forked-vs-fresh-runtime-parity`, `helper-vs-canonical-run-parity`, `spec-140-replay-identity`, and `zobrist-incremental-parity`, then fails on `dist/test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.js` with `FATAL ERROR: Ineffective mark-compacts near heap limit Allocation failed - JavaScript heap out of memory`

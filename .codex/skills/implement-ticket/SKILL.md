@@ -32,6 +32,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 - Treat any code, test, fixture, generated-artifact, or ticket-text edit made after a proof lane as proof-invalidating for every affected acceptance command. Rerun the impacted focused/package/workspace lanes after those edits land; do not cite the earlier green run as final.
 - When a ticket owns regenerated fixtures or other generated artifacts and the repo provides a nearby helper script, validate that helper against the current live runtime/API seam before relying on it as the authoritative regen path. If the helper partially rewrites owned artifacts and then fails, treat the entire owned artifact set as dirty, regenerate it again through a known-live seam, and only then continue toward final proof.
 - If live evidence proves the remaining implementation work belongs to a sibling ticket in the same active series, do not drift into that sibling implicitly. First restate the new owner, get any required user authorization for the boundary change, verify that the successor and affected sibling tickets already tell the truthful ownership story (or update them first), then emit a fresh working-notes checkpoint before continuing under the successor boundary.
+- If the named implementation slice is already present on live `HEAD`, do not force an artificial code diff. Switch to a verification-and-closeout pass: prove the landed slice directly, classify any remaining blocker or proof failure, and update the active ticket/spec/sibling artifacts so the durable ownership story matches the live repo.
 - If you become materially stuck after a partial repair, or you now have multiple plausible fixes with different tradeoffs and the next step is no longer clearly user-authorized, stop for the repo's `1-3-1` workflow instead of continuing to iterate. State the problem, give 3 options, recommend 1, and wait for confirmation before implementing another path.
 
 ## Final-Proof Gate
@@ -129,6 +130,7 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
 ### Phase 2: Reassess Assumptions
 
 7. Verify every referenced artifact against the live codebase with targeted reads and `rg`. Load `references/triage-and-resolution.md` (Artifact Verification Checklist section) for what to validate — file existence, exports/signatures, callsite ownership, claimed dead fallbacks, widened compilation families, and auto-synthesized outputs.
+   - If those checks show the ticket's named code/test/module slice is already landed on live `HEAD`, explicitly classify the run as `verification + truthful closeout` rather than fresh implementation. From that point, the owned work is to validate the proof surface, confirm whether any cited blocker still reproduces, and rewrite ticket/spec/sibling artifacts before claiming completion or retaining `BLOCKED`.
 8. Build a discrepancy list and classify each item per `references/triage-and-resolution.md` (Stale-vs-Blocking Triage). When legality/admissibility and sampled completion surfaces disagree, follow the Legality/Admissibility Contradiction Playbook in that reference before widening retries, adding fallbacks, or rewriting the boundary.
    - For proof, benchmark, audit, regression, or invariant-locking tickets, explicitly check whether any named warning, rejection, event, or failure surface is the architectural invariant itself or only one manifestation of it. If the live code preserves the broader invariant through a different layer or rejection surface, stop and reconcile the ticket/spec before changing production code just to force the named symptom surface.
    - When a broad acceptance lane fails or stalls inside a corpus that repo doctrine already classifies as advisory, non-blocking, or separately owned (for example via `docs/FOUNDATIONS.md`, lane-taxonomy tests, or CI workflow intent), verify that ownership before treating the surfaced file as a production-fix or harness-fix requirement. If the repo doctrine says the corpus should not block the owned ticket, prefer a truthful proof-boundary correction over repairing the advisory witness just to preserve the stale lane shape.
@@ -186,6 +188,13 @@ When a bounded implementation slice lands but the ticket's named broader accepta
 3. `draft lane shape is stale`: the named lane no longer matches the truthful owned invariant even though the owned implementation is complete; rewrite the ticket's proof description before final proof rather than repairing the wrong lane shape
 
 Treat this as an acceptance-lane reclassification step, not as ordinary test noise. The ticket cannot close truthfully until the active artifact, proof lane, and ownership story all agree.
+
+When the originally cited blocker disappears but the same broader lane later fails on a different file or witness class, treat that as a **moved live blocker**, not as "still the same ticket by inertia":
+
+1. record that the original blocker no longer reproduces
+2. identify the new failing file or witness class precisely
+3. classify whether the new blocker is still owned by the active ticket, belongs to a new prerequisite/follow-up, or proves the broad lane shape itself is stale
+4. rewrite the active ticket and any affected sibling/spec artifacts before closeout so the old blocker is not left as the durable story
 
 When the user approves a non-implementation boundary rewrite after 1-3-1, use this cleanup order before durable series edits:
 
@@ -296,6 +305,13 @@ Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria`
 2. mark each one as `ran directly`, `subsumed by <broader lane>`, or `not yet proven`
 3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
 4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
+
+When a named verification command exits cleanly but proves nothing substantive in the current environment (for example `0 tests`, `0 files`, or another empty execution summary), do not count it as acceptance proof by default:
+
+1. classify it as `repo-valid but non-proving` rather than green
+2. identify the narrowest command that does exercise the owned boundary
+3. record the anomaly and the substitute proof lane in the active ticket before final closeout
+4. if the ticket explicitly required that exact command to prove the boundary, leave the command as `not yet proven` until the ticket or tooling story is corrected truthfully
 
 When a ticket-named **broad verification lane** (for example `pnpm turbo test`, workspace lint, or another multi-package suite) fails outside the owned diff, do not silently collapse that result into a vague "repo is red" note. Classify the failure explicitly before closeout:
 
@@ -439,6 +455,12 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 1. Run a cheap self-reference check for the corrected literal/path when proportionate (for example `rg` on the active ticket for the old ticket id/path).
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
+
+If the session creates a new prerequisite/follow-up ticket or rewires deps across the active series, treat dependency validation as immediate, not optional:
+
+1. update the affected deps/status fields first
+2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
+3. fix any cycle or stale dependency before continuing to broader proof or final closeout
 
 When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
 

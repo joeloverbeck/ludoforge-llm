@@ -105,7 +105,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - name: Download current-run shard artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: current-policy-profile-quality
           pattern: policy-profile-quality-shard-*

@@ -1,4 +1,4 @@
-import { type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, type ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { useStore } from 'zustand';
 import type { Move } from '@ludoforge/engine/runtime';
 
@@ -7,17 +7,13 @@ import { findBootstrapDescriptorById } from './bootstrap/bootstrap-registry.js';
 import { deleteSavedGame, loadGame } from './persistence/save-manager.js';
 import type { SavedGameRecord } from './persistence/game-db.js';
 import { createSessionStore } from './session/session-store.js';
-import { useActiveGameRuntime } from './session/active-game-runtime.js';
-import { useReplayRuntime } from './session/replay-runtime.js';
 import { ErrorBoundary } from './ui/ErrorBoundary.js';
-import { GameContainer } from './ui/GameContainer.js';
 import { GameSelectionScreen } from './ui/GameSelectionScreen.js';
-import { LoadGameDialog } from './ui/LoadGameDialog.js';
-import { MapEditorScreen } from './map-editor/MapEditorScreen.js';
-import { PreGameConfigScreen } from './ui/PreGameConfigScreen.js';
-import { ReplayScreen } from './ui/ReplayScreen.js';
-import { SaveGameDialog } from './ui/SaveGameDialog.js';
-import { UnsavedChangesDialog } from './ui/UnsavedChangesDialog.js';
+
+const ActiveGameRoute = lazy(async () => import('./routes/ActiveGameRoute.js').then((module) => ({ default: module.ActiveGameRoute })));
+const PreGameConfigRoute = lazy(async () => import('./routes/PreGameConfigRoute.js').then((module) => ({ default: module.PreGameConfigRoute })));
+const ReplayRoute = lazy(async () => import('./routes/ReplayRoute.js').then((module) => ({ default: module.ReplayRoute })));
+const MapEditorRoute = lazy(async () => import('./routes/MapEditorRoute.js').then((module) => ({ default: module.MapEditorRoute })));
 
 interface AppProps {
   readonly browserBootstrapEntry?: BrowserBootstrapEntryRequest | null;
@@ -40,13 +36,12 @@ export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactEleme
   const sessionStore = sessionStoreRef.current;
   const sessionState = useStore(sessionStore, (state) => state.sessionState);
   const unsavedChanges = useStore(sessionStore, (state) => state.unsavedChanges);
+  const descriptor = 'gameId' in sessionState
+    ? findBootstrapDescriptorById(sessionState.gameId)
+    : null;
   const handleMoveApplied = useCallback((move: Move) => {
     sessionStore.getState().recordMove(move);
   }, [sessionStore]);
-  const activeRuntime = useActiveGameRuntime(sessionState, {
-    onMoveApplied: handleMoveApplied,
-  });
-  const replayRuntime = useReplayRuntime(sessionState);
 
   useEffect(() => {
     if (sessionState.screen !== 'activeGame') {
@@ -108,9 +103,8 @@ export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactEleme
           />
         );
       case 'preGameConfig': {
-        const descriptor = findBootstrapDescriptorById(sessionState.gameId);
         return (
-          <PreGameConfigScreen
+          <PreGameConfigRoute
             gameId={sessionState.gameId}
             descriptor={descriptor}
             onStartGame={(seed, playerConfig) => {
@@ -123,83 +117,28 @@ export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactEleme
         );
       }
       case 'activeGame': {
-        if (activeRuntime === null) {
-          return (
-            <main data-testid="active-game-loading-screen">
-              <h1>Loading Game</h1>
-            </main>
-          );
-        }
-        const descriptor = findBootstrapDescriptorById(sessionState.gameId);
         return (
-          <>
-            <GameContainer
-              store={activeRuntime.store}
-              bridge={activeRuntime.bridgeHandle.bridge}
-              visualConfigProvider={activeRuntime.visualConfigProvider}
-              onSave={() => {
-                setSaveDialogOpen(true);
-              }}
-              onLoad={() => {
-                setLoadDialogOpen(true);
-              }}
-              onReturnToMenu={() => {
-                sessionStore.getState().returnToMenu();
-              }}
-              onNewGame={() => {
-                sessionStore.getState().newGame();
-              }}
-              onQuit={() => {
-                if (unsavedChanges) {
-                  setQuitDialogOpen(true);
-                  return;
-                }
-                sessionStore.getState().returnToMenu();
-              }}
-            />
-            <SaveGameDialog
-              isOpen={saveDialogOpen}
-              gameName={descriptor?.gameMetadata.name ?? sessionState.gameId}
-              sessionState={sessionState}
-              sessionStore={sessionStore}
-              gameStore={activeRuntime.store}
-              onSaved={() => {
-                sessionStore.getState().markSaved();
-              }}
-              onClose={() => {
-                setSaveDialogOpen(false);
-              }}
-            />
-            <LoadGameDialog
-              isOpen={loadDialogOpen}
-              gameId={sessionState.gameId}
-              onResume={(record) => {
-                handleResumeRecord(record);
-              }}
-              onReplay={(record) => {
-                handleReplayRecord(record);
-              }}
-              onClose={() => {
-                setLoadDialogOpen(false);
-              }}
-            />
-            <UnsavedChangesDialog
-              isOpen={quitDialogOpen}
-              onDiscard={() => {
-                setQuitDialogOpen(false);
-                sessionStore.getState().returnToMenu();
-              }}
-              onCancel={() => {
-                setQuitDialogOpen(false);
-              }}
-            />
-          </>
+          <ActiveGameRoute
+            sessionState={sessionState}
+            sessionStore={sessionStore}
+            unsavedChanges={unsavedChanges}
+            saveDialogOpen={saveDialogOpen}
+            loadDialogOpen={loadDialogOpen}
+            quitDialogOpen={quitDialogOpen}
+            setSaveDialogOpen={setSaveDialogOpen}
+            setLoadDialogOpen={setLoadDialogOpen}
+            setQuitDialogOpen={setQuitDialogOpen}
+            descriptorName={descriptor?.gameMetadata.name ?? sessionState.gameId}
+            onMoveApplied={handleMoveApplied}
+            onResumeRecord={handleResumeRecord}
+            onReplayRecord={handleReplayRecord}
+          />
         );
       }
       case 'replay':
         return (
-          <ReplayScreen
-            runtime={replayRuntime}
+          <ReplayRoute
+            sessionState={sessionState}
             onBackToMenu={() => {
               sessionStore.getState().returnToMenu();
             }}
@@ -207,7 +146,7 @@ export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactEleme
         );
       case 'mapEditor':
         return (
-          <MapEditorScreen
+          <MapEditorRoute
             gameId={sessionState.gameId}
             onBack={() => {
               sessionStore.getState().returnToMenu();
@@ -221,7 +160,9 @@ export function App({ browserBootstrapEntry = null }: AppProps = {}): ReactEleme
 
   return (
     <ErrorBoundary>
-      {content}
+      <Suspense fallback={<main data-testid="route-loading-screen"><h1>Loading Screen</h1></main>}>
+        {content}
+      </Suspense>
     </ErrorBoundary>
   );
 }

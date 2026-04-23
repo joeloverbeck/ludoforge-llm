@@ -9,11 +9,26 @@ export default defineConfig(({ mode }) => ({
     target: 'esnext',
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-react': ['react', 'react-dom'],
-          'vendor-pixi': ['pixi.js', '@pixi/react', 'pixi-viewport'],
-          'vendor-gsap': ['gsap'],
-          'vendor-graph': ['graphology', 'graphology-layout-forceatlas2'],
+        manualChunks(id) {
+          if (id.includes('/packages/engine/dist/src/')) {
+            return 'engine-runtime';
+          }
+          if (id.includes('/node_modules/react/') || id.includes('/node_modules/react-dom/')) {
+            return 'vendor-react';
+          }
+          if (id.includes('/node_modules/pixi.js/')
+            || id.includes('/node_modules/@pixi/react/')
+            || id.includes('/node_modules/pixi-viewport/')) {
+            return 'vendor-pixi';
+          }
+          if (id.includes('/node_modules/gsap/')) {
+            return 'vendor-gsap';
+          }
+          if (id.includes('/node_modules/graphology/')
+            || id.includes('/node_modules/graphology-layout-forceatlas2/')) {
+            return 'vendor-graph';
+          }
+          return undefined;
         },
       },
     },

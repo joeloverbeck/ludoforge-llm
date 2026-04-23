@@ -1,7 +1,6 @@
 import { type ReactElement, useEffect, useState } from 'react';
 
 import { listBootstrapDescriptors } from '../bootstrap/bootstrap-registry.js';
-import { resolveRunnerBootstrapHandle } from '../bootstrap/runner-bootstrap.js';
 import { listSavedGames, type SavedGameListItem } from '../persistence/save-manager.js';
 import styles from './GameSelectionScreen.module.css';
 
@@ -51,19 +50,21 @@ export function GameSelectionScreen({
   useEffect(() => {
     let cancelled = false;
 
-    void Promise.all(gameDescriptors.map(async (descriptor) => {
-      try {
-        const capabilities = await resolveRunnerBootstrapHandle(descriptor).resolveCapabilities();
-        return [descriptor.id, capabilities.supportsMapEditor] as const;
-      } catch {
-        return [descriptor.id, false] as const;
-      }
-    })).then((entries) => {
+    void (async () => {
+      const { resolveRunnerBootstrapHandle } = await import('../bootstrap/runner-bootstrap.js');
+      const entries = await Promise.all(gameDescriptors.map(async (descriptor) => {
+        try {
+          const capabilities = await resolveRunnerBootstrapHandle(descriptor).resolveCapabilities();
+          return [descriptor.id, capabilities.supportsMapEditor] as const;
+        } catch {
+          return [descriptor.id, false] as const;
+        }
+      }));
       if (cancelled) {
         return;
       }
       setMapEditorSupport(new Map(entries));
-    });
+    })();
 
     return () => {
       cancelled = true;

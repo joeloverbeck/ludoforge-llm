@@ -508,6 +508,9 @@ describe('App', () => {
     render(createElement(App));
 
     fireEvent.click(screen.getByTestId('select-game-fitl'));
+    await waitFor(() => {
+      expect(screen.getByTestId('pre-game-start')).toBeTruthy();
+    });
     fireEvent.click(screen.getByTestId('pre-game-start'));
 
     await waitFor(() => {
@@ -521,8 +524,14 @@ describe('App', () => {
 
     render(createElement(App));
     fireEvent.click(screen.getByTestId('select-game-fitl'));
+    await waitFor(() => {
+      expect(screen.getByTestId('pre-game-start')).toBeTruthy();
+    });
     fireEvent.click(screen.getByTestId('pre-game-start'));
 
+    await waitFor(() => {
+      expect(screen.getByTestId('game-container-return-menu')).toBeTruthy();
+    });
     fireEvent.click(screen.getByTestId('game-container-return-menu'));
 
     await waitFor(() => {
@@ -546,6 +555,9 @@ describe('App', () => {
     const { App } = await import('../../src/App.js');
 
     render(createElement(App));
+    await waitFor(() => {
+      expect(screen.getByTestId('game-container-quit')).toBeTruthy();
+    });
     fireEvent.click(screen.getByTestId('game-container-quit'));
 
     expect(screen.getByTestId('unsaved-changes-dialog')).toBeTruthy();
@@ -574,6 +586,9 @@ describe('App', () => {
     const { App } = await import('../../src/App.js');
 
     render(createElement(App));
+    await waitFor(() => {
+      expect(testDoubles.useActiveGameRuntime).toHaveBeenCalled();
+    });
     const runtimeOptions = testDoubles.useActiveGameRuntime.mock.calls.at(-1)?.[1] as
       | { onMoveApplied?: (move: unknown) => void }
       | undefined;
@@ -638,7 +653,9 @@ describe('App', () => {
 
     render(createElement(App));
 
-    expect(screen.getByTestId('map-editor-screen')).toBeTruthy();
+    await waitFor(() => {
+      expect(screen.getByTestId('map-editor-screen')).toBeTruthy();
+    });
     expect(screen.getByTestId('map-editor-game-id').textContent).toBe('fitl');
 
     fireEvent.click(screen.getByTestId('map-editor-back-button'));

@@ -53,7 +53,7 @@ importers:
         version: link:../engine
       '@pixi/react':
         specifier: ^8.0.0
-        version: 8.0.5(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.5)
+        version: 8.0.5(@types/react@19.2.14)(pixi.js@8.18.1)(react@19.2.5)
       comlink:
         specifier: ^4.4.2
         version: 4.4.2
@@ -67,14 +67,14 @@ importers:
         specifier: ^0.10.1
         version: 0.10.1(graphology-types@0.24.8)
       gsap:
-        specifier: ^3.14.2
-        version: 3.14.2
+        specifier: ^3.15.0
+        version: 3.15.0
       pixi-viewport:
         specifier: ^6.0.1
-        version: 6.0.3(pixi.js@8.17.1)
+        version: 6.0.3(pixi.js@8.18.1)
       pixi.js:
-        specifier: ^8.17.1
-        version: 8.17.1
+        specifier: ^8.18.1
+        version: 8.18.1
       react:
         specifier: ^19.2.5
         version: 19.2.5
@@ -868,10 +868,9 @@ packages:
   '@webgpu/types@0.1.69':
     resolution: {integrity: sha512-RPmm6kgRbI8e98zSD3RVACvnuktIja5+yLgDAkTmxLr90BEwdTXRQWNLF3ETTTyH/8mKhznZuN5AveXYFEsMGQ==}
 
-  '@xmldom/xmldom@0.8.11':
-    resolution: {integrity: sha512-cQzWCtO6C8TQiYl1ruKNn2U6Ao4o4WBBcbL61yJl84x+j5sOWWFU9X7DpND8XZG3daDppSsigMdfAIl2upQBRw==}
+  '@xmldom/xmldom@0.8.13':
+    resolution: {integrity: sha512-KRYzxepc14G/CEpEGc3Yn+JKaAeT63smlDr+vjB8jRfgTBBI9wRj/nkQEO+ucV8p8I9bfKLWp37uHgFrbntPvw==}
     engines: {node: '>=10.0.0'}
-    deprecated: this version has critical issues, please update to the latest version
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -1144,8 +1143,8 @@ packages:
     peerDependencies:
       graphology-types: '>=0.24.0'
 
-  gsap@3.14.2:
-    resolution: {integrity: sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==}
+  gsap@3.15.0:
+    resolution: {integrity: sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==}
 
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
@@ -1324,8 +1323,8 @@ packages:
     peerDependencies:
       pixi.js: '>=8'
 
-  pixi.js@8.17.1:
-    resolution: {integrity: sha512-OB4TpZHrP5RYy+7FqmFrAc0IHRhfOoNIfF4sVeinvK3aG1r2pYrSMneJAKi9+WvGKC70Dj7GEpZ2OZGB6o/xdg==}
+  pixi.js@8.18.1:
+    resolution: {integrity: sha512-6LUPWYgulZhp/w4kam2XHXB0QedISZIqrJbRdHLLQ3csn5a38uzKxAp6B5j6s89QFYaIJbg95kvgTRcbgpO1ow==}
 
   postcss@8.5.6:
     resolution: {integrity: sha512-3Ybi1tAuwAP9s0r1UQ2J4n5Y0G05bJkpUIO0/bI9MhwmD70S5aTWbXGBwxHrelT+XM1k6dM0pk+SwNkpTRN7Pg==}
@@ -1984,10 +1983,10 @@ snapshots:
 
   '@pixi/colord@2.9.6': {}
 
-  '@pixi/react@8.0.5(@types/react@19.2.14)(pixi.js@8.17.1)(react@19.2.5)':
+  '@pixi/react@8.0.5(@types/react@19.2.14)(pixi.js@8.18.1)(react@19.2.5)':
     dependencies:
       its-fine: 2.0.0(@types/react@19.2.14)(react@19.2.5)
-      pixi.js: 8.17.1
+      pixi.js: 8.18.1
       react: 19.2.5
       react-reconciler: 0.31.0(react@19.2.5)
     transitivePeerDependencies:
@@ -2319,7 +2318,7 @@ snapshots:
 
   '@webgpu/types@0.1.69': {}
 
-  '@xmldom/xmldom@0.8.11': {}
+  '@xmldom/xmldom@0.8.13': {}
 
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
@@ -2597,7 +2596,7 @@ snapshots:
       events: 3.3.0
       graphology-types: 0.24.8
 
-  gsap@3.14.2: {}
+  gsap@3.15.0: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:
@@ -2754,16 +2753,16 @@ snapshots:
 
   picomatch@4.0.4: {}
 
-  pixi-viewport@6.0.3(pixi.js@8.17.1):
+  pixi-viewport@6.0.3(pixi.js@8.18.1):
     dependencies:
-      pixi.js: 8.17.1
+      pixi.js: 8.18.1
 
-  pixi.js@8.17.1:
+  pixi.js@8.18.1:
     dependencies:
       '@pixi/colord': 2.9.6
       '@types/earcut': 3.0.0
       '@webgpu/types': 0.1.69
-      '@xmldom/xmldom': 0.8.11
+      '@xmldom/xmldom': 0.8.13
       earcut: 3.0.2
       eventemitter3: 5.0.4
       gifuct-js: 2.1.2

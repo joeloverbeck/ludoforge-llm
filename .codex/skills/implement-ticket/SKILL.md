@@ -20,6 +20,7 @@ Load `references/working-notes.md` for the working-notes checklist, `commentary`
 
 - If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If the active ticket is an untracked or draft ticket that you expect to rewrite durably (`COMPLETED`, `BLOCKED`, scope correction, outcome block), update the ticket before the final acceptance-proof pass so the last green run matches both code and ticket artifact.
+- If live reassessment changes an **explicit ticket deliverable** rather than only clarifying proof shape — for example the required artifact, the default reproduction command, the owned witness shape, or another user-facing contract the ticket explicitly promised — do not silently rewrite that boundary just because the draft is wrong. In this repo, `AGENTS.md` `Ticket Fidelity` still applies: stop for `1-3-1` unless the user has already authorized that class of deliverable correction.
 - Before marking a ticket complete, compare the ticket's named files/artifacts against the actual touched-file scope, including untracked files.
 - If a ticket's named `Files to Touch` / `What to Change` list includes paths that reassessment proves do not require edits, do not silently ignore that mismatch. Either make the required change, or record the boundary correction in the active ticket before closeout so the untouched path is explained truthfully.
 - If the final diff includes newly touched files or generated artifacts that the ticket did not name, do not leave that mismatch implicit. Update the active ticket's touched-file scope before closeout so the recorded boundary matches the live diff in both directions.
@@ -139,6 +140,20 @@ Load `references/draft-handling.md` when the active ticket or referenced artifac
    - For mutable caches or memo tables, decide `sharedStructural` versus `runLocal` explicitly instead of treating mutability alone as decisive. Verify: the cache key universe is bounded by the compiled artifact; cached values are pure functions of structural inputs; sharing cannot change cross-run semantics; and fork/reset is required only if one of those proofs fails.
 
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
+
+When an investigation/profiling ticket needs one command to **reproduce the live failure** and a different command to **produce a durable artifact** (for example a stable snapshot/report run versus a higher-turn crash repro), do not collapse them into one fuzzy story. Treat them as two explicit evidence lanes:
+
+1. identify which command is the best failure repro
+2. identify which command is the best durable artifact-capture path
+3. if the ticket draft claimed one command served both roles and live evidence disproves that, stop for `1-3-1` unless the user has already authorized that deliverable correction
+4. once authorized, record both commands explicitly in the active ticket outcome/report before the final proof pass
+
+For heavy diagnostics that may run silently for a long time or where post-processing can distort the measured surface, add a lightweight observer-effect check before finalizing the artifact:
+
+1. add only the minimum progress instrumentation needed to distinguish `still running` from `stuck`
+2. keep that instrumentation outside the owned metric whenever practical, or report clearly when it can perturb the measurement
+3. separate the target-system metric from analysis/post-processing overhead when both occur in one script (for example simulation heap versus heap-snapshot parsing cost)
+4. report both numbers distinctly if the post-processing step materially changes the observed totals
 
 When the owned deliverable is a large checked-in fixture or inventory artifact, prefer generating it from the most authoritative live seam available (compiled spec surface, runtime snapshot, parser output, or equivalent) instead of hand-authoring repeated rows. Before check-in:
 
@@ -402,6 +417,15 @@ Investigation-ticket example when the artifact landed but the hypothesis shifted
 - `ticket corrections applied`: `expected small viable subset on both seeds -> measured 44/44 on seed A and 1/30 on seed B`
 - `verification set`: `<artifact-generation commands in final proof order>`
 - `proof gaps`: `none`
+
+Evidence-ticket compact closeout pattern when the deliverable is primarily a script plus checked-in report/artifact:
+
+- `capture command`: `<stable artifact-producing command>`
+- `repro command`: `<best live failure repro command>` or `same as capture command`
+- `artifact paths`: `<checked-in report/script/generated artifact paths>`
+- `measured result`: `<top-line quantitative or categorical outcome>`
+- `mapping gaps`: `<top-N entries or observations not yet covered by the starter taxonomy>` or `none`
+- `verification set`: `<commands run directly in final proof order>`
 
 ### Post-Closeout Reopen
 

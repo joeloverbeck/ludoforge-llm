@@ -2,10 +2,10 @@
 
 **Status**: Draft  
 **Priority**: P1  
-**Complexity**: M  
-**Dependencies**: Spec 15, Spec 140, Spec 141 (builds on them; no forced implementation order beyond Foundations alignment)  
-**Estimated effort**: 3-5 days  
-**Source**: `tickets/ENG-230-required-free-operation-admissibility-parity.md`, post-Spec-140 FITL boundedness/memory investigation on 2026-04-23
+**Complexity**: L  
+**Dependencies**: Spec 140, Spec 141 (builds on them; no forced implementation order beyond Foundations alignment)  
+**Estimated effort**: 5-8 days  
+**Source**: post-Spec-140 FITL boundedness/memory investigation on 2026-04-23. The investigation was surfaced during work on `tickets/ENG-230-required-free-operation-admissibility-parity.md`; ENG-230 is the origin ticket, not a functional dependency — it addresses a distinct legality-contract parity gap at seed 1006, and its fix is not on the critical path for this spec.
 
 ## Overview
 
@@ -20,11 +20,11 @@ This spec formalizes that requirement as an engine property rather than a FITL-s
 
 ## Problem
 
-The current `spec-140` FITL policy witness (`profiles=us-baseline,arvn-baseline,nva-baseline,vc-baseline seed=1002`) still OOMs in the engine after the already-landed run-boundary fixes from Spec 141 and after several local memory reductions discovered during this investigation.
+The current Spec 140 FITL policy witness (`profiles=us-baseline,arvn-baseline,nva-baseline,vc-baseline seed=1002`) still OOMs in the engine after the already-landed run-boundary fixes from Spec 141 and after several local memory reductions discovered during this investigation.
 
 What the investigation established:
 
-- the remaining failure is not explained by the ENG-230 required-free-operation admissibility change
+- the remaining failure is not located in the ENG-230 admissibility code path (ENG-230 is still PENDING; this is a scope claim about where the memory issue lives, not a prediction about what its eventual fix will accomplish)
 - repeated-run shared-runtime cache retention was a real issue and already belongs to Spec 141, but the isolated single-run witness still OOMs after those protections
 - decision-local serialization and preview/caching surfaces can still accumulate enough live state to drive the process to the heap limit during one long game
 - when memory rises through a long self-play run, simulation cost also tends to rise because the engine is carrying and revisiting larger live structures
@@ -34,7 +34,7 @@ Concrete evidence from the current investigation:
 - `decisionStackFrame` Zobrist features were previously interning oversized serialized frame strings; replacing them with bounded digests removed real waste but did not solve the OOM
 - token-state-index churn was real and was reduced, but the isolated witness still OOMed
 - child decision-stack frames were redundantly copying root `accumulatedBindings`; removing that duplication helped but did not solve the OOM
-- a heap snapshot of the isolated witness showed that the strongest remaining live suspect is not one giant static authored string or one repeated-run runtime cache, but active retained execution/context surfaces during a long policy run
+- a heap snapshot of the isolated witness showed that the strongest remaining live suspect is not one giant static authored string or one repeated-run runtime cache, but active retained execution/context surfaces during a long policy run. The top-N retainer breakdown from that snapshot is load-bearing evidence for this spec and should be checked in as `reports/spec-143-heap-snapshot.md` during the first implementation ticket, so follow-on tickets have concrete per-structure targets rather than a qualitative description
 - a causal toggle showed that chooseN `probeCache` is not the primary remaining driver
 
 The architectural gap is now clearer:
@@ -62,7 +62,9 @@ Without that contract, Foundations `#8`, `#10`, and `#15` are only partially enf
 
 - **Foundation 5**: the same kernel protocol used by simulator, runner, and agents must remain executable without accumulating hidden client-specific retained state.
 - **Foundation 8**: deterministic execution is not enough if one long deterministic run still exhausts memory through retained transient state.
-- **Foundation 10**: bounded computation includes bounded live state and bounded frontier-support machinery, not just bounded loops in authored rules.
+- **Foundation 10**: the bounded enumeration and bounded microturn-sequence guarantees of Foundation 10 naturally imply bounded live support state for the machinery that produces them; this spec makes that implication explicit at the memory and per-decision runtime-cost boundary. (Foundation 10's literal text covers bounded iteration, recursion, enumeration, and microturn sequences; the live-state and runtime-cost extension is stated here rather than claimed as already written into the Foundation.)
+- **Foundation 11**: any scoped internal mutation used to canonicalize, compact, or drop retained support state must remain inside Foundation 11's scoped-mutation exception — no aliasing escaping the scope, no observation before finalization — and must be regression-tested as such.
+- **Foundation 13**: canonical-identity compaction for retained decision/preview surfaces must preserve replay and artifact-identity semantics. GameDef hashes, replay fixtures, and zobrist-derived keys must remain stable across the compaction work; any change that would alter a pinned artifact identity is out of scope for this spec and belongs in an explicit migration.
 - **Foundation 15**: the fix must target root ownership/representation boundaries, not symptom patches for one FITL witness or one cache.
 - **Foundation 16**: long-run boundedness and cost behavior must be proven by automated witnesses.
 - **Foundation 19**: atomic decision uniformity implies that live engine state should retain atomic decision context only, not oversized compound reconstruction payloads when a smaller canonical identity suffices.
@@ -78,6 +80,21 @@ Every runtime structure that participates in a single long simulation must be cl
 - `decision-local-transient`: valid only for the current publication / preview / witness-search scope and must be discarded once that scope completes
 
 The current gap exists because several execution helpers effectively behave as decision-local-transient state while being retained as if they were run-local-structural.
+
+The following non-binding classification maps the concrete structures surfaced by the current investigation to their intended class. It is a starting point for the audit proposed under Required Changes; each row becomes a concrete per-structure confirmation or correction during the follow-on tickets, not a pre-committed fix.
+
+| Structure | Intended class | Notes |
+|---|---|---|
+| `GameState` fields used for replay/continuation | `persistent-authoritative` | snapshot source of truth; already bounded |
+| `GameDefRuntime` structural tables | `run-local-structural` | bounded by compiled GameDef; already owned by Spec 141's run-boundary contract |
+| `zobristTable.keyCache` (`packages/engine/src/kernel/zobrist.ts:218`) | `run-local-structural` | must remain bounded by the feature domain, not by simulation length — audit confirms bound + drop-on-reset |
+| Token-state index (`packages/engine/src/kernel/token-state-index.ts`) | `run-local-structural` | bounded by live token count; audit churn and retention |
+| Policy preview / evaluation contexts (`packages/engine/src/agents/policy-preview.ts`) | `decision-local-transient` | scope: one publication / preview evaluation; drop at scope exit |
+| ChooseN `probeCache`, `legalityCache` (`packages/engine/src/kernel/choose-n-session.ts:292-293`) | `decision-local-transient` (session-scoped) | drop at chooseN session exit |
+| `decisionStackFrame` live fields (`packages/engine/src/kernel/microturn/types.ts:205-212`) | split: continuation-required fields → `persistent-authoritative`; transient preview/search fields → `decision-local-transient` | the split is itself audit work |
+| Granted-operation / decision-preview helper state | `decision-local-transient` | drop at decision scope exit |
+
+The audit proposed in Required Changes is the process by which this table becomes authoritative.
 
 ### 2. Serialized payloads are not acceptable live identities when smaller canonical forms exist
 
@@ -177,9 +194,9 @@ If a field exists only for convenience of intermediate preview/search work and i
 
 ### Runtime-cost proof surface
 
-- Add a focused proof surface for long-run memory boundedness in engine tests.
-- Add an advisory long-run cost witness showing that later-decision runtime does not drift pathologically for the same fixed scenario/profile/seed corpus.
-- Keep this proof engine-generic even when FITL is the motivating witness.
+- Add a focused proof surface for long-run memory boundedness in engine tests. The heap-boundedness witness for the motivating FITL policy seed lives under `packages/engine/test/policy-profile-quality/` (alongside existing policy-profile witnesses such as `fitl-variant-all-baselines-convergence.test.ts`) and uses the `POLICY_PROFILE_QUALITY_REGRESSION` advisory-CI channel defined in FOUNDATIONS.md (Appendix). A blocking determinism-tier test is the wrong home — the boundedness claim is a quality-signal-plus-memory-ceiling, not an engine-level determinism invariant.
+- Add an advisory long-run cost witness showing that later-decision runtime does not drift pathologically for the same fixed scenario/profile/seed corpus. Same home and same advisory channel as the heap-boundedness witness.
+- Keep these proofs engine-generic even when FITL is the motivating witness.
 
 ## Acceptance Criteria
 
@@ -192,19 +209,34 @@ If a field exists only for convenience of intermediate preview/search work and i
 
 ## Testing Requirements
 
-- Heap-boundedness regression for the isolated long-run FITL policy witness that currently OOMs.
+- Heap-boundedness regression for the isolated long-run FITL policy witness that currently OOMs. Lives under `packages/engine/test/policy-profile-quality/` using the advisory `POLICY_PROFILE_QUALITY_REGRESSION` warning channel (per FOUNDATIONS.md Appendix), modeled on the existing baseline-convergence tests in that directory.
 - Focused unit/integration regressions for any canonicalization or lifetime-boundary changes made to support structures.
 - At least one engine-generic regression proving a decision-local helper/cache is dropped or compacted at scope exit.
-- Advisory long-run performance witness on a fixed corpus showing that decision cost does not climb pathologically with turn count after the fix.
+- Advisory long-run performance witness on a fixed corpus showing that decision cost does not climb pathologically with turn count after the fix. Same home and advisory channel as the heap-boundedness witness.
 
 ## Follow-On Tickets
 
+Suggested namespace: `143BOUNDMEM-*` (following the pattern of `141RUNCACHE-*`).
+
 - Lifetime-class audit for chooseN, preview, and policy-evaluation support state
 - Canonical identity compaction for retained decision/preview surfaces
-- Long-run heap witness and advisory simulation-cost witness
+- Long-run heap witness and advisory simulation-cost witness (home: `packages/engine/test/policy-profile-quality/`, advisory CI channel)
 - FITL motivating-corpus proof and non-FITL engine-generic regression hardening
+- Check in `reports/spec-143-heap-snapshot.md` summarizing the top-N retainer breakdown that motivates the audit (load-bearing evidence for the contract)
 
 ## Notes
 
 - Spec 141 already owns repeated-run runtime cache boundaries. This spec owns the remaining single-run retained-state and long-run-cost boundary.
 - The correct completion bar is not “the FITL seed no longer crashes on this machine.” The correct bar is an explicit architectural contract plus regression proof that the engine no longer retains transient support state in a way that makes long simulations blow up or slow down pathologically.
+
+## Tickets
+
+Decomposed 2026-04-23 under namespace `143BOURUNMEM`:
+
+- `tickets/143BOURUNMEM-001.md` — Heap-snapshot evidence report and top-N retainer breakdown
+- `tickets/143BOURUNMEM-002.md` — Lifetime-class audit and authoritative classification
+- `tickets/143BOURUNMEM-003.md` — Canonical-identity compaction for oversized serialized retained structures
+- `tickets/143BOURUNMEM-004.md` — Scope-boundary enforcement for decision-local-transient helpers
+- `tickets/143BOURUNMEM-005.md` — Long-run heap-boundedness witness (FITL motivating corpus)
+- `tickets/143BOURUNMEM-006.md` — Advisory long-run per-decision cost witness
+- `tickets/143BOURUNMEM-007.md` — Engine-generic decision-local-helper drop/compact regression

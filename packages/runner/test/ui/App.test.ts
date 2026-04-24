@@ -468,6 +468,7 @@ describe('App', () => {
   });
 
   it('opens pre-game config directly when bootstrapped from a browser entry request', async () => {
+    await import('../../src/routes/PreGameConfigRoute.js');
     const { App } = await import('../../src/App.js');
 
     render(createElement(

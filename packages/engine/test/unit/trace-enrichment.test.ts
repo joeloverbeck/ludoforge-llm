@@ -39,6 +39,8 @@ const makeMockTrace = (playerIndices: readonly number[]): GameTrace => ({
     triggerFirings: [],
     warnings: [],
   })),
+  probeHoleRecoveries: [],
+  recoveredFromProbeHole: 0,
   compoundTurns: playerIndices.map((player, index) => ({
     turnId: asTurnId(player + 1),
     seatId: asSeatId(String(player)),

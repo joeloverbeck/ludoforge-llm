@@ -264,6 +264,8 @@ const validRuntimeTrace: GameTrace = {
       warnings: [],
     },
   ],
+  probeHoleRecoveries: [],
+  recoveredFromProbeHole: 0,
   compoundTurns: [
     { turnId: asTurnId(1), seatId: asSeatId('0'), decisionIndexRange: { start: 0, end: 1 }, microturnCount: 1, turnStopReason: 'terminal' },
   ],

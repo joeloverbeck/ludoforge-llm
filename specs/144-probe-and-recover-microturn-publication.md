@@ -55,7 +55,7 @@ Close the probe hole in `publishMicroturn` by deepening the continuation check o
 
 1. Every candidate microturn decision published by the kernel is verified to lead to either a terminal state, an auto-resolvable microturn, or a player microturn with at least one legal option — recursively up to a bounded depth `K=3`.
 2. If a published decision still proves unbridgeable at apply time (either because of a residual probe gap or because `depth > K`), the kernel rolls back to the nearest `actionSelection` frame, blacklists the offending action for the current (seat, turn), and re-publishes. If the post-rollback `actionSelection` microturn has zero legal actions, the kernel looks up a generic `tags: [pass]` action in the game spec and emits it as the single legal decision.
-3. `stopReason: 'noLegalMoves'` becomes reachable only when a game spec truly has no fallback action declared. FITL declares `pass` (`data/games/fire-in-the-lake/30-rules-actions.md:159`); Texas Hold'em declares `fold` / `check`.
+3. `stopReason: 'noLegalMoves'` becomes reachable only when rollback cannot identify a new action-selection recovery path, or when the nearest action-selection action is already blacklisted and no `tags: [pass]` fallback is declared. FITL declares `pass` (`data/games/fire-in-the-lake/30-rules-actions.md:159`); the I3 audit adds the generic `pass` tag to Texas Hold'em `check`.
 
 Foundation #18 is amended to distinguish the published contract (which remains "every published action is constructible") from the runtime safety net (a deterministic rollback that catches residual probe gaps as self-describing diagnostic events, not as routine control flow).
 
@@ -95,7 +95,7 @@ Under spec 140's contract, every *actionSelection* candidate goes through `suppo
 
 - **G1** — `publishMicroturn` verifies each candidate decision to a bounded recursion depth; no `chooseOne` / `chooseN` / `chooseNStep` confirm is published unless the resulting next microturn has ≥ 1 legal option (or terminates / auto-resolves cleanly).
 - **G2** — If the probe ever proves insufficient (state-dependent branches deeper than `K`, or a future bug), the kernel rolls back deterministically. No `noLegalMoves` termination caused by a probe gap.
-- **G3** — Rollback uses a generic game-spec action tagged `pass` when the post-rollback action-selection frame has no other legal options. FITL and Texas Hold'em already declare such actions; other conformance-corpus games will need one.
+- **G3** — Rollback uses a generic game-spec action tagged `pass` when the post-rollback action-selection frame has no other legal options. FITL declares `pass`; the I3 audit adds the generic `pass` tag to Texas Hold'em `check` because that action is the rule-valid no-bet pass. Other conformance-corpus games will need one.
 - **G4** — Seed 1001 reaches `stopReason=terminal` under direct `runGame`.
 - **G5** — Seed 1049 stepwise diagnostic no longer diverges from `runGame`, because `diagnose-nolegalmoves.mjs` routes through `runGame` instead of hand-rolling its own loop.
 - **G6** — FOUNDATIONS #18 amended to distinguish published contract from runtime safety net; no other Foundation changed.
@@ -135,7 +135,7 @@ Build a prototype of the memoization cache (keyed on `(stateHash, frameId, decis
 - Wall-clock delta with vs. without cache
 - Peak cache size (to size the LRU)
 
-Output: a measurement report at `campaigns/phase4-probe-recover/memoization-measurement.md`. If the hit rate is < 15% or the total slowdown without memo is < 5%, simplify by removing memoization from the spec.
+Output: a measurement report at `campaigns/phase4-probe-recover/memoization-measurement.md`. If the hit rate is < 15%, remove memoization from the spec. If the hit rate is healthy but the total slowdown without memo is < 5%, either remove the cache or tune the LRU limit to the measured working set; record the decision in the I2 artifact before implementation.
 
 ### I3 — Generic `tags: [pass]` lookup + grant-clearing audit
 
@@ -314,7 +314,7 @@ probe:${stateHash}:${frameId}:${decisionKey}:${candidateValueStableKey}:${depthB
 
 `depthBudget` is in the key because the same (state, frame, candidate) at different remaining budgets can yield different verdicts (deeper budget = more information).
 
-LRU size: 10 000 entries per run by default, capped by spec 143's per-run memory contract. Memoization is strictly an accelerator — removing it produces identical verdicts, just slower. The factory `createGameDefRuntime` (gamedef-runtime.ts:61-74) is extended to instantiate the cache; all six existing `createGameDefRuntime` call sites (simulator, publish, apply (×2), resume) automatically receive it.
+LRU size: 2 500 entries per run by default, tuned by the I2 measurement artifact from an observed 2 467-entry full-corpus peak and capped by spec 143's per-run memory contract. Memoization is strictly an accelerator — removing it produces identical verdicts. The factory `createGameDefRuntime` (gamedef-runtime.ts:61-74) is extended to instantiate the cache; all six existing `createGameDefRuntime` call sites (simulator, publish, apply (×2), resume) automatically receive it.
 
 ### D4 — Rollback safety net (change #2)
 
@@ -387,7 +387,7 @@ throw microturnConstructibilityInvariant(
 );
 ```
 
-This is the only engine ↔ game-spec coupling: the engine recognizes `tags: [pass]` as the terminal-fallback hint. It does not hard-code action names or faction-specific rules. FITL and Texas Hold'em already declare such actions; any future conformance-corpus game must declare one.
+This is the only engine ↔ game-spec coupling: the engine recognizes `tags: [pass]` as the terminal-fallback hint. It does not hard-code action names or faction-specific rules. FITL declares `pass`; the I3 audit adds the generic tag to Texas Hold'em `check`, not `fold`. Any future conformance-corpus game must declare a rule-valid pass fallback.
 
 Note: the pass action runs through the normal apply pipeline — its effects, grants, and turn-retirement semantics are game-authored. The engine does not synthesize an "empty" pass; it publishes the game's own pass action as the single legal choice.
 
@@ -509,7 +509,7 @@ Deleted files: none (spec does not retire any existing machinery).
 
 - **Nested rollback within a single turn.** If the first rollback leads to a second unbridgeable action, the process repeats. Bound: no more than `|actions|` rollbacks per turn (once all actions are blacklisted, the pass fallback fires). Turns remain bounded.
 
-- **`stopReason: 'noLegalMoves'` becomes rare.** Only reachable if (a) the rollback path finds no `actionSelection` frame and (b) no pass fallback is declared. Under spec 140, (a) should be impossible for any game that starts from `initialState`. Under FITL's spec, (b) is not the case. So `noLegalMoves` becomes a game-spec quality signal: if it fires, the game spec has a genuine structural bug.
+- **`stopReason: 'noLegalMoves'` becomes rare.** Only reachable if rollback cannot identify a new action-selection recovery path, or if the nearest action-selection action is already blacklisted and no pass fallback is declared. Under spec 140, a missing action-selection frame should be impossible for any game that starts from `initialState`; under FITL's spec, pass fallback absence is not the case. So `noLegalMoves` becomes a game-spec quality signal: if it fires, the game spec has a genuine structural bug.
 
 ## Testing Strategy
 
@@ -561,7 +561,7 @@ Ticket sequence (prefix `144PROBEREC-`):
 
 4. **144PROBEREC-004 — Diagnostic harness rewire (seed 1049 divergence fix).** Adds `SimulationOptions.decisionHook`, rewrites `diagnose-nolegalmoves.mjs` to route through `runGame` — closing the `state.activePlayer` vs `resolvePlayerIndexForSeat(microturn.seatId)` gap (see D6). Adds smoke test asserting direct-vs-diagnostic parity. Can land in parallel with 003.
 
-5. **144PROBEREC-005 — Determinism replay-identity proof + schema update.** Adds `probe-hole-recovery-replay-identity.test.ts` and extends `packages/engine/schemas/Trace.schema.json` with `ProbeHoleRecoveryLog` schema and the two new `GameTrace` fields. Depends on 002.
+5. **144PROBEREC-005 — Determinism replay-identity proof.** Adds `probe-hole-recovery-replay-identity.test.ts`; ticket 002 absorbed the `Trace.schema.json` extension because the live focused test lane requires `schema:artifacts:check`. Depends on 002.
 
 Estimated complexity per ticket: S–M each (one day of focused implementation + test).
 
@@ -587,7 +587,7 @@ Estimated complexity per ticket: S–M each (one day of focused implementation +
 ## Tickets
 
 - `archive/tickets/144PROBEREC-001.md` — Deep probe + minimal LRU + memoization cache (I1/I2)
-- `tickets/144PROBEREC-002.md` — Rollback safety net + blacklist state + GameTrace migration (I3)
+- `archive/tickets/144PROBEREC-002.md` — Rollback safety net + blacklist state + GameTrace migration (I3)
 - `tickets/144PROBEREC-003.md` — F#18 amendment + seed-1001 regression fixture (I4) + convergence-witness re-bless
 - `tickets/144PROBEREC-004.md` — Diagnostic harness rewire + `SimulationOptions.decisionHook` (seed 1049)
-- `tickets/144PROBEREC-005.md` — Determinism replay-identity proof + `Trace.schema.json` update
+- `tickets/144PROBEREC-005.md` — Determinism replay-identity proof

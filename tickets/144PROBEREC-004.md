@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `SimulationOptions` extension + campaign diagnostic rewrite
-**Deps**: `tickets/144PROBEREC-002.md`
+**Deps**: `archive/tickets/144PROBEREC-002.md`
 
 ## Problem
 
@@ -108,7 +108,7 @@ Add `packages/engine/test/integration/diagnose-parity-runGame.test.ts` (`@test-c
 - Deep probe / LRU / cache — ticket 001.
 - Rollback / blacklist / `ProbeHoleRecoveryLog` type / `GameTrace` migration — ticket 002.
 - Seed-1001 fixture / F#18 amendment / convergence-witness re-bless — ticket 003.
-- `Trace.schema.json` update — ticket 005.
+- Replay-identity determinism proof for recovery traces — ticket 005. (`Trace.schema.json` was absorbed by ticket 002.)
 - Other campaign diagnostics (only `diagnose-nolegalmoves.mjs` is in scope — a repo-wide grep shows it's the only copy).
 
 ## Acceptance Criteria

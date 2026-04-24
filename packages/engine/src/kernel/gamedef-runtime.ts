@@ -15,7 +15,7 @@ import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 import { LruCache } from '../shared/lru-cache.js';
 
-export const PUBLICATION_PROBE_CACHE_LIMIT = 10_000;
+export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
 
 export interface GameDefRuntime {
   /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */

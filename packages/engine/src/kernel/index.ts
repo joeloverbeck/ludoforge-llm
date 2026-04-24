@@ -85,6 +85,7 @@ export * from './grant-lifecycle-trace.js';
 export * from './grant-lifecycle.js';
 export * from './runtime-error.js';
 export * from './runtime-reasons.js';
+export * from './microturn/rollback.js';
 export * from './execution-collector.js';
 export * from './execution-policy.js';
 export * from './effects.js';

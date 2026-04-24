@@ -256,7 +256,7 @@ actions:
     limits: []
 
   - id: check
-    tags: [check]
+    tags: [check, pass]
     actor: active
     executor: actor
     phase: [preflop, flop, turn, river]

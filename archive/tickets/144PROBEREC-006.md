@@ -1,6 +1,6 @@
 # 144PROBEREC-006: Complete full I1/I2 probe evidence gates
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Conditional — only if the completed measurement invalidates the retained publication-probe cache
@@ -70,6 +70,7 @@ If the cache remains, leave the runtime code unchanged and document why the curr
 
 - `campaigns/phase4-probe-recover/depth-audit.md` (modify)
 - `campaigns/phase4-probe-recover/memoization-measurement.md` (modify)
+- `campaigns/phase4-probe-recover/measure-memoization.mjs` (add)
 - `packages/engine/src/kernel/gamedef-runtime.ts` (conditional modify)
 - `packages/engine/src/kernel/microturn/probe.ts` (conditional modify)
 - `packages/engine/test/unit/shared/lru-cache.test.ts` (conditional modify/delete)
@@ -108,9 +109,17 @@ If the cache remains, leave the runtime code unchanged and document why the curr
 
 ### Commands
 
-1. `<exact memoization measurement command>`
+1. `timeout 25m node campaigns/phase4-probe-recover/measure-memoization.mjs --max-turns 500 --seed-list 1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1020,1049,1054 --modes enabled,disabled`
 2. `pnpm -F @ludoforge/engine build`
 3. `pnpm -F @ludoforge/engine test packages/engine/test/unit/kernel/microturn/deep-probe.test.ts`
 4. `pnpm turbo lint`
 5. `pnpm turbo typecheck`
 6. `pnpm turbo test`
+
+## Outcome
+
+Completed on 2026-04-24.
+
+- I1: `campaigns/phase4-probe-recover/depth-audit.md` now enumerates the audited FITL action/profile/macro surfaces and retains the explicit `K > 3` conclusion. No audited surface requires increasing `MICROTURN_PROBE_DEPTH_BUDGET`.
+- I2: `campaigns/phase4-probe-recover/memoization-measurement.md` records the completed 18-seed, `maxTurns=500` cache-enabled/cache-disabled measurement. The cache produced identical stop reasons, turn counts, and decision counts with and without memoization. Hit rate was 36.45%; disabled mode was 0.26% faster in this sandbox on the tuned-build final run.
+- Cache decision: retained and tuned `publicationProbeCache`; `PUBLICATION_PROBE_CACHE_LIMIT` is now `2_500`, matching the observed 2,467-entry peak with bounded headroom.

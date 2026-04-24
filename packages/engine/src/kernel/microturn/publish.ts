@@ -10,6 +10,7 @@ import { probeMoveViability } from '../apply-move.js';
 import { MISSING_BINDING_POLICY_CONTEXTS } from '../missing-binding-policy.js';
 import { derivePlayerObservation } from '../observation.js';
 import type {
+  ActionDef,
   ChoiceOption,
   ChoicePendingRequest,
   GameDef,
@@ -233,6 +234,33 @@ const supportedActionMovesForState = (
   ).moves
     .map((entry) => entry.move)
     .filter((move) => isSupportedActionMove(def, state, move, runtime));
+
+const unavailableActionKey = (
+  turnId: ReturnType<typeof actionSelectionTurnId>,
+  seatId: SeatId,
+): string => `${String(turnId)}:${String(seatId)}`;
+
+const filterUnavailableActions = (
+  state: GameState,
+  moves: readonly Move[],
+  turnId: ReturnType<typeof actionSelectionTurnId>,
+  seatId: SeatId,
+): readonly Move[] => {
+  const unavailable = state.unavailableActionsPerTurn?.[unavailableActionKey(turnId, seatId)] ?? [];
+  if (unavailable.length === 0) {
+    return moves;
+  }
+  return moves.filter((move) => !unavailable.includes(move.actionId));
+};
+
+const actionById = (def: GameDef, actionId: Move['actionId']): ActionDef | undefined =>
+  def.actions.find((action) => action.id === actionId);
+
+const findPassFallbackMove = (
+  def: GameDef,
+  supportedMoves: readonly Move[],
+): Move | undefined =>
+  supportedMoves.find((move) => actionById(def, move.actionId)?.tags?.includes('pass') === true);
 
 const rootDecisionHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -595,23 +623,29 @@ const publishActionSelection = (
   state: GameState,
   runtime?: GameDefRuntime,
 ): MicroturnState => {
-  const supportedMoves = supportedActionMovesForState(def, state, runtime);
-  if (supportedMoves.length === 0) {
+  const rawSupportedMoves = supportedActionMovesForState(def, state, runtime);
+  const seatId = publishedSeatId(state, activeSeatForPlayer(def, state));
+  const turnId = actionSelectionTurnId(state);
+  const supportedMoves = filterUnavailableActions(state, rawSupportedMoves, turnId, seatId);
+  const fallbackMove = findPassFallbackMove(def, rawSupportedMoves);
+  const legalMoves = supportedMoves.length === 0 && fallbackMove !== undefined
+    ? [fallbackMove]
+    : supportedMoves;
+  if (legalMoves.length === 0) {
     throw microturnConstructibilityInvariant('no simple actionSelection moves are currently bridgeable');
   }
-  const seatId = publishedSeatId(state, activeSeatForPlayer(def, state));
   const decisionContext: ActionSelectionContext = {
     kind: 'actionSelection',
     seatId,
-    eligibleActions: Array.from(new Set(supportedMoves.map((move) => move.actionId))),
+    eligibleActions: Array.from(new Set(legalMoves.map((move) => move.actionId))),
   };
   return {
     kind: decisionContext.kind,
     seatId,
     decisionContext,
-    legalActions: toActionSelectionDecisions(supportedMoves),
+    legalActions: toActionSelectionDecisions(legalMoves),
     projectedState: buildProjectedState(def, state, seatId),
-    turnId: actionSelectionTurnId(state),
+    turnId,
     frameId: actionSelectionFrameId(state),
     compoundTurnTrace: [],
   };
@@ -628,11 +662,19 @@ const publishStackTop = (
   const compoundTurnTrace = rootDecisionHistory(root);
   if (top.context.kind === 'actionSelection') {
     const context = top.context;
-    const legalActions = toActionSelectionDecisions(
-      supportedActionMovesForState(def, state, runtime).filter((move) =>
-        context.eligibleActions.includes(move.actionId),
-      ),
+    if (seatId === '__chance' || seatId === '__kernel') {
+      throw microturnConstructibilityInvariant(`actionSelection context has unsupported seat ${seatId}`);
+    }
+    const allSupportedMoves = supportedActionMovesForState(def, state, runtime);
+    const rawSupportedMoves = allSupportedMoves.filter((move) =>
+      context.eligibleActions.includes(move.actionId),
     );
+    const supportedMoves = filterUnavailableActions(state, rawSupportedMoves, top.turnId, seatId);
+    const fallbackMove = findPassFallbackMove(def, allSupportedMoves);
+    const legalMoves = supportedMoves.length === 0 && fallbackMove !== undefined
+      ? [fallbackMove]
+      : supportedMoves;
+    const legalActions = toActionSelectionDecisions(legalMoves);
     if (legalActions.length === 0) {
       throw microturnConstructibilityInvariant('actionSelection context has no bridgeable continuations');
     }

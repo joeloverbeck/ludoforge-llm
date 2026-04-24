@@ -1,6 +1,6 @@
 # 144PROBEREC-002: Rollback safety net + blacklist state + GameTrace migration (I3)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel rollback module, GameState/GameTrace types, simulator, actionSelection publisher, seven GameTrace construction-site migration
@@ -21,6 +21,8 @@ The recovery event is stored as a trace-only `ProbeHoleRecoveryLog` in a new `Ga
 3. `GameTrace` at `packages/engine/src/kernel/types-core.ts:1707-1717` is constructed at seven sites: one source (`simulator.ts:248-258`) and six test fixtures (`serde.test.ts`, `schemas-top-level.test.ts`, `trace-enrichment.test.ts`, `json-schema.test.ts`, `sim/trace-eval.test.ts`, `sim/eval-report.test.ts`). All seven are migrated in this ticket per F#14 (non-optional field addition).
 4. `publishActionSelection` is at `publish.ts:586-611`. Extending it to filter by the blacklist is a pre-pipeline step inside `supportedActionMovesForState`.
 5. FITL's `pass` action has `tags: [pass]` at `data/games/fire-in-the-lake/30-rules-actions.md:159` with `effects: []` — the I3 audit (below) decides grant-clearing handling.
+6. I3 audit correction: Texas Hold'em did not already declare a `tags: [pass]` fallback. `check` is the rule-valid generic pass carrier because the game's verbalization defines it as "Pass without adding chips to the pot" and its precondition requires `streetBet == currentBet`. `fold` remains fold-only.
+7. Live package tests run `schema:artifacts:check` before focused files. Adding non-optional `GameTrace` fields therefore required absorbing the `Trace.schema.json` artifact extension into this ticket for F#14; ticket 005 is narrowed to replay-identity proof.
 6. Free-operation grants live in `state.turnOrderState.pendingFreeOperationGrants` (`TurnFlowRuntimeState`), not directly in `GameState` — I3 audit addresses grant survival across rollback.
 
 ## Architecture Check
@@ -152,10 +154,15 @@ Add `probeHoleRecoveries: []` and `recoveredFromProbeHole: 0` to each literal (t
 ## Files to Touch
 
 - `campaigns/phase4-probe-recover/pass-action-audit.md` (new — I3 artifact)
+- `data/games/texas-holdem/30-rules-actions.md` (modify — add `pass` tag to `check`)
 - `packages/engine/src/kernel/microturn/rollback.ts` (new)
 - `packages/engine/src/kernel/microturn/publish.ts` (modify — blacklist filter + pass fallback in `publishActionSelection`)
 - `packages/engine/src/kernel/types-core.ts` (modify — `GameState.unavailableActionsPerTurn`, `GameTrace.probeHoleRecoveries`, `GameTrace.recoveredFromProbeHole`)
 - `packages/engine/src/sim/simulator.ts` (modify — rollback integration, parallel recoveries accumulator)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — runtime/serialized trace schema mirrors)
+- `packages/engine/src/kernel/serde.ts` (modify — recovery hash serialization)
+- `packages/engine/src/kernel/zobrist.ts` (modify — hash blacklist state)
+- `packages/engine/schemas/Trace.schema.json` (modify — required generated artifact fallout)
 - `packages/engine/test/unit/kernel/microturn/rollback.test.ts` (new)
 - `packages/engine/test/integration/fitl-probe-hole-rollback-safety-net.test.ts` (new)
 - `packages/engine/test/unit/serde.test.ts` (modify — fixture)
@@ -164,12 +171,15 @@ Add `probeHoleRecoveries: []` and `recoveredFromProbeHole: 0` to each literal (t
 - `packages/engine/test/unit/json-schema.test.ts` (modify — fixture)
 - `packages/engine/test/unit/sim/trace-eval.test.ts` (modify — fixture)
 - `packages/engine/test/unit/sim/eval-report.test.ts` (modify — fixture)
+- `packages/engine/test/fixtures/trace/valid-serialized-trace.json` (modify — fixture)
+- `packages/engine/test/fixtures/trace/simulator-golden-trace.json` (modify — fixture)
+- `packages/engine/test/fixtures/trace/eval-golden-trace.json` (modify — fixture)
 - `data/games/fire-in-the-lake/30-rules-actions.md` (conditional modify — only if I3 audit selects path (a) grant-terminator)
 
 ## Out of Scope
 
 - Deep probe implementation — ticket 001.
-- `Trace.schema.json` update for `ProbeHoleRecoveryLog` and new `GameTrace` fields — ticket 005.
+- Replay-identity determinism proof for recovery traces — ticket 005.
 - Seed-1001 regression fixture + convergence-witness re-bless — ticket 003 (this ticket's synthetic test exercises the rollback path without needing the FITL fixture).
 - F#18 amendment in FOUNDATIONS.md — ticket 003.
 - Diagnostic harness rewire / `SimulationOptions.decisionHook` — ticket 004.
@@ -189,7 +199,7 @@ Add `probeHoleRecoveries: []` and `recoveredFromProbeHole: 0` to each literal (t
 2. Blacklist is turn-scoped: after turn retirement, `state.unavailableActionsPerTurn` contains no entries keyed on the retired turn.
 3. `probeHoleRecoveries` is NEVER appended to `decisions[]` — `decisionLogs.push(probeHoleLogEntry)` MUST NOT appear in the codebase (structural-invariant lint/grep-assertion in the test).
 4. `recoveredFromProbeHole === probeHoleRecoveries.length` at trace construction.
-5. `stopReason === 'noLegalMoves'` is reachable only when (a) no `actionSelection` frame exists on the stack, AND (b) no `tags: [pass]` action is declared in the game spec.
+5. `stopReason === 'noLegalMoves'` is reachable only when rollback cannot identify a new action-selection recovery path, or when the nearest action-selection action is already blacklisted and no `tags: [pass]` fallback is declared in the game spec.
 6. The pass action, when used as a fallback, runs through the normal apply pipeline — no synthetic pass is created.
 
 ## Test Plan
@@ -208,3 +218,27 @@ Add `probeHoleRecoveries: []` and `recoveredFromProbeHole: 0` to each literal (t
 4. `pnpm turbo lint`
 5. `pnpm turbo typecheck`
 6. `pnpm turbo test`
+
+## Outcome
+
+Completed: 2026-04-24
+
+Implemented:
+- Added the I3 pass-action audit and tagged Texas Hold'em `check` as `[check, pass]`; `fold` remains fold-only.
+- Added `rollbackToActionSelection`, turn/seat-scoped blacklist state, blacklist-aware action publication, generic `tags: [pass]` fallback publication, and turn-retirement blacklist cleanup.
+- Added trace-only `ProbeHoleRecoveryLog`, `GameTrace.probeHoleRecoveries`, and `GameTrace.recoveredFromProbeHole`; recoveries are not appended to `decisions[]`.
+- Added deterministic hash coverage for `unavailableActionsPerTurn`, serialization/Zod support for recovery logs, generated `Trace.schema.json` fallout, and migrated trace fixtures.
+- Post-review cleanup: `rollbackToActionSelection` now returns `null` when the nearest action-selection action is already blacklisted, so pass-fallback absence terminates as `noLegalMoves` instead of retrying an exhausted frame.
+
+Deviation:
+- `Trace.schema.json` moved from ticket 005 into this ticket because the live engine package test command requires `schema:artifacts:check` before focused test execution. Leaving the generated schema for ticket 005 would fail ticket 002's own acceptance lanes and violate F#14. Ticket 005 is narrowed to replay-identity proof.
+- The integration safety-net test uses a synthetic in-progress action stack to exercise rollback/fallback directly, rather than relying on a brittle full `runGame` stochastic/depth witness.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine test packages/engine/test/unit/kernel/microturn/rollback.test.ts`
+- `pnpm -F @ludoforge/engine test packages/engine/test/integration/fitl-probe-hole-rollback-safety-net.test.ts`
+- `pnpm -F @ludoforge/engine test packages/engine/test/unit/serde.test.ts packages/engine/test/unit/schemas-top-level.test.ts packages/engine/test/unit/trace-enrichment.test.ts packages/engine/test/unit/json-schema.test.ts packages/engine/test/unit/sim/trace-eval.test.ts packages/engine/test/unit/sim/eval-report.test.ts`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`

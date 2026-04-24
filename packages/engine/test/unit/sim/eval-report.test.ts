@@ -84,6 +84,8 @@ const makeTrace = (
   gameDefId: 'trace-game-id',
   seed,
   decisions,
+  probeHoleRecoveries: overrides.probeHoleRecoveries ?? [],
+  recoveredFromProbeHole: overrides.recoveredFromProbeHole ?? 0,
   compoundTurns: makeCompoundTurns(decisions, overrides.stopReason ?? 'terminal'),
   finalState: makeState(finalPerPlayerVars, { turnCount: decisions.length }),
   result: null,

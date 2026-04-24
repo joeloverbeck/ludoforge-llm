@@ -7,6 +7,7 @@ import {
   createRng,
   initialState,
   publishMicroturn,
+  rollbackToActionSelection,
   terminalResult,
 } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
@@ -17,6 +18,7 @@ import type {
   DecisionLog,
   GameDefRuntime,
   GameTrace,
+  ProbeHoleRecoveryLog,
   Rng,
   SimulationStopReason,
   TerminalResult,
@@ -142,6 +144,7 @@ export const runGame = (
     );
   }
   const decisionLogs: DecisionLog[] = [];
+  const probeHoleRecoveries: ProbeHoleRecoveryLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
   let stopReason: SimulationStopReason;
@@ -178,8 +181,21 @@ export const runGame = (
       microturn = publishMicroturn(validatedDef, state, resolvedRuntime);
     } catch (error) {
       if (isNoBridgeableMicroturnError(error)) {
-        stopReason = 'noLegalMoves';
-        break;
+        const rollback = rollbackToActionSelection(
+          validatedDef,
+          state,
+          resolvedRuntime,
+          error instanceof Error ? error.message : String(error),
+        );
+        if (rollback === null) {
+          stopReason = 'noLegalMoves';
+          break;
+        }
+        state = rollback.state;
+        if (shouldRetainTrace) {
+          probeHoleRecoveries.push(rollback.logEntry);
+        }
+        continue;
       }
       throw error;
     }
@@ -249,6 +265,8 @@ export const runGame = (
     gameDefId: validatedDef.metadata.id,
     seed,
     decisions: shouldRetainTrace ? decisionLogs : [],
+    probeHoleRecoveries: shouldRetainTrace ? probeHoleRecoveries : [],
+    recoveredFromProbeHole: probeHoleRecoveries.length,
     compoundTurns: shouldRetainTrace ? synthesizeCompoundTurnSummaries(decisionLogs, stopReason) : [],
     finalState: state,
     result,

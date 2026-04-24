@@ -176,7 +176,11 @@ Modified:
 - `specs/144-probe-and-recover-microturn-publication.md` was corrected to match the live stochastic/request boundary.
 
 Deviation:
-- The production deep-probe seam and bounded calibration landed, but the original I1/I2 evidence gates did not fully land. `campaigns/phase4-probe-recover/depth-audit.md` is a source-derived category audit rather than one row per FITL action, and `campaigns/phase4-probe-recover/memoization-measurement.md` records a one-turn 18-seed calibration because the full 500-turn and 25-turn doubled corpus measurements exceeded bounded interactive time. Follow-up `tickets/144PROBEREC-006.md` owns the full I1/I2 evidence completion and final cache-retention decision.
+- The production deep-probe seam and bounded calibration landed, but the original I1/I2 evidence gates did not fully land. `campaigns/phase4-probe-recover/depth-audit.md` is a source-derived category audit rather than one row per FITL action, and `campaigns/phase4-probe-recover/memoization-measurement.md` records a one-turn 18-seed calibration because the full 500-turn and 25-turn doubled corpus measurements exceeded bounded interactive time. Follow-up `archive/tickets/144PROBEREC-006.md` owns the full I1/I2 evidence completion and final cache-retention decision.
+
+Outcome amended: 2026-04-24
+
+Follow-up `archive/tickets/144PROBEREC-006.md` completed the full I1/I2 evidence gate and final cache-retention decision.
 
 Verification:
 - `pnpm -F @ludoforge/engine build`

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — FOUNDATIONS.md doctrine, architecture.md note, convergence-witness re-bless
-**Deps**: `archive/tickets/144PROBEREC-001.md`, `tickets/144PROBEREC-002.md`
+**Deps**: `archive/tickets/144PROBEREC-001.md`, `archive/tickets/144PROBEREC-002.md`
 
 ## Problem
 
@@ -81,7 +81,7 @@ Audit for any other `policy-profile-quality` tests pinning decision counts on th
 - Deep probe / cache / LRU — ticket 001.
 - Rollback / `ProbeHoleRecoveryLog` / `publishActionSelection` blacklist — ticket 002.
 - Diagnostic harness rewire — ticket 004.
-- `Trace.schema.json` update — ticket 005.
+- Replay-identity determinism proof for recovery traces — ticket 005. (`Trace.schema.json` was absorbed by ticket 002.)
 
 ## Acceptance Criteria
 

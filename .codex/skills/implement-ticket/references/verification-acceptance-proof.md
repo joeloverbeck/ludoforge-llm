@@ -52,6 +52,8 @@ After any acceptance or proof lane goes green, preserve that result only while t
 2. rerun the narrowest affected focused lane first, then any broader package/workspace lanes that depended on the stale state
 3. only treat the rerun set as the final proof record; earlier green runs become historical diagnostics, not closeout evidence
 
+Active ticket/spec/report metadata can be proof-affecting even when no runtime code changes. Edits to `Status`, `Outcome`, `Files to Touch`, `Acceptance Criteria`, command substitutions, or final proof ledgers after a proof lane passes require an explicit invalidation decision: either rerun the affected lane, or record why the edit is purely clerical and does not alter the acceptance story. Do not silently append metadata edits after broad proof and still cite the earlier lane as final.
+
 ## Focused Recovery Loop
 
 If the first broader proof lane fails on a newly added or modified test, do one focused recovery loop before rerunning the full lane:

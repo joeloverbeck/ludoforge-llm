@@ -72,6 +72,26 @@ const clearMicroturnState = (
   activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(state.activePlayer)),
 }, runtime);
 
+const clearUnavailableActionsForTurn = (
+  state: GameState,
+  retiringTurnId: ReturnType<typeof asTurnId>,
+): GameState => {
+  const unavailable = state.unavailableActionsPerTurn;
+  if (unavailable === undefined) {
+    return state;
+  }
+  const prefix = `${String(retiringTurnId)}:`;
+  const retained = Object.fromEntries(
+    Object.entries(unavailable).filter(([key]) => !key.startsWith(prefix)),
+  );
+  if (Object.keys(retained).length === 0) {
+    const { unavailableActionsPerTurn: _unavailableActionsPerTurn, ...rest } = state;
+    void _unavailableActionsPerTurn;
+    return rest;
+  }
+  return { ...state, unavailableActionsPerTurn: retained };
+};
+
 const emptyEffectFrame = (): EffectExecutionFrameSnapshot => ({
   programCounter: 0,
   boundedIterationCursors: {},
@@ -647,7 +667,10 @@ export const applyPublishedDecision = (
   }
 
   if (decision.kind === 'turnRetirement') {
-    const baseState = clearMicroturnState(def, canonicalState, resolvedRuntime);
+    const baseState = clearUnavailableActionsForTurn(
+      clearMicroturnState(def, canonicalState, resolvedRuntime),
+      decision.retiringTurnId,
+    );
     const triggerFirings: TriggerLogEntry[] = [];
     const advanced = advancePhase(buildAdvancePhaseRequest(def, baseState, createEvalRuntimeResources(), {
       cachedRuntime: resolvedRuntime,

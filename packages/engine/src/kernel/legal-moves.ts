@@ -74,6 +74,7 @@ import { probeMoveViability } from './apply-move.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import { createSeatResolutionContext } from './identity.js';
 import { createTrustedExecutableMove } from './trusted-move.js';
+import { hasActiveSeatRequiredPendingFreeOperationGrant } from './required-free-operation-admissibility.js';
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
@@ -1397,6 +1398,9 @@ const enumerateRawLegalMoves = (
   };
 
   const earlyExitAfterFirst = options?.earlyExitAfterFirst === true;
+  const restrictToPendingFreeOperations =
+    state.turnOrderState.type === 'cardDriven'
+    && hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution);
 
   // When only checking existence (earlyExitAfterFirst), try trivial actions
   // first — those with no params, no precondition, and always-complete.
@@ -1406,7 +1410,7 @@ const enumerateRawLegalMoves = (
   const alwaysComplete = runtime?.alwaysCompleteActionIds ?? computeAlwaysCompleteActionIds(def);
   const actionsForPhase = getPhaseActionIndex(def).actionsByPhase.get(state.currentPhase) ?? [];
   let earlyExitTriedTrivial = false;
-  if (earlyExitAfterFirst) {
+  if (earlyExitAfterFirst && !restrictToPendingFreeOperations) {
     for (const action of actionsForPhase) {
       // Trivial = no params + always-complete + no precondition + no pipeline
       if (action.params.length > 0 || !alwaysComplete.has(action.id)) continue;
@@ -1448,6 +1452,9 @@ const enumerateRawLegalMoves = (
   }
 
   for (const action of actionsForPhase) {
+    if (restrictToPendingFreeOperations) {
+      break;
+    }
     if (enumeration.templateBudgetExceeded) {
       break;
     }

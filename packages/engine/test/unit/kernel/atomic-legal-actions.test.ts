@@ -111,7 +111,6 @@ describe('atomic legal actions', () => {
       parentFrameId: null,
       turnId: asTurnId(0),
       context: { kind: 'turnRetirement', seatId: '__kernel', retiringTurnId: asTurnId(0) },
-      accumulatedBindings: {},
       effectFrame: { programCounter: 0, boundedIterationCursors: {}, localBindings: {}, pendingTriggerQueue: [] },
     };
     const retirementState = {

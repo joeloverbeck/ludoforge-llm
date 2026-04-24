@@ -12,7 +12,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../src/kernel/index.js';
-import { getTokenStateIndexEntry } from '../../src/kernel/token-state-index.js';
+import { getTokenStateIndex, getTokenStateIndexEntry } from '../../src/kernel/token-state-index.js';
 
 const makeDef = (): GameDef => ({
   metadata: { id: 'eval-context-test', players: { min: 1, max: 2 } },
@@ -166,5 +166,24 @@ describe('token-state-index canonical helper', () => {
     assert.equal(tokenStateEntry?.zoneId, 'hand:0');
     assert.equal(tokenStateEntry?.occurrenceCount, 2);
     assert.deepEqual(tokenStateEntry?.occurrenceZoneIds, ['hand:0', 'bench:1']);
+  });
+
+  it('reuses the canonical token state index across states that share the same zones object', () => {
+    const zones = {
+      'hand:0': [{ id: 'shared-token', type: 'card', props: {} }],
+      'bench:1': [{ id: 'shared-token', type: 'card', props: {} }],
+    };
+    const firstState = {
+      ...makeState(),
+      globalVars: { score: 1 },
+      zones,
+    } as unknown as GameState;
+    const secondState = {
+      ...makeState(),
+      globalVars: { score: 2 },
+      zones,
+    } as unknown as GameState;
+
+    assert.equal(getTokenStateIndex(firstState), getTokenStateIndex(secondState));
   });
 });

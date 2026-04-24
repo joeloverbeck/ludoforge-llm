@@ -208,9 +208,9 @@ describe('microturn publication', () => {
 
     const followup = publishMicroturn(def, state, runtime);
     assert.equal(followup.kind, 'chooseOne');
-    const accumulatedBindings = state.decisionStack?.[0]?.accumulatedBindings as Readonly<Record<string, unknown>> | undefined;
+    const continuationBindings = state.decisionStack?.[0]?.continuationBindings as Readonly<Record<string, unknown>> | undefined;
     assert.ok(
-      Object.keys(accumulatedBindings ?? {}).some((key) => key.includes('$targets')),
+      Object.keys(continuationBindings ?? {}).some((key) => key.includes('$targets')),
       'expected carried root bindings to retain the auto-completed decision key',
     );
 
@@ -480,7 +480,6 @@ describe('microturn publication', () => {
         seatId: '__kernel',
         retiringTurnId: asTurnId(0),
       },
-      accumulatedBindings: {},
       effectFrame: {
         programCounter: 0,
         boundedIterationCursors: {},

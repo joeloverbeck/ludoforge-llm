@@ -87,6 +87,8 @@ Do not change the overall section ordering (workflow phases stay in sequence). O
 
 When a topic spans multiple workflow phases, prefer adding cross-references between phases rather than moving content out of its phase. Moving content across phases is only valid when the instruction has no phase-specific context.
 
+When a single move both deduplicates (removing a redundant instance) and regroups (unifying a fragmented topic), report it under Topics Regrouped — the regrouping is the structural change; dedup is a side effect.
+
 ---
 
 ### Step 4: Readability Restructuring
@@ -128,11 +130,15 @@ For non-redundant instructions (those surviving Steps 2-5), tighten prose:
 
 **Critical constraint**: Never change the meaning of an instruction. If unsure whether tightening alters meaning, keep the original wording.
 
+If the file's prose is already terse (no filler words, no hedging, consistent active voice), Step 6 may be minimal or a no-op. Note this in the diff summary's Wording Tightened section (e.g., "no material tightening needed — prose was already terse") rather than omitting the section.
+
 ---
 
 ### Step 7: Rewrite
 
 Apply the consolidated changes to `<skill-path>/SKILL.md`. Prefer targeted `Edit` calls (top-to-bottom to avoid offset drift) for surgical changes. Use `Write` when changes touch more than 40% of the file's sections or when topic regrouping moves content across 3+ sections. Use `Edit` when changes are confined to in-place deduplication or wording tightening within existing sections.
+
+**Counting rule**: a section is "touched" when its content is moved, deleted, or substantially rewritten — not when a heading/divider is inserted. Adding N sub-headings to a single large section counts as one touched section, not N.
 
 The result must:
 1. **Preserve frontmatter exactly** — do not modify name, description, arguments, or any YAML field
@@ -150,6 +156,8 @@ Re-read the written file (or key sections for large files). Check:
 - No duplicate headings or broken numbered lists
 - Anchor links (e.g., `#stale-vs-blocking-triage`) resolve to existing headings
 - No accidentally dropped sections
+
+**Semantic preservation check**: for each redundancy cluster recorded in Step 2, grep the rewritten file for a distinctive phrase from the canonical version to confirm it landed. For each non-canonical instance marked for removal, confirm at least one copy of the semantic still exists somewhere in the file. This catches the failure mode where a dedup sweep accidentally removes all instances.
 
 If any issue is found, fix it with a targeted `Edit` before proceeding.
 
@@ -187,6 +195,8 @@ All <N> unique instructions preserved. [If any were intentionally dropped as tru
 ### Observations (if any)
 - Gaps noticed but not filled (per no-scope-expansion guardrail). Omit this section if there are none.
 ```
+
+Omit any section with count 0 (e.g., "Topics Regrouped (0)", "Decision Paths Clarified (0)") except "Semantic Preservation" which is always present.
 
 Do NOT commit. Leave the file for user review via `git diff`.
 

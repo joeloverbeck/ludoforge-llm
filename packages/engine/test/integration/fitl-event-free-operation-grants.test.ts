@@ -1473,8 +1473,10 @@ phase: [asPhaseId('main')],
               query: 'enums',
               values: [
                 'card-require-usable-play',
+                'card-require-usable-play-emit',
                 'card-require-usable-play-outcome',
                 'card-require-usable-issue',
+                'card-effect-require-usable-play',
                 'card-effect-require-usable-issue',
                 'card-effect-require-usable-issue-sequence',
                 'card-effect-require-usable-issue-sequence-usable',
@@ -1558,6 +1560,28 @@ phase: [asPhaseId('main')],
             },
           },
           {
+            id: 'card-require-usable-play-emit',
+            title: 'Play-time Viability Emits After Legal Event Play',
+            sideMode: 'single',
+            unshaded: {
+              text: 'A legal requireUsableForEventPlay event should still emit its declarative grant at issue time.',
+              freeOperationGrants: [
+                {
+                  seat: 'self',
+                  sequence: { batch: 'play-usable', step: 0 },
+                  operationClass: 'operation',
+                  actionIds: ['operation'],
+                  viabilityPolicy: 'requireUsableForEventPlay',
+                  zoneFilter: {
+                    op: '==',
+                    left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                    right: 'cambodia',
+                  },
+                },
+              ],
+            },
+          },
+          {
             id: 'card-require-usable-play-outcome',
             title: 'Play-time Viability Requires Non-Noop Completion',
             sideMode: 'single',
@@ -1611,6 +1635,29 @@ phase: [asPhaseId('main')],
                     op: '==',
                     left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' },
                     right: 'laos',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            id: 'card-effect-require-usable-play',
+            title: 'Effect Play-time Viability Required',
+            sideMode: 'single',
+            unshaded: {
+              text: 'Effect-issued grants with play-time viability use the event-legality proof instead of re-probing at issue time.',
+              effects: [
+                {
+                  grantFreeOperation: {
+                    seat: 'self',
+                    operationClass: 'operation',
+                    actionIds: ['operation'],
+                    viabilityPolicy: 'requireUsableForEventPlay',
+                    zoneFilter: {
+                      op: '==',
+                      left: { _t: 2 as const, ref: 'zoneProp', zone: '$zone', prop: 'country' },
+                      right: 'cambodia',
+                    },
                   },
                 },
               ],
@@ -3067,6 +3114,25 @@ describe('event free-operation grants integration', () => {
     );
   });
 
+  it('emits declarative requireUsableForEventPlay grants once the event move is already legal', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 111, 3).state;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-require-usable-play-emit',
+    );
+    assert.equal(moves.length, 1);
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-require-usable-play-emit', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.viabilityPolicy, 'requireUsableForEventPlay');
+  });
+
   it('suppresses event moves when requireUsableForEventPlay cannot satisfy a required non-noop outcome', () => {
     const def = createGrantViabilityPolicyDef();
     const start = initialState(def, 211, 3).state;
@@ -3103,6 +3169,25 @@ describe('event free-operation grants integration', () => {
     const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
     assert.equal(grants.length, 1);
     assert.equal(grants.every((grant) => grant.viabilityPolicy === 'requireUsableAtIssue'), true);
+  });
+
+  it('keeps effect-issued requireUsableForEventPlay grants once the event move is already legal', () => {
+    const def = createGrantViabilityPolicyDef();
+    const start = initialState(def, 113, 3).state;
+
+    const moves = legalMoves(def, start).filter(
+      (move) => String(move.actionId) === 'event' && move.params.eventCardId === 'card-effect-require-usable-play',
+    );
+    assert.equal(moves.length, 1);
+
+    const afterEvent = applyMove(def, start, {
+      actionId: asActionId('event'),
+      params: { eventCardId: 'card-effect-require-usable-play', side: 'unshaded', branch: 'none' },
+    }).state;
+
+    const grants = requireCardDrivenRuntime(afterEvent).pendingFreeOperationGrants ?? [];
+    assert.equal(grants.length, 1);
+    assert.equal(grants[0]?.viabilityPolicy, 'requireUsableForEventPlay');
   });
 
   it('does not emit sequence-later effect grants when earlier requireUsableAtIssue steps are currently unusable', () => {

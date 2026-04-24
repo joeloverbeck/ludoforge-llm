@@ -49,7 +49,7 @@
     "test:e2e:slow": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow",
     "test:e2e:all": "RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all",
     "test:determinism": "node scripts/run-tests.mjs --lane determinism",
-    "test:policy-profile-quality": "node scripts/run-tests.mjs --lane policy-profile-quality",
+    "test:policy-profile-quality": "node scripts/run-policy-profile-quality-tests.mjs",
     "test": "pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default",
     "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/performance/**/*.test.js\" \"dist/test/memory/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
   },

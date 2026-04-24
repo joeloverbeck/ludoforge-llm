@@ -45,8 +45,12 @@ export function scoreCompletionOption(
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
-  return considerationIds.reduce(
-    (total, considerationId) => total + evaluation.evaluateConsideration(considerations, considerationId, undefined),
-    0,
-  );
+  try {
+    return considerationIds.reduce(
+      (total, considerationId) => total + evaluation.evaluateConsideration(considerations, considerationId, undefined),
+      0,
+    );
+  } finally {
+    evaluation.dispose();
+  }
 }

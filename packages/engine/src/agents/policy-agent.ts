@@ -1,4 +1,3 @@
-import { applyPublishedDecision } from '../kernel/microturn/apply.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision } from '../kernel/microturn/types.js';
 import { perfDynEnd, perfStart } from '../kernel/perf-profiler.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
@@ -17,7 +16,6 @@ import {
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
-import { evaluateState } from './evaluate-state.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 
 export interface PolicyAgentConfig {
@@ -33,6 +31,33 @@ interface FrontierCandidate {
   readonly score: number;
   readonly progressBias: number;
 }
+
+const POLICY_TRACE_INTERVAL = 25;
+let policyChooseCallCount = 0;
+
+const shouldLogPolicyOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
+
+const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+
+const shouldEmitPolicyTrace = (legalActionCount: number): boolean => {
+  if (!shouldLogPolicyOomTrace()) {
+    return false;
+  }
+  return legalActionCount >= 8 || policyChooseCallCount % POLICY_TRACE_INTERVAL === 0;
+};
+
+const logPolicyOomTrace = (
+  label: string,
+  input: AgentMicroturnDecisionInput,
+  extras = '',
+): void => {
+  if (!shouldEmitPolicyTrace(input.microturn.legalActions.length)) {
+    return;
+  }
+  console.error(
+    `[oom-trace] policy:${label} turn=${input.state.turnCount} kind=${input.microturn.kind} legal=${input.microturn.legalActions.length} heapMb=${heapUsedMb()}${extras}`,
+  );
+};
 
 const traceCandidatesForFrontier = (
   traceLevel: PolicyDecisionTraceLevel,
@@ -71,11 +96,7 @@ const chooseStructuralFrontierDecision = (
   resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
   profileIdOverride: string | undefined,
   traceLevel: PolicyDecisionTraceLevel,
-): AgentMicroturnDecisionResult | null => {
-  if (input.microturn.kind !== 'chooseNStep') {
-    return null;
-  }
-
+): AgentMicroturnDecisionResult => {
   const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => ({
     decision,
     stableMoveKey: frontierDecisionKey(input.def, decision),
@@ -163,6 +184,8 @@ export class PolicyAgent implements Agent {
       throw new Error('PolicyAgent.chooseDecision called with empty legalActions');
     }
 
+    policyChooseCallCount += 1;
+    logPolicyOomTrace('choose:start', input);
     const t0Eval = perfStart(input.profiler);
     const result = input.microturn.kind === 'actionSelection'
       ? this.chooseActionSelectionDecision(input)
@@ -178,10 +201,12 @@ export class PolicyAgent implements Agent {
       (decision): decision is Extract<Decision, { readonly kind: 'actionSelection' }> =>
         decision.kind === 'actionSelection' && decision.move !== undefined,
     );
+    logPolicyOomTrace('actionSelection:prepared', input, ` actionMoves=${actionDecisions.length}`);
     if (actionDecisions.length === 0) {
       return this.chooseFrontierDecision(input);
     }
 
+    const evalHeapBefore = heapUsedMb();
     const evaluation = evaluatePolicyMove({
       def: input.def,
       state: input.state,
@@ -193,6 +218,11 @@ export class PolicyAgent implements Agent {
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     });
+    logPolicyOomTrace(
+      'actionSelection:evaluated',
+      input,
+      ` actionMoves=${actionDecisions.length} heapDeltaMb=${heapUsedMb() - evalHeapBefore} finalScore=${evaluation.metadata.finalScore ?? 'null'}`,
+    );
     const selectedMoveKey = toMoveIdentityKey(input.def, evaluation.move);
     const selectedDecision = actionDecisions.find(
       (decision) => decision.move !== undefined && toMoveIdentityKey(input.def, decision.move) === selectedMoveKey,
@@ -249,53 +279,7 @@ export class PolicyAgent implements Agent {
       };
     }
 
-    const structuralChoice = chooseStructuralFrontierDecision(input, resolvedProfile, this.profileId, this.traceLevel);
-    if (structuralChoice !== null) {
-      return structuralChoice;
-    }
-
-    const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => {
-      const nextState = applyPublishedDecision(
-        input.def,
-        input.state,
-        input.microturn,
-        decision,
-        undefined,
-        input.runtime,
-      ).state;
-      return {
-        decision,
-        stableMoveKey: frontierDecisionKey(input.def, decision),
-        score: evaluateState(input.def, nextState, input.state.activePlayer, input.runtime),
-        progressBias: chooseNStepProgressBias(input, decision),
-      };
-    });
-    const bestScore = Math.max(...frontier.map((candidate) => candidate.score));
-    const bestByScore = frontier.filter((candidate) => candidate.score === bestScore);
-    const bestProgressBias = Math.max(...bestByScore.map((candidate) => candidate.progressBias));
-    const bestCandidates = bestByScore.filter((candidate) => candidate.progressBias === bestProgressBias);
-    const { item: selected, rng } = pickRandom(bestCandidates, input.rng);
-    const metadata: PolicyEvaluationMetadata = {
-      seatId: resolvedProfile?.seatId ?? null,
-      requestedProfileId: this.profileId ?? null,
-      profileId: resolvedProfile?.profileId ?? null,
-      profileFingerprint: resolvedProfile?.profile.fingerprint ?? null,
-      canonicalOrder: frontier.map((candidate) => candidate.stableMoveKey),
-      candidates: traceCandidatesForFrontier(this.traceLevel, frontier),
-      pruningSteps: [],
-      tieBreakChain: [],
-      previewUsage: emptyPreviewUsage(),
-      selectedStableMoveKey: selected.stableMoveKey,
-      finalScore: selected.score,
-      usedFallback: false,
-      failure: null,
-    };
-
-    return {
-      decision: selected.decision,
-      rng,
-      agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel),
-    };
+    return chooseStructuralFrontierDecision(input, resolvedProfile, this.profileId, this.traceLevel);
   }
 
   private matchGuidedCompletionDecision(

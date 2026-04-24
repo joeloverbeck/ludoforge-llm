@@ -13,9 +13,6 @@ import {
 import { createDeferredLifecycleTraceEntry } from './turn-flow-deferred-lifecycle-trace.js';
 import { cardDrivenConfig, cardDrivenRuntime } from './card-driven-accessors.js';
 import {
-  doesGrantPotentiallyAuthorizeMove,
-} from './free-operation-grant-authorization.js';
-import {
   appendSkippedSequenceStep,
   ensureFreeOperationSequenceBatchContext,
   resolvePendingFreeOperationGrantSequenceStatus,
@@ -47,6 +44,7 @@ import {
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
+  resolveFreeOperationGrantViabilityPolicy,
 } from './free-operation-viability.js';
 import type {
   EventEligibilityOverrideDef,
@@ -117,12 +115,6 @@ const computeCandidates = (
   };
 };
 
-const isBlockingPendingFreeOperationGrant = (
-  grant: TurnFlowPendingFreeOperationGrant,
-): boolean =>
-  (grant.phase === 'ready' || grant.phase === 'offered')
-  && (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion');
-
 const resolveReadyPendingFreeOperationGrantSeats = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
   seatOrder: readonly string[],
@@ -130,7 +122,9 @@ const resolveReadyPendingFreeOperationGrantSeats = (
   const readySeats = new Set(
     pending
       .filter(
-        (grant) => grant.phase === 'ready' && isBlockingPendingFreeOperationGrant(grant),
+        (grant) =>
+          grant.phase === 'ready'
+          && (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion'),
       )
       .map((grant) => grant.seat),
   );
@@ -164,7 +158,7 @@ const hasReadyPendingFreeOperationGrantForSeat = (
   pending.some((grant) =>
     grant.seat === seat
     && grant.phase === 'ready'
-    && isBlockingPendingFreeOperationGrant(grant));
+    && (grant.completionPolicy === 'required' || grant.completionPolicy === 'skipIfNoLegalCompletion'));
 
 export const advanceSequenceReadyPendingFreeOperationGrants = (
   pending: readonly TurnFlowPendingFreeOperationGrant[],
@@ -338,8 +332,12 @@ const extractPendingFreeOperationGrants = (
             && candidate.sequence.batch === grant.sequence.batch
             && candidate.sequence.step < grant.sequence.step,
         );
+    const shouldProbeGrantAtIssue =
+      grantRequiresUsableProbe(grant)
+      && resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay';
+
     if (
-      grantRequiresUsableProbe(grant) &&
+      shouldProbeGrantAtIssue &&
       !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, {
         sequenceProbeCandidates,
         evalContext: grantEvalContext,
@@ -821,56 +819,6 @@ export const isActiveSeatEligibleForTurnFlow = (
       activeSeat,
     )
   );
-};
-
-export const hasActiveSeatRequiredPendingFreeOperationGrant = (
-  def: GameDef,
-  state: GameState,
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return false;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.ELIGIBILITY_CHECK,
-    seatResolution,
-  );
-  return hasReadyPendingFreeOperationGrantForSeat(
-    runtime.pendingFreeOperationGrants ?? [],
-    activeSeat,
-  );
-};
-
-export const isMoveAllowedByRequiredPendingFreeOperationGrant = (
-  def: GameDef,
-  state: GameState,
-  move: Move,
-  seatResolution: SeatResolutionContext,
-): boolean => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null) {
-    return true;
-  }
-  const activeSeat = requireCardDrivenActiveSeat(
-    def,
-    state,
-    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.WINDOW_FILTER_APPLICATION,
-    seatResolution,
-  );
-  const pending = runtime.pendingFreeOperationGrants ?? [];
-  if (!hasReadyPendingFreeOperationGrantForSeat(pending, activeSeat)) {
-    return true;
-  }
-  if (move.freeOperation !== true) {
-    return false;
-  }
-  return pending.some((grant) =>
-    grant.seat === activeSeat
-    && isBlockingPendingFreeOperationGrant(grant)
-    && doesGrantPotentiallyAuthorizeMove(def, state, pending, grant, move));
 };
 
 export const applyTurnFlowEligibilityAfterMove = (

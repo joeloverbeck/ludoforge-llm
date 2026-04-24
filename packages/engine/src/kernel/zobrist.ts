@@ -134,7 +134,7 @@ const encodeFeature = (feature: ZobristFeature): string => {
     case 'zoneVar':
       return `kind=zoneVar|zoneId=${feature.zoneId}|varName=${feature.varName}|value=${feature.value}`;
     case 'decisionStackFrame':
-      return `kind=decisionStackFrame|slot=${feature.slot}|encoded=${feature.encoded}`;
+      return `kind=decisionStackFrame|slot=${feature.slot}|digest=${feature.digest}`;
     case 'nextFrameId':
       return `kind=nextFrameId|value=${feature.value}`;
     case 'nextTurnId':
@@ -165,6 +165,16 @@ const canonicalizeHashValue = (value: unknown): string => {
     return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeHashValue(entry)}`).join(',')}}`;
   }
   return JSON.stringify(String(value));
+};
+
+const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
+const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+
+const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
+  const encoded = canonicalizeHashValue(frame);
+  const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
+  const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
+  return `${digestA}:${digestB}`;
 };
 
 const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {
@@ -208,8 +218,35 @@ export const createZobristTable = (def: GameDef): ZobristTable => {
   return { seed, fingerprint, seedHex: seed.toString(16), keyCache: new Map(), sortedKeys: buildSortedKeys(def) };
 };
 
+const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
+  switch (feature.kind) {
+    case 'tokenPlacement':
+    case 'activePlayer':
+    case 'currentPhase':
+    case 'markerState':
+    case 'globalMarkerState':
+    case 'interruptPhaseFrame':
+    case 'revealGrant':
+    case 'activeDeciderSeatId':
+      return true;
+    case 'globalVar':
+    case 'perPlayerVar':
+    case 'turnCount':
+    case 'actionUsage':
+    case 'lastingEffect':
+    case 'zoneVar':
+    case 'decisionStackFrame':
+    case 'nextFrameId':
+    case 'nextTurnId':
+      return false;
+  }
+};
+
 export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
   const encoded = encodeFeature(feature);
+  if (!shouldCacheFeatureKey(feature)) {
+    return fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+  }
   const cached = table.keyCache.get(encoded);
   if (cached !== undefined) {
     return cached;
@@ -448,7 +485,7 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
     hash ^= zobristKey(table, {
       kind: 'decisionStackFrame',
       slot,
-      encoded: canonicalizeHashValue(frame),
+      digest: digestDecisionStackFrame(frame),
     });
   });
 

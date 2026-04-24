@@ -215,15 +215,17 @@ const withAccumulatedBinding = (
   decisionKey: DecisionKey,
   value: readonly MoveParamScalar[],
 ): DecisionStackFrame => {
-  const nextBindings = { ...frame.accumulatedBindings };
+  const nextBindings = { ...(frame.continuationBindings ?? {}) };
   if (value.length === 0) {
     delete nextBindings[decisionKey];
   } else {
     nextBindings[decisionKey] = value;
   }
+  const frameWithoutBindings = { ...frame };
+  delete frameWithoutBindings.continuationBindings;
   return {
-    ...frame,
-    accumulatedBindings: nextBindings,
+    ...frameWithoutBindings,
+    ...(Object.keys(nextBindings).length === 0 ? {} : { continuationBindings: nextBindings }),
   };
 };
 
@@ -232,8 +234,8 @@ const withAccumulatedBindingsFromMove = (
   move: Move,
 ): DecisionStackFrame => ({
   ...frame,
-  accumulatedBindings: {
-    ...frame.accumulatedBindings,
+  continuationBindings: {
+    ...(frame.continuationBindings ?? {}),
     ...Object.fromEntries(
       Object.entries(move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
     ),
@@ -301,7 +303,6 @@ const spawnPendingFrame = (
       parentFrameId: updatedRoot.frameId,
       turnId: updatedRoot.turnId,
       context: toStochasticDecisionStackContext(continuation),
-      accumulatedBindings: updatedRoot.accumulatedBindings,
       effectFrame: {
         ...emptyEffectFrame(),
         ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -316,7 +317,6 @@ const spawnPendingFrame = (
           pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
           continuation.nextChooseNTemplate,
         ),
-        accumulatedBindings: updatedRoot.accumulatedBindings,
         effectFrame: {
           ...emptyEffectFrame(),
           ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -417,7 +417,7 @@ export const applyPublishedDecision = (
       parentFrameId: null,
       turnId,
       context: microturn.decisionContext,
-      accumulatedBindings: Object.fromEntries(
+      continuationBindings: Object.fromEntries(
         Object.entries(continuation.move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
       ),
       effectFrame: {
@@ -431,7 +431,6 @@ export const applyPublishedDecision = (
         parentFrameId: rootFrame.frameId,
         turnId,
         context: toStochasticDecisionStackContext(continuation),
-        accumulatedBindings: {},
         effectFrame: {
           ...emptyEffectFrame(),
           ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -446,7 +445,6 @@ export const applyPublishedDecision = (
           pendingSeatId(def, canonicalState, microturn.seatId, continuation.nextDecision?.decisionPlayer),
           continuation.nextChooseNTemplate,
         ),
-        accumulatedBindings: {},
         effectFrame: {
           ...emptyEffectFrame(),
           ...(continuation.suspendedFrame === undefined ? {} : { suspendedFrame: continuation.suspendedFrame }),
@@ -505,8 +503,8 @@ export const applyPublishedDecision = (
     const tracedRoot = advanced.done
       ? {
         ...appendTraceEntry(rootFrame, entryForDecision(microturn, decision)),
-        accumulatedBindings: {
-          ...rootFrame.accumulatedBindings,
+        continuationBindings: {
+          ...(rootFrame.continuationBindings ?? {}),
           [decision.decisionKey]: advanced.value,
         },
       }

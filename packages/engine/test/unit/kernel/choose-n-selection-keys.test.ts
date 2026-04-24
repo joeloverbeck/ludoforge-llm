@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import {
   toSelectionKey,
-} from '../../../src/kernel/choose-n-session.js';
+} from '../../../src/kernel/choose-n-selection-key.js';
 import { optionKey } from '../../../src/kernel/legal-choices.js';
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -92,6 +92,21 @@ describe('toSelectionKey', () => {
       const key1 = toSelectionKey(domainIndex, ['opt_0', 'opt_1']);
       const key2 = toSelectionKey(domainIndex, ['opt_0', 'opt_2']);
       assert.notEqual(key1, key2);
+    });
+
+    it('does not retain oversized raw option payloads in the fallback key', () => {
+      const oversizedA = `opt_${'a'.repeat(256)}`;
+      const oversizedB = `opt_${'b'.repeat(256)}`;
+      const domain = Array.from({ length: 65 }, (_, i) =>
+        i === 5 ? oversizedA : i === 42 ? oversizedB : `opt_${i}`,
+      );
+      const domainIndex = buildDomainIndex(domain);
+
+      const key = toSelectionKey(domainIndex, [oversizedA, oversizedB]);
+
+      assert.equal(key, '5,42');
+      assert.ok(key.length < 16, `expected compact fallback key, received ${key.length}`);
+      assert.doesNotMatch(key, /a{32}|b{32}/, 'fallback key must not embed raw oversized option payloads');
     });
   });
 

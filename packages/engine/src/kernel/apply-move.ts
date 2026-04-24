@@ -41,10 +41,12 @@ import {
 } from './runtime-error.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import {
-  advanceSequenceReadyPendingFreeOperationGrants,
-  applyTurnFlowEligibilityAfterMove,
   hasActiveSeatRequiredPendingFreeOperationGrant,
   isMoveAllowedByRequiredPendingFreeOperationGrant,
+} from './required-free-operation-admissibility.js';
+import {
+  advanceSequenceReadyPendingFreeOperationGrants,
+  applyTurnFlowEligibilityAfterMove,
   splitReadyDeferredEventEffects,
   toPendingDeferredEventEffects,
   toPendingFreeOperationGrants,

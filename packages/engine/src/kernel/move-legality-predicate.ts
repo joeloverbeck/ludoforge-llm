@@ -9,6 +9,10 @@ import {
   hasLegalCompletedFreeOperationMoveInCurrentState,
 } from './free-operation-viability.js';
 import { createSeatResolutionContext } from './identity.js';
+import {
+  hasActiveSeatRequiredPendingFreeOperationGrant,
+  isMoveAllowedByRequiredPendingFreeOperationGrant,
+} from './required-free-operation-admissibility.js';
 import type { IllegalMoveContext } from './runtime-error.js';
 import { ILLEGAL_MOVE_REASONS, type IllegalMoveReason } from './runtime-reasons.js';
 import { isTurnFlowErrorCode } from './turn-flow-error.js';
@@ -43,6 +47,19 @@ const outcomePolicyFailureVerdict = (
     reason: ILLEGAL_MOVE_REASONS.FREE_OPERATION_OUTCOME_POLICY_FAILED,
     grantId: grant.grantId,
     outcomePolicy: 'mustChangeGameplayState',
+  },
+});
+
+const unresolvedRequiredFreeOperationGrantVerdict = (
+  move: Move,
+): LegalityVerdict => ({
+  kind: 'illegal',
+  reason: ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE,
+  context: {
+    actionId: move.actionId,
+    params: move.params,
+    reason: ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE,
+    detail: 'active seat has unresolved required free-operation grants',
   },
 });
 
@@ -122,15 +139,32 @@ export const evaluateMoveLegality = (
   }
   const seatResolution = createSeatResolutionContext(def, state.playerCount);
   const outcomeGrant = resolveOutcomePolicyGrant(def, state, sequence.move, sequence.complete, seatResolution);
-  if (outcomeGrant === null) {
+  if (outcomeGrant !== null) {
+    if (sequence.complete) {
+      return doesCompletedProbeMoveChangeGameplayState(def, state, sequence.move, seatResolution)
+        ? LEGAL_VERDICT
+        : outcomePolicyFailureVerdict(sequence.move, outcomeGrant);
+    }
+    if (!hasLegalCompletedFreeOperationMoveInCurrentState(def, state, sequence.move, seatResolution)) {
+      return outcomePolicyFailureVerdict(sequence.move, outcomeGrant);
+    }
+  }
+
+  if (!hasActiveSeatRequiredPendingFreeOperationGrant(def, state, seatResolution)) {
     return LEGAL_VERDICT;
   }
   if (sequence.complete) {
-    return doesCompletedProbeMoveChangeGameplayState(def, state, sequence.move, seatResolution)
+    return isMoveAllowedByRequiredPendingFreeOperationGrant(
+      def,
+      state,
+      sequence.move,
+      seatResolution,
+      { authorization: 'resolved' },
+    )
       ? LEGAL_VERDICT
-      : outcomePolicyFailureVerdict(sequence.move, outcomeGrant);
+      : unresolvedRequiredFreeOperationGrantVerdict(sequence.move);
   }
   return hasLegalCompletedFreeOperationMoveInCurrentState(def, state, sequence.move, seatResolution)
     ? LEGAL_VERDICT
-    : outcomePolicyFailureVerdict(sequence.move, outcomeGrant);
+    : unresolvedRequiredFreeOperationGrantVerdict(sequence.move);
 };

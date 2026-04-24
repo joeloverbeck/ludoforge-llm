@@ -18,6 +18,7 @@ import { createEvalRuntimeResources } from './eval-context.js';
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
+  resolveFreeOperationGrantViabilityPolicy,
 } from './free-operation-viability.js';
 import {
   appendSkippedSequenceStep,
@@ -300,8 +301,12 @@ export const applyGrantFreeOperation = (
   );
   env.freeOperationProbeScope?.priorGrantDefinitions.push(resolvedGrant);
 
-  if (
+  const shouldProbeGrantAtIssue =
     grantRequiresUsableProbe(resolvedGrant)
+    && resolveFreeOperationGrantViabilityPolicy(resolvedGrant) !== 'requireUsableForEventPlay';
+
+  if (
+    shouldProbeGrantAtIssue
     && !isFreeOperationGrantUsableInCurrentState(
       env.def,
       cursor.state,

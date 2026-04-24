@@ -55,6 +55,7 @@ import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { cardDrivenRuntime, type CardDrivenRuntime } from './card-driven-accessors.js';
+import { isMoveAllowedByRequiredPendingFreeOperationGrant } from './required-free-operation-admissibility.js';
 import type {
   ActionPipelineDef,
   ChoicePendingRequest,
@@ -618,6 +619,13 @@ const hasLegalCompletedProbeMove = (
           request.move,
           seatResolution,
           { zoneFilterErrorSurface: 'turnFlowEligibility' },
+        )
+        || !isMoveAllowedByRequiredPendingFreeOperationGrant(
+          def,
+          authorizationState,
+          request.move,
+          seatResolution,
+          { authorization: 'resolved' },
         )
         || !isCompletedProbeMoveCurrentlyLegal(def, authorizationState, request.move, seatResolution)
       ) {

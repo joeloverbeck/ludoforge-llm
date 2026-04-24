@@ -33,6 +33,38 @@ const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
 const TWO_TO_53 = 9007199254740992;
 const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
 const FNV_PRIME_64 = 0x100000001b3n;
+const POLICY_EVAL_TRACE_INTERVAL = 25;
+let policyEvalCallCount = 0;
+let policyEvalDepth = 0;
+
+const shouldLogPolicyEvalOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
+
+const heapUsedMb = (): number => Math.round(process.memoryUsage().heapUsed / 1024 / 1024);
+
+const shouldEmitPolicyEvalTrace = (
+  legalMoveCount: number,
+  depth: number,
+): boolean => {
+  if (!shouldLogPolicyEvalOomTrace()) {
+    return false;
+  }
+  return depth > 1 || legalMoveCount >= 8 || policyEvalCallCount % POLICY_EVAL_TRACE_INTERVAL === 0;
+};
+
+const logPolicyEvalOomTrace = (
+  label: string,
+  depth: number,
+  state: GameState,
+  legalMoveCount: number,
+  extras = '',
+): void => {
+  if (!shouldEmitPolicyEvalTrace(legalMoveCount, depth)) {
+    return;
+  }
+  console.error(
+    `[oom-trace] policy-eval:${label} depth=${depth} turn=${state.turnCount} legalMoves=${legalMoveCount} heapMb=${heapUsedMb()}${extras}`,
+  );
+};
 
 export interface PolicyPreviewUnknownRef {
   readonly refId: string;
@@ -342,306 +374,332 @@ function computeWeightedSampleProbabilities(candidates: readonly CandidateEntry[
 }
 
 export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEvaluationCoreResult {
+  policyEvalCallCount += 1;
+  policyEvalDepth += 1;
   const candidates = canonicalizeCandidates(input.def, input.legalMoves);
+  const currentDepth = policyEvalDepth;
+  logPolicyEvalOomTrace('start', currentDepth, input.state, candidates.length);
   const canonicalOrder = candidates.map((candidate) => candidate.stableMoveKey);
   const requestedProfileId = input.profileIdOverride ?? null;
 
-  if (candidates.length === 0) {
-    return {
-      kind: 'failure',
-      move: undefined,
-      rng: undefined,
-      failure: {
-        code: 'EMPTY_LEGAL_MOVES',
-        message: 'Policy evaluation requires at least one legal move.',
-      },
-      metadata: {
-        seatId: null,
-        requestedProfileId,
-        profileId: null,
-        profileFingerprint: null,
-        canonicalOrder,
-        candidates: [],
-        pruningSteps: [],
-        tieBreakChain: [],
-        previewUsage: emptyPreviewUsage('exactWorld'),
-        selectedStableMoveKey: null,
-        finalScore: null,
-        usedFallback: false,
+  try {
+    if (candidates.length === 0) {
+      return {
+        kind: 'failure',
+        move: undefined,
+        rng: undefined,
         failure: {
           code: 'EMPTY_LEGAL_MOVES',
           message: 'Policy evaluation requires at least one legal move.',
         },
-      },
-    };
-  }
-
-  const catalog = input.def.agents;
-  if (catalog === undefined) {
-    return failureWithMetadata(candidates, null, requestedProfileId, null, {
-      code: 'POLICY_CATALOG_MISSING',
-      message: 'GameDef.agents is required to evaluate an authored policy.',
-    });
-  }
-
-  const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
-  if (seatId === null) {
-    return failureWithMetadata(candidates, null, requestedProfileId, null, {
-      code: 'SEAT_UNRESOLVED',
-      message: `Player ${input.playerId} does not resolve to a canonical seat id for policy binding.`,
-      detail: { playerId: input.playerId },
-    });
-  }
-
-  const profileId = input.profileIdOverride ?? catalog.bindingsBySeat[seatId];
-  if (profileId === undefined) {
-    return failureWithMetadata(candidates, seatId, requestedProfileId, null, {
-      code: 'PROFILE_BINDING_MISSING',
-      message: `Seat "${seatId}" is not bound to an authored policy profile.`,
-      detail: { seatId },
-    });
-  }
-
-  const profile = catalog.profiles[profileId];
-  if (profile === undefined) {
-    return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, {
-      code: 'PROFILE_MISSING',
-      message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
-      detail: { seatId, profileId },
-    });
-  }
-
-  try {
-    const previewDependencies = {
-      ...createGrantedOperationPreviewDependencies(input.def, profileId),
-      ...input.previewDependencies,
-    } satisfies PolicyPreviewDependencies;
-    const evaluation = new PolicyEvaluationContext({
-      def: input.def,
-      state: input.state,
-      playerId: input.playerId,
-      seatId,
-      catalog,
-      parameterValues: profile.params,
-      trustedMoveIndex: input.trustedMoveIndex,
-      ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
-      previewDependencies,
-      ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-    }, candidates);
-    let activeCandidates = [...candidates];
-    const pruningSteps: PolicyEvaluationPruningStep[] = [];
-    const tieBreakChain: PolicyEvaluationTieBreakStep[] = [];
-
-    for (const featureId of profile.plan.stateFeatures) {
-      evaluation.evaluateStateFeature(featureId);
-    }
-    for (const candidate of activeCandidates) {
-      for (const featureId of profile.plan.candidateFeatures) {
-        const feature = catalog.library.candidateFeatures[featureId];
-        if (feature?.costClass === 'preview' && !evaluation.hasPreviewData(candidate)) {
-          continue;
-        }
-        evaluation.evaluateCandidateFeature(candidate, featureId);
-      }
-    }
-
-    for (const pruningRuleId of profile.use.pruningRules) {
-      const pruningRule = catalog.library.pruningRules[pruningRuleId];
-      if (pruningRule === undefined) {
-        throw new PolicyRuntimeError({
-          code: 'RUNTIME_EVALUATION_ERROR',
-          message: `Unknown pruning rule "${pruningRuleId}".`,
-          detail: { pruningRuleId },
-        });
-      }
-      const survivors = activeCandidates.filter((candidate) => {
-        const shouldPrune = evaluation.evaluateExpr(pruningRule.when, candidate);
-        if (shouldPrune === true) {
-          candidate.prunedBy.push(pruningRuleId);
-          return false;
-        }
-        return true;
-      });
-
-      if (survivors.length === 0) {
-        if (pruningRule.onEmpty === 'skipRule') {
-          activeCandidates.forEach((candidate) => {
-            if (candidate.prunedBy.at(-1) === pruningRuleId) {
-              candidate.prunedBy.pop();
-            }
-          });
-          pruningSteps.push({
-            ruleId: pruningRuleId,
-            remainingCandidateCount: activeCandidates.length,
-            skippedBecauseEmpty: true,
-          });
-          continue;
-        }
-        throw new PolicyRuntimeError({
-          code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
-          message: `Pruning rule "${pruningRuleId}" removed every candidate.`,
-          detail: { pruningRuleId },
-        });
-      }
-
-      if (survivors.length !== activeCandidates.length) {
-        activeCandidates = survivors;
-        evaluation.setCurrentCandidates(activeCandidates);
-      }
-      pruningSteps.push({
-        ruleId: pruningRuleId,
-        remainingCandidateCount: activeCandidates.length,
-        skippedBecauseEmpty: false,
-      });
-    }
-
-    const considerations = catalog.library.considerations ?? {};
-    const moveConsiderationIds = (profile.use.considerations ?? []).filter(
-      (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
-    );
-    for (const candidate of activeCandidates) {
-      candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
-        total + evaluation.evaluateConsideration(
-          considerations,
-          considerationId,
-          candidate,
-          (contribution) => {
-            candidate.scoreContributions.push({ termId: considerationId, contribution });
+        metadata: {
+          seatId: null,
+          requestedProfileId,
+          profileId: null,
+          profileFingerprint: null,
+          canonicalOrder,
+          candidates: [],
+          pruningSteps: [],
+          tieBreakChain: [],
+          previewUsage: emptyPreviewUsage('exactWorld'),
+          selectedStableMoveKey: null,
+          finalScore: null,
+          usedFallback: false,
+          failure: {
+            code: 'EMPTY_LEGAL_MOVES',
+            message: 'Policy evaluation requires at least one legal move.',
           },
-        )
-      ), 0);
-      evaluation.finalizePreviewOutcome(candidate);
+        },
+      };
     }
-    let rng = input.rng;
-    let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];
-    if (input.selectionGrouping === 'actionId') {
-      const groupedSelection = selectRepresentativeCandidatesByActionId(
-        evaluation,
+
+    const catalog = input.def.agents;
+    if (catalog === undefined) {
+      return failureWithMetadata(candidates, null, requestedProfileId, null, {
+        code: 'POLICY_CATALOG_MISSING',
+        message: 'GameDef.agents is required to evaluate an authored policy.',
+      });
+    }
+
+    const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
+    if (seatId === null) {
+      return failureWithMetadata(candidates, null, requestedProfileId, null, {
+        code: 'SEAT_UNRESOLVED',
+        message: `Player ${input.playerId} does not resolve to a canonical seat id for policy binding.`,
+        detail: { playerId: input.playerId },
+      });
+    }
+
+    const profileId = input.profileIdOverride ?? catalog.bindingsBySeat[seatId];
+    if (profileId === undefined) {
+      return failureWithMetadata(candidates, seatId, requestedProfileId, null, {
+        code: 'PROFILE_BINDING_MISSING',
+        message: `Seat "${seatId}" is not bound to an authored policy profile.`,
+        detail: { seatId },
+      });
+    }
+
+    const profile = catalog.profiles[profileId];
+    if (profile === undefined) {
+      return failureWithMetadata(candidates, seatId, requestedProfileId, profileId, {
+        code: 'PROFILE_MISSING',
+        message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
+        detail: { seatId, profileId },
+      });
+    }
+
+    let evaluationForDispose: PolicyEvaluationContext | undefined;
+    try {
+      const previewDependencies = {
+        ...createGrantedOperationPreviewDependencies(input.def, profileId),
+        ...input.previewDependencies,
+      } satisfies PolicyPreviewDependencies;
+      const evaluation = new PolicyEvaluationContext({
+        def: input.def,
+        state: input.state,
+        playerId: input.playerId,
+        seatId,
         catalog,
-        selectionCandidates,
-        profile.use.tieBreakers,
-        rng,
-      );
-      selectionCandidates = groupedSelection.candidates;
-      rng = groupedSelection.rng;
-    }
-    let selected: CandidateEntry | undefined;
-    let selectionTrace: PolicyEvaluationSelectionTrace | undefined;
-    switch (profile.selection.mode) {
-      case 'argmax': {
-        const bestScore = selectionCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
-        let bestCandidates = selectionCandidates.filter((candidate) => candidate.score === bestScore);
+        parameterValues: profile.params,
+        trustedMoveIndex: input.trustedMoveIndex,
+        ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
+        previewDependencies,
+        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      }, candidates);
+      evaluationForDispose = evaluation;
+      let activeCandidates = [...candidates];
+      const pruningSteps: PolicyEvaluationPruningStep[] = [];
+      const tieBreakChain: PolicyEvaluationTieBreakStep[] = [];
 
-        for (const tieBreakerId of profile.use.tieBreakers) {
-          if (bestCandidates.length <= 1) {
-            break;
-          }
-          const candidateCountBefore = bestCandidates.length;
-          const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, rng);
-          bestCandidates = [...tieBreakResult.candidates];
-          rng = tieBreakResult.rng;
-          tieBreakChain.push({
-            tieBreakerId,
-            candidateCountBefore,
-            candidateCountAfter: bestCandidates.length,
-          });
-        }
-
-        selected = bestCandidates[0] ?? selectionCandidates[0];
-        selectionTrace = {
-          mode: 'argmax',
-          candidateCount: selectionCandidates.length,
-          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-        };
-        break;
+      for (const featureId of profile.plan.stateFeatures) {
+        evaluation.evaluateStateFeature(featureId);
       }
-      case 'softmaxSample': {
-        const temperature = profile.selection.temperature;
-        if (temperature === undefined) {
+      for (const candidate of activeCandidates) {
+        for (const featureId of profile.plan.candidateFeatures) {
+          const feature = catalog.library.candidateFeatures[featureId];
+          if (feature?.costClass === 'preview' && !evaluation.hasPreviewData(candidate)) {
+            continue;
+          }
+          evaluation.evaluateCandidateFeature(candidate, featureId);
+        }
+      }
+
+      for (const pruningRuleId of profile.use.pruningRules) {
+        const pruningRule = catalog.library.pruningRules[pruningRuleId];
+        if (pruningRule === undefined) {
           throw new PolicyRuntimeError({
             code: 'RUNTIME_EVALUATION_ERROR',
-            message: `Profile "${profileId}" selection.mode "softmaxSample" requires temperature at runtime.`,
-            detail: { profileId },
+            message: `Unknown pruning rule "${pruningRuleId}".`,
+            detail: { pruningRuleId },
           });
         }
-        const probabilities = computeSoftmaxProbabilities(selectionCandidates, temperature);
-        selected = sampleCandidateByProbabilities(
-          selectionCandidates,
-          probabilities,
-          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
-        ).selected;
-        selectionTrace = {
-          mode: 'softmaxSample',
-          temperature,
-          candidateCount: selectionCandidates.length,
-          samplingProbabilities: probabilities,
-          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-        };
-        break;
-      }
-      case 'weightedSample': {
-        const probabilities = computeWeightedSampleProbabilities(selectionCandidates);
-        selected = sampleCandidateByProbabilities(
-          selectionCandidates,
-          probabilities,
-          deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
-        ).selected;
-        selectionTrace = {
-          mode: 'weightedSample',
-          candidateCount: selectionCandidates.length,
-          samplingProbabilities: probabilities,
-          selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-        };
-        break;
-      }
-    }
+        const survivors = activeCandidates.filter((candidate) => {
+          const shouldPrune = evaluation.evaluateExpr(pruningRule.when, candidate);
+          if (shouldPrune === true) {
+            candidate.prunedBy.push(pruningRuleId);
+            return false;
+          }
+          return true;
+        });
 
-    if (selected === undefined) {
-      throw new PolicyRuntimeError({
-        code: 'RUNTIME_EVALUATION_ERROR',
-        message: 'Policy evaluation did not produce a selectable candidate.',
-      });
-    }
+        if (survivors.length === 0) {
+          if (pruningRule.onEmpty === 'skipRule') {
+            activeCandidates.forEach((candidate) => {
+              if (candidate.prunedBy.at(-1) === pruningRuleId) {
+                candidate.prunedBy.pop();
+              }
+            });
+            pruningSteps.push({
+              ruleId: pruningRuleId,
+              remainingCandidateCount: activeCandidates.length,
+              skippedBecauseEmpty: true,
+            });
+            continue;
+          }
+          throw new PolicyRuntimeError({
+            code: 'PRUNING_RULE_EMPTIED_CANDIDATES',
+            message: `Pruning rule "${pruningRuleId}" removed every candidate.`,
+            detail: { pruningRuleId },
+          });
+        }
 
-    const stateFeatures = evaluation.getEvaluatedStateFeatures();
-    return {
-      kind: 'success',
-      move: selected.move,
-      rng,
-      failure: undefined,
-      metadata: {
+        if (survivors.length !== activeCandidates.length) {
+          activeCandidates = survivors;
+          evaluation.setCurrentCandidates(activeCandidates);
+        }
+        pruningSteps.push({
+          ruleId: pruningRuleId,
+          remainingCandidateCount: activeCandidates.length,
+          skippedBecauseEmpty: false,
+        });
+      }
+
+      const considerations = catalog.library.considerations ?? {};
+      const moveConsiderationIds = (profile.use.considerations ?? []).filter(
+        (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
+      );
+      for (const candidate of activeCandidates) {
+        candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
+          total + evaluation.evaluateConsideration(
+            considerations,
+            considerationId,
+            candidate,
+            (contribution) => {
+              candidate.scoreContributions.push({ termId: considerationId, contribution });
+            },
+          )
+        ), 0);
+        evaluation.finalizePreviewOutcome(candidate);
+      }
+      let rng = input.rng;
+      let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];
+      if (input.selectionGrouping === 'actionId') {
+        const groupedSelection = selectRepresentativeCandidatesByActionId(
+          evaluation,
+          catalog,
+          selectionCandidates,
+          profile.use.tieBreakers,
+          rng,
+        );
+        selectionCandidates = groupedSelection.candidates;
+        rng = groupedSelection.rng;
+      }
+      let selected: CandidateEntry | undefined;
+      let selectionTrace: PolicyEvaluationSelectionTrace | undefined;
+      switch (profile.selection.mode) {
+        case 'argmax': {
+          const bestScore = selectionCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
+          let bestCandidates = selectionCandidates.filter((candidate) => candidate.score === bestScore);
+
+          for (const tieBreakerId of profile.use.tieBreakers) {
+            if (bestCandidates.length <= 1) {
+              break;
+            }
+            const candidateCountBefore = bestCandidates.length;
+            const tieBreakResult = applyTieBreaker(evaluation, catalog, bestCandidates, tieBreakerId, rng);
+            bestCandidates = [...tieBreakResult.candidates];
+            rng = tieBreakResult.rng;
+            tieBreakChain.push({
+              tieBreakerId,
+              candidateCountBefore,
+              candidateCountAfter: bestCandidates.length,
+            });
+          }
+
+          selected = bestCandidates[0] ?? selectionCandidates[0];
+          selectionTrace = {
+            mode: 'argmax',
+            candidateCount: selectionCandidates.length,
+            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          };
+          break;
+        }
+        case 'softmaxSample': {
+          const temperature = profile.selection.temperature;
+          if (temperature === undefined) {
+            throw new PolicyRuntimeError({
+              code: 'RUNTIME_EVALUATION_ERROR',
+              message: `Profile "${profileId}" selection.mode "softmaxSample" requires temperature at runtime.`,
+              detail: { profileId },
+            });
+          }
+          const probabilities = computeSoftmaxProbabilities(selectionCandidates, temperature);
+          selected = sampleCandidateByProbabilities(
+            selectionCandidates,
+            probabilities,
+            deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
+          ).selected;
+          selectionTrace = {
+            mode: 'softmaxSample',
+            temperature,
+            candidateCount: selectionCandidates.length,
+            samplingProbabilities: probabilities,
+            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          };
+          break;
+        }
+        case 'weightedSample': {
+          const probabilities = computeWeightedSampleProbabilities(selectionCandidates);
+          selected = sampleCandidateByProbabilities(
+            selectionCandidates,
+            probabilities,
+            deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
+          ).selected;
+          selectionTrace = {
+            mode: 'weightedSample',
+            candidateCount: selectionCandidates.length,
+            samplingProbabilities: probabilities,
+            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+          };
+          break;
+        }
+      }
+
+      if (selected === undefined) {
+        throw new PolicyRuntimeError({
+          code: 'RUNTIME_EVALUATION_ERROR',
+          message: 'Policy evaluation did not produce a selectable candidate.',
+        });
+      }
+
+      const stateFeatures = evaluation.getEvaluatedStateFeatures();
+      logPolicyEvalOomTrace(
+        'success',
+        currentDepth,
+        input.state,
+        candidates.length,
+        ` selectedCandidates=${selectionCandidates.length} finalScore=${selected.score}`,
+      );
+      return {
+        kind: 'success',
+        move: selected.move,
+        rng,
+        failure: undefined,
+        metadata: {
+          seatId,
+          requestedProfileId,
+          profileId,
+          profileFingerprint: profile.fingerprint,
+          canonicalOrder,
+          candidates: candidates.map(candidateMetadata),
+          pruningSteps,
+          tieBreakChain,
+          previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
+          ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
+          ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
+          selectedStableMoveKey: selected.stableMoveKey,
+          finalScore: Number.isFinite(selected.score) ? selected.score : null,
+          usedFallback: false,
+          failure: null,
+        },
+      };
+    } catch (error) {
+      const failure = error instanceof PolicyRuntimeError
+        ? error.failure as PolicyEvaluationFailure
+        : {
+            code: 'RUNTIME_EVALUATION_ERROR' as const,
+            message: error instanceof Error ? error.message : 'Unknown policy evaluation failure.',
+          };
+      logPolicyEvalOomTrace(
+        'failure',
+        currentDepth,
+        input.state,
+        candidates.length,
+        ` code=${failure.code}`,
+      );
+      return failureWithMetadata(
+        candidates,
         seatId,
         requestedProfileId,
         profileId,
-        profileFingerprint: profile.fingerprint,
-        canonicalOrder,
-        candidates: candidates.map(candidateMetadata),
-        pruningSteps,
-        tieBreakChain,
-        previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
-        ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
-        ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
-        selectedStableMoveKey: selected.stableMoveKey,
-        finalScore: Number.isFinite(selected.score) ? selected.score : null,
-        usedFallback: false,
-        failure: null,
-      },
-    };
-  } catch (error) {
-    const failure = error instanceof PolicyRuntimeError
-      ? error.failure as PolicyEvaluationFailure
-      : {
-          code: 'RUNTIME_EVALUATION_ERROR' as const,
-          message: error instanceof Error ? error.message : 'Unknown policy evaluation failure.',
-        };
-    return failureWithMetadata(
-      candidates,
-      seatId,
-      requestedProfileId,
-      profileId,
-      failure,
-      profile.fingerprint,
-    );
+        failure,
+        profile.fingerprint,
+      );
+    } finally {
+      evaluationForDispose?.dispose();
+    }
+  } finally {
+    policyEvalDepth -= 1;
   }
 }
 
@@ -668,6 +726,13 @@ function createGrantedOperationPreviewDependencies(
       }
 
       const availableMoves = legalMoves(currentDef, postEventState, undefined, runtime);
+      logPolicyEvalOomTrace(
+        'granted-operation-preview',
+        policyEvalDepth + 1,
+        postEventState,
+        availableMoves.length,
+        ` activeSeat=${activeSeatId ?? 'null'} grantSeat=${agentSeatId}`,
+      );
       if (availableMoves.length === 0) {
         return undefined;
       }

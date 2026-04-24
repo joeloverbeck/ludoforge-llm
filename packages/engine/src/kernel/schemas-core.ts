@@ -1343,7 +1343,7 @@ export const DecisionStackFrameSchema = z
     parentFrameId: NumberSchema.nullable(),
     turnId: NumberSchema,
     context: DecisionContextSchema,
-    accumulatedBindings: z.record(StringSchema, MoveParamValueSchema),
+    continuationBindings: z.record(StringSchema, MoveParamValueSchema).optional(),
     effectFrame: EffectExecutionFrameSnapshotSchema,
   })
   .strict();

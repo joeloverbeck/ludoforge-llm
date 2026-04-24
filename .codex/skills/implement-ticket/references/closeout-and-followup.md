@@ -74,3 +74,87 @@ For active-ticket rewrites that change the ticket graph itself, an optional fina
 ## Draft Ticket Durable Closeout
 
 For active untracked draft tickets, prefer the same durable closeout pattern before finishing the turn: update the draft ticket status and outcome so later sessions inherit the corrected contract, touched-file scope, and repo-valid verification commands rather than the stale draft wording.
+
+## Touched-File Scope Sweep
+
+As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`. Remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.
+
+If that sweep finds ticket-named files that were intentionally left untouched because reassessment proved no live change was required, do not quietly leave the mismatch behind. Record the correction in the active ticket closeout so the final artifact explains why those paths remained unchanged.
+
+If that sweep finds additional live-diff files or generated artifacts that were not named in the ticket, treat that as the same class of ticket drift as an untouched named file. Update the active ticket before closeout so the touched-file scope explains both omitted additions and omitted removals.
+
+When a ticket that initially looked code-only widens during live reassessment into authored game data, policy catalogs, or other rule-authoritative assets, do not leave that ownership change implicit. Update `Files to Touch` / `What to Change` before final proof so the closeout truthfully records the mixed code-plus-authored-data boundary.
+
+When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
+
+## Correction Ledger Pattern
+
+When live implementation requires correcting stale ticket text, record a compact ledger in the active ticket before the final proof pass when proportionate:
+
+- `ticket corrections applied`: `<stale claim> -> <live contract>`
+
+Use this for concrete live-contract fixes such as helper signatures, export-surface ownership, touched-file scope, or verification command wording. Keep it short; do not turn it into a second narrative section when a one-line correction ledger is enough.
+
+When the ticket lands successfully but the live investigation disproves part of the draft framing, still close the ticket truthfully if the owned evidence artifact was produced. In that case, keep the correction ledger explicit rather than quietly preserving the stale hypothesis. Typical shape:
+
+- `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
+
+## Draft Ticket Closeout Order
+
+For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
+
+1. Update the draft ticket status truthfully (`COMPLETED`, `BLOCKED`, etc.).
+2. Record what landed, any boundary correction, and the verification set you intend to run.
+3. Make any needed ticket-scope or touched-file corrections before the final acceptance-proof pass.
+4. Run the final acceptance-proof set after those ticket edits so the last green run matches both code and ticket artifact.
+
+If those ticket edits include path, dependency, archival, or ticket-id corrections, do one immediate narrow integrity pass before treating closeout as done:
+
+1. Run a cheap self-reference check for the corrected literal/path when proportionate (for example `rg` on the active ticket for the old ticket id/path).
+2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
+3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
+
+## Dependency Integrity Pass
+
+If the session creates a new prerequisite/follow-up ticket or rewires deps across the active series, treat dependency validation as immediate, not optional:
+
+1. update the affected deps/status fields first
+2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
+3. fix any cycle or stale dependency before continuing to broader proof or final closeout
+
+## Sibling Absorbed Ownership
+
+When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
+
+1. Update each affected sibling draft to a truthful durable state before or alongside the final proof pass (`DEFERRED`, `BLOCKED`, or equivalent per repo convention).
+2. Add a compact historical-resolution note so the series remains inspectable without rereading the whole session.
+3. Treat stale sibling draft statuses after an ownership rewrite as acceptance-proof drift, not optional postscript cleanup.
+
+Suggested compact sibling ledger:
+
+- `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
+
+## Compact Final-Proof Ledger
+
+Suggested compact final-proof ledger:
+
+- `ticket corrections applied`: `<stale claim> -> <live contract>`
+- `verification set`: `<commands run directly in final proof order>`
+- `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
+- `proof gaps`: `none` or `<remaining blocker>`
+- `architectural follow-up`: `<new spec/ticket id or proposed artifact> for <cross-ticket contract discovered during implementation>` when the ticket uncovered a broader design gap that outlives the local fix
+
+Investigation-ticket example when the artifact landed but the hypothesis shifted:
+
+- `ticket corrections applied`: `expected small viable subset on both seeds -> measured 44/44 on seed A and 1/30 on seed B`
+- `verification set`: `<artifact-generation commands in final proof order>`
+- `proof gaps`: `none`
+
+Evidence-ticket compact closeout pattern when the deliverable is primarily a script plus checked-in report/artifact:
+
+- `capture command`: `<stable artifact-producing command>`
+- `repro command`: `<best live failure repro command>` or `same as capture command`
+- `artifact paths`: `<checked-in report/script/generated artifact paths>`
+- `measured result`: `<top-line quantitative or categorical outcome>`
+- `mapping gaps`: `<top-N entries or observations not yet covered by the starter taxonomy>` or `none`
+- `verification set`: `<commands run directly in final proof order>`

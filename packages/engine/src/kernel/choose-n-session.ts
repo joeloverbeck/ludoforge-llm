@@ -14,6 +14,7 @@
  * behavior of buildChooseNPendingChoice in effects-choice.ts.
  */
 import { canConfirmChooseNSelection } from './choose-n-cardinality.js';
+import { toSelectionKey, type SelectionKey } from './choose-n-selection-key.js';
 import { validateChooseNSelectedSequence } from './choose-n-selected-validation.js';
 import { optionKey } from './legal-choices.js';
 import { computeTierAdmissibility, type PrioritizedTierEntry } from './prioritized-tier-legality.js';
@@ -228,49 +229,6 @@ export const isChooseNSessionEligible = (
   return true;
 };
 
-// ── Canonical selection keys ──────────────────────────────────────
-
-/**
- * A canonical set key for probe and legality caches.
- *
- * - For domains up to 64 options: bigint bitset (set bit per option's
- *   domain index). Efficient equality and hashing.
- * - For larger domains: sorted option key string.
- *
- * Internal only — public `selected` order is unchanged by this.
- */
-export type SelectionKey = bigint | string;
-
-/** Maximum domain size for the bigint bitset representation. */
-const MAX_BITSET_DOMAIN_SIZE = 64;
-
-/**
- * Compute a canonical SelectionKey for a set of selected values.
- *
- * Deterministic: same selected set (regardless of order) → same key.
- */
-export const toSelectionKey = (
-  domainIndex: ReadonlyMap<string, number>,
-  selected: readonly MoveParamScalar[],
-): SelectionKey => {
-  if (domainIndex.size <= MAX_BITSET_DOMAIN_SIZE) {
-    let bits = 0n;
-    for (const value of selected) {
-      const idx = domainIndex.get(optionKey(value));
-      if (idx !== undefined) {
-        bits |= 1n << BigInt(idx);
-      }
-    }
-    return bits;
-  }
-
-  // Large domain: sorted string key.
-  return selected
-    .map((v) => optionKey(v))
-    .sort()
-    .join('|');
-};
-
 // ── ChooseNSession ────────────────────────────────────────────────
 
 /**
@@ -289,7 +247,23 @@ export interface ChooseNSession {
   readonly revision: number;
   readonly decisionKey: DecisionKey;
   readonly template: ChooseNTemplate;
+  /**
+   * Owner scope: one chooseN session.
+   * Key shape: selection fingerprint for singleton probes.
+   * Maximum retained population: bounded by the session's explored
+   * selection surface, not by decisions across the whole run.
+   * Drop rule: cleared via `disposeChooseNSession(...)` before the
+   * session owner discards the session.
+   */
   readonly probeCache: Map<SelectionKey, SingletonProbeOutcome>;
+  /**
+   * Owner scope: one chooseN session.
+   * Key shape: selection fingerprint to rebuilt option legality results.
+   * Maximum retained population: bounded by the session's explored
+   * candidate surface, not by decisions across the whole run.
+   * Drop rule: cleared via `disposeChooseNSession(...)` before the
+   * session owner discards the session.
+   */
   readonly legalityCache: Map<SelectionKey, readonly ChoiceOption[]>;
   currentSelected: readonly MoveParamScalar[];
   currentPending: ChoicePendingChooseNRequest;
@@ -328,6 +302,18 @@ export const isSessionValid = (
   session: ChooseNSession,
   currentRevision: number,
 ): boolean => session.revision === currentRevision;
+
+/**
+ * Explicit scope-exit hook for decision-local chooseN session helpers.
+ *
+ * The session owner should call this before dropping an expired or
+ * completed session so probe and legality caches do not rely on GC
+ * alone for boundedness.
+ */
+export const disposeChooseNSession = (session: ChooseNSession): void => {
+  session.probeCache.clear();
+  session.legalityCache.clear();
+};
 
 // ── Session-aware toggle types ────────────────────────────────────
 

@@ -217,12 +217,13 @@ export function matchesZoneFilter(
 }
 
 export class PolicyEvaluationContext {
-  private readonly stateFeatureCacheByState = new Map<bigint, Map<string, PolicyValue>>();
+  private readonly rootStateFeatureCache = new Map<string, PolicyValue>();
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
-  private readonly zoneReadContextsByState = new Map<bigint, ReadContext>();
+  private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
+  private transientZoneReadContext: { readonly stateHash: bigint; readonly context: ReadContext } | null = null;
   private currentCandidates: PolicyEvaluationCandidate[];
   private activeState: GameState;
   private currentSeatContext: string | undefined;
@@ -248,6 +249,19 @@ export class PolicyEvaluationContext {
     });
   }
 
+  dispose(): void {
+    this.rootStateFeatureCache.clear();
+    this.candidateFeatureCache.clear();
+    this.aggregateCache.clear();
+    this.strategicConditionCache.clear();
+    this.transientStateFeatureCache?.cache.clear();
+    this.transientStateFeatureCache = null;
+    this.transientZoneReadContext = null;
+    this.currentCandidates = [];
+    this.currentSeatContext = undefined;
+    this.runtimeProviders.dispose();
+  }
+
   invalidateAggregates(): void {
     this.aggregateCache.clear();
   }
@@ -259,11 +273,7 @@ export class PolicyEvaluationContext {
 
   getEvaluatedStateFeatures(): Readonly<Record<string, number | string | boolean>> {
     const result: Record<string, number | string | boolean> = {};
-    const cache = this.stateFeatureCacheByState.get(this.input.state.stateHash);
-    if (cache === undefined) {
-      return result;
-    }
-    for (const [id, value] of cache) {
+    for (const [id, value] of this.rootStateFeatureCache) {
       if (typeof value === 'number' || typeof value === 'string' || typeof value === 'boolean') {
         result[id] = value;
       }
@@ -930,9 +940,13 @@ export class PolicyEvaluationContext {
 
   private getZoneReadContext(): ReadContext {
     const currentState = this.activeState;
-    const cached = this.zoneReadContextsByState.get(currentState.stateHash);
-    if (cached !== undefined) {
-      return cached;
+    if (currentState.stateHash === this.input.state.stateHash) {
+      const cached = this.transientZoneReadContext;
+      if (cached?.stateHash === currentState.stateHash) {
+        return cached.context;
+      }
+    } else if (this.transientZoneReadContext?.stateHash === currentState.stateHash) {
+      return this.transientZoneReadContext.context;
     }
     const resources = createEvalRuntimeResources();
     const context = createEvalContext({
@@ -945,7 +959,7 @@ export class PolicyEvaluationContext {
       runtimeTableIndex: this.input.runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(this.input.def),
       resources,
     });
-    this.zoneReadContextsByState.set(currentState.stateHash, context);
+    this.transientZoneReadContext = { stateHash: currentState.stateHash, context };
     return context;
   }
 
@@ -987,12 +1001,6 @@ export class PolicyEvaluationContext {
         candidate.previewFailureReason = previewFailureReason;
       }
     }
-    if (candidate.grantedOperation === undefined) {
-      const grantedOperation = this.runtimeProviders.previewSurface.getGrantedOperation(candidate);
-      if (grantedOperation !== undefined) {
-        candidate.grantedOperation = grantedOperation;
-      }
-    }
   }
 
   private evaluateStateFeatureAgainstState(featureId: string, state: GameState): PolicyValue {
@@ -1010,11 +1018,14 @@ export class PolicyEvaluationContext {
   }
 
   private getStateFeatureCache(state: GameState): Map<string, PolicyValue> {
-    let cache = this.stateFeatureCacheByState.get(state.stateHash);
-    if (cache === undefined) {
-      cache = new Map<string, PolicyValue>();
-      this.stateFeatureCacheByState.set(state.stateHash, cache);
+    if (state.stateHash === this.input.state.stateHash) {
+      return this.rootStateFeatureCache;
     }
+    if (this.transientStateFeatureCache?.stateHash === state.stateHash) {
+      return this.transientStateFeatureCache.cache;
+    }
+    const cache = new Map<string, PolicyValue>();
+    this.transientStateFeatureCache = { stateHash: state.stateHash, cache };
     return cache;
   }
 

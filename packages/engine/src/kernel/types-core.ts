@@ -1068,7 +1068,7 @@ export type ZobristFeature =
       readonly varName: string;
       readonly value: number;
     }
-  | { readonly kind: 'decisionStackFrame'; readonly slot: number; readonly encoded: string }
+  | { readonly kind: 'decisionStackFrame'; readonly slot: number; readonly digest: string }
   | { readonly kind: 'nextFrameId'; readonly value: number }
   | { readonly kind: 'nextTurnId'; readonly value: number }
   | { readonly kind: 'activeDeciderSeatId'; readonly seatId: string };

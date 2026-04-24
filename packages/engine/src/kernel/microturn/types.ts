@@ -207,7 +207,16 @@ export interface DecisionStackFrame {
   readonly parentFrameId: DecisionFrameId | null;
   readonly turnId: TurnId;
   readonly context: DecisionContext;
-  readonly accumulatedBindings: Readonly<Record<DecisionKey, MoveParamValue>>;
+  /**
+   * Root-frame continuation payload only.
+   *
+   * Owner scope: the root decision-stack frame for one in-progress atomic move.
+   * Key shape: decision-key to canonical move-param value.
+   * Maximum retained population: bounded by the number of continuation-required
+   * decision bindings in the current move, not by decision count over the run.
+   * Drop rule: omitted on child frames and released when the root frame retires.
+   */
+  readonly continuationBindings?: Readonly<Record<DecisionKey, MoveParamValue>>;
   readonly effectFrame: EffectExecutionFrameSnapshot;
 }
 

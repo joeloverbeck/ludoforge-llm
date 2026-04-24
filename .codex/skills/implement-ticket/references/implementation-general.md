@@ -66,3 +66,68 @@ When a confirmed boundary rewrite absorbs or defers work across the series:
 3. Update sibling scope/deps/status in the same turn or record why no edit was necessary.
 4. Run `pnpm run check:ticket-deps` when available.
 5. In working notes and final closeout, name absorbed and deferred scope.
+
+## Named-Witness Regression Loop
+
+For named-witness regression tickets that cite a small seed/case matrix, add one cheap direct witness loop between candidate fixes and the heavier acceptance lanes:
+
+1. rerun the exact named seeds/cases directly through the most authoritative live seam available
+2. use that matrix to classify `still broken`, `partially repaired`, or `fully repaired on owned witnesses`
+3. if the result is only `partially repaired`, stop for `1-3-1` before continuing when the remaining fix path is no longer obvious
+4. only return to the heavier focused/package/workspace acceptance lanes once the named witness matrix matches the intended boundary
+
+## Representative-Corpus Preflight
+
+For representative-corpus proof tickets that do **not** bind to exact seeds/cases, use this compact preflight before writing or finalizing the durable witness set:
+
+1. probe each candidate once through the authoritative fresh path
+2. classify each candidate as `owned invariant exercised cleanly` or `candidate blocked by unrelated live failure`
+3. keep the smallest representative passing subset that still covers the ticket's stated surface
+4. record any dropped candidate and replacement in the ticket outcome before final proof so the closeout explains why the final corpus changed
+
+## Same-Ticket Widened Continuation Checklist
+
+When `docs/FOUNDATIONS.md` and live proof require the active ticket to widen in place, run this short checklist before treating any later proof as final:
+
+1. confirm the earlier bounded seam is no longer sufficient for ticket completion
+2. restate the widened owned outcome in commentary and working notes
+3. update the active ticket's boundary/proof wording before the final proof pass if it still reflects the narrower slice
+4. run the widened proof surface that now owns completion
+5. close the ticket only once that authoritative acceptance lane is green
+
+## Synthetic Fixture Checklist
+
+When a ticket needs a new narrow kernel/compiler proof with a synthetic fixture, prefer this setup unless live code says otherwise:
+
+1. Use the real runtime seam whenever practical (`resolveMoveDecisionSequence`, `legalChoices`, classifier/admission helpers, etc.) instead of mocked request objects or hand-simulated intermediate structures.
+2. Reuse existing fixture helpers such as `asTaggedGameDef`, effect-tag helpers, and nearby state builders before inventing new one-off scaffolding.
+3. Verify whether the test should import from the public package surface or an internal module before writing the fixture.
+4. If the assertion depends on runtime-generated identifiers, derive the canonical identifiers from the live seam first, then build the expected witness/certificate/assertion payload from that observed sequence rather than hardcoding draft-shaped literals.
+5. If the production seam is intentionally absent because the ticket is proving feasibility ahead of implementation, prefer the smallest deterministic sketch harness that models the proposed contract directly. Keep that scaffold local to the test/prototype surface and make the proof target explicit (`feasibility`, `suspend/resume ordering`, `serialization stability`, etc.), not production readiness.
+
+When a synthetic fixture proves simulator boundedness, turn retirement, or `runGame` stop behavior, add this stale-witness check before treating silence or timeout as harness drift:
+
+1. verify the live stop budget the runtime actually enforces (`turnCount`, decision count, terminal condition, or another owned bound) instead of assuming the draft witness still targets the same budget surface
+2. check that the fixture's legal-action frontier still advances the owned stop surface under the current protocol; a same-turn repeatable action may keep emitting legal decisions forever without progressing the budget the simulator now uses
+3. if the fixture no longer advances that surface, fix the witness first and rerun before escalating to runner or harness diagnosis
+4. when the remaining negative-path contract is a structured runtime/kernel error, prefer asserting the stable error code or equivalent structured field over a brittle regex against the formatted message
+
+## Regression Placement Triage
+
+When a bug lives in a shared runtime seam but the smallest truthful witness may be game-backed, choose the first regression target with this order:
+
+1. prefer a narrow shared-seam unit test when the failing contract is reproducible without runtime-owned game identities or shipped-sequence context
+2. prefer a shipped-game integration witness when the bug depends on live action identities, grant sequencing, event/card routing, or another runtime-owned surface that a synthetic fixture would have to guess
+3. when both are useful, land the game-backed witness first for correctness, then add the shared-seam unit only if it stays narrow and does not duplicate the same proof burden
+
+Record the chosen witness surface in working notes when the choice is not obvious from the ticket text.
+
+## Direct Fallout Test Triage
+
+When a ticket retires a public surface and the first build exposes a large direct-fallout test set, classify each affected test before editing:
+
+1. `delete` the test when its primary asserted contract is the retired surface itself (deleted export, legacy overload, certificate/template helper, or another compatibility-era artifact)
+2. `migrate` the test when it still proves a retained runtime, legality, visibility, replay, or agent behavior on the live boundary
+3. if many fallout tests are deleted in one sweep, record the rationale in the active ticket outcome so the reduction is inspectable rather than looking like silent coverage loss
+
+Use this rule to avoid both over-migrating dead compatibility tests and over-deleting tests that still prove live behavior.

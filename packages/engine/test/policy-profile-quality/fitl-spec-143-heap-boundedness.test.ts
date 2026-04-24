@@ -1,6 +1,7 @@
 // @test-class: architectural-invariant
 
 import * as assert from 'node:assert/strict';
+import { Session } from 'node:inspector';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
@@ -42,6 +43,24 @@ const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
 // baseline profiles. A 170 MiB ceiling leaves generous Node/V8 headroom while
 // still flagging a clear retained-state regression.
 const HEAP_GROWTH_CEILING_MB = 170;
+
+const collectGarbage = async (): Promise<void> => {
+  const session = new Session();
+  session.connect();
+  try {
+    await new Promise<void>((resolve, reject) => {
+      session.post('HeapProfiler.collectGarbage', (error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  } finally {
+    session.disconnect();
+  }
+};
 
 type StopReason = 'terminal' | 'maxTurns' | 'noLegalMoves' | 'error';
 
@@ -92,12 +111,13 @@ const isNoBridgeableMicroturnError = (error: unknown): boolean =>
       || error.message.includes('has no bridgeable continuations')
     );
 
-const recordSample = (
+const recordSample = async (
   samples: HeapSample[],
   decisionCount: number,
   playerDecisionCount: number,
   turnCount: number,
-): void => {
+): Promise<void> => {
+  await collectGarbage();
   samples.push({
     decisionCount,
     playerDecisionCount,
@@ -147,10 +167,10 @@ const peakSampleFor = (samples: readonly HeapSample[]): HeapSample => {
   return peak;
 };
 
-const runHeapWitness = (
+const runHeapWitness = async (
   def: ValidatedGameDef,
   runtime: GameDefRuntime,
-): HeapWitnessResult => {
+): Promise<HeapWitnessResult> => {
   const agents: readonly Agent[] = POLICY_PROFILES.map(
     (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
   );
@@ -165,7 +185,7 @@ const runHeapWitness = (
   let state = initial.state;
   const samples: HeapSample[] = [];
 
-  recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+  await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
 
   try {
     while (true) {
@@ -175,12 +195,12 @@ const runHeapWitness = (
       totalDecisionCount += autoResult.autoResolvedLogs.length;
 
       while (totalDecisionCount >= nextSampleDecision) {
-        recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+        await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
         nextSampleDecision += SAMPLE_EVERY_DECISIONS;
       }
 
       if (terminalResult(def, state, runtime) !== null) {
-        recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+        await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
         return {
           stopReason: 'terminal',
           totalDecisionCount,
@@ -193,7 +213,7 @@ const runHeapWitness = (
       }
 
       if (state.turnCount >= MAX_TURNS) {
-        recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+        await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
         return {
           stopReason: 'maxTurns',
           totalDecisionCount,
@@ -210,7 +230,7 @@ const runHeapWitness = (
         microturn = publishMicroturn(def, state, runtime);
       } catch (error) {
         if (isNoBridgeableMicroturnError(error)) {
-          recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+          await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
           return {
             stopReason: 'noLegalMoves',
             totalDecisionCount,
@@ -246,12 +266,12 @@ const runHeapWitness = (
       playerDecisionCount += 1;
 
       while (totalDecisionCount >= nextSampleDecision) {
-        recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+        await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
         nextSampleDecision += SAMPLE_EVERY_DECISIONS;
       }
     }
   } catch (error) {
-    recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
+    await recordSample(samples, totalDecisionCount, playerDecisionCount, state.turnCount);
     return {
       stopReason: 'error',
       totalDecisionCount,
@@ -276,8 +296,8 @@ describe('FITL spec 143 heap boundedness witness', () => {
   const def = assertValidatedGameDef(compiled.gameDef);
   const runtime = createGameDefRuntime(def);
 
-  it(`seed ${SEED}: stays under the calibrated heap-growth ceiling`, { timeout: 60_000 }, () => {
-    const result = runHeapWitness(def, runtime);
+  it(`seed ${SEED}: stays under the calibrated heap-growth ceiling`, { timeout: 60_000 }, async () => {
+    const result = await runHeapWitness(def, runtime);
     const midpointGrowthMb = result.midpointSample.heapUsedMb - result.startSample.heapUsedMb;
     const peakGrowthMb = result.peakSample.heapUsedMb - result.startSample.heapUsedMb;
     const passed = ALLOWED_STOP_REASONS.has(result.stopReason) && peakGrowthMb < HEAP_GROWTH_CEILING_MB;

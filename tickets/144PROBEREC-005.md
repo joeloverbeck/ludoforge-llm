@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new determinism test
-**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`, `tickets/144PROBEREC-007.md`
+**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`, `archive/tickets/144PROBEREC-007.md`
 
 ## Problem
 
@@ -17,12 +17,12 @@ This ticket closes the remaining determinism proof loop.
 1. `packages/engine/schemas/Trace.schema.json` already includes `probeHoleRecoveries`, `recoveredFromProbeHole`, and `unavailableActionsPerTurn` from ticket 002.
 2. `pnpm turbo schema:artifacts` remains a verification lane here only to ensure no schema drift was introduced while adding the replay proof.
 3. `packages/engine/test/determinism/` currently contains 11 tests (per reassessment). This ticket adds one more, following the existing style (seed + replay + byte-identical assertion).
-4. Post-review of ticket 004 found a remaining recovery/grant reconciliation blocker: representative FITL lanes can still throw `ILLEGAL_MOVE` for the game-authored `pass` fallback while required free-operation grants remain unresolved. `tickets/144PROBEREC-007.md` now owns that prerequisite repair before this replay-identity proof can be trusted.
+4. Post-review of ticket 004 found a recovery/grant reconciliation blocker: representative FITL lanes could throw `ILLEGAL_MOVE` for the game-authored `pass` fallback while required free-operation grants remained unresolved. `archive/tickets/144PROBEREC-007.md` landed that prerequisite repair; this ticket remains the replay-identity proof owner and should use the now-valid recovery/fallback surface.
 
 ## Architecture Check
 
 1. The replay-identity test is `@test-class: architectural-invariant`: any legitimate trace (including those with recovery events) must replay to bit-identical state.
-2. No additional kernel or simulator change should be needed after ticket 006 closes the remaining recovery/fallback grant reconciliation gap. This ticket proves replay identity on a valid recovery path rather than repairing fallback legality itself.
+2. No additional kernel or simulator change should be needed after ticket 007's recovery/fallback grant reconciliation repair. This ticket proves replay identity on a valid recovery path rather than repairing fallback legality itself.
 
 ## What to Change
 

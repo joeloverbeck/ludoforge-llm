@@ -1,6 +1,6 @@
 # 144PROBEREC-007: Recovery fallback grant reconciliation parity
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — probe-hole recovery / free-operation grant reconciliation
@@ -100,3 +100,30 @@ If this repair changes the replay-identity surface expected by `144PROBEREC-005`
 5. `pnpm turbo lint`
 6. `pnpm turbo typecheck`
 7. `pnpm turbo test`
+
+## Outcome
+
+Completion date: 2026-04-25
+
+Implemented recovery fallback grant reconciliation parity across the shared pass fallback surfaces. The live failure was reproduced in `dist/test/integration/spec-140-profile-migration.test.js` on the FITL canary seed 123: the publisher exposed the game-authored `tags: [pass]` fallback while ready free-operation grants still blocked normal action execution.
+
+The repair keeps the fallback game-authored and engine-generic:
+
+1. `applyPublishedDecision` reconciles ready blocking grants for the published fallback seat before resolving and applying the singleton `tags: [pass]` fallback.
+2. `applyMove`, `applyTrustedMove`, and move viability/legality probes reconcile the same fallback state so raw legal moves, classified enumeration, trusted execution, and microturn application remain parity-aligned, but only when the active seat no longer has a potentially playable required free-operation completion.
+3. `enumerateLegalMoves` / `legalMoves` now surface the same generic paramless `tags: [pass]` fallback when ordinary turn-flow-filtered moves are empty.
+4. Pass fallback validation bypasses turn-flow window filters that only make sense for ordinary operations/events once the fallback is the last legal exit.
+
+Added focused unit coverage in `packages/engine/test/unit/kernel/microturn/rollback.test.ts` proving that applying a singleton pass fallback clears only the recovered seat's ready blocking grant and preserves another seat's pending grant. Post-review tightened the same test file with a guard regression proving raw `applyMove` does not reconcile a pass while a required grant still has a playable completion.
+
+Sibling status: `tickets/144PROBEREC-005.md` remains the replay-identity proof owner. This ticket removes its prerequisite fallback-legality blocker but does not implement the determinism test.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn/rollback.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/spec-140-profile-migration.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`
+- `pnpm run check:ticket-deps`

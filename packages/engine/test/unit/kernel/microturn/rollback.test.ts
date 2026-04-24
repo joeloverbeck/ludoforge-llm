@@ -6,6 +6,8 @@ import { describe, it } from 'node:test';
 
 import {
   applyDecision,
+  applyMove,
+  applyPublishedDecision,
   asActionId,
   asDecisionFrameId,
   type DecisionKey,
@@ -267,6 +269,109 @@ describe('probe-hole rollback safety net', () => {
         ? rolledBack!.state.turnOrderState.runtime.pendingFreeOperationGrants?.map((grant) => grant.grantId)
         : [],
       ['grant:other'],
+    );
+  });
+
+  it('reconciles ready blocking grants before applying the singleton pass fallback', () => {
+    const def = makeDef([badAction, passAction]);
+    const runtime = createGameDefRuntime(def);
+    const blockingGrant = {
+      grantId: 'grant:missing-action',
+      phase: 'ready',
+      seat: '0',
+      operationClass: 'operation',
+      actionIds: ['missing-action'],
+      completionPolicy: 'required',
+      remainingUses: 1,
+    } satisfies TurnFlowPendingFreeOperationGrant;
+    const otherGrant = {
+      grantId: 'grant:other-seat',
+      phase: 'ready',
+      seat: '1',
+      operationClass: 'operation',
+      actionIds: ['bad'],
+      completionPolicy: 'required',
+      remainingUses: 1,
+    } satisfies TurnFlowPendingFreeOperationGrant;
+    const state = {
+      ...makeState(def),
+      turnOrderState: {
+        type: 'cardDriven' as const,
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          pendingEligibilityOverrides: [],
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingFreeOperationGrants: [blockingGrant, otherGrant],
+        },
+      },
+    } satisfies GameState;
+
+    const microturn = publishMicroturn(def, state, runtime);
+    const passDecision = microturn.legalActions.find((decision) =>
+      decision.kind === 'actionSelection' && decision.actionId === asActionId('pass'));
+
+    assert.notEqual(passDecision, undefined);
+    assert.deepEqual(
+      microturn.legalActions
+        .filter((decision) => decision.kind === 'actionSelection')
+        .map((decision) => decision.actionId),
+      [asActionId('pass')],
+    );
+
+    const applied = applyPublishedDecision(def, state, microturn, passDecision!, undefined, runtime);
+
+    assert.equal(applied.state.globalVars.done, 1);
+    assert.deepEqual(
+      applied.state.turnOrderState.type === 'cardDriven'
+        ? applied.state.turnOrderState.runtime.pendingFreeOperationGrants?.map((grant) => grant.grantId)
+        : [],
+      ['grant:other-seat'],
+    );
+  });
+
+  it('does not reconcile pass when a required grant still has a playable completion', () => {
+    const def = makeDef([badAction, passAction]);
+    const runtime = createGameDefRuntime(def);
+    const state = {
+      ...makeState(def),
+      turnOrderState: {
+        type: 'cardDriven' as const,
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          pendingEligibilityOverrides: [],
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingFreeOperationGrants: [{
+            grantId: 'grant:playable-action',
+            phase: 'ready',
+            seat: '0',
+            operationClass: 'operation',
+            actionIds: ['bad'],
+            completionPolicy: 'required',
+            remainingUses: 1,
+          }],
+        },
+      },
+    } satisfies GameState;
+
+    assert.throws(
+      () => applyMove(def, state, { actionId: asActionId('pass'), params: {} }, undefined, runtime),
+      /active seat has unresolved required free-operation grants/,
     );
   });
 

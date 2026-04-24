@@ -18,6 +18,7 @@
 
 - If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
 - Before inventing a brand-new synthetic failing test, check whether an existing nearby unit/integration fixture, regression, or focused failing lane already proves the same seam closely enough. Prefer extracting, tightening, or adapting the smallest existing repo-owned witness when it remains the narrowest valid proof.
+- If a live ticket-named acceptance lane already fails on the owned bug, treat that lane as the initial red witness. After the mechanism is isolated, add or tighten the narrowest focused regression that captures the shared contract rather than skipping TDD or replacing the existing red lane with a weaker synthetic proof.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
 - When a ticket's authoritative witness is a long campaign, replay, or simulation harness, prefer a compact reduction before patching:

@@ -14,7 +14,11 @@ import { applyMove } from '../apply-move.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import { deepEqual } from '../deep-equal.js';
-import { markOffered, withPendingFreeOperationGrants } from '../grant-lifecycle.js';
+import {
+  expireReadyBlockingGrantsForSeat,
+  markOffered,
+  withPendingFreeOperationGrants,
+} from '../grant-lifecycle.js';
 import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
 import { nextInt } from '../prng.js';
 import type { DecisionKey } from '../decision-scope.js';
@@ -204,6 +208,53 @@ const isMatchingDecision = (candidate: Decision, decision: Decision): boolean =>
     return candidate.retiringTurnId === decision.retiringTurnId;
   }
   return false;
+};
+
+const actionHasTag = (
+  def: GameDef,
+  actionId: Move['actionId'],
+  tag: string,
+): boolean =>
+  def.actions.find((action) => action.id === actionId)?.tags?.includes(tag) === true;
+
+const isSingletonPassFallback = (
+  def: GameDef,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Extract<Decision, { readonly kind: 'actionSelection' }>,
+): boolean =>
+  microturn.kind === 'actionSelection'
+  && microturn.legalActions.length === 1
+  && actionHasTag(def, decision.actionId, 'pass')
+  && microturn.legalActions[0]?.kind === 'actionSelection'
+  && microturn.legalActions[0]?.actionId === decision.actionId;
+
+const reconcilePassFallbackBlockingGrants = (
+  def: GameDef,
+  state: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Extract<Decision, { readonly kind: 'actionSelection' }>,
+): GameState => {
+  if (!isSingletonPassFallback(def, microturn, decision) || state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return state;
+  }
+  const expired = expireReadyBlockingGrantsForSeat(pending, String(microturn.seatId));
+  if (expired.grants.length === pending.length) {
+    return state;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        state.turnOrderState.runtime,
+        expired.grants.length === 0 ? undefined : expired.grants,
+      ),
+    },
+  };
 };
 
 const ensurePublishedDecision = (
@@ -420,17 +471,23 @@ export const applyPublishedDecision = (
 
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
-    const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, resolvedRuntime);
+    const grantReconciledState = reconcilePassFallbackBlockingGrants(
+      def,
+      canonicalState,
+      microturn,
+      decision,
+    );
+    const continuation = resolveDecisionContinuation(def, grantReconciledState, move, { choose: () => undefined }, resolvedRuntime);
     if (continuation.illegal !== undefined) {
       throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
     }
     if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-      return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+      return applyChosenMove(def, grantReconciledState, continuation.move, microturn, decision, options, resolvedRuntime);
     }
 
-    const rootFrameId = canonicalState.nextFrameId ?? asDecisionFrameId(0);
+    const rootFrameId = grantReconciledState.nextFrameId ?? asDecisionFrameId(0);
     const childFrameId = asDecisionFrameId(Number(rootFrameId) + 1);
-    const turnId = canonicalState.nextTurnId ?? asTurnId(0);
+    const turnId = grantReconciledState.nextTurnId ?? asTurnId(0);
     const rootEntry = entryForDecision(microturn, decision);
     const rootFrame: DecisionStackFrame = {
       frameId: rootFrameId,
@@ -471,7 +528,7 @@ export const applyPublishedDecision = (
         },
       };
     const nextState = updateHash(def, {
-      ...canonicalState,
+      ...grantReconciledState,
       decisionStack: [rootFrame, childFrame],
       nextFrameId: asDecisionFrameId(Number(childFrameId) + 1),
       activeDeciderSeatId: childFrame.context.seatId,

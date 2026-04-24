@@ -1584,6 +1584,18 @@ const enumerateRawLegalMoves = (
   );
 
   const finalMoves = applyTurnFlowWindowFilters(def, state, enumeration.moves, seatResolution);
+  if (finalMoves.length === 0) {
+    const passFallback = actionsForPhase.find((action) =>
+      action.tags?.includes('pass') === true
+      && action.params.length === 0);
+    if (passFallback !== undefined) {
+      return {
+        moves: [{ actionId: passFallback.id, params: {} }],
+        warnings,
+        discoveryCache,
+      };
+    }
+  }
   return {
     moves: finalMoves,
     warnings,

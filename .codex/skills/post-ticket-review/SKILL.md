@@ -33,6 +33,8 @@ Take actions first, then summarize only the decisions made.
 
 If the implemented ticket is already archived, still proceed with the review.
 
+Inspect `git status --short` early. Separate unrelated dirty files from the implemented-ticket review scope, and leave them alone unless the completed ticket or concrete same-seam evidence makes them part of the review.
+
 ## Evidence Model
 
 Use concrete evidence only. Review against:
@@ -74,10 +76,12 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 2. Identify the code that was actually touched and the nearby modules that matter architecturally.
 3. Read the remaining active tickets and check for overlap, adjacent scope, and likely dependency relationships.
 4. If overlap or remainder ownership is still unclear in a staged series, inspect the relevant archived sibling tickets or archived follow-up tickets before creating new work.
+5. Keep a clear boundary between current-review changes and unrelated dirty worktree state. If unrelated dirty paths exist, mention them in the final handoff only as separate pre-existing or same-session work, not as ticket-review output.
 
 ### Phase 2: Review With a Do-Nothing Bias
 
 4. Compare the finished work against the review dimensions using direct evidence from code, tests, and ticket intent.
+   - For microturn publication, recovery, rollback, fallback, or pass-fallback tickets, explicitly sweep the one-rules-protocol surfaces before calling the review complete: `publishMicroturn`, `applyPublishedDecision`, `applyMove`, `applyTrustedMove`, `legalMoves`, `enumerateLegalMoves`, `probeMoveLegality`, and `probeMoveViability`. Publication, raw/classified enumeration, direct apply, trusted apply, and probe/admissibility paths must preserve the same invariant.
 5. Classify each finding into one of these action buckets:
    - `must-fix-now`: small enough to fix immediately and verify now
    - `follow-up-ticket`: important, concrete work that should not be folded into the finished ticket now
@@ -89,6 +93,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 7. If there is a `must-fix-now` item:
    - implement the small cleanup immediately
    - run targeted verification for that cleanup
+   - if the cleanup changes production runtime, compiler, schema, or shared test behavior, also rerun the affected original acceptance lanes before archival; a focused regression alone is not enough for closeout when shared behavior changed
    - continue reviewing for larger follow-up work after the fix
 8. For follow-up work:
    - prefer extending an existing active ticket when that produces a cleaner boundary and avoids overlap
@@ -140,6 +145,7 @@ For any ticket you create or extend:
   - active ticket extended
   - new ticket created
   - original ticket archived
+  - unrelated dirty paths only when needed to keep the ticket-review output distinct from other same-session or pre-existing work
 
 ## Guardrails
 

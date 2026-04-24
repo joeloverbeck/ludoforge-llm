@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — new test file only
-**Deps**: `tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`, `tickets/143BOURUNMEM-008.md`
+**Deps**: `archive/tickets/143BOURUNMEM-003.md`, `archive/tickets/143BOURUNMEM-004.md`, `archive/tickets/143BOURUNMEM-008.md`
 
 ## Problem
 

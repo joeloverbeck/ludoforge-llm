@@ -1,6 +1,6 @@
 # 143BOURUNMEM-008: Resolve remaining FITL medium-diverse determinism OOM
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — exact surface to reassess against the current determinism-lane failure.
@@ -77,6 +77,19 @@ Exact files depend on the reassessed root cause. Likely surfaces include one or 
 
 ### Invariants
 
-1. The ticket ends with a truthful classification of the medium-diverse OOM as either a remaining runtime bug or a proof-corpus budgeting issue.
+1. The ticket ends with a truthful classification of the medium-diverse OOM as a remaining runtime bug in the free-operation event-apply / decision-advance path, not a proof-corpus budgeting issue.
 2. 005/006 remain test-only witness tickets unless new evidence proves their ownership changed.
 3. 003 closes only after this prerequisite is resolved or the active series is rewritten truthfully.
+
+## Outcome
+
+Completed: 2026-04-24
+
+- Implemented: removed duplicated `requireUsableForEventPlay` issue-time probing from the effect-issued and declarative free-operation grant seams in `packages/engine/src/kernel/effects-turn-flow.ts` and `packages/engine/src/kernel/turn-flow-eligibility.ts`, so already-legal events do not re-run the exact grant-usability search while issuing grants.
+- Implemented: added integration regressions in `packages/engine/test/integration/fitl-event-free-operation-grants.test.ts` proving `requireUsableForEventPlay` grants still emit once the event itself is already legal.
+- Implemented: fixed the remaining runtime blow-up in `packages/engine/src/kernel/legal-moves.ts` by restricting decision-point enumeration to pending free operations whenever a required pending free-operation grant is active, instead of enumerating ordinary phase actions that would be discarded later.
+- Classification: the former `zobrist-incremental-property-fitl-medium-diverse` OOM was a real production boundedness bug in FITL event apply / decision advancement, not a stale determinism-budget assumption.
+- Sibling ticket updates required: 003's prior blocker is now resolved; 005/006 remain active advisory witness tickets.
+
+- deviations from original plan: the fix was split across two production seams. The first patch removed duplicated grant-issuance probing, but the witness still reproduced until the later `legalMoves` decision-point enumeration path was narrowed to the required pending free-operation surface.
+- verification results: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-event-free-operation-grants.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/free-operation-viability.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/choose-n-selection-keys.test.js dist/test/unit/kernel/choose-n-session.test.js dist/test/unit/kernel/canonical-identity-bounds.test.js`; `pnpm -F @ludoforge/engine test:determinism`

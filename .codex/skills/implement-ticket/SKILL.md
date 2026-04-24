@@ -196,6 +196,13 @@ When the originally cited blocker disappears but the same broader lane later fai
 3. classify whether the new blocker is still owned by the active ticket, belongs to a new prerequisite/follow-up, or proves the broad lane shape itself is stale
 4. rewrite the active ticket and any affected sibling/spec artifacts before closeout so the old blocker is not left as the durable story
 
+When a first round of diagnostic instrumentation only proves that the blocker moved deeper into the same owned path, use this narrowing loop before adding more speculative fixes:
+
+1. instrument the broad owner boundary once and identify the first child seam that does not return cleanly
+2. remove or supersede the broader instrumentation before the next pass so later evidence stays readable
+3. re-instrument only that first non-returning child seam and repeat until one concrete helper or enumeration path owns the blow-up
+4. once the live owner is isolated, stop instrumenting wider siblings and patch the production seam directly
+
 When the user approves a non-implementation boundary rewrite after 1-3-1, use this cleanup order before durable series edits:
 
 1. Classify any in-progress code/test/schema/artifact diff for the abandoned path as exploratory or abandoned implementation work.
@@ -312,6 +319,13 @@ When a named verification command exits cleanly but proves nothing substantive i
 2. identify the narrowest command that does exercise the owned boundary
 3. record the anomaly and the substitute proof lane in the active ticket before final closeout
 4. if the ticket explicitly required that exact command to prove the boundary, leave the command as `not yet proven` until the ticket or tooling story is corrected truthfully
+
+When a focused proof lane is expected to be valid but runs silently for a long time in the current environment, do not immediately classify it as hung or non-final:
+
+1. rerun it once with a proportionate bounded wrapper such as `timeout` rather than waiting open-ended
+2. pair that run with the cheapest direct owned witness probe you have, so you can distinguish `slow but healthy` from `still broken`
+3. if the bounded run later completes cleanly, treat the silence as an environment/reporting artifact rather than a proof-shape problem
+4. if it still does not return and the direct witness is green, record the broad lane as `slow/unconfirmed in this environment` and keep the owned witness proof explicit in the ticket outcome
 
 When a ticket-named **broad verification lane** (for example `pnpm turbo test`, workspace lint, or another multi-package suite) fails outside the owned diff, do not silently collapse that result into a vague "repo is red" note. Classify the failure explicitly before closeout:
 

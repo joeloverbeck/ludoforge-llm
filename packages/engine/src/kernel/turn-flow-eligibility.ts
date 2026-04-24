@@ -44,6 +44,7 @@ import {
 import {
   grantRequiresUsableProbe,
   isFreeOperationGrantUsableInCurrentState,
+  resolveFreeOperationGrantViabilityPolicy,
 } from './free-operation-viability.js';
 import type {
   EventEligibilityOverrideDef,
@@ -331,8 +332,12 @@ const extractPendingFreeOperationGrants = (
             && candidate.sequence.batch === grant.sequence.batch
             && candidate.sequence.step < grant.sequence.step,
         );
+    const shouldProbeGrantAtIssue =
+      grantRequiresUsableProbe(grant)
+      && resolveFreeOperationGrantViabilityPolicy(grant) !== 'requireUsableForEventPlay';
+
     if (
-      grantRequiresUsableProbe(grant) &&
+      shouldProbeGrantAtIssue &&
       !isFreeOperationGrantUsableInCurrentState(def, state, grant, activeSeat, seatOrder, seatResolution, {
         sequenceProbeCandidates,
         evalContext: grantEvalContext,

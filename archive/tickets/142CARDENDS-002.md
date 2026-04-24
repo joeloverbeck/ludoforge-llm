@@ -1,6 +1,6 @@
 # 142CARDENDS-002: Generic non-FITL regression for Future-Stream Class-Filter Pattern
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — tests only
@@ -106,3 +106,23 @@ Once `142CARDENDS-001` lands (or during concurrent implementation), add a one-li
 3. `pnpm -F @ludoforge/engine test:integration` — confirms FITL regressions remain green.
 4. `pnpm turbo test` — full suite including determinism/canary corpus.
 5. `pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-04-24.
+
+- Added `packages/engine/test/unit/terminal-future-stream-class-filter.test.ts` as the generic, non-FITL architectural invariant for the Future-Stream Class-Filter Pattern.
+- The test uses a synthetic card-driven `GameDef` with arbitrary `class: "special"` / `class: "ordinary"` card properties, not FITL fixtures or FITL-specific property names.
+- The regression proves both required cases: the final-class checkpoint fires across both authored phases when only ordinary future cards remain, and `advanceToDecisionPoint` does not advance phase, reveal another card, or emit lifecycle logs once the checkpoint is terminal.
+- Since `142CARDENDS-001` had already landed, updated `docs/card-driven-terminal-authoring.md` to cite this generic invariant test by path.
+- Engine/schema/artifact fallout: none.
+
+Verification set:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test dist/test/unit/terminal-future-stream-class-filter.test.js` from `packages/engine/`
+3. `pnpm -F @ludoforge/engine test:unit`
+4. `pnpm -F @ludoforge/engine test:integration`
+5. `pnpm test`
+6. `pnpm turbo lint`
+7. `pnpm turbo typecheck`

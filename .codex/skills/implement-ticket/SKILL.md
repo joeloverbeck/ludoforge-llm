@@ -35,7 +35,8 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 1. the active ticket status and outcome block already match the live intended result (`COMPLETED`, `BLOCKED`, narrowed scope, etc.)
 2. any command substitutions or ticket-correction ledger entries are already written into the active ticket when needed
 3. any sibling-ticket, dependency, spec, or touched-file-scope edits required for a truthful closeout are already done
-4. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
+4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`)
+5. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 
@@ -52,6 +53,8 @@ When the owned metric is **process-local** (`heapUsed`, GC time/percent, RSS, re
 When a proof ticket requires a **new calibrated threshold or ceiling**, prefer this order unless live evidence proves a different shape is cleaner: first land the narrowest truthful witness/harness, then run the smallest live calibration probe that exercises the owned seam, write the measured values and resulting threshold rationale back into the owned artifact, and only then start the final acceptance-proof lanes. Do not cite a draft or exploratory threshold as final if the ticket artifact still needs to change after calibration.
 
 For inventory, audit, or fixture-producing tickets, verify the **live ownership unit** before building the deliverable. A ticket may name a broad semantic surface (`march`, `event-card action`, `policy profile`, etc.) while the real repo-owned boundary is finer-grained (`actionPipeline` id, card side, phase variant, emitted report row, or another runtime-owned artifact). Build the deliverable against the finest truthful live unit rather than collapsing distinct surfaces into the draft ticket's coarser prose.
+
+For **small test-only regression tickets** whose owned deliverable is one new or modified test plus minor docs/ticket closeout, use the bounded local refactor fast path when live reassessment shows no blocking drift, no schema/fixture regeneration, and no wider shared-contract fallout. Still apply production-proof checks for stale examples, correct suite-family placement, compiled-test command shape, and acceptance-command reconciliation.
 
 ### Bounded Local Refactor Fast Path
 
@@ -85,6 +88,8 @@ When ticket triage confirms a bounded local refactor, load `references/bounded-l
 #### Session, Series, and Draft Context
 
 Load `references/implementation-general.md` for session continuity, series-slice discipline, named fallout classification, the active draft series sanity check, and ticket re-entry classification after a prior follow-up split when the ticket is not a bounded local refactor. For bounded local refactors, defer this load unless reassessment reveals split ownership, sibling drift, reopened follow-up context, or another concrete need for the broader series guidance.
+
+When the active ticket names a sibling ticket as a condition for a deliverable, search both active `tickets/` and archived ticket roots such as `archive/tickets/` before deciding whether that condition has fired. Record the resolved sibling state in working notes when it changes the owned closeout work.
 
 Load `references/draft-handling.md` when the active ticket or referenced artifacts are untracked drafts, or when a tracked ticket appears stale, and draft status creates real reassessment or ownership ambiguity. For bounded local refactors, untracked-draft status alone does not force this load if the active draft can be kept honest through working notes, direct reassessment, and durable closeout updates.
 

@@ -48,4 +48,5 @@ The existing FITL regressions preserve the production behavior:
   coup round.
 
 `142CARDENDS-002` adds the forward generic, non-FITL regression for this same
-pattern.
+pattern at
+`packages/engine/test/unit/terminal-future-stream-class-filter.test.ts`.

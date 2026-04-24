@@ -23,6 +23,7 @@ import {
   resolveDecisionContinuation,
   type DecisionContinuationResult,
 } from './continuation.js';
+import { isBridgeableNextDecision, MICROTURN_PROBE_DEPTH_BUDGET } from './probe.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
 import {
   asDecisionFrameId,
@@ -75,9 +76,6 @@ const actionSelectionTurnId = (state: GameState): ReturnType<typeof asTurnId> =>
 
 const actionSelectionFrameId = (state: GameState): ReturnType<typeof asDecisionFrameId> =>
   state.nextFrameId ?? asDecisionFrameId(0);
-
-const isSupportedChoiceRequest = (request: ChoicePendingRequest): boolean =>
-  request.type === 'chooseOne' || request.type === 'chooseN';
 
 const toStochasticDistribution = (
   continuation: DecisionContinuationResult,
@@ -191,7 +189,16 @@ const isSupportedContinuationResult = (
   ) {
     return false;
   }
-  return isSupportedChoiceRequest(continuation.nextDecision);
+  return isBridgeableNextDecision(
+    {
+      def,
+      state,
+      runtime: getRuntime(def, runtime),
+      move,
+      depthBudget: MICROTURN_PROBE_DEPTH_BUDGET,
+    },
+    continuation.nextDecision,
+  );
 };
 
 const isSupportedFrameContinuationMove = (

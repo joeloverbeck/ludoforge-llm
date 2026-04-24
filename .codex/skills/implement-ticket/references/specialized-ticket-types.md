@@ -57,6 +57,8 @@ For investigation tickets whose primary output is a checked-in measurement artif
 
 When a long-running measurement witness has a **stable earlier prefix** already backed by durable evidence and the later tail is flaky or environment-sensitive, prefer narrowing to that smallest truthful prefix over preserving the longer tail by inertia. Record the narrowed bound explicitly in the active ticket before final proof so the witness does not look silently weakened.
 
+If that narrowing changes an **explicit ticket deliverable** (for example a named full-corpus measurement, exact turn horizon, required artifact scope, or threshold decision), `AGENTS.md` Ticket Fidelity wins over the narrowing preference: stop for 1-3-1 unless the ticket already authorizes bounded-prefix substitution. After confirmation, update the ticket outcome before final proof and classify the durable state honestly as `COMPLETED`, `PARTIAL`, or `BLOCKED` rather than treating a narrower artifact as equivalent by default.
+
 When an investigation/profiling ticket needs one command to **reproduce the live failure** and a different command to **produce a durable artifact** (for example a stable snapshot/report run versus a higher-turn crash repro), do not collapse them into one fuzzy story. Treat them as two explicit evidence lanes:
 
 1. identify which command is the best failure repro

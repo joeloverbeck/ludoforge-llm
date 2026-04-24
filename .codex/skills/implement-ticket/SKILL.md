@@ -37,6 +37,7 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 3. any sibling-ticket, dependency, spec, or touched-file-scope edits required for a truthful closeout are already done
 4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`)
 5. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
+6. no final proof lane is running in parallel with a build, schema, or artifact producer that can clean or rewrite the same output tree; a zero-test or module-resolution "green" from an overlapped compiled-output lane is invalid until rerun serially
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 

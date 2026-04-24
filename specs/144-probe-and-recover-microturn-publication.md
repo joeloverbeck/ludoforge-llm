@@ -18,7 +18,7 @@
 - **Seed 1001** reproduces `noLegalMoves` at turn 2 with `MICROTURN_CONSTRUCTIBILITY_INVARIANT: chooseNStep context has no bridgeable continuations`, in the NVA `march` pipeline (`actionPipelines[10]`) granted by event card-59 shaded.
 - **Seed 1049** terminates at turn 0 under direct `runGame` (VC sudden-win event) but diverges under `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs`, where it reaches turn 1 with 237 decisions and hits the same NVA-march constructibility invariant. The divergence is a harness bug (different agent/chance RNG plumbing), not an engine bug.
 
-**Root cause.** `packages/engine/src/kernel/microturn/publish.ts:194` — `isSupportedContinuationResult` terminates in `isSupportedChoiceRequest(continuation.nextDecision)`, which is a type check (`type === 'chooseOne' || type === 'chooseN'`). It does **not** verify that the next `chooseOne`/`chooseN` has at least one legal option. A `confirm` on a `chooseN` whose resume opens a next-level `chooseN` with zero filtered options is therefore published as a legal action. The agent selects `confirm`, `applyPublishedDecision` succeeds, and the *next* `publishMicroturn` call finds the stack-top frame has zero legal options and throws. The simulator at `packages/engine/src/sim/simulator.ts:180-183` catches the error and surrenders to `noLegalMoves`.
+**Root cause.** `packages/engine/src/kernel/microturn/publish.ts:194` — `isSupportedContinuationResult` terminates in `isSupportedChoiceRequest(continuation.nextDecision)`, which is a type check (`type === 'chooseOne' || type === 'chooseN'`). It does **not** verify that the next `chooseOne`/`chooseN` has at least one legal option. A `confirm` on a `chooseN` whose resume opens a next-level `chooseN` with zero filtered options is therefore published as a legal action. The agent selects `confirm`, `applyPublishedDecision` succeeds, and the *next* `publishMicroturn` call finds the stack-top frame has zero legal options and throws. The simulator at `packages/engine/src/sim/simulator.ts:177-185` catches the error via `isNoBridgeableMicroturnError` and surrenders to `noLegalMoves`.
 
 This violates Foundation #18 as written: "Every kernel-published legal action is constructible atomically at its microturn scope." The published `confirm` is not constructible; its downstream microturn is empty.
 
@@ -137,14 +137,16 @@ Build a prototype of the memoization cache (keyed on `(stateHash, frameId, decis
 
 Output: a measurement report at `campaigns/phase4-probe-recover/memoization-measurement.md`. If the hit rate is < 15% or the total slowdown without memo is < 5%, simplify by removing memoization from the spec.
 
-### I3 — Generic `tags: [pass]` lookup audit
+### I3 — Generic `tags: [pass]` lookup + grant-clearing audit
 
 Grep the current conformance corpus (`data/games/fire-in-the-lake/`, `data/games/texas-holdem/`) for actions tagged as fallback candidates:
 
-- FITL: `pass` (defined at `30-rules-actions.md:159`).
-- Texas Hold'em: `fold`, `check`.
+- FITL: `pass` (defined at `30-rules-actions.md:159`; declared with `effects: []` today — no grant-clearing).
+- Texas Hold'em: `fold` (line 244), `check` (line 259).
 
-Output: a classification at `campaigns/phase4-probe-recover/pass-action-audit.md` documenting each game's fallback action, the condition under which it applies (e.g., "always legal to the 1st/2nd Eligible Faction"), and the engine-side lookup predicate (`action.tags.includes('pass')`). Any corpus game without such a tag becomes a spec-reviser blocker.
+Output: a classification at `campaigns/phase4-probe-recover/pass-action-audit.md` documenting each game's fallback action, the condition under which it applies (e.g., "always legal to the 1st/2nd Eligible Faction"), and the engine-side lookup predicate (`action.tags.includes('pass')`).
+
+The audit MUST additionally answer: when the rollback pops past a scope that opened a free-operation grant (stored in `state.turnOrderState.pendingFreeOperationGrants`), what clears the now-orphaned grant? Either (a) the game's pass action needs added grant-terminator effects, (b) the engine's rollback emits a grant-clearing effect as part of the pop, or (c) the grant harmlessly expires at turn retirement. Decide and document before ticket work begins — this decision gates the wording of D4. Any corpus game without a `tags: [pass]` action, or whose pass action cannot be made grant-safe, becomes a spec-reviser blocker.
 
 ### I4 — Seed 1001 reproduction as checked-in fixture
 
@@ -167,6 +169,7 @@ export interface ProbeContext {
   readonly def: GameDef;
   readonly state: GameState;
   readonly runtime: GameDefRuntime;
+  readonly move: Move;
   readonly depthBudget: number;  // remaining recursion budget
 }
 
@@ -180,6 +183,7 @@ export type ProbeUnbridgeableReason =
   | 'nextFrameHadNoLegal'    // next microturn would throw constructibility
   | 'depthExhausted';        // recursion budget spent; inconclusive
 
+// Lives here (probe-specific) to avoid bloating microturn/constants.ts.
 export const MICROTURN_PROBE_DEPTH_BUDGET = 3 as const;
 ```
 
@@ -191,9 +195,16 @@ export interface RollbackResult {
   readonly logEntry: ProbeHoleRecoveryLog;
 }
 
+// ProbeHoleRecoveryLog is a trace-only diagnostic event, NOT a Decision union
+// variant and NOT a DecisionLog variant. It records a kernel-internal recovery
+// step; it is not a player/chance/kernel decision, so adding it to the Decision
+// union would violate F#19 (decision-granularity uniformity). It is stored in
+// its own `GameTrace.probeHoleRecoveries` array.
 export interface ProbeHoleRecoveryLog {
   readonly kind: 'probeHoleRecovery';
-  readonly seatId: SeatId;
+  readonly stateHashBefore: bigint;  // determinism audit anchor
+  readonly stateHashAfter: bigint;
+  readonly seatId: ActiveDeciderSeatId;
   readonly turnId: TurnId;
   readonly blacklistedActionId: ActionId;
   readonly rolledBackFrames: number;
@@ -210,38 +221,28 @@ export interface GameState {
   // ... existing fields ...
   /**
    * Per-turn action blacklist maintained by the rollback safety net.
-   * Cleared at turn retirement. Keys: `turnId:seatId`.
+   * Cleared at turn retirement. Keys: `${turnId}:${seatId}`.
    * Values: list of actionIds that proved unbridgeable during this turn.
    */
   readonly unavailableActionsPerTurn?: Readonly<Record<string, readonly ActionId[]>>;
 }
 ```
 
-New `DecisionLog` kind:
+`DecisionLog` is **not** modified. It remains the single interface currently declared at `packages/engine/src/kernel/microturn/types.ts:290-309`, and the `Decision` union at `types.ts:263-269` remains exactly as is (six variants: actionSelection, chooseOne, chooseNStep, stochasticResolve, outcomeGrantResolve, turnRetirement). Probe-hole recoveries are trace-only events, kept separate from the decision stream.
 
-```ts
-// packages/engine/src/kernel/types-core.ts (extend existing union)
-
-export type DecisionLog =
-  | ActionSelectionLog
-  | ChooseOneLog
-  | ChooseNStepLog
-  | StochasticResolveLog
-  | OutcomeGrantResolveLog
-  | TurnRetirementLog
-  | ProbeHoleRecoveryLog;  // NEW
-```
-
-New `GameTrace` counter:
+New `GameTrace` fields (trace-only, non-optional per F#14):
 
 ```ts
 // packages/engine/src/kernel/types-core.ts
 
 export interface GameTrace {
   // ... existing fields ...
-  readonly recoveredFromProbeHole: number;  // count of probeHoleRecovery events
+  readonly probeHoleRecoveries: readonly ProbeHoleRecoveryLog[];
+  readonly recoveredFromProbeHole: number;  // convenience counter = probeHoleRecoveries.length
 }
 ```
+
+Both fields are **non-optional** per F#14; every `GameTrace` construction site (one source, six+ test — see D10) is migrated in the same change.
 
 ### D2 — Deep probe (change #1)
 
@@ -253,10 +254,12 @@ return isSupportedChoiceRequest(continuation.nextDecision);
 
 // After
 return isBridgeableNextDecision(
-  { def, state, runtime: getRuntime(def, runtime), depthBudget: MICROTURN_PROBE_DEPTH_BUDGET },
+  { def, state, runtime: getRuntime(def, runtime), move, depthBudget: MICROTURN_PROBE_DEPTH_BUDGET },
   continuation.nextDecision,
 );
 ```
+
+Live-surface correction from ticket 144PROBEREC-001: `ChoicePendingRequest` currently contains only `chooseOne | chooseN`; stochastic continuations live on `DecisionContinuationResult.stochasticDecision` and remain handled by `publish.ts` before this probe is called. `ProbeContext` includes the current `move` because `resumeSuspendedEffectFrame` resolves selected values from move params.
 
 `isBridgeableNextDecision` logic:
 
@@ -277,8 +280,6 @@ isBridgeableNextDecision(ctx, request):
       return hasLegalAddThatBridges(ctx, request, budget-1)
           || canConfirmBridgeably(ctx, request, budget-1)
 
-    case 'stochastic':
-      return request.distribution.outcomes.length > 0
 ```
 
 `probeOneBridge` speculatively applies the candidate value through `resumeSuspendedEffectFrame`, inspects the resulting continuation, and recurses on its `nextDecision` (or returns `true` if terminal / auto-resolvable). Memoization lives at this entry point.
@@ -292,16 +293,18 @@ Key constraints:
 
 ### D3 — Memoization cache
 
-Extend `GameDefRuntime` with:
+Extend `GameDefRuntime` with a publication-probe cache. Name is deliberately distinct from the pre-existing session-scoped `probeCache` in `packages/engine/src/kernel/choose-n-session.ts:258` (which caches `SingletonProbeOutcome`s within a single `chooseN` session and is cleared per session). The new cache is run-scoped and caches bridgeability verdicts across publication calls:
 
 ```ts
 // packages/engine/src/kernel/gamedef-runtime.ts
 
 export interface GameDefRuntime {
   // ... existing fields ...
-  readonly probeCache: LruCache<string, boolean>;  // NEW
+  readonly publicationProbeCache: LruCache<string, boolean>;  // NEW
 }
 ```
+
+`LruCache<K, V>` is a new minimal generic implementation at `packages/engine/src/shared/lru-cache.ts` (no external dependency per F#14) — a map + doubly-linked list, ~40 lines, with `get(k)`, `set(k, v)`, and `size` plus an `evictionLimit` constructor parameter. It is implemented and unit-tested in ticket 144PROBEREC-001 alongside the probe itself.
 
 Cache key format:
 
@@ -311,7 +314,7 @@ probe:${stateHash}:${frameId}:${decisionKey}:${candidateValueStableKey}:${depthB
 
 `depthBudget` is in the key because the same (state, frame, candidate) at different remaining budgets can yield different verdicts (deeper budget = more information).
 
-LRU size: 10 000 entries per run by default, capped by spec 143's per-run memory contract. Memoization is strictly an accelerator — removing it produces identical verdicts, just slower.
+LRU size: 10 000 entries per run by default, capped by spec 143's per-run memory contract. Memoization is strictly an accelerator — removing it produces identical verdicts, just slower. The factory `createGameDefRuntime` (gamedef-runtime.ts:61-74) is extended to instantiate the cache; all six existing `createGameDefRuntime` call sites (simulator, publish, apply (×2), resume) automatically receive it.
 
 ### D4 — Rollback safety net (change #2)
 
@@ -342,7 +345,6 @@ try {
     validatedDef,
     state,
     resolvedRuntime,
-    /* activeActionId */ resolveCurrentActionSelection(state),
     /* invariantMessage */ (error as Error).message,
   );
   if (rollback === null) {
@@ -350,19 +352,21 @@ try {
     break;
   }
   state = rollback.state;
-  if (shouldRetainTrace) decisionLogs.push(rollback.logEntry);
+  if (shouldRetainTrace) probeHoleRecoveries.push(rollback.logEntry);
   continue;  // re-enter the loop; next iteration will publishMicroturn against the rolled-back state
 }
 ```
 
+Recovery events accumulate in a **separate** `probeHoleRecoveries: ProbeHoleRecoveryLog[]` array maintained by the simulator (parallel to the existing `decisionLogs: DecisionLog[]`); they are **not** appended to `decisionLogs` (preserves F#19).
+
 `rollbackToActionSelection` (new module `packages/engine/src/kernel/microturn/rollback.ts`):
 
-1. Walks `state.decisionStack` from top down, finding the nearest frame with `context.kind === 'actionSelection'`.
+1. Walks `state.decisionStack` from top down, finding the nearest frame with `context.kind === 'actionSelection'`. Captures the frame's `actionId` internally — no separate `resolveCurrentActionSelection` helper is exposed; the walk and the actionId capture happen in one pass.
 2. If no such frame exists: returns `null` (truly stuck — which under spec 140's invariants should be unreachable, but the explicit `null` is the fail-safe).
 3. Produces `newStack = state.decisionStack.slice(0, actionSelectionFrameIndex + 1)`.
-4. Records the offending `actionId` in `state.unavailableActionsPerTurn[${turnId}:${seatId}]`.
+4. Records the captured offending `actionId` in `state.unavailableActionsPerTurn[${turnId}:${seatId}]`.
 5. Resets `state.activeDeciderSeatId`, `state.nextFrameId`, and any other stack-derived fields to values consistent with the popped stack.
-6. Returns `{ state: newState, logEntry: ProbeHoleRecoveryLog }`.
+6. Returns `{ state: newState, logEntry: ProbeHoleRecoveryLog }`. The log carries both `stateHashBefore` and `stateHashAfter` for determinism audit.
 
 The `actionSelection` publisher (`publishActionSelection` at `publish.ts:586-611`) is extended to filter `supportedActionMovesForState` by the current turn's blacklist. The filter uses the generic `action.id` + `seatId` + `turnId` tuple — zero FITL-specific code.
 
@@ -389,7 +393,12 @@ Note: the pass action runs through the normal apply pipeline — its effects, gr
 
 ### D6 — Seed 1049 harness divergence fix
 
-`campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` currently implements its own loop that imports `publishMicroturn`, `applyPublishedDecision`, and `advanceAutoresolvable` directly (lines 42-49). It derives its own `chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX)` and `agentRng` per seat. Its RNG plumbing does not match `runGame`'s exact path (different mix order, different trace-retention handling, different profiler hooks), leading to seed 1049 running two different trajectories.
+`campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` currently implements its own loop that imports `publishMicroturn`, `applyPublishedDecision`, and `advanceAutoresolvable` directly (at `diagnose-nolegalmoves.mjs:36-49`). The RNG mix constants and derivation formulas are **identical** to `runGame` (both use `CHANCE_RNG_MIX` and `AGENT_RNG_MIX = 0x9e3779b97f4a7c15n` with the same `seed ^ (BigInt(i+1) * AGENT_RNG_MIX)` shape). The actual divergence is on the **agent-dispatch player resolution**:
+
+- Diagnostic (`diagnose-nolegalmoves.mjs:138`): `const player = state.activePlayer;`
+- Simulator (`simulator.ts:191`): `const player = resolvePlayerIndexForSeat(validatedDef, microturn.seatId);`
+
+In FITL, `state.activePlayer` is the faction whose turn it currently is, but during event resolution or interrupt windows the microturn decider can be a non-active faction. The diagnostic therefore dispatches the wrong agent (and wrong `agentRng`) for non-active-faction microturns, producing a different trajectory. Seed 1049 is the reproducer for this class.
 
 Fix: rewrite `diagnose-nolegalmoves.mjs` to route through `runGame(def, seed, agents, maxTurns, playerCount, options, runtime)` with `options.decisionHook = (log) => captureDiagnosticOnFailure(log)` and `options.traceRetention = 'full'`. The diagnostic captures the state at the moment of failure via a hook, not by re-running the simulator loop. This guarantees direct `runGame` and the diagnostic are the same path.
 
@@ -403,7 +412,13 @@ Replace the existing F#18 in `docs/FOUNDATIONS.md`:
 
 > **18. Constructibility Is Part of Legality**
 >
-> A move is not legal for clients unless it is constructible under the kernel's bounded deterministic rules protocol. Every kernel-published legal action is constructible atomically at its microturn scope; the publication probe verifies constructibility within a bounded depth budget (`MICROTURN_PROBE_DEPTH_BUDGET`). For residual probe gaps caused by state-dependent branches deeper than the budget or future bugs, the kernel MUST implement deterministic rollback to the nearest `actionSelection` frame — rollback is a runtime safety net, not a published contract. If the publication pipeline produces a decision that proves unbridgeable at apply time, that is a kernel bug surfaced as a `probeHoleRecovery` diagnostic and SHOULD be closed by deepening the probe. No client-side search, no template completion, no satisfiability verdict distinct from publication, no `unknown` legal actions. The microturn publication pipeline plus the rollback safety net together establish legality and executability; they cannot diverge.
+> A move is not legal for clients unless it is constructible under the kernel's bounded deterministic rules protocol. Existence without a construction artifact is insufficient. No client-side search, no template completion, no satisfiability verdict distinct from publication, no `unknown` legal actions.
+>
+> *Publication contract*: Every kernel-published legal action is constructible atomically at its microturn scope. The publication probe verifies constructibility by inspecting the candidate's resulting next decision to a bounded depth (`MICROTURN_PROBE_DEPTH_BUDGET`); a candidate is not published unless its next decision terminates, auto-resolves, or has ≥ 1 legal option at each level within the budget.
+>
+> *Runtime safety net*: For residual probe gaps — state-dependent branches deeper than the budget, or future bugs — the kernel MUST roll back deterministically to the nearest `actionSelection` frame, blacklist the offending action for the current `(turnId, seatId)`, and re-publish. Rollback is an observable trace event (`ProbeHoleRecoveryLog`), not a published contract, and not a `Decision` union variant. If the publication pipeline produces an unbridgeable decision at apply time, that is a kernel bug and SHOULD be closed by deepening the probe.
+>
+> The microturn publication pipeline plus the rollback safety net together establish legality and executability; they cannot diverge.
 
 The Appendix clause referring to Spec 139 / Spec 140 is extended with a one-line note:
 
@@ -424,7 +439,7 @@ Re-bless protocol per `.claude/rules/testing.md` (distillation over re-bless):
 ### D9 — New test files
 
 - `packages/engine/test/unit/kernel/microturn/deep-probe.test.ts` (`@test-class: architectural-invariant`)
-  - For each continuation kind (`chooseOne`, `chooseN`, `chooseNStep`, terminal, stochastic): crafted fixtures asserting the probe correctly returns bridgeable/unbridgeable. Zero-option frames produce unbridgeable verdicts.
+  - For live choice continuations (`chooseOne`, `chooseN`, `chooseNStep`, terminal): crafted fixtures asserting the probe correctly returns bridgeable/unbridgeable. Zero-option frames produce unbridgeable verdicts. Stochastic continuations remain covered by `publish.ts`'s existing distribution handling.
   - Purity: same `(state, request)` → same verdict across repeated invocations.
   - Budget: `K=0` returns `bridgeable` (optimistic).
 - `packages/engine/test/unit/kernel/microturn/rollback.test.ts` (`@test-class: architectural-invariant`)
@@ -443,8 +458,10 @@ Re-bless protocol per `.claude/rules/testing.md` (distillation over re-bless):
 ### D10 — Affected files (migration inventory)
 
 New files:
-- `packages/engine/src/kernel/microturn/probe.ts`
-- `packages/engine/src/kernel/microturn/rollback.ts`
+- `packages/engine/src/kernel/microturn/probe.ts` — deep probe core (D2).
+- `packages/engine/src/kernel/microturn/rollback.ts` — rollback + `ProbeHoleRecoveryLog` type (D4).
+- `packages/engine/src/shared/lru-cache.ts` — minimal generic LRU used by D3.
+- `packages/engine/test/unit/shared/lru-cache.test.ts` — LRU unit tests.
 - `packages/engine/test/unit/kernel/microturn/deep-probe.test.ts`
 - `packages/engine/test/unit/kernel/microturn/rollback.test.ts`
 - `packages/engine/test/integration/fitl-march-dead-end-recovery.test.ts`
@@ -455,25 +472,32 @@ New files:
 - `campaigns/phase4-probe-recover/memoization-measurement.md` (I2 artifact)
 - `campaigns/phase4-probe-recover/pass-action-audit.md` (I3 artifact)
 
-Modified files:
+Modified files (source):
 - `packages/engine/src/kernel/microturn/publish.ts` — deepened probe; calls `probe.ts`.
-- `packages/engine/src/kernel/microturn/constants.ts` — adds `MICROTURN_PROBE_DEPTH_BUDGET`.
-- `packages/engine/src/kernel/gamedef-runtime.ts` — adds `probeCache`.
-- `packages/engine/src/kernel/types-core.ts` — extends `GameState`, `DecisionLog`, `GameTrace`.
-- `packages/engine/src/sim/simulator.ts` — rollback integration.
+- `packages/engine/src/kernel/gamedef-runtime.ts` — adds `publicationProbeCache` field + factory wiring.
+- `packages/engine/src/kernel/types-core.ts` — extends `GameState` (optional `unavailableActionsPerTurn`) and `GameTrace` (`probeHoleRecoveries`, `recoveredFromProbeHole`). `DecisionLog` and the `Decision` union are NOT modified.
+- `packages/engine/src/sim/simulator.ts` — rollback integration + maintains a parallel `probeHoleRecoveries` array.
 - `packages/engine/src/sim/sim-options.ts` — adds optional `decisionHook`.
-- `packages/engine/src/sim/compound-turns.ts` — filters `probeHoleRecovery` events out of compound-turn aggregation.
-- `packages/engine/schemas/Trace.schema.json` — adds `ProbeHoleRecoveryLog` variant and `recoveredFromProbeHole` counter.
+- `packages/engine/src/sim/compound-turns.ts` — no change to input shape (recoveries live outside `decisions[]`), but a one-line note may be warranted.
+- `packages/engine/schemas/Trace.schema.json` — adds `ProbeHoleRecoveryLog` schema as a sibling of `DecisionLogSchema` plus the new `probeHoleRecoveries` / `recoveredFromProbeHole` fields on the trace schema. `DecisionLog` schema itself unchanged.
 - `docs/FOUNDATIONS.md` — F#18 amendment + Appendix addendum.
 - `docs/architecture.md` — one-paragraph note on the probe/rollback pairing.
-- `packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts` — re-bless.
-- `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` — route through `runGame`.
+- `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` — route through `runGame` (D6).
+
+Modified files (tests — `GameTrace` construction-site migration for the non-optional `probeHoleRecoveries` and `recoveredFromProbeHole` fields):
+- `packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts` — re-bless per D8.
+- `packages/engine/test/unit/serde.test.ts` — `GameTrace` literal fixture.
+- `packages/engine/test/unit/schemas-top-level.test.ts` — `validGameTrace` literal.
+- `packages/engine/test/unit/trace-enrichment.test.ts` — `makeMockTrace` helper (two sites).
+- `packages/engine/test/unit/json-schema.test.ts` — `validRuntimeTrace` literal.
+- `packages/engine/test/unit/sim/trace-eval.test.ts` — trace factory.
+- `packages/engine/test/unit/sim/eval-report.test.ts` — trace factory.
 
 Deleted files: none (spec does not retire any existing machinery).
 
 ## Edge Cases
 
-- **Free-operation grants outstanding after rollback.** If the rollback pops past a `freeOperation: true` action's scope, the outstanding grant remains pending. The `pass` action declared by the game spec must be authored to consume/clear the grant (FITL's `pass` action: `grant-terminator` semantics added as part of I3 if missing). Alternative: engine's pass-fallback publisher is a no-op that does not consume grants, and the game's own turn-flow must handle "pass with outstanding grant" — this is explored in I3.
+- **Free-operation grants outstanding after rollback.** Free-operation grants live in `state.turnOrderState.pendingFreeOperationGrants` (`TurnFlowRuntimeState`). If the rollback pops past a `freeOperation: true` action's scope, the outstanding grant remains pending in that field. FITL's `pass` action is declared today with `effects: []` (no grant clearing). I3 decides among three paths: (a) extend FITL's `pass` action with explicit grant-terminator effects; (b) have the engine's rollback also emit a grant-clearing effect at pop time; (c) confirm the grant harmlessly expires at turn retirement. D4 is worded neutrally until I3 lands.
 
 - **Rollback across compound action + special activity.** If the offending action is a compound `{ actionId: march, compound: { specialActivity: ambush } }`, both halves unwind together. The rollback walks up to the root `actionSelection` frame, not an intermediate `specialActivity` frame.
 
@@ -523,21 +547,21 @@ Coverage matrix (in addition to the new test files in D9):
 | **F#16 Testing as Proof** | Each invariant listed in Testing Strategy has a test. |
 | **F#17 Strongly Typed Identifiers** | New types use branded `TurnId`, `ActionId`, `SeatId`. |
 | **F#18 Constructibility Is Part of Legality** | Amended by this spec (D7) to distinguish published contract from safety net. |
-| **F#19 Decision-Granularity Uniformity** | Unchanged; rollback events are trace-only and do not violate microturn atomicity. |
+| **F#19 Decision-Granularity Uniformity** | Preserved. `ProbeHoleRecoveryLog` is trace-only — stored in its own `GameTrace.probeHoleRecoveries` array, NOT appended to `GameTrace.decisions[]`, and NOT a `Decision` union variant. The microturn decision stream remains six kinds (`actionSelection`, `chooseOne`, `chooseNStep`, `stochasticResolve`, `outcomeGrantResolve`, `turnRetirement`). |
 
 ## Migration Waves
 
 Ticket sequence (prefix `144PROBEREC-`):
 
-1. **144PROBEREC-001 — Deep probe + memoization cache.** Implements `probe.ts`, extends `GameDefRuntime`, rewires `publish.ts` to call the new probe. Adds `deep-probe.test.ts`. Depends on I1 & I2 artifacts landing first.
+1. **144PROBEREC-001 — Minimal LRU + deep probe + memoization cache.** Implements `packages/engine/src/shared/lru-cache.ts` + unit tests, `probe.ts`, extends `GameDefRuntime` with `publicationProbeCache`, rewires `publish.ts` to call the new probe. Adds `deep-probe.test.ts`. Depends on I1 & I2 artifacts landing first.
 
-2. **144PROBEREC-002 — Rollback safety net + blacklist state + trace event.** Implements `rollback.ts`, extends `GameState` / `DecisionLog` / `GameTrace`, rewires `simulator.ts`. Adds `rollback.test.ts` and the synthetic `fitl-probe-hole-rollback-safety-net.test.ts`. Depends on I3 artifact.
+2. **144PROBEREC-002 — Rollback safety net + blacklist state + trace event + test-fixture migration.** Implements `rollback.ts`, extends `GameState` (`unavailableActionsPerTurn`) and `GameTrace` (`probeHoleRecoveries`, `recoveredFromProbeHole` — both non-optional per F#14). Rewires `simulator.ts` (including the parallel `probeHoleRecoveries` accumulator). Migrates all seven `GameTrace` construction sites listed in D10 (one source, six test fixtures). Adds `rollback.test.ts` and the synthetic `fitl-probe-hole-rollback-safety-net.test.ts`. Depends on I3 artifact.
 
 3. **144PROBEREC-003 — F#18 amendment + convergence-witness re-bless + seed-1001 regression test.** Updates `docs/FOUNDATIONS.md`, `docs/architecture.md`, re-blesses `fitl-variant-arvn-evolved-convergence.test.ts`, adds `fitl-march-dead-end-recovery.test.ts` using the I4 fixture. Depends on 001 + 002 + I4.
 
-4. **144PROBEREC-004 — Diagnostic harness rewire (seed 1049 divergence fix).** Adds `SimulationOptions.decisionHook`, rewrites `diagnose-nolegalmoves.mjs` to route through `runGame`. Adds smoke test asserting direct-vs-diagnostic parity. Can land in parallel with 003.
+4. **144PROBEREC-004 — Diagnostic harness rewire (seed 1049 divergence fix).** Adds `SimulationOptions.decisionHook`, rewrites `diagnose-nolegalmoves.mjs` to route through `runGame` — closing the `state.activePlayer` vs `resolvePlayerIndexForSeat(microturn.seatId)` gap (see D6). Adds smoke test asserting direct-vs-diagnostic parity. Can land in parallel with 003.
 
-5. **144PROBEREC-005 — Determinism replay-identity proof.** Adds `probe-hole-recovery-replay-identity.test.ts` and `Trace.schema.json` update. Depends on 002.
+5. **144PROBEREC-005 — Determinism replay-identity proof + schema update.** Adds `probe-hole-recovery-replay-identity.test.ts` and extends `packages/engine/schemas/Trace.schema.json` with `ProbeHoleRecoveryLog` schema and the two new `GameTrace` fields. Depends on 002.
 
 Estimated complexity per ticket: S–M each (one day of focused implementation + test).
 
@@ -559,3 +583,11 @@ Estimated complexity per ticket: S–M each (one day of focused implementation +
 - **MCTS / tree-search agent** (carried over from spec 140 future work): the deeper probe makes search-guided agents more reliable because speculative rollouts operate on the same constructibility contract as the publication path.
 - **Adaptive probe depth**: if telemetry shows certain games consistently need `K=4` or `K=5`, the depth could become per-game-spec configurable under the generic `gameMetadata.probeDepth` field.
 - **Probe-gap closure automation**: when `recoveredFromProbeHole > 0` in a CI run, automatically generate a minimal failing fixture and open a ticket. The existing `distillation-over-re-bless` protocol handles the resulting test distinctions.
+
+## Tickets
+
+- `archive/tickets/144PROBEREC-001.md` — Deep probe + minimal LRU + memoization cache (I1/I2)
+- `tickets/144PROBEREC-002.md` — Rollback safety net + blacklist state + GameTrace migration (I3)
+- `tickets/144PROBEREC-003.md` — F#18 amendment + seed-1001 regression fixture (I4) + convergence-witness re-bless
+- `tickets/144PROBEREC-004.md` — Diagnostic harness rewire + `SimulationOptions.decisionHook` (seed 1049)
+- `tickets/144PROBEREC-005.md` — Determinism replay-identity proof + `Trace.schema.json` update

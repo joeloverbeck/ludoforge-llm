@@ -249,6 +249,7 @@ describe('runGame', () => {
     const def = createDef({ terminalAtScore: 1 });
     const sharedRuntime = createGameDefRuntime(def);
     sharedRuntime.zobristTable.keyCache.set('score=1', 1n);
+    sharedRuntime.publicationProbeCache.set('probe', true);
     const forkedRuntime = forkGameDefRuntimeForRun(sharedRuntime);
 
     const sharedStructuralRows = [
@@ -275,6 +276,13 @@ describe('runGame', () => {
     );
     assert.equal(forkedRuntime.zobristTable.keyCache.size, 0);
     assert.equal(sharedRuntime.zobristTable.keyCache.size, 1);
+    assert.notEqual(
+      forkedRuntime.publicationProbeCache,
+      sharedRuntime.publicationProbeCache,
+      'publicationProbeCache should fork per run',
+    );
+    assert.equal(forkedRuntime.publicationProbeCache.size, 0);
+    assert.equal(sharedRuntime.publicationProbeCache.size, 1);
   });
 
   it('treats shared runtime zobrist caches as per-run state', () => {
@@ -284,6 +292,7 @@ describe('runGame', () => {
     const second = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
 
     assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    assert.equal(sharedRuntime.publicationProbeCache.size, 0);
     assert.equal(first.finalState.stateHash, second.finalState.stateHash);
     assert.equal(first.stopReason, second.stopReason);
   });

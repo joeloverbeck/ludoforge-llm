@@ -7,10 +7,7 @@ import {
   asPlayerId,
   asPhaseId,
   asZoneId,
-  buildAdjacencyGraph,
-  buildRuntimeTableIndex,
-  compileGameDefFirstDecisionDomains,
-  createZobristTable,
+  createGameDefRuntime,
   describeAction,
   type ActionDef,
   type ActionPipelineDef,
@@ -22,7 +19,6 @@ import {
   type DisplayLineNode,
   type DisplayNode,
   type GameDef,
-  type GameDefRuntime,
   type GameState,
   type VerbalizationDef,
 } from '../../../src/kernel/index.js';
@@ -104,21 +100,13 @@ const makeState = (overrides: Partial<GameState> = {}): GameState => ({
   ...overrides,
 });
 
-const makeRuntime = (def: GameDef): GameDefRuntime => ({
-  adjacencyGraph: buildAdjacencyGraph(def.zones),
-  runtimeTableIndex: buildRuntimeTableIndex(def),
-  zobristTable: createZobristTable(def),
-  alwaysCompleteActionIds: new Set(),
-  firstDecisionDomains: compileGameDefFirstDecisionDomains(def),
-  ruleCardCache: new Map(),
-  compiledLifecycleEffects: new Map(),
-});
+const makeRuntime = (def: GameDef) => createGameDefRuntime(def);
 
 const makeContext = (overrides: Partial<AnnotationContext> = {}): AnnotationContext => {
   const def = overrides.def ?? makeDef();
   return {
     def,
-    runtime: makeRuntime(def),
+    runtime: createGameDefRuntime(def),
     state: makeState(),
     activePlayer: asPlayerId(0),
     actorPlayer: asPlayerId(0),

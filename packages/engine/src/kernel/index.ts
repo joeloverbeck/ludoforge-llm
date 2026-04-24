@@ -163,6 +163,7 @@ export * from './decision-scope.js';
 export * from './microturn/types.js';
 export * from './microturn/constants.js';
 export * from './microturn/publish.js';
+export * from './microturn/probe.js';
 export * from './microturn/apply.js';
 export * from './microturn/advance.js';
 export * from './perf-profiler.js';

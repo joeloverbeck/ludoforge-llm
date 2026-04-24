@@ -21,6 +21,7 @@ import {
   type DecisionStackFrame,
   type GameDef,
   type GameState,
+  type TurnFlowPendingFreeOperationGrant,
 } from '../../../../src/kernel/index.js';
 import { eff } from '../../../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../../../helpers/gamedef-fixtures.js';
@@ -190,6 +191,82 @@ describe('probe-hole rollback safety net', () => {
         .filter((decision) => decision.kind === 'actionSelection')
         .map((decision) => decision.actionId),
       [asActionId('pass')],
+    );
+  });
+
+  it('expires ready blocking free-operation grants for the recovered seat', () => {
+    const def = makeDef([badAction, passAction]);
+    const runtime = createGameDefRuntime(def);
+    const blockingGrant = {
+      grantId: 'grant:bad',
+      phase: 'ready',
+      seat: '0',
+      operationClass: 'operation',
+      actionIds: ['bad'],
+      completionPolicy: 'skipIfNoLegalCompletion',
+      remainingUses: 1,
+    } satisfies TurnFlowPendingFreeOperationGrant;
+    const otherGrant = {
+      grantId: 'grant:other',
+      phase: 'ready',
+      seat: '1',
+      operationClass: 'operation',
+      actionIds: ['bad'],
+      completionPolicy: 'required',
+      remainingUses: 1,
+    } satisfies TurnFlowPendingFreeOperationGrant;
+    const state = {
+      ...makeState(def),
+      turnOrderState: {
+        type: 'cardDriven' as const,
+        runtime: {
+          seatOrder: ['0', '1'],
+          eligibility: { '0': true, '1': true },
+          pendingEligibilityOverrides: [],
+          currentCard: {
+            firstEligible: '0',
+            secondEligible: '1',
+            actedSeats: [],
+            passedSeats: [],
+            nonPassCount: 0,
+            firstActionClass: null,
+          },
+          pendingFreeOperationGrants: [blockingGrant, otherGrant],
+        },
+      },
+      decisionStack: [{
+        frameId: asDecisionFrameId(0),
+        parentFrameId: null,
+        turnId: asTurnId(0),
+        context: {
+          kind: 'actionSelection',
+          seatId: '0' as SeatId,
+          eligibleActions: [asActionId('bad')],
+        },
+        effectFrame: {
+          programCounter: 0,
+          boundedIterationCursors: {},
+          localBindings: {},
+          pendingTriggerQueue: [],
+          decisionHistory: [{
+            seatId: '0' as SeatId,
+            decision: { kind: 'actionSelection', actionId: asActionId('bad'), move: { actionId: asActionId('bad'), params: {} } },
+            decisionContextKind: 'actionSelection',
+            decisionKey: null,
+            frameId: asDecisionFrameId(0),
+          }],
+        },
+      } satisfies DecisionStackFrame],
+    } satisfies GameState;
+
+    const rolledBack = rollbackToActionSelection(def, state, runtime, 'forced test failure');
+
+    assert.notEqual(rolledBack, null);
+    assert.deepEqual(
+      rolledBack!.state.turnOrderState.type === 'cardDriven'
+        ? rolledBack!.state.turnOrderState.runtime.pendingFreeOperationGrants?.map((grant) => grant.grantId)
+        : [],
+      ['grant:other'],
     );
   });
 

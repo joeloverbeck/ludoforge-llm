@@ -149,6 +149,13 @@ This matches the spec's intended scope, but the drop rule is currently object-li
 
 The class assignment is confirmed, but the drop rule is still documented-by-convention rather than enforced by a dedicated scope owner. That enforcement gap belongs to `143BOURUNMEM-004`.
 
+#### Microturn probe and recovery
+
+- Structure: `packages/engine/src/kernel/microturn/probe.ts`, `packages/engine/src/kernel/microturn/rollback.ts`, `packages/engine/src/kernel/microturn/publish.ts`
+- Contract: publication first filters candidate decisions through the bounded probe. If a residual probe hole still reaches runtime, the simulator rolls back to the nearest `actionSelection` frame, blacklists the offending action for that `(turnId, seatId)`, reconciles ready blocking free-operation grants for the recovered seat, and re-publishes.
+- Trace surface: recovery emits trace-only `ProbeHoleRecoveryLog` entries in `GameTrace.probeHoleRecoveries`; these are not player/chance/kernel decisions and are not appended to the decision stream.
+- Fallback: when no non-blacklisted action remains, publication uses the authored action tagged `pass` as the generic fallback. The engine recognizes the tag only; rule semantics remain in GameSpecDoc data.
+
 #### `DecisionStackFrame` live fields
 
 - Structure: `packages/engine/src/kernel/microturn/types.ts:205-212`

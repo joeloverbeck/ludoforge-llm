@@ -1,0 +1,1775 @@
+[
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-48",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:eventTarget:0:$targetProvince::$targetProvince",
+    "value": "pleiku-darlac:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.eventDecks.0.cards.47.shaded.targets.0.effects.0.chooseOne::$coinBaseToRemove",
+    "value": "tok_us-bases_46"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "govern",
+    "move": {
+      "actionId": "govern",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]",
+    "value": "patronage"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-1",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "sihanoukville:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-50",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded",
+        "branch": "vc-then-nva-six-free-limited-ops"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "govern",
+    "move": {
+      "actionId": "govern",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "ba-xuyen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@ba-xuyen:none[0]",
+    "value": "patronage"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "ba-xuyen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "assault",
+    "move": {
+      "actionId": "assault",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "binh-dinh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[4].effects.0.if.then.0.if.then.0.chooseN::$arvnFollowupSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-51",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "stochasticResolve",
+    "decisionKey": "$dieRoll",
+    "value": 1
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "govern",
+    "move": {
+      "actionId": "govern",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "kien-hoa-vinh-binh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@kien-hoa-vinh-binh:none[0]",
+    "value": "patronage"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "northeast-cambodia:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "assault",
+    "move": {
+      "actionId": "assault",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "pleiku-darlac:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.6.stages[4].effects.0.if.then.0.if.then.0.chooseN::$arvnFollowupSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "govern",
+    "move": {
+      "actionId": "govern",
+      "params": {},
+      "actionClass": "specialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "cam-ranh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@cam-ranh:none[0]",
+    "value": "patronage"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-26",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupVictoryCheck",
+    "move": {
+      "actionId": "coupVictoryCheck",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "the-fishhook:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "kien-giang-an-xuyen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupResourcesResolve",
+    "move": {
+      "actionId": "coupResourcesResolve",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "march",
+    "move": {
+      "actionId": "march",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "sihanoukville:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@sihanoukville:none[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "march",
+    "move": {
+      "actionId": "march",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "loc-hue-khe-sanh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@loc-hue-khe-sanh:none[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "march",
+    "move": {
+      "actionId": "march",
+      "params": {},
+      "freeOperation": true,
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "southern-laos:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@southern-laos:none[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyUS",
+    "move": {
+      "actionId": "coupPacifyUS",
+      "params": {
+        "targetSpace": "saigon:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyUS",
+    "move": {
+      "actionId": "coupPacifyUS",
+      "params": {
+        "targetSpace": "da-nang:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyUS",
+    "move": {
+      "actionId": "coupPacifyUS",
+      "params": {
+        "targetSpace": "da-nang:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyUS",
+    "move": {
+      "actionId": "coupPacifyUS",
+      "params": {
+        "targetSpace": "kontum:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyUS",
+    "move": {
+      "actionId": "coupPacifyUS",
+      "params": {
+        "targetSpace": "kontum:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyPass",
+    "move": {
+      "actionId": "coupPacifyPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyARVN",
+    "move": {
+      "actionId": "coupPacifyARVN",
+      "params": {
+        "targetSpace": "an-loc:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyARVN",
+    "move": {
+      "actionId": "coupPacifyARVN",
+      "params": {
+        "targetSpace": "an-loc:none",
+        "action": "shiftSupport"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupPacifyPass",
+    "move": {
+      "actionId": "coupPacifyPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupAgitateVC",
+    "move": {
+      "actionId": "coupAgitateVC",
+      "params": {
+        "targetSpace": "binh-dinh:none",
+        "action": "shiftOpposition"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupAgitateVC",
+    "move": {
+      "actionId": "coupAgitateVC",
+      "params": {
+        "targetSpace": "quang-tri-thua-thien:none",
+        "action": "shiftOpposition"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupAgitateVC",
+    "move": {
+      "actionId": "coupAgitateVC",
+      "params": {
+        "targetSpace": "ba-xuyen:none",
+        "action": "shiftOpposition"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupAgitateVC",
+    "move": {
+      "actionId": "coupAgitateVC",
+      "params": {
+        "targetSpace": "ba-xuyen:none",
+        "action": "shiftOpposition"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupAgitatePass",
+    "move": {
+      "actionId": "coupAgitatePass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupRedeployPass",
+    "move": {
+      "actionId": "coupRedeployPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "an-loc:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "da-nang:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "can-tho:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "cam-ranh:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "can-tho:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "hue:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "can-tho:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "kontum:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "cam-ranh:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "hue:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "qui-nhon:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "da-nang:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "qui-nhon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "cam-ranh:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "an-loc:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployOptionalTroops",
+    "move": {
+      "actionId": "coupArvnRedeployOptionalTroops",
+      "params": {
+        "sourceSpace": "saigon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "saigon:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.10.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "qui-nhon:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "an-loc:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-can-tho-bac-lieu:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-can-tho-long-phu:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "ba-xuyen:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-qui-nhon-cam-ranh:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "cam-ranh:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-saigon-da-lat:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-hue-khe-sanh:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "can-tho:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-da-nang-dak-to:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-cam-ranh-da-lat:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "da-nang:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-ban-me-thuot-da-lat:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "hue:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-hue-da-nang:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-saigon-can-tho:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "khanh-hoa:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-saigon-cam-ranh:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "kien-hoa-vinh-binh:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "hue:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "kontum:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-kontum-qui-nhon:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "phu-bon-phu-yen:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "phu-bon-phu-yen:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "quang-nam:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-hue-da-nang:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "qui-nhon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-cam-ranh-da-lat:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-da-nang-qui-nhon:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupArvnRedeployPolice",
+    "move": {
+      "actionId": "coupArvnRedeployPolice",
+      "params": {
+        "sourceSpace": "saigon:none"
+      },
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[0]",
+    "value": "loc-saigon-da-lat:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[1]",
+    "value": "loc-da-nang-qui-nhon:none"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actions.11.effects.0.forEach.effects.0.chooseOne::$destination[2]",
+    "value": "hue:none"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupRedeployPass",
+    "move": {
+      "actionId": "coupRedeployPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupRedeployPass",
+    "move": {
+      "actionId": "coupRedeployPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupRedeployPass",
+    "move": {
+      "actionId": "coupRedeployPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupCommitmentPass",
+    "move": {
+      "actionId": "coupCommitmentPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupCommitmentPass",
+    "move": {
+      "actionId": "coupCommitmentPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupCommitmentPass",
+    "move": {
+      "actionId": "coupCommitmentPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "coupCommitmentPass",
+    "move": {
+      "actionId": "coupCommitmentPass",
+      "params": {},
+      "actionClass": "pass"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "quang-tri-thua-thien:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.1.if.then.0.chooseOne::$withBaseChoice[0]",
+    "value": "place-guerrillas"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-17",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "unshaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "can-tho:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "arvn-cubes"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-43",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded",
+        "branch": "improve-trail-and-add-resources"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "advise",
+    "move": {
+      "actionId": "advise",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "kien-hoa-vinh-binh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.else.0.chooseOne::$adviseMode@kien-hoa-vinh-binh:none[0]",
+    "value": "assault"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[2].effects.0.chooseOne::$adviseAid",
+    "value": "yes"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "cam-ranh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "pleiku-darlac:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "rangers"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-110",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "advise",
+    "move": {
+      "actionId": "advise",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "sihanoukville:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.else.0.chooseOne::$adviseMode@sihanoukville:none[0]",
+    "value": "activate-remove"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[2].effects.0.chooseOne::$adviseAid",
+    "value": "no"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "northeast-cambodia:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "tay-ninh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "rangers"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-38",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "unshaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "advise",
+    "move": {
+      "actionId": "advise",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "phuoc-long:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.else.0.chooseOne::$adviseMode@phuoc-long:none[0]",
+    "value": "activate-remove"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[2].effects.0.chooseOne::$adviseAid",
+    "value": "yes"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-78",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "quang-tin-quang-ngai:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.1.if.then.0.chooseOne::$withBaseChoice[0]",
+    "value": "flip-underground"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-6",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "unshaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "march",
+    "move": {
+      "actionId": "march",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "quang-tin-quang-ngai:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[1].effects.0.forEach.effects.0.if.else.0.chooseN::$movingGuerrillas@quang-tin-quang-ngai:none[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-95",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "phu-bon-phu-yen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "rangers"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.1.if.then.1.forEach.in.0.let.in.0.if.then.0.chooseN::$__macro_place_from_available_or_map_actionPipelines_1__stages_1__effects_0__forEach_effects_1__if_then_1__sourceSpaces[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "advise",
+    "move": {
+      "actionId": "advise",
+      "params": {},
+      "actionClass": "specialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "phu-bon-phu-yen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.then.0.chooseOne::$adviseMode@phu-bon-phu-yen:none[0]",
+    "value": "activate-remove"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[2].effects.0.chooseOne::$adviseAid",
+    "value": "no"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-22",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-129",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "unshaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "quang-duc-long-khanh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "arvn-cubes"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-90",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@phu-bon-phu-yen:none[0]",
+    "command": "add",
+    "value": "tok_vc-guerrillas_215"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@phu-bon-phu-yen:none[0]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@pleiku-darlac:none[1]",
+    "command": "add",
+    "value": "tok_nva-guerrillas_202"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@pleiku-darlac:none[1]",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@quang-nam:none[2]",
+    "command": "add",
+    "value": "tok_nva-guerrillas_206"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.89.shaded.effects.0.forEach.effects.0.chooseN::$rostowGuerrillaToPlace@quang-nam:none[2]",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "advise",
+    "move": {
+      "actionId": "advise",
+      "params": {},
+      "actionClass": "operationPlusSpecialActivity"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "central-laos:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[1].effects.0.forEach.effects.0.if.else.0.chooseOne::$adviseMode@central-laos:none[0]",
+    "value": "activate-remove"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.16.stages[2].effects.0.chooseOne::$adviseAid",
+    "value": "no"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "rally",
+    "move": {
+      "actionId": "rally",
+      "params": {},
+      "actionClass": "operation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "cam-ranh:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.0.if.then.0.if.else.0.chooseOne::$noBaseChoice[0]",
+    "value": "place-guerrilla"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "train",
+    "move": {
+      "actionId": "train",
+      "params": {},
+      "actionClass": "limitedOperation"
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "da-nang:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[1].effects.0.forEach.effects.0.chooseOne::$trainChoice[0]",
+    "value": "arvn-cubes"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.1.stages[2].effects.0.if.else.0.chooseN::$subActionSpaces",
+    "command": "confirm"
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "event",
+    "move": {
+      "actionId": "event",
+      "params": {
+        "eventCardId": "card-59",
+        "eventDeckId": "fitl-events-initial-card-pack",
+        "side": "shaded"
+      },
+      "actionClass": "event"
+    }
+  },
+  {
+    "kind": "actionSelection",
+    "actionId": "march",
+    "move": {
+      "actionId": "march",
+      "params": {},
+      "freeOperation": true
+    }
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "phu-bon-phu-yen:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "add",
+    "value": "central-laos:none"
+  },
+  {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.10.stages[0].effects.0.if.else.0.if.else.0.chooseN::$targetSpaces",
+    "command": "confirm"
+  }
+]

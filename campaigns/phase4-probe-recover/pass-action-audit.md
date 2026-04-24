@@ -26,8 +26,8 @@ Texas Hold'em's verbalization already describes `check` as "Pass without adding 
 
 ## Grant-Clearing Decision
 
-Rollback does not synthesize a grant-clearing effect and does not modify FITL's `pass` action in this ticket.
+Rollback does not synthesize a FITL-specific effect and does not modify FITL's `pass` action in this ticket.
 
-Decision: path (c), grant harmlessly expires at turn retirement, with the important implementation detail that rollback restores the nearest existing `actionSelection` frame rather than inventing a new action or clearing `turnOrderState.runtime.pendingFreeOperationGrants`. The fallback pass action still runs through the normal apply pipeline. If a future game needs explicit grant termination, that belongs in authored GameSpecDoc data or in a separate generic grant-lifecycle rule, not in a FITL-specific rollback branch.
+Live seed-1001 reassessment disproved the original path (c) assumption: leaving a ready blocking free-operation grant in place after rollback prevented the generic `tags: [pass]` fallback from publishing, so the simulator still terminated as `noLegalMoves`.
 
-This is safe for the current rollback use case because the blacklisted action is skipped before it is re-applied, and the pass/check fallback is a normal authored action. Any still-pending free-operation grant remains part of the state until the normal turn lifecycle advances or expires it.
+Revised decision: rollback applies a generic grant-lifecycle reconciliation for the recovered seat. When it blacklists an action and restores the nearest `actionSelection` frame, it also expires ready blocking free-operation grants (`required` and `skipIfNoLegalCompletion`) for that seat. The fallback pass action still runs through the normal apply pipeline. This keeps the behavior engine-agnostic: rollback does not know FITL action ids or faction rules, and game-authored `pass` / `check` actions still carry the fallback semantics.

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `SimulationOptions` extension + campaign diagnostic rewrite
-**Deps**: `archive/tickets/144PROBEREC-002.md`
+**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`
 
 ## Problem
 
@@ -107,7 +107,7 @@ Add `packages/engine/test/integration/diagnose-parity-runGame.test.ts` (`@test-c
 
 - Deep probe / LRU / cache — ticket 001.
 - Rollback / blacklist / `ProbeHoleRecoveryLog` type / `GameTrace` migration — ticket 002.
-- Seed-1001 fixture / F#18 amendment / convergence-witness re-bless — ticket 003.
+- Seed-1001 fixture / F#18 amendment / convergence-witness re-bless / residual recovery completion — ticket 003.
 - Replay-identity determinism proof for recovery traces — ticket 005. (`Trace.schema.json` was absorbed by ticket 002.)
 - Other campaign diagnostics (only `diagnose-nolegalmoves.mjs` is in scope — a repo-wide grep shows it's the only copy).
 
@@ -133,7 +133,7 @@ Add `packages/engine/test/integration/diagnose-parity-runGame.test.ts` (`@test-c
 
 Manual verification for the CLI:
 - `node campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs --seed 1049` — expect `stopReason=terminal` (not `noLegalMoves`), decision count matches `runGame` direct invocation.
-- `node campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs --seed 1001` — expect `stopReason=terminal` (post-001/002 behavior).
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs --seed 1001` — expect `stopReason=terminal` (post-003 behavior).
 
 ### Commands
 

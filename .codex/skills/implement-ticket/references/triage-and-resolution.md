@@ -59,6 +59,8 @@ If stronger live evidence contradicts an archived sibling ticket's benchmark or 
 
 Prefer `historical evidence only` when the archived ticket remains a truthful record of its own run and the current ticket can carry the stronger same-environment comparison without misleading future work.
 
+Apply the same classification to checked-in investigation, audit, benchmark, or campaign artifacts produced by completed dependency tickets. If the current ticket's live proof contradicts a durable dependency artifact's verdict or decision, update that artifact in the same turn when it remains part of the active series contract; otherwise record explicitly why the artifact is historical-only and why leaving it unchanged will not mislead future implementers.
+
 ## Confirmation Semantics
 
 - If the user explicitly authorizes reassessment and instructs you to proceed with the best `FOUNDATIONS.md`-compliant option after you have presented the discrepancy and choices, treat that as confirmation. Restate the boundary, then continue.

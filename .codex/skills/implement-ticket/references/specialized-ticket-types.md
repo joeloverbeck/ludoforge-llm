@@ -88,3 +88,10 @@ When an investigation or measurement ticket needs a new checked-in helper script
 3. add the helper to the active ticket's touched-file or outcome ledger before final proof
 4. cite the helper's exact invocation in the durable report or ticket closeout
 5. include the helper in the final touched-file scope sweep
+
+When the helper is a fixture/golden `regenerate` script:
+
+1. run the regenerate script at least once after the authoritative producer is built or otherwise current
+2. confirm the expected generated files changed or stayed stable for an understood reason
+3. ensure at least one proof lane consumes the generated fixture/golden, or record explicitly why the checked-in artifact is evidence-only rather than test-consumed
+4. if the regenerate script and consumer disagree, treat the generated artifact set as dirty, fix the producer/consumer boundary, regenerate again, and only then start final proof

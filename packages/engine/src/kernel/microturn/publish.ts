@@ -258,9 +258,21 @@ const actionById = (def: GameDef, actionId: Move['actionId']): ActionDef | undef
 
 const findPassFallbackMove = (
   def: GameDef,
+  state: GameState,
   supportedMoves: readonly Move[],
-): Move | undefined =>
-  supportedMoves.find((move) => actionById(def, move.actionId)?.tags?.includes('pass') === true);
+): Move | undefined => {
+  const supportedFallback = supportedMoves.find((move) => actionById(def, move.actionId)?.tags?.includes('pass') === true);
+  if (supportedFallback !== undefined) {
+    return supportedFallback;
+  }
+  const fallbackAction = def.actions.find((action) =>
+    action.tags?.includes('pass') === true
+    && action.params.length === 0
+    && action.phase.includes(state.currentPhase));
+  return fallbackAction === undefined
+    ? undefined
+    : { actionId: fallbackAction.id, params: {} };
+};
 
 const rootDecisionHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -627,7 +639,7 @@ const publishActionSelection = (
   const seatId = publishedSeatId(state, activeSeatForPlayer(def, state));
   const turnId = actionSelectionTurnId(state);
   const supportedMoves = filterUnavailableActions(state, rawSupportedMoves, turnId, seatId);
-  const fallbackMove = findPassFallbackMove(def, rawSupportedMoves);
+  const fallbackMove = findPassFallbackMove(def, state, rawSupportedMoves);
   const legalMoves = supportedMoves.length === 0 && fallbackMove !== undefined
     ? [fallbackMove]
     : supportedMoves;
@@ -670,7 +682,7 @@ const publishStackTop = (
       context.eligibleActions.includes(move.actionId),
     );
     const supportedMoves = filterUnavailableActions(state, rawSupportedMoves, top.turnId, seatId);
-    const fallbackMove = findPassFallbackMove(def, allSupportedMoves);
+    const fallbackMove = findPassFallbackMove(def, state, allSupportedMoves);
     const legalMoves = supportedMoves.length === 0 && fallbackMove !== undefined
       ? [fallbackMove]
       : supportedMoves;

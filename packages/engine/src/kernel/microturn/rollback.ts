@@ -1,4 +1,5 @@
 import type { GameDefRuntime } from '../gamedef-runtime.js';
+import { expireReadyBlockingGrantsForSeat, withPendingFreeOperationGrants } from '../grant-lifecycle.js';
 import type { GameDef, GameState, ProbeHoleRecoveryLog } from '../types-core.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
 import { asDecisionFrameId, type ActiveDeciderSeatId, type DecisionStackFrame } from './types.js';
@@ -58,6 +59,33 @@ const isActionAlreadyUnavailable = (
   return (state.unavailableActionsPerTurn?.[key] ?? []).includes(rebuildMoveFromFrame(frame).actionId);
 };
 
+const expireRollbackBlockingGrantsForSeat = (
+  state: GameState,
+  seatId: ActiveDeciderSeatId,
+): GameState => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return state;
+  }
+  const expired = expireReadyBlockingGrantsForSeat(pending, String(seatId));
+  if (expired.grants.length === pending.length) {
+    return state;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        state.turnOrderState.runtime,
+        expired.grants.length === 0 ? undefined : expired.grants,
+      ),
+    },
+  };
+};
+
 export const rollbackToActionSelection = (
   def: GameDef,
   state: GameState,
@@ -89,13 +117,13 @@ export const rollbackToActionSelection = (
   const nextFrameId = asDecisionFrameId(
     Math.max(...newStack.map((frame) => Number(frame.frameId))) + 1,
   );
-  const nextState = withResolvedHash(def, {
+  const nextState = withResolvedHash(def, expireRollbackBlockingGrantsForSeat({
     ...canonicalState,
     decisionStack: newStack,
     unavailableActionsPerTurn: appendUnavailableAction(canonicalState, actionSelectionFrame),
     nextFrameId,
     activeDeciderSeatId: seatId,
-  }, runtime);
+  }, seatId), runtime);
 
   return {
     state: nextState,

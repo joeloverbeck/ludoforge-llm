@@ -54,7 +54,7 @@ Our F#18 commitment is stricter than TAG/OpenSpiel — we promise constructibili
 Close the probe hole in `publishMicroturn` by deepening the continuation check one bounded level, and add a kernel-level rollback as a defense-in-depth safety net. After this spec:
 
 1. Every candidate microturn decision published by the kernel is verified to lead to either a terminal state, an auto-resolvable microturn, or a player microturn with at least one legal option — recursively up to a bounded depth `K=3`.
-2. If a published decision still proves unbridgeable at apply time (either because of a residual probe gap or because `depth > K`), the kernel rolls back to the nearest `actionSelection` frame, blacklists the offending action for the current (seat, turn), and re-publishes. If the post-rollback `actionSelection` microturn has zero legal actions, the kernel looks up a generic `tags: [pass]` action in the game spec and emits it as the single legal decision.
+2. If a published decision still proves unbridgeable at apply time (either because of a residual probe gap or because `depth > K`), the kernel rolls back to the nearest `actionSelection` frame, blacklists the offending action for the current (seat, turn), reconciles ready blocking free-operation grants for that seat, and re-publishes. If the post-rollback `actionSelection` microturn has zero legal actions, the kernel looks up a generic `tags: [pass]` action in the game spec and emits it as the single legal decision.
 3. `stopReason: 'noLegalMoves'` becomes reachable only when rollback cannot identify a new action-selection recovery path, or when the nearest action-selection action is already blacklisted and no `tags: [pass]` fallback is declared. FITL declares `pass` (`data/games/fire-in-the-lake/30-rules-actions.md:159`); the I3 audit adds the generic `pass` tag to Texas Hold'em `check`.
 
 Foundation #18 is amended to distinguish the published contract (which remains "every published action is constructible") from the runtime safety net (a deterministic rollback that catches residual probe gaps as self-describing diagnostic events, not as routine control flow).
@@ -389,7 +389,7 @@ throw microturnConstructibilityInvariant(
 
 This is the only engine ↔ game-spec coupling: the engine recognizes `tags: [pass]` as the terminal-fallback hint. It does not hard-code action names or faction-specific rules. FITL declares `pass`; the I3 audit adds the generic tag to Texas Hold'em `check`, not `fold`. Any future conformance-corpus game must declare a rule-valid pass fallback.
 
-Note: the pass action runs through the normal apply pipeline — its effects, grants, and turn-retirement semantics are game-authored. The engine does not synthesize an "empty" pass; it publishes the game's own pass action as the single legal choice.
+Note: the pass action runs through the normal apply pipeline — its effects, grants, and turn-retirement semantics are game-authored. The engine does not synthesize an "empty" pass; it publishes the game's own pass action as the single legal choice. Rollback may first expire ready blocking free-operation grants for the recovered seat so those grants cannot continue to block the generic fallback after the offending granted action has been blacklisted.
 
 ### D6 — Seed 1049 harness divergence fix
 
@@ -416,7 +416,7 @@ Replace the existing F#18 in `docs/FOUNDATIONS.md`:
 >
 > *Publication contract*: Every kernel-published legal action is constructible atomically at its microturn scope. The publication probe verifies constructibility by inspecting the candidate's resulting next decision to a bounded depth (`MICROTURN_PROBE_DEPTH_BUDGET`); a candidate is not published unless its next decision terminates, auto-resolves, or has ≥ 1 legal option at each level within the budget.
 >
-> *Runtime safety net*: For residual probe gaps — state-dependent branches deeper than the budget, or future bugs — the kernel MUST roll back deterministically to the nearest `actionSelection` frame, blacklist the offending action for the current `(turnId, seatId)`, and re-publish. Rollback is an observable trace event (`ProbeHoleRecoveryLog`), not a published contract, and not a `Decision` union variant. If the publication pipeline produces an unbridgeable decision at apply time, that is a kernel bug and SHOULD be closed by deepening the probe.
+> *Runtime safety net*: For residual probe gaps — state-dependent branches deeper than the budget, or future bugs — the kernel MUST roll back deterministically to the nearest `actionSelection` frame, blacklist the offending action for the current `(turnId, seatId)`, reconcile ready blocking free-operation grants for that seat, and re-publish. Rollback is an observable trace event (`ProbeHoleRecoveryLog`), not a published contract, and not a `Decision` union variant. If the publication pipeline produces an unbridgeable decision at apply time, that is a kernel bug and SHOULD be closed by deepening the probe.
 >
 > The microturn publication pipeline plus the rollback safety net together establish legality and executability; they cannot diverge.
 

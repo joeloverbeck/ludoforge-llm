@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new determinism test
-**Deps**: `archive/tickets/144PROBEREC-002.md`
+**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`
 
 ## Problem
 
@@ -21,7 +21,7 @@ This ticket closes the remaining determinism proof loop.
 ## Architecture Check
 
 1. The replay-identity test is `@test-class: architectural-invariant`: any legitimate trace (including those with recovery events) must replay to bit-identical state.
-2. No additional kernel or simulator change should be needed — the replay-identity guarantee is already enforced by ticket 002's pure `rollbackToActionSelection`. This ticket proves it.
+2. No additional kernel or simulator change should be needed — the replay-identity guarantee is enforced by ticket 002's trace surface plus ticket 003's completed recovery/grant-reconciliation path. This ticket proves it.
 
 ## What to Change
 
@@ -45,7 +45,7 @@ This ticket closes the remaining determinism proof loop.
 
 - Deep probe / LRU / cache — ticket 001.
 - Rollback / `ProbeHoleRecoveryLog` type / `GameTrace` migration / blacklist — ticket 002.
-- Seed-1001 fixture / F#18 amendment / convergence-witness re-bless — ticket 003.
+- Seed-1001 fixture / F#18 amendment / convergence-witness re-bless / residual recovery completion — ticket 003.
 - `SimulationOptions.decisionHook` / diagnostic harness rewire — ticket 004.
 
 ## Acceptance Criteria

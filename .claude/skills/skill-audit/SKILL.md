@@ -43,7 +43,7 @@ If working inside a worktree (e.g., `.claude/worktrees/<name>/`), ALL file paths
    - **Feature**: A new capability that aligns with the skill's stated intent but is currently missing
 
    When in doubt between Improvement and Feature: *Improvement* refines prose or output structure of an existing instruction. *Feature* adds a new capability path — something the skill couldn't produce before but now can. Structural templates or output-format refinements for existing behaviors are Improvements, not Features. *Example*: adding a new subsection (e.g., "Suggested follow-up") to an existing summary template is an *Improvement* — the summary already existed and is being structurally refined. Adding an entirely new output artifact the skill didn't previously produce would be a *Feature*.
-6. **Severity-tag each finding** — CRITICAL (skill produces wrong output or violates guardrails) / HIGH (common path confused or blocked) / MEDIUM (uncommon path confused or suboptimal outcome) / LOW (minor friction or edge-case gap). When a finding could fit two tiers, let actual session impact break the tie: if the skill gap caused improvisation, a misstep, or a user-visible workaround *this session*, escalate to the higher tier.
+6. **Severity-tag each finding** — CRITICAL (skill produces wrong output or violates guardrails) / HIGH (common path confused or blocked) / MEDIUM (uncommon path confused or suboptimal outcome) / LOW (minor friction or edge-case gap). When a finding could fit two tiers, determine the base tier from the descriptions first — edge-case gap → LOW; uncommon-path suboptimal outcome → MEDIUM; common-path confused or blocked → HIGH; wrong output or guardrail violation → CRITICAL — then escalate by one tier if the skill gap caused improvisation, a misstep, or a user-visible workaround *this session*.
 7. **Present the report** — Output the structured report using the template below.
 
 Scale analysis depth to skill complexity. For small skills (<50 lines, <3 steps), the reflection can be a single paragraph. For large skills (>150 lines, >6 steps), each sub-item in step 3 deserves explicit consideration.
@@ -61,7 +61,18 @@ Output this structure to the conversation (do not write to a file):
 **Session date**: YYYY-MM-DD
 **Session summary**: <1-2 sentence description of what work was done with this skill>
 **Session evidence**: <rich / moderate / thin>
-(rich = skill executed 2+ times or across multiple scenarios; moderate = single full execution, or single execution with audit-driven edits applied to the target skill; thin = self-audit or first-time observation only. "Audit-driven edits" means edits to the *target skill* produced from this audit's own findings — not downstream use of the target skill's own outputs. For self-audit of skill-audit specifically: thin = skill-audit used zero or one time this session as auditor with no follow-up implementation; moderate = one prior execution as auditor plus follow-up implementation against some target (does NOT require the self-audit itself to have been implemented yet); rich = 2+ auditor executions this session, with or without follow-up implementation.)
+
+Evidence levels (normal audit):
+- rich — skill executed 2+ times or across multiple scenarios this session.
+- moderate — single full execution, or single execution with audit-driven edits applied to the target skill.
+- thin — self-audit or first-time observation only.
+
+Evidence levels (self-audit of skill-audit specifically):
+- thin — skill-audit used zero or one time this session as auditor with no follow-up implementation.
+- moderate — one prior execution as auditor plus follow-up implementation against some target (does NOT require the self-audit itself to have been implemented yet).
+- rich — 2+ auditor executions this session, with or without follow-up implementation.
+
+"Audit-driven edits" means edits to the *target skill* produced from this audit's own findings — not downstream use of the target skill's own outputs.
 
 ## Alignment Check
 
@@ -125,6 +136,7 @@ If analysis during classification disproves an initial impression, withdraw the 
   3. Combine or separate Edit calls using the following decision rules, evaluated in order (first match wins):
      - **Same skill location or coherent paragraph** (including in-place restructuring of a single bullet into nested sub-bullets, or splitting a flat paragraph into lead-in + child items) → combine into one Edit, even if findings are classified differently (e.g., an Issue fix and a Feature addition that form a unified section together).
      - **Different items within the same short numbered list (<10 items)** → combine into one Edit to avoid mid-list offset drift.
+     - **Cross-section consistency edits for a single finding** (e.g., a numbered-rule change that also needs an update to a guardrail bullet cross-referencing the rule, or a menu item change that needs matching guidance in a "Not Exercised" section) → separate Edits in top-to-bottom order. Place the primary change edit first; the cross-reference edit follows so the referencing text matches the new text of the primary rule.
      - **Adjacent but independent bullets across separate logical sections** → separate Edits in top-to-bottom order (keeps each finding traceable).
      - **Default (no rule above applies)** → combine if adjacent or overlapping; separate if non-adjacent.
   4. When a finding requires edits across multiple files (e.g., cross-skill consistency fixes), process files independently. Complete all edits and verification for one file before moving to the next. After completing all files, verify cross-file references are consistent (e.g., step numbers referenced in SKILL.md match headings in reference files).

@@ -75,6 +75,8 @@ Classify each file in the tree:
 
 **Borderline tolerance**: A file up to ~165 lines (≤ 10% over 150) that covers one coherent topic does NOT count as overloaded if further splitting would produce stubs or fracture tightly-related guidance. Classify it as acceptable and record the decision in Step 10 Observations so subsequent audits see it was a deliberate choice — this preserves idempotency when the next invocation reaches Step 2.
 
+**Post-rebalance stable state for SKILL.md**: A SKILL.md may remain over 80 lines after successful rebalance if it has many workflow phases that each warrant a thin orchestration section. If every step is framing + load instruction only and no step exceeds ~10 lines of directive content, the tree is post-rebalance stable — do not force further re-extraction to hit the 80-line bar. Record this classification in Step 10 Observations so subsequent invocations see that the size was a deliberate steady state.
+
 Record each flagged file/section with its classification. This list feeds Step 4.
 
 ---
@@ -121,6 +123,8 @@ Propose a re-extraction when a `SKILL.md` step contains dense, self-contained gu
 **Destination**:
 - If the content thematically matches an existing reference → append there (re-extraction + merge).
 - If it represents a new coherent topic → create a new reference file with a kebab-case filename.
+
+**Multi-destination re-extraction**: When a single SKILL.md section contains ≥2 distinct sub-topics AND would produce an overloaded destination reference (>150 lines post-append) if funneled into one file, plan the split destinations up front. Name each new reference during Step 4a-style sub-topic analysis, then route each sub-topic's content directly to its own destination during Step 6. See Step 4d's destination-aware shortcut for the ordering rationale. This is the common case for re-extracting heavily re-bloated SKILL.md sections (~150+ lines of accumulated directive content), not an optimization.
 
 **Do NOT re-extract when**:
 - The content is genuinely orchestration (the numbered sequence itself, short framing sentences, load directives).
@@ -172,6 +176,8 @@ For each planned re-extraction (executed first per Step 4d priority):
 3. Retain a 1–2 sentence framing before or after the load instruction when workflow context requires it.
 
 **Tool choice**: Prefer targeted `Edit` calls when re-extracting 1–3 blocks from SKILL.md, or when appending a small section to an existing reference. Prefer a full `Write` rewrite of SKILL.md when re-extracting many blocks at once (≥4) — the rewrite is cleaner than a long sequence of surgical edits. For references, default to `Edit` to append unless the destination is being restructured.
+
+**Overlap is expected**: Appending SKILL.md-extracted content to an existing reference commonly creates near-duplicate paragraphs with content already there. Preserve both copies, flag the redundancy in the Step 10 Observations section, and defer dedup to `skill-consolidate` — this is expected, not a rebalance defect.
 
 ---
 
@@ -234,6 +240,11 @@ After Steps 6–8:
 
 ### Observations (if any)
 [Redundancies or gaps noticed during rebalance that were NOT fixed per the No Scope Expansion guardrail. Flag for `skill-consolidate` or `skill-audit` follow-up.]
+
+### Suggested follow-up
+Run `skill-consolidate` on each file whose content changed materially (new files, appended references, rewritten SKILL.md):
+- `/skill-consolidate <skill-path>` for the target SKILL.md
+- One `/skill-consolidate` invocation per modified/new reference, listing each by path.
 ```
 
 Do NOT commit. Leave files for user review via `git diff`.

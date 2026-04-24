@@ -50,3 +50,29 @@ For preparatory tickets landing shared helpers, contracts, or APIs ahead of call
 - When a proof needs live authored behavior plus a small test-only policy or hook, compile the production spec with a narrow in-memory overlay rather than editing production data.
 - If the ticket names files to inspect rather than modify, read and assess them; leave unchanged when evidence shows no edit is needed; state the no-change decision explicitly.
 - If a ticket names an authored data file as an optional surface tweak, verify whether compiled defaults already satisfy the contract before editing.
+
+## Investigation Ticket Reassessment Patterns
+
+For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
+
+When a long-running measurement witness has a **stable earlier prefix** already backed by durable evidence and the later tail is flaky or environment-sensitive, prefer narrowing to that smallest truthful prefix over preserving the longer tail by inertia. Record the narrowed bound explicitly in the active ticket before final proof so the witness does not look silently weakened.
+
+When an investigation/profiling ticket needs one command to **reproduce the live failure** and a different command to **produce a durable artifact** (for example a stable snapshot/report run versus a higher-turn crash repro), do not collapse them into one fuzzy story. Treat them as two explicit evidence lanes:
+
+1. identify which command is the best failure repro
+2. identify which command is the best durable artifact-capture path
+3. if the ticket draft claimed one command served both roles and live evidence disproves that, stop for `1-3-1` unless the user has already authorized that deliverable correction
+4. once authorized, record both commands explicitly in the active ticket outcome/report before the final proof pass
+
+For heavy diagnostics that may run silently for a long time or where post-processing can distort the measured surface, add a lightweight observer-effect check before finalizing the artifact:
+
+1. add only the minimum progress instrumentation needed to distinguish `still running` from `stuck`
+2. keep that instrumentation outside the owned metric whenever practical, or report clearly when it can perturb the measurement
+3. separate the target-system metric from analysis/post-processing overhead when both occur in one script (for example simulation heap versus heap-snapshot parsing cost)
+4. report both numbers distinctly if the post-processing step materially changes the observed totals
+
+When the owned deliverable is a large checked-in fixture or inventory artifact, prefer generating it from the most authoritative live seam available (compiled spec surface, runtime snapshot, parser output, or equivalent) instead of hand-authoring repeated rows. Before check-in:
+
+1. record the derivation source in working notes
+2. capture a compact summary (`entry counts`, `surface classes`, `deepest cases`, or similar) so the artifact can be sanity-checked without rereading the whole file
+3. add or extend a validator that proves schema conformance plus coverage parity against the same live seam when proportionate

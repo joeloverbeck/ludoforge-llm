@@ -25,7 +25,7 @@ Spec 143 Design Section 4 explicitly couples long-run heap growth and long-run p
 2. **Right-tier placement**: same rationale as 005 — cost stability is a quality-plus-budget signal, not an engine determinism invariant. Advisory channel appropriate.
 3. **Agnostic test structure**: generic measurement scaffolding; FITL profiles supply the workload. 007 provides the engine-generic counterpart.
 4. **No backwards-compatibility shims**: new test file.
-5. **Model test file**: 005's `fitl-spec-143-heap-boundedness.test.ts` (authored in the immediately-preceding wave) is the direct template for imports, profile-loading, seed-handling, and advisory reporting. Mirror its structure.
+5. **Model test file**: 005's `fitl-spec-143-heap-boundedness.test.ts` (authored in the immediately-preceding wave) is the direct template for imports, profile-loading, seed-handling, bounded-completion handling, and advisory reporting. Mirror its structure.
 
 ## What to Change
 
@@ -47,7 +47,7 @@ Set the drift ceiling as a named constant with inline rationale, e.g.:
 
 ```ts
 // Per-decision cost drift ceiling: last-decile avg / first-decile avg.
-// Post-003/004 baseline: ~X on seed 1002, four baselines, terminal run.
+// Post-003/004/008 baseline: ~X on seed 1002, four baselines, bounded completion.
 // Ceiling: 2× — absorbs GC warmup and natural decision-shape variation
 // without masking retained-state-driven pathological drift.
 const COST_DRIFT_CEILING = 2.0;
@@ -59,6 +59,7 @@ Calibrate using post-003/004/008 measurements; do NOT use pre-fix measurements a
 
 - Warm-up: discard the first few decisions from the "first decile" computation to avoid JIT warmup bias.
 - Outlier trimming: trim the top/bottom 5% of per-decision times in each decile to absorb GC pauses.
+- Reuse the dedicated sequential `test:policy-profile-quality` package runner established by 005 rather than reintroducing the generic batched lane shape for a process-sensitive advisory witness.
 
 ## Files to Touch
 
@@ -75,10 +76,9 @@ Calibrate using post-003/004/008 measurements; do NOT use pre-fix measurements a
 
 ### Tests That Must Pass
 
-1. The new `fitl-spec-143-cost-stability.test.ts` passes after 003, 004, and 008 land (drift under the calibrated ceiling on seed 1002, four baselines, terminal run).
-2. Full policy-profile-quality suite: `pnpm -F @ludoforge/engine test -- test/policy-profile-quality`.
-3. Full engine suite: `pnpm -F @ludoforge/engine test:all`.
-4. No regression in existing policy-profile-quality tests or 005's heap witness.
+1. The new `fitl-spec-143-cost-stability.test.ts` passes after 003, 004, and 008 land (drift under the calibrated ceiling on seed 1002, four baselines, bounded completion with the same truthful stop-surface handling used by 005 where needed).
+2. Full policy-profile-quality suite: `pnpm -F @ludoforge/engine test:policy-profile-quality`.
+3. No regression in existing policy-profile-quality tests or 005's heap witness.
 
 ### Invariants
 
@@ -95,6 +95,6 @@ Calibrate using post-003/004/008 measurements; do NOT use pre-fix measurements a
 
 ### Commands
 
-1. Targeted: `pnpm -F @ludoforge/engine test -- --test-name-pattern=spec-143-cost`
-2. Policy-profile-quality suite: `pnpm -F @ludoforge/engine test -- test/policy-profile-quality`
-3. Full suite: `pnpm turbo test`, `pnpm turbo lint`, `pnpm turbo typecheck`
+1. Build: `pnpm -F @ludoforge/engine build`
+2. Targeted: `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/fitl-spec-143-cost-stability.test.js`
+3. Policy-profile-quality suite: `pnpm -F @ludoforge/engine test:policy-profile-quality`

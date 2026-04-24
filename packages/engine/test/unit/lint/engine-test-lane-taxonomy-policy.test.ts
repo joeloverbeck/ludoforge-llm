@@ -38,7 +38,7 @@ describe('engine test lane taxonomy policy', () => {
       packageJson.scripts?.['test:integration:texas-cross-game'],
       'node scripts/run-tests.mjs --lane integration:texas-cross-game',
     );
-    assert.equal(packageJson.scripts?.['test:policy-profile-quality'], 'node scripts/run-tests.mjs --lane policy-profile-quality');
+    assert.equal(packageJson.scripts?.['test:policy-profile-quality'], 'node scripts/run-policy-profile-quality-tests.mjs');
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {

@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @witness-id: spec-144-seed-1001-nva-march
+// @witness: spec-144-seed-1001-nva-march
 
 import * as assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';

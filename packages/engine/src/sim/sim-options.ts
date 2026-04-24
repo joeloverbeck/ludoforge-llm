@@ -1,6 +1,21 @@
 import type { ExecutionOptions } from '../kernel/types-core.js';
 import type { PerfProfiler } from '../kernel/perf-profiler.js';
+import type { DecisionLog, ProbeHoleRecoveryLog } from '../kernel/index.js';
 import type { SnapshotDepth } from './snapshot-types.js';
+
+export type DecisionHookContext =
+  | {
+      readonly kind: 'decision';
+      readonly decisionLog: DecisionLog;
+      readonly turnCount: number;
+      readonly stateHash: bigint;
+    }
+  | {
+      readonly kind: 'probeHoleRecovery';
+      readonly probeHoleRecovery: ProbeHoleRecoveryLog;
+      readonly turnCount: number;
+      readonly stateHash: bigint;
+    };
 
 /**
  * Simulation-layer options for `runGame` / `runGames`.
@@ -24,4 +39,6 @@ export interface SimulationOptions {
   readonly snapshotDepth?: SnapshotDepth;
   /** Opt-in performance profiler. Accumulates sub-function timing when provided. */
   readonly profiler?: PerfProfiler;
+  /** Side-effect-only observer called as simulator decisions and recovery events are produced. */
+  readonly decisionHook?: (context: DecisionHookContext) => void;
 }

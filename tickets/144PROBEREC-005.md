@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new determinism test
-**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`
+**Deps**: `archive/tickets/144PROBEREC-002.md`, `archive/tickets/144PROBEREC-003.md`, `tickets/144PROBEREC-007.md`
 
 ## Problem
 
@@ -17,11 +17,12 @@ This ticket closes the remaining determinism proof loop.
 1. `packages/engine/schemas/Trace.schema.json` already includes `probeHoleRecoveries`, `recoveredFromProbeHole`, and `unavailableActionsPerTurn` from ticket 002.
 2. `pnpm turbo schema:artifacts` remains a verification lane here only to ensure no schema drift was introduced while adding the replay proof.
 3. `packages/engine/test/determinism/` currently contains 11 tests (per reassessment). This ticket adds one more, following the existing style (seed + replay + byte-identical assertion).
+4. Post-review of ticket 004 found a remaining recovery/grant reconciliation blocker: representative FITL lanes can still throw `ILLEGAL_MOVE` for the game-authored `pass` fallback while required free-operation grants remain unresolved. `tickets/144PROBEREC-007.md` now owns that prerequisite repair before this replay-identity proof can be trusted.
 
 ## Architecture Check
 
 1. The replay-identity test is `@test-class: architectural-invariant`: any legitimate trace (including those with recovery events) must replay to bit-identical state.
-2. No additional kernel or simulator change should be needed — the replay-identity guarantee is enforced by ticket 002's trace surface plus ticket 003's completed recovery/grant-reconciliation path. This ticket proves it.
+2. No additional kernel or simulator change should be needed after ticket 006 closes the remaining recovery/fallback grant reconciliation gap. This ticket proves replay identity on a valid recovery path rather than repairing fallback legality itself.
 
 ## What to Change
 
@@ -47,6 +48,7 @@ This ticket closes the remaining determinism proof loop.
 - Rollback / `ProbeHoleRecoveryLog` type / `GameTrace` migration / blacklist — ticket 002.
 - Seed-1001 fixture / F#18 amendment / convergence-witness re-bless / residual recovery completion — ticket 003.
 - `SimulationOptions.decisionHook` / diagnostic harness rewire — ticket 004.
+- Recovery fallback grant reconciliation parity — ticket 007.
 
 ## Acceptance Criteria
 

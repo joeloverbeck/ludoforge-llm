@@ -1,6 +1,6 @@
 # 144PROBEREC-004: Diagnostic harness rewire + SimulationOptions.decisionHook (seed 1049)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `SimulationOptions` extension + campaign diagnostic rewrite
@@ -143,3 +143,32 @@ Manual verification for the CLI:
 4. `pnpm turbo lint`
 5. `pnpm turbo typecheck`
 6. `pnpm turbo test`
+
+## Outcome
+
+Completion date: 2026-04-25
+
+Implemented `SimulationOptions.decisionHook` as a side-effect-only simulator observer. `runGame` now invokes the hook for retained and non-retained `DecisionLog` events and for `ProbeHoleRecoveryLog` events as they are produced; hook exceptions propagate to the caller.
+
+Rewired `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` through `runGame` and deleted the hand-rolled simulator loop, RNG plumbing, and direct calls to `publishMicroturn`, `applyPublishedDecision`, and `advanceAutoresolvable`. The CLI interface is unchanged, and seed 1049 now follows direct `runGame` to `stopReason=terminal`.
+
+Added hook invariants to `packages/engine/test/unit/sim/simulator.test.ts` and a production-seed parity test at `packages/engine/test/integration/diagnose-parity-runGame.test.ts` covering seeds 1001, 1020, 1049, and 1054.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/sim/simulator.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/diagnose-parity-runGame.test.js`
+- `node campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs --seed 1049`
+- `pnpm -F @ludoforge/engine test packages/engine/test/integration/diagnose-parity-runGame.test.ts`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test` — failed in pre-existing/broader Spec 140/Spec 133 lanes outside this ticket's hook/diagnostic boundary:
+  - `dist/test/integration/classified-move-parity.test.js`
+  - `dist/test/integration/spec-140-bounded-termination.test.js`
+  - `dist/test/integration/spec-140-foundations-conformance.test.js`
+  - `dist/test/integration/spec-140-profile-migration.test.js`
+  - `dist/test/unit/infrastructure/test-class-markers.test.js` (post-review cleanup fixed the stale `@witness-id` marker in `packages/engine/test/integration/fitl-march-dead-end-recovery.test.ts`; direct marker scan now passes)
+
+Broad-lane failure classification: not owned by 144PROBEREC-004. Direct reruns showed the Spec 140 failures throw `ILLEGAL_MOVE` for `actionId=pass` because the active seat still has unresolved required free-operation grants, which is recovery/grant semantics from tickets 002/003 rather than `SimulationOptions.decisionHook` or the diagnostic harness rewire. The marker failure was a stale `@witness-id` marker in `packages/engine/test/integration/fitl-march-dead-end-recovery.test.ts`, also from the completed ticket 003 seam; post-review cleanup corrected it to `@witness:`.
+
+Post-review follow-up: `tickets/144PROBEREC-007.md` now owns the remaining recovery fallback grant reconciliation blocker, and `tickets/144PROBEREC-005.md` depends on that repair before replay-identity proof. Targeted cleanup verification: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js`.

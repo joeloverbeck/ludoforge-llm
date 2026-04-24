@@ -55,6 +55,31 @@ const maybeLogOomTrace = (
   );
 };
 
+const emitDecisionHook = (
+  options: SimulationOptions | undefined,
+  decisionLog: DecisionLog,
+  turnCount: number,
+): void => {
+  options?.decisionHook?.({
+    kind: 'decision',
+    decisionLog,
+    turnCount,
+    stateHash: decisionLog.stateHash,
+  });
+};
+
+const emitProbeHoleRecoveryHook = (
+  options: SimulationOptions | undefined,
+  probeHoleRecovery: ProbeHoleRecoveryLog,
+  turnCount: number,
+): void => {
+  options?.decisionHook?.({
+    kind: 'probeHoleRecovery',
+    probeHoleRecovery,
+    turnCount,
+    stateHash: probeHoleRecovery.stateHashAfter,
+  });
+};
 
 const validateSeed = (seed: number): void => {
   if (!Number.isSafeInteger(seed)) {
@@ -161,6 +186,9 @@ export const runGame = (
     if (shouldRetainTrace) {
       decisionLogs.push(...autoResult.autoResolvedLogs);
     }
+    for (const log of autoResult.autoResolvedLogs) {
+      emitDecisionHook(options, log, state.turnCount);
+    }
 
     const t0_term = perfStart(profiler);
     const terminal = terminalResult(validatedDef, state, resolvedRuntime);
@@ -195,6 +223,7 @@ export const runGame = (
         if (shouldRetainTrace) {
           probeHoleRecoveries.push(rollback.logEntry);
         }
+        emitProbeHoleRecoveryHook(options, rollback.logEntry, state.turnCount);
         continue;
       }
       throw error;
@@ -250,15 +279,17 @@ export const runGame = (
     const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);
     perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
+    const decisionLog: DecisionLog = {
+      ...applied.log,
+      playerId: asPlayerId(player),
+      deltas,
+      ...(snapshot === undefined ? {} : { snapshot }),
+      ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
+    };
     if (shouldRetainTrace) {
-      decisionLogs.push({
-        ...applied.log,
-        playerId: asPlayerId(player),
-        deltas,
-        ...(snapshot === undefined ? {} : { snapshot }),
-        ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
-      });
+      decisionLogs.push(decisionLog);
     }
+    emitDecisionHook(options, decisionLog, state.turnCount);
   }
 
   return {

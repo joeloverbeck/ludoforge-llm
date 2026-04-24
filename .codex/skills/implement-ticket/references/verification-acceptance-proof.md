@@ -39,10 +39,13 @@ When a focused proof lane is expected to be valid but runs silently for a long t
 When a ticket-named **broad verification lane** (for example `pnpm turbo test`, workspace lint, or another multi-package suite) fails outside the owned diff, do not silently collapse that result into a vague "repo is red" note. Classify the failure explicitly before closeout:
 
 1. identify the first failing owned path/test and decide whether it is inside the ticket's touched boundary
-2. record the lane as either `owned failure` or `repo-preexisting unrelated blocker`
+2. record the lane as `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`
 3. if it is `owned failure`, the ticket is not acceptance-proven; continue fixing or stop for `1-3-1` if the next path is unclear
-4. if it is `repo-preexisting unrelated blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, state that the owned slice did not touch that surface, and preserve the proof gap explicitly instead of claiming the broad lane passed
-5. only treat the ticket as closeable with that documented proof gap when the remaining acceptance evidence still truthfully proves the owned boundary and `AGENTS.md` does not require fixing the unrelated blocker as part of the ticket
+4. if it is `same-series residual / dependency blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, name the dependency/sibling/spec seam that appears to own it, and do not widen the active ticket unless the user confirms that broader boundary
+5. if it is `repo-preexisting unrelated blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, state that the owned slice did not touch that surface, and preserve the proof gap explicitly instead of claiming the broad lane passed
+6. only treat the ticket as closeable with that documented proof gap when the remaining acceptance evidence still truthfully proves the owned boundary and `AGENTS.md` does not require fixing the unrelated blocker or same-series residual as part of the ticket
+
+For `packages/engine/test/unit/infrastructure/test-class-markers.test.ts`, treat the reported source file as the owner candidate before blaming the marker scan itself. Fix it when the named file is part of the active ticket or an immediately owned touched-file fallout surface. Otherwise, classify the failure as same-series metadata residue or unrelated marker drift, cite the named file in closeout, and keep the scan rule intact.
 
 ## Post-Proof-Edit Invalidation
 
@@ -68,10 +71,11 @@ If the first broader proof lane fails on a newly added or modified test, do one 
 When a broader proof lane fails on a surface that may be unrelated to the owned ticket slice, classify it before widening implementation:
 
 1. `owned regression`: the failure directly exercises the changed contract, touched files, or an immediately dependent proof surface; fix it before treating broader proof as usable
-2. `likely preexisting unrelated failure`: the failure targets a different contract or appears unchanged by the owned diff; record it explicitly, keep your diff isolated, and do not silently absorb it into the ticket scope
-3. `harness/tooling defect`: the lane behavior itself appears broken or non-final; use the noisy-harness triage in `references/verification-noisy-harness.md` before rewriting code around runner behavior
+2. `same-series residual / dependency blocker`: the failure targets a sibling/dependency seam in the same spec or ticket family, but not the active ticket's owned boundary; record it explicitly, name the apparent owner, and do not silently absorb it into the current ticket
+3. `likely preexisting unrelated failure`: the failure targets a different contract or appears unchanged by the owned diff; record it explicitly, keep your diff isolated, and do not silently absorb it into the ticket scope
+4. `harness/tooling defect`: the lane behavior itself appears broken or non-final; use the noisy-harness triage in `references/verification-noisy-harness.md` before rewriting code around runner behavior
 
-If the failure is `likely preexisting unrelated failure`, preserve the evidence in the ticket outcome or final closeout instead of quietly treating the lane as green.
+If the failure is `same-series residual / dependency blocker` or `likely preexisting unrelated failure`, preserve the evidence in the ticket outcome or final closeout instead of quietly treating the lane as green.
 
 ## Package Script / Runner Widening
 

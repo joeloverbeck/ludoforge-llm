@@ -5,7 +5,7 @@ export { DEFAULT_EVAL_CONFIG } from './eval-config.js';
 export type { EvalConfig } from './eval-config.js';
 export { generateEvalReport } from './eval-report.js';
 export type { EnrichedDecisionLog, EnrichedGameTrace } from './enriched-trace-types.js';
-export type { SimulationOptions } from './sim-options.js';
+export type { DecisionHookContext, SimulationOptions } from './sim-options.js';
 export { extractDecisionPointSnapshot, extractMicroturnSnapshot } from './snapshot.js';
 export type {
   DecisionPointSnapshot,

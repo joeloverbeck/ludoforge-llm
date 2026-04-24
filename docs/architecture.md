@@ -209,6 +209,10 @@ Game Spec (Markdown+YAML) → parseGameSpec → validateGameSpec → expandMacro
 GameDef JSON → validateGameDef → initialState(def, seed) → kernel loop (legalMoves → applyMove → dispatch triggers → terminalResult)
 ```
 
+For card-driven terminal authoring conventions, including the generic
+Future-Stream Class-Filter Pattern, see
+[`docs/card-driven-terminal-authoring.md`](card-driven-terminal-authoring.md).
+
 ## Kernel DSL
 
 The kernel operates on ASTs for conditions, effects, and references. Core types: `ConditionAST`, `EffectAST`, `ValueExpr`, `PlayerSel`, `ZoneSel`, `TokenSel`. Effects use bounded iteration (`forEach` over finite collections) — no general recursion. Includes spatial support via board-as-graph (zone adjacency). See the brainstorming spec sections 3.1-3.6 for exact AST shapes.

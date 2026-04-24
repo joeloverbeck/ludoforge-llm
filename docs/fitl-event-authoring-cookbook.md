@@ -11,6 +11,11 @@ It describes the current production contract for GameSpecDoc YAML authoring:
 
 It does not introduce new engine primitives, backwards-compatibility aliases, or FITL-specific runtime logic.
 
+For generic card-driven terminal conditions, see
+[`docs/card-driven-terminal-authoring.md`](card-driven-terminal-authoring.md),
+which names the Future-Stream Class-Filter Pattern used by FITL's final-coup
+checkpoint.
+
 ## Authoring Boundary
 
 Keep FITL behavior in FITL YAML and FITL-local macros.

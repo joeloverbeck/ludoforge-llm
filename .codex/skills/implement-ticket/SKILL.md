@@ -48,6 +48,8 @@ For **investigation / measurement / fixture-producing** tickets, do not default 
 
 When the owned metric is **process-local** (`heapUsed`, GC time/percent, RSS, resident subprocess state, or similar), verify early whether the named package script / lane wrapper preserves that metric's meaning. If the runner batches multiple files in one process, adds helper subprocesses, or otherwise changes the measured process boundary, treat that wrapper as part of the owned proof surface rather than iterating on thresholds first.
 
+When a proof ticket requires a **new calibrated threshold or ceiling**, prefer this order unless live evidence proves a different shape is cleaner: first land the narrowest truthful witness/harness, then run the smallest live calibration probe that exercises the owned seam, write the measured values and resulting threshold rationale back into the owned artifact, and only then start the final acceptance-proof lanes. Do not cite a draft or exploratory threshold as final if the ticket artifact still needs to change after calibration.
+
 For inventory, audit, or fixture-producing tickets, verify the **live ownership unit** before building the deliverable. A ticket may name a broad semantic surface (`march`, `event-card action`, `policy profile`, etc.) while the real repo-owned boundary is finer-grained (`actionPipeline` id, card side, phase variant, emitted report row, or another runtime-owned artifact). Build the deliverable against the finest truthful live unit rather than collapsing distinct surfaces into the draft ticket's coarser prose.
 
 ### Bounded Local Refactor Fast Path
@@ -75,6 +77,7 @@ When ticket triage confirms a bounded local refactor, load `references/bounded-l
 6. Sanity-check ticket-named verification commands against live repo tooling before relying on them later.
    - For bounded local refactors with straightforward verification, a light command-sanity pass is enough at this stage.
    - When the command is a package-manager script target, prefer verifying the script definition and underlying runner entrypoint before using `--help` or ad hoc flags as a probe.
+   - When the owned change is a **new test file only**, verify how the acceptance lane discovers files before assuming the ticket's named command covers the new witness. Check whether membership is explicit, manifest-driven, or directory-derived, and record any resulting command or lane-coverage correction before closeout.
    - Load `references/verification.md` now only when the command sanity check itself is nontrivial or already reveals output contention, stale-runner drift, or tracked-vs-draft correction work that needs the fuller guidance.
 
 #### Session, Series, and Draft Context

@@ -233,11 +233,11 @@ Suggested namespace: `143BOUNDMEM-*` (following the pattern of `141RUNCACHE-*`).
 
 Decomposed 2026-04-23 under namespace `143BOURUNMEM`:
 
-- `tickets/143BOURUNMEM-001.md` — Heap-snapshot evidence report and top-N retainer breakdown
-- `tickets/143BOURUNMEM-002.md` — Lifetime-class audit and authoritative classification
-- `tickets/143BOURUNMEM-003.md` — Canonical-identity compaction for oversized serialized retained structures
+- `archive/tickets/143BOURUNMEM-001.md` — Heap-snapshot evidence report and top-N retainer breakdown
+- `archive/tickets/143BOURUNMEM-002.md` — Lifetime-class audit and authoritative classification
+- `archive/tickets/143BOURUNMEM-003.md` — Canonical-identity compaction for oversized serialized retained structures
 - `archive/tickets/143BOURUNMEM-004.md` — Scope-boundary enforcement for decision-local-transient helpers
-- `tickets/143BOURUNMEM-005.md` — Long-run heap-boundedness witness (FITL motivating corpus)
-- `tickets/143BOURUNMEM-006.md` — Advisory long-run per-decision cost witness
+- `archive/tickets/143BOURUNMEM-005.md` — Long-run heap-boundedness witness (FITL motivating corpus)
+- `archive/tickets/143BOURUNMEM-006.md` — Advisory long-run per-decision cost witness
 - `tickets/143BOURUNMEM-007.md` — Engine-generic decision-local-helper drop/compact regression
-- `tickets/143BOURUNMEM-008.md` — Remaining FITL medium-diverse determinism OOM prerequisite
+- `archive/tickets/143BOURUNMEM-008.md` — Remaining FITL medium-diverse determinism OOM prerequisite

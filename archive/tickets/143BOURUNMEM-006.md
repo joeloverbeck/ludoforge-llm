@@ -1,6 +1,6 @@
 # 143BOURUNMEM-006: Advisory long-run per-decision cost witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — new test file only
@@ -60,6 +60,15 @@ Calibrate using post-003/004/008 measurements; do NOT use pre-fix measurements a
 - Warm-up: discard the first few decisions from the "first decile" computation to avoid JIT warmup bias.
 - Outlier trimming: trim the top/bottom 5% of per-decision times in each decile to absorb GC pauses.
 - Reuse the dedicated sequential `test:policy-profile-quality` package runner established by 005 rather than reintroducing the generic batched lane shape for a process-sensitive advisory witness.
+
+## Outcome
+
+Completed: 2026-04-24
+
+- Implemented: added `packages/engine/test/policy-profile-quality/fitl-spec-143-cost-stability.test.ts`, a manual FITL policy-profile witness modeled on 005's stable `maxTurns=3` harness and stop-surface handling.
+- Implemented: measured player-decision cycle time with `performance.now()`, then compared trimmed last-decile average vs post-warmup first-decile average so the witness checks drift rather than absolute runtime.
+- Implemented: recorded the advisory result through the existing `POLICY_PROFILE_QUALITY_REGRESSION` channel with `variantId=all-baselines`.
+- Calibration: direct compiled measurement on 2026-04-24 at seed `1002` and profiles `us-baseline, arvn-baseline, nva-baseline, vc-baseline` produced `firstDecileAvg≈13.243ms`, `lastDecileAvg≈14.675ms`, ratio `≈1.108` over 282 player decisions. The checked-in ceiling is `1.75x` to absorb normal JIT/GC and decision-shape variance without masking pathological retained-state drift.
 
 ## Files to Touch
 

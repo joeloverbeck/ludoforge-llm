@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — diagnostic script + report only; no runtime code changes
-**Deps**: `specs/143-bounded-runtime-memory-and-simulation-cost.md`
+**Deps**: `archive/specs/143-bounded-runtime-memory-and-simulation-cost.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # Spec 143: Bounded Runtime Memory and Simulation Cost
 
-**Status**: Draft  
+**Status**: COMPLETED  
 **Priority**: P1  
 **Complexity**: L  
 **Dependencies**: Spec 140, Spec 141 (builds on them; no forced implementation order beyond Foundations alignment)  
@@ -239,5 +239,14 @@ Decomposed 2026-04-23 under namespace `143BOURUNMEM`:
 - `archive/tickets/143BOURUNMEM-004.md` — Scope-boundary enforcement for decision-local-transient helpers
 - `archive/tickets/143BOURUNMEM-005.md` — Long-run heap-boundedness witness (FITL motivating corpus)
 - `archive/tickets/143BOURUNMEM-006.md` — Advisory long-run per-decision cost witness
-- `tickets/143BOURUNMEM-007.md` — Engine-generic decision-local-helper drop/compact regression
+- `archive/tickets/143BOURUNMEM-007.md` — Engine-generic decision-local-helper drop/compact regression
 - `archive/tickets/143BOURUNMEM-008.md` — Remaining FITL medium-diverse determinism OOM prerequisite
+
+## Outcome
+
+Completion date: 2026-04-24
+
+- Implemented: the spec's full ticket family landed and is now archived under `archive/tickets/143BOURUNMEM-001.md` through `archive/tickets/143BOURUNMEM-008.md`, covering evidence capture, lifetime classification, canonical-identity compaction, scope-boundary enforcement, advisory heap/cost witnesses, an engine-generic drop-at-scope-exit regression, and the remaining determinism OOM prerequisite.
+- Implemented: the live ticket list in this spec was updated to the archived ticket paths so the decomposition now matches the completed state of the series.
+- Deviations from original plan: none at the spec boundary; the individual ticket outcomes record the narrower moved-blocker and proof-shape corrections discovered during implementation.
+- Verification results: `node scripts/archive-ticket.mjs specs/143-bounded-runtime-memory-and-simulation-cost.md archive/specs/`; `pnpm run check:ticket-deps`.

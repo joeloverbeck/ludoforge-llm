@@ -2,7 +2,7 @@
   "move": {
     "actionId": "raise",
     "params": {
-      "raiseAmount": 426
+      "raiseAmount": 120
     }
   },
   "agentDecision": {
@@ -13,9 +13,9 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588",
+    "profileFingerprint": "611471255deffbc5e1be0d2d1571449adba6a69cd37f8b56235f1f76ab08e9d1",
     "initialCandidateCount": 12,
-    "selectedStableMoveKey": "raise|{\"raiseAmount\":426}|false|unclassified",
+    "selectedStableMoveKey": "raise|{\"raiseAmount\":120}|false|unclassified",
     "finalScore": 90,
     "pruningSteps": [],
     "tieBreakChain": [],
@@ -54,7 +54,7 @@
         0.09999999997938847,
         0.09999999997938847
       ],
-      "selectedIndex": 7
+      "selectedIndex": 3
     },
     "emergencyFallback": false,
     "failure": null,

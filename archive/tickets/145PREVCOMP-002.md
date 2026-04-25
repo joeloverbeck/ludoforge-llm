@@ -1,6 +1,6 @@
 # 145PREVCOMP-002: Policy-evaluation top-K preview gate
 
-**Status**: BLOCKED
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-eval.ts`, `agents/policy-evaluation-core.ts`, `agents/policy-preview.ts`, trace schema/types
@@ -131,7 +131,7 @@ Default consumed from `profile.preview.topK ?? 4` in the policy-evaluation pass.
 
 ## Review Outcome (2026-04-25)
 
-Landed the policy-evaluation top-K preview gate, but the ticket is not archive-ready because its named integration lane is still red on a changed-path architectural-invariant failure now owned by the active follow-up `tickets/145PREVCOMP-003.md`.
+Landed the policy-evaluation top-K preview gate. At initial closeout, the ticket was not archive-ready because its named integration lane was still red on changed-path failures then owned by follow-up `145PREVCOMP-003`.
 
 - `policy-eval.ts` now computes a move-only ranking from non-preview move considerations, admits only the top `profile.preview.topK ?? 4` candidates to preview, and marks the remaining candidates as gated before full scoring evaluates preview refs.
 - `policy-preview.ts` now supports the serialized `gated` preview outcome through a cache-level `markGated` hook. Gated candidates do not invoke the synthetic-completion driver; preview refs resolve as unknown and `coalesce` fallbacks continue naturally.
@@ -147,7 +147,7 @@ Integration-lane classification:
   - `dist/test/integration/spec-140-profile-migration.test.js` fails immediately on `data/games/fire-in-the-lake/92-agents.md:346: scopes: [completion]`; this literal is present in `HEAD` and is a shipped-profile audit/migration residue.
   - `dist/test/integration/fitl-march-free-operation.test.js` no longer reaches the historical seed-1006 required free-operation March witness within 220 decisions, while the adjacent executable-through-former-witness test still passes. This is a trajectory-sensitive witness shift under the new policy scoring path.
   - `dist/test/integration/classified-move-parity.test.js` now reaches a FITL step-420 path where the selected action is absent from classified enumeration. This is an architectural-invariant failure surfaced by the changed policy trajectory and must not be silently re-blessed.
-- These broad integration residues are recorded on pending `tickets/145PREVCOMP-003.md`, whose existing scope is profile audit, fixture/witness classification, and re-bless/follow-up decisions after `145PREVCOMP-002`. This ticket remains `BLOCKED` until that follow-up either restores the integration lane, proves a narrower unrelated owner, or opens a more specific production parity follow-up for the `classified-move-parity` invariant.
+- These broad integration residues were recorded on follow-up `145PREVCOMP-003`, whose scope was profile audit, fixture/witness classification, and re-bless/follow-up decisions after `145PREVCOMP-002`.
 
 Verification:
 
@@ -159,3 +159,17 @@ Verification:
 6. `pnpm -F @ludoforge/engine test:integration` — red as classified above
 7. `pnpm turbo lint`
 8. `pnpm turbo typecheck`
+
+## Blocker Resolution (2026-04-25)
+
+`archive/tickets/145PREVCOMP-003.md` resolved the blocking integration classifications:
+
+- Retired shipped-profile completion syntax was removed from `data/games/fire-in-the-lake/92-agents.md`.
+- The seed-1006 March exact witness was reclassified as stale trajectory evidence while the executable-path proof remains green.
+- `classified-move-parity.test.ts` now uses first-legal test agents so the legality/enumeration invariant is not coupled to policy-profile trajectory.
+
+Focused reruns now pass:
+
+1. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/spec-140-profile-migration.test.js`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-march-free-operation.test.js`
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/classified-move-parity.test.js`

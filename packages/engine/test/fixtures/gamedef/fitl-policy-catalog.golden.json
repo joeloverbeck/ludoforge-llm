@@ -2109,46 +2109,6 @@
           "strategicConditions": []
         }
       },
-      "preferPatronageMode": {
-        "scopes": [
-          "completion"
-        ],
-        "costClass": "state",
-        "weight": {
-          "kind": "literal",
-          "value": 10
-        },
-        "value": {
-          "kind": "op",
-          "op": "boolToNumber",
-          "args": [
-            {
-              "kind": "op",
-              "op": "eq",
-              "args": [
-                {
-                  "kind": "ref",
-                  "ref": {
-                    "kind": "optionIntrinsic",
-                    "intrinsic": "value"
-                  }
-                },
-                {
-                  "kind": "literal",
-                  "value": "patronage"
-                }
-              ]
-            }
-          ]
-        },
-        "dependencies": {
-          "parameters": [],
-          "stateFeatures": [],
-          "candidateFeatures": [],
-          "aggregates": [],
-          "strategicConditions": []
-        }
-      },
       "preferNormalizedMargin": {
         "scopes": [
           "move"
@@ -2484,7 +2444,10 @@
         ]
       },
       "preview": {
-        "mode": "exactWorld"
+        "mode": "exactWorld",
+        "completion": "greedy",
+        "completionDepthCap": 8,
+        "topK": 4
       },
       "selection": {
         "mode": "argmax"
@@ -2510,7 +2473,7 @@
           "preferAdviseAction"
         ]
       },
-      "fingerprint": "3e00cb8e49737f68940ad2e0c114f644d94460f14ee3441d24c78a3ba7ecbc30"
+      "fingerprint": "cb70458191639a96121de3d8ba59933773274cff9f24dcd703c3b7651f9a06d8"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
@@ -2532,6 +2495,9 @@
       },
       "preview": {
         "mode": "exactWorld",
+        "completion": "greedy",
+        "completionDepthCap": 8,
+        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -2553,7 +2519,7 @@
           "preferGovernWeighted"
         ]
       },
-      "fingerprint": "8e14f41674dcd52e93083ff72e694fe5a7e225f76a0893d808b69eabdd657116"
+      "fingerprint": "53b9c8ae7447b3e1b3c45fdebdf5630f9dcfccbb088f34878e0a4a5bc454ea72"
     },
     "arvn-evolved": {
       "observerName": "currentPlayer",
@@ -2572,8 +2538,7 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow",
-          "preferPatronageMode"
+          "trainWhenControlLow"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2581,6 +2546,9 @@
       },
       "preview": {
         "mode": "exactWorld",
+        "completion": "greedy",
+        "completionDepthCap": 8,
+        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -2607,11 +2575,10 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow",
-          "preferPatronageMode"
+          "trainWhenControlLow"
         ]
       },
-      "fingerprint": "358b37b031d7ca90cf9458046b60867881ed558a9b14b59fb4725e7528d3e5ee"
+      "fingerprint": "86673fb4e11192bcfe50894a26aa22ec0bbe23bdca3d35f0b969c32dd5c0d088"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2640,7 +2607,10 @@
         ]
       },
       "preview": {
-        "mode": "exactWorld"
+        "mode": "exactWorld",
+        "completion": "greedy",
+        "completionDepthCap": 8,
+        "topK": 4
       },
       "selection": {
         "mode": "argmax"
@@ -2668,7 +2638,7 @@
           "preferBombardAction"
         ]
       },
-      "fingerprint": "9055bca195c7e60c2e08b74afce3699749102e0209839e8ffbd2564ac23c2598"
+      "fingerprint": "be331f71c86b50e98fc452b36ef60ac3fd8423ac9e08bb5ffb562cd143f16872"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
@@ -2691,6 +2661,9 @@
       },
       "preview": {
         "mode": "tolerateStochastic",
+        "completion": "greedy",
+        "completionDepthCap": 8,
+        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -2717,7 +2690,7 @@
           "valueCapabilityGain"
         ]
       },
-      "fingerprint": "61adbd1ea3aafc9ce8e0a931eb8ae438d80013ce6b77f60545b42fdd239fba7b"
+      "fingerprint": "5edf2d1f4c5ad6dcd16e408e32bdd35b3ba0f78b55c1600f8a05211a28b63e86"
     }
   },
   "bindingsBySeat": {
@@ -2726,5 +2699,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "6ae70f921c9d2180a399cd9478ae7e5de67f9f0984f4fc43c7ecde580df0f109"
+  "catalogFingerprint": "324e1859590d3f47bbe488be2ff2bedc1872731e4025857429610b3b9b89dabb"
 }

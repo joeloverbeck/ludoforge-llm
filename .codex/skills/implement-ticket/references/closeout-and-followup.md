@@ -38,7 +38,9 @@ Before declaring completion or updating the ticket status, run one final accepta
 
 ## Acceptance-Proof Invalidation
 
-Acceptance-proof runs are invalidated by later edits. If any code, tests, fixtures, schemas, goldens, generated artifacts, or active-ticket text changes after the last green acceptance-proof lane, rerun the full acceptance-proof set before marking the ticket complete. Do not rely on an earlier green run once the final diff has changed.
+Acceptance-proof runs are invalidated by later edits to the proved surface or acceptance story. If code, tests, fixtures, schemas, goldens, generated artifacts, status, scope, touched-file expectations, command ledgers, acceptance wording, or proof claims change after the last green acceptance-proof lane, rerun the narrowest affected proof lanes before marking the ticket complete. Do not rely on an earlier green run once the final diff has changed.
+
+Purely clerical ticket/spec edits, such as typo fixes or appending evidence that does not alter status, scope, command coverage, or proof claims, may preserve earlier proof only when you record an explicit no-invalidation decision in the ticket outcome or final closeout. If there is any doubt whether the edit changes the acceptance story, treat it as proof-affecting and rerun the affected lane.
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
@@ -124,6 +126,17 @@ If the session creates a new prerequisite/follow-up ticket or rewires deps acros
 1. update the affected deps/status fields first
 2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
 3. fix any cycle or stale dependency before continuing to broader proof or final closeout
+
+## Follow-Up Ticket Creation During Implementation
+
+When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
+
+1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
+2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
+3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
+4. update the active ticket, sibling tickets, and deps/status fields so the series tells one ownership story
+5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
+6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep
 
 ## Sibling Absorbed Ownership
 

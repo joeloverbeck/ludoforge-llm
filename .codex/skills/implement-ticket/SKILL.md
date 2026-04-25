@@ -16,6 +16,14 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 Load `references/working-notes.md` for the working-notes checklist, `commentary` usage, and the 1-3-1 boundary reset ledger format. Emit the compact working-notes checkpoint before coding.
 
+Minimal checkpoint shape:
+
+- `draft/untracked status`: active ticket/spec/sibling state that matters
+- `discrepancy class`: blocking vs nonblocking live mismatches
+- `authoritative boundary`: what this ticket now owns
+- `verification substitutions`: any ticket-command or proof-shape corrections
+- `acceptance-proof lanes`: final lanes you intend to cite
+
 ## High-Signal Reminders
 
 These are the reminders whose canonical guidance lives nowhere else in this skill. Rules about final-proof gating, touched-file scope sweeps, acceptance-command reconciliation, representative-corpus preflight, post-proof-edit invalidation, sibling handoffs, and already-landed slices are covered in their respective reference files.

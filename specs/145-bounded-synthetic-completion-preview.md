@@ -406,8 +406,8 @@ Per F#14, no compatibility shim. The change ships in a single PR:
 Decomposed via `/spec-to-tickets` on 2026-04-25:
 
 - [`archive/tickets/145PREVCOMP-001.md`](../archive/tickets/145PREVCOMP-001.md) — Bounded synthetic-completion driver and profile config (covers I1)
-- [`tickets/145PREVCOMP-002.md`](../tickets/145PREVCOMP-002.md) — Policy-evaluation top-K preview gate (covers I2)
-- [`tickets/145PREVCOMP-003.md`](../tickets/145PREVCOMP-003.md) — Profile audit and golden re-bless (covers I3)
+- [`archive/tickets/145PREVCOMP-002.md`](../archive/tickets/145PREVCOMP-002.md) — Policy-evaluation top-K preview gate (covers I2)
+- [`archive/tickets/145PREVCOMP-003.md`](../archive/tickets/145PREVCOMP-003.md) — Profile audit and golden re-bless (covers I3)
 - [`tickets/145PREVCOMP-004.md`](../tickets/145PREVCOMP-004.md) — Cross-game driver conformance and per-policy determinism (covers I4)
 - [`tickets/145PREVCOMP-005.md`](../tickets/145PREVCOMP-005.md) — Trace and diagnostics for driver and gate (covers I5)
 - [`tickets/145PREVCOMP-006.md`](../tickets/145PREVCOMP-006.md) — Performance harness and topK derivation script (covers I6)

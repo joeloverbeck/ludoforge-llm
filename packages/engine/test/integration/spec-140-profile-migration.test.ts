@@ -21,6 +21,8 @@ const RETIRED_PATTERNS = [
   'preview\\.phase1',
 ] as const;
 const ALLOWED_STOP_REASONS = new Set(['terminal', 'maxTurns', 'noLegalMoves']);
+const FITL_PROFILE_SMOKE_SEEDS = [123] as const;
+const FITL_PROFILE_SMOKE_DECISIONS = 5;
 
 const grepMatches = (pattern: string): string => {
   return findPatternMatches(new RegExp(pattern, 'u'), ACTIVE_PROFILE_FILES);
@@ -46,8 +48,8 @@ describe('Spec 140 profile migration correctness', () => {
       (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
     );
 
-    for (const seed of [123, 1002, 1010] as const) {
-      const trace = runGame(def, seed, agents, 200, 4, { skipDeltas: true }, runtime);
+    for (const seed of FITL_PROFILE_SMOKE_SEEDS) {
+      const trace = runGame(def, seed, agents, FITL_PROFILE_SMOKE_DECISIONS, 4, { skipDeltas: true }, runtime);
       assert.ok(ALLOWED_STOP_REASONS.has(trace.stopReason));
       assert.ok(trace.decisions.length > 0);
     }

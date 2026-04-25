@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — test/measurement-only
-**Deps**: `archive/tickets/145PREVCOMP-001.md`, `tickets/145PREVCOMP-002.md`
+**Deps**: `archive/tickets/145PREVCOMP-001.md`, `archive/tickets/145PREVCOMP-002.md`
 
 ## Problem
 

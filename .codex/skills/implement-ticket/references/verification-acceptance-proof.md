@@ -16,6 +16,16 @@ When a named verification command exits cleanly but proves nothing substantive i
 3. record the anomaly and the substitute proof lane in the active ticket before final closeout
 4. if the ticket explicitly required that exact command to prove the boundary, leave the command as `not yet proven` until the ticket or tooling story is corrected truthfully
 
+## Cache-Hit Acceptance Lanes
+
+When a broad workspace or package lane exits from cache after you added, deleted, or modified files, do not automatically count that lane as proof for the changed surface. This matters especially for newly added files, untracked files, generated artifacts, and tests that may not have been part of the cache key you expected.
+
+1. classify the cached lane as `cache-hit proof pending` for the changed surface unless you have already proven that the changed files were included in the cached task inputs
+2. run the narrowest direct command that exercises the changed files, or rerun the package/workspace lane with the repo's documented no-cache mechanism when that is proportionate
+3. for new tests or source files, prefer a direct lint/typecheck/test command against the new file or the smallest package lane that definitely includes it
+4. record any cache-hit substitution in the ticket outcome or final closeout when it affects a ticket-named acceptance command
+5. if you cannot prove the cached broad lane covered the changed surface, leave that lane as `not yet proven` rather than treating the cache hit as acceptance proof
+
 ## Wrapper and Child Command Isolation
 
 When the raw child command for a witness passes but the **wrapper script or package test entrypoint** still fails, stop treating the test file as the only owner. Isolate the wrapper seam directly:

@@ -123,7 +123,9 @@ Implemented the widened F#18-aligned boundary after live reassessment proved see
 
 Added the I4 fixture under `packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/` and the seed-1001 regression at `packages/engine/test/integration/fitl-march-dead-end-recovery.test.ts`. The regression validates GameDef hash, initial-state hash, the recorded pre-recovery decision prefix, terminal completion, and final-state replay identity.
 
-Documentation was updated in `docs/FOUNDATIONS.md`, `docs/architecture.md`, `specs/144-probe-and-recover-microturn-publication.md`, and `campaigns/phase4-probe-recover/pass-action-audit.md` to reflect the truthful two-tier contract and the revised grant-reconciliation decision.
+Outcome amended: 2026-04-25
+
+Documentation was updated in `docs/FOUNDATIONS.md`, `docs/architecture.md`, `archive/specs/144-probe-and-recover-microturn-publication.md`, and `campaigns/phase4-probe-recover/pass-action-audit.md` to reflect the truthful two-tier contract and the revised grant-reconciliation decision.
 
 Convergence-witness re-bless result: `packages/engine/test/policy-profile-quality/fitl-variant-arvn-evolved-convergence.test.ts` already passes unchanged for seeds 1020, 1049, and 1054, so no re-bless edit was required.
 

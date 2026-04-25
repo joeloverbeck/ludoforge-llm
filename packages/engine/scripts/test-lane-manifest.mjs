@@ -31,6 +31,19 @@ export const E2E_SLOW_EXACT_TESTS = [
   'texas-holdem-tournament.test.ts',
 ];
 
+// Heavy parametric runGame parity tests. Each iterates a seed × profile-variant
+// matrix and runs full bounded simulations, so individually they cost minutes.
+// Excluded from the default/integration:core lane to keep local development
+// `pnpm turbo test` fast; covered by the dedicated engine-slow-parity workflow.
+export const SLOW_INTEGRATION_TESTS = [
+  'classified-move-parity.test.ts',
+  'diagnose-parity-runGame.test.ts',
+  'spec-140-bounded-termination.test.ts',
+  'spec-140-compound-turn-summary.test.ts',
+  'spec-140-foundations-conformance.test.ts',
+  'spec-140-profile-migration.test.ts',
+];
+
 function collectTestFiles(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
   const files = [];
@@ -55,6 +68,13 @@ export const ALL_DETERMINISM_TESTS = collectTestFiles(DETERMINISM_TEST_ROOT);
 export const ALL_POLICY_PROFILE_QUALITY_TESTS = collectTestFiles(POLICY_PROFILE_QUALITY_TEST_ROOT);
 
 const gamePackageSmokeTests = new Set(GAME_PACKAGE_SMOKE_TESTS.map((testPath) => `test/integration/${testPath}`));
+const slowIntegrationTests = new Set(SLOW_INTEGRATION_TESTS.map((testPath) => `test/integration/${testPath}`));
+
+export function isSlowIntegrationTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return SLOW_INTEGRATION_TESTS.includes(baseName);
+}
 
 export function isGamePackageIntegrationTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
@@ -79,8 +99,12 @@ export function listIntegrationTestsForLane(lane) {
       return [...ALL_INTEGRATION_TESTS];
     case 'integration:core':
       return ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => !isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath),
+        (sourcePath) =>
+          (!isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath)) &&
+          !slowIntegrationTests.has(sourcePath),
       );
+    case 'integration:slow-parity':
+      return ALL_INTEGRATION_TESTS.filter((sourcePath) => slowIntegrationTests.has(sourcePath));
     case 'integration:game-packages':
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath),

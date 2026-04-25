@@ -19,7 +19,7 @@ This contradicts the completed Spec 144 recovery contract in `docs/FOUNDATIONS.m
 1. `packages/engine/src/kernel/microturn/rollback.ts` currently calls `expireReadyBlockingGrantsForSeat(...)` during rollback, and `packages/engine/test/unit/kernel/microturn/rollback.test.ts` has a unit case proving one ready blocking grant is removed for the recovered seat.
 2. Live broad proof still fails outside the diagnostic seam. Direct reruns of `dist/test/integration/classified-move-parity.test.js` and `dist/test/integration/spec-140-profile-migration.test.js` throw the same `ILLEGAL_MOVE` for `actionId=pass` with unresolved required free-operation grants.
 3. The failure means the existing rollback unit proof is too narrow for at least one production FITL state: either the grant that blocks `pass` is not considered ready by the current expiry helper, the seat/action ownership used during rollback is wrong, or fallback publication can still expose `pass` before all blocking obligations are reconciled.
-4. `tickets/144PROBEREC-005.md` is a replay-identity proof for recovery traces. It should depend on this repair because replay proof is not meaningful while representative recovery/fallback paths can still throw before producing a legitimate trace.
+4. `archive/tickets/144PROBEREC-005.md` is a replay-identity proof for recovery traces. It should depend on this repair because replay proof is not meaningful while representative recovery/fallback paths can still throw before producing a legitimate trace.
 
 ## Architecture Check
 
@@ -59,7 +59,7 @@ If this repair changes the replay-identity surface expected by `144PROBEREC-005`
 - `packages/engine/src/kernel/grant-lifecycle.ts` or adjacent grant reconciliation helpers (modify if the ownership is deeper than rollback)
 - `packages/engine/test/unit/kernel/microturn/rollback.test.ts` (likely modify)
 - `packages/engine/test/integration/<new-or-existing-recovery-regression>.test.ts` (new or modify)
-- `tickets/144PROBEREC-005.md` (conditional modify if proof assumptions change)
+- `archive/tickets/144PROBEREC-005.md` (conditional modify if proof assumptions change)
 
 ## Out of Scope
 
@@ -104,6 +104,7 @@ If this repair changes the replay-identity surface expected by `144PROBEREC-005`
 ## Outcome
 
 Completion date: 2026-04-25
+Outcome amended: 2026-04-25
 
 Implemented recovery fallback grant reconciliation parity across the shared pass fallback surfaces. The live failure was reproduced in `dist/test/integration/spec-140-profile-migration.test.js` on the FITL canary seed 123: the publisher exposed the game-authored `tags: [pass]` fallback while ready free-operation grants still blocked normal action execution.
 
@@ -116,7 +117,7 @@ The repair keeps the fallback game-authored and engine-generic:
 
 Added focused unit coverage in `packages/engine/test/unit/kernel/microturn/rollback.test.ts` proving that applying a singleton pass fallback clears only the recovered seat's ready blocking grant and preserves another seat's pending grant. Post-review tightened the same test file with a guard regression proving raw `applyMove` does not reconcile a pass while a required grant still has a playable completion.
 
-Sibling status: `tickets/144PROBEREC-005.md` remains the replay-identity proof owner. This ticket removes its prerequisite fallback-legality blocker but does not implement the determinism test.
+Sibling status: `archive/tickets/144PROBEREC-005.md` owns the completed replay-identity proof. This ticket removed its prerequisite fallback-legality blocker but did not implement the determinism test.
 
 Verification:
 - `pnpm -F @ludoforge/engine build`

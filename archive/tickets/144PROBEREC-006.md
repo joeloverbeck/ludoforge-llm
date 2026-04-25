@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Conditional — only if the completed measurement invalidates the retained publication-probe cache
-**Deps**: `archive/tickets/144PROBEREC-001.md`, `specs/144-probe-and-recover-microturn-publication.md`
+**Deps**: `archive/tickets/144PROBEREC-001.md`, `archive/specs/144-probe-and-recover-microturn-publication.md`
 
 ## Problem
 
@@ -119,6 +119,7 @@ If the cache remains, leave the runtime code unchanged and document why the curr
 ## Outcome
 
 Completed on 2026-04-24.
+Outcome amended: 2026-04-25
 
 - I1: `campaigns/phase4-probe-recover/depth-audit.md` now enumerates the audited FITL action/profile/macro surfaces and retains the explicit `K > 3` conclusion. No audited surface requires increasing `MICROTURN_PROBE_DEPTH_BUDGET`.
 - I2: `campaigns/phase4-probe-recover/memoization-measurement.md` records the completed 18-seed, `maxTurns=500` cache-enabled/cache-disabled measurement. The cache produced identical stop reasons, turn counts, and decision counts with and without memoization. Hit rate was 36.45%; disabled mode was 0.26% faster in this sandbox on the tuned-build final run.

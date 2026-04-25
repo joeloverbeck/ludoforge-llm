@@ -171,4 +171,6 @@ Verification:
 
 Broad-lane failure classification: not owned by 144PROBEREC-004. Direct reruns showed the Spec 140 failures throw `ILLEGAL_MOVE` for `actionId=pass` because the active seat still has unresolved required free-operation grants, which is recovery/grant semantics from tickets 002/003 rather than `SimulationOptions.decisionHook` or the diagnostic harness rewire. The marker failure was a stale `@witness-id` marker in `packages/engine/test/integration/fitl-march-dead-end-recovery.test.ts`, also from the completed ticket 003 seam; post-review cleanup corrected it to `@witness:`.
 
-Post-review follow-up: `tickets/144PROBEREC-007.md` now owns the remaining recovery fallback grant reconciliation blocker, and `tickets/144PROBEREC-005.md` depends on that repair before replay-identity proof. Targeted cleanup verification: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js`.
+Outcome amended: 2026-04-25
+
+Post-review follow-up: `archive/tickets/144PROBEREC-007.md` now owns the completed recovery fallback grant reconciliation blocker, and `archive/tickets/144PROBEREC-005.md` owns the completed replay-identity proof that depended on that repair. Targeted cleanup verification: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js`.

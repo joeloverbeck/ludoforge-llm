@@ -340,8 +340,8 @@ This spec is implementation-ready. Tickets follow a small linear chain.
 
 ### I4. Cross-game conformance test + agnosticism proof
 
-- New test under `packages/engine/test/integration/agents/`: drive the same `pickInnerDecision` greedy policy against (a) FITL Govern, (b) FITL March, (c) FITL Train, (d) FITL Sweep, (e) FITL Assault, and (f) Texas Hold'em raise. Assert each production action-selection witness retires within K_PREVIEW_DEPTH and produces a non-pre-move-equal `selfMargin`. Assert FITL March returns `depthCap` when `completionDepthCap` is lowered to 2. This is the F#1 / F#19 conformance witness and the production-backed boundedness matrix split out of I1 after `145PREVCOMP-001` landed only synthetic driver-internal tests.
-- Add a determinism assertion under **both** `greedy` and `agentGuided` pickers: run the driver twice on the same inputs for each policy and assert byte-identical `previewState.stateHash` and `depth`. The per-policy split matters because `agentGuided` invokes considerations evaluation, which is a separate code path from greedy precedence selection — both are claimed deterministic in D8 and both must be witnessed.
+- New test under `packages/engine/test/integration/agents/`: drive the same `pickInnerDecision` greedy policy against (a) FITL Govern, (b) FITL March, (c) FITL Train, (d) FITL Sweep, (e) FITL Assault, and (f) Texas Hold'em raise. Assert each production action-selection witness returns a ready preview under K_PREVIEW_DEPTH and produces a non-pre-move-equal `previewState.stateHash`. Assert FITL March returns `depthCap` when `completionDepthCap` is lowered to 2. This is the F#1 / F#19 conformance witness and the production-backed boundedness matrix split out of I1 after `145PREVCOMP-001` landed only synthetic driver-internal tests.
+- Add a determinism assertion under **both** `greedy` and `agentGuided` pickers: run the driver twice on the same inputs for each policy and assert byte-identical outcomes and `previewState.stateHash` values. The per-policy split matters because `agentGuided` invokes considerations evaluation, which is a separate code path from greedy precedence selection — both are claimed deterministic in D8 and both must be witnessed.
 - Ticket: `145PREVCOMP-004`.
 
 ### I5. Trace and diagnostics
@@ -408,6 +408,6 @@ Decomposed via `/spec-to-tickets` on 2026-04-25:
 - [`archive/tickets/145PREVCOMP-001.md`](../archive/tickets/145PREVCOMP-001.md) — Bounded synthetic-completion driver and profile config (covers I1)
 - [`archive/tickets/145PREVCOMP-002.md`](../archive/tickets/145PREVCOMP-002.md) — Policy-evaluation top-K preview gate (covers I2)
 - [`archive/tickets/145PREVCOMP-003.md`](../archive/tickets/145PREVCOMP-003.md) — Profile audit and golden re-bless (covers I3)
-- [`tickets/145PREVCOMP-004.md`](../tickets/145PREVCOMP-004.md) — Cross-game driver conformance and per-policy determinism (covers I4)
+- [`archive/tickets/145PREVCOMP-004.md`](../archive/tickets/145PREVCOMP-004.md) — Cross-game driver conformance and per-policy determinism (covers I4)
 - [`tickets/145PREVCOMP-005.md`](../tickets/145PREVCOMP-005.md) — Trace and diagnostics for driver and gate (covers I5)
 - [`tickets/145PREVCOMP-006.md`](../tickets/145PREVCOMP-006.md) — Performance harness and topK derivation script (covers I6)

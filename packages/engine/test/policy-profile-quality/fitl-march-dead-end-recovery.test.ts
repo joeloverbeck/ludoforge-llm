@@ -1,5 +1,5 @@
 // @test-class: convergence-witness
-// @witness: spec-144-seed-1001-nva-march
+// @profile-variant: spec-144-seed-1001-nva-march
 
 import * as assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -7,6 +7,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { PolicyAgent } from '../../src/agents/index.js';
 import {
@@ -16,6 +17,7 @@ import {
   serializeGameState,
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
+import { emitPolicyProfileQualityRecord } from '../helpers/policy-profile-quality-report-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const VARIANT_PROFILES = ['us-baseline', 'arvn-evolved', 'nva-baseline', 'vc-baseline'] as const;
@@ -23,6 +25,7 @@ const SEED = 1001;
 const MAX_TURNS = 500;
 const PLAYER_COUNT = 4;
 const FIXTURE_DIR = fileURLToPath(new URL('../../../test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/', import.meta.url));
+const TEST_FILE = fileURLToPath(import.meta.url);
 
 const readFixtureText = (name: string): string =>
   readFileSync(join(FIXTURE_DIR, name), 'utf8').trim();
@@ -42,7 +45,7 @@ describe('Spec 144 seed-1001 NVA march recovery', () => {
     return runGame(def, SEED, agents, MAX_TURNS, PLAYER_COUNT, { skipDeltas: true }, createGameDefRuntime(def));
   };
 
-  it('reaches terminal instead of noLegalMoves after the card-59 NVA march dead end', () => {
+  it('tracks terminal convergence after the card-59 NVA march dead end', () => {
     assert.equal(createHash('sha256').update(JSON.stringify(def)).digest('hex'), fixtureGameDefHash);
     assert.equal(
       serializeGameState(initialState(def, SEED, PLAYER_COUNT, undefined, createGameDefRuntime(def)).state).stateHash,
@@ -50,15 +53,24 @@ describe('Spec 144 seed-1001 NVA march recovery', () => {
     );
 
     const first = runWitness();
-    assert.deepEqual(
+    const prefixMatches = isDeepStrictEqual(
       first.decisions.slice(0, fixtureDecisionSequence.length).map((entry) => entry.decision),
       fixtureDecisionSequence,
-      'seed 1001 should preserve the recorded pre-recovery decision prefix',
     );
+    const terminalConverged = first.stopReason === 'terminal';
+    const passed = prefixMatches && terminalConverged;
+    emitPolicyProfileQualityRecord({
+      file: TEST_FILE,
+      variantId: 'spec-144-seed-1001-nva-march',
+      seed: SEED,
+      passed,
+      stopReason: first.stopReason,
+      decisions: first.decisions.length,
+    });
     assert.equal(
-      first.stopReason,
-      'terminal',
-      `seed ${SEED} stopped with ${first.stopReason} after ${first.decisions.length} decisions`,
+      passed,
+      true,
+      `seed ${SEED} prefixMatches=${prefixMatches} stopReason=${first.stopReason} decisions=${first.decisions.length}`,
     );
 
     const second = runWitness();

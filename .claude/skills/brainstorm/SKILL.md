@@ -71,7 +71,7 @@ Classify: design | decision/triage | operational
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
-3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles.
+3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles. *"Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md — skill design, process changes, and tooling configurations are not, even if they indirectly influence implementation.*
 
 4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A directional report with general suggestions may start you at 60-70%. A report with specific, codebase-grounded proposals (concrete file references, verified claims, detailed tradeoffs) may start at 70-80% — the remaining gap is typically just user intent and risk tolerance.
 
@@ -235,11 +235,15 @@ Sections to cover (skip irrelevant ones):
 6. **Testing strategy**: How to verify this works (if implementation-related)
 7. **FOUNDATIONS.md alignment**: Table of relevant principles and how the design respects them (if implementation-related)
 
+The list above is a starting menu, not a fixed schema — domain-appropriate substitutions (e.g., "Phases" or "Step-by-step execution" in place of "Data flow / Process") are expected for non-implementation designs.
+
 "Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md. Skill design, process changes, and tooling configurations are not implementation-related for this purpose, even if they indirectly influence implementation.
 
 **After each section**, ask: "Does this section look right?" Wait for confirmation before presenting the next section. If the user pushes back, revise that section before continuing.
 
 **Auto-mode adaptation**: When Claude Code's auto mode is active, section-by-section gating compresses to consolidated presentation with a single approval. Present the remaining sections together and proceed to Step 5 artifact writing unless the user has pushed back on a prior section. This matches auto mode's "prefer action over planning" posture while preserving substantive review — the user still sees every section before the artifact is written. If a user objection arises mid-consolidation, stop, revise the flagged section, and present the revision for approval before continuing.
+
+**Compound-move + auto-mode intersection**: When Step 2's compound-move variant was used (approach presentation merged with terminal gap-closer), the consolidated Step 4 design preview is still required as a separate message before the artifact write — section-name bullets with a one-line summary each are sufficient, full prose is not. The compound-move's approach-level overview does NOT satisfy the section preview promise, since later sections (edge cases, recovery info, files NOT touched, step-by-step execution) are typically not enumerated at approach time. Skip the preview only when the user has explicitly waived it ("just write the file", "skip the preview", or equivalent).
 
 ## Step 5: Write Output Artifacts
 
@@ -253,6 +257,8 @@ Once all sections are approved, determine the output format:
 
 - **If the design needs further refinement** (sections had significant revision, open questions remain, approach is exploratory): write to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Include a "Brainstorm Context" header noting the original request, reference file (if any), key interview insights, and final confidence score with any assumptions.
 - **If all sections were approved without revision and the output is a well-scoped implementation spec** (ready for ticket decomposition): write directly to `specs/<number>-<name>.md`. The design doc is a staging area for designs that need further discussion — not a mandatory waypoint when the brainstorm produces a finished spec.
+
+**Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
 
 Do NOT commit the file. Leave it for user review.
 
@@ -307,7 +313,7 @@ Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose 
 **If triage produced spec(s) and/or report updates**:
 ```
 What would you like to do next?
-1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets)
+1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
 2. Run another missing-abstractions analysis on a different test suite
 3. Done for now — I'll review the artifacts later
 ```

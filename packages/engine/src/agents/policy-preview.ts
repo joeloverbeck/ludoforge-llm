@@ -110,8 +110,10 @@ export interface PolicyPreviewRuntime {
   getPreviewState(candidate: PolicyPreviewCandidate): GameState | undefined;
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
+  getCompletionMetadata(candidate: PolicyPreviewCandidate): PolicyPreviewCompletionMetadata | undefined;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
+  hasMaterializedOutcome(candidate: PolicyPreviewCandidate): boolean;
 }
 
 export type PolicyPreviewUnavailabilityReason =
@@ -145,11 +147,18 @@ export interface PolicyPreviewGrantedOperation {
   readonly postEventPlusOpMargin?: number;
 }
 
+export interface PolicyPreviewCompletionMetadata {
+  readonly depth: number;
+  readonly policy: AgentPreviewCompletionPolicy;
+}
+
 type PreviewOutcome =
   | {
       readonly kind: 'ready';
       readonly state: GameState;
       readonly trustedMove: TrustedExecutableMove;
+      readonly driveDepth: number;
+      readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -160,6 +169,8 @@ type PreviewOutcome =
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly trustedMove: TrustedExecutableMove;
+      readonly driveDepth: number;
+      readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -170,6 +181,8 @@ type PreviewOutcome =
       readonly kind: 'unknown';
       readonly reason: PolicyPreviewUnavailabilityReason;
       readonly failureReason?: string;
+      readonly driveDepth?: number;
+      readonly completionPolicy?: AgentPreviewCompletionPolicy;
     };
 
 type PreviewCandidateClassification =
@@ -201,6 +214,7 @@ type DriveResult =
   | {
       readonly kind: 'failed';
       readonly reason: PolicyPreviewUnavailabilityReason;
+      readonly depth?: number;
       readonly failureReason?: string;
     };
 
@@ -483,7 +497,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       cache.clear();
     },
     markGated(candidate) {
-      if (disposed || cache.has(candidate.stableMoveKey)) {
+      if (disposed) {
         return;
       }
       cache.set(candidate.stableMoveKey, { kind: 'unknown', reason: 'gated', failureReason: 'gated' });
@@ -581,6 +595,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       const outcome = getPreviewOutcome(candidate);
       return outcome.kind === 'unknown' ? outcome.failureReason : undefined;
     },
+    getCompletionMetadata(candidate) {
+      if (disposed) {
+        return undefined;
+      }
+      const outcome = getPreviewOutcome(candidate);
+      return outcome.driveDepth === undefined || outcome.completionPolicy === undefined
+        ? undefined
+        : { depth: outcome.driveDepth, policy: outcome.completionPolicy };
+    },
     getGrantedOperation(candidate) {
       if (disposed) {
         return undefined;
@@ -597,6 +620,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       const candidateActionId = candidate.actionId ?? String(candidate.move.actionId);
       return input.trustedMoveIndex.has(candidate.stableMoveKey)
         || input.phase1ActionPreviewIndex?.has(candidateActionId) === true;
+    },
+    hasMaterializedOutcome(candidate) {
+      if (disposed) {
+        return false;
+      }
+      const cached = cache.get(candidate.stableMoveKey);
+      return cached !== undefined
+        && !(cached.kind === 'unknown' && (cached.reason === 'gated' || cached.reason === 'failed'));
     },
   };
 
@@ -695,7 +726,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
         const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
         if (decision === undefined) {
-          return { kind: 'failed', reason: 'noPreviewDecision', failureReason: 'noPreviewDecision' };
+          return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
         }
         state = applyPublishedDecision(input.def, state, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
         depth += 1;
@@ -714,20 +745,27 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return {
         kind: 'unknown',
         reason: result.reason,
+        ...(result.depth === undefined ? {} : { driveDepth: result.depth, completionPolicy }),
         ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
       };
     }
     if (result.kind === 'depthCap') {
-      return { kind: 'unknown', reason: 'depthCap', failureReason: 'depthCap' };
+      return {
+        kind: 'unknown',
+        reason: 'depthCap',
+        failureReason: 'depthCap',
+        driveDepth: result.depth,
+        completionPolicy,
+      };
     }
 
     if (result.kind === 'stochastic' && input.previewMode === 'exactWorld') {
-      return { kind: 'unknown', reason: 'random' };
+      return { kind: 'unknown', reason: 'random', driveDepth: result.depth, completionPolicy };
     }
 
     const rngDiverged = !rngStatesEqual(result.state.rng, input.state.rng);
     if (rngDiverged && input.previewMode === 'exactWorld') {
-      return { kind: 'unknown', reason: 'random' };
+      return { kind: 'unknown', reason: 'random', driveDepth: result.depth, completionPolicy };
     }
 
     const observation = deps.derivePlayerObservation(input.def, result.state, input.playerId);
@@ -735,6 +773,8 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       kind: result.kind === 'stochastic' || rngDiverged ? 'stochastic' : 'ready',
       state: result.state,
       trustedMove,
+      driveDepth: result.depth,
+      completionPolicy,
       hiddenSamplingZones: observation.hiddenSamplingZones,
       metricCache: new Map<string, number>(),
       victorySurface: null,

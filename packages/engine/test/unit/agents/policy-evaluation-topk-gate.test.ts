@@ -34,7 +34,10 @@ const emptyDeps: CompiledAgentDependencyRefs = {
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref']): AgentPolicyExpr => ({ kind: 'ref', ref });
 
-function createDef(topK: number): GameDef {
+function createDef(
+  topK: number,
+  options: { readonly materializePreviewInPruning?: boolean } = {},
+): GameDef {
   const catalog: AgentPolicyCatalog = {
     schemaVersion: 2,
     catalogFingerprint: 'topk-test',
@@ -69,7 +72,25 @@ function createDef(topK: number): GameDef {
       },
       candidateFeatures: {},
       candidateAggregates: {},
-      pruningRules: {},
+      pruningRules: {
+        ...(options.materializePreviewInPruning === true
+          ? {
+              warmPreview: {
+                costClass: 'preview',
+                when: {
+                  kind: 'op',
+                  op: 'coalesce',
+                  args: [
+                    refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'projected' }),
+                    literal(false),
+                  ],
+                },
+                dependencies: emptyDeps,
+                onEmpty: 'skipRule',
+              },
+            }
+          : {}),
+      },
       considerations: {
         moveRank: {
           scopes: ['move'],
@@ -86,11 +107,11 @@ function createDef(topK: number): GameDef {
             kind: 'op',
             op: 'coalesce',
             args: [
-              refExpr({ kind: 'library', refKind: 'previewStateFeature', id: 'projected' }),
+              refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'projected' }),
               literal(0),
             ],
           },
-          dependencies: { ...emptyDeps, stateFeatures: ['projected'] },
+          dependencies: emptyDeps,
         },
       },
       tieBreakers: {
@@ -105,7 +126,7 @@ function createDef(topK: number): GameDef {
         preview: { mode: 'exactWorld', topK },
         selection: { mode: 'argmax' },
         use: {
-          pruningRules: [],
+          pruningRules: options.materializePreviewInPruning === true ? ['warmPreview'] : [],
           considerations: ['moveRank', 'projectedScore'],
           tieBreakers: ['stable'],
         },
@@ -156,13 +177,17 @@ function createMoves(ranks: readonly number[]): readonly Move[] {
   return ranks.map((rank) => ({ actionId, params: { rank } }));
 }
 
-function runTopK(topK: number, moves: readonly Move[]): {
+function runTopK(
+  topK: number,
+  moves: readonly Move[],
+  options: { readonly materializePreviewInPruning?: boolean } = {},
+): {
   readonly result: ReturnType<typeof evaluatePolicyMoveCore>;
   readonly previewedKeys: ReadonlySet<string>;
   readonly state: GameState;
   readonly def: GameDef;
 } {
-  const def = createDef(topK);
+  const def = createDef(topK, options);
   const { state } = initialState(def, 42, 2);
   const trustedMoveIndex = new Map(
     moves.map((move) => [
@@ -174,13 +199,16 @@ function runTopK(topK: number, moves: readonly Move[]): {
   const previewDependencies: PolicyPreviewDependencies = {
     applyMove(currentDef, currentState, trustedMove) {
       previewedKeys.add(toMoveIdentityKey(currentDef, trustedMove.move));
+      const projected = trustedMove.move.params.projected;
       const rank = trustedMove.move.params.rank;
       return {
         state: {
           ...currentState,
           globalVars: {
             ...currentState.globalVars,
-            projected: typeof rank === 'number' ? rank * 10 : 0,
+            projected: typeof projected === 'number'
+              ? projected
+              : typeof rank === 'number' ? rank * 10 : 0,
           },
         },
       };
@@ -214,6 +242,8 @@ describe('policy evaluation top-K preview gate', () => {
     assert.equal(result.kind, 'success');
     assert.deepEqual([...previewedKeys], [keyFor(def, 3)]);
     assert.equal(result.move?.params.rank, 3);
+    assert.equal(result.metadata.previewGatedCount, 2);
+    assert.equal(result.metadata.previewGatedTopFlipDetected, undefined);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 1);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 2);
     assert.equal(result.metadata.candidates.find((candidate) => candidate.stableMoveKey === keyFor(def, 1))?.previewOutcome, 'gated');
@@ -227,6 +257,7 @@ describe('policy evaluation top-K preview gate', () => {
 
     assert.equal(result.kind, 'success');
     assert.equal(previewedKeys.size, 3);
+    assert.equal(result.metadata.previewGatedCount, 0);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 3);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 0);
   });
@@ -237,6 +268,7 @@ describe('policy evaluation top-K preview gate', () => {
 
     assert.equal(result.kind, 'success');
     assert.equal(previewedKeys.size, 4);
+    assert.equal(result.metadata.previewGatedCount, 8);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 4);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 8);
   });
@@ -255,7 +287,22 @@ describe('policy evaluation top-K preview gate', () => {
 
     assert.equal(result.kind, 'success');
     assert.deepEqual([...previewedKeys].sort((left, right) => left.localeCompare(right)), expectedPreviewedKeys);
+    assert.equal(result.metadata.previewGatedCount, 1);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 2);
+    assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 1);
+  });
+
+  it('detects when an already-cached gated preview would have flipped the selected candidate', () => {
+    const moves = [
+      { actionId, params: { rank: 10, projected: 0 } },
+      { actionId, params: { rank: 1, projected: 1000 } },
+    ];
+    const { result } = runTopK(1, moves, { materializePreviewInPruning: true });
+
+    assert.equal(result.kind, 'success');
+    assert.equal(result.move?.params.rank, 10);
+    assert.equal(result.metadata.previewGatedCount, 1);
+    assert.equal(result.metadata.previewGatedTopFlipDetected, true);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 1);
   });
 });

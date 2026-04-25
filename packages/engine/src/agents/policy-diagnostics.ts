@@ -126,6 +126,10 @@ export function buildPolicyAgentDecisionTrace(
     ...(metadata.phase1Score === undefined ? {} : { phase1Score: metadata.phase1Score }),
     ...(metadata.phase2Score === undefined ? {} : { phase2Score: metadata.phase2Score }),
     ...(metadata.phase1ActionRanking === undefined ? {} : { phase1ActionRanking: metadata.phase1ActionRanking }),
+    ...(metadata.previewGatedCount === undefined ? {} : { previewGatedCount: metadata.previewGatedCount }),
+    ...(metadata.previewGatedTopFlipDetected === undefined
+      ? {}
+      : { previewGatedTopFlipDetected: metadata.previewGatedTopFlipDetected }),
     pruningSteps: metadata.pruningSteps,
     tieBreakChain: metadata.tieBreakChain,
     previewUsage: metadata.previewUsage,

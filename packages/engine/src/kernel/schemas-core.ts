@@ -1695,6 +1695,8 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]).optional(),
+    previewDriveDepth: IntegerSchema.nonnegative().optional(),
+    previewCompletionPolicy: z.enum(['greedy', 'agentGuided']).optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({
       actionId: StringSchema,
@@ -1769,6 +1771,8 @@ const AgentDecisionTraceSchema = z
     phase2Score: NumberSchema.nullable().optional(),
     phase1ActionRanking: z.array(StringSchema).optional(),
     finalScore: NumberSchema.nullable(),
+    previewGatedCount: IntegerSchema.nonnegative().optional(),
+    previewGatedTopFlipDetected: BooleanSchema.optional(),
     pruningSteps: z.array(PolicyPruningStepTraceSchema),
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,

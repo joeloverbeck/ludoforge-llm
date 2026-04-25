@@ -19,6 +19,7 @@ import {
   createPolicyPreviewRuntime,
   type Phase1ActionPreviewEntry,
   type PolicyPreviewDependencies,
+  type PolicyPreviewCompletionMetadata,
   type PolicyPreviewGrantedOperation,
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
@@ -73,8 +74,10 @@ export interface PolicyPreviewSurfaceProvider {
   getPreviewState(candidate: PolicyRuntimeCandidate): GameState | undefined;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
+  getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
+  hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
 }
 
 export interface PolicyCompletionProvider {
@@ -303,11 +306,17 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       getFailureReason(candidate) {
         return previewRuntime.getFailureReason(candidate);
       },
+      getCompletionMetadata(candidate) {
+        return previewRuntime.getCompletionMetadata(candidate);
+      },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);
       },
       hasPreviewData(candidate) {
         return previewRuntime.hasPreviewData(candidate);
+      },
+      hasMaterializedOutcome(candidate) {
+        return previewRuntime.hasMaterializedOutcome(candidate);
       },
     },
     ...(input.completion === undefined

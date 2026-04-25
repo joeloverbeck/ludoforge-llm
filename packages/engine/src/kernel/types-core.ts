@@ -1571,6 +1571,8 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
+  readonly previewDriveDepth?: number;
+  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -1633,6 +1635,8 @@ export interface PolicyAgentDecisionTrace {
   readonly phase2Score?: number | null;
   readonly phase1ActionRanking?: readonly string[];
   readonly finalScore: number | null;
+  readonly previewGatedCount?: number;
+  readonly previewGatedTopFlipDetected?: boolean;
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;

@@ -4,6 +4,7 @@ import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
+  AgentPreviewCompletionPolicy,
   AgentSelectionMode,
   AgentPolicyCatalog,
   CompiledAgentConsideration,
@@ -101,6 +102,8 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
+  readonly previewDriveDepth?: number;
+  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -152,6 +155,8 @@ export interface PolicyEvaluationMetadata {
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
+  readonly previewGatedCount?: number;
+  readonly previewGatedTopFlipDetected?: boolean;
   readonly phase1Score?: number | null;
   readonly phase2Score?: number | null;
   readonly phase1ActionRanking?: readonly string[];
@@ -209,6 +214,8 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  previewDriveDepth?: number;
+  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
 }
@@ -552,9 +559,18 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         moveOnlyConsiderationIds,
         previewTopK,
       );
+      let previewGatedCount = 0;
+      let maxCachedGatedPreviewScore = Number.NEGATIVE_INFINITY;
       if (previewAllowedKeys.size < activeCandidates.length) {
         for (const candidate of activeCandidates) {
           if (!previewAllowedKeys.has(candidate.stableMoveKey)) {
+            previewGatedCount += 1;
+            if (evaluation.hasMaterializedPreview(candidate)) {
+              maxCachedGatedPreviewScore = Math.max(
+                maxCachedGatedPreviewScore,
+                scoreCandidateForGateFlipProbe(evaluation, considerations, candidate, moveConsiderationIds),
+              );
+            }
             evaluation.markPreviewGated(candidate);
           }
         }
@@ -690,6 +706,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,
           finalScore: Number.isFinite(selected.score) ? selected.score : null,
+          previewGatedCount,
+          ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
+            ? { previewGatedTopFlipDetected: true }
+            : {}),
           usedFallback: false,
           failure: null,
         },
@@ -904,9 +924,38 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
+    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
     ...(grantedOperationMetadata ?? {}),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
   };
+}
+
+function scoreCandidateForGateFlipProbe(
+  evaluation: PolicyEvaluationContext,
+  considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+  candidate: CandidateEntry,
+  considerationIds: readonly string[],
+): number {
+  const probe: CandidateEntry = {
+    move: candidate.move,
+    stableMoveKey: candidate.stableMoveKey,
+    actionId: candidate.actionId,
+    canonicalIndex: candidate.canonicalIndex,
+    prunedBy: [...candidate.prunedBy],
+    scoreContributions: [],
+    previewRefIds: new Set(candidate.previewRefIds),
+    unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
+    score: candidate.score,
+    ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
+    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
+    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
+    ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
+  };
+  return considerationIds.reduce((total, considerationId) => (
+    total + evaluation.evaluateConsideration(considerations, considerationId, probe)
+  ), 0);
 }
 
 function pickTopKByMoveOnlyScore(

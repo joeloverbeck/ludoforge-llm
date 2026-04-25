@@ -3472,6 +3472,14 @@
                   }
                 ]
               },
+              "previewGatedCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "previewGatedTopFlipDetected": {
+                "type": "boolean"
+              },
               "pruningSteps": {
                 "type": "array",
                 "items": {
@@ -3849,6 +3857,18 @@
                           "type": "string",
                           "const": "gated"
                         }
+                      ]
+                    },
+                    "previewDriveDepth": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "previewCompletionPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "greedy",
+                        "agentGuided"
                       ]
                     },
                     "grantedOperationSimulated": {

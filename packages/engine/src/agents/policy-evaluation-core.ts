@@ -5,6 +5,7 @@ import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import type {
+  AgentPreviewCompletionPolicy,
   AttributeValue,
   AgentParameterValue,
   AgentPolicyCatalog,
@@ -58,6 +59,8 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  previewDriveDepth?: number;
+  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
@@ -309,6 +312,14 @@ export class PolicyEvaluationContext {
 
   markPreviewGated(candidate: PolicyEvaluationCandidate): void {
     this.runtimeProviders.previewSurface.markGated(candidate);
+    candidate.previewOutcome = 'gated';
+    candidate.previewFailureReason = 'gated';
+    delete candidate.previewDriveDepth;
+    delete candidate.previewCompletionPolicy;
+  }
+
+  hasMaterializedPreview(candidate: PolicyEvaluationCandidate): boolean {
+    return this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
   }
 
   /** Ensure the candidate's previewOutcome is set from the preview surface.
@@ -1003,6 +1014,13 @@ export class PolicyEvaluationContext {
       const previewFailureReason = this.runtimeProviders.previewSurface.getFailureReason(candidate);
       if (previewFailureReason !== undefined) {
         candidate.previewFailureReason = previewFailureReason;
+      }
+    }
+    if (candidate.previewDriveDepth === undefined || candidate.previewCompletionPolicy === undefined) {
+      const completionMetadata = this.runtimeProviders.previewSurface.getCompletionMetadata(candidate);
+      if (completionMetadata !== undefined) {
+        candidate.previewDriveDepth = completionMetadata.depth;
+        candidate.previewCompletionPolicy = completionMetadata.policy;
       }
     }
   }

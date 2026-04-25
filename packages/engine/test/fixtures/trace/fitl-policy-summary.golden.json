@@ -27,7 +27,13 @@
         "skippedBecauseEmpty": false
       }
     ],
-    "tieBreakChain": [],
+    "tieBreakChain": [
+      {
+        "tieBreakerId": "stableMoveKey",
+        "candidateCountBefore": 2,
+        "candidateCountAfter": 1
+      }
+    ],
     "previewUsage": {
       "mode": "exactWorld",
       "evaluatedCandidateCount": 6,
@@ -51,7 +57,7 @@
     },
     "selection": {
       "mode": "argmax",
-      "candidateCount": 5,
+      "candidateCount": 6,
       "selectedIndex": 2
     },
     "emergencyFallback": false,

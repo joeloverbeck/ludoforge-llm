@@ -2109,6 +2109,46 @@
           "strategicConditions": []
         }
       },
+      "preferPatronageMode": {
+        "scopes": [
+          "completion"
+        ],
+        "costClass": "state",
+        "weight": {
+          "kind": "literal",
+          "value": 10
+        },
+        "value": {
+          "kind": "op",
+          "op": "boolToNumber",
+          "args": [
+            {
+              "kind": "op",
+              "op": "eq",
+              "args": [
+                {
+                  "kind": "ref",
+                  "ref": {
+                    "kind": "optionIntrinsic",
+                    "intrinsic": "value"
+                  }
+                },
+                {
+                  "kind": "literal",
+                  "value": "patronage"
+                }
+              ]
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
       "preferNormalizedMargin": {
         "scopes": [
           "move"
@@ -2519,7 +2559,7 @@
       "observerName": "currentPlayer",
       "params": {
         "projectedMarginWeight": 3,
-        "governWeight": 5,
+        "governWeight": 10,
         "trainWeight": 3
       },
       "use": {
@@ -2532,7 +2572,8 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow"
+          "trainWhenControlLow",
+          "preferPatronageMode"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -2566,10 +2607,11 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow"
+          "trainWhenControlLow",
+          "preferPatronageMode"
         ]
       },
-      "fingerprint": "1a68bcfad6ee5a2deed74a928b4405c19c05c40b1a711adb4b3bba6f7aa13b16"
+      "fingerprint": "358b37b031d7ca90cf9458046b60867881ed558a9b14b59fb4725e7528d3e5ee"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -2684,5 +2726,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "0f275ad8c8cb8f4f999521177f69681470a146f9cf390eddd33bf9182343c031"
+  "catalogFingerprint": "6ae70f921c9d2180a399cd9478ae7e5de67f9f0984f4fc43c7ecde580df0f109"
 }

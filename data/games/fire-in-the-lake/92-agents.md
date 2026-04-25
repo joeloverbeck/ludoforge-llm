@@ -342,6 +342,14 @@ agents:
         value:
           boolToNumber:
             ref: candidate.tag.train
+      preferPatronageMode:
+        scopes: [completion]
+        weight: 10
+        value:
+          boolToNumber:
+            eq:
+              - { ref: option.value }
+              - { const: "patronage" }
       preferNormalizedMargin:
         scopes: [move]
         weight: 5
@@ -438,7 +446,7 @@ agents:
         mode: exactWorld
       params:
         projectedMarginWeight: 3
-        governWeight: 5
+        governWeight: 10
         trainWeight: 3
       use:
         pruningRules:
@@ -450,6 +458,7 @@ agents:
           - preferTrainWeighted
           - governWhenPatronageLow
           - trainWhenControlLow
+          - preferPatronageMode
         tieBreakers:
           - stableMoveKey
 

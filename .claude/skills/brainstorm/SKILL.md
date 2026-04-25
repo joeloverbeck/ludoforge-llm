@@ -71,7 +71,7 @@ Classify: design | decision/triage | operational
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
-3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles.
+3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles. *"Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md — skill design, process changes, and tooling configurations are not, even if they indirectly influence implementation.*
 
 4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A directional report with general suggestions may start you at 60-70%. A report with specific, codebase-grounded proposals (concrete file references, verified claims, detailed tradeoffs) may start at 70-80% — the remaining gap is typically just user intent and risk tolerance.
 
@@ -91,13 +91,16 @@ Before the interview, run targeted verification when either of these triggers ap
 
 Mode-specific behavior:
 
-- **Design mode**: For Trigger A, present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them. For Trigger B, run inspections directly without asking — the cost is low and it shapes better questions. When the topic spans multiple subsystems (kernel + simulator + agents + protocol + UI, etc.), orientation-level reads — `docs/architecture.md`, `docs/project-structure.md`, and representative source files at module boundaries — are a legitimate Trigger B activity; keep the read scoped to what makes the first interview question specific rather than attempting a full codebase survey. "Inspections" in this skill is shorthand for both prescribed checks and scoped orientation reads.
+- **Design mode**: For Trigger A, present the checks to the user: "The report prescribes N verification checks. Should I run them now?" If yes, run them. For Trigger B, distinguish by cost: cheap inspections (reads, grep, git status, single commands, orientation-level source reads) run directly without asking — the cost is low and they shape better questions. Moderately expensive inspections (multi-minute simulator runs, full test suites, builds that exceed ~1 minute of wall-clock time) still run autonomously under auto mode, but outside auto mode announce the expected cost ("this will run ~5 minutes against the engine") and proceed unless the user redirects. When the topic spans multiple subsystems (kernel + simulator + agents + protocol + UI, etc.), orientation-level reads — `docs/architecture.md`, `docs/project-structure.md`, and representative source files at module boundaries — are a legitimate Trigger B activity; keep the read scoped to what makes the first interview question specific rather than attempting a full codebase survey. "Inspections" in this skill is shorthand for both prescribed checks and scoped orientation reads.
 - **Triage mode**: Proceed directly to verification without asking. The user invoked triage specifically to act on the report — verification is an expected prerequisite, not an optional step.
 - **Operational mode**: Always run state verification (Trigger B). The plan's correctness depends on accurate observed state, not assumed state.
 - Run checks using Explore agents, grep, git log, file reads — whatever the checks require
 - Report results before proceeding to the interview
 - Adjust confidence and approach based on what the checks reveal
-- Verification artifacts created during this step (diagnostic scripts, probe fixtures, measurement logs) SHOULD be kept alongside existing reproducers when they cover a failure mode not otherwise reproducible, or removed when they duplicate existing tools. State the disposition explicitly in the Step 6 summary so the user knows what was left behind.
+- Verification artifacts created during this step (diagnostic scripts, probe fixtures, measurement logs) fall into one of three disposition categories. State which category applies in the Step 6 summary so the user knows what was left behind:
+  - **promoted to repo** — the artifact covers a failure mode no existing tool reproduces; add it under `campaigns/`, `packages/*/test/fixtures/`, or equivalent so future sessions can reuse it.
+  - **ephemeral (/tmp or equivalent)** — the artifact was a convenience wrapper around existing tooling and does not add coverage. Left in `/tmp` where the OS will clean it up; no repo footprint.
+  - **deleted** — the artifact was exploratory, did not produce usable coverage, and was not even a useful convenience wrapper. Removed explicitly.
 
 Skip this step only if neither trigger applies.
 
@@ -132,7 +135,7 @@ Either way, name the percentage and the specific gaps. Vague phrasings like "I n
 
 ### Interview Rules
 
-1. **One question per message.** Never ask multiple questions at once. **Exception for triage mode**: Related independent decisions (e.g., disposition of item A + artifact format for item B) may be batched into a single AskUserQuestion call when the questions don't depend on each other's answers.
+1. **One question per message.** Never ask multiple questions at once. **Exception — triage mode**: Related independent decisions (e.g., disposition of item A + artifact format for item B) may be batched into a single AskUserQuestion call when the questions don't depend on each other's answers. **Exception — terminal design-mode rounds**: At ≥ 95% confidence (or under the 90–94% approach-closes-gaps exception in the Confidence Scoring Guide) where every remaining gap is a multiple-choice terminal decision that the Step 3 approach selection or a scoped scope/amendment choice will close, those gaps may be batched in the same message as the approach presentation. The inverse does not hold: open-ended "what problem are you solving?"–class questions must still be one per message.
 2. **Prefer multiple-choice questions** when the answer space is bounded. Open-ended is fine when it isn't.
 3. **Probe motivations before solutions.** Ask "What problem does this solve?" and "What happens if we don't do this?" before "What do you want built?" The user's first request often describes a solution, not the problem. Your job is to find the problem.
 4. **Challenge premature specificity.** If the user jumps to implementation details early, ask why that specific approach matters. Often the constraint is softer than stated.
@@ -163,6 +166,8 @@ If the user says something like "just go" or "that's enough questions", respect 
 ### High-Confidence Start
 
 If prior session context (e.g., extended debugging, codebase exploration, or diagnostic work earlier in the conversation) puts starting confidence above 80%, the interview may reduce to 1-2 targeted questions about remaining gaps. If confidence reaches 95% after context reading alone (no user questions needed), announce the confidence score with explicit gaps/assumptions and proceed directly to Step 3. The interview is a tool for gap-filling, not a mandatory ceremony.
+
+**Compound-move variant at 80–94%**: When the remaining gaps are all multiple-choice terminal decisions (which approach, is scope X in or out, amend foundation Y), the Step 3 approach presentation and the final gap-closer questions may be combined into a single message — the user's choice of approach simultaneously resolves the remaining gaps. This is the natural flow when the gaps are "which option" rather than "what's the problem", and the approach recommendations already implicitly argue for one scope/amendment answer over the others. The message shape: short findings recap → 2-3 approaches with tradeoffs → explicit batched gap-closers ending with "pick one and call out the other gaps". See Interview Rule 1's terminal-round exception.
 
 ### Investigation Questions
 
@@ -230,11 +235,15 @@ Sections to cover (skip irrelevant ones):
 6. **Testing strategy**: How to verify this works (if implementation-related)
 7. **FOUNDATIONS.md alignment**: Table of relevant principles and how the design respects them (if implementation-related)
 
+The list above is a starting menu, not a fixed schema — domain-appropriate substitutions (e.g., "Phases" or "Step-by-step execution" in place of "Data flow / Process") are expected for non-implementation designs.
+
 "Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md. Skill design, process changes, and tooling configurations are not implementation-related for this purpose, even if they indirectly influence implementation.
 
 **After each section**, ask: "Does this section look right?" Wait for confirmation before presenting the next section. If the user pushes back, revise that section before continuing.
 
 **Auto-mode adaptation**: When Claude Code's auto mode is active, section-by-section gating compresses to consolidated presentation with a single approval. Present the remaining sections together and proceed to Step 5 artifact writing unless the user has pushed back on a prior section. This matches auto mode's "prefer action over planning" posture while preserving substantive review — the user still sees every section before the artifact is written. If a user objection arises mid-consolidation, stop, revise the flagged section, and present the revision for approval before continuing.
+
+**Compound-move + auto-mode intersection**: When Step 2's compound-move variant was used (approach presentation merged with terminal gap-closer), the consolidated Step 4 design preview is still required as a separate message before the artifact write — section-name bullets with a one-line summary each are sufficient, full prose is not. The compound-move's approach-level overview does NOT satisfy the section preview promise, since later sections (edge cases, recovery info, files NOT touched, step-by-step execution) are typically not enumerated at approach time. Skip the preview only when the user has explicitly waived it ("just write the file", "skip the preview", or equivalent).
 
 ## Step 5: Write Output Artifacts
 
@@ -248,6 +257,8 @@ Once all sections are approved, determine the output format:
 
 - **If the design needs further refinement** (sections had significant revision, open questions remain, approach is exploratory): write to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Include a "Brainstorm Context" header noting the original request, reference file (if any), key interview insights, and final confidence score with any assumptions.
 - **If all sections were approved without revision and the output is a well-scoped implementation spec** (ready for ticket decomposition): write directly to `specs/<number>-<name>.md`. The design doc is a staging area for designs that need further discussion — not a mandatory waypoint when the brainstorm produces a finished spec.
+
+**Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
 
 Do NOT commit the file. Leave it for user review.
 
@@ -302,7 +313,7 @@ Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose 
 **If triage produced spec(s) and/or report updates**:
 ```
 What would you like to do next?
-1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets)
+1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
 2. Run another missing-abstractions analysis on a different test suite
 3. Done for now — I'll review the artifacts later
 ```
@@ -319,7 +330,9 @@ What would you like to do next?
 
 If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. If the brainstorm was invoked mid-task (e.g., during active troubleshooting or implementation) and the design is a targeted fix, present a brief confirmation ("Ready to implement — proceeding unless you'd prefer a different path") rather than the full menu. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
 
-Use AskUserQuestion to present this as a proper choice. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
+**Auto-mode adaptation**: Under Claude Code's auto mode, the multi-option menu is replaced by a brief recommendation + one-beat pause. State the recommended next step (typically option 1 for well-scoped specs and operational plans, or option 2 for XL specs that benefit from review-first), explain in one sentence why it is the recommendation, and offer the user a chance to redirect before proceeding. If the user is silent or affirms the recommendation, proceed with it. This matches auto mode's "prefer action over planning" directive without forgoing substantive user control — the user still sees what will happen and can veto. The disposition of any Step 1.5 verification artifacts (promoted / ephemeral / deleted) belongs in this same auto-mode recommendation so the user can object before the next step starts.
+
+Use AskUserQuestion to present this as a proper choice (skip under auto-mode adaptation above). If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
 
 ## Post-Design Requests
 
@@ -330,7 +343,7 @@ If the design has cross-repo implications (e.g., the same pattern needs to be ap
 ## Guardrails
 
 - **YAGNI ruthlessly**: Remove unnecessary features from all designs. If a proposed approach has optional extras, strip them unless the user explicitly asked for them.
-- **One question at a time**: Never batch questions in design mode. In triage mode, related independent decisions may be batched (see Interview Rule 1).
+- **One question at a time**: Design mode is strict by default — one question per message. Batching is allowed in triage mode and in design-mode terminal rounds where all remaining gaps are multiple-choice terminal decisions that the Step 3 approach selection will close (see Interview Rule 1 for full exception criteria).
 - **No implementation before approval**: The hard gate at the top means exactly what it says.
 - **FOUNDATIONS.md is authoritative**: For implementation topics, if a proposed approach violates a Foundation principle, flag it immediately. Do not propose approaches that violate Foundations without explicitly calling out the violation and getting user sign-off.
 - **Worktree discipline**: If working in a worktree, all file paths use the worktree root.

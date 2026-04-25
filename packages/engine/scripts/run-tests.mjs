@@ -39,6 +39,10 @@ const laneConfigs = {
     execution: 'batched',
     patterns: listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
   },
+  'integration:slow-parity': {
+    execution: 'batched',
+    patterns: listIntegrationTestsForLane('integration:slow-parity').map(toDistTestPath),
+  },
   determinism: {
     execution: 'sequential',
     patterns: ALL_DETERMINISM_TESTS.map(toDistTestPath),

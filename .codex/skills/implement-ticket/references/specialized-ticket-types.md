@@ -55,7 +55,11 @@ For preparatory tickets landing shared helpers, contracts, or APIs ahead of call
 
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
 
+For long-running measurement tickets, that minimal probe should also validate the **output shape**, not just command viability. Before the expensive run, execute a one-seed, one-item, or otherwise tiny smoke probe and inspect that emitted rows use the promised unit of analysis, counters are per-row rather than accidental cumulative totals, required columns are present, and disabled/toggled modes report comparable fields.
+
 When a long-running measurement witness has a **stable earlier prefix** already backed by durable evidence and the later tail is flaky or environment-sensitive, prefer narrowing to that smallest truthful prefix over preserving the longer tail by inertia. Record the narrowed bound explicitly in the active ticket before final proof so the witness does not look silently weakened.
+
+If that narrowing changes an **explicit ticket deliverable** (for example a named full-corpus measurement, exact turn horizon, required artifact scope, or threshold decision), `AGENTS.md` Ticket Fidelity wins over the narrowing preference: stop for 1-3-1 unless the ticket already authorizes bounded-prefix substitution. After confirmation, update the ticket outcome before final proof and classify the durable state honestly as `COMPLETED`, `PARTIAL`, or `BLOCKED` rather than treating a narrower artifact as equivalent by default.
 
 When an investigation/profiling ticket needs one command to **reproduce the live failure** and a different command to **produce a durable artifact** (for example a stable snapshot/report run versus a higher-turn crash repro), do not collapse them into one fuzzy story. Treat them as two explicit evidence lanes:
 
@@ -76,3 +80,18 @@ When the owned deliverable is a large checked-in fixture or inventory artifact, 
 1. record the derivation source in working notes
 2. capture a compact summary (`entry counts`, `surface classes`, `deepest cases`, or similar) so the artifact can be sanity-checked without rereading the whole file
 3. add or extend a validator that proves schema conformance plus coverage parity against the same live seam when proportionate
+
+When an investigation or measurement ticket needs a new checked-in helper script or harness to make the evidence repeatable:
+
+1. run a syntax check and a minimal smoke command before the expensive proof run
+2. confirm the new file appears in `git status --short`, because untracked files do not appear in `git diff --stat`
+3. add the helper to the active ticket's touched-file or outcome ledger before final proof
+4. cite the helper's exact invocation in the durable report or ticket closeout
+5. include the helper in the final touched-file scope sweep
+
+When the helper is a fixture/golden `regenerate` script:
+
+1. run the regenerate script at least once after the authoritative producer is built or otherwise current
+2. confirm the expected generated files changed or stayed stable for an understood reason
+3. ensure at least one proof lane consumes the generated fixture/golden, or record explicitly why the checked-in artifact is evidence-only rather than test-consumed
+4. if the regenerate script and consumer disagree, treat the generated artifact set as dirty, fix the producer/consumer boundary, regenerate again, and only then start final proof

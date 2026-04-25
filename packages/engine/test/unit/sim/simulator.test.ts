@@ -245,10 +245,58 @@ describe('runGame', () => {
     assert.equal(trace.finalState.globalVars.score, 1);
   });
 
+  it('calls decisionHook even when trace retention omits decision logs', () => {
+    const def = createDef({ terminalAtScore: 1 });
+    const observed: string[] = [];
+    const trace = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, {
+      traceRetention: 'finalStateOnly',
+      decisionHook: (ctx) => {
+        assert.equal(ctx.kind, 'decision');
+        observed.push(`${ctx.turnCount}:${ctx.decisionLog.decision.kind}:${String(ctx.stateHash)}`);
+      },
+    });
+
+    assert.equal(trace.decisions.length, 0);
+    assert.equal(observed.length, 1);
+    assert.match(observed[0]!, /^0:actionSelection:/);
+  });
+
+  it('does not change runGame output when decisionHook only observes decisions', () => {
+    const def = createDef({ terminalAtScore: 2 });
+    const baseline = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10);
+    const observedKinds: string[] = [];
+    const withHook = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, {
+      decisionHook: (ctx) => {
+        if (ctx.kind === 'decision') {
+          observedKinds.push(ctx.decisionLog.decision.kind);
+        }
+      },
+    });
+
+    assert.deepEqual(withHook.decisions, baseline.decisions);
+    assert.equal(withHook.finalState.stateHash, baseline.finalState.stateHash);
+    assert.equal(withHook.stopReason, baseline.stopReason);
+    assert.deepEqual(observedKinds, baseline.decisions.map((log) => log.decision.kind));
+  });
+
+  it('propagates decisionHook exceptions', () => {
+    const def = createDef({ terminalAtScore: 1 });
+
+    assert.throws(
+      () => runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, {
+        decisionHook: () => {
+          throw new Error('hook exploded');
+        },
+      }),
+      /hook exploded/,
+    );
+  });
+
   it('classifies GameDefRuntime members as sharedStructural or runLocal across forks', () => {
     const def = createDef({ terminalAtScore: 1 });
     const sharedRuntime = createGameDefRuntime(def);
     sharedRuntime.zobristTable.keyCache.set('score=1', 1n);
+    sharedRuntime.publicationProbeCache.set('probe', true);
     const forkedRuntime = forkGameDefRuntimeForRun(sharedRuntime);
 
     const sharedStructuralRows = [
@@ -275,6 +323,13 @@ describe('runGame', () => {
     );
     assert.equal(forkedRuntime.zobristTable.keyCache.size, 0);
     assert.equal(sharedRuntime.zobristTable.keyCache.size, 1);
+    assert.notEqual(
+      forkedRuntime.publicationProbeCache,
+      sharedRuntime.publicationProbeCache,
+      'publicationProbeCache should fork per run',
+    );
+    assert.equal(forkedRuntime.publicationProbeCache.size, 0);
+    assert.equal(sharedRuntime.publicationProbeCache.size, 1);
   });
 
   it('treats shared runtime zobrist caches as per-run state', () => {
@@ -284,6 +339,7 @@ describe('runGame', () => {
     const second = runGame(def, 17, [firstLegalAgent, firstLegalAgent], 10, undefined, undefined, sharedRuntime);
 
     assert.equal(sharedRuntime.zobristTable.keyCache.size, 0);
+    assert.equal(sharedRuntime.publicationProbeCache.size, 0);
     assert.equal(first.finalState.stateHash, second.finalState.stateHash);
     assert.equal(first.stopReason, second.stopReason);
   });

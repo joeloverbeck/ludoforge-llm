@@ -1,0 +1,47 @@
+name: Engine Slow Parity
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.github/workflows/engine-slow-parity.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - 'eslint.config.js'
+      - '.github/workflows/engine-slow-parity.yml'
+  workflow_dispatch:
+concurrency:
+  group: engine-slow-parity-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  engine-slow-parity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine build
+      - run: pnpm -F @ludoforge/engine test:integration:slow-parity

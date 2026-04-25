@@ -27,7 +27,11 @@ import {
 } from './move-runtime-bindings.js';
 import { EFFECT_RUNTIME_REASONS, ILLEGAL_MOVE_REASONS } from './runtime-reasons.js';
 import { advanceToDecisionPoint } from './phase-advance.js';
-import { consumeGrantUse, withPendingFreeOperationGrants } from './grant-lifecycle.js';
+import {
+  consumeGrantUse,
+  expireReadyBlockingGrantsForSeat,
+  withPendingFreeOperationGrants,
+} from './grant-lifecycle.js';
 import {
   illegalMoveError,
   IllegalMoveError,
@@ -58,8 +62,12 @@ import {
 import { resolveFreeOperationDiscoveryAnalysis } from './free-operation-discovery-analysis.js';
 import {
   collectGrantMoveZoneCandidates,
+  grantActionIds,
   resolveAuthorizedPendingFreeOperationGrants,
 } from './free-operation-grant-authorization.js';
+import {
+  resolveGrantMoveActionClassOverride,
+} from './free-operation-grant-bindings.js';
 import { resolveTurnFlowActionClassMismatch } from './turn-flow-action-class.js';
 import { toFreeOperationDeniedCauseForLegality } from './free-operation-legality-policy.js';
 import { applyTurnFlowWindowFilters, isMoveAllowedByTurnFlowOptionMatrix } from './legal-moves-turn-order.js';
@@ -94,6 +102,7 @@ import type {
   MoveParamValue,
   Rng,
   TrustedExecutableMove,
+  TurnFlowPendingFreeOperationGrant,
   TurnFlowReleasedDeferredEventEffect,
   TriggerLogEntry,
   TriggerEvent,
@@ -842,7 +851,9 @@ const validateMove = (
   validateDecisionSequenceForMove(def, state, move, {
     allowIncomplete,
   }, cachedRuntime);
-  validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
+  if (!isPassFallbackMove(def, move)) {
+    validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
+  }
   return {
     preflight,
   };
@@ -1707,11 +1718,90 @@ const applySimultaneousSubmission = (
   };
 };
 
+const isPassFallbackMove = (def: GameDef, move: Move): boolean =>
+  move.freeOperation !== true
+  && Object.keys(move.params).length === 0
+  && def.actions.find((action) => action.id === move.actionId)?.tags?.includes('pass') === true;
+
+const isReadyBlockingGrantForSeat = (
+  grant: TurnFlowPendingFreeOperationGrant,
+  seat: string,
+): boolean =>
+  grant.seat === seat
+  && grant.phase === 'ready'
+  && (
+    grant.completionPolicy === 'required'
+    || grant.completionPolicy === 'skipIfNoLegalCompletion'
+  );
+
+const hasPotentialReadyGrantCompletion = (
+  def: GameDef,
+  state: GameState,
+  pending: readonly TurnFlowPendingFreeOperationGrant[],
+  activeSeat: string,
+  seatResolution: ReturnType<typeof createSeatResolutionContext>,
+): boolean =>
+  pending
+    .filter((grant) => isReadyBlockingGrantForSeat(grant, activeSeat))
+    .some((grant) =>
+      grantActionIds(def, grant).some((actionId) => {
+        const action = def.actions.find((candidate) => String(candidate.id) === actionId);
+        if (action === undefined || !action.phase.includes(state.currentPhase)) {
+          return false;
+        }
+        const actionClass = resolveGrantMoveActionClassOverride(def, action.id, grant.operationClass);
+        const candidateMove: Move = {
+          actionId: action.id,
+          params: {},
+          freeOperation: true,
+          ...(actionClass === undefined ? {} : { actionClass }),
+        };
+        return isMoveAllowedByRequiredPendingFreeOperationGrant(def, state, candidateMove, seatResolution);
+      }));
+
+const reconcilePassFallbackMoveState = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+): GameState => {
+  if (!isPassFallbackMove(def, move) || state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const pending = state.turnOrderState.runtime.pendingFreeOperationGrants ?? [];
+  if (pending.length === 0) {
+    return state;
+  }
+  const activeSeat = requireCardDrivenActiveSeat(
+    def,
+    state,
+    TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS.FREE_OPERATION_GRANT_MATCH_EVALUATION,
+    createSeatResolutionContext(def, state.playerCount),
+  );
+  const seatResolution = createSeatResolutionContext(def, state.playerCount);
+  if (hasPotentialReadyGrantCompletion(def, state, pending, activeSeat, seatResolution)) {
+    return state;
+  }
+  const expired = expireReadyBlockingGrantsForSeat(pending, activeSeat);
+  if (expired.grants.length === pending.length) {
+    return state;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: withPendingFreeOperationGrants(
+        state.turnOrderState.runtime,
+        expired.grants.length === 0 ? undefined : expired.grants,
+      ),
+    },
+  };
+};
+
 export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions, runtime?: GameDefRuntime): ApplyMoveResult => {
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, state, move, options, undefined, runtime);
+  return applyMoveCore(def, reconcilePassFallbackMoveState(def, state, move), move, options, undefined, runtime);
 };
 
 const assertTrustedExecutableMove = (
@@ -1740,9 +1830,10 @@ export const applyTrustedMove = (
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, trustedMove.move, options, runtime);
   }
+  const reconciledState = reconcilePassFallbackMoveState(def, state, trustedMove.move);
   return applyMoveCore(
     def,
-    state,
+    reconciledState,
     trustedMove.move,
     options,
     { skipValidation: true },
@@ -1756,12 +1847,13 @@ export const probeMoveLegality = (
   move: Move,
   runtime?: GameDefRuntime,
 ): MoveLegalityProbeResult => {
+  const probedState = reconcilePassFallbackMoveState(def, state, move);
   try {
     validateMove(
       def,
-      state,
+      probedState,
       move,
-      createSeatResolutionContext(def, state.playerCount),
+      createSeatResolutionContext(def, probedState.playerCount),
       createEvalRuntimeResources(),
       runtime,
     );
@@ -1852,7 +1944,9 @@ const probeMoveViabilityRaw = (
         }
       }
     }
-    validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
+    if (!isPassFallbackMove(def, move)) {
+      validateTurnFlowWindowAccess(def, state, move, preflight.actionPipeline, seatResolution);
+    }
 
     const sequence = resolveDecisionContinuation(
       def,
@@ -1986,12 +2080,13 @@ export const probeMoveViability = (
   runtime?: GameDefRuntime,
   discoveryCache?: DecisionContinuationCache,
 ): MoveViabilityProbeResult => {
-  const raw = probeMoveViabilityRaw(def, state, move, runtime, discoveryCache);
+  const probedState = reconcilePassFallbackMoveState(def, state, move);
+  const raw = probeMoveViabilityRaw(def, probedState, move, runtime, discoveryCache);
   const rewritten = deriveMoveViabilityVerdict(move, raw);
   if (rewritten === raw) {
     return rewritten;
   }
-  const admissibility = classifyMoveAdmissibility(def, state, move, rewritten, runtime);
+  const admissibility = classifyMoveAdmissibility(def, probedState, move, rewritten, runtime);
   if (isDefinitivelyInadmissibleRewrittenVerdict(admissibility)) {
     return raw;
   }

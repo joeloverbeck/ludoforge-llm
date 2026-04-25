@@ -7,6 +7,7 @@ import {
   createRng,
   initialState,
   publishMicroturn,
+  rollbackToActionSelection,
   terminalResult,
 } from '../kernel/index.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
@@ -17,6 +18,7 @@ import type {
   DecisionLog,
   GameDefRuntime,
   GameTrace,
+  ProbeHoleRecoveryLog,
   Rng,
   SimulationStopReason,
   TerminalResult,
@@ -53,6 +55,31 @@ const maybeLogOomTrace = (
   );
 };
 
+const emitDecisionHook = (
+  options: SimulationOptions | undefined,
+  decisionLog: DecisionLog,
+  turnCount: number,
+): void => {
+  options?.decisionHook?.({
+    kind: 'decision',
+    decisionLog,
+    turnCount,
+    stateHash: decisionLog.stateHash,
+  });
+};
+
+const emitProbeHoleRecoveryHook = (
+  options: SimulationOptions | undefined,
+  probeHoleRecovery: ProbeHoleRecoveryLog,
+  turnCount: number,
+): void => {
+  options?.decisionHook?.({
+    kind: 'probeHoleRecovery',
+    probeHoleRecovery,
+    turnCount,
+    stateHash: probeHoleRecovery.stateHashAfter,
+  });
+};
 
 const validateSeed = (seed: number): void => {
   if (!Number.isSafeInteger(seed)) {
@@ -142,6 +169,7 @@ export const runGame = (
     );
   }
   const decisionLogs: DecisionLog[] = [];
+  const probeHoleRecoveries: ProbeHoleRecoveryLog[] = [];
   const agentRngByPlayer = [...createAgentRngByPlayer(seed, state.playerCount)];
   let result: TerminalResult | null = null;
   let stopReason: SimulationStopReason;
@@ -157,6 +185,9 @@ export const runGame = (
     currentChanceRng = autoResult.rng;
     if (shouldRetainTrace) {
       decisionLogs.push(...autoResult.autoResolvedLogs);
+    }
+    for (const log of autoResult.autoResolvedLogs) {
+      emitDecisionHook(options, log, state.turnCount);
     }
 
     const t0_term = perfStart(profiler);
@@ -178,8 +209,22 @@ export const runGame = (
       microturn = publishMicroturn(validatedDef, state, resolvedRuntime);
     } catch (error) {
       if (isNoBridgeableMicroturnError(error)) {
-        stopReason = 'noLegalMoves';
-        break;
+        const rollback = rollbackToActionSelection(
+          validatedDef,
+          state,
+          resolvedRuntime,
+          error instanceof Error ? error.message : String(error),
+        );
+        if (rollback === null) {
+          stopReason = 'noLegalMoves';
+          break;
+        }
+        state = rollback.state;
+        if (shouldRetainTrace) {
+          probeHoleRecoveries.push(rollback.logEntry);
+        }
+        emitProbeHoleRecoveryHook(options, rollback.logEntry, state.turnCount);
+        continue;
       }
       throw error;
     }
@@ -234,21 +279,25 @@ export const runGame = (
     const deltas = options?.skipDeltas === true ? [] : computeDeltas(preState, state);
     perfEnd(profiler, 'simComputeDeltas', t0_delta);
 
+    const decisionLog: DecisionLog = {
+      ...applied.log,
+      playerId: asPlayerId(player),
+      deltas,
+      ...(snapshot === undefined ? {} : { snapshot }),
+      ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
+    };
     if (shouldRetainTrace) {
-      decisionLogs.push({
-        ...applied.log,
-        playerId: asPlayerId(player),
-        deltas,
-        ...(snapshot === undefined ? {} : { snapshot }),
-        ...(selected.agentDecision === undefined ? {} : { agentDecision: selected.agentDecision }),
-      });
+      decisionLogs.push(decisionLog);
     }
+    emitDecisionHook(options, decisionLog, state.turnCount);
   }
 
   return {
     gameDefId: validatedDef.metadata.id,
     seed,
     decisions: shouldRetainTrace ? decisionLogs : [],
+    probeHoleRecoveries: shouldRetainTrace ? probeHoleRecoveries : [],
+    recoveredFromProbeHole: probeHoleRecoveries.length,
     compoundTurns: shouldRetainTrace ? synthesizeCompoundTurnSummaries(decisionLogs, stopReason) : [],
     finalState: state,
     result,

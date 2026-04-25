@@ -82,6 +82,8 @@ const traceFixture: GameTrace = {
         },
       ]),
   ],
+  probeHoleRecoveries: [],
+  recoveredFromProbeHole: 0,
   compoundTurns: [
     { turnId: asTurnId(1), seatId: asSeatId('0'), decisionIndexRange: { start: 0, end: 1 }, microturnCount: 1, turnStopReason: 'retired' },
     { turnId: asTurnId(2), seatId: asSeatId('1'), decisionIndexRange: { start: 1, end: 2 }, microturnCount: 1, turnStopReason: 'terminal' },

@@ -24,6 +24,42 @@ jobs:
   determinism:
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - shard_id: core
+            shard_label: core determinism
+            test_paths: |
+              dist/test/determinism/decision-local-scope-drop.test.js
+              dist/test/determinism/probe-hole-recovery-replay-identity.test.js
+          - shard_id: spec-140-replay
+            shard_label: Spec 140 replay determinism
+            test_paths: |
+              dist/test/determinism/spec-140-replay-identity.test.js
+          - shard_id: runtime-parity
+            shard_label: runtime parity determinism
+            test_paths: |
+              dist/test/determinism/forked-vs-fresh-runtime-parity.test.js
+              dist/test/determinism/helper-vs-canonical-run-parity.test.js
+          - shard_id: draft-state
+            shard_label: draft-state determinism
+            test_paths: |
+              dist/test/determinism/draft-state-determinism-parity.test.js
+          - shard_id: zobrist-core
+            shard_label: Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-parity.test.js
+              dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js
+              dist/test/determinism/zobrist-incremental-property-texas.test.js
+          - shard_id: grant-canary
+            shard_label: grant determinism canary
+            test_paths: |
+              dist/test/determinism/fitl-policy-agent-canary-determinism.test.js
+          - shard_id: fitl-medium-zobrist
+            shard_label: FITL medium Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.js
     steps:
       - uses: actions/checkout@v6
         with:
@@ -35,7 +71,13 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
-      - run: pnpm -F @ludoforge/engine test:determinism
+      - name: Run determinism shard
+        working-directory: packages/engine
+        env:
+          DETERMINISM_TEST_PATHS: ${{ matrix.test_paths }}
+        run: |
+          mapfile -t test_paths <<< "$DETERMINISM_TEST_PATHS"
+          node scripts/run-tests.mjs --lane determinism "${test_paths[@]}"
 
   policy-profile-quality:
     runs-on: ubuntu-latest
@@ -58,6 +100,7 @@ jobs:
             shard_label: regression witnesses
             test_paths: |
               dist/test/policy-profile-quality/fitl-seed-2057-regression.test.js
+              dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js
           - shard_id: arvn-evolved-seed-1000
             shard_label: arvn evolved seed 1000
             test_paths: |

@@ -256,6 +256,8 @@ const validGameTrace = {
       warnings: [],
     },
   ],
+  probeHoleRecoveries: [],
+  recoveredFromProbeHole: 0,
   compoundTurns: [
     {
       turnId: 0,

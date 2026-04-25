@@ -13,6 +13,9 @@ import type {
 import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
+import { LruCache } from '../shared/lru-cache.js';
+
+export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
 
 export interface GameDefRuntime {
   /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */
@@ -34,6 +37,8 @@ export interface GameDefRuntime {
    * Cached RuleCard values are pure functions of that structural input.
    */
   readonly ruleCardCache: Map<string, RuleCard>;
+  /** `runLocal`: memoizes publication probe verdicts; reset for every run. */
+  readonly publicationProbeCache: LruCache<string, boolean>;
   /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
@@ -69,6 +74,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     alwaysCompleteActionIds,
     firstDecisionDomains,
     ruleCardCache: new Map(),
+    publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
     compiledLifecycleEffects,
   };
 }
@@ -81,9 +87,9 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * `firstDecisionDomains`, `ruleCardCache`, `compiledLifecycleEffects`, and the
  * structural Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
  *
- * The only `runLocal` member is `zobristTable.keyCache`, which is reset at
- * game boundaries so long-lived callers do not accumulate cross-run feature
- * keys.
+ * The `runLocal` members are `zobristTable.keyCache` and
+ * `publicationProbeCache`; both reset at game boundaries so long-lived callers
+ * do not accumulate cross-run state.
  */
 export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {
@@ -92,5 +98,6 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
       ...runtime.zobristTable,
       keyCache: new Map(),
     },
+    publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
   } as ForkedGameDefRuntimeForRun;
 }

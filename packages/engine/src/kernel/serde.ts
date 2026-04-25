@@ -80,6 +80,11 @@ export const serializeTrace = (trace: GameTrace): SerializedGameTrace => ({
     ...decision,
     stateHash: toHexBigInt(decision.stateHash),
   })),
+  probeHoleRecoveries: trace.probeHoleRecoveries.map((recovery) => ({
+    ...recovery,
+    stateHashBefore: toHexBigInt(recovery.stateHashBefore),
+    stateHashAfter: toHexBigInt(recovery.stateHashAfter),
+  })),
   finalState: serializeGameState(trace.finalState),
 });
 
@@ -88,6 +93,11 @@ export const deserializeTrace = (trace: SerializedGameTrace): GameTrace => ({
   decisions: trace.decisions.map((decision, index) => ({
     ...decision,
     stateHash: fromHexBigInt(decision.stateHash, `decisions[${index}].stateHash`),
+  })),
+  probeHoleRecoveries: trace.probeHoleRecoveries.map((recovery, index) => ({
+    ...recovery,
+    stateHashBefore: fromHexBigInt(recovery.stateHashBefore, `probeHoleRecoveries[${index}].stateHashBefore`),
+    stateHashAfter: fromHexBigInt(recovery.stateHashAfter, `probeHoleRecoveries[${index}].stateHashAfter`),
   })),
   finalState: deserializeGameState(trace.finalState),
 });

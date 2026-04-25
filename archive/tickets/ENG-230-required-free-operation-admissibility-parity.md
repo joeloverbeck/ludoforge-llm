@@ -1,6 +1,6 @@
 # ENG-230: Restore required free-operation admissibility parity across publication, probe, legality, and apply
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel microturn publication, legality/admissibility classification, and apply-time required-grant enforcement
@@ -162,3 +162,14 @@ This ticket must land with thorough tests that cover more than the exact seed wi
 7. `pnpm -F @ludoforge/engine lint`
 8. `pnpm -F @ludoforge/engine typecheck`
 9. `pnpm -F @ludoforge/engine test:all`
+
+## Outcome (2026-04-24)
+
+- Live reassessment showed the owned kernel fix and regression coverage were already present on `HEAD`; this turn was `verification + truthful closeout`, not fresh implementation.
+- Required pending free-operation grant admissibility is now enforced through the shared legality path used by publication, probe/admissibility, legality classification, and apply-time validation.
+- The seed-1006 FITL March witness is covered by focused regression proof: the empty required free-operation `chooseNStep` confirm is no longer published, and the simulator/agent path stays executable through the former failure seam.
+- Ticket-named engine/test paths were `verified-no-edit` during closeout because the implementation had already landed in the live codebase.
+- `ticket corrections applied`: `Status: PENDING -> Status: COMPLETED after live proof confirmed ENG-230 was already implemented on HEAD`
+- `verification set`: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/evaluate-move-legality.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/microturn-publication.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/free-operation-viability-contract-parity.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-march-free-operation.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/integration/agents-never-throw-microturn.test.js`; `pnpm -F @ludoforge/engine lint`; `pnpm -F @ludoforge/engine typecheck`; `pnpm -F @ludoforge/engine test:all`
+- `schema/artifact fallout`: none beyond rebuilt `packages/engine/dist`
+- `proof gaps`: none

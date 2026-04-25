@@ -18,6 +18,7 @@
 
 - If implementation exposes a new bug or semantic defect inside the owned ticket slice, follow repo TDD rules when practical: add the narrowest failing proof first, then fix it, and record the proof lane in working notes.
 - Before inventing a brand-new synthetic failing test, check whether an existing nearby unit/integration fixture, regression, or focused failing lane already proves the same seam closely enough. Prefer extracting, tightening, or adapting the smallest existing repo-owned witness when it remains the narrowest valid proof.
+- If a live ticket-named acceptance lane already fails on the owned bug, treat that lane as the initial red witness. After the mechanism is isolated, add or tighten the narrowest focused regression that captures the shared contract rather than skipping TDD or replacing the existing red lane with a weaker synthetic proof.
 - If a focused failing proof is not practical for an implementation-discovered defect, state why and keep the verification lane as narrow and behavior-specific as possible.
 - If an initially plausible integration reproducer fails for reasons outside the owned boundary, pivot to the narrowest live authority surface that still proves the ticket's invariant. Record the substitution and whether the resulting evidence is direct or indirect.
 - When a ticket's authoritative witness is a long campaign, replay, or simulation harness, prefer a compact reduction before patching:
@@ -43,6 +44,7 @@ When a ticket change affects other active tickets in the same series:
 - If the active ticket's authoritative verification fails on generated artifacts, goldens, or other repo-owned fallout that a sibling draft planned to pick up later, absorb the minimum fallout required for the active ticket to be true in live runtime, then update the affected sibling(s).
 - Note informative but non-blocking sibling drift in working notes without absorbing scope.
 - If sibling/spec artifacts are already dirty or untracked drafts, prefer editing only the active ticket unless the user asked for broader cleanup or the stale sibling would directly invalidate the boundary.
+- If sibling tickets are untracked or preexisting draft context and the active ticket correction does not invalidate their explicit deps, status, or deliverables, classify them as concurrent draft context and leave them unchanged. If the correction changes their explicit deps or deliverables, update those directly affected sibling drafts before final proof.
 - If a referenced spec mentions a deliverable split into a later sibling, keep implementation anchored to the current ticket boundary.
 - When a new follow-up spec changes framing around an adjacent active spec, prefer a small cross-reference update over rewriting the adjacent spec's problem statement.
 

@@ -1069,6 +1069,7 @@ export type ZobristFeature =
       readonly value: number;
     }
   | { readonly kind: 'decisionStackFrame'; readonly slot: number; readonly digest: string }
+  | { readonly kind: 'unavailableAction'; readonly key: string; readonly actionId: ActionId; readonly slot: number }
   | { readonly kind: 'nextFrameId'; readonly value: number }
   | { readonly kind: 'nextTurnId'; readonly value: number }
   | { readonly kind: 'activeDeciderSeatId'; readonly seatId: string };
@@ -1093,8 +1094,9 @@ export interface RevealGrant {
  * Canonical shape: globalVars, perPlayerVars, zoneVars, playerCount, zones,
  * nextTokenOrdinal, currentPhase, activePlayer, turnCount, rng, stateHash,
  * _runningHash, actionUsage, turnOrderState, markers, reveals, globalMarkers,
- * activeLastingEffects, interruptPhaseStack, decisionStack, nextFrameId,
- * nextTurnId, activeDeciderSeatId.
+ * activeLastingEffects, interruptPhaseStack, decisionStack,
+ * unavailableActionsPerTurn, nextFrameId, nextTurnId,
+ * activeDeciderSeatId.
  * Runtime construction sites should materialize every property; older
  * hand-authored fixture states may rely on the identity defaults.
  */
@@ -1119,6 +1121,7 @@ export interface GameState {
   readonly activeLastingEffects: readonly ActiveLastingEffect[] | undefined;
   readonly interruptPhaseStack: readonly InterruptPhaseFrame[] | undefined;
   readonly decisionStack?: readonly DecisionStackFrame[];
+  readonly unavailableActionsPerTurn?: Readonly<Record<string, readonly ActionId[]>>;
   readonly nextFrameId?: DecisionFrameId;
   readonly nextTurnId?: TurnId;
   readonly activeDeciderSeatId?: ActiveDeciderSeatId;
@@ -1708,12 +1711,25 @@ export interface GameTrace {
   readonly gameDefId: string;
   readonly seed: number;
   readonly decisions: readonly DecisionLog[];
+  readonly probeHoleRecoveries: readonly ProbeHoleRecoveryLog[];
+  readonly recoveredFromProbeHole: number;
   readonly compoundTurns: readonly CompoundTurnSummary[];
   readonly finalState: GameState;
   readonly result: TerminalResult | null;
   readonly turnsCount: number;
   readonly stopReason: SimulationStopReason;
   readonly traceProtocolVersion: 'spec-140';
+}
+
+export interface ProbeHoleRecoveryLog {
+  readonly kind: 'probeHoleRecovery';
+  readonly stateHashBefore: bigint;
+  readonly stateHashAfter: bigint;
+  readonly seatId: ActiveDeciderSeatId;
+  readonly turnId: TurnId;
+  readonly blacklistedActionId: ActionId;
+  readonly rolledBackFrames: number;
+  readonly reason: string;
 }
 
 export interface Metrics {
@@ -1777,8 +1793,14 @@ export interface SerializedGameState extends Omit<
   readonly stateHash: HexBigInt;
 }
 
-export interface SerializedGameTrace extends Omit<GameTrace, 'decisions' | 'finalState'> {
+export interface SerializedProbeHoleRecoveryLog extends Omit<ProbeHoleRecoveryLog, 'stateHashBefore' | 'stateHashAfter'> {
+  readonly stateHashBefore: HexBigInt;
+  readonly stateHashAfter: HexBigInt;
+}
+
+export interface SerializedGameTrace extends Omit<GameTrace, 'decisions' | 'probeHoleRecoveries' | 'finalState'> {
   readonly decisions: readonly SerializedDecisionLog[];
+  readonly probeHoleRecoveries: readonly SerializedProbeHoleRecoveryLog[];
   readonly finalState: SerializedGameState;
 }
 

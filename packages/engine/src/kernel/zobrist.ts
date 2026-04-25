@@ -135,6 +135,8 @@ const encodeFeature = (feature: ZobristFeature): string => {
       return `kind=zoneVar|zoneId=${feature.zoneId}|varName=${feature.varName}|value=${feature.value}`;
     case 'decisionStackFrame':
       return `kind=decisionStackFrame|slot=${feature.slot}|digest=${feature.digest}`;
+    case 'unavailableAction':
+      return `kind=unavailableAction|key=${feature.key}|actionId=${feature.actionId}|slot=${feature.slot}`;
     case 'nextFrameId':
       return `kind=nextFrameId|value=${feature.value}`;
     case 'nextTurnId':
@@ -236,6 +238,7 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
     case 'lastingEffect':
     case 'zoneVar':
     case 'decisionStackFrame':
+    case 'unavailableAction':
     case 'nextFrameId':
     case 'nextTurnId':
       return false;
@@ -488,6 +491,19 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
       digest: digestDecisionStackFrame(frame),
     });
   });
+
+  const unavailableActionsPerTurn = state.unavailableActionsPerTurn ?? {};
+  for (const key of Object.keys(unavailableActionsPerTurn).sort()) {
+    const actions = unavailableActionsPerTurn[key] ?? [];
+    actions.forEach((actionId, slot) => {
+      hash ^= zobristKey(table, {
+        kind: 'unavailableAction',
+        key,
+        actionId,
+        slot,
+      });
+    });
+  }
 
   if ((state.nextFrameId ?? 0) !== 0) {
     hash ^= zobristKey(table, { kind: 'nextFrameId', value: state.nextFrameId ?? 0 });

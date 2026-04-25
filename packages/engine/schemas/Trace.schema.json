@@ -4361,6 +4361,67 @@
         "additionalProperties": false
       }
     },
+    "probeHoleRecoveries": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "probeHoleRecovery"
+          },
+          "stateHashBefore": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]+$"
+          },
+          "stateHashAfter": {
+            "type": "string",
+            "pattern": "^0x[0-9a-f]+$"
+          },
+          "seatId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "string",
+                "const": "__chance"
+              },
+              {
+                "type": "string",
+                "const": "__kernel"
+              }
+            ]
+          },
+          "turnId": {
+            "type": "number"
+          },
+          "blacklistedActionId": {
+            "type": "string"
+          },
+          "rolledBackFrames": {
+            "type": "number"
+          },
+          "reason": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "stateHashBefore",
+          "stateHashAfter",
+          "seatId",
+          "turnId",
+          "blacklistedActionId",
+          "rolledBackFrames",
+          "reason"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "recoveredFromProbeHole": {
+      "type": "number"
+    },
     "compoundTurns": {
       "type": "array",
       "items": {
@@ -6944,6 +7005,18 @@
             "additionalProperties": false
           }
         },
+        "unavailableActionsPerTurn": {
+          "type": "object",
+          "propertyNames": {
+            "type": "string"
+          },
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
         "nextFrameId": {
           "type": "number"
         },
@@ -7169,6 +7242,8 @@
     "gameDefId",
     "seed",
     "decisions",
+    "probeHoleRecoveries",
+    "recoveredFromProbeHole",
     "compoundTurns",
     "finalState",
     "result",

@@ -41,7 +41,7 @@ describe('FITL seed 5000 repeated-run regression gate', () => {
         `seed ${seed}: expected terminal/maxTurns/noLegalMoves, got ${trace.stopReason} after ${trace.decisions.length} decisions`,
       );
       assert.ok(trace.decisions.length > 0, `seed ${seed}: expected at least one decision`);
-      assert.ok(trace.turnsCount >= 2, `seed ${seed}: expected repeated-run witness to retire beyond the opening turn`);
+      assert.ok(trace.compoundTurns.length >= 2, `seed ${seed}: expected repeated-run witness to retire beyond the opening turn`);
       assert.ok(trace.compoundTurns.length <= MAX_TURNS, `seed ${seed}: compound turns ${trace.compoundTurns.length} exceeded ${MAX_TURNS}`);
     }
   });

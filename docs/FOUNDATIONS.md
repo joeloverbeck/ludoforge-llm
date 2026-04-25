@@ -114,7 +114,11 @@ In TypeScript, this means branded types. The kernel validates identifier constru
 
 **A move is not legal for clients unless it is constructible under the kernel's bounded deterministic rules protocol. Existence without a construction artifact is insufficient.**
 
-Legality and constructibility are a single property exposed by a single kernel artifact. Every kernel-published legal action is constructible atomically at its microturn scope. No client-side search, no template completion, no satisfiability verdict distinct from publication, no `unknown` legal actions. The microturn publication pipeline is the single kernel artifact that establishes legality and executability; they cannot diverge.
+**Publication contract**: Every kernel-published legal action is constructible atomically at its microturn scope. The publication probe verifies constructibility by inspecting the candidate's resulting next decision to a bounded depth; a candidate is not published unless its next decision terminates, auto-resolves, or has at least one legal option at each checked level.
+
+**Runtime safety net**: For residual probe gaps such as state-dependent branches deeper than the publication budget, the kernel must roll back deterministically to the nearest `actionSelection` frame, blacklist the offending action for the current `(turnId, seatId)`, reconcile blocking free-operation grants for that seat, and re-publish. Rollback is an observable trace event, not a published contract and not a `Decision` union variant. If no non-blacklisted action remains, the engine may publish a generic game-authored fallback action tagged `pass`.
+
+Legality and constructibility are a single property exposed by the kernel. No client-side search, no template completion, no satisfiability verdict distinct from publication, no `unknown` legal actions. The microturn publication and recovery pipeline is the single kernel artifact that establishes legality and executability; they cannot diverge into a client-visible `noLegalMoves` termination when an authored pass fallback exists.
 
 ## 19. Decision-Granularity Uniformity
 
@@ -131,3 +135,5 @@ The determinism commandment (#8) is proven by the `packages/engine/test/determin
 Convergence claims tied to a specific policy-profile variant are not engine invariants. They are quality signals for the profile maintainer, and they live in `packages/engine/test/policy-profile-quality/`, not in `determinism/`. Failures there emit `POLICY_PROFILE_QUALITY_REGRESSION` warnings and a non-blocking CI summary rather than a blocking determinism failure.
 
 The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 and Spec 139 were written to eliminate. Spec 140 amended Foundations #5, #10, and #18, and added Foundation #19, to formalize the microturn-native decision protocol. Spec 139's certificate-carrying contract (the prior iteration of #18) is retired.
+
+Spec 144 amended Foundation #18 to distinguish the published-legality contract from the runtime-recovery safety net, and formalized the engine-agnostic `tags: [pass]` fallback convention.

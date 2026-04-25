@@ -46,6 +46,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 1. Read `$WT/campaigns/<campaign>/program.md` completely.
 2. Verify `$WT/campaigns/<campaign>/harness.sh` exists and is executable.
 3. Read `$WT/campaigns/<campaign>/results.tsv` — if it has data rows beyond the header, resume from the last accepted state (the current HEAD of the worktree branch IS the last accepted state).
+   - **Stale-baseline recovery**: if the recorded baseline commit hash from `checkpoints.jsonl` is not reachable from the worktree HEAD (verify with `git merge-base --is-ancestor <baseline-hash> HEAD`; non-zero exit = unreachable), the prior worktree was removed and the recorded state no longer matches the worktree branch. Treat this as a fresh restart: clear `results.tsv` to the header row, clear `checkpoints.jsonl`, reset `seed-tier.txt` to `INITIAL_SEED_TIER`, and proceed to Phase 1 (Baseline) as if no prior data existed. Document the reason in musings: `**STALE BASELINE**: Prior worktree removed; recorded baseline <hash> not reachable from new HEAD. Restarting from main.`
 4. Identify the **mutable files** from program.md. If the mutable surface is a small set of files (<10), read each one into context. If the mutable surface is a directory tree (e.g., "all files under `packages/engine/src/`"), read only the files relevant to the current experiment hypothesis — the full tree is too large for context. Use profiling data and program.md's root causes to guide which files to read.
 5. Identify the **root causes to seed** from program.md as the initial hypothesis queue.
 
@@ -82,8 +83,9 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
    Use specific file paths (not `git add -A`) to avoid accidentally staging unrelated files.
 7. Append to results.tsv:
    ```
-   baseline	<baseline_metric>	0	baseline	ACCEPT	baseline measurement
+   baseline	<baseline_metric>	0	baseline	BASELINE	baseline measurement
    ```
+   Use status `BASELINE` (see `references/prerequisites-and-config.md`). For backward compatibility with older campaigns, parsing tools should accept either `BASELINE` or `ACCEPT` on the initial baseline row.
 8. Initialize `$WT/campaigns/<campaign>/checkpoints.jsonl` with the baseline:
    ```json
    {"exp_id": "baseline", "metric": <baseline_metric>, "commit": "<commit-hash>", "lines_delta_cumulative": 0, "description": "baseline", "timestamp": "<ISO-8601>"}
@@ -104,8 +106,9 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
 
 If program.md defines fixture sync or tiered mutability, load `references/advanced-commit-policies.md`.
 
-### Step 0: ANCHOR (Condition Drift Prevention)
+### Step 0: ANCHOR (Condition Drift Prevention + CWD Verify)
 
+- **CWD verify**: Run `pwd` and confirm the cwd matches `$WT`. If drift is detected (e.g., from a prior `cd` to the main repo for diagnostic work, end-of-campaign prep, or a Human Investigation Interrupt), re-anchor with `cd $WT`. The Phase-0 anchor only holds until the first cross-tree command; in long campaigns the cwd drifts silently otherwise, and downstream commits land on the wrong tree. This check is cheap; do it every iteration.
 - Re-read `$WT/campaigns/<campaign>/program.md` objective section from disk.
 - Compare the last 5 experiment descriptions (from results.tsv) against the declared objective.
 - If the recent experiments are exploring tangential goals not aligned with the stated objective:
@@ -275,29 +278,40 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 5. Remove the worktree and delete the branch (step 9 below).
 
 **Normal campaign** (one or more accepted experiments):
-1. Review the worktree branch: `git log --oneline` shows all accepted improvements.
-2. Promote high-confidence lessons to global store (if not already done by Step 7.6).
-3. **Commit `campaigns/lessons-global.jsonl`** with `git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`. This file persists across campaigns — without this commit, lessons are lost when the worktree is removed.
-4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history.
+
+This sequence crosses between the worktree and the main repo. Each step is annotated with its required cwd. **Verify with `pwd` after every cwd switch** — the Phase-0 anchor does not survive cross-tree work, and the lessons commit landing in the wrong tree is a known pitfall.
+
+1. Review the worktree branch: `git log --oneline` shows all accepted improvements. *(cwd: worktree)*
+2. Promote high-confidence lessons to global store (if not already done by Step 7.6). *(cwd: worktree — append to the worktree's `campaigns/lessons-global.jsonl`)*
+3. **Commit `campaigns/lessons-global.jsonl`** *(cwd: worktree, on the campaign branch — verify with `pwd` and `git branch --show-current` before staging)*:
+   ```bash
+   cd $WT && pwd  # must show worktree path
+   git branch --show-current  # must show improve/<campaign>
+   git add -f campaigns/lessons-global.jsonl
+   git commit -m "chore: promote global lessons from <campaign>"
+   ```
+   This file persists across campaigns — without this commit, lessons are lost when the worktree is removed. The squash-merge in step 5 picks up this commit; landing it on main directly bypasses that path and leaves the worktree branch missing the promotion.
+4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `musings.md`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history. *(no cwd change required; uses absolute paths)*
 5. Switch to the main repo root (NOT the worktree) and squash-merge:
    ```bash
-   cd <main-repo-root> && git merge --squash improve/<campaign>
+   cd <main-repo-root> && pwd  # verify cwd is main, not worktree
+   git merge --squash improve/<campaign>
    ```
-6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test.
-7. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored).
-8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. If specs were already created during the campaign (e.g., during a human investigation interrupt or by user request), reference them in the squash-merge commit message but skip spec creation. If not yet created, confirm with the user whether to create specs (in `specs/`) before merging. Specs are project-level artifacts — create them in the main repo root, not the worktree.
-9. Remove the worktree and delete the branch:
+6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test. *(cwd: main repo root)*
+7. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored). *(cwd: main repo root)*
+8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. Spec creation can happen at any of three points: (a) during a Human Investigation Interrupt, (b) between user-directed campaign halt and squash-merge (e.g., user says "write the spec, then squash-merge"), or (c) post-merge as a follow-up. In all three cases, specs are project-level artifacts — create them in the main repo root (not the worktree) as a separate commit; the squash-merge does not include them. If specs already exist when reaching this step, reference them in the squash-merge commit message but skip creation. *(cwd: main repo root)*
+9. Remove the worktree and delete the branch *(cwd: main repo root)*:
    ```bash
-   git worktree remove .claude/worktrees/improve-<campaign>
+   git worktree remove --force .claude/worktrees/improve-<campaign>
    git branch -D improve/<campaign>
    ```
-   Force-delete (`-D`) is required because squash-merge does not mark the branch as merged.
+   `--force` on `git worktree remove` is required because the worktree contains gitignored runtime files (results.tsv, traces/, run logs, etc.); these have already been preserved by step 4, so the force-remove is safe. `-D` on `git branch` is required because squash-merge does not mark the branch as merged.
 
 ## Human Investigation Interrupt
 
 If the human interrupts the loop for investigation (e.g., "stop, investigate this crash", "analyze why this keeps failing", "look into the root cause"):
 
-1. **Pause loop state**: Save current `consecutive_rejects`, `strategy`, `best_metric`, and `experiment_count` mentally. The loop is paused, not stopped.
+1. **Pause loop state**: Save current `consecutive_rejects`, `strategy`, `best_metric`, and `experiment_count` mentally. The loop is paused, not stopped. **CWD verify on resume**: investigation may legitimately `cd` to the main repo to read source, run greps, or inspect specs. Before resuming the loop, run `pwd` and re-anchor with `cd $WT` if needed — drift here causes downstream commits to land on the wrong tree. Step 0 ANCHOR will also verify cwd, but verifying at resume catches the issue one step earlier.
 2. **Investigate**: Follow the human's direction. The investigation may produce Tier 2/3 infrastructure commits — commit these with `infra:` prefix and log in musings, but do NOT log in results.tsv.
 3. **Resume protocol**: After investigation completes:
    - If the investigation **unlocked new capabilities** (fixed a fragile test, added infrastructure that enables previously-blocked features, etc.): reset `consecutive_rejects = 0` and `strategy = "normal"`. Note in musings: `**CAPABILITY UNLOCKED**: <description>. Resetting plateau counter.`

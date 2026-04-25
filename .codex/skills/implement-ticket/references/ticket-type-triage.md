@@ -4,6 +4,7 @@ Before loading every optional reference, classify the ticket into the smallest l
 
 - **Bounded local refactor**: one main module or a tight cluster of same-domain files, no schema/serialized artifact ownership, no blocking discrepancies, and no verified sibling ownership drift beyond a lightweight sanity check
 - **Shared-contract or migration ticket**: exported types, schemas, generated artifacts, serialized surfaces, or broad fixture fallout are likely
+- **Mixed bounded/shared-contract ticket**: the code change is local, but it changes a serialized trace/result shape, generated schema, exported union, diagnostic field, or required object-literal property consumed outside the local package
 - **Proof, benchmark, audit, or investigation ticket**: the decisive deliverable is evidence, measurement, or a verdict rather than production code
 - **Mixed ticket**: more than one category applies; load the minimum extra references for each active category rather than defaulting to the whole skill body
 
@@ -70,3 +71,10 @@ When the ticket is a **shared-contract or migration ticket**, do this compact do
 2. Classify each consumer as `runtime owner`, `serialized/display boundary`, `generated artifact consumer`, or `tests/fixtures only`.
 3. Record which verification lanes are intermediate local proofs versus final acceptance-proof lanes for the ticket.
 4. If any downstream consumer is outside the main package you are editing, plan at least one workspace-level build/typecheck lane before considering the ticket complete.
+
+For a **mixed bounded/shared-contract ticket**, add this early fallout pass before treating the work as a local refactor:
+
+1. `rg` the changed field/type/literal across the workspace, not only the package you expect to edit.
+2. Check hand-authored fixtures, runner/UI/report consumers, trace-summary fixtures, and exhaustiveness-style tests for required object-shape fallout.
+3. Decide whether schema/artifact regeneration is owned now or explicitly deferred to a sibling ticket.
+4. Keep the focused local witness as the first proof, but reserve closeout until the planned workspace-level build/typecheck lane has either passed or been truthfully classified.

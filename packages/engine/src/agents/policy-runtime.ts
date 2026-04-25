@@ -64,6 +64,7 @@ export interface PolicyCurrentSurfaceProvider {
 }
 
 export interface PolicyPreviewSurfaceProvider {
+  markGated(candidate: PolicyRuntimeCandidate): void;
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
     ref: CompiledPreviewSurfaceRef,
@@ -287,6 +288,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
     },
     previewSurface: {
+      markGated(candidate) {
+        previewRuntime.markGated(candidate);
+      },
       resolveSurface(candidate, ref, seatContext) {
         return previewRuntime.resolveSurface(candidate, ref, seatContext);
       },

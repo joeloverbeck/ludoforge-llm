@@ -1559,7 +1559,7 @@ export interface AgentDecisionScoreContribution {
 
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
-  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
 }
 
 export interface PolicyCandidateDecisionTrace {
@@ -1570,7 +1570,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
-  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -1614,6 +1614,9 @@ export interface PolicyPreviewOutcomeBreakdownTrace {
   readonly unknownRandom: number;
   readonly unknownHidden: number;
   readonly unknownUnresolved: number;
+  readonly unknownDepthCap: number;
+  readonly unknownNoPreviewDecision: number;
+  readonly unknownGated: number;
   readonly unknownFailed: number;
 }
 

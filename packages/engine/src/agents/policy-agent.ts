@@ -144,6 +144,9 @@ const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
     unknownRandom: 0,
     unknownHidden: 0,
     unknownUnresolved: 0,
+    unknownDepthCap: 0,
+    unknownNoPreviewDecision: 0,
+    unknownGated: 0,
     unknownFailed: 0,
   },
 });

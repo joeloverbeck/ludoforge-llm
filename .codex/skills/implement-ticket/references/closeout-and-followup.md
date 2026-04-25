@@ -62,6 +62,8 @@ When the active tracked ticket was truthfully narrowed or rewritten and the owne
 
 Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.
 
+If an explicit ticket-named broad acceptance lane is still red, `COMPLETED` is only truthful when the active ticket has first been rewritten to remove that lane from the owned boundary or the failures have been proven unrelated/pre-existing. A red changed-path, serialized-contract, or architectural-invariant failure should normally become `BLOCKED by prerequisite` or trigger 1-3-1 rather than a completed ticket plus an implicit follow-up.
+
 ## Optional State-Transition Ledger
 
 For active-ticket rewrites that change the ticket graph itself, an optional final state-transition ledger can help keep the repo artifact honest:
@@ -144,6 +146,15 @@ Suggested compact final-proof ledger:
 - `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
 - `proof gaps`: `none` or `<remaining blocker>`
 - `architectural follow-up`: `<new spec/ticket id or proposed artifact> for <cross-ticket contract discovered during implementation>` when the ticket uncovered a broader design gap that outlives the local fix
+
+When a ticket-named broad lane remains red, use a more explicit residual handoff ledger:
+
+- `red lane`: `<ticket-named command>`
+- `direct rerun`: `<first failing file/command rerun directly>`
+- `assertion`: `<short failing assertion or error class>`
+- `classification`: `owned failure | same-series residual / dependency blocker | repo-preexisting unrelated blocker`
+- `owner`: `<active ticket, sibling ticket, external blocker, or unknown>`
+- `durable status`: `<COMPLETED | BLOCKED by prerequisite | PENDING untouched | repo-equivalent>`
 
 Investigation-ticket example when the artifact landed but the hypothesis shifted:
 

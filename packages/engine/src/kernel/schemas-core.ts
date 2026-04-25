@@ -1668,6 +1668,9 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('hidden'),
       z.literal('unresolved'),
       z.literal('failed'),
+      z.literal('depthCap'),
+      z.literal('noPreviewDecision'),
+      z.literal('gated'),
     ]),
   })
   .strict();
@@ -1690,6 +1693,7 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('failed'),
       z.literal('depthCap'),
       z.literal('noPreviewDecision'),
+      z.literal('gated'),
     ]).optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({
@@ -1724,6 +1728,9 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
     unknownRandom: NumberSchema,
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
+    unknownDepthCap: NumberSchema,
+    unknownNoPreviewDecision: NumberSchema,
+    unknownGated: NumberSchema,
     unknownFailed: NumberSchema,
   })
   .strict();

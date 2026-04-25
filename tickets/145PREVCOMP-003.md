@@ -18,6 +18,10 @@ In addition, this ticket performs a one-pass audit of the five shipped FITL prof
 2. Shipped profiles list: `us-baseline` (weight 1), `arvn-baseline` (weight 8), `arvn-evolved` (weight 3), `nva-baseline` (weight 1), and `vc-baseline` (weight 5 declared as param but unused in `use.considerations`). Verified at `data/games/fire-in-the-lake/92-agents.md:407-502`.
 3. ARVN-evolved campaign witnesses (1000, 1001) referenced in Spec 145 §Testing live under `campaigns/fitl-arvn-agent-evolution/traces/`. These are campaign artifacts, not engine fixtures; re-bless decisions for them are governed by Spec 145 §Testing's "re-blessed only if `compositeScore` provably improves" rule.
 4. Schema-level `previewFailureReason` enum (in trace fixtures) gains `'depthCap'` (from 145PREVCOMP-001) and `'gated'` (from 145PREVCOMP-002) — fixtures must be regenerated.
+5. Post-`145PREVCOMP-002` integration proof is not green and must be classified here before any re-bless:
+   - `spec-140-profile-migration.test.js` fails on live shipped FITL profile syntax at `data/games/fire-in-the-lake/92-agents.md:346: scopes: [completion]`. The literal is present in `HEAD`, so this is a pre-existing shipped-profile migration residue that this audit must either remove or explicitly hand off.
+   - `fitl-march-free-operation.test.js` no longer reaches the historical seed-1006 required free-operation March witness within 220 decisions, while the adjacent executable-through-former-witness test still passes. Treat this as a trajectory-sensitive witness shift caused by the new policy scoring path; distill or replace the witness rather than weakening the underlying invariant.
+   - `classified-move-parity.test.js` now reaches a FITL step-420 path where the selected action is absent from classified enumeration. This remains an `architectural-invariant` failure; do not re-bless it as a golden/profile-quality shift without first proving the invariant still holds through a narrower repaired witness or opening a production parity follow-up.
 
 ## Architecture Check
 

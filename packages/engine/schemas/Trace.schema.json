@@ -3563,6 +3563,18 @@
                             {
                               "type": "string",
                               "const": "failed"
+                            },
+                            {
+                              "type": "string",
+                              "const": "depthCap"
+                            },
+                            {
+                              "type": "string",
+                              "const": "noPreviewDecision"
+                            },
+                            {
+                              "type": "string",
+                              "const": "gated"
                             }
                           ]
                         }
@@ -3592,6 +3604,15 @@
                       "unknownUnresolved": {
                         "type": "number"
                       },
+                      "unknownDepthCap": {
+                        "type": "number"
+                      },
+                      "unknownNoPreviewDecision": {
+                        "type": "number"
+                      },
+                      "unknownGated": {
+                        "type": "number"
+                      },
                       "unknownFailed": {
                         "type": "number"
                       }
@@ -3602,6 +3623,9 @@
                       "unknownRandom",
                       "unknownHidden",
                       "unknownUnresolved",
+                      "unknownDepthCap",
+                      "unknownNoPreviewDecision",
+                      "unknownGated",
                       "unknownFailed"
                     ],
                     "additionalProperties": false
@@ -3764,6 +3788,18 @@
                               {
                                 "type": "string",
                                 "const": "failed"
+                              },
+                              {
+                                "type": "string",
+                                "const": "depthCap"
+                              },
+                              {
+                                "type": "string",
+                                "const": "noPreviewDecision"
+                              },
+                              {
+                                "type": "string",
+                                "const": "gated"
                               }
                             ]
                           }
@@ -3808,6 +3844,10 @@
                         {
                           "type": "string",
                           "const": "noPreviewDecision"
+                        },
+                        {
+                          "type": "string",
+                          "const": "gated"
                         }
                       ]
                     },

@@ -55,6 +55,16 @@ When a ticket-named **broad verification lane** (for example `pnpm turbo test`, 
 5. if it is `repo-preexisting unrelated blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, state that the owned slice did not touch that surface, and preserve the proof gap explicitly instead of claiming the broad lane passed
 6. only treat the ticket as closeable with that documented proof gap when the remaining acceptance evidence still truthfully proves the owned boundary and `AGENTS.md` does not require fixing the unrelated blocker or same-series residual as part of the ticket
 
+Status stop: if the broad lane was named by the active ticket and any direct-rerun failure exercises the changed execution path, changed serialized/shared contract, or an architectural invariant touched by the ticket, default the classification to `owned failure`. Do not set `**Status**: COMPLETED` until that failure is fixed, proven pre-existing outside the active boundary, or the user confirms a 1-3-1 boundary reset / sibling handoff that rewrites the active ticket's durable state.
+
+When a ticket-named broad lane fails after otherwise successful focused proof, use this red-lane closeout choreography before any final status edit:
+
+1. rerun the first failing file/command directly when feasible
+2. classify each failure with its concrete path, assertion, and owner candidate
+3. update active and sibling tickets with that evidence before claiming final proof
+4. choose a truthful durable state (`COMPLETED`, `BLOCKED by prerequisite`, `PENDING untouched`, or repo-equivalent) from the rewritten active boundary
+5. if those edits change the acceptance story, rerun the narrowest affected proof lane or record a clerical-only invalidation decision
+
 For `packages/engine/test/unit/infrastructure/test-class-markers.test.ts`, treat the reported source file as the owner candidate before blaming the marker scan itself. Fix it when the named file is part of the active ticket or an immediately owned touched-file fallout surface. Otherwise, classify the failure as same-series metadata residue or unrelated marker drift, cite the named file in closeout, and keep the scan rule intact.
 
 ## Post-Proof-Edit Invalidation

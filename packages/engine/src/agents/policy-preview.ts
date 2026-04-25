@@ -101,6 +101,7 @@ export interface CreatePolicyPreviewRuntimeInput {
 
 export interface PolicyPreviewRuntime {
   dispose(): void;
+  markGated(candidate: PolicyPreviewCandidate): void;
   resolveSurface(
     candidate: PolicyPreviewCandidate,
     ref: CompiledPreviewSurfaceRef,
@@ -113,7 +114,14 @@ export interface PolicyPreviewRuntime {
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
 }
 
-export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
+export type PolicyPreviewUnavailabilityReason =
+  | 'random'
+  | 'hidden'
+  | 'unresolved'
+  | 'failed'
+  | 'depthCap'
+  | 'noPreviewDecision'
+  | 'gated';
 export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
 
 export type PolicyPreviewSurfaceResolution =
@@ -473,6 +481,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         }
       }
       cache.clear();
+    },
+    markGated(candidate) {
+      if (disposed || cache.has(candidate.stableMoveKey)) {
+        return;
+      }
+      cache.set(candidate.stableMoveKey, { kind: 'unknown', reason: 'gated', failureReason: 'gated' });
     },
     resolveSurface(candidate, ref, seatContext) {
       if (disposed) {

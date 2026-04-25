@@ -307,6 +307,10 @@ export class PolicyEvaluationContext {
     return this.runtimeProviders.previewSurface.hasPreviewData(candidate);
   }
 
+  markPreviewGated(candidate: PolicyEvaluationCandidate): void {
+    this.runtimeProviders.previewSurface.markGated(candidate);
+  }
+
   /** Ensure the candidate's previewOutcome is set from the preview surface.
    *  Call after all feature evaluation to finalize outcome before trace generation.
    *  Only syncs metadata for candidates that actually attempted preview ref resolution. */

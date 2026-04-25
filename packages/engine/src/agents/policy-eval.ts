@@ -6,6 +6,7 @@ import type {
   AgentPreviewMode,
   AgentSelectionMode,
   AgentPolicyCatalog,
+  CompiledAgentConsideration,
   CompiledAgentTieBreaker,
   GameDef,
   GameState,
@@ -477,7 +478,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       for (const candidate of activeCandidates) {
         for (const featureId of profile.plan.candidateFeatures) {
           const feature = catalog.library.candidateFeatures[featureId];
-          if (feature?.costClass === 'preview' && !evaluation.hasPreviewData(candidate)) {
+          if (feature?.costClass === 'preview') {
             continue;
           }
           evaluation.evaluateCandidateFeature(candidate, featureId);
@@ -538,6 +539,26 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(
         (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
       );
+      const moveOnlyConsiderationIds = moveConsiderationIds.filter(
+        (considerationId) => considerations[considerationId]?.costClass !== 'preview',
+      );
+      const previewTopK = profile.preview.mode === 'disabled'
+        ? activeCandidates.length
+        : Math.min(profile.preview.topK ?? 4, activeCandidates.length);
+      const previewAllowedKeys = pickTopKByMoveOnlyScore(
+        evaluation,
+        considerations,
+        activeCandidates,
+        moveOnlyConsiderationIds,
+        previewTopK,
+      );
+      if (previewAllowedKeys.size < activeCandidates.length) {
+        for (const candidate of activeCandidates) {
+          if (!previewAllowedKeys.has(candidate.stableMoveKey)) {
+            evaluation.markPreviewGated(candidate);
+          }
+        }
+      }
       for (const candidate of activeCandidates) {
         candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
           total + evaluation.evaluateConsideration(
@@ -888,6 +909,37 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
   };
 }
 
+function pickTopKByMoveOnlyScore(
+  evaluation: PolicyEvaluationContext,
+  considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+  candidates: readonly CandidateEntry[],
+  moveOnlyConsiderationIds: readonly string[],
+  topK: number,
+): ReadonlySet<string> {
+  if (topK >= candidates.length) {
+    return new Set(candidates.map((candidate) => candidate.stableMoveKey));
+  }
+  if (topK <= 0) {
+    return new Set();
+  }
+
+  const ranked = candidates.map((candidate) => ({
+    candidate,
+    score: moveOnlyConsiderationIds.reduce((total, considerationId) => (
+      total + evaluation.evaluateConsideration(considerations, considerationId, candidate)
+    ), 0),
+  }));
+
+  ranked.sort((left, right) => {
+    const scoreOrder = right.score - left.score;
+    return scoreOrder === 0
+      ? left.candidate.stableMoveKey.localeCompare(right.candidate.stableMoveKey)
+      : scoreOrder;
+  });
+
+  return new Set(ranked.slice(0, topK).map((entry) => entry.candidate.stableMoveKey));
+}
+
 function traceGrantedOperation(
   grantedOperation: PolicyPreviewGrantedOperation | undefined,
 ): Pick<
@@ -941,6 +993,9 @@ function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
+      unknownDepthCap: 0,
+      unknownNoPreviewDecision: 0,
+      unknownGated: 0,
       unknownFailed: 0,
     },
   };
@@ -954,6 +1009,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
+      unknownDepthCap: 0,
+      unknownNoPreviewDecision: 0,
+      unknownGated: 0,
       unknownFailed: 0,
     };
   }
@@ -963,6 +1021,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   let random = 0;
   let hidden = 0;
   let unresolved = 0;
+  let depthCap = 0;
+  let noPreviewDecision = 0;
+  let gated = 0;
   let failed = 0;
 
   for (const candidate of evaluatedCandidates) {
@@ -987,6 +1048,18 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
+    if (outcome === 'depthCap') {
+      depthCap += 1;
+      continue;
+    }
+    if (outcome === 'noPreviewDecision') {
+      noPreviewDecision += 1;
+      continue;
+    }
+    if (outcome === 'gated') {
+      gated += 1;
+      continue;
+    }
     failed += 1;
   }
 
@@ -996,6 +1069,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
     unknownRandom: random,
     unknownHidden: hidden,
     unknownUnresolved: unresolved,
+    unknownDepthCap: depthCap,
+    unknownNoPreviewDecision: noPreviewDecision,
+    unknownGated: gated,
     unknownFailed: failed,
   };
 }

@@ -1,9 +1,9 @@
 # 145PREVCOMP-002: Policy-evaluation top-K preview gate
 
-**Status**: PENDING
+**Status**: BLOCKED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `agents/policy-evaluation-core.ts`
+**Engine Changes**: Yes — `agents/policy-eval.ts`, `agents/policy-evaluation-core.ts`, `agents/policy-preview.ts`, trace schema/types
 **Deps**: `archive/tickets/145PREVCOMP-001.md`
 
 ## Problem
@@ -14,7 +14,7 @@ This ticket splits `policy-evaluation-core.ts`'s candidate scoring loop into two
 
 ## Assumption Reassessment (2026-04-25)
 
-1. `policy-evaluation-core.ts` candidate scoring loop is the right insertion point per Spec 145 D7 ("This cap is implemented in the policy-evaluation pass (not in `policy-preview.ts`)"). Verified file at `packages/engine/src/agents/policy-evaluation-core.ts`.
+1. The policy-evaluation pass is the right insertion point per Spec 145 D7 ("This cap is implemented in the policy-evaluation pass (not in `policy-preview.ts`)"). Live correction: the scoring loop is orchestrated in `packages/engine/src/agents/policy-eval.ts`; `packages/engine/src/agents/policy-evaluation-core.ts` owns evaluator helpers and preview metadata sync.
 2. The `'gated'` reason is new — added to `PolicyPreviewUnavailabilityReason` here (it is *not* added in `145PREVCOMP-001`, which only adds `'depthCap'` and `'noPreviewDecision'`).
 3. `preview.topK` config field threading and validation already landed in `145PREVCOMP-001`; this ticket consumes the validated value.
 4. `K_PREVIEW_TOPK` default is 4 per Spec 145 D7. Justified empirically by the 8–12 candidate-count observation; the derivation script lands in `145PREVCOMP-006`.
@@ -71,7 +71,7 @@ When `previewMode === 'disabled'`, skip the gate entirely — every candidate al
 const K_PREVIEW_TOPK = 4;
 ```
 
-Module-private to `policy-evaluation-core.ts`. Override path is `profile.preview.topK` (already wired by `145PREVCOMP-001`).
+Default consumed from `profile.preview.topK ?? 4` in the policy-evaluation pass. Override path is `profile.preview.topK` (already wired by `145PREVCOMP-001`).
 
 ### 5. Top-K gate unit tests
 
@@ -83,8 +83,13 @@ Module-private to `policy-evaluation-core.ts`. Override path is `profile.preview
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify)
+- `packages/engine/src/agents/policy-eval.ts` (modify — live scoring-loop owner)
+- `packages/engine/src/agents/policy-runtime.ts` (modify — expose `markGated` through runtime providers)
 - `packages/engine/src/agents/policy-preview.ts` (modify — add `'gated'` reason and `markGated` cache helper)
+- `packages/engine/src/kernel/types-core.ts` (modify — extend trace outcome/breakdown types)
 - `packages/engine/src/kernel/schemas-core.ts` (modify — extend `PolicyPreviewUnavailabilityReason` schema if exposed)
+- `packages/engine/schemas/Trace.schema.json` (regenerated)
+- `packages/engine/src/agents/policy-agent.ts` and `packages/engine/test/unit/agents/policy-diagnostics.test.ts` (metadata fixture fallout)
 - `packages/engine/test/unit/agents/policy-evaluation-topk-gate.test.ts` (new)
 
 ## Out of Scope
@@ -123,3 +128,34 @@ Module-private to `policy-evaluation-core.ts`. Override path is `profile.preview
 3. `pnpm -F @ludoforge/engine test:integration`
 4. `pnpm turbo lint`
 5. `pnpm turbo typecheck`
+
+## Review Outcome (2026-04-25)
+
+Landed the policy-evaluation top-K preview gate, but the ticket is not archive-ready because its named integration lane is still red on a changed-path architectural-invariant failure now owned by the active follow-up `tickets/145PREVCOMP-003.md`.
+
+- `policy-eval.ts` now computes a move-only ranking from non-preview move considerations, admits only the top `profile.preview.topK ?? 4` candidates to preview, and marks the remaining candidates as gated before full scoring evaluates preview refs.
+- `policy-preview.ts` now supports the serialized `gated` preview outcome through a cache-level `markGated` hook. Gated candidates do not invoke the synthetic-completion driver; preview refs resolve as unknown and `coalesce` fallbacks continue naturally.
+- `policy-runtime.ts` / `policy-evaluation-core.ts` expose the gate hook through the existing runtime-provider boundary instead of coupling the scoring pass directly to preview internals.
+- Trace types, schemas, and generated `Trace.schema.json` now include `gated`; preview outcome breakdowns also separate `depthCap`, `noPreviewDecision`, and `gated` instead of folding them into generic failure.
+- `policy-evaluation-topk-gate.test.ts` covers `topK=1`, `topK >= candidateCount`, the default-sized `topK=4` / 12-candidate shape, and deterministic `stableMoveKey` tie-breaking.
+
+Live seam correction: the ticket named `policy-evaluation-core.ts` as the scoring-loop insertion point, but the current scoring loop lives in `policy-eval.ts`. The implementation uses `policy-eval.ts` for orchestration and keeps `policy-evaluation-core.ts` limited to the preview-gating provider method.
+
+Integration-lane classification:
+
+- `pnpm -F @ludoforge/engine test:integration` is not green after the gate. Direct reruns isolate three failures:
+  - `dist/test/integration/spec-140-profile-migration.test.js` fails immediately on `data/games/fire-in-the-lake/92-agents.md:346: scopes: [completion]`; this literal is present in `HEAD` and is a shipped-profile audit/migration residue.
+  - `dist/test/integration/fitl-march-free-operation.test.js` no longer reaches the historical seed-1006 required free-operation March witness within 220 decisions, while the adjacent executable-through-former-witness test still passes. This is a trajectory-sensitive witness shift under the new policy scoring path.
+  - `dist/test/integration/classified-move-parity.test.js` now reaches a FITL step-420 path where the selected action is absent from classified enumeration. This is an architectural-invariant failure surfaced by the changed policy trajectory and must not be silently re-blessed.
+- These broad integration residues are recorded on pending `tickets/145PREVCOMP-003.md`, whose existing scope is profile audit, fixture/witness classification, and re-bless/follow-up decisions after `145PREVCOMP-002`. This ticket remains `BLOCKED` until that follow-up either restores the integration lane, proves a narrower unrelated owner, or opens a more specific production parity follow-up for the `classified-move-parity` invariant.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-evaluation-topk-gate.test.js`
+3. `pnpm -F @ludoforge/engine schema:artifacts:check`
+4. `pnpm -F @ludoforge/engine test:unit`
+5. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js dist/test/unit/agents/policy-evaluation-topk-gate.test.js`
+6. `pnpm -F @ludoforge/engine test:integration` — red as classified above
+7. `pnpm turbo lint`
+8. `pnpm turbo typecheck`

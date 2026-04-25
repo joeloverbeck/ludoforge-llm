@@ -65,6 +65,9 @@ function createMetadata(): PolicyEvaluationMetadata {
         unknownRandom: 0,
         unknownHidden: 1,
         unknownUnresolved: 0,
+        unknownDepthCap: 0,
+        unknownNoPreviewDecision: 0,
+        unknownGated: 0,
         unknownFailed: 0,
       },
     },
@@ -88,6 +91,9 @@ describe('policy-diagnostics', () => {
       unknownRandom: 0,
       unknownHidden: 1,
       unknownUnresolved: 0,
+      unknownDepthCap: 0,
+      unknownNoPreviewDecision: 0,
+      unknownGated: 0,
       unknownFailed: 0,
     });
     assert.equal(trace.phase1Score, 5);

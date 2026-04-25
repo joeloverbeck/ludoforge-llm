@@ -71,6 +71,8 @@ Classify: design | decision/triage | operational
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
 
+   Announce the chosen classification in one sentence before proceeding (e.g., "Topic classification: design — producing a campaign infrastructure artifact."). This forces conscious classification, especially when the topic could plausibly fit two modes (e.g., a campaign design that also launches a destructive worktree-modifying loop), and creates an audit trail for the rest of the conversation.
+
 3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles. *"Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md — skill design, process changes, and tooling configurations are not, even if they indirectly influence implementation.*
 
 4. **Confidence adjustment for rich reference files**: If the reference file provides detailed analysis with specific recommendations, counter-evidence, and tradeoffs, adjust your starting confidence accordingly. A directional report with general suggestions may start you at 60-70%. A report with specific, codebase-grounded proposals (concrete file references, verified claims, detailed tradeoffs) may start at 70-80% — the remaining gap is typically just user intent and risk tolerance.
@@ -215,7 +217,7 @@ Present **2-3 distinct approaches** with:
 
 **If triage produced a set of approved changes** (decision/triage → design transition), the approach options shift from "which changes" to "how to apply them" — e.g., incremental patches vs. structured rewrite vs. phased rollout. Present these implementation strategies as the approaches.
 
-**If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`.
+**If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`. Omit the line for an approach that is FOUNDATIONS-neutral relative to its alternatives — only tag when it surfaces a real differentiator (alignment unique to this approach, or a tension absent in the others). When all approaches are FOUNDATIONS-equivalent, defer per-approach tagging entirely and address FOUNDATIONS in the Step 4 design section.
 
 **Wait for user to choose or ask questions.** Do not proceed until the user picks an approach (or asks you to refine/combine).
 
@@ -282,6 +284,37 @@ Write an executable plan with the following sections (scale each to its complexi
 
 Output to `docs/plans/YYYY-MM-DD-<action>.md` (or harness-specified plan path under plan mode). Do NOT execute. The plan is the artifact; execution is a separate user-approved step.
 
+### Multi-file artifact directory
+
+When the brainstorm's output is a multi-file directory (e.g., an `improve-loop` campaign, a plugin scaffold, a harness scaffold) rather than a single prose document:
+
+- **Output path**: a new directory whose location follows existing repo convention (e.g., `campaigns/<name>/` for improve-loop campaigns; `<plugin-root>/<name>/` for plugin scaffolds). Confirm the convention by listing the parent directory before writing.
+- **Required artifacts** (campaign example): one human-readable instruction spec (e.g., `program.md`) that captures the approved design verbatim, plus the executable scaffolding the design prescribes (harness script, runner script, fixtures). Generate the spec and the scaffolding in the same brainstorm — do not defer scaffolding to a follow-up.
+- **Section-by-section approval applies to the spec only.** The executable scaffolding (harness, runner) is mechanical translation from the approved spec, not new design. Compound-move + auto-mode rules from Step 4 still apply to the spec; under auto mode, write the scaffolding immediately after the spec is approved without further per-file approval.
+- **Do NOT commit the directory.** Leave it for user review like any other Step 5 artifact.
+- **Smoke-validate** the executable scaffolding per Step 5.5 before handoff.
+
+## Step 5.5: Validate Executable Artifacts
+
+When Step 5 produces executable code (harness scripts, benchmark runners, plugins, generated config) — not just prose — run cheap structural checks before handing off to the user.
+
+**Mandatory checks** (every executable artifact):
+
+- **Syntax check**: `node --check <file.mjs|.js>`, `bash -n <file.sh>`, `python -m py_compile <file.py>`, or the language equivalent. These catch import errors, scoping bugs (e.g., referencing a class declaration before its definition), missing braces, and similar mechanical defects in <1 second.
+- **Permission/shebang check**: if the artifact is meant to be invoked directly (`./harness.sh`, executable via shebang), verify the executable bit (`ls -l`) and shebang line.
+
+**Optional checks** (when the runtime is bounded, typically <2 minutes per mode):
+
+- **Smoke run**: invoke the artifact once per declared operating mode (e.g., `--mode on`, `--mode off`) and confirm it produces structurally valid output (expected JSON keys, exit code 0, expected order of magnitude on declared metrics). Skip when a single invocation would exceed ~2 minutes unless the user explicitly opts in.
+- **Cross-mode comparison** (when applicable): if the artifact has a declared expected relationship between modes (e.g., a watchdog mode should be ~baseline-time, a primary mode should reproduce a known regression), confirm the relationship holds within reasonable noise.
+
+**Defect disposition**:
+
+- **Mechanical defects** (syntax errors, missing imports, typos, executable-bit not set): fix in-place silently. This is artifact-correctness, not re-design — it does not require re-approval.
+- **Structural defects** (wrong scope, missed requirement, design assumption violated by the smoke run): raise back to the user with a one-line summary of what the smoke run revealed, propose a corrected design, and re-validate after the correction is approved. This IS a design correction — surface it, do not silently rewrite the artifact.
+
+The hard gate at the top of this skill is preserved: validation confirms structural correctness of the *approved* design, it does not introduce new behavior.
+
 ## Step 6: Next Steps Menu
 
 **Plan mode override**: If plan mode is active, replace the menu with `ExitPlanMode`. The plan-mode approval IS the next-step decision. See "Plan Mode Interaction" earlier in this skill.
@@ -325,6 +358,16 @@ What would you like to do next?
 2. Defer execution — I'll run it later or in a separate session
 3. Revise the plan first (re-enter brainstorm with corrections)
 ```
+
+**If output was a multi-file artifact directory** (`campaigns/<name>/`, plugin scaffold, etc.):
+```
+What would you like to do next?
+1. Launch the workflow now (e.g., `/improve-loop campaigns/<name>` for campaigns; equivalent invocation for other directory artifacts)
+2. Smoke-test the harness/runner first (run one mode end-to-end at baseline cost before launching the loop)
+3. Done for now — I'll launch later
+```
+
+Adapt option 1 to the directory's downstream consumer — `/improve-loop` for campaigns, the relevant plugin-loader command for plugin scaffolds, etc. Option 2 applies when Step 5.5's optional smoke run was deferred (e.g., per-mode runtime exceeds the ~2-minute bounded threshold and the user did not opt in earlier).
 
 **Continual Learning prompt** (only when applicable): If the brainstorm surfaced a concrete gap in `CLAUDE.md`, `docs/FOUNDATIONS.md`, or an existing skill (conflicting instructions, missing guidance, outdated references), append an option: "Propose updates to <file>". Do not include this option speculatively — only when the brainstorm produced specific evidence of a gap. This implements CLAUDE.md's Continual Learning rule.
 

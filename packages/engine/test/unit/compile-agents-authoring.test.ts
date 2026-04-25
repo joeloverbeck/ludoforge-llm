@@ -1067,11 +1067,60 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
       phase1: false,
       phase1CompletionsPerAction: 1,
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
       mode: 'argmax',
+    });
+  });
+
+  it('compiles bounded preview completion config from profile YAML', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'tolerateStochastic',
+              completion: 'agentGuided',
+              completionDepthCap: 5,
+              topK: 6,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
+      mode: 'tolerateStochastic',
+      completion: 'agentGuided',
+      completionDepthCap: 5,
+      topK: 6,
+      phase1: false,
+      phase1CompletionsPerAction: 1,
     });
   });
 
@@ -1107,6 +1156,9 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
       mode: 'argmax',
@@ -1149,6 +1201,9 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
       phase1: true,
       phase1CompletionsPerAction: 1,
     });
@@ -1191,6 +1246,9 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
       phase1: true,
       phase1CompletionsPerAction: 3,
     });
@@ -1611,6 +1669,86 @@ describe('agents authoring surface', () => {
     );
   });
 
+  it('emits diagnostics when bounded preview completion config is invalid', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          badCompletion: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              completion: 'random' as unknown as string,
+            },
+          },
+          badDepth: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              completionDepthCap: 0,
+            },
+          },
+          badTopK: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              topK: 1.5,
+            },
+          },
+        },
+        bindings: {
+          us: 'badCompletion',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_COMPLETION_INVALID'
+          && d.path === 'doc.agents.profiles.badCompletion.preview.completion',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_COMPLETION_DEPTH_CAP_INVALID'
+          && d.path === 'doc.agents.profiles.badDepth.preview.completionDepthCap',
+      ),
+      true,
+    );
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_TOPK_INVALID'
+          && d.path === 'doc.agents.profiles.badTopK.preview.topK',
+      ),
+      true,
+    );
+  });
+
   it('emits diagnostic when preview.phase1 is invalid', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
@@ -1738,6 +1876,9 @@ describe('agents authoring surface', () => {
     );
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
       phase1: false,
       phase1CompletionsPerAction: 2,
     });

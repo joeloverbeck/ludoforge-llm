@@ -123,6 +123,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     trustedMoveIndex: input.trustedMoveIndex,
     ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
+    completionPolicy: activeProfile?.preview.completion ?? 'greedy',
+    completionDepthCap: activeProfile?.preview.completionDepthCap ?? 8,
+    ...(activeProfile === undefined ? {} : { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile } }),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });

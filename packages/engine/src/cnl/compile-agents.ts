@@ -666,11 +666,16 @@ function lowerPreviewConfig(
 ): CompiledAgentProfile['preview'] | undefined {
   const authored = profileDef.preview;
   if (authored === undefined) {
-    return { mode: 'exactWorld' };
+    return {
+      mode: 'exactWorld',
+      completion: 'greedy',
+      completionDepthCap: 8,
+      topK: 4,
+    };
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const { mode, phase1, phase1CompletionsPerAction } = authored;
+  const { mode, completion, completionDepthCap, topK, phase1, phase1CompletionsPerAction } = authored;
 
   if (mode === undefined) {
     diagnostics.push({
@@ -709,6 +714,56 @@ function lowerPreviewConfig(
       severity: 'error',
       message: `Profile "${profileId}" preview.mode "${mode}" is invalid.`,
       suggestion: 'Use preview.mode exactWorld, tolerateStochastic, or disabled.',
+    });
+    return undefined;
+  }
+
+  if (
+    completion !== undefined
+    && (typeof completion !== 'string' || (completion !== 'greedy' && completion !== 'agentGuided'))
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_COMPLETION_INVALID,
+      path: `${path}.completion`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.completion must be greedy or agentGuided, got ${JSON.stringify(completion)}.`,
+      suggestion: 'Set preview.completion to greedy or agentGuided.',
+    });
+    return undefined;
+  }
+
+  if (
+    completionDepthCap !== undefined
+    && (
+      typeof completionDepthCap !== 'number'
+      || !Number.isSafeInteger(completionDepthCap)
+      || completionDepthCap <= 0
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_COMPLETION_DEPTH_CAP_INVALID,
+      path: `${path}.completionDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.completionDepthCap must be a positive safe integer, got ${String(completionDepthCap)}.`,
+      suggestion: 'Set preview.completionDepthCap to a positive integer such as 8.',
+    });
+    return undefined;
+  }
+
+  if (
+    topK !== undefined
+    && (
+      typeof topK !== 'number'
+      || !Number.isSafeInteger(topK)
+      || topK <= 0
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_TOPK_INVALID,
+      path: `${path}.topK`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.topK must be a positive safe integer, got ${String(topK)}.`,
+      suggestion: 'Set preview.topK to a positive integer such as 4.',
     });
     return undefined;
   }
@@ -756,6 +811,9 @@ function lowerPreviewConfig(
 
   return {
     mode,
+    completion: completion ?? 'greedy',
+    completionDepthCap: completionDepthCap ?? 8,
+    topK: topK ?? 4,
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
   };

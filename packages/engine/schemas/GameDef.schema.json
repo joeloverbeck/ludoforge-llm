@@ -3991,6 +3991,23 @@
                       "disabled"
                     ]
                   },
+                  "completion": {
+                    "type": "string",
+                    "enum": [
+                      "greedy",
+                      "agentGuided"
+                    ]
+                  },
+                  "completionDepthCap": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "topK": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
                   "phase1": {
                     "type": "boolean"
                   },

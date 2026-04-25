@@ -959,6 +959,9 @@ const CompiledAgentProfileSchema = z
     preview: z
       .object({
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
+        completion: z.enum(['greedy', 'agentGuided']).optional(),
+        completionDepthCap: z.number().int().positive().optional(),
+        topK: z.number().int().positive().optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })
@@ -1685,6 +1688,8 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('hidden'),
       z.literal('unresolved'),
       z.literal('failed'),
+      z.literal('depthCap'),
+      z.literal('noPreviewDecision'),
     ]).optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({

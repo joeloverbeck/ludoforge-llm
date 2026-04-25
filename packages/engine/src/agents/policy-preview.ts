@@ -2,12 +2,21 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { probeMoveViability } from '../kernel/apply-move.js';
+import { applyPublishedDecision } from '../kernel/microturn/apply.js';
+import { publishMicroturn } from '../kernel/microturn/publish.js';
+import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
 import { buildSeatResolutionIndex } from '../kernel/identity.js';
 import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
+import { selectChoiceOptionsByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
 import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
+  AgentPolicyCatalog,
+  AgentPreviewCompletionPolicy,
   AgentPreviewMode,
+  ChoicePendingChooseNRequest,
+  ChoicePendingChooseOneRequest,
+  CompiledAgentProfile,
   CompiledPreviewSurfaceRef,
   ExecutionOptions,
   GameDef,
@@ -27,6 +36,9 @@ import {
   type PolicyVictorySurface,
   type SurfaceResolutionContext,
 } from './policy-surface.js';
+import { buildCompletionChooseCallback, selectBestCompletionChooseOneValue } from './completion-guidance-choice.js';
+
+const K_PREVIEW_DEPTH = 8;
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -79,6 +91,12 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
   readonly previewMode: AgentPreviewMode;
+  readonly completionPolicy?: AgentPreviewCompletionPolicy;
+  readonly completionDepthCap?: number;
+  readonly agentGuidedDeps?: {
+    readonly catalog: AgentPolicyCatalog;
+    readonly profile: CompiledAgentProfile;
+  };
 }
 
 export interface PolicyPreviewRuntime {
@@ -95,7 +113,7 @@ export interface PolicyPreviewRuntime {
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
 }
 
-export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed';
+export type PolicyPreviewUnavailabilityReason = 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
 export type PolicyPreviewTraceOutcome = 'ready' | 'stochastic' | PolicyPreviewUnavailabilityReason;
 
 export type PolicyPreviewSurfaceResolution =
@@ -156,6 +174,38 @@ type PreviewCandidateClassification =
       readonly failureReason?: string;
     };
 
+type DriveResult =
+  | {
+      readonly kind: 'completed';
+      readonly state: GameState;
+      readonly depth: number;
+    }
+  | {
+      readonly kind: 'stochastic';
+      readonly state: GameState;
+      readonly depth: number;
+    }
+  | {
+      readonly kind: 'depthCap';
+      readonly state: GameState;
+      readonly depth: number;
+    }
+  | {
+      readonly kind: 'failed';
+      readonly reason: PolicyPreviewUnavailabilityReason;
+      readonly failureReason?: string;
+    };
+
+type ChooseOneMicroturn = MicroturnState & {
+  readonly kind: 'chooseOne';
+  readonly decisionContext: ChooseOneContext;
+};
+
+type ChooseNStepMicroturn = MicroturnState & {
+  readonly kind: 'chooseNStep';
+  readonly decisionContext: ChooseNStepContext;
+};
+
 const classifyPreviewCandidate = (
   def: GameDef,
   state: GameState,
@@ -170,13 +220,10 @@ const classifyPreviewCandidate = (
     };
   }
   const admissibility = classifyMoveAdmissibility(def, state, move, viability, runtime);
-  if (
-    admissibility.kind === 'inadmissible'
-    || (admissibility.kind === 'pendingAdmissible' && admissibility.continuation !== 'stochastic')
-  ) {
+  if (admissibility.kind === 'inadmissible') {
     return {
       kind: 'rejected',
-      failureReason: admissibility.kind === 'inadmissible' ? admissibility.reason : 'notDecisionComplete',
+      failureReason: admissibility.reason,
     };
   }
   return {
@@ -204,6 +251,185 @@ export function applyPreviewMove(
   return applyTrustedMove(def, state, move, options, runtime);
 }
 
+const createChooseOneRequest = (
+  microturn: ChooseOneMicroturn,
+): ChoicePendingChooseOneRequest => ({
+  kind: 'pending',
+  complete: false,
+  decisionKey: microturn.decisionContext.decisionKey,
+  name: String(microturn.decisionContext.decisionKey),
+  options: microturn.decisionContext.options,
+  targetKinds: [],
+  type: 'chooseOne',
+});
+
+const createChooseNRequest = (
+  microturn: ChooseNStepMicroturn,
+): ChoicePendingChooseNRequest => ({
+  kind: 'pending',
+  complete: false,
+  decisionKey: microturn.decisionContext.decisionKey,
+  name: String(microturn.decisionContext.decisionKey),
+  options: microturn.decisionContext.options,
+  targetKinds: [],
+  type: 'chooseN',
+  min: microturn.decisionContext.cardinality.min,
+  max: microturn.decisionContext.cardinality.max,
+  selected: microturn.decisionContext.selectedSoFar,
+  canConfirm: microturn.decisionContext.stepCommands.includes('confirm'),
+});
+
+const findMatchingChooseOneDecision = (
+  microturn: ChooseOneMicroturn,
+  value: unknown,
+): Decision | undefined =>
+  microturn.legalActions.find(
+    (decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> =>
+      decision.kind === 'chooseOne'
+      && decision.decisionKey === microturn.decisionContext.decisionKey
+      && JSON.stringify(decision.value) === JSON.stringify(value),
+  );
+
+const pickGreedyChooseOneDecision = (
+  microturn: ChooseOneMicroturn,
+): Decision | undefined => {
+  const request = createChooseOneRequest(microturn);
+  const selected = selectChoiceOptionsByLegalityPrecedence(request)[0]?.value;
+  return selected === undefined ? undefined : findMatchingChooseOneDecision(microturn, selected);
+};
+
+const pickGreedyChooseNStepDecision = (
+  microturn: ChooseNStepMicroturn,
+): Decision | undefined => {
+  const context = microturn.decisionContext;
+  if (
+    context.selectedSoFar.length >= context.cardinality.min
+    && context.stepCommands.includes('confirm')
+  ) {
+    return microturn.legalActions.find(
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep'
+        && decision.decisionKey === context.decisionKey
+        && decision.command === 'confirm',
+    );
+  }
+
+  const request = createChooseNRequest(microturn);
+  const selected = new Set<unknown>(context.selectedSoFar);
+  const nextValue = selectUniqueChoiceOptionValuesByLegalityPrecedence(request)
+    .find((value) => !selected.has(value));
+  if (nextValue === undefined) {
+    return undefined;
+  }
+  return microturn.legalActions.find(
+    (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+      decision.kind === 'chooseNStep'
+      && decision.decisionKey === context.decisionKey
+      && decision.command === 'add'
+      && decision.value === nextValue,
+  );
+};
+
+const pickAgentGuidedChooseOneDecision = (
+  state: GameState,
+  def: GameDef,
+  microturn: ChooseOneMicroturn,
+  input: CreatePolicyPreviewRuntimeInput,
+): Decision | undefined => {
+  const guided = input.agentGuidedDeps;
+  if (guided === undefined) {
+    return undefined;
+  }
+  const request = createChooseOneRequest(microturn);
+  const selected = selectBestCompletionChooseOneValue({
+    state,
+    def,
+    catalog: guided.catalog,
+    playerId: input.playerId,
+    seatId: input.seatId,
+    profile: guided.profile,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+  }, request, { requirePositiveScore: false })?.value;
+  return selected === undefined ? undefined : findMatchingChooseOneDecision(microturn, selected);
+};
+
+const pickAgentGuidedChooseNStepDecision = (
+  state: GameState,
+  def: GameDef,
+  microturn: ChooseNStepMicroturn,
+  input: CreatePolicyPreviewRuntimeInput,
+): Decision | undefined => {
+  const guided = input.agentGuidedDeps;
+  if (guided === undefined) {
+    return undefined;
+  }
+  const choose = buildCompletionChooseCallback({
+    state,
+    def,
+    catalog: guided.catalog,
+    playerId: input.playerId,
+    seatId: input.seatId,
+    profile: guided.profile,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+  });
+  if (choose === undefined) {
+    return undefined;
+  }
+
+  const preferredSelection = choose(createChooseNRequest(microturn));
+  if (preferredSelection === undefined) {
+    return undefined;
+  }
+  const preferredValues = Array.isArray(preferredSelection)
+    ? preferredSelection
+    : [preferredSelection];
+  const selected = microturn.decisionContext.selectedSoFar;
+  const nextAdd = preferredValues.find((value) => !selected.some((entry) => entry === value));
+  if (nextAdd !== undefined) {
+    return microturn.legalActions.find(
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep'
+        && decision.decisionKey === microturn.decisionContext.decisionKey
+        && decision.command === 'add'
+        && decision.value === nextAdd,
+    );
+  }
+  if (
+    preferredValues.length === selected.length
+    && preferredValues.every((value) => selected.some((entry) => entry === value))
+  ) {
+    return microturn.legalActions.find(
+      (decision): decision is Extract<Decision, { readonly kind: 'chooseNStep' }> =>
+        decision.kind === 'chooseNStep'
+        && decision.decisionKey === microturn.decisionContext.decisionKey
+        && decision.command === 'confirm',
+    );
+  }
+  return undefined;
+};
+
+const pickInnerDecision = (
+  state: GameState,
+  def: GameDef,
+  microturn: ReturnType<typeof publishMicroturn>,
+  policy: AgentPreviewCompletionPolicy,
+  input: CreatePolicyPreviewRuntimeInput,
+): Decision | undefined => {
+  if (microturn.kind === 'chooseOne') {
+    const chooseOne = microturn as ChooseOneMicroturn;
+    return policy === 'agentGuided'
+      ? pickAgentGuidedChooseOneDecision(state, def, chooseOne, input) ?? pickGreedyChooseOneDecision(chooseOne)
+      : pickGreedyChooseOneDecision(chooseOne);
+  }
+  if (microturn.kind === 'chooseNStep') {
+    const chooseN = microturn as ChooseNStepMicroturn;
+    return policy === 'agentGuided'
+      ? pickAgentGuidedChooseNStepDecision(state, def, chooseN, input) ?? pickGreedyChooseNStepDecision(chooseN)
+      : pickGreedyChooseNStepDecision(chooseN);
+  }
+  return undefined;
+};
+
 export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInput): PolicyPreviewRuntime {
   const deps = {
     ...defaultDependencies,
@@ -221,6 +447,8 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   const cache = new Map<string, PreviewOutcome>();
   let disposed = false;
   const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const completionPolicy = input.completionPolicy ?? 'greedy';
+  const completionDepthCap = input.completionDepthCap ?? K_PREVIEW_DEPTH;
   const surfaceContext: SurfaceResolutionContext = {
     def: input.def,
     seatResolutionIndex,
@@ -376,9 +604,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     const candidateActionId = candidate.actionId ?? String(candidate.move.actionId);
     const representativeTrustedMove = input.phase1ActionPreviewIndex?.get(candidateActionId)?.trustedMove;
     const outcome = trustedMove !== undefined
-      ? tryApplyPreview(trustedMove)
+      ? finalizePreview(trustedMove, driveSyntheticCompletion(trustedMove))
       : representativeTrustedMove !== undefined
-        ? tryApplyPreview(representativeTrustedMove)
+        ? finalizePreview(representativeTrustedMove, driveSyntheticCompletion(representativeTrustedMove))
         : classifyPreviewOutcome(
           (deps.classifyPlayableMoveCandidate ?? deps.classifyCandidate)(
             input.def,
@@ -400,51 +628,105 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       };
     }
 
-    return tryApplyPreview(classification.move);
+    return finalizePreview(classification.move, driveSyntheticCompletion(classification.move));
   }
 
-  function tryApplyPreview(trustedMove: TrustedExecutableMove): PreviewOutcome {
+  function driveSyntheticCompletion(trustedMove: TrustedExecutableMove): DriveResult {
     if (trustedMove.sourceStateHash !== input.state.stateHash) {
       return {
-        kind: 'unknown',
+        kind: 'failed',
         reason: 'failed',
         failureReason: 'sourceStateHashMismatch',
       };
     }
 
     try {
-      const previewState = deps.applyMove(
-        input.def,
-        input.state,
-        trustedMove,
-        { advanceToDecisionPoint: false },
-        input.runtime,
-      ).state;
-      const eventRngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
-
-      if (eventRngDiverged && input.previewMode === 'exactWorld') {
-        return { kind: 'unknown', reason: 'random' };
+      const origin = publishMicroturn(input.def, input.state, input.runtime);
+      let state: GameState;
+      try {
+        state = deps.applyMove(
+          input.def,
+          input.state,
+          trustedMove,
+          { advanceToDecisionPoint: true },
+          input.runtime,
+        ).state;
+      } catch {
+        const actionDecision: Decision = {
+          kind: 'actionSelection',
+          actionId: trustedMove.move.actionId,
+          move: trustedMove.move,
+        };
+        state = applyPublishedDecision(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
       }
+      let depth = 1;
 
-      const rngDiverged = !rngStatesEqual(previewState.rng, input.state.rng);
-      const observation = deps.derivePlayerObservation(input.def, previewState, input.playerId);
-      return {
-        kind: rngDiverged ? 'stochastic' : 'ready',
-        state: previewState,
-        trustedMove,
-        hiddenSamplingZones: observation.hiddenSamplingZones,
-        metricCache: new Map<string, number>(),
-        victorySurface: null,
-        grantedOperationResolved: false,
-        grantedOperation: undefined,
-      };
+      while (true) {
+        const microturn = publishMicroturn(input.def, state, input.runtime);
+        if (
+          microturn.kind === 'actionSelection'
+          || microturn.kind === 'outcomeGrantResolve'
+          || microturn.kind === 'turnRetirement'
+          || microturn.seatId !== origin.seatId
+          || microturn.turnId !== origin.turnId
+        ) {
+          return { kind: 'completed', state, depth };
+        }
+        if (microturn.kind === 'stochasticResolve') {
+          return { kind: 'stochastic', state, depth };
+        }
+        if (depth >= completionDepthCap) {
+          return { kind: 'depthCap', state, depth };
+        }
+
+        const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
+        if (decision === undefined) {
+          return { kind: 'failed', reason: 'noPreviewDecision', failureReason: 'noPreviewDecision' };
+        }
+        state = applyPublishedDecision(input.def, state, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
+        depth += 1;
+      }
     } catch (error) {
       return {
-        kind: 'unknown',
+        kind: 'failed',
         reason: 'failed',
         failureReason: truncatePreviewFailureReason(error),
       };
     }
+  }
+
+  function finalizePreview(trustedMove: TrustedExecutableMove, result: DriveResult): PreviewOutcome {
+    if (result.kind === 'failed') {
+      return {
+        kind: 'unknown',
+        reason: result.reason,
+        ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
+      };
+    }
+    if (result.kind === 'depthCap') {
+      return { kind: 'unknown', reason: 'depthCap', failureReason: 'depthCap' };
+    }
+
+    if (result.kind === 'stochastic' && input.previewMode === 'exactWorld') {
+      return { kind: 'unknown', reason: 'random' };
+    }
+
+    const rngDiverged = !rngStatesEqual(result.state.rng, input.state.rng);
+    if (rngDiverged && input.previewMode === 'exactWorld') {
+      return { kind: 'unknown', reason: 'random' };
+    }
+
+    const observation = deps.derivePlayerObservation(input.def, result.state, input.playerId);
+    return {
+      kind: result.kind === 'stochastic' || rngDiverged ? 'stochastic' : 'ready',
+      state: result.state,
+      trustedMove,
+      hiddenSamplingZones: observation.hiddenSamplingZones,
+      metricCache: new Map<string, number>(),
+      victorySurface: null,
+      grantedOperationResolved: false,
+      grantedOperation: undefined,
+    };
   }
 
   function getGrantedOperation(

@@ -710,9 +710,13 @@ export interface CompiledAgentLibraryIndex {
 }
 
 export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
+export type AgentPreviewCompletionPolicy = 'greedy' | 'agentGuided';
 
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
+  readonly completion?: AgentPreviewCompletionPolicy;
+  readonly completionDepthCap?: number;
+  readonly topK?: number;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }
@@ -1555,7 +1559,7 @@ export interface AgentDecisionScoreContribution {
 
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
-  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
 }
 
 export interface PolicyCandidateDecisionTrace {
@@ -1566,7 +1570,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
-  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed';
+  readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision';
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;

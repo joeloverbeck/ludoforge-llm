@@ -11,7 +11,7 @@
 
 **Source**:
 - Campaign log `campaigns/fitl-arvn-agent-evolution/musings.md` (entries `exp-001` through `exp-006`, 2026-04-25): seven experiments demonstrating that without working preview, ARVN policy-quality is bounded by action-type ranking + completion-scope option-equality tricks. exp-002, exp-004, and exp-005 each regressed because the agent had no candidate-level signal to justify the trade against the dominant Govern action.
-- Trace evidence in `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json`: 224 of 230 ARVN evolved-seat decisions tied at score 0; every action-selection candidate reported `previewOutcome: "unresolved"`, `previewFailureReason: "notDecisionComplete"`.
+- Trace evidence in `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json`: `decisionBreakdown.tiedDecisions = 173` out of `totalDecisions = 196` ARVN evolved-seat decisions tied at score 0 (~88%); every action-selection candidate reported `previewOutcome: "unresolved"`, `previewFailureReason: "notDecisionComplete"`. (`decisionBreakdown` is a campaign-tournament output computed by `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs`, not an engine trace field.)
 - Code path: `packages/engine/src/agents/policy-preview.ts:159-186` (`classifyPreviewCandidate` rejects every `pendingAdmissible` action-selection); `packages/engine/src/agents/policy-preview.ts:406-448` (`tryApplyPreview` calls `applyMove` with `advanceToDecisionPoint: false`, so even non-rejected candidates land at the very first inner microturn with no params bound).
 - DSL cookbook `docs/agent-dsl-cookbook.md:101-125` ("Preview remains useful when it stays one-step and bounded") — this spec converts the documented aspiration into a working contract.
 
@@ -19,7 +19,7 @@
 
 **Original framing.** Spec 140 made every kernel-published decision atomic. A consequence the original spec-140 envelope did not call out: under the new contract, an action-selection microturn for any non-trivial action (Govern, March, Train, Sweep, Assault, etc.) is *never* `viability.complete` at probe time, because it always has at least one inner `chooseN` / `chooseOne` to follow. The agent-side preview helper in `policy-preview.ts` was carried forward from the pre-microturn world, where many Phase-1 action templates *were* complete after `applyMove`. The classification still rejects anything `pendingAdmissible`, which under microturns is essentially all action-selection candidates.
 
-The downstream effect is that `preferProjectedSelfMargin` — declared in every shipped FITL profile (us-baseline, arvn-baseline, arvn-evolved, vc-baseline, nva-baseline) and weighted as the largest single signal in arvn-baseline (`projectedMarginWeight=8`) — silently degenerates. `preview.victory.currentMargin.self` resolves as `unresolved`; the canonical `coalesce` falls through to `feature.selfMargin` (the pre-move margin), which is identical across every non-terminal candidate at the same action-selection microturn. Each candidate then scores the same margin contribution and the entire scoring reduces to action-tag ranking + tiebreakers.
+The downstream effect is that `preferProjectedSelfMargin` — declared in four of five shipped FITL profiles (us-baseline, arvn-baseline, arvn-evolved, nva-baseline; vc-baseline declares the `projectedMarginWeight: 5` param but does not list the consideration in its `use.considerations`, so the param is dead config) and weighted as the largest single signal in arvn-baseline (`projectedMarginWeight=8`) — silently degenerates. `preview.victory.currentMargin.self` resolves as `unresolved`; the canonical `coalesce` falls through to `feature.selfMargin` (the pre-move margin), which is identical across every non-terminal candidate at the same action-selection microturn. Each candidate then scores the same margin contribution and the entire scoring reduces to action-tag ranking + tiebreakers.
 
 **Motivation.** Two converging needs drive this spec:
 
@@ -77,7 +77,7 @@ Foundations alignment: this spec adds no new kernel surface, no new GameSpecDoc 
 
 ### The defect class
 
-Every shipped FITL policy profile lists `preferProjectedSelfMargin` and assigns it a weight (8 in arvn-baseline, 5 in vc-baseline, 1 elsewhere). The shape of `preferProjectedSelfMargin`, in YAML:
+Four of five shipped FITL policy profiles list `preferProjectedSelfMargin` in their `use.considerations` and assign it a weight: us-baseline=1, arvn-baseline=8, arvn-evolved=3, nva-baseline=1. The vc-baseline profile declares `projectedMarginWeight: 5` as a param but does not include the consideration in `use.considerations`, so the param is currently dead config. The shape of `preferProjectedSelfMargin`, in YAML:
 
 ```yaml
 preferProjectedSelfMargin:
@@ -101,7 +101,7 @@ projectedSelfMargin:
 
 Under the post-Spec-140 kernel, every action-selection candidate at a non-trivial microturn (govern, train, march, rally, ...) returns `previewOutcome: "unresolved"` because `classifyPreviewCandidate` rejects `pendingAdmissible` decisions. The `coalesce` falls through to `feature.selfMargin`, which evaluates against the *pre-move* state and is therefore the same scalar for every candidate. The whole consideration contributes a constant offset, not a discriminator.
 
-In the ARVN campaign run, this manifested as 224 of 230 evolved-seat decisions reported `tiedDecisions` in `decisionBreakdown` — over 97% of decisions where the agent could not differentiate candidates. Action-tag considerations, completion-scope considerations, and `stableMoveKey` tiebreakers became the only working signals. Every experiment that tried to introduce a meaningful trade-off against the locally dominant action type regressed, because the agent had no nuanced state-projection signal to justify the trade.
+In the ARVN campaign run, this manifested as 173 of 196 evolved-seat decisions reported as tied in `decisionBreakdown.tiedDecisions` — about 88% of decisions where the agent could not differentiate candidates. Action-tag considerations, completion-scope considerations, and `stableMoveKey` tiebreakers became the only working signals. Every experiment that tried to introduce a meaningful trade-off against the locally dominant action type regressed, because the agent had no nuanced state-projection signal to justify the trade.
 
 ### Why the existing preview machinery cannot just "stop rejecting"
 
@@ -115,7 +115,7 @@ The three deferred spec-140 patches that all point at this code path:
 
 1. `policy-preview.ts:172-180` — the rejection itself.
 2. `policy-preview.ts:406-448` — `tryApplyPreview`'s `advanceToDecisionPoint: false` call.
-3. `cnl/compile-agents.ts` — the documented "retired for new authoring" status of `decision.*` / `option.value` refs without a recommended replacement for projecting candidate state.
+3. `docs/agent-dsl-cookbook.md:127-144` ("Retired For New Production Profiles") — the documented retirement of `decision.*` / `option.value` refs (and `scopes: [completion]`, `candidate.param.*`) without a recommended replacement for projecting candidate state. The implementation of those refs still lives at `cnl/compile-agents.ts:1873-1888` (`resolveCompletionRuntimeRef`), but the authoring guidance is in the cookbook.
 
 A single bounded synthetic-completion driver fixes all three: rejection #1 becomes "drive the candidate through its compound turn," `tryApplyPreview` #2 is replaced by repeated `applyPublishedDecision` calls that *do* advance, and the documentation in #3 gains a positive recommendation ("use `preview.*` refs; the runtime resolves them via bounded synthetic completion") instead of being a list of don'ts.
 
@@ -137,7 +137,7 @@ export interface CompiledAgentPreviewConfig {
 }
 ```
 
-Phase-1 fields are retained as deprecated-but-tolerated knobs for one release per F#14 ("migrate all owned artifacts in the same change" is satisfied by this spec's I1 audit; nothing in-tree depends on Phase-1 anymore).
+Phase-1 fields remain as currently-supported config. Phase-1 plumbing is still wired through `policy-preview.ts:357,377` (consults `phase1ActionPreviewIndex`), `policy-evaluation-core.ts:72,243`, `policy-runtime.ts:103,124`, and the trace fields `phase1Score` / `phase1ActionRanking` in `types-core.ts:1625-1627`. No shipped profile currently activates Phase-1, but the infrastructure is intact. Phase-1 deletion is out of scope here and would warrant its own spec; this spec leaves the Phase-1 surface unchanged.
 
 ### D2. New constant
 
@@ -175,7 +175,9 @@ function driveSyntheticCompletion(
 Driver loop (pseudocode):
 
 ```
+origin = publishMicroturn(def, startState, runtime)
 state = applyMove(def, startState, trustedMove, { advanceToDecisionPoint: true }, runtime).state
+  or, when the trusted move is an incomplete action header, applyPublishedDecision(def, startState, origin, actionSelectionDecision, { advanceToDecisionPoint: true }, runtime).state
 depth = 1
 loop:
   microturn = publishMicroturn(def, state, runtime)
@@ -242,6 +244,8 @@ function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
 }
 ```
 
+The first driver step may preserve the existing `applyMove` dependency hook for complete or already-bindable moves, but incomplete action-selection headers must advance through the kernel-published `actionSelection` microturn with `applyPublishedDecision`. That is the live one-rules-protocol seam for post-Spec-140 action-selection candidates.
+
 `finalizePreview` translates `DriveResult` into `PreviewOutcome`:
 
 - `completed` → `{ kind: 'ready' }` if rng unchanged, `{ kind: 'stochastic' }` if rng diverged but `previewMode === 'tolerateStochastic'`, otherwise `{ kind: 'unknown', reason: 'random' }`. Uses the existing `rngStatesEqual` utility for parity with current `tryApplyPreview` logic.
@@ -260,7 +264,7 @@ The existing `cache: Map<string, PreviewOutcome>` keyed by `candidate.stableMove
 To honor the user constraint that per-turn cost stays bounded (target: under 5% wall-time overhead on representative campaigns), introduce a *cost gate* in `policy-evaluation-core.ts`'s candidate scoring loop:
 
 - Compute the move-scope-only score for every candidate (the considerations that do not depend on `preview.*` refs).
-- Identify the top `K_PREVIEW_TOPK` candidates by move-score (default 4). Justification: ARVN traces show a typical 8–12 action-selection candidates per microturn; previewing the top 4 captures the realistic competition for the win. Lower-ranked candidates would need a preview-derived swing exceeding the move-score gap, which observation says is rare; if regression evidence shows this default is too tight, the cap is tunable per profile.
+- Identify the top `K_PREVIEW_TOPK` candidates by move-score (default 4). Justification: ARVN traces show a typical 8–12 action-selection candidates per microturn; previewing the top 4 captures the realistic competition for the win. Lower-ranked candidates would need a preview-derived swing exceeding the move-score gap, which observation says is rare; if regression evidence shows this default is too tight, the cap is tunable per profile. The 8–12 empirical bound should be re-verifiable as the campaign corpus evolves; the I6 measurement harness lands a small derivation script alongside the perf benchmark so future authors can re-check the floor.
 - Drive synthetic completion only for those top K candidates. Lower-ranked candidates' `previewOutcome` is set to `{ kind: 'unknown', reason: 'gated' }` and `coalesce` falls through naturally. They still participate in scoring, just without the preview-derived discriminator.
 
 This cap is implemented in the policy-evaluation pass (not in `policy-preview.ts`), so it is composable with the existing `disabled` mode (no driver invoked at all) and with the existing `tolerateStochastic` mode (stochastic outcomes admitted).
@@ -320,6 +324,7 @@ This spec is implementation-ready. Tickets follow a small linear chain.
 - `packages/engine/src/agents/policy-preview.ts`: add `driveSyntheticCompletion`, `pickInnerDecision`, `finalizePreview`. Replace the rejection branch in `classifyPreviewCandidate` for `pendingAdmissible { decision | decisionSet }` so it returns `playable`. Update `getPreviewOutcome` per D5.
 - `packages/engine/src/kernel/types-core.ts`: add `AgentPreviewCompletionPolicy`, extend `CompiledAgentPreviewConfig`. Update branded JSON schema if the config shape is exposed (it is, per `packages/engine/schemas/`).
 - `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/validate-agents.ts`: accept `preview.completion` (default `greedy`), `preview.completionDepthCap` (default `K_PREVIEW_DEPTH`), `preview.topK` (default 4). Static type/range checks; reject negative or non-integer values per F#12.
+- `docs/agent-dsl-cookbook.md`: in the "Preview Refs" section (lines 100-125), add the positive recommendation that `preview.*` refs now resolve via the bounded synthetic-completion driver for action-selection candidates by default, replacing the "list of don'ts" framing for new-profile authors. Cross-link the "Retired For New Production Profiles" section so readers understand `decision.*` / `option.value` are not the recommended replacement.
 - Ticket: `145PREVCOMP-001`.
 
 ### I2. Policy-evaluation top-K gate
@@ -335,13 +340,15 @@ This spec is implementation-ready. Tickets follow a small linear chain.
 
 ### I4. Cross-game conformance test + agnosticism proof
 
-- New test under `packages/engine/test/integration/agents/`: drive the same `pickInnerDecision` greedy policy against (a) FITL Govern, (b) FITL March, (c) Texas Hold'em raise. Assert each retires within K_PREVIEW_DEPTH and produces a non-pre-move-equal `selfMargin`. This is the F#1 / F#19 conformance witness.
-- Add a determinism assertion: run the driver twice on the same inputs; assert byte-identical `previewState.stateHash` and `depth`.
+- New test under `packages/engine/test/integration/agents/`: drive the same `pickInnerDecision` greedy policy against (a) FITL Govern, (b) FITL March, (c) FITL Train, (d) FITL Sweep, (e) FITL Assault, and (f) Texas Hold'em raise. Assert each production action-selection witness retires within K_PREVIEW_DEPTH and produces a non-pre-move-equal `selfMargin`. Assert FITL March returns `depthCap` when `completionDepthCap` is lowered to 2. This is the F#1 / F#19 conformance witness and the production-backed boundedness matrix split out of I1 after `145PREVCOMP-001` landed only synthetic driver-internal tests.
+- Add a determinism assertion under **both** `greedy` and `agentGuided` pickers: run the driver twice on the same inputs for each policy and assert byte-identical `previewState.stateHash` and `depth`. The per-policy split matters because `agentGuided` invokes considerations evaluation, which is a separate code path from greedy precedence selection — both are claimed deterministic in D8 and both must be witnessed.
 - Ticket: `145PREVCOMP-004`.
 
 ### I5. Trace and diagnostics
 
 - Extend `policy-diagnostics.ts` so verbose policy traces emit `previewDriveDepth`, `previewCompletionPolicy`, and the new `'depthCap'` / `'gated'` reason codes. The audit of trace fixtures is part of I3's re-bless.
+- Add `previewGatedCount` to per-microturn diagnostics (count of candidates suppressed by D7's top-K gate at this microturn). This is the primary observability signal for over-suppression risk called out in the Risks section; without it, "preview.topK is tunable" is not actionable because tuners cannot see when the gate is biting.
+- Add an optional `previewGatedTopFlipDetected` flag emitted when a sampled gated candidate, after a follow-up cached preview-score evaluation, would have outscored the chosen candidate. Optional/sampled because the on-the-spot computation is exactly the cost the gate exists to avoid; emit only when the underlying preview-runtime cache already holds the gated candidate's outcome (e.g., after subsequent passes within the same evaluation).
 - Trace lessons file `campaigns/lessons-global.jsonl` adds an entry describing the post-145 expected `previewOutcome: 'ready'` rate as a smoke signal for future campaigns.
 - Ticket: `145PREVCOMP-005`.
 
@@ -355,7 +362,7 @@ This spec is implementation-ready. Tickets follow a small linear chain.
 Per F#16, every architectural property is proven by a test, not assumed.
 
 - **Driver determinism**: I4 (byte-identical state hash on repeated drive).
-- **Boundedness**: I1 unit tests assert `depth <= depthCap` always; setting depthCap=2 forces `depthCap` outcome on FITL March; setting depthCap=8 admits Govern, March, Train, Sweep, Assault completion.
+- **Boundedness**: I1 unit tests assert `depth <= depthCap` on synthetic driver-internal fixtures; I4 owns the production FITL matrix where depthCap=2 forces `depthCap` on March and depthCap=8 admits Govern, March, Train, Sweep, Assault completion.
 - **Same-seat fence**: unit test drives a candidate that grants a free operation to another seat (FITL event card grant) and asserts the driver stops at the seat boundary.
 - **Stochastic surfacing**: unit test drives a candidate whose inner microturn is a `stochasticResolve`; asserts `kind: 'stochastic'` outcome.
 - **Cache hit determinism**: unit test calls `getPreviewOutcome` twice on the same candidate within one preview-runtime instance; asserts second call hits the cache (no kernel calls counted) and returns the same outcome.
@@ -393,3 +400,14 @@ Per F#14, no compatibility shim. The change ships in a single PR:
 - **Synthetic completion**: a deterministic mechanical resolution of a candidate's inner microturns for the purpose of preview. Synthetic because no human or full agent is consulted; mechanical because the picker is a fixed function.
 - **Preview outcome**: the post-completion `GameState` plus a kind tag (`ready`, `stochastic`, `unknown`). Consumed by `preview.*` ref evaluators.
 - **Top-K gate**: the cost-control mechanism in policy-evaluation that limits which candidates receive a synthetic completion.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-04-25:
+
+- [`archive/tickets/145PREVCOMP-001.md`](../archive/tickets/145PREVCOMP-001.md) — Bounded synthetic-completion driver and profile config (covers I1)
+- [`tickets/145PREVCOMP-002.md`](../tickets/145PREVCOMP-002.md) — Policy-evaluation top-K preview gate (covers I2)
+- [`tickets/145PREVCOMP-003.md`](../tickets/145PREVCOMP-003.md) — Profile audit and golden re-bless (covers I3)
+- [`tickets/145PREVCOMP-004.md`](../tickets/145PREVCOMP-004.md) — Cross-game driver conformance and per-policy determinism (covers I4)
+- [`tickets/145PREVCOMP-005.md`](../tickets/145PREVCOMP-005.md) — Trace and diagnostics for driver and gate (covers I5)
+- [`tickets/145PREVCOMP-006.md`](../tickets/145PREVCOMP-006.md) — Performance harness and topK derivation script (covers I6)

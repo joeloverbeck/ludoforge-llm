@@ -3800,6 +3800,14 @@
                         {
                           "type": "string",
                           "const": "failed"
+                        },
+                        {
+                          "type": "string",
+                          "const": "depthCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "noPreviewDecision"
                         }
                       ]
                     },

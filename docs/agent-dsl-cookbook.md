@@ -99,7 +99,7 @@ For new production authoring, prefer `candidate.tag.*` and state/preview-derived
 
 ### Preview Refs
 
-Preview remains useful when it stays one-step and bounded.
+Preview remains useful when it stays bounded. Action-selection candidates now use a bounded synthetic-completion driver by default, so `preview.*` refs project through same-seat inner microturns without reviving retired `decision.*`, `option.value`, or `candidate.param.*` authoring.
 
 | Ref | Meaning |
 | --- | --- |

@@ -1,6 +1,6 @@
 # 145PREVCOMP-007: Post-preview ARVN profile-quality audit
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None expected — profile-quality audit and possible profile config edit
@@ -15,6 +15,51 @@ Exploratory evidence from `145PREVCOMP-003`:
 - `pnpm -F @ludoforge/engine test:policy-profile-quality` fails immediately on `dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js`; the reporter classifies it as `convergence-witness` / `profile-level quality witness`, not an architectural-invariant failure.
 - `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --max-turns 50 --trace-all false` reports seed 1000 as terminal with ARVN margin 36 and `compositeScore=46`.
 - The matching two-seed probe with `--seeds 2 --max-turns 50` timed out after recording seed 1000, so seed 1001 and `agentGuided` comparison remain unmeasured.
+
+## Outcome (2026-04-25)
+
+Completed the post-preview ARVN profile-quality audit and re-blessed the stale convergence witnesses surfaced by the current profile-quality lane.
+
+### Audit metrics
+
+Current FITL ARVN campaign harness, seeds 1000 and 1001, `--max-turns 50`, `--trace-all false`:
+
+| ARVN seat profile | completion policy | compositeScore | avgMargin | winRate | seed 1000 | seed 1001 | decisionBreakdown |
+| --- | --- | ---: | ---: | ---: | --- | --- | --- |
+| `arvn-evolved` | default `greedy` | 29 | 24 | 0.5 | terminal, ARVN margin 36, win | terminal, ARVN margin 12, loss | strategic 159, tactical 21, tied 166, total 180 |
+| `arvn-evolved` | `agentGuided` override | 29 | 24 | 0.5 | terminal, ARVN margin 36, win | terminal, ARVN margin 12, loss | strategic 159, tactical 21, tied 166, total 180 |
+| `arvn-baseline` | default `greedy` | 28 | 23 | 0.5 | terminal, ARVN margin 34, win | terminal, ARVN margin 12, loss | strategic 142, tactical 21, tied 151.5, total 163 |
+| `arvn-baseline` | `agentGuided` override | 28 | 23 | 0.5 | terminal, ARVN margin 34, win | terminal, ARVN margin 12, loss | strategic 142, tactical 21, tied 151.5, total 163 |
+
+Decision: do not edit `data/games/fire-in-the-lake/92-agents.md`. `agentGuided` shows no measurable benefit for either ARVN profile on the ticket-owned seeds.
+
+Other shipped-profile coverage:
+
+- `us-baseline`, `arvn-baseline`, `nva-baseline`, and `vc-baseline` are covered together by `fitl-variant-all-baselines-convergence.test.ts`, now green on seeds 1020, 1049, and 1054.
+- `arvn-evolved` is covered by `fitl-variant-arvn-evolved-convergence.test.ts`, `fitl-variant-arvn-evolved-seed-1000-draw-space-convergence.test.ts`, and `fitl-variant-campaign-seat-mapping-seed-1000-convergence.test.ts`, all green in the package policy-quality wrapper.
+- Texas Hold'em baseline has no meaningful ARVN-margin/composite metric in the FITL ARVN campaign harness. It remains covered as a cross-game policy-profile smoke through the generated `texas-policy-summary.golden.json` fixture and existing Texas cross-game/integration lanes, but there is no comparable Spec 145 ARVN campaign score to record here.
+- `vc-baseline projectedMarginWeight: 5` remains dead-but-harmless: `vc-baseline` still does not consume `preferProjectedSelfMargin`, and the audit found no evidence supporting a direct cleanup in this ticket.
+
+### Witness decisions
+
+- Re-blessed `packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/` through its checked-in `regenerate.mjs` script. The prior `fitl-march-dead-end-recovery.test.ts` failure was a stale GameDef-hash / decision-prefix fixture, not a kernel regression. The regenerated convergence witness now passes and still proves terminal recovery plus deterministic replay.
+- Re-blessed `fitl-variant-all-baselines-convergence.test.ts` seed 1054 from `noLegalMoves` to `terminal`. The direct run showed terminal completion under current profiles; this is a convergence-witness trajectory improvement, not an architectural invariant failure.
+- Increased the policy-profile-quality wrapper default per-file timeout from 90 seconds to 10 minutes. Current Spec 145 profile-quality witnesses legitimately take 2-9 minutes per file; the old timeout killed a passing march witness before it could complete.
+- Added repeatable audit controls to `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs`: `--evolved-profile PROFILE` and `--profile-completion PROFILE=greedy|agentGuided`. These alter only the in-memory compiled policy catalog for measurement and do not change production profile YAML.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --max-turns 50 --trace-all false`
+3. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 1 --max-turns 50 --trace-all false --profile-completion arvn-evolved=agentGuided`
+4. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 2 --max-turns 50 --trace-all false`
+5. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 2 --max-turns 50 --trace-all false --profile-completion arvn-evolved=agentGuided`
+6. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 2 --max-turns 50 --trace-all false --evolved-profile arvn-baseline`
+7. `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 2 --max-turns 50 --trace-all false --evolved-profile arvn-baseline --profile-completion arvn-baseline=agentGuided`
+8. `node packages/engine/test/fixtures/spec-144-probe-recovery/seed-1001-nva-march-dead-end/regenerate.mjs`
+9. `pnpm -F @ludoforge/engine exec node --test --test-reporter=./scripts/test-class-reporter.mjs --test-reporter-destination=stdout dist/test/policy-profile-quality/fitl-march-dead-end-recovery.test.js`
+10. `pnpm -F @ludoforge/engine exec node --test --test-reporter=./scripts/test-class-reporter.mjs --test-reporter-destination=stdout dist/test/policy-profile-quality/fitl-variant-all-baselines-convergence.test.js`
+11. `pnpm -F @ludoforge/engine test:policy-profile-quality` — 8/8 files passed.
 
 ## Assumption Reassessment (2026-04-25)
 

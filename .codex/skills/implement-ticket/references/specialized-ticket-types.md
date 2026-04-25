@@ -22,6 +22,10 @@ For tickets whose primary deliverable is a measured decision:
 5. Distinguish runtime/code changes from repository-owned deliverables (ticket outcomes, archived specs, dependency rewrites, status updates).
 6. If a diagnostic report has no named output file, prefer `reports/` over ephemeral scratch files.
 
+When an audit compares profile, policy, feature-flag, or config variants, prefer a repeatable harness-level or in-memory override over temporary production-data edits until the measured verdict is known. The override must be explicit in the command and output/report, and any production config edit should happen only after the evidence shows a direct benefit. This preserves F#14 by avoiding compatibility aliases or speculative YAML churn while still making the A/B comparison reproducible.
+
+When an audit matrix spans surfaces that do not share a meaningful metric, do not force a fake scalar comparison. Classify each row as `comparable metric`, `covered by existing smoke`, or `no meaningful comparable metric`, and record the rationale in the ticket outcome/report. Use this especially when a broad acceptance criterion names multiple games, profiles, packages, or corpora but only one subset participates in the measured harness.
+
 ## Investigation Tickets
 
 For tickets whose primary deliverable is a verdict rather than a production code change:

@@ -35,6 +35,14 @@ When the raw child command for a witness passes but the **wrapper script or pack
 3. classify whether the remaining failure lives in the child witness, the runner wrapper, or the package script contract
 4. if the wrapper alone is the failing seam and the ticket-owned metric depends on that wrapper's process boundary, treat the wrapper/package script as part of the active ticket's owned proof surface before more threshold tuning
 
+When a wrapper times out a focused witness that passes directly, calibrate the wrapper before reworking the witness:
+
+1. direct-run the first timed-out file or child command and record whether it passes plus its observed duration
+2. compare that duration to the wrapper's per-file or per-child timeout
+3. update the wrapper timeout only when the direct witness is healthy, the runtime is reasonable for the owned lane, and the wrapper is the authoritative ticket-named proof surface
+4. rerun the wrapper after the timeout change; do not claim the wrapper lane green from the direct child proof alone
+5. record the calibration rationale in the active ticket outcome/report when it changes a named acceptance command
+
 ## Silent-But-Healthy Lanes
 
 When a focused proof lane is expected to be valid but runs silently for a long time in the current environment, do not immediately classify it as hung or non-final:
@@ -76,6 +84,12 @@ After any acceptance or proof lane goes green, preserve that result only while t
 3. only treat the rerun set as the final proof record; earlier green runs become historical diagnostics, not closeout evidence
 
 Active ticket/spec/report metadata can be proof-affecting even when no runtime code changes. Edits to `Status`, `Outcome`, `Files to Touch`, `Acceptance Criteria`, command substitutions, or final proof ledgers after a proof lane passes require an explicit invalidation decision: either rerun the affected lane, or record why the edit is purely clerical and does not alter the acceptance story. Do not silently append metadata edits after broad proof and still cite the earlier lane as final.
+
+For expensive evidence or measurement tickets, distinguish **transcription edits** from **acceptance-story edits** before rerunning long lanes:
+
+1. if the post-proof edit only records already-run metrics, command outputs, durations, or a verdict already proven by the final lane, reread the edited artifact for consistency and run cheap hygiene checks such as `git diff --check`; a full empirical rerun is not required solely because the evidence was transcribed after the lane
+2. if the edit changes status, metric values, thresholds, acceptance boundaries, command semantics, touched-file ownership, or follow-up/dependency classification, rerun the narrowest affected proof lane before citing final acceptance
+3. if the distinction is unclear, treat the edit as acceptance-story affecting and rerun or stop for 1-3-1 when the rerun cost or boundary change is no longer clearly authorized
 
 ## Focused Recovery Loop
 

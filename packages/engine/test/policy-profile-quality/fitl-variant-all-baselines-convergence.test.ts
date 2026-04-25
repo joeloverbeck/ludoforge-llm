@@ -16,7 +16,7 @@ const VARIANT_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-ba
 const FITL_1964_CANARY_SEEDS = [
   { seed: 1020, expectedStopReason: 'terminal' },
   { seed: 1049, expectedStopReason: 'terminal' },
-  { seed: 1054, expectedStopReason: 'noLegalMoves' },
+  { seed: 1054, expectedStopReason: 'terminal' },
 ] as const;
 const MAX_TURNS = 300;
 const PLAYER_COUNT = 4;

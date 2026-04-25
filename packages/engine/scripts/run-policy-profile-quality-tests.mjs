@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process';
 
 import { ALL_POLICY_PROFILE_QUALITY_TESTS, toDistTestPath } from './test-lane-manifest.mjs';
 
-const DEFAULT_TIMEOUT_MS = 90 * 1000;
+const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
 const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];
 const TEST_PROGRESS_LANE_ENV = 'ENGINE_TEST_PROGRESS_LANE';

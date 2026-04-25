@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `agents/policy-preview.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`, `cnl/compile-agents.ts`, `cnl/validate-agents.ts`; doc update in `docs/agent-dsl-cookbook.md`
-**Deps**: `specs/145-bounded-synthetic-completion-preview.md`
+**Deps**: `archive/specs/145-bounded-synthetic-completion-preview.md`
 
 ## Problem
 

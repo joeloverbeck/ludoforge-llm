@@ -138,3 +138,5 @@ pnpm turbo schema:artifacts
 ## Measured-Gate Outcome
 
 For profiling/audit tickets, capture: measured surface, command(s), decisive result, threshold comparison, downstream action (archived/amended/deferred/not-actionable).
+
+For benchmark tickets with a baseline or disabled/enabled comparison, include the concrete comparison fields in the same durable outcome: baseline value, current value, absolute delta, ratio or percent change, threshold, gate result, and command. A green benchmark lane is not enough if the ticket's useful decision depends on the magnitude of the difference.

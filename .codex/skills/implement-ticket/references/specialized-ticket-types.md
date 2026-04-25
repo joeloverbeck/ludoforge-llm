@@ -24,6 +24,8 @@ For tickets whose primary deliverable is a measured decision:
 
 When an audit compares profile, policy, feature-flag, or config variants, prefer a repeatable harness-level or in-memory override over temporary production-data edits until the measured verdict is known. The override must be explicit in the command and output/report, and any production config edit should happen only after the evidence shows a direct benefit. This preserves F#14 by avoiding compatibility aliases or speculative YAML churn while still making the A/B comparison reproducible.
 
+For profiling or benchmark tickets that create or update a checked-in baseline, make the comparison itself durable. The active ticket outcome, report, or final closeout should include the baseline measurement, current measurement, absolute delta, ratio or percent change, threshold comparison, whether the warning/failure gate fired, and the exact command that produced the numbers. Do not leave the decisive "how much slower/faster" answer implicit in a passing harness.
+
 When an audit matrix spans surfaces that do not share a meaningful metric, do not force a fake scalar comparison. Classify each row as `comparable metric`, `covered by existing smoke`, or `no meaningful comparable metric`, and record the rationale in the ticket outcome/report. Use this especially when a broad acceptance criterion names multiple games, profiles, packages, or corpora but only one subset participates in the measured harness.
 
 ## Investigation Tickets
@@ -60,6 +62,8 @@ For preparatory tickets landing shared helpers, contracts, or APIs ahead of call
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.
 
 For long-running measurement tickets, that minimal probe should also validate the **output shape**, not just command viability. Before the expensive run, execute a one-seed, one-item, or otherwise tiny smoke probe and inspect that emitted rows use the promised unit of analysis, counters are per-row rather than accidental cumulative totals, required columns are present, and disabled/toggled modes report comparable fields.
+
+For exploratory benchmark sweeps, keep probes bounded and interruptible until the first representative case returns. Start with the smallest case that can validate the metric, avoid multi-case loops before that result is understood, and add per-case timeouts or progress output when a sweep may run silently for minutes. If an exploratory command becomes stale or superseded, stop or classify it before final proof so delayed output does not contaminate the acceptance story.
 
 When a long-running measurement witness has a **stable earlier prefix** already backed by durable evidence and the later tail is flaky or environment-sensitive, prefer narrowing to that smallest truthful prefix over preserving the longer tail by inertia. Record the narrowed bound explicitly in the active ticket before final proof so the witness does not look silently weakened.
 

@@ -84,7 +84,7 @@ Do NOT introduce new helpers for cases the existing helpers cover. If the existi
 
 - `packages/engine/test/integration/agents/cross-game-driver-conformance.test.ts` (new)
 - Possibly `packages/engine/test/helpers/` (modify if Texas Hold'em fixture loading needs extension)
-- `specs/145-bounded-synthetic-completion-preview.md` (I4 proof-boundary correction)
+- `archive/specs/145-bounded-synthetic-completion-preview.md` (I4 proof-boundary correction; archived after Spec 145 completion)
 
 ## Out of Scope
 

@@ -1,6 +1,6 @@
 # Spec 145: Bounded Synthetic-Completion Preview For Action-Selection Microturns
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P1 (blocks ARVN agent evolution and any future faction-evolution campaign that depends on candidate-level margin discrimination; observed in `campaigns/fitl-arvn-agent-evolution/` 2026-04-25)
 **Complexity**: M (agent-side preview pipeline change, new bounded completion driver, profile config extension, regression-test corpus update; no kernel rule changes, no GameSpecDoc changes)
 **Dependencies**:
@@ -354,7 +354,7 @@ This spec is implementation-ready. Tickets follow a small linear chain.
 
 ### I6. Performance harness
 
-- Add a tiny benchmark under `packages/engine/test/perf/agents/`: replay 50 ARVN action-selection microturns from a captured trace; assert post-spec wall time < 1.05 × pre-spec wall time + 30 ms / candidate budget. The pre-spec baseline is captured at I1 land time. This is a CI signal, not a hard fail.
+- Add a tiny benchmark under `packages/engine/test/perf/agents/`: generate a deterministic live FITL corpus from fixed seed/profile bindings, sample 50 ARVN action-selection microturns, and compare current preview cost against a checked-in disabled-preview baseline using the budget `1.05 × baseline wall time + 30 ms / candidate budget`. Existing campaign trace summaries provide candidate-count evidence for topK derivation, not replayable `GameState` snapshots. This is a CI signal, not a hard fail.
 - Ticket: `145PREVCOMP-006`.
 
 ## Testing
@@ -410,4 +410,13 @@ Decomposed via `/spec-to-tickets` on 2026-04-25:
 - [`archive/tickets/145PREVCOMP-003.md`](../archive/tickets/145PREVCOMP-003.md) — Profile audit and golden re-bless (covers I3)
 - [`archive/tickets/145PREVCOMP-004.md`](../archive/tickets/145PREVCOMP-004.md) — Cross-game driver conformance and per-policy determinism (covers I4)
 - [`archive/tickets/145PREVCOMP-005.md`](../archive/tickets/145PREVCOMP-005.md) — Trace and diagnostics for driver and gate (covers I5)
-- [`tickets/145PREVCOMP-006.md`](../tickets/145PREVCOMP-006.md) — Performance harness and topK derivation script (covers I6)
+- [`archive/tickets/145PREVCOMP-006.md`](../archive/tickets/145PREVCOMP-006.md) — Performance harness and topK derivation script (covers I6)
+
+## Outcome
+
+Completed 2026-04-25.
+
+- Implemented the bounded synthetic-completion preview driver, configurable completion/depth/topK surface, policy-evaluation top-K gate, profile/golden cleanup, cross-game conformance and determinism proof, trace diagnostics, and performance harness through archived tickets `145PREVCOMP-001` through `145PREVCOMP-006`.
+- Corrected the original I6 performance-harness premise during implementation: existing campaign trace summaries provide candidate-count evidence for topK derivation, but not replayable `GameState` snapshots. The final perf harness uses a deterministic live FITL corpus and a checked-in disabled-preview baseline.
+- Retained Spec 145's out-of-scope boundaries: no recursive agent-self preview, no cross-seat rollout, no run-scoped preview cache, and no default switch from `greedy` to `agentGuided`.
+- Verification is recorded in the archived ticket outcomes. Final series checks included ticket dependency integrity after `145PREVCOMP-006` archival.

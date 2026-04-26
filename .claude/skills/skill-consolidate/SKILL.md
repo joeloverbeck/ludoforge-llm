@@ -12,7 +12,7 @@ arguments:
 
 Structural consolidation for skill files that have grown organically through iterative skill-audit improvement cycles. Removes redundancy, regroups fragmented topics, restructures for readability, and clarifies scattered decision paths — while preserving every unique instruction.
 
-Complements skill-audit: skill-audit reports issues, refinements, and suggested additions; skill-consolidate removes structural entropy (pruning). Together they form a quality cycle.
+Complements skill-audit: skill-audit reports Issues, Improvements, and Features; skill-consolidate removes structural entropy (pruning). Together they form a quality cycle.
 
 ## Invocation
 

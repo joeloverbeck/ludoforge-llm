@@ -81,7 +81,7 @@ Classify: design | decision/triage | operational
 
 6. **Conversation context**: If the brainstorm follows extensive prior work in the same session (e.g., debugging, optimization campaigns, code exploration), treat the accumulated conversation context as equivalent to a rich reference file. Start confidence at 60-70% — you mainly need intent and scope clarification, not domain investigation.
 
-7. **Existing artifact investigation**: When the brainstorm topic concerns existing codebase artifacts (skills, modules, configurations, files), read them during this step — before the first interview question. The interview is more productive when grounded in the actual artifact content rather than the user's summary of it.
+7. **Existing artifact investigation**: When the brainstorm topic concerns existing codebase artifacts (skills, modules, configurations, files), read them during this step — before the first interview question. The interview is more productive when grounded in the actual artifact content rather than the user's summary of it. Heavy artifact investigation without a reference file (e.g., reading sibling code, workflow YAMLs, convention examples) typically yields a 70-80% starting confidence — comparable to a rich reference file under Step 1.4.
 
 ## Step 1.5: Pre-Interview Verification (Optional)
 
@@ -259,6 +259,7 @@ Once all sections are approved, determine the output format:
 
 - **If the design needs further refinement** (sections had significant revision, open questions remain, approach is exploratory): write to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Include a "Brainstorm Context" header noting the original request, reference file (if any), key interview insights, and final confidence score with any assumptions.
 - **If all sections were approved without revision and the output is a well-scoped implementation spec** (ready for ticket decomposition): write directly to `specs/<number>-<name>.md`. The design doc is a staging area for designs that need further discussion — not a mandatory waypoint when the brainstorm produces a finished spec.
+- **If the brainstorm produces a new user-invocable skill**: write to `.claude/skills/<name>/SKILL.md`. Follow the convention visible in sibling skills under `.claude/skills/` — frontmatter (`name`, `description`, `user-invocable: true`, optional `arguments` with `name`/`description`/`required`), worktree-awareness section, numbered Process steps, Guardrails. Use the multi-file directory pattern (`SKILL.md` + `references/`) only when SKILL.md would exceed ~250 lines or when distinct instruction surfaces warrant extraction; defer to `skill-extract-references` for retroactive splitting rather than pre-splitting at creation time.
 
 **Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
 
@@ -296,7 +297,7 @@ When the brainstorm's output is a multi-file directory (e.g., an `improve-loop` 
 
 ## Step 5.5: Validate Executable Artifacts
 
-When Step 5 produces executable code (harness scripts, benchmark runners, plugins, generated config) — not just prose — run cheap structural checks before handing off to the user.
+When Step 5 produces executable code (harness scripts, benchmark runners, plugins, generated config) — not just prose — run cheap structural checks before handing off to the user. Skill artifacts (`.claude/skills/<name>/SKILL.md`) get a parallel set of checks documented under "Skill artifact checks" below.
 
 **Mandatory checks** (every executable artifact):
 
@@ -307,6 +308,14 @@ When Step 5 produces executable code (harness scripts, benchmark runners, plugin
 
 - **Smoke run**: invoke the artifact once per declared operating mode (e.g., `--mode on`, `--mode off`) and confirm it produces structurally valid output (expected JSON keys, exit code 0, expected order of magnitude on declared metrics). Skip when a single invocation would exceed ~2 minutes unless the user explicitly opts in.
 - **Cross-mode comparison** (when applicable): if the artifact has a declared expected relationship between modes (e.g., a watchdog mode should be ~baseline-time, a primary mode should reproduce a known regression), confirm the relationship holds within reasonable noise.
+
+**Skill artifact checks** (every new SKILL.md produced by Step 5):
+
+- **Frontmatter validity**: the YAML frontmatter parses; contains `name`, `description`, and `user-invocable`; if `arguments` is present, each entry has `name`, `description`, and `required`.
+- **Directory layout**: matches sibling-skill convention under `.claude/skills/`. Single `SKILL.md` by default; `SKILL.md` + `references/` only when SKILL.md is a thin entry point.
+- **Harness registration**: the new skill name appears in the next system-injected available-skills list. The harness re-loads its index after a write; registration is observable in the next message's system-reminder block. If the skill does not appear, re-check frontmatter and file path before handoff.
+
+Skill artifacts are prose, not executable code, so syntax/permission/smoke checks do not apply. The disposition rules below cover frontmatter typos (mechanical → fix in-place) and missing-design-section gaps (structural → raise to user).
 
 **Defect disposition**:
 
@@ -324,7 +333,7 @@ Present the user with options for what to do next. Adapt the menu to the output 
 **If output was a design doc** (`docs/plans/`):
 ```
 What would you like to do next?
-1. Write an implementation plan (invoke writing-plans skill)
+1. Write an implementation plan (invoke superpowers:writing-plans skill)
 2. Create a spec from this design (write to specs/)
 3. Start implementing directly
 4. Done for now — I'll review the design doc later
@@ -368,6 +377,16 @@ What would you like to do next?
 ```
 
 Adapt option 1 to the directory's downstream consumer — `/improve-loop` for campaigns, the relevant plugin-loader command for plugin scaffolds, etc. Option 2 applies when Step 5.5's optional smoke run was deferred (e.g., per-mode runtime exceeds the ~2-minute bounded threshold and the user did not opt in earlier).
+
+**If output was a new skill** (`.claude/skills/<name>/SKILL.md`):
+```
+What would you like to do next?
+1. Validate via `/skill-audit .claude/skills/<name>` (catches frontmatter and cross-skill issues before first real use)
+2. Exercise the skill on a representative real-world case
+3. Done — I'll exercise it next time the trigger arises
+```
+
+Recommend option 1 when the new skill has more than ~150 lines or invokes other skills as chain neighbors. For short, self-contained skills, option 3 is reasonable.
 
 **Continual Learning prompt** (only when applicable): If the brainstorm surfaced a concrete gap in `CLAUDE.md`, `docs/FOUNDATIONS.md`, or an existing skill (conflicting instructions, missing guidance, outdated references), append an option: "Propose updates to <file>". Do not include this option speculatively — only when the brainstorm produced specific evidence of a gap. This implements CLAUDE.md's Continual Learning rule.
 

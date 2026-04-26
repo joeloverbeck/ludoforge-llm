@@ -1,7 +1,7 @@
 # Spec 147: Ahead-Of-Time Compilation Of Consideration AST Trees
 
-**Status**: PROPOSED — scope corrected 2026-04-26 after 147AOTCON-003 post-migration measurement
-**Priority**: P2 (compounds with Spec 146; addresses the post-fitl-preview-perf-campaign profile concentrated in interpretive AST evaluation; live 147AOTCON-003 evidence shows the remaining hard-target miss is now Zobrist/GC dominated and owned by 147AOTCON-004)
+**Status**: PROPOSED — scope corrected 2026-04-26 after 147AOTCON-003 post-migration measurement; 147AOTCON-004 closed on an explicit close-enough decision with the strict hard target still red
+**Priority**: P2 (compounds with Spec 146; addresses the post-fitl-preview-perf-campaign profile concentrated in interpretive AST evaluation; live 147AOTCON-003 evidence showed the remaining hard-target miss was Zobrist/GC dominated, and 147AOTCON-004 landed a weak decision-frame digest cache accepted as close enough at `mean_totalMs=26784.93` despite `pass=false`)
 **Complexity**: L (compiler-side AST→closure-tree compilation, kernel-side runtime path that consumes compiled closures, GameDef schema addition for the compiled artifact, fixture migration of every shipped agent profile; no GameSpecDoc YAML change)
 **Dependencies**:
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the consideration evaluation surface this spec optimizes.
@@ -15,7 +15,8 @@
 - Cumulative-FITL-perf global lessons: "FITL kernel computation functions (`resolveRef`, `evalCondition`, `foldTokenFilterExpr`, `matchesScalarMembership`) are at a V8 JIT optimization ceiling. ANY modification — WeakMap caching (+7.7%), fast-path branching (+3.8%), short-circuit evaluation (test failures) — causes hidden class deoptimization. The ONLY safe optimization pattern is removing WORK at the orchestration level (skipping calls entirely), not modifying how calls behave."
 - The orchestration-level skipping the lessons recommend is exactly what AOT compilation enables: a per-AST-node closure tree replaces the per-evaluation switch dispatch, eliminating both the dispatch cost and the hidden-class polymorphism that V8 cannot resolve in interpretive evaluation.
 - Post-Spec-146 handoff from `archive/tickets/146DRIVE-005.md` (2026-04-26): durable production-profile hard-target probe still misses `25600 ms` (`--runs 1` sample `27012.48 ms`; CPU-profile sample `28019.62 ms`, `candidateBudget=465`). The Outcome section explicitly assigns the next large implementation owner to this spec rather than another narrow Spec 146 drive patch.
-- Post-147AOTCON-003 correction (2026-04-26): deleting the runtime policy AST interpreter and switching production artifacts to compiled-only policy descriptors did not satisfy the hard target. The 3-run profile reported `mean_totalMs=27884.08`, `mad_pct=2.54`, `hardTargetMs=25600`, `pass=false`; top samples were GC and Zobrist/hash-family work (`fnv1a64`, `digestDecisionStackFrame`, `zobristKey`). The remaining hard-target miss is split to `tickets/147AOTCON-004.md`.
+- Post-147AOTCON-003 correction (2026-04-26): deleting the runtime policy AST interpreter and switching production artifacts to compiled-only policy descriptors did not satisfy the hard target. The 3-run profile reported `mean_totalMs=27884.08`, `mad_pct=2.54`, `hardTargetMs=25600`, `pass=false`; top samples were GC and Zobrist/hash-family work (`fnv1a64`, `digestDecisionStackFrame`, `zobristKey`). The remaining hard-target miss was split to `archive/tickets/147AOTCON-004.md`.
+- Post-147AOTCON-004 closeout (2026-04-26): the accepted implementation cached decision-stack frame digests by weak frame identity. The final 3-run profile reported `previewOn_totalMs_ms=27307.05,26554.94,26492.8`, `mean_totalMs=26784.93`, `mad_pct=1.3`, `hardTargetMs=25600`, `pass=false`, `candidateBudget=465`, `sampledActionSelectionCount=50`. The strict hard target remained red, but the user explicitly accepted this closest measured result as close enough for the ticket.
 
 ## Brainstorm Context
 
@@ -247,7 +248,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-26:
 - [`archive/tickets/147AOTCON-001.md`](../archive/tickets/147AOTCON-001.md) — Add compiled policy expression descriptors and equivalence scaffold (covers D1 minimum surface, D2 lowering scaffold, D3 runtime materialization scaffold, D5.1 equivalence scaffold).
 - [`archive/tickets/147AOTCON-002.md`](../archive/tickets/147AOTCON-002.md) — Extend compiled policy descriptors to full `AgentPolicyExpr` coverage and add determinism invariant (covers D1 full union, D2 full lowering coverage, D3 full factory coverage, D5.2 determinism invariant).
 - [`archive/tickets/147AOTCON-003.md`](../archive/tickets/147AOTCON-003.md) — Enable compiled policy path as default, delete AST interpreter, regenerate fixtures, re-measure hard-target and split the remaining miss if it is outside the AOT seam (covers D4 runtime collapse, D6 fixture migration, performance evidence correction).
-- [`tickets/147AOTCON-004.md`](../tickets/147AOTCON-004.md) — Remove Zobrist and GC bottlenecks from the FITL preview hard-target path (owns the remaining `25600 ms` miss exposed by 147AOTCON-003).
+- [`archive/tickets/147AOTCON-004.md`](../archive/tickets/147AOTCON-004.md) — Remove Zobrist and GC bottlenecks from the FITL preview hard-target path (completed on the accepted weak digest-cache close-enough result; strict `25600 ms` hard target remained red).
 
 ## Follow-On Tickets
 
@@ -258,4 +259,4 @@ Anticipated decomposition (final ordering and granularity owned by `/spec-to-tic
 1. **147AOTCON-001** — Already exists. Adds the descriptor types (D1 minimum surface), the lowering scaffold (D2), the runtime materialization scaffold (D3) for the first supported expression families, and the equivalence test scaffold (D5.1) without enabling the compiled path as default.
 2. **147AOTCON-002** — Extend descriptor coverage to every `AgentPolicyExpr.kind` (`zoneProp`, `zoneTokenAgg`, `globalTokenAgg`, `globalZoneAgg`, `adjacentTokenAgg`, `seatAgg`) and every operator under `op`, plus the determinism invariant test (D5.2).
 3. **147AOTCON-003** — Enable the compiled path as default, delete the AST interpreter (`evaluateExpr`, the AST-bearing `library` shape that's no longer needed), regenerate the policy-catalog goldens, validate policy-summary trace goldens, and re-measure the hard-target profile. If the hard target still misses outside the AOT seam, record and split it.
-4. **147AOTCON-004** — Remove the Zobrist/hash and GC bottlenecks exposed by the post-003 profile until the same hard-target script reports `pass=true`.
+4. **147AOTCON-004** — Completed 2026-04-26 with a weak decision-stack frame digest cache. Final hard-target script remained `pass=false` at `mean_totalMs=26784.93`, but the result was explicitly accepted as close enough for this ticket.

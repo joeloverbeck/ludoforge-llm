@@ -171,12 +171,19 @@ const canonicalizeHashValue = (value: unknown): string => {
 
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+const decisionStackFrameDigestCache = new WeakMap<object, string>();
 
 const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
+  const cached = decisionStackFrameDigestCache.get(frame);
+  if (cached !== undefined) {
+    return cached;
+  }
   const encoded = canonicalizeHashValue(frame);
   const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
   const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
-  return `${digestA}:${digestB}`;
+  const digest = `${digestA}:${digestB}`;
+  decisionStackFrameDigestCache.set(frame, digest);
+  return digest;
 };
 
 const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {

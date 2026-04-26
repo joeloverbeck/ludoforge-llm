@@ -160,6 +160,21 @@ Suggested compact final-proof ledger:
 - `proof gaps`: `none` or `<remaining blocker>`
 - `architectural follow-up`: `<new spec/ticket id or proposed artifact> for <cross-ticket contract discovered during implementation>` when the ticket uncovered a broader design gap that outlives the local fix
 
+For benchmark tickets with tried-and-reverted candidates, add a compact attempt ledger when it prevents future repetition:
+
+- `candidate`: `<optimization/probe tried>`
+- `correctness proof`: `<focused command or not reached>`
+- `measurement`: `<sample/result/profile summary>`
+- `decision`: `kept | reverted | abandoned | accepted by user exception`
+
+For a user-approved acceptance exception on a red measured gate, make the exception explicit:
+
+- `original gate`: `<metric and threshold>`
+- `measured result`: `<samples, mean, variance, pass=false>`
+- `authorization`: `<user-approved close-enough / waiver wording and date>`
+- `durable status`: `<COMPLETED by user-approved acceptance exception or repo-equivalent>`
+- `residual risk`: `<remaining hotspot/follow-up omitted or named owner>`
+
 When a ticket-named broad lane remains red, use a more explicit residual handoff ledger:
 
 - `red lane`: `<ticket-named command>`

@@ -44,6 +44,7 @@ import type {
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import { lowerAgentConsiderations } from './lower-agent-considerations.js';
 
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
@@ -108,6 +109,7 @@ export function lowerAgents(
     parameterDefs,
     candidateParamDefs,
     library,
+    compiled: lowerAgentConsiderations(library),
     profiles,
     bindingsBySeat,
   } satisfies Omit<AgentPolicyCatalog, 'catalogFingerprint'>;

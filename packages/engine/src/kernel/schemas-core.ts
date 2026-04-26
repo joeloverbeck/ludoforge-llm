@@ -835,6 +835,51 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   ]),
 );
 
+const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([
+    z.object({
+      kind: z.literal('literal'),
+      value: AgentPolicyLiteralSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('param'),
+      id: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('ref'),
+      ref: CompiledAgentPolicyRefSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('op'),
+      op: z.union([
+        z.literal('abs'),
+        z.literal('add'),
+        z.literal('and'),
+        z.literal('boolToNumber'),
+        z.literal('clamp'),
+        z.literal('coalesce'),
+        z.literal('div'),
+        z.literal('eq'),
+        z.literal('gt'),
+        z.literal('gte'),
+        z.literal('if'),
+        z.literal('in'),
+        z.literal('lt'),
+        z.literal('lte'),
+        z.literal('max'),
+        z.literal('min'),
+        z.literal('mul'),
+        z.literal('ne'),
+        z.literal('neg'),
+        z.literal('not'),
+        z.literal('or'),
+        z.literal('sub'),
+      ]),
+      args: z.array(CompiledPolicyExprSchema),
+    }).strict(),
+  ]),
+);
+
 const AgentPolicyValueTypeSchema = z.union([
   z.literal('number'),
   z.literal('boolean'),
@@ -906,6 +951,25 @@ const CompiledAgentConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyConsiderationSchema = z
+  .object({
+    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
+    costClass: AgentPolicyCostClassSchema,
+    when: CompiledPolicyExprSchema.optional(),
+    weight: CompiledPolicyExprSchema,
+    value: CompiledPolicyExprSchema,
+    unknownAs: NumberSchema.optional(),
+    clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyCatalogSchema = z
+  .object({
+    considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
   })
   .strict();
 
@@ -991,6 +1055,7 @@ const AgentPolicyCatalogSchema = z
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,
+    compiled: CompiledPolicyCatalogSchema.optional(),
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
   })

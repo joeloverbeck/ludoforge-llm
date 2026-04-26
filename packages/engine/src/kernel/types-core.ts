@@ -508,6 +508,43 @@ export type AgentPolicyExpr =
       readonly prop: string;
     };
 
+export type CompiledPolicyExpr =
+  | {
+      readonly kind: 'literal';
+      readonly value: AgentPolicyLiteral;
+    }
+  | {
+      readonly kind: 'param';
+      readonly id: string;
+    }
+  | {
+      readonly kind: 'ref';
+      readonly ref: CompiledAgentPolicyRef;
+    }
+  | {
+      readonly kind: 'op';
+      readonly op: AgentPolicyOperator;
+      readonly args: readonly CompiledPolicyExpr[];
+    };
+
+export interface CompiledPolicyConsideration {
+  readonly scopes?: readonly ('move' | 'completion')[];
+  readonly costClass: AgentPolicyCostClass;
+  readonly when?: CompiledPolicyExpr;
+  readonly weight: CompiledPolicyExpr;
+  readonly value: CompiledPolicyExpr;
+  readonly unknownAs?: number;
+  readonly clamp?: {
+    readonly min?: number;
+    readonly max?: number;
+  };
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledPolicyCatalog {
+  readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
+}
+
 export interface CompiledSurfacePreviewVisibility {
   readonly visibility: SurfaceVisibilityClass;
   readonly allowWhenHiddenSampling: boolean;
@@ -754,6 +791,7 @@ export interface AgentPolicyCatalog {
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;
+  readonly compiled?: CompiledPolicyCatalog;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;
 }

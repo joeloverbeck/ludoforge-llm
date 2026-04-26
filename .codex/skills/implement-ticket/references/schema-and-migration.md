@@ -104,6 +104,11 @@ When the ticket introduces a shared contract surface but a downstream sibling st
 - rewrite active draft acceptance text before completion if the original wording would misstate that interim contract
 - verify the interim shape with the narrowest build-safe proof lane instead of silently absorbing the downstream sibling's work
 
+When the staged surface is a partially populated compiled or serialized artifact:
+- record which descriptor families, fields, or producers are supported by the current ticket and which are deliberately deferred to siblings
+- include a compact compiled-versus-skipped coverage summary in the ticket outcome, proof helper output, or another durable closeout surface when the skipped portion is material to the handoff
+- verify that unsupported portions fail closed, remain absent, or are otherwise impossible to consume accidentally under the current ticket boundary
+
 ## Historical Benchmark Sweeps Across Worktrees
 
 For historical benchmark sweeps across commits, branches, or detached worktrees:

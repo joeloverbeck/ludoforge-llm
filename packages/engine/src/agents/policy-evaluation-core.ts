@@ -561,6 +561,22 @@ export class PolicyEvaluationContext {
     }
   }
 
+  resolveCompiledPolicyParam(id: string): PolicyValue {
+    return this.input.parameterValues[id];
+  }
+
+  resolveCompiledPolicyRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    return this.resolveRef(ref, candidate);
+  }
+
+  createCompiledPolicyRuntimeError(
+    code: string,
+    message: string,
+    detail?: Readonly<Record<string, unknown>>,
+  ): PolicyRuntimeError {
+    return this.runtimeError(code, message, detail);
+  }
+
   private evaluateZoneProp(
     expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneProp' }>,
     candidate: PolicyEvaluationCandidate | undefined,

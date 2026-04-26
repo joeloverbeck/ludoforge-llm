@@ -53,9 +53,9 @@ else
   (
     cd "$PROJECT_ROOT/packages/engine"
     node --test \
-      'test/unit/agents/' \
-      'test/integration/agents/' \
-      'test/perf/agents/preview-pipeline.perf.test.ts'
+      'dist/test/unit/agents/**/*.test.js' \
+      'dist/test/integration/agents/**/*.test.js' \
+      'dist/test/perf/agents/preview-pipeline.perf.test.js'
   ) > "$GATE_LOG" 2>&1
 fi
 GATE_EXIT=$?

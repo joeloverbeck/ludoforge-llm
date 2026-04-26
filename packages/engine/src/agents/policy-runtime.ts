@@ -1,11 +1,12 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
-import { buildSeatResolutionIndex } from '../kernel/identity.js';
+import { createSeatResolutionContext } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
+  CompiledAgentProfile,
   CompiledCurrentSurfaceRef,
   CompiledPreviewSurfaceRef,
   GameDef,
@@ -116,9 +117,11 @@ export interface CreatePolicyRuntimeProvidersInput {
 }
 
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
-  const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
   const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
+  const profileHasCompletionConsiderations = activeProfile !== undefined
+    && hasCompletionScopedConsideration(input.catalog, activeProfile);
   const previewRuntime = createPolicyPreviewRuntime({
     def: input.def,
     state: input.state,
@@ -129,7 +132,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? 8,
-    ...(activeProfile === undefined ? {} : { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile } }),
+    ...(profileHasCompletionConsiderations
+      ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
+      : {}),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
@@ -340,6 +345,30 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       transientVictorySurface = null;
     },
   };
+}
+
+// Memoize: a profile's set of completion-scoped considerations is fixed across
+// a benchmark run. Per-call recomputation otherwise iterates `profile.use.considerations`
+// inside every `createPolicyRuntimeProviders` call (~50 outer microturns + several
+// per-pick scoring contexts). When the result is empty the agentGuided picker
+// becomes a no-op — callers can short-circuit allocation of pending-request
+// objects entirely.
+const profileHasCompletionCache = new WeakMap<CompiledAgentProfile, boolean>();
+
+function hasCompletionScopedConsideration(
+  catalog: AgentPolicyCatalog,
+  profile: CompiledAgentProfile,
+): boolean {
+  const cached = profileHasCompletionCache.get(profile);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const considerations = catalog.library.considerations ?? {};
+  const result = (profile.use.considerations ?? []).some(
+    (id) => considerations[id]?.scopes?.includes('completion') === true,
+  );
+  profileHasCompletionCache.set(profile, result);
+  return result;
 }
 
 export function createPolicyCompletionProvider(

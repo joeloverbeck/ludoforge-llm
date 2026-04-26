@@ -468,6 +468,39 @@ export const applyPublishedDecision = (
 ): ApplyDecisionResult => {
   const resolvedRuntime = runtime ?? createGameDefRuntime(def);
   const canonicalState = withResolvedHash(def, state, resolvedRuntime);
+  return applyPublishedDecisionInternal(def, canonicalState, microturn, decision, options, resolvedRuntime);
+};
+
+/**
+ * Fast variant of {@link applyPublishedDecision} that skips the entry
+ * `withResolvedHash` call. The caller MUST guarantee `state.stateHash` is
+ * already canonical — typically because `state` comes straight from another
+ * kernel call (applyPublishedDecision / publishMicroturn) with no spread
+ * mutations in between.
+ *
+ * Used by the synthetic-completion driver inside `policy-preview.ts` to
+ * eliminate the redundant Zobrist recomputation per inner-microturn iteration.
+ */
+export const applyPublishedDecisionFromCanonicalState = (
+  def: GameDef,
+  state: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+): ApplyDecisionResult => {
+  const resolvedRuntime = runtime ?? createGameDefRuntime(def);
+  return applyPublishedDecisionInternal(def, state, microturn, decision, options, resolvedRuntime);
+};
+
+const applyPublishedDecisionInternal = (
+  def: GameDef,
+  canonicalState: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options: ExecutionOptions | undefined,
+  resolvedRuntime: GameDefRuntime,
+): ApplyDecisionResult => {
 
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };

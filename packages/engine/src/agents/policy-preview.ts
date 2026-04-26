@@ -2,11 +2,11 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { probeMoveViability } from '../kernel/apply-move.js';
-import { applyPublishedDecision } from '../kernel/microturn/apply.js';
-import { publishMicroturn } from '../kernel/microturn/publish.js';
+import { applyPublishedDecisionFromCanonicalState } from '../kernel/microturn/apply.js';
+import { publishMicroturn, publishMicroturnFromCanonicalState, publishMicroturnGreedyChooseOne } from '../kernel/microturn/publish.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
-import { buildSeatResolutionIndex } from '../kernel/identity.js';
+import { createSeatResolutionContext } from '../kernel/identity.js';
 import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import { selectChoiceOptionsByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
 import type { PlayerId, ZoneId } from '../kernel/branded.js';
@@ -468,9 +468,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
    */
   const cache = new Map<string, PreviewOutcome>();
   let disposed = false;
-  const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const completionPolicy = input.completionPolicy ?? 'greedy';
   const completionDepthCap = input.completionDepthCap ?? K_PREVIEW_DEPTH;
+  // origin is computed against `input.state`, which is invariant across all
+  // candidates in this runtime. Cache lazily so each driveSyntheticCompletion
+  // pays the publishMicroturn cost once instead of once per candidate.
+  let cachedOrigin: ReturnType<typeof publishMicroturn> | undefined;
+  // Different candidates' preview drives sometimes converge to the same final
+  // state (especially in FITL where a handful of capability cards collapse to
+  // the same post-effect state). derivePlayerObservation iterates every
+  // def.zones entry and allocates per-zone arrays/maps — caching by stateHash
+  // pays for itself when even a few outcomes share a hash.
+  const hiddenZonesByStateHash = new Map<bigint, readonly ZoneId[]>();
   const surfaceContext: SurfaceResolutionContext = {
     def: input.def,
     seatResolutionIndex,
@@ -686,7 +696,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     }
 
     try {
-      const origin = publishMicroturn(input.def, input.state, input.runtime);
+      // input.state is the action-selection state delivered to the agent by the
+      // simulator — always canonically hashed. Subsequent loop-iteration states
+      // come from applyPublishedDecision().state, which the kernel emits with
+      // hash already computed (via updateHash). Use the canonical-state fast
+      // variants to skip the redundant entry hash recomputation each iteration.
+      const origin = cachedOrigin === undefined
+        ? (cachedOrigin = publishMicroturnFromCanonicalState(input.def, input.state, input.runtime))
+        : cachedOrigin;
       let state: GameState;
       try {
         state = deps.applyMove(
@@ -702,33 +719,58 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           actionId: trustedMove.move.actionId,
           move: trustedMove.move,
         };
-        state = applyPublishedDecision(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
+        state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
       }
       let depth = 1;
 
       while (true) {
-        const microturn = publishMicroturn(input.def, state, input.runtime);
+        // Cheap exit-condition check: derive kind/seatId/turnId from
+        // state.decisionStack top without enumerating legalActions or
+        // computing the projected-state observation. Matches publishMicroturn's
+        // logic exactly: empty stack → actionSelection; otherwise top frame's
+        // context kind/seatId/turnId.
+        const top = state.decisionStack?.at(-1);
+        if (top === undefined) {
+          return { kind: 'completed', state, depth };
+        }
+        const ctxKind = top.context.kind;
+        const topSeatId = top.context.seatId;
         if (
-          microturn.kind === 'actionSelection'
-          || microturn.kind === 'outcomeGrantResolve'
-          || microturn.kind === 'turnRetirement'
-          || microturn.seatId !== origin.seatId
-          || microturn.turnId !== origin.turnId
+          ctxKind === 'actionSelection'
+          || ctxKind === 'outcomeGrantResolve'
+          || ctxKind === 'turnRetirement'
+          || topSeatId !== origin.seatId
+          || top.turnId !== origin.turnId
         ) {
           return { kind: 'completed', state, depth };
         }
-        if (microturn.kind === 'stochasticResolve') {
+        if (ctxKind === 'stochasticResolve') {
           return { kind: 'stochastic', state, depth };
         }
         if (depth >= completionDepthCap) {
           return { kind: 'depthCap', state, depth };
         }
 
+        // Fast path for greedy chooseOne: skip remaining-option verification +
+        // projected-state observation by using the kernel's greedy-aware
+        // publish variant. Falls through to the slow path for chooseNStep
+        // (which has more complex selection rules).
+        if (ctxKind === 'chooseOne' && completionPolicy === 'greedy') {
+          const greedy = publishMicroturnGreedyChooseOne(input.def, state, input.runtime);
+          if (greedy === null) {
+            return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
+          }
+          state = applyPublishedDecisionFromCanonicalState(input.def, state, greedy.microturn, greedy.decision, { advanceToDecisionPoint: true }, input.runtime).state;
+          depth += 1;
+          continue;
+        }
+
+        const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);
         const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
         if (decision === undefined) {
           return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
         }
-        state = applyPublishedDecision(input.def, state, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
+        state = applyPublishedDecisionFromCanonicalState(input.def, state, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
         depth += 1;
       }
     } catch (error) {
@@ -768,14 +810,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       return { kind: 'unknown', reason: 'random', driveDepth: result.depth, completionPolicy };
     }
 
-    const observation = deps.derivePlayerObservation(input.def, result.state, input.playerId);
+    const stateHashKey = result.state.stateHash;
+    let hiddenSamplingZones = hiddenZonesByStateHash.get(stateHashKey);
+    if (hiddenSamplingZones === undefined) {
+      hiddenSamplingZones = deps.derivePlayerObservation(input.def, result.state, input.playerId).hiddenSamplingZones;
+      hiddenZonesByStateHash.set(stateHashKey, hiddenSamplingZones);
+    }
     return {
       kind: result.kind === 'stochastic' || rngDiverged ? 'stochastic' : 'ready',
       state: result.state,
       trustedMove,
       driveDepth: result.depth,
       completionPolicy,
-      hiddenSamplingZones: observation.hiddenSamplingZones,
+      hiddenSamplingZones,
       metricCache: new Map<string, number>(),
       victorySurface: null,
       grantedOperationResolved: false,
@@ -849,17 +896,15 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         { advanceToDecisionPoint: false },
         input.runtime,
       ).state;
+      const preEventMargin = getSeatMargin(input.def, previewState, input.seatId, input.runtime);
+      const postEventPlusOpMargin = getSeatMargin(input.def, postEventPlusOpState, input.seatId, input.runtime);
       return {
         state: postEventPlusOpState,
         grantedOperation: {
           move: selected.move,
           score: selected.score,
-          ...(getSeatMargin(input.def, previewState, input.seatId, input.runtime) === undefined
-            ? {}
-            : { preEventMargin: getSeatMargin(input.def, previewState, input.seatId, input.runtime)! }),
-          ...(getSeatMargin(input.def, postEventPlusOpState, input.seatId, input.runtime) === undefined
-            ? {}
-            : { postEventPlusOpMargin: getSeatMargin(input.def, postEventPlusOpState, input.seatId, input.runtime)! }),
+          ...(preEventMargin === undefined ? {} : { preEventMargin }),
+          ...(postEventPlusOpMargin === undefined ? {} : { postEventPlusOpMargin }),
         },
       };
     } catch {

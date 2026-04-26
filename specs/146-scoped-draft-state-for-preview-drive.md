@@ -2,15 +2,15 @@
 
 **Status**: PROPOSED
 **Priority**: P1 (blocks reaching the spec-145 hard target on FITL preview perf and any future faction-evolution campaign that needs sub-25s previewOn budgets)
-**Complexity**: M (kernel-internal API addition, no GameSpecDoc change, no new compiler rule, no public-API regression risk; concentrated in `packages/engine/src/kernel/microturn/apply.ts` + `packages/engine/src/kernel/microturn/publish.ts` + `packages/engine/src/agents/policy-preview.ts`)
+**Complexity**: M (kernel-internal API addition, no GameSpecDoc change, no new compiler rule, no public-API regression risk; concentrated in `packages/engine/src/kernel/microturn/drive.ts` (new file colocating the shadow chain) + `packages/engine/src/kernel/microturn/types.ts` + `packages/engine/src/agents/policy-preview.ts`. The existing `kernel/microturn/apply.ts` and `kernel/microturn/publish.ts` are intentionally NOT modified — preserving their V8 JIT profiles is the architectural argument for a separate file.)
 **Dependencies**:
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the inner-microturn drive contract this spec optimizes.
 - Spec 144 [probe-and-recover-microturn-publication] (archived) — the kernel-side analog that this spec mirrors on the agent-preview side.
 - Foundation 11 (Immutability) — the spec relies on the existing "scoped internal mutation" exception clause.
 
 **Source**:
-- Campaign log `campaigns/fitl-preview-perf/musings.md` (entries `exp-001` through `exp-017`, 2026-04-26): 17 experiments demonstrating that after exhausting orchestration-level skips (cumulative -64.76% from baseline 88394 ms → 31149 ms), the remaining ~17.8% gap to the hard target is dominated by per-iteration kernel state-mutation cost.
-- V8 sampling profile after exp-015: ~9% of total CPU is `digestDecisionStackFrame` via `updateHash` inside `applyPublishedDecisionInternal` (5.3%) + `spawnPendingFrame` (3.8%) + `clearMicroturnState` residual. Each inner-microturn iteration of `driveSyntheticCompletion` triggers at least one full Zobrist recomputation as the kernel finalizes intermediate state via spread + `updateHash`.
+- Campaign results `campaigns/fitl-preview-perf/results.tsv` (entries `exp-001` through `exp-017`, 2026-04-26; campaign objective in `campaigns/fitl-preview-perf/program.md`): 17 experiments demonstrating that after exhausting orchestration-level skips (cumulative -64.76% from baseline 88394 ms → 31149 ms), the remaining ~17.8% gap to the hard target is dominated by per-iteration kernel state-mutation cost.
+- V8 sampling profile after exp-015: ~9% of total CPU is `digestDecisionStackFrame` (`packages/engine/src/kernel/zobrist.ts:175`) via `updateHash` inside `applyPublishedDecisionInternal` (5.3%) + `spawnPendingFrame` (3.8%) + `clearMicroturnState` residual. Each inner-microturn iteration of `driveSyntheticCompletion` triggers at least one full Zobrist recomputation as the kernel finalizes intermediate state via spread + `updateHash`.
 - exp-017 attempted to thread a `skipFinalHash` boolean through `applyPublishedDecisionInternal` + `applyChosenMove` + `spawnPendingFrame` + `continueResolvedMove` (~60 lines of changes across 4 hot kernel functions). The metric was flat (+0.12% within mad_pct=0.36% noise) — V8 deopt from changing the signature of multiple hot kernel functions in the same direction roughly equalled the theoretical ~9% savings. Confirmed by the global negative lesson: "modifying multiple hot-path kernel function signatures triggers compounding V8 deopt costs that can offset theoretical savings".
 - Global lessons archive: `campaigns/lessons-global.jsonl` records the same conclusion across multiple prior FITL perf campaigns — "object spread immutability costs 15% CPU — addressable via Foundation 11's scoped-draft-state carve-out". The carve-out exists in F#11 but has never been extended to multi-decision drives.
 
@@ -20,7 +20,7 @@
 
 **Motivation.**
 1. **Foundation 11 already authorizes scoped internal mutation** for performance, with the explicit safety contract: "Within a single synchronous effect-execution scope, the kernel MAY use a private draft state or copy-on-write working state for performance. That working state MUST be fully isolated from caller-visible state". The agent's bounded synthetic-completion drive is exactly this kind of synchronous scope — it owns its `state` variable end-to-end, no other code holds a reference.
-2. **The existing carve-out is narrow.** `kernel/state-draft.ts`'s `createMutableState` is consumed only by single-effect dispatches (`applyEffectsWithBudgetState`); the multi-decision drive path uses the immutable contract throughout. This spec extends the existing pattern to span an entire bounded drive.
+2. **The existing carve-out is narrow.** `kernel/state-draft.ts`'s `createMutableState` is consumed only by single-effect dispatches (`applyEffectsWithBudgetState` in `packages/engine/src/kernel/effect-dispatch.ts:109`); the multi-decision drive path uses the immutable contract throughout. This spec extends the existing pattern to span an entire bounded drive — the FIRST multi-decision application of the F#11 carve-out in this codebase. The mutation primitives (`createMutableState`, `DraftTracker`) are reused unchanged; only the scope is new. The conformance witness in D5 establishes the precedent for future scope extensions.
 3. **No new architectural commitments.** The drive is already bounded (Spec 145's `K_PREVIEW_DEPTH=8`), already deterministic (every step uses kernel `applyPublishedDecisionInternal`), and already isolated (the agent owns its state object). Only the per-iteration finalization is wasteful.
 
 **Prior art surveyed.**
@@ -62,7 +62,7 @@ Add `applyPreviewDriveGreedyChooseOne(def, initialState, origin, depthCap, runti
 
 ### Defect class: per-iteration Zobrist recomputation
 
-Spec 145 established that the synthetic-completion driver iterates ~3-6 inner microturns per ready outcome × ~200 ready outcomes per FITL benchmark = ~600-1000 inner iterations. Each iteration calls `applyPublishedDecisionFromCanonicalState`, which inside `applyPublishedDecisionInternal` ends one of several branches with `updateHash(def, {...newStateContent}, runtime)`. The hash work is concentrated in `digestDecisionStackFrame` (line `kernel/zobrist.ts:158`) iterating every frame of `decisionStack`.
+Spec 145 established that the synthetic-completion driver iterates ~3-6 inner microturns per ready outcome × ~200 ready outcomes per FITL benchmark = ~600-1000 inner iterations. Each iteration calls `applyPublishedDecisionFromCanonicalState`, which inside `applyPublishedDecisionInternal` ends one of several branches with `updateHash(def, {...newStateContent}, runtime)`. The hash work is concentrated in `digestDecisionStackFrame` (`packages/engine/src/kernel/zobrist.ts:175`) iterating every frame of `decisionStack`.
 
 The campaign's V8 sampling profile (post-exp-015) attributes ~9% of total CPU to this `updateHash`-via-`computeFullHash`-via-`digestDecisionStackFrame` chain, with bottom-up call-graph attribution showing `applyPublishedDecisionInternal` direct (5.3%) and `spawnPendingFrame` (3.8%) as the two dominant entry points.
 
@@ -136,7 +136,7 @@ Inside `applyPreviewDriveGreedyChooseOne`:
 
 1. Maintain an internal mutable holder: `let workingState: GameState = initialState;`. The initial state is the caller's canonical state — never mutated, only the local `workingState` reference is reassigned.
 2. Each iteration calls `applyPublishedDecisionInternalNoFinalHash(def, workingState, microturn, decision, options, resolvedRuntime)` — a kernel-internal helper that mirrors `applyPublishedDecisionInternal` but with all `updateHash` calls bypassed. Only used from this function and from helper internals.
-3. The `applyPublishedDecisionInternalNoFinalHash` implementation is a SHADOW of the existing `applyPublishedDecisionInternal` — same structure, but every `updateHash(def, X, runtime)` becomes `X` (the unhashed object). Sub-helpers (`applyChosenMoveNoFinalHash`, `spawnPendingFrameNoFinalHash`) likewise mirror their hashed counterparts. The shadow chain is colocated in `kernel/microturn/drive.ts` and clearly marked as drive-internal.
+3. The `applyPublishedDecisionInternalNoFinalHash` implementation is a SHADOW of the existing `applyPublishedDecisionInternal` — same structure, but every `updateHash(def, X, runtime)` becomes `X` (the unhashed object). Sub-helpers (`applyChosenMoveNoFinalHash`, `spawnPendingFrameNoFinalHash`, `continueResolvedMoveNoFinalHash`) likewise mirror their hashed counterparts. The full shadow set is FOUR functions, not three: `applyPublishedDecisionInternal` calls `continueResolvedMove` from four sites (`apply.ts:602` in the chooseOne branch, plus 675/711/727), and `continueResolvedMove` itself tail-calls into `applyChosenMove` or `spawnPendingFrame`. Without `continueResolvedMoveNoFinalHash`, the chooseOne shadow path would re-enter the canonical (hashing) helpers via the continuation tail call and defeat the optimization. The shadow chain is colocated in `kernel/microturn/drive.ts` and clearly marked as drive-internal.
 4. At exit, `workingState = updateHash(def, workingState, resolvedRuntime);`. The canonical hash is computed once.
 5. The shadow functions consume the same `state-draft.ts` mutation utilities the existing F#11 carve-out uses — they do not introduce a new mutation primitive, only a new scope for the existing one.
 
@@ -144,28 +144,34 @@ Inside `applyPreviewDriveGreedyChooseOne`:
 
 In `packages/engine/src/agents/policy-preview.ts:driveSyntheticCompletion`:
 
-Replace the inner-microturn loop's chooseOne fast path with a single call to `applyPreviewDriveGreedyChooseOne`. The existing cheap state-stack exit checks (introduced by exp-014) move into the new kernel function. The chooseNStep and agentGuided fallback paths remain unchanged in the agent driver — they continue to use `publishMicroturnFromCanonicalState` + `applyPublishedDecisionFromCanonicalState`.
+Replace the inner-microturn loop's greedy-chooseOne fast path with a single call to `applyPreviewDriveGreedyChooseOne`. The existing cheap state-stack exit checks (introduced by exp-014, currently at `policy-preview.ts:732–752`) move into the new kernel function.
 
-The returned `PreviewDriveResult` maps directly onto the existing `DriveResult` union in `policy-preview.ts`.
+The new function applies ONLY when both gating conditions hold: `top.context.kind === 'chooseOne'` AND `completionPolicy === 'greedy'` (matching the existing fast-path predicate at `policy-preview.ts:758`). The agent driver's slow path remains the fallback in three cases:
+
+1. The inner top frame is `chooseNStep`.
+2. The inner top frame is `chooseOne` but `completionPolicy !== 'greedy'` (i.e., `agentGuided`).
+3. Any non-greedy picker invocation.
+
+The slow-path branches continue to use `publishMicroturnFromCanonicalState` + `applyPublishedDecisionFromCanonicalState` (per-iteration hash retained). The returned `PreviewDriveResult` maps directly onto the existing `DriveResult` union in `policy-preview.ts:198–221` (`completed | stochastic | depthCap | failed`).
 
 ### D5. Mutation safety contract (F#11)
 
 The new function MUST satisfy F#11's exception clause:
-- The `initialState` argument is never modified. A regression test asserts `Object.is(initialState, returnedState) === false` and `initialState.stateHash === computeFullHash(table, initialState)` after the call.
+- The `initialState` argument is never mutated. The substantive guarantee is non-mutation, not non-aliasing — early exits (depth=0 due to immediate seat/turn divergence or already-terminal state) MAY legitimately return the input reference unchanged. A regression test asserts `initialState.stateHash === computeFullHash(table, initialState)` after the call AND that nested mutable fields (`decisionStack`, `players`, zone token bags, marker maps) are reference-equal to their pre-call snapshots when no logical change occurred. Object inequality of the returned reference is NOT a required invariant.
 - The shadow functions never publish or expose intermediate unhashed states outside the drive function's local scope.
 - Determinism is proven by a fixture: same `(def, initialState, origin, depthCap, runtime)` produces identical `result.state.stateHash` across N independent invocations.
 - The conformance corpus (F#16) gains a new test class: `architectural-invariant`, `@witness: spec-146-drive-mutation-safety`, asserting the above for FITL and Texas Hold'em representative inputs.
 
 ### D6. ABI compatibility
 
-The existing `applyPublishedDecision`, `applyPublishedDecisionFromCanonicalState`, `applyDecision`, `publishMicroturn`, `publishMicroturnFromCanonicalState`, and `publishMicroturnGreedyChooseOne` exports are unchanged. The new function is purely additive. Per F#14 (No Backwards Compatibility), this spec does not introduce a deprecation path — it adds a single new entry point.
+The existing `applyPublishedDecision`, `applyPublishedDecisionFromCanonicalState`, `applyDecision`, `publishMicroturn`, `publishMicroturnFromCanonicalState`, and `publishMicroturnGreedyChooseOne` exports are unchanged. The internal helpers `applyPublishedDecisionInternal` (`apply.ts:496`), `applyChosenMove` (`apply.ts:327`), `spawnPendingFrame` (`apply.ts:354`), and `continueResolvedMove` (`apply.ts:410`) are likewise unmodified — preserving their V8 JIT profiles is the architectural reason for colocating the shadow chain in a separate file rather than threading a flag through them. The new function is purely additive. Per F#14 (No Backwards Compatibility), this spec does not introduce a deprecation path — it adds a single new entry point.
 
 ## Acceptance Criteria
 
 1. **Performance**: `previewOn_totalMs_ms` on the spec-145 perf corpus (`packages/engine/test/perf/agents/preview-pipeline.perf.test.ts`) drops from ~31s (post-fitl-preview-perf campaign) to ≤25.6s (the hard target). Measured by 3 harness runs, mad_pct < 1.5%.
 2. **Determinism**: All `packages/engine/test/determinism/` corpus passes. Per-frame hash equivalence proven for the post-drive state across 10 independent runs.
 3. **F#11 safety**: Regression test asserts caller-supplied `initialState` is unmodified after `applyPreviewDriveGreedyChooseOne`.
-4. **Full gate**: `pnpm turbo test` passes (5706 engine tests + new spec-146 suite).
+4. **Full gate**: `pnpm turbo test` passes (engine + runner) including the new spec-146 suite.
 5. **Profile evidence**: `digestDecisionStackFrame` ticks attributable to `applyPublishedDecisionInternal` + `spawnPendingFrame` drop by ≥80% (the per-iteration hash savings target).
 
 ## Risks
@@ -181,3 +187,24 @@ The existing `applyPublishedDecision`, `applyPublishedDecisionFromCanonicalState
 - Lazy `state.stateHash` getter design.
 - Removal of any existing kernel API.
 - `chooseNStep` or `agentGuided` fast paths.
+
+## Follow-On Tickets
+
+Suggested ticket namespace for `/spec-to-tickets`: **`146DRIVE-*`** (matches existing convention: `145PREVCOMP-*` for spec 145, `144PROBEREC-*` for spec 144).
+
+Anticipated decomposition (informational — finalized by `/spec-to-tickets`):
+
+1. Add `PreviewDriveResult` and `PreviewDriveOrigin` types in `kernel/microturn/types.ts`.
+2. Implement the four-shadow chain (`applyPublishedDecisionInternalNoFinalHash`, `applyChosenMoveNoFinalHash`, `spawnPendingFrameNoFinalHash`, `continueResolvedMoveNoFinalHash`) plus `applyPreviewDriveGreedyChooseOne` in new file `kernel/microturn/drive.ts`.
+3. Add the conformance witness suite (F#16, `@witness: spec-146-drive-mutation-safety`) covering F#11 mutation safety and determinism for FITL + Texas Hold'em.
+4. Migrate `policy-preview.ts:driveSyntheticCompletion` to call the new function on the gated chooseOne+greedy fast path; preserve the slow path for chooseNStep and agentGuided.
+5. Run `packages/engine/test/perf/agents/preview-pipeline.perf.test.ts` to validate the ≤25.6s hard target (3 harness runs, mad_pct < 1.5%).
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-04-26:
+
+- [`archive/tickets/146DRIVE-001.md`](../archive/tickets/146DRIVE-001.md) — Add `PreviewDriveResult` and `PreviewDriveOrigin` types (covers D1)
+- [`tickets/146DRIVE-002.md`](../tickets/146DRIVE-002.md) — Implement drive function + four-shadow chain in `kernel/microturn/drive.ts` (covers D2, D3, D6)
+- [`tickets/146DRIVE-003.md`](../tickets/146DRIVE-003.md) — Conformance witness suite for drive mutation safety, determinism, and shadow-canonical parity (covers D5 + Risks shadow-chain mitigation)
+- [`tickets/146DRIVE-004.md`](../tickets/146DRIVE-004.md) — Migrate `driveSyntheticCompletion` greedy-chooseOne path + perf gate validation (covers D4 + Acceptance Criteria 1, 2, 4, 5)

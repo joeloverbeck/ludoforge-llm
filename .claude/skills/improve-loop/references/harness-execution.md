@@ -18,9 +18,11 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 
 - Read `HARNESS_RUNS` from program.md (default: 1).
 - **Fixture sync**: Already handled in Step 3 (IMPLEMENT). If `sync-fixtures.sh` was not run during IMPLEMENT (e.g., infrastructure-only change), run it now before the harness.
-- Run the harness:
+- Run the harness using the Harness Preflight pattern from SKILL.md (defends against cwd drift after diagnostic / profiling commands silently changed the Bash session's cwd):
   ```bash
-  cd $WT && bash campaigns/<campaign>/harness.sh
+  cd "$WT" || { echo "PREFLIGHT: $WT unreachable"; exit 1; }
+  [ "$(pwd)" = "$WT" ] || { echo "PREFLIGHT: cwd drift to $(pwd), aborting"; exit 1; }
+  bash campaigns/<campaign>/harness.sh
   ```
 
 **Early abort (per-run):** If the harness supports intermediate output (one line per target file), parse after each line. If the running metric value is worse than `best_metric` by more than `ABORT_THRESHOLD` (using the Metric Direction Comparison Helpers above), kill the harness process. Log status as `EARLY_ABORT` and REJECT immediately (skip to Step 7).

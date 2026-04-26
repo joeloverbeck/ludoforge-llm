@@ -47,6 +47,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 2. Verify `$WT/campaigns/<campaign>/harness.sh` exists and is executable.
 3. Read `$WT/campaigns/<campaign>/results.tsv` — if it has data rows beyond the header, resume from the last accepted state (the current HEAD of the worktree branch IS the last accepted state).
    - **Stale-baseline recovery**: if the recorded baseline commit hash from `checkpoints.jsonl` is not reachable from the worktree HEAD (verify with `git merge-base --is-ancestor <baseline-hash> HEAD`; non-zero exit = unreachable), the prior worktree was removed and the recorded state no longer matches the worktree branch. Treat this as a fresh restart: clear `results.tsv` to the header row, clear `checkpoints.jsonl`, reset `seed-tier.txt` to `INITIAL_SEED_TIER`, and proceed to Phase 1 (Baseline) as if no prior data existed. Document the reason in musings: `**STALE BASELINE**: Prior worktree removed; recorded baseline <hash> not reachable from new HEAD. Restarting from main.`
+   - **Strategy state recovery** (when resuming a contiguous campaign): derive `consecutive_rejects` from the tail of `results.tsv` — count consecutive non-`ACCEPT`/non-`SUSPICIOUS_ACCEPT`/non-`BASELINE` statuses ending at the last row. Derive `total_accepts` from total `ACCEPT` + `SUSPICIOUS_ACCEPT` count. Default `strategy = "normal"` unless the most recent musings entry contains a `**STRATEGY SHIFT**: <name>` marker, in which case adopt that strategy. Long campaigns where session continuity cannot be assumed should rely on this recovery path rather than agent mental tracking.
 4. Identify the **mutable files** from program.md. If the mutable surface is a small set of files (<10), read each one into context. If the mutable surface is a directory tree (e.g., "all files under `packages/engine/src/`"), read only the files relevant to the current experiment hypothesis — the full tree is too large for context. Use profiling data and program.md's root causes to guide which files to read.
 5. Identify the **root causes to seed** from program.md as the initial hypothesis queue.
 
@@ -90,6 +91,18 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
    ```json
    {"exp_id": "baseline", "metric": <baseline_metric>, "commit": "<commit-hash>", "lines_delta_cumulative": 0, "description": "baseline", "timestamp": "<ISO-8601>"}
    ```
+
+### Harness Preflight
+
+Wrap every harness invocation with a cwd preflight check. Diagnostic / profiling commands routinely `cd` to scratch directories or the main repo, and the Bash session retains the new cwd silently; the harness script's `SCRIPT_DIR` / `PROJECT_ROOT` resolution then lands in the wrong tree without any error message. The preflight asserts the actual cwd and aborts before the harness wastes a build/gate cycle:
+
+```bash
+cd "$WT" || { echo "PREFLIGHT: $WT unreachable"; exit 1; }
+[ "$(pwd)" = "$WT" ] || { echo "PREFLIGHT: cwd drift to $(pwd), aborting"; exit 1; }
+bash campaigns/<campaign>/harness.sh
+```
+
+Apply this preflight at every harness call site: Phase 1 baseline (step 1 above), Step 4 EXECUTE in `references/harness-execution.md`, ceiling-baseline runs after a tier promotion or phase transition, post-meta-review trial runs. The paren-subshell form `(cd "$WT" && bash campaigns/<campaign>/harness.sh)` is a stricter inline equivalent that scopes the `cd` to a child shell and never leaks cwd back to the parent — useful for one-off harness probes from inside a longer diagnostic sequence.
 
 ### Baseline Failure Protocol
 
@@ -138,6 +151,12 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
 4. Record the diagnostic summary in musings (whatever the protocol produces).
 
 **When NOT triggered**: read diagnostic artifacts if the harness produces them to inform hypothesis generation. This lighter-weight observation is always appropriate but does not replace the full diagnostic at trigger points.
+
+**Profile-first heuristic** (applies whenever Step 1b is entered): if the campaign's `PRIMARY_METRIC_KEY` is a duration / wall-time metric (matches `*_ms`, `*_duration_*`, or composite scores that include a wall-time component) AND the campaign's `program.md` mentions profiling (any of: `perf record`, `--prof`, `profiler`, "Profiling tool hierarchy"), invoke the profiler in iteration 1 BEFORE forming the first hypothesis. Code-reading guesses for bottleneck location systematically miss V8 deopt patterns, inline-cache costs, and escape-analyzed allocations that only profiles surface. Burning early experiments on hypothesis-driven micro-optimizations risks accept→V8-deopt→reject cycles; profile-driven hypotheses skip the cycle.
+
+**Profile freshness**: if the prior iteration was a REJECT with kernel-internal or compiled-output changes, run the project's compile step (e.g., `pnpm -F @ludoforge/engine build`) BEFORE re-profiling. Profilers attribute time to symbols in the loaded compiled output (typically `dist/` or `build/`), not the source — stale compiled output shows symbols from the just-rolled-back diff and misleads the next hypothesis.
+
+**CWD discipline during diagnostics**: profiling and diagnostic commands (`node --prof`, `cd /tmp/<scratch>`, source greps that descend out of the worktree) routinely change the Bash session's cwd silently. The Step 0 ANCHOR catches drift on the next loop iteration but does NOT catch drift mid-iteration. Re-anchor with `cd "$WT"` AFTER any diagnostic command that crosses tree boundaries, BEFORE the next `bash campaigns/<campaign>/harness.sh` invocation. The Phase 1 Harness Preflight pattern is the canonical guard.
 
 ### Steps 1c-1g: STRATEGY MANAGEMENT
 
@@ -219,6 +238,14 @@ Append a row to `$WT/campaigns/<campaign>/results.tsv`:
 <experiment_id>	<metric_value>	<lines_delta>	<category>	<ACCEPT|REJECT|NEAR_MISS|EARLY_ABORT|CRASH|SUSPICIOUS_ACCEPT|BACKTRACK>	<description>
 ```
 
+**Status selection guidance**:
+- `ACCEPT` / `SUSPICIOUS_ACCEPT`: metric improved past the program.md acceptance gate.
+- `REJECT`: metric regressed beyond `NOISE_TOLERANCE`, or metric was within-noise without a simplification (lines_delta ≥ 0).
+- `NEAR_MISS`: metric within `NOISE_TOLERANCE` of best AND `lines_delta >= 0`; stash for combine strategy.
+- `EARLY_ABORT`: harness was killed mid-run for exceeding `ABORT_THRESHOLD`.
+- `CRASH`: harness exited non-zero (build/gate/runner failure) OR a test asserted incorrectly. Use `CRASH` for both retryable trivial errors AND for un-retryable correctness failures (e.g., a determinism test caught that the diff broke an invariant). The 3-retry policy in Git Operations Summary applies to TRIVIAL crashes only — for un-retryable correctness CRASH the row's `metric_value` column is `null` (write the literal `null`) since no measurement was produced; the `description` column names the failing test or assertion.
+- `BACKTRACK`: marker row written by the BACKTRACK strategy; metric is the checkpoint's metric, lines_delta is `0`.
+
 Use a sequential experiment ID: `exp-001`, `exp-002`, etc. (continue from where results.tsv left off).
 
 **IMPORTANT**: After logging results.tsv, ALWAYS proceed to Step 7.5 (musings) then Step 7.6 (lesson extraction). Do not skip to Step 8.
@@ -231,6 +258,16 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 **Partial signals**: <if any intermediate metrics showed directional improvement/regression>
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
+
+**On `SUSPICIOUS_ACCEPT` only**, extend the template with a Suspicion-gate verification block:
+```markdown
+**Suspicion-gate verification** (improvement >MAX_IMPROVEMENT_PCT triggered SUSPICIOUS_ACCEPT):
+- Mechanism: <numbered list of work skipped or restructured that explains the magnitude>
+- Determinism witness: <state_hash / outcome counts / corpus-shape fingerprint preserved vs baseline>
+- Watchdog status: <Goodhart-guard reading vs threshold>
+- Plausibility judgment: ACCEPT (mechanism matches measured gain) | REJECT (gain too large for stated mechanism)
+```
+The judgment is the agent's mechanistic audit of WHY the gain is so large. If no plausible mechanism explains the magnitude, re-classify as REJECT and roll back per Step 6.
 
 **V8 JIT deopt pattern detection**: If 3+ consecutive rejects show measured regressions (not within-noise, but slowdowns >1%) with root causes attributable to V8 JIT deoptimization (object shape changes, closure body modifications, hidden class mutations, WeakMap/caching overhead in kernel execution paths), flag as `**V8 JIT CEILING**` in musings. Skip directly to ceiling report with architectural spec creation (Option D in Step 1g). Further micro-optimization experiments are provably futile — the architecture must change. This pattern is distinct from a normal plateau (where experiments are within noise) — V8 deopt regressions are ACTIVE performance degradation, not just failure to improve.
 
@@ -298,7 +335,7 @@ This sequence crosses between the worktree and the main repo. Each step is annot
    git merge --squash improve/<campaign>
    ```
 6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. Verify with a quick build+test. *(cwd: main repo root)*
-7. Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes. The detailed experiment history lives in musings.md and results.tsv (gitignored). *(cwd: main repo root)*
+7. **Spec timing branch**: if the user has directed pre-merge spec creation (timing option (b) in step 8 below), execute step 8's spec creation BEFORE this commit step, and reference the new spec file paths (or their commit hashes if committed separately) in the squash-merge message. Otherwise commit the squash-merge first and create specs as a separate post-merge commit per timing option (c). Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes, (e) any pre-merge specs referenced. The detailed experiment history lives in musings.md and results.tsv (gitignored). *(cwd: main repo root)*
 8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. Spec creation can happen at any of three points: (a) during a Human Investigation Interrupt, (b) between user-directed campaign halt and squash-merge (e.g., user says "write the spec, then squash-merge"), or (c) post-merge as a follow-up. In all three cases, specs are project-level artifacts — create them in the main repo root (not the worktree) as a separate commit; the squash-merge does not include them. If specs already exist when reaching this step, reference them in the squash-merge commit message but skip creation. *(cwd: main repo root)*
 9. Remove the worktree and delete the branch *(cwd: main repo root)*:
    ```bash

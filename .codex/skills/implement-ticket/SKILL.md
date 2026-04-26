@@ -50,6 +50,7 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 5. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
 6. no final proof lane is running in parallel with a build, schema, or artifact producer that can clean or rewrite the same output tree; a zero-test or module-resolution "green" from an overlapped compiled-output lane is invalid until rerun serially
 7. any previously failed ticket-named broad lane has already been classified in the active ticket as `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`; do not use `COMPLETED` while a changed-path or architectural-invariant failure is still unclassified or still active-ticket-owned
+8. the final touched-file sweep uses `git status --short` or an equivalent untracked-aware check, not only `git diff` / `git diff --stat`, so newly added ticket deliverables cannot disappear from the closeout view
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 

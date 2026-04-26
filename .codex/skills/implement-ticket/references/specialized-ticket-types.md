@@ -44,6 +44,7 @@ For preparatory tickets landing shared helpers, contracts, or APIs ahead of call
 - Keep broader behavioral adoption anchored to the sibling tickets that own it.
 - In the final summary, separate what landed now from what remains deferred.
 - Treat deferred adoption as residual risk only when callers still rely on older paths after groundwork lands.
+- When the groundwork is a shadow chain, no-finalizer variant, no-side-effect mirror, or other mechanically mirrored fast path, audit the full transitive helper graph before coding. Do not stop at the ticket-named endpoint calls: check helper calls inside the mirrored path for the retired operation or side effect, and add local shadow helpers when needed so the intended invariant survives through tail calls and private helper boundaries.
 
 ## Production-Proof & Regression Tickets
 

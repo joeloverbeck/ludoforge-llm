@@ -2,8 +2,9 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { probeMoveViability } from '../kernel/apply-move.js';
+import { applyPreviewDriveGreedyChooseOne } from '../kernel/microturn/drive.js';
 import { applyPublishedDecisionFromCanonicalState } from '../kernel/microturn/apply.js';
-import { publishMicroturn, publishMicroturnFromCanonicalState, publishMicroturnGreedyChooseOne } from '../kernel/microturn/publish.js';
+import { publishMicroturn, publishMicroturnFromCanonicalState } from '../kernel/microturn/publish.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
@@ -751,18 +752,26 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           return { kind: 'depthCap', state, depth };
         }
 
-        // Fast path for greedy chooseOne: skip remaining-option verification +
-        // projected-state observation by using the kernel's greedy-aware
-        // publish variant. Falls through to the slow path for chooseNStep
-        // (which has more complex selection rules).
+        // Fast path for greedy chooseOne: let the kernel own the bounded inner
+        // drive and canonicalize the final state once at exit.
         if (ctxKind === 'chooseOne' && completionPolicy === 'greedy') {
-          const greedy = publishMicroturnGreedyChooseOne(input.def, state, input.runtime);
-          if (greedy === null) {
-            return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
+          const result = applyPreviewDriveGreedyChooseOne(
+            input.def,
+            state,
+            { seatId: origin.seatId, turnId: origin.turnId },
+            completionDepthCap - depth,
+            input.runtime,
+          );
+          const resultDepth = depth + result.depth;
+          if (result.kind === 'failed') {
+            return {
+              kind: 'failed',
+              reason: 'noPreviewDecision',
+              depth: resultDepth,
+              failureReason: result.failureReason ?? 'noPreviewDecision',
+            };
           }
-          state = applyPublishedDecisionFromCanonicalState(input.def, state, greedy.microturn, greedy.decision, { advanceToDecisionPoint: true }, input.runtime).state;
-          depth += 1;
-          continue;
+          return { kind: result.kind, state: result.state, depth: resultDepth };
         }
 
         const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);

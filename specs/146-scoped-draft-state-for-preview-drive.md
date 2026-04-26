@@ -207,4 +207,5 @@ Decomposed via `/spec-to-tickets` on 2026-04-26:
 - [`archive/tickets/146DRIVE-001.md`](../archive/tickets/146DRIVE-001.md) — Add `PreviewDriveResult` and `PreviewDriveOrigin` types (covers D1)
 - [`archive/tickets/146DRIVE-002.md`](../archive/tickets/146DRIVE-002.md) — Implement drive function + four-shadow chain in `kernel/microturn/drive.ts` (covers D2, D3, D6)
 - [`archive/tickets/146DRIVE-003.md`](../archive/tickets/146DRIVE-003.md) — Conformance witness suite for drive mutation safety, determinism, and shadow-canonical parity (covers D5 + Risks shadow-chain mitigation)
-- [`tickets/146DRIVE-004.md`](../tickets/146DRIVE-004.md) — Migrate `driveSyntheticCompletion` greedy-chooseOne path + perf gate validation (covers D4 + Acceptance Criteria 1, 2, 4, 5)
+- [`archive/tickets/146DRIVE-004.md`](../archive/tickets/146DRIVE-004.md) — Migrate `driveSyntheticCompletion` greedy-chooseOne path + perf gate validation (covers D4; archived as the completed caller-migration owner, with Acceptance Criteria 1 remaining red under 146DRIVE-005)
+- [`tickets/146DRIVE-005.md`](../tickets/146DRIVE-005.md) — Investigate post-migration preview perf shortfall and reconcile the next owner after 004 measured `mean_totalMs=27925.19 ms` against the `25600 ms` hard target

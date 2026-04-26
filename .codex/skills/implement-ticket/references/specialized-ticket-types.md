@@ -26,6 +26,10 @@ When an audit compares profile, policy, feature-flag, or config variants, prefer
 
 For profiling or benchmark tickets that create or update a checked-in baseline, make the comparison itself durable. The active ticket outcome, report, or final closeout should include the baseline measurement, current measurement, absolute delta, ratio or percent change, threshold comparison, whether the warning/failure gate fired, and the exact command that produced the numbers. Do not leave the decisive "how much slower/faster" answer implicit in a passing harness.
 
+For benchmark tickets that combine a production/code migration with an explicit measured acceptance gate, closeout depends on both halves. If the migration lands and focused correctness checks pass but the measured gate still misses, record the exact samples, mean, variance metric, threshold, and verdict; keep the active ticket `BLOCKED`, `PARTIAL`, or equivalent rather than `COMPLETED`; create or update the follow-up investigation/optimization owner named by the ticket or spec; update sibling/spec status so the series tells the same story; and run the repo's ticket-dependency integrity check after changing deps or adding the follow-up.
+
+When a benchmark/perf test exits green but only emits advisory warnings or omits the ticket-owned metric, treat it as a harness smoke, not final acceptance proof. Inspect the test or harness output shape, then either use the existing repo-owned command that prints/asserts the required metric or add a durable measurement path before final closeout. Record the green-but-non-asserting lane separately from the decisive measured verdict.
+
 When an audit matrix spans surfaces that do not share a meaningful metric, do not force a fake scalar comparison. Classify each row as `comparable metric`, `covered by existing smoke`, or `no meaningful comparable metric`, and record the rationale in the ticket outcome/report. Use this especially when a broad acceptance criterion names multiple games, profiles, packages, or corpora but only one subset participates in the measured harness.
 
 ## Investigation Tickets

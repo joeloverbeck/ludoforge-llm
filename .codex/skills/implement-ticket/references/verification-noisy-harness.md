@@ -20,6 +20,8 @@ For long-running package lanes that already printed `ok` lines for the ticket-ow
 
 This preserves truthful proof language without requiring unbounded waiting on runner noise.
 
+Before starting or continuing a broad lane that is known or suspected to have heavyweight tail files, set a proportionate triage plan up front when ticket-owned focused witnesses are available: identify the owned witness files, identify likely non-owned tail files from the manifest or recent lane history, decide a bounded wait limit for repeated quiet-progress output, and decide which direct focused command will preserve the owned proof if the broad tail times out. If the broad tail later times out outside the touched seam, record the focused owned witnesses and the timeout location separately instead of rewriting the implementation around the broad tail by default.
+
 ## Interrupted Host or Resumed Verification
 
 When the terminal, VM, WSL instance, or host environment hangs or is restarted during a long verification lane, do not count the interrupted lane as green or red. Resume from the last trustworthy observation:

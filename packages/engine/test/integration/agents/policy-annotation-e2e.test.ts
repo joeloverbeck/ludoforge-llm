@@ -19,6 +19,7 @@ import {
   type GameState,
 } from '../../../src/kernel/index.js';
 import type { EventDeckDef } from '../../../src/kernel/types-events.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -122,7 +123,7 @@ function createCatalog(overrides?: {
       considerations: [],
     },
   };
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'e2e-catalog',
     surfaceVisibility: {
@@ -152,7 +153,7 @@ function createCatalog(overrides?: {
     },
     profiles: { 'test-profile': profile },
     bindingsBySeat: { us: 'test-profile', nva: 'test-profile', vc: 'test-profile' },
-  };
+  });
 }
 
 function createDef(

@@ -955,7 +955,6 @@ const CompiledAgentStateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
-    expr: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -964,7 +963,6 @@ const CompiledAgentCandidateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
-    expr: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -974,8 +972,6 @@ const CompiledAgentAggregateSchema = z
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
     op: StringSchema,
-    of: AgentPolicyExprSchema,
-    where: AgentPolicyExprSchema.optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -983,7 +979,6 @@ const CompiledAgentAggregateSchema = z
 const CompiledAgentPruningRuleSchema = z
   .object({
     costClass: AgentPolicyCostClassSchema,
-    when: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
     onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
   })
@@ -993,9 +988,6 @@ const CompiledAgentConsiderationSchema = z
   .object({
     scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
-    when: AgentPolicyExprSchema.optional(),
-    weight: AgentPolicyExprSchema,
-    value: AgentPolicyExprSchema,
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
@@ -1092,7 +1084,6 @@ const CompiledAgentTieBreakerSchema = z
   .object({
     kind: StringSchema,
     costClass: AgentPolicyCostClassSchema,
-    value: AgentPolicyExprSchema.optional(),
     order: z.array(StringSchema).optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
   })
@@ -1100,10 +1091,8 @@ const CompiledAgentTieBreakerSchema = z
 
 const CompiledStrategicConditionSchema = z
   .object({
-    target: AgentPolicyExprSchema,
     proximity: z
       .object({
-        current: AgentPolicyExprSchema,
         threshold: NumberSchema,
       })
       .strict()
@@ -1170,7 +1159,7 @@ const AgentPolicyCatalogSchema = z
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,
-    compiled: CompiledPolicyCatalogSchema.optional(),
+    compiled: CompiledPolicyCatalogSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
   })

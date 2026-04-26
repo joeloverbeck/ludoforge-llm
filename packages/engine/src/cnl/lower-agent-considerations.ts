@@ -1,6 +1,8 @@
 import type {
   AgentPolicyExpr,
-  CompiledAgentLibraryIndex,
+  AgentPolicyCostClass,
+  AgentPolicyValueType,
+  CompiledAgentDependencyRefs,
   CompiledPolicyCatalog,
   CompiledPolicyAggregate,
   CompiledPolicyCandidateFeature,
@@ -13,8 +15,64 @@ import type {
   CompiledPolicyZoneSource,
 } from '../kernel/types.js';
 
+export interface AgentPolicyLibraryWithExpr {
+  readonly stateFeatures: Readonly<Record<string, {
+    readonly type: AgentPolicyValueType;
+    readonly costClass: AgentPolicyCostClass;
+    readonly expr: AgentPolicyExpr;
+    readonly dependencies: CompiledAgentDependencyRefs;
+  }>>;
+  readonly candidateFeatures: Readonly<Record<string, {
+    readonly type: AgentPolicyValueType;
+    readonly costClass: AgentPolicyCostClass;
+    readonly expr: AgentPolicyExpr;
+    readonly dependencies: CompiledAgentDependencyRefs;
+  }>>;
+  readonly candidateAggregates: Readonly<Record<string, {
+    readonly type: AgentPolicyValueType;
+    readonly costClass: AgentPolicyCostClass;
+    readonly op: string;
+    readonly of: AgentPolicyExpr;
+    readonly where?: AgentPolicyExpr;
+    readonly dependencies: CompiledAgentDependencyRefs;
+  }>>;
+  readonly pruningRules: Readonly<Record<string, {
+    readonly costClass: AgentPolicyCostClass;
+    readonly when: AgentPolicyExpr;
+    readonly dependencies: CompiledAgentDependencyRefs;
+    readonly onEmpty: 'skipRule' | 'error';
+  }>>;
+  readonly considerations: Readonly<Record<string, {
+    readonly scopes?: readonly ('move' | 'completion')[];
+    readonly costClass: AgentPolicyCostClass;
+    readonly when?: AgentPolicyExpr;
+    readonly weight: AgentPolicyExpr;
+    readonly value: AgentPolicyExpr;
+    readonly unknownAs?: number;
+    readonly clamp?: {
+      readonly min?: number;
+      readonly max?: number;
+    };
+    readonly dependencies: CompiledAgentDependencyRefs;
+  }>>;
+  readonly tieBreakers: Readonly<Record<string, {
+    readonly kind: string;
+    readonly costClass: AgentPolicyCostClass;
+    readonly value?: AgentPolicyExpr;
+    readonly order?: readonly string[];
+    readonly dependencies: CompiledAgentDependencyRefs;
+  }>>;
+  readonly strategicConditions: Readonly<Record<string, {
+    readonly target: AgentPolicyExpr;
+    readonly proximity?: {
+      readonly current: AgentPolicyExpr;
+      readonly threshold: number;
+    };
+  }>>;
+}
+
 export function lowerAgentConsiderations(
-  library: CompiledAgentLibraryIndex,
+  library: AgentPolicyLibraryWithExpr,
 ): CompiledPolicyCatalog {
   const stateFeatures: Record<string, CompiledPolicyStateFeature> = {};
   const candidateFeatures: Record<string, CompiledPolicyCandidateFeature> = {};

@@ -10,6 +10,7 @@ import {
 import { asPhaseId, asPlayerId, asZoneId, initialState, type GameDef, type GameState } from '../../../src/kernel/index.js';
 import { buildSeatResolutionIndex } from '../../../src/kernel/identity.js';
 import type { EventDeckDef } from '../../../src/kernel/types-events.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
 
@@ -43,7 +44,7 @@ function createDef(): GameDef {
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
-    agents: {
+    agents: withCompiledPolicyCatalog({
       schemaVersion: 2,
       catalogFingerprint: 'surface-resolution-dispatch-test',
       surfaceVisibility: {
@@ -91,7 +92,7 @@ function createDef(): GameDef {
       },
       profiles: {},
       bindingsBySeat: {},
-    },
+    }),
     actions: [],
     triggers: [],
     terminal: {

@@ -7,8 +7,6 @@ import {
   createGameDefRuntime,
   initialState,
   type AgentPolicyCatalog,
-  type AgentPolicyExpr,
-  type CompiledAgentConsideration,
   type CompiledPolicyCatalog,
   type CompiledPolicyConsideration,
   type CompiledPolicyExpr,
@@ -28,7 +26,7 @@ export interface CompiledConsiderationSample {
   readonly seatId: string;
   readonly considerationId: string;
   readonly state: GameState;
-  readonly ast: CompiledAgentConsideration;
+  readonly ast: CompiledPolicyConsideration;
   readonly compiled: CompiledPolicyConsideration;
 }
 
@@ -37,7 +35,7 @@ export interface CompiledPolicyExpressionSample {
   readonly profileId: string;
   readonly seatId: string;
   readonly state: GameState;
-  readonly ast: AgentPolicyExpr;
+  readonly ast: CompiledPolicyExpr;
   readonly compiled: CompiledPolicyExpr;
 }
 
@@ -175,7 +173,7 @@ export function collectCompiledConsiderationSamples(
       }
       for (const considerationId of profile.use.considerations) {
         const compiled = compiledConsiderations[considerationId];
-        const ast = catalog.library.considerations[considerationId];
+        const ast = compiled;
         if (compiled === undefined || ast === undefined) {
           continue;
         }
@@ -207,23 +205,23 @@ export function collectSyntheticCompiledPolicyExpressionSamples(
     field: 'category',
     aggOp: 'count',
     zoneScope: 'all',
-  } satisfies AgentPolicyExpr & CompiledPolicyExpr;
+  } satisfies CompiledPolicyExpr;
   const adjacentTokenAgg = {
     kind: 'adjacentTokenAgg',
     anchorZone,
     aggOp: 'count',
-  } satisfies AgentPolicyExpr & CompiledPolicyExpr;
+  } satisfies CompiledPolicyExpr;
   const seatAgg = {
     kind: 'seatAgg',
     over: 'all',
     expr: { kind: 'literal', value: 1 },
     aggOp: 'count',
-  } satisfies AgentPolicyExpr & CompiledPolicyExpr;
+  } satisfies CompiledPolicyExpr;
   const zoneProp = {
     kind: 'zoneProp',
     zone: anchorZone,
     prop: 'category',
-  } satisfies AgentPolicyExpr & CompiledPolicyExpr;
+  } satisfies CompiledPolicyExpr;
 
   return [globalZoneAgg, adjacentTokenAgg, seatAgg, zoneProp].map((expr) => ({
     fixtureLabel: `${fixture.label}:synthetic-${expr.kind}`,
@@ -251,8 +249,8 @@ export function evaluateAstExpressionSample(
   def: GameDef,
   catalog: AgentPolicyCatalog,
   sample: CompiledPolicyExpressionSample,
-): ReturnType<PolicyEvaluationContext['evaluateExpr']> {
-  return createEvaluationContext(def, catalog, sample).evaluateExpr(sample.ast, undefined);
+): ReturnType<PolicyEvaluationContext['evaluateCompiledExpr']> {
+  return createEvaluationContext(def, catalog, sample).evaluateCompiledExpr(sample.ast, undefined);
 }
 
 export function evaluateCompiledConsiderationSample(
@@ -280,7 +278,7 @@ export function evaluateCompiledExpressionSample(
   def: GameDef,
   catalog: AgentPolicyCatalog,
   sample: CompiledPolicyExpressionSample,
-): ReturnType<PolicyEvaluationContext['evaluateExpr']> {
+): ReturnType<PolicyEvaluationContext['evaluateCompiledExpr']> {
   return buildPolicyExprClosure(sample.compiled, createEvaluationContext(def, catalog, sample))(undefined);
 }
 

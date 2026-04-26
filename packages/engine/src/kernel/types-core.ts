@@ -774,14 +774,12 @@ export interface CompiledAgentDependencyRefs {
 export interface CompiledAgentStateFeature {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
-  readonly expr: AgentPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
 export interface CompiledAgentCandidateFeature {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
-  readonly expr: AgentPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
@@ -789,14 +787,11 @@ export interface CompiledAgentAggregate {
   readonly type: AgentPolicyValueType;
   readonly costClass: AgentPolicyCostClass;
   readonly op: string;
-  readonly of: AgentPolicyExpr;
-  readonly where?: AgentPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
 export interface CompiledAgentPruningRule {
   readonly costClass: AgentPolicyCostClass;
-  readonly when: AgentPolicyExpr;
   readonly dependencies: CompiledAgentDependencyRefs;
   readonly onEmpty: 'skipRule' | 'error';
 }
@@ -804,9 +799,6 @@ export interface CompiledAgentPruningRule {
 export interface CompiledAgentConsideration {
   readonly scopes?: readonly ('move' | 'completion')[];
   readonly costClass: AgentPolicyCostClass;
-  readonly when?: AgentPolicyExpr;
-  readonly weight: AgentPolicyExpr;
-  readonly value: AgentPolicyExpr;
   readonly unknownAs?: number;
   readonly clamp?: {
     readonly min?: number;
@@ -818,15 +810,12 @@ export interface CompiledAgentConsideration {
 export interface CompiledAgentTieBreaker {
   readonly kind: string;
   readonly costClass: AgentPolicyCostClass;
-  readonly value?: AgentPolicyExpr;
   readonly order?: readonly string[];
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
 export interface CompiledStrategicCondition {
-  readonly target: AgentPolicyExpr;
   readonly proximity?: {
-    readonly current: AgentPolicyExpr;
     readonly threshold: number;
   };
 }
@@ -886,7 +875,7 @@ export interface AgentPolicyCatalog {
   readonly parameterDefs: Readonly<Record<string, CompiledAgentParameterDef>>;
   readonly candidateParamDefs: Readonly<Record<string, CompiledAgentCandidateParamDef>>;
   readonly library: CompiledAgentLibraryIndex;
-  readonly compiled?: CompiledPolicyCatalog;
+  readonly compiled: CompiledPolicyCatalog;
   readonly profiles: Readonly<Record<string, CompiledAgentProfile>>;
   readonly bindingsBySeat: Readonly<Record<string, string>>;
 }

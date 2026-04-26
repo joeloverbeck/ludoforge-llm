@@ -34,7 +34,7 @@ const completionConsiderationIdsForProfile = (
   catalog: AgentPolicyCatalog,
   profile: CompiledAgentProfile,
 ): readonly string[] => {
-  const considerations = catalog.library.considerations ?? {};
+  const considerations = catalog.compiled.considerations;
   return (profile.use.considerations ?? []).filter(
     (considerationId) => considerations[considerationId]?.scopes?.includes('completion') === true,
   );

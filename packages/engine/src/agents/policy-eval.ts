@@ -7,8 +7,8 @@ import type {
   AgentPreviewCompletionPolicy,
   AgentSelectionMode,
   AgentPolicyCatalog,
-  CompiledAgentConsideration,
-  CompiledAgentTieBreaker,
+  CompiledPolicyConsideration,
+  CompiledPolicyTieBreaker,
   GameDef,
   GameState,
   Move,
@@ -229,7 +229,7 @@ function applyTieBreaker(
   tieBreakerId: string,
   rng: Rng,
 ): { readonly candidates: readonly CandidateEntry[]; readonly rng: Rng } {
-  const tieBreaker = catalog.library.tieBreakers[tieBreakerId];
+  const tieBreaker = catalog.compiled.tieBreakers[tieBreakerId];
   if (tieBreaker === undefined) {
     throw new PolicyRuntimeError({
       code: 'RUNTIME_EVALUATION_ERROR',
@@ -254,7 +254,7 @@ function applyTieBreaker(
         candidates: selectByScalarExpr(
           candidates,
           (left, right) => (tieBreaker.kind === 'higherExpr' ? left > right : left < right),
-          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+          (candidate) => evaluation.evaluateCompiledExpr(tieBreaker.value!, candidate),
         ),
         rng,
       };
@@ -264,7 +264,7 @@ function applyTieBreaker(
         candidates: selectByPreferredOrder(
           candidates,
           tieBreaker,
-          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+          (candidate) => evaluation.evaluateCompiledExpr(tieBreaker.value!, candidate),
         ),
         rng,
       };
@@ -493,7 +493,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       }
 
       for (const pruningRuleId of profile.use.pruningRules) {
-        const pruningRule = catalog.library.pruningRules[pruningRuleId];
+        const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
         if (pruningRule === undefined) {
           throw new PolicyRuntimeError({
             code: 'RUNTIME_EVALUATION_ERROR',
@@ -502,7 +502,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           });
         }
         const survivors = activeCandidates.filter((candidate) => {
-          const shouldPrune = evaluation.evaluateExpr(pruningRule.when, candidate);
+          const shouldPrune = evaluation.evaluateCompiledExpr(pruningRule.when, candidate);
           if (shouldPrune === true) {
             candidate.prunedBy.push(pruningRuleId);
             return false;
@@ -542,7 +542,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         });
       }
 
-      const considerations = catalog.library.considerations ?? {};
+      const considerations = catalog.compiled.considerations;
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(
         (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
       );
@@ -874,7 +874,7 @@ function selectRepresentativeCandidatesByActionId(
 
   let nextRng = rng;
   const representativeTieBreakerIds = tieBreakerIds.filter((tieBreakerId) =>
-    catalog.library.tieBreakers[tieBreakerId]?.kind !== 'stableMoveKey');
+    catalog.compiled.tieBreakers[tieBreakerId]?.kind !== 'stableMoveKey');
   const representatives = [...actionGroups.values()].map((groupCandidates) => {
     const bestScore = groupCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
     let bestCandidates = groupCandidates.filter((candidate) => candidate.score === bestScore);
@@ -933,7 +933,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
 
 function scoreCandidateForGateFlipProbe(
   evaluation: PolicyEvaluationContext,
-  considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+  considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
   candidate: CandidateEntry,
   considerationIds: readonly string[],
 ): number {
@@ -960,7 +960,7 @@ function scoreCandidateForGateFlipProbe(
 
 function pickTopKByMoveOnlyScore(
   evaluation: PolicyEvaluationContext,
-  considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+  considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
   candidates: readonly CandidateEntry[],
   moveOnlyConsiderationIds: readonly string[],
   topK: number,
@@ -1149,7 +1149,7 @@ function selectByScalarExpr(
 
 function selectByPreferredOrder(
   candidates: readonly CandidateEntry[],
-  tieBreaker: CompiledAgentTieBreaker,
+  tieBreaker: CompiledPolicyTieBreaker,
   evaluate: (candidate: CandidateEntry) => PolicyValue,
 ): readonly CandidateEntry[] {
   const orderIndex = new Map((tieBreaker.order ?? []).map((entry, index): readonly [string, number] => [entry, index]));

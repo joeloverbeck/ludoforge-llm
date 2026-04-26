@@ -776,6 +776,658 @@
       "selfMargin": {
         "type": "number",
         "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "patronage": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "coinControlPop": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "selfResources": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "vcGuerrillaCount": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "vcBaseCount": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "vcFriendlyCapCount": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "arvnTroopCount": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "turnRound": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      }
+    },
+    "candidateFeatures": {
+      "projectedSelfMargin": {
+        "type": "number",
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfMargin"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "projectedCapabilityGain": {
+        "type": "number",
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "vcFriendlyCapCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      }
+    },
+    "candidateAggregates": {
+      "hasNonPassAlternative": {
+        "type": "boolean",
+        "costClass": "candidate",
+        "op": "any",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "maxMarginScore": {
+        "type": "number",
+        "costClass": "preview",
+        "op": "max",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "minMarginScore": {
+        "type": "number",
+        "costClass": "preview",
+        "op": "min",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      }
+    },
+    "pruningRules": {
+      "dropPassWhenOtherMovesExist": {
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [
+            "hasNonPassAlternative"
+          ],
+          "strategicConditions": []
+        },
+        "onEmpty": "skipRule"
+      }
+    },
+    "considerations": {
+      "preferProjectedSelfMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [
+            "projectedMarginWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preserveResources": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [
+            "resourceWeight"
+          ],
+          "stateFeatures": [
+            "selfResources"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferEvent": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "eventWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTrainAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferPatrolAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferAssaultAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferAdviseAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferSweepAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferGovernAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferRallyAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferRallyWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "rallyWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferMarchAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferAttackAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTerrorAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTaxAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTaxWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "taxWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferGovernWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "governWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferTrainWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "trainWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferSweepWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "sweepWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferAssaultWeighted": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [
+            "assaultWeight"
+          ],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferSubvertAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferInfiltrateAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferBombardAction": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "trainWhenFewTroops": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "arvnTroopCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "governWhenPatronageLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "patronage"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "trainWhenControlLow": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "coinControlPop"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferNormalizedMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [
+            "maxMarginScore",
+            "minMarginScore"
+          ],
+          "strategicConditions": []
+        }
+      },
+      "preferStrongNormalizedMargin": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfMargin"
+          ],
+          "aggregates": [
+            "maxMarginScore",
+            "minMarginScore"
+          ],
+          "strategicConditions": []
+        }
+      },
+      "valueCapabilityGain": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedCapabilityGain"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "penalizeAttack": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "candidate",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "observeGameState": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfResources",
+            "turnRound",
+            "vcBaseCount",
+            "vcGuerrillaCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      }
+    },
+    "tieBreakers": {
+      "stableMoveKey": {
+        "kind": "stableMoveKey",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      }
+    },
+    "strategicConditions": {}
+  },
+  "compiled": {
+    "stateFeatures": {
+      "selfMargin": {
+        "type": "number",
+        "costClass": "state",
         "expr": {
           "kind": "ref",
           "ref": {
@@ -2699,5 +3351,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "324e1859590d3f47bbe488be2ff2bedc1872731e4025857429610b3b9b89dabb"
+  "catalogFingerprint": "d568fede8aa02e20ba6726804d7e2c816f09c3faa80741fd2f1bc699eefd6d2d"
 }

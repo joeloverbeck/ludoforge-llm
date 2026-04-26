@@ -256,7 +256,7 @@ describe('agents authoring surface', () => {
         preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
       },
     });
-    assert.deepEqual(agents.library, {
+    assert.deepEqual(agents.compiled, {
       stateFeatures: {
         currentMargin: {
           type: 'number',
@@ -474,7 +474,7 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 
-    const stateFeatures = result.gameDef?.agents?.library.stateFeatures;
+    const stateFeatures = result.gameDef?.agents?.compiled.stateFeatures;
     assert.ok(stateFeatures !== undefined);
     assert.deepEqual(stateFeatures.maxOpponentMargin, {
       type: 'number',
@@ -841,7 +841,7 @@ describe('agents authoring surface', () => {
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.library.considerations?.preferNamedOption, {
+    assert.deepEqual(result.gameDef?.agents?.compiled.considerations?.preferNamedOption, {
       scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
@@ -916,7 +916,7 @@ describe('agents authoring surface', () => {
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.library.considerations?.preferHigherPopulation, {
+    assert.deepEqual(result.gameDef?.agents?.compiled.considerations?.preferHigherPopulation, {
       scopes: ['completion'],
       costClass: 'state',
       when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
@@ -984,7 +984,7 @@ describe('agents authoring surface', () => {
 
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    const paramLoad = result.gameDef?.agents?.library.candidateFeatures.paramLoad;
+    const paramLoad = result.gameDef?.agents?.compiled.candidateFeatures.paramLoad;
     assert.ok(paramLoad !== undefined);
     assert.deepEqual(paramLoad.expr, {
       kind: 'ref',
@@ -3121,24 +3121,24 @@ describe('agents authoring surface', () => {
     });
 
     assert.equal(result.gameDef === null, false);
-    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedMargin?.expr, refExpr({
+    assert.deepEqual(result.gameDef?.agents?.compiled.candidateFeatures.projectedMargin?.expr, refExpr({
       kind: 'previewSurface',
       family: 'victoryCurrentMargin',
       id: 'currentMargin',
       selector: { kind: 'role', seatToken: 'us' },
     }));
-    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedCurrentMarginFeature?.expr, refExpr({
+    assert.deepEqual(result.gameDef?.agents?.compiled.candidateFeatures.projectedCurrentMarginFeature?.expr, refExpr({
       kind: 'library',
       refKind: 'previewStateFeature',
       id: 'currentMargin',
     }));
-    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedResources?.expr, refExpr({
+    assert.deepEqual(result.gameDef?.agents?.compiled.candidateFeatures.projectedResources?.expr, refExpr({
       kind: 'previewSurface',
       family: 'perPlayerVar',
       id: 'resources',
       selector: { kind: 'player', player: 'self' },
     }));
-    assert.deepEqual(result.gameDef?.agents?.library.candidateFeatures.projectedBoobyTraps?.expr, refExpr({
+    assert.deepEqual(result.gameDef?.agents?.compiled.candidateFeatures.projectedBoobyTraps?.expr, refExpr({
       kind: 'previewSurface',
       family: 'globalMarker',
       id: 'cap_boobyTraps',
@@ -3240,7 +3240,7 @@ describe('agents authoring surface', () => {
     });
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.library.stateFeatures.selfResources?.expr, refExpr({
+    assert.deepEqual(result.gameDef?.agents?.compiled.stateFeatures.selfResources?.expr, refExpr({
       kind: 'currentSurface',
       family: 'perPlayerVar',
       id: 'resources',

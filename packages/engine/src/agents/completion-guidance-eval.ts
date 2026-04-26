@@ -28,7 +28,7 @@ export function scoreCompletionOption(
   if (considerationIds.length === 0) {
     return 0;
   }
-  const considerations = catalog.library.considerations ?? {};
+  const considerations = catalog.compiled.considerations;
 
   const evaluation = new PolicyEvaluationContext({
     def,

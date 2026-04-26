@@ -1,7 +1,7 @@
 # Spec 147: Ahead-Of-Time Compilation Of Consideration AST Trees
 
-**Status**: PROPOSED
-**Priority**: P2 (compounds with Spec 146; addresses ~10% of the post-fitl-preview-perf-campaign profile concentrated in interpretive AST evaluation; not a hard prerequisite for spec-146 nor for any specific shipping campaign)
+**Status**: PROPOSED — scope corrected 2026-04-26 after 147AOTCON-003 post-migration measurement
+**Priority**: P2 (compounds with Spec 146; addresses the post-fitl-preview-perf-campaign profile concentrated in interpretive AST evaluation; live 147AOTCON-003 evidence shows the remaining hard-target miss is now Zobrist/GC dominated and owned by 147AOTCON-004)
 **Complexity**: L (compiler-side AST→closure-tree compilation, kernel-side runtime path that consumes compiled closures, GameDef schema addition for the compiled artifact, fixture migration of every shipped agent profile; no GameSpecDoc YAML change)
 **Dependencies**:
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the consideration evaluation surface this spec optimizes.
@@ -15,6 +15,7 @@
 - Cumulative-FITL-perf global lessons: "FITL kernel computation functions (`resolveRef`, `evalCondition`, `foldTokenFilterExpr`, `matchesScalarMembership`) are at a V8 JIT optimization ceiling. ANY modification — WeakMap caching (+7.7%), fast-path branching (+3.8%), short-circuit evaluation (test failures) — causes hidden class deoptimization. The ONLY safe optimization pattern is removing WORK at the orchestration level (skipping calls entirely), not modifying how calls behave."
 - The orchestration-level skipping the lessons recommend is exactly what AOT compilation enables: a per-AST-node closure tree replaces the per-evaluation switch dispatch, eliminating both the dispatch cost and the hidden-class polymorphism that V8 cannot resolve in interpretive evaluation.
 - Post-Spec-146 handoff from `archive/tickets/146DRIVE-005.md` (2026-04-26): durable production-profile hard-target probe still misses `25600 ms` (`--runs 1` sample `27012.48 ms`; CPU-profile sample `28019.62 ms`, `candidateBudget=465`). The Outcome section explicitly assigns the next large implementation owner to this spec rather than another narrow Spec 146 drive patch.
+- Post-147AOTCON-003 correction (2026-04-26): deleting the runtime policy AST interpreter and switching production artifacts to compiled-only policy descriptors did not satisfy the hard target. The 3-run profile reported `mean_totalMs=27884.08`, `mad_pct=2.54`, `hardTargetMs=25600`, `pass=false`; top samples were GC and Zobrist/hash-family work (`fnv1a64`, `digestDecisionStackFrame`, `zobristKey`). The remaining hard-target miss is split to `tickets/147AOTCON-004.md`.
 
 ## Brainstorm Context
 
@@ -206,7 +207,7 @@ CI blocks if either test fails.
 
 The compiled tree is added as a new optional `compiled` field on `AgentPolicyCatalog` (`kernel/types-core.ts:750`). It contributes to `catalogFingerprint` automatically because `fingerprintPolicyIr` (`agents/policy-ir.ts:3`) hashes the catalog object verbatim and the lowering pass runs before the fingerprint is computed (`cnl/compile-agents.ts:117`). No new hash mechanism is introduced. The schema artifacts (`packages/engine/schemas/GameDef.schema.json`) are regenerated in the same change.
 
-The four repository-owned golden fixtures are migrated in the same change per F#14:
+Repository-owned fixtures are updated or validated in the same change per F#14. The policy-catalog fixtures are regenerated because they serialize `GameDef.agents`; the policy-summary trace fixtures are validated unchanged unless trace content changes:
 
 - `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json`
 - `packages/engine/test/fixtures/gamedef/texas-policy-catalog.golden.json`
@@ -217,17 +218,18 @@ Other `GameDef` consumers are unaffected because adding an optional field to a s
 
 ## Acceptance Criteria
 
-1. **Performance**: `previewOn_totalMs_ms` on the spec-145 perf corpus drops by ≥6% relative to the post-spec-146 baseline measured by `pnpm -F @ludoforge/engine measure:preview-hard-target` (i.e., addresses ~half the documented ~10-13% interpretive cost). Combined with Spec 146 the cumulative win is expected to bring `previewOn` under the 25.6s hard target.
+1. **Performance evidence**: `previewOn_totalMs_ms` on the spec-145 perf corpus is re-measured by `pnpm -F @ludoforge/engine measure:preview-hard-target` after the compiled-only cut. If the same 3-run hard-target script still reports `pass=false`, the remaining root-cause hotspot must be recorded and split rather than counted as Spec 147 complete performance success.
 2. **Equivalence**: The compiled-descriptor closure path and the AST interpreter return identical `PolicyValue` for every production-reachable policy carrier and expression kind in FITL and Texas Hold'em over the deterministic state corpus built by `compiled-policy-production-helpers.ts` (D5.1). Production-absent descriptor kinds are covered by generic synthetic expression parity samples. CI-enforced.
 3. **Determinism**: `catalogFingerprint` is canonically reproducible across compiles for both FITL and Texas (same GameSpec → byte-identical `compiled` tree → identical fingerprint), proven by `compiled-policy-determinism.test.ts` (D5.2).
 4. **Full gate**: `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm turbo schema:artifacts` all pass.
-5. **Profile evidence**: A `--cpu-prof` run of `pnpm -F @ludoforge/engine measure:preview-hard-target` shows `resolveRef` self-time dropping by ≥50% relative to the 6.09% baseline recorded in `archive/tickets/146DRIVE-005.md:124-129`. The same script is the methodology gate; pre/post profiles are kept under `/tmp/146drive-profile-*` (or equivalent) and referenced in the implementation ticket.
+5. **Profile evidence**: A `--cpu-prof` run of `pnpm -F @ludoforge/engine measure:preview-hard-target` confirms the runtime policy AST interpreter is no longer the active policy-evaluation bottleneck. Remaining hard-target hotspots outside the AOT policy seam are owned by follow-up tickets with their own proof gates.
 
 ## Risks
 
-- **Migration cost**: Four golden fixtures (`fitl-policy-catalog.golden.json`, `texas-policy-catalog.golden.json`, `fitl-policy-summary.golden.json`, `texas-policy-summary.golden.json`) must be regenerated in the same change as the lowering pass lands and the AST fallback is removed. Mitigated by automating fixture regeneration via the existing `sync-fixtures.sh` workflow and by gating on the equivalence test (D5.1) before the fixtures are accepted.
+- **Migration cost**: The policy-catalog goldens (`fitl-policy-catalog.golden.json`, `texas-policy-catalog.golden.json`) must be regenerated in the same change as the AST fallback is removed. The policy-summary trace goldens (`fitl-policy-summary.golden.json`, `texas-policy-summary.golden.json`) remain part of the proof surface but only need regeneration if trace content changes, because they do not serialize the agent catalog. The previously drafted `sync-fixtures.sh` workflow is stale in the live repo; use the built production fixture helpers plus the existing engine test/schema lanes.
 - **Compiled-tree size**: Closures are small but numerous. Estimate: <2× the size of the current AST IR. Acceptable.
 - **V8 closure deopt for the factory**: If the factory function itself becomes too large, V8 may stop inlining it. Mitigated by keeping each `case` body to ≤10 lines and using a switch (not a Map) for kind dispatch — V8 monomorphizes switches well.
+- **Hard-target over-attribution**: Live 147AOTCON-003 measurement showed the remaining `25600 ms` miss is dominated by GC and Zobrist/hash work after the policy interpreter is removed. Mitigated by splitting the remaining performance root cause to 147AOTCON-004 instead of stretching this AOT spec beyond its measured seam.
 - **Per-context closure-build cost**: ~50-100 closures per outer microturn × 50 microturns = 2500-5000 closures per benchmark. Mitigated by closure-tree caching at the catalog level (compile once per GameDef, materialize once per `PolicyEvaluationContext`, reuse across candidates).
 
 ## Out Of Scope
@@ -244,7 +246,8 @@ Decomposed via `/spec-to-tickets` on 2026-04-26:
 
 - [`archive/tickets/147AOTCON-001.md`](../archive/tickets/147AOTCON-001.md) — Add compiled policy expression descriptors and equivalence scaffold (covers D1 minimum surface, D2 lowering scaffold, D3 runtime materialization scaffold, D5.1 equivalence scaffold).
 - [`archive/tickets/147AOTCON-002.md`](../archive/tickets/147AOTCON-002.md) — Extend compiled policy descriptors to full `AgentPolicyExpr` coverage and add determinism invariant (covers D1 full union, D2 full lowering coverage, D3 full factory coverage, D5.2 determinism invariant).
-- [`tickets/147AOTCON-003.md`](../tickets/147AOTCON-003.md) — Enable compiled policy path as default, delete AST interpreter, regenerate fixtures, re-measure hard-target (covers D4 runtime collapse, D6 fixture migration, Acceptance Criteria 1 & 5).
+- [`archive/tickets/147AOTCON-003.md`](../archive/tickets/147AOTCON-003.md) — Enable compiled policy path as default, delete AST interpreter, regenerate fixtures, re-measure hard-target and split the remaining miss if it is outside the AOT seam (covers D4 runtime collapse, D6 fixture migration, performance evidence correction).
+- [`tickets/147AOTCON-004.md`](../tickets/147AOTCON-004.md) — Remove Zobrist and GC bottlenecks from the FITL preview hard-target path (owns the remaining `25600 ms` miss exposed by 147AOTCON-003).
 
 ## Follow-On Tickets
 
@@ -254,4 +257,5 @@ Anticipated decomposition (final ordering and granularity owned by `/spec-to-tic
 
 1. **147AOTCON-001** — Already exists. Adds the descriptor types (D1 minimum surface), the lowering scaffold (D2), the runtime materialization scaffold (D3) for the first supported expression families, and the equivalence test scaffold (D5.1) without enabling the compiled path as default.
 2. **147AOTCON-002** — Extend descriptor coverage to every `AgentPolicyExpr.kind` (`zoneProp`, `zoneTokenAgg`, `globalTokenAgg`, `globalZoneAgg`, `adjacentTokenAgg`, `seatAgg`) and every operator under `op`, plus the determinism invariant test (D5.2).
-3. **147AOTCON-003** — Enable the compiled path as default, delete the AST interpreter (`evaluateExpr`, the AST-bearing `library` shape that's no longer needed), regenerate the four golden fixtures (D6), and re-measure the hard-target profile (Acceptance Criterion 5).
+3. **147AOTCON-003** — Enable the compiled path as default, delete the AST interpreter (`evaluateExpr`, the AST-bearing `library` shape that's no longer needed), regenerate the policy-catalog goldens, validate policy-summary trace goldens, and re-measure the hard-target profile. If the hard target still misses outside the AOT seam, record and split it.
+4. **147AOTCON-004** — Remove the Zobrist/hash and GC bottlenecks exposed by the post-003 profile until the same hard-target script reports `pass=true`.

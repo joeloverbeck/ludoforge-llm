@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { buildPolicyAgentDecisionTrace, buildPolicyDiagnosticsSnapshot } from '../../../src/agents/policy-diagnostics.js';
 import type { PolicyEvaluationMetadata } from '../../../src/agents/policy-eval.js';
 import type { GameDef } from '../../../src/kernel/index.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 function createMetadata(): PolicyEvaluationMetadata {
   return {
@@ -160,7 +161,7 @@ describe('policy-diagnostics', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: 'main' as never }] },
-      agents: {
+      agents: withCompiledPolicyCatalog({
         schemaVersion: 2,
         catalogFingerprint: 'preview-feature-catalog',
         surfaceVisibility: {
@@ -226,7 +227,7 @@ describe('policy-diagnostics', () => {
           },
         },
         bindingsBySeat: { us: 'baseline' },
-      },
+      }),
       actions: [],
       triggers: [],
       terminal: { conditions: [] },
@@ -250,7 +251,7 @@ describe('policy-diagnostics', () => {
       tokenTypes: [],
       setup: [],
       turnStructure: { phases: [{ id: 'main' as never }] },
-      agents: {
+      agents: withCompiledPolicyCatalog({
         schemaVersion: 2,
         catalogFingerprint: 'seat-agg-catalog',
         surfaceVisibility: {
@@ -333,7 +334,7 @@ describe('policy-diagnostics', () => {
           },
         },
         bindingsBySeat: { us: 'baseline', arvn: 'baseline' },
-      },
+      }),
       actions: [],
       triggers: [],
       terminal: { conditions: [] },

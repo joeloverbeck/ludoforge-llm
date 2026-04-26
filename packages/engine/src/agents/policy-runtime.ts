@@ -363,7 +363,7 @@ function hasCompletionScopedConsideration(
   if (cached !== undefined) {
     return cached;
   }
-  const considerations = catalog.library.considerations ?? {};
+  const considerations = catalog.compiled.considerations;
   const result = (profile.use.considerations ?? []).some(
     (id) => considerations[id]?.scopes?.includes('completion') === true,
   );

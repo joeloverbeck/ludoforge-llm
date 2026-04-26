@@ -18,6 +18,7 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { createTrustedExecutableMove } from '../../../src/kernel/trusted-move.js';
 
@@ -38,7 +39,7 @@ function createDef(
   topK: number,
   options: { readonly materializePreviewInPruning?: boolean } = {},
 ): GameDef {
-  const catalog: AgentPolicyCatalog = {
+  const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'topk-test',
     surfaceVisibility: {
@@ -139,7 +140,7 @@ function createDef(
       },
     },
     bindingsBySeat: { alpha: 'baseline' },
-  };
+  });
 
   return {
     metadata: { id: 'topk-preview-test', players: { min: 2, max: 2 } },

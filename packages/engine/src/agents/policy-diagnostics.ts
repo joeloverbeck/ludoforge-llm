@@ -1,8 +1,8 @@
 import type {
   AgentPolicyCatalog,
-  AgentPolicyExpr,
   AgentParameterValue,
   CompiledAgentPolicyRef,
+  CompiledPolicyExpr,
   CompiledSurfaceRef,
   CompiledAgentProfile,
   GameDef,
@@ -247,7 +247,7 @@ function collectSurfaceRefs(
 
     switch (ref.refKind) {
       case 'stateFeature': {
-        const feature = catalog.library.stateFeatures[ref.id];
+        const feature = catalog.compiled.stateFeatures[ref.id];
         if (feature !== undefined) {
           walkExpr(feature.expr, visitRef);
         }
@@ -258,14 +258,14 @@ function collectSurfaceRefs(
         break;
       }
       case 'candidateFeature': {
-        const feature = catalog.library.candidateFeatures[ref.id];
+        const feature = catalog.compiled.candidateFeatures[ref.id];
         if (feature !== undefined) {
           walkExpr(feature.expr, visitRef);
         }
         break;
       }
       case 'aggregate': {
-        const aggregate = catalog.library.candidateAggregates[ref.id];
+        const aggregate = catalog.compiled.candidateAggregates[ref.id];
         if (aggregate !== undefined) {
           walkExpr(aggregate.of, visitRef);
           if (aggregate.where !== undefined) {
@@ -278,19 +278,19 @@ function collectSurfaceRefs(
   };
 
   for (const featureId of profile.plan.stateFeatures) {
-    const feature = catalog.library.stateFeatures[featureId];
+    const feature = catalog.compiled.stateFeatures[featureId];
     if (feature !== undefined) {
       walkExpr(feature.expr, visitRef);
     }
   }
   for (const featureId of profile.plan.candidateFeatures) {
-    const feature = catalog.library.candidateFeatures[featureId];
+    const feature = catalog.compiled.candidateFeatures[featureId];
     if (feature !== undefined) {
       walkExpr(feature.expr, visitRef);
     }
   }
   for (const aggregateId of profile.plan.candidateAggregates) {
-    const aggregate = catalog.library.candidateAggregates[aggregateId];
+    const aggregate = catalog.compiled.candidateAggregates[aggregateId];
     if (aggregate !== undefined) {
       walkExpr(aggregate.of, visitRef);
       if (aggregate.where !== undefined) {
@@ -299,12 +299,12 @@ function collectSurfaceRefs(
     }
   }
   for (const ruleId of profile.use.pruningRules) {
-    const rule = catalog.library.pruningRules[ruleId];
+    const rule = catalog.compiled.pruningRules[ruleId];
     if (rule !== undefined) {
       walkExpr(rule.when, visitRef);
     }
   }
-  const considerations = catalog.library.considerations ?? {};
+  const considerations = catalog.compiled.considerations;
   for (const considerationId of profile.use.considerations ?? []) {
     const consideration = considerations[considerationId];
     if (consideration !== undefined) {
@@ -316,7 +316,7 @@ function collectSurfaceRefs(
     }
   }
   for (const tieBreakerId of profile.use.tieBreakers) {
-    const tieBreaker = catalog.library.tieBreakers[tieBreakerId];
+    const tieBreaker = catalog.compiled.tieBreakers[tieBreakerId];
     if (tieBreaker?.value !== undefined) {
       walkExpr(tieBreaker.value, visitRef);
     }
@@ -328,7 +328,7 @@ function collectSurfaceRefs(
   };
 }
 
-function walkExpr(expr: AgentPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef) => void): void {
+function walkExpr(expr: CompiledPolicyExpr, visitRef: (ref: CompiledAgentPolicyRef) => void): void {
   if (expr.kind === 'ref') {
     visitRef(expr.ref);
     return;

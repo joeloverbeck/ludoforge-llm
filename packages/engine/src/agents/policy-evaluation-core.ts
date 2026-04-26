@@ -1,5 +1,5 @@
 import { asPlayerId, type PlayerId, type ZoneId } from '../kernel/branded.js';
-import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
+import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOp, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext } from '../kernel/eval-context.js';
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
@@ -15,6 +15,8 @@ import type {
   ChoicePendingRequest,
   CompiledAgentConsideration,
   CompiledAgentPolicyRef,
+  CompiledPolicyExpr,
+  CompiledPolicyZoneSource,
   CompiledSurfaceRef,
   GameDef,
   GameState,
@@ -37,6 +39,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import { buildPolicyExprClosure, type CompiledPolicyExprClosure } from './compiled-policy-runtime.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -569,6 +572,152 @@ export class PolicyEvaluationContext {
     return this.resolveRef(ref, candidate);
   }
 
+  evaluateCompiledZoneProp(
+    zone: CompiledPolicyZoneSource,
+    prop: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const zoneId = this.resolveCompiledPolicyZoneId(zone, 'none', candidate);
+    if (zoneId === undefined) {
+      return undefined;
+    }
+    const zoneDef = this.input.def.zones.find((entry) => entry.id === zoneId);
+    if (zoneDef === undefined) {
+      return undefined;
+    }
+    if (prop === 'id') {
+      return zoneDef.id;
+    }
+    if (prop === 'category') {
+      return zoneDef.category;
+    }
+    return scalarZonePropValue(zoneDef.attributes?.[prop]);
+  }
+
+  evaluateCompiledZoneTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const currentState = this.activeState;
+    const resolvedOwner = resolveZoneTokenAggOwner(expr.owner, this.input, currentState);
+    if (resolvedOwner === undefined) {
+      return undefined;
+    }
+    const zoneId = this.resolveCompiledPolicyZoneId(expr.zone, resolvedOwner, candidate);
+    if (zoneId === undefined) {
+      return undefined;
+    }
+    const tokens = currentState.zones[zoneId];
+    if (tokens === undefined || tokens.length === 0) {
+      return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
+    }
+    const values: number[] = [];
+    for (const token of tokens) {
+      const value = token.props[expr.prop];
+      if (typeof value === 'number') {
+        values.push(value);
+      }
+    }
+    if (values.length === 0) {
+      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
+    }
+    switch (expr.aggOp) {
+      case 'sum':
+        return values.reduce((acc, value) => acc + value, 0);
+      case 'count':
+        return values.length;
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
+    }
+  }
+
+  evaluateCompiledGlobalTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
+  ): PolicyValue {
+    const currentState = this.activeState;
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
+    const zoneIds: string[] = [];
+
+    for (const zoneDef of this.input.def.zones) {
+      if (!matchesZoneScope(zoneDef, expr.zoneScope)) {
+        continue;
+      }
+      if (!matchesZoneFilter(zoneDef, expr.zoneFilter, currentState)) {
+        continue;
+      }
+      zoneIds.push(String(zoneDef.id));
+    }
+
+    return this.aggregateTokensAcrossZones(zoneIds, expr, resolvedFilter);
+  }
+
+  evaluateCompiledGlobalZoneAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
+  ): PolicyValue {
+    return this.evaluateGlobalZoneAggregate(expr);
+  }
+
+  evaluateCompiledAdjacentTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const currentState = this.activeState;
+    const anchorZoneId = this.resolveCompiledPolicyZoneId(expr.anchorZone, 'none', candidate);
+    if (anchorZoneId === undefined) {
+      return undefined;
+    }
+    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
+    const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
+    return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
+  }
+
+  evaluateCompiledSeatAggregate(
+    over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+    aggOp: AgentPolicyZoneTokenAggOp,
+    inner: CompiledPolicyExprClosure,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const seatIds = this.resolveSeatAggregateSeatIds(over);
+    if (seatIds === undefined || seatIds.length === 0) {
+      return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
+    }
+
+    const values: number[] = [];
+    for (const seatId of seatIds) {
+      const previousSeatContext = this.currentSeatContext;
+      this.currentSeatContext = seatId;
+      try {
+        const value = inner(candidate);
+        if (typeof value === 'number') {
+          values.push(value);
+        }
+      } finally {
+        this.currentSeatContext = previousSeatContext;
+      }
+    }
+
+    if (aggOp === 'count') {
+      return values.length;
+    }
+    if (values.length === 0) {
+      return aggOp === 'sum' ? 0 : undefined;
+    }
+
+    switch (aggOp) {
+      case 'sum':
+        return values.reduce((acc, value) => acc + value, 0);
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
+    }
+  }
+
   createCompiledPolicyRuntimeError(
     code: string,
     message: string,
@@ -779,7 +928,7 @@ export class PolicyEvaluationContext {
   }
 
   private resolveSeatAggregateSeatIds(
-    over: Extract<AgentPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+    over: 'opponents' | 'all' | readonly string[],
   ): readonly string[] | undefined {
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
     if (seatIds === undefined) {
@@ -890,9 +1039,23 @@ export class PolicyEvaluationContext {
     return resolveZoneRefWithOwnerFallback(resolvedZone, owner, this.getZoneReadContext());
   }
 
+  private resolveCompiledPolicyZoneId(
+    zoneExpr: CompiledPolicyZoneSource,
+    owner: 'none' | PlayerId,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): ZoneId | undefined {
+    const resolvedZone = typeof zoneExpr === 'string'
+      ? zoneExpr
+      : buildPolicyExprClosure(zoneExpr, this)(candidate);
+    if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
+      return undefined;
+    }
+    return resolveZoneRefWithOwnerFallback(resolvedZone, owner, this.getZoneReadContext());
+  }
+
   private aggregateTokensAcrossZones(
     zoneIds: readonly string[],
-    expr: Pick<Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' | 'adjacentTokenAgg' }>, 'aggOp' | 'prop'>,
+    expr: { readonly aggOp: AgentPolicyZoneTokenAggOp; readonly prop?: string },
     resolvedFilter: ResolvedTokenFilter | undefined,
   ): PolicyValue {
     const currentState = this.activeState;

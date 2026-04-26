@@ -197,7 +197,7 @@ Once the conformance corpus passes, the AST-interpreter path, the optional marke
 
 Two integration tests, both modeled on the existing `packages/engine/test/integration/compiled-condition-equivalence.test.ts` pattern (which uses `test/helpers/compiled-condition-production-helpers.ts` to build a deterministic state corpus and compiled samples):
 
-1. `packages/engine/test/integration/agents/compiled-evaluator-equivalence.test.ts` — for every consideration / state-feature / candidate-feature reachable from every shipped GameSpec (FITL + Texas Hold'em), asserts identical `PolicyValue` between the AST interpreter and the compiled-descriptor closure path over a `(state, candidate)` corpus drawn from the same fixture sources used by the existing perf and policy-summary tests. A new helper `test/helpers/compiled-policy-production-helpers.ts` provides the parallel scaffolding.
+1. `packages/engine/test/integration/agents/compiled-evaluator-equivalence.test.ts` — for every production-reachable policy carrier and expression kind in every shipped GameSpec (FITL + Texas Hold'em), asserts identical `PolicyValue` between the AST interpreter and the compiled-descriptor closure path over a `(state, candidate)` corpus drawn from the same fixture sources used by the existing perf and policy-summary tests. Descriptor kinds absent from current production policy data are covered by generic synthetic expression parity samples rather than artificial GameSpecDoc policy churn. A new helper `test/helpers/compiled-policy-production-helpers.ts` provides the parallel scaffolding.
 2. `packages/engine/test/integration/agents/compiled-policy-determinism.test.ts` — compiles the FITL and Texas catalogs twice and asserts byte-identical `compiled` descriptor trees and identical `catalogFingerprint` values, proving the lowering pass is referentially transparent (F#8 + F#16).
 
 CI blocks if either test fails.
@@ -218,7 +218,7 @@ Other `GameDef` consumers are unaffected because adding an optional field to a s
 ## Acceptance Criteria
 
 1. **Performance**: `previewOn_totalMs_ms` on the spec-145 perf corpus drops by ≥6% relative to the post-spec-146 baseline measured by `pnpm -F @ludoforge/engine measure:preview-hard-target` (i.e., addresses ~half the documented ~10-13% interpretive cost). Combined with Spec 146 the cumulative win is expected to bring `previewOn` under the 25.6s hard target.
-2. **Equivalence**: The compiled-descriptor closure path and the AST interpreter return identical `PolicyValue` for every consideration / state-feature / candidate-feature reachable from FITL and Texas Hold'em over the deterministic state corpus built by `compiled-policy-production-helpers.ts` (D5.1). CI-enforced.
+2. **Equivalence**: The compiled-descriptor closure path and the AST interpreter return identical `PolicyValue` for every production-reachable policy carrier and expression kind in FITL and Texas Hold'em over the deterministic state corpus built by `compiled-policy-production-helpers.ts` (D5.1). Production-absent descriptor kinds are covered by generic synthetic expression parity samples. CI-enforced.
 3. **Determinism**: `catalogFingerprint` is canonically reproducible across compiles for both FITL and Texas (same GameSpec → byte-identical `compiled` tree → identical fingerprint), proven by `compiled-policy-determinism.test.ts` (D5.2).
 4. **Full gate**: `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm turbo schema:artifacts` all pass.
 5. **Profile evidence**: A `--cpu-prof` run of `pnpm -F @ludoforge/engine measure:preview-hard-target` shows `resolveRef` self-time dropping by ≥50% relative to the 6.09% baseline recorded in `archive/tickets/146DRIVE-005.md:124-129`. The same script is the methodology gate; pre/post profiles are kept under `/tmp/146drive-profile-*` (or equivalent) and referenced in the implementation ticket.
@@ -243,7 +243,7 @@ Other `GameDef` consumers are unaffected because adding an optional field to a s
 Decomposed via `/spec-to-tickets` on 2026-04-26:
 
 - [`archive/tickets/147AOTCON-001.md`](../archive/tickets/147AOTCON-001.md) — Add compiled policy expression descriptors and equivalence scaffold (covers D1 minimum surface, D2 lowering scaffold, D3 runtime materialization scaffold, D5.1 equivalence scaffold).
-- [`tickets/147AOTCON-002.md`](../tickets/147AOTCON-002.md) — Extend compiled policy descriptors to full `AgentPolicyExpr` coverage and add determinism invariant (covers D1 full union, D2 full lowering coverage, D3 full factory coverage, D5.2 determinism invariant).
+- [`archive/tickets/147AOTCON-002.md`](../archive/tickets/147AOTCON-002.md) — Extend compiled policy descriptors to full `AgentPolicyExpr` coverage and add determinism invariant (covers D1 full union, D2 full lowering coverage, D3 full factory coverage, D5.2 determinism invariant).
 - [`tickets/147AOTCON-003.md`](../tickets/147AOTCON-003.md) — Enable compiled policy path as default, delete AST interpreter, regenerate fixtures, re-measure hard-target (covers D4 runtime collapse, D6 fixture migration, Acceptance Criteria 1 & 5).
 
 ## Follow-On Tickets

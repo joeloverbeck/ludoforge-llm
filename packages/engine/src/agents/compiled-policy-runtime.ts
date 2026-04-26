@@ -1,4 +1,9 @@
-import type { CompiledAgentPolicyRef, CompiledPolicyExpr } from '../kernel/types.js';
+import type {
+  CompiledAgentPolicyRef,
+  CompiledPolicyExpr,
+  CompiledPolicyZoneSource,
+} from '../kernel/types.js';
+import type { AgentPolicyZoneTokenAggOp } from '../contracts/index.js';
 import type { PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import type { PolicyValue } from './policy-surface.js';
 
@@ -8,6 +13,31 @@ export interface CompiledPolicyRuntimeContext {
   resolveCompiledPolicyParam(id: string): PolicyValue;
   resolveCompiledPolicyRef(
     ref: CompiledAgentPolicyRef,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue;
+  evaluateCompiledZoneProp(
+    zone: CompiledPolicyZoneSource,
+    prop: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue;
+  evaluateCompiledZoneTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue;
+  evaluateCompiledGlobalTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
+  ): PolicyValue;
+  evaluateCompiledGlobalZoneAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
+  ): PolicyValue;
+  evaluateCompiledAdjacentTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue;
+  evaluateCompiledSeatAggregate(
+    over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+    aggOp: AgentPolicyZoneTokenAggOp,
+    inner: CompiledPolicyExprClosure,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue;
   createCompiledPolicyRuntimeError(
@@ -30,6 +60,20 @@ export function buildPolicyExprClosure(
       return (candidate) => context.resolveCompiledPolicyRef(expr.ref, candidate);
     case 'op':
       return buildOpClosure(expr, context);
+    case 'zoneProp':
+      return (candidate) => context.evaluateCompiledZoneProp(expr.zone, expr.prop, candidate);
+    case 'zoneTokenAgg':
+      return (candidate) => context.evaluateCompiledZoneTokenAggregate(expr, candidate);
+    case 'globalTokenAgg':
+      return () => context.evaluateCompiledGlobalTokenAggregate(expr);
+    case 'globalZoneAgg':
+      return () => context.evaluateCompiledGlobalZoneAggregate(expr);
+    case 'adjacentTokenAgg':
+      return (candidate) => context.evaluateCompiledAdjacentTokenAggregate(expr, candidate);
+    case 'seatAgg': {
+      const inner = buildPolicyExprClosure(expr.expr, context);
+      return (candidate) => context.evaluateCompiledSeatAggregate(expr.over, expr.aggOp, inner, candidate);
+    }
   }
 }
 

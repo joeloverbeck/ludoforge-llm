@@ -525,7 +525,80 @@ export type CompiledPolicyExpr =
       readonly kind: 'op';
       readonly op: AgentPolicyOperator;
       readonly args: readonly CompiledPolicyExpr[];
+    }
+  | {
+      readonly kind: 'zoneTokenAgg';
+      readonly zone: CompiledPolicyZoneSource;
+      readonly owner: AgentPolicyZoneTokenAggOwner;
+      readonly prop: string;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+    }
+  | {
+      readonly kind: 'globalTokenAgg';
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly prop?: string;
+      readonly zoneFilter?: AgentPolicyZoneFilter;
+      readonly zoneScope: AgentPolicyZoneScope;
+    }
+  | {
+      readonly kind: 'globalZoneAgg';
+      readonly source: AgentPolicyZoneAggSource;
+      readonly field: string;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly zoneFilter?: AgentPolicyZoneFilter;
+      readonly zoneScope: AgentPolicyZoneScope;
+    }
+  | {
+      readonly kind: 'adjacentTokenAgg';
+      readonly anchorZone: CompiledPolicyZoneSource;
+      readonly tokenFilter?: AgentPolicyTokenFilter;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+      readonly prop?: string;
+    }
+  | {
+      readonly kind: 'seatAgg';
+      readonly over: 'opponents' | 'all' | readonly string[];
+      readonly expr: CompiledPolicyExpr;
+      readonly aggOp: AgentPolicyZoneTokenAggOp;
+    }
+  | {
+      readonly kind: 'zoneProp';
+      readonly zone: CompiledPolicyZoneSource;
+      readonly prop: string;
     };
+
+export type CompiledPolicyZoneSource = string | CompiledPolicyExpr;
+
+export interface CompiledPolicyStateFeature {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly expr: CompiledPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledPolicyCandidateFeature {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly expr: CompiledPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledPolicyAggregate {
+  readonly type: AgentPolicyValueType;
+  readonly costClass: AgentPolicyCostClass;
+  readonly op: string;
+  readonly of: CompiledPolicyExpr;
+  readonly where?: CompiledPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledPolicyPruningRule {
+  readonly costClass: AgentPolicyCostClass;
+  readonly when: CompiledPolicyExpr;
+  readonly dependencies: CompiledAgentDependencyRefs;
+  readonly onEmpty: 'skipRule' | 'error';
+}
 
 export interface CompiledPolicyConsideration {
   readonly scopes?: readonly ('move' | 'completion')[];
@@ -541,8 +614,30 @@ export interface CompiledPolicyConsideration {
   readonly dependencies: CompiledAgentDependencyRefs;
 }
 
+export interface CompiledPolicyTieBreaker {
+  readonly kind: string;
+  readonly costClass: AgentPolicyCostClass;
+  readonly value?: CompiledPolicyExpr;
+  readonly order?: readonly string[];
+  readonly dependencies: CompiledAgentDependencyRefs;
+}
+
+export interface CompiledPolicyStrategicCondition {
+  readonly target: CompiledPolicyExpr;
+  readonly proximity?: {
+    readonly current: CompiledPolicyExpr;
+    readonly threshold: number;
+  };
+}
+
 export interface CompiledPolicyCatalog {
+  readonly stateFeatures: Readonly<Record<string, CompiledPolicyStateFeature>>;
+  readonly candidateFeatures: Readonly<Record<string, CompiledPolicyCandidateFeature>>;
+  readonly candidateAggregates: Readonly<Record<string, CompiledPolicyAggregate>>;
+  readonly pruningRules: Readonly<Record<string, CompiledPolicyPruningRule>>;
   readonly considerations: Readonly<Record<string, CompiledPolicyConsideration>>;
+  readonly tieBreakers: Readonly<Record<string, CompiledPolicyTieBreaker>>;
+  readonly strategicConditions: Readonly<Record<string, CompiledPolicyStrategicCondition>>;
 }
 
 export interface CompiledSurfacePreviewVisibility {

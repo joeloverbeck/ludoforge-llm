@@ -877,6 +877,54 @@ const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
       ]),
       args: z.array(CompiledPolicyExprSchema),
     }).strict(),
+    z.object({
+      kind: z.literal('zoneTokenAgg'),
+      zone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      owner: z.union([
+        z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
+        z.string().regex(/^[0-9]+$/),
+      ]),
+      prop: StringSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalTokenAgg'),
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalZoneAgg'),
+      source: z.enum(AGENT_POLICY_ZONE_AGG_SOURCES),
+      field: StringSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('adjacentTokenAgg'),
+      anchorZone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
+    }).strict(),
+    z.object({
+      kind: z.literal('seatAgg'),
+      over: z.union([
+        z.literal('opponents'),
+        z.literal('all'),
+        z.array(StringSchema).readonly(),
+      ]),
+      expr: CompiledPolicyExprSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
+      kind: z.literal('zoneProp'),
+      zone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      prop: StringSchema,
+    }).strict(),
   ]),
 );
 
@@ -967,9 +1015,76 @@ const CompiledPolicyConsiderationSchema = z
   })
   .strict();
 
+const CompiledPolicyStateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyCandidateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyAggregateSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    op: StringSchema,
+    of: CompiledPolicyExprSchema,
+    where: CompiledPolicyExprSchema.optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyPruningRuleSchema = z
+  .object({
+    costClass: AgentPolicyCostClassSchema,
+    when: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+    onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
+  })
+  .strict();
+
+const CompiledPolicyTieBreakerSchema = z
+  .object({
+    kind: StringSchema,
+    costClass: AgentPolicyCostClassSchema,
+    value: CompiledPolicyExprSchema.optional(),
+    order: z.array(StringSchema).optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyStrategicConditionSchema = z
+  .object({
+    target: CompiledPolicyExprSchema,
+    proximity: z
+      .object({
+        current: CompiledPolicyExprSchema,
+        threshold: NumberSchema,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
 const CompiledPolicyCatalogSchema = z
   .object({
+    stateFeatures: z.record(StringSchema, CompiledPolicyStateFeatureSchema),
+    candidateFeatures: z.record(StringSchema, CompiledPolicyCandidateFeatureSchema),
+    candidateAggregates: z.record(StringSchema, CompiledPolicyAggregateSchema),
+    pruningRules: z.record(StringSchema, CompiledPolicyPruningRuleSchema),
     considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
+    tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
+    strategicConditions: z.record(StringSchema, CompiledPolicyStrategicConditionSchema),
   })
   .strict();
 

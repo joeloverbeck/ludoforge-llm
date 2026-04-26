@@ -1,6 +1,6 @@
 # Spec 146: Scoped-Draft State For Bounded Synthetic-Completion Preview Drives
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P1 (blocks reaching the spec-145 hard target on FITL preview perf and any future faction-evolution campaign that needs sub-25s previewOn budgets)
 **Complexity**: M (kernel-internal API addition, no GameSpecDoc change, no new compiler rule, no public-API regression risk; concentrated in `packages/engine/src/kernel/microturn/drive.ts` (new file colocating the shadow chain) + `packages/engine/src/kernel/microturn/types.ts` + `packages/engine/src/agents/policy-preview.ts`. The existing `kernel/microturn/apply.ts` and `kernel/microturn/publish.ts` are intentionally NOT modified — preserving their V8 JIT profiles is the architectural argument for a separate file.)
 **Dependencies**:
@@ -208,4 +208,28 @@ Decomposed via `/spec-to-tickets` on 2026-04-26:
 - [`archive/tickets/146DRIVE-002.md`](../archive/tickets/146DRIVE-002.md) — Implement drive function + four-shadow chain in `kernel/microturn/drive.ts` (covers D2, D3, D6)
 - [`archive/tickets/146DRIVE-003.md`](../archive/tickets/146DRIVE-003.md) — Conformance witness suite for drive mutation safety, determinism, and shadow-canonical parity (covers D5 + Risks shadow-chain mitigation)
 - [`archive/tickets/146DRIVE-004.md`](../archive/tickets/146DRIVE-004.md) — Migrate `driveSyntheticCompletion` greedy-chooseOne path + perf gate validation (covers D4; archived as the completed caller-migration owner, with Acceptance Criteria 1 remaining red under 146DRIVE-005)
-- [`tickets/146DRIVE-005.md`](../tickets/146DRIVE-005.md) — Investigate post-migration preview perf shortfall and reconcile the next owner after 004 measured `mean_totalMs=27925.19 ms` against the `25600 ms` hard target
+- [`archive/tickets/146DRIVE-005.md`](../archive/tickets/146DRIVE-005.md) — Completed post-migration perf shortfall investigation; added the durable hard-target measurement command and assigned the next large owner to [`tickets/147AOTCON-001.md`](../tickets/147AOTCON-001.md) after the profile confirmed policy evaluator / preview-surface dominance rather than another narrow Spec 146 drive patch
+
+## Outcome (2026-04-26)
+
+**Completion date**: 2026-04-26
+
+Implemented the scoped-draft preview-drive substrate and archived the full `146DRIVE-*` ticket chain:
+
+- `archive/tickets/146DRIVE-001.md` added the public preview-drive result/origin types.
+- `archive/tickets/146DRIVE-002.md` implemented the bounded greedy choose-one drive and no-final-hash shadow chain in `kernel/microturn/drive.ts`.
+- `archive/tickets/146DRIVE-003.md` added mutation-safety, determinism, and shadow/canonical parity witnesses.
+- `archive/tickets/146DRIVE-004.md` migrated `driveSyntheticCompletion` onto the new drive API for the gated greedy choose-one path.
+- `archive/tickets/146DRIVE-005.md` added the durable hard-target measurement command and classified the remaining performance gap.
+
+Deviations from the original plan:
+
+- The Spec 146 implementation is complete, but the `25600 ms` hard target remains red. Final `146DRIVE-005` verification reported `previewOn_totalMs_ms=27843.85,26752.56,26707.75`, `mean_totalMs=27101.39`, `mad_pct=1.83`, `hardTargetMs=25600`, `pass=false`.
+- Fresh CPU-profile evidence showed the next large owner is policy evaluator / preview-surface work, not another narrow Spec 146 preview-drive patch. The remaining optimization work is now owned by `tickets/147AOTCON-001.md` under `specs/147-aot-consideration-ast-compilation.md`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed during `146DRIVE-005` closeout.
+- `pnpm -F @ludoforge/engine measure:preview-hard-target` — command passed and reported the red hard-target verdict above.
+- `pnpm -F @ludoforge/engine typecheck` — passed during `146DRIVE-005` closeout.
+- `pnpm run check:ticket-deps` — passed after archiving `146DRIVE-005` and creating `tickets/147AOTCON-001.md`.

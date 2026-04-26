@@ -15,6 +15,7 @@
 - Bottom-up call graph: `resolveRef` accounts for 64% of `ArrayTimSort` callers (pre-exp-015) — a distributed cost across many evaluator paths.
 - Cumulative-FITL-perf global lessons: "FITL kernel computation functions (`resolveRef`, `evalCondition`, `foldTokenFilterExpr`, `matchesScalarMembership`) are at a V8 JIT optimization ceiling. ANY modification — WeakMap caching (+7.7%), fast-path branching (+3.8%), short-circuit evaluation (test failures) — causes hidden class deoptimization. The ONLY safe optimization pattern is removing WORK at the orchestration level (skipping calls entirely), not modifying how calls behave."
 - The orchestration-level skipping the lessons recommend is exactly what AOT compilation enables: a per-AST-node closure tree replaces the per-evaluation switch dispatch, eliminating both the dispatch cost and the hidden-class polymorphism that V8 cannot resolve in interpretive evaluation.
+- Post-Spec-146 handoff from `archive/tickets/146DRIVE-005.md` (2026-04-26): durable production-profile hard-target probe still misses `25600 ms` (`--runs 1` sample `27012.48 ms`; CPU-profile sample `28019.62 ms`, `candidateBudget=465`). Fresh V8 profile shows top self-time in `fnv1a64` 17.68%, GC 11.28%, kernel `resolveRef` 6.09%, `buildTokenStateIndex` 4.71%, `evalCondition` 4.09%, and bottom-up dominance through `policy-evaluation-core:evaluateExpr` / `resolveRef` plus preview-surface resolution. 146DRIVE-005 therefore assigns the next large implementation owner to this spec rather than another narrow Spec 146 drive patch.
 
 ## Brainstorm Context
 
@@ -218,3 +219,7 @@ The compiled tree is added as `GameDef.agents.compiled` (new optional field; onc
 - AOT compilation of `evalCondition` ASTs in the kernel's effect-tree application (the spec narrows to agent policy considerations).
 - Removal of `policy-evaluation-core.ts:evaluateExpr` until the conformance corpus passes (F#14 still applies — final removal happens in the same change as the corpus-passing migration).
 - Performance tuning of the closure factory itself (assumed to be the small-fast path V8 inlines well — to be validated, not optimized further).
+
+## Tickets
+
+- [`tickets/147AOTCON-001.md`](../tickets/147AOTCON-001.md) — Add compiled policy expression descriptors and equivalence scaffold.

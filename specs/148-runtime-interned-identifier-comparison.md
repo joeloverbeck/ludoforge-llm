@@ -7,7 +7,7 @@
 - Foundation 17 (Strongly Typed Domain Identifiers) — extends the brand-types pattern with a runtime numeric encoding.
 - Foundation 8 (Determinism) — interned encodings are computed deterministically per `(GameDef, idDomain)` and never observable in serialized artifacts.
 - Foundation 14 (No Backwards Compatibility) — serialized YAML / JSON keep canonical string IDs; the interning is purely a kernel runtime cache. No compatibility shims are introduced.
-- Spec 146 [scoped-draft-state-for-preview-drive] (PROPOSED) and Spec 147 [aot-consideration-ast-compilation] (PROPOSED) — should land before this spec, as they reduce the residual hot-path identifier cost and the cost-benefit may shift after they ship.
+- Spec 146 [scoped-draft-state-for-preview-drive] (archived/completed) and Spec 147 [aot-consideration-ast-compilation] (PROPOSED) — should land before this spec, as they reduce the residual hot-path identifier cost and the cost-benefit may shift after they ship.
 
 **Source**:
 - V8 sampling profile from `campaigns/fitl-preview-perf/musings.md` "Re-profile after exp-015": `Builtin: StringEqual` (2.0%), `Builtin: StringCompare` (1.8%), `Builtin: StringFastLocaleCompare` (1.3%), `Builtin: FindOrderedHashMapEntry` (4.4%, partially id-related). Combined ~5-9% of total CPU is in identifier comparisons or in Map / Set lookups keyed on identifier strings.

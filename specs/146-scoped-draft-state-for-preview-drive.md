@@ -160,7 +160,7 @@ The new function MUST satisfy F#11's exception clause:
 - The `initialState` argument is never mutated. The substantive guarantee is non-mutation, not non-aliasing — early exits (depth=0 due to immediate seat/turn divergence or already-terminal state) MAY legitimately return the input reference unchanged. A regression test asserts `initialState.stateHash === computeFullHash(table, initialState)` after the call AND that nested mutable fields (`decisionStack`, `players`, zone token bags, marker maps) are reference-equal to their pre-call snapshots when no logical change occurred. Object inequality of the returned reference is NOT a required invariant.
 - The shadow functions never publish or expose intermediate unhashed states outside the drive function's local scope.
 - Determinism is proven by a fixture: same `(def, initialState, origin, depthCap, runtime)` produces identical `result.state.stateHash` across N independent invocations.
-- The conformance corpus (F#16) gains a new test class: `architectural-invariant`, `@witness: spec-146-drive-mutation-safety`, asserting the above for FITL and Texas Hold'em representative inputs.
+- The conformance corpus (F#16) gains a new test class: `architectural-invariant`, `@witness: spec-146-drive-mutation-safety`, asserting the above across FITL and Texas Hold'em representative inputs. FITL owns the active multi-step `chooseOne` shadow-chain witness because live FITL states exercise that path. Texas Hold'em owns the same API's production-relevant non-applicable/exit witness when no `chooseOne` continuation is available; the test suite must not alter Texas rule data or add game-specific engine behavior solely to manufacture the optimized path.
 
 ### D6. ABI compatibility
 
@@ -206,5 +206,5 @@ Decomposed via `/spec-to-tickets` on 2026-04-26:
 
 - [`archive/tickets/146DRIVE-001.md`](../archive/tickets/146DRIVE-001.md) — Add `PreviewDriveResult` and `PreviewDriveOrigin` types (covers D1)
 - [`archive/tickets/146DRIVE-002.md`](../archive/tickets/146DRIVE-002.md) — Implement drive function + four-shadow chain in `kernel/microturn/drive.ts` (covers D2, D3, D6)
-- [`tickets/146DRIVE-003.md`](../tickets/146DRIVE-003.md) — Conformance witness suite for drive mutation safety, determinism, and shadow-canonical parity (covers D5 + Risks shadow-chain mitigation)
+- [`archive/tickets/146DRIVE-003.md`](../archive/tickets/146DRIVE-003.md) — Conformance witness suite for drive mutation safety, determinism, and shadow-canonical parity (covers D5 + Risks shadow-chain mitigation)
 - [`tickets/146DRIVE-004.md`](../tickets/146DRIVE-004.md) — Migrate `driveSyntheticCompletion` greedy-chooseOne path + perf gate validation (covers D4 + Acceptance Criteria 1, 2, 4, 5)

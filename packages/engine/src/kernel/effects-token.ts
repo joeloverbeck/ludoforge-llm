@@ -11,7 +11,11 @@ import { checkStackingConstraints } from './stacking.js';
 import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
-import { getTokenStateIndexEntry, invalidateTokenStateIndex } from './token-state-index.js';
+import {
+  getTokenStateIndexEntry,
+  refreshCachedTokenStateIndexEntries,
+  invalidateTokenStateIndex,
+} from './token-state-index.js';
 import { resolveTraceProvenance } from './trace-provenance.js';
 import { resolveEffectBindings, toTraceProvenanceContext, updateReadScopeRaw } from './effect-context.js';
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
@@ -20,6 +24,17 @@ import type { ApplyEffectsWithBudget } from './effect-registry.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
 import { updateZoneTokenHash } from './zobrist-token-hash.js';
 import type { EffectAST, GameState, Rng, Token, TokenTypeDef, ZoneDef } from './types.js';
+
+const TOKEN_INDEX_INCREMENTAL_REFRESH_LIMIT = 16;
+
+const addTokenIds = (tokenIds: Set<string>, tokens: readonly Token[] | undefined): void => {
+  if (tokens === undefined) {
+    return;
+  }
+  for (const token of tokens) {
+    tokenIds.add(String(token.id));
+  }
+};
 
 /**
  * Write zone array mutations to state, using mutable path when a DraftTracker
@@ -32,11 +47,22 @@ const writeZoneMutations = (
 ): GameState => {
   if (cursor.tracker) {
     const ms = cursor.state as MutableGameState;
+    const affectedTokenIds = new Set<string>();
+    for (const zoneId in mutations) {
+      addTokenIds(affectedTokenIds, cursor.state.zones[zoneId]);
+      addTokenIds(affectedTokenIds, mutations[zoneId]);
+    }
     for (const zoneId in mutations) {
       ensureZoneCloned(ms, cursor.tracker, zoneId);
       (ms.zones as Record<string, Token[]>)[zoneId] = mutations[zoneId] as Token[];
     }
-    invalidateTokenStateIndex(cursor.state);
+    if (
+      affectedTokenIds.size === 0 ||
+      affectedTokenIds.size > TOKEN_INDEX_INCREMENTAL_REFRESH_LIMIT ||
+      !refreshCachedTokenStateIndexEntries(cursor.state, affectedTokenIds)
+    ) {
+      invalidateTokenStateIndex(cursor.state);
+    }
     return cursor.state;
   }
   return {
@@ -733,8 +759,26 @@ export const applySetTokenProp = (
   const sourceTokens = cursor.state.zones[occurrence.zoneId]!;
   const zoneAfter = [...sourceTokens.slice(0, occurrence.index), updatedToken, ...sourceTokens.slice(occurrence.index + 1)];
 
-  const newState = writeZoneMutations(cursor, { [occurrence.zoneId]: zoneAfter });
-  return { state: newState, rng: cursor.rng };
+  if (cursor.tracker) {
+    const ms = cursor.state as MutableGameState;
+    ensureZoneCloned(ms, cursor.tracker, occurrence.zoneId);
+    (ms.zones as Record<string, Token[]>)[occurrence.zoneId] = zoneAfter;
+    if (!refreshCachedTokenStateIndexEntries(cursor.state, new Set([tokenId]))) {
+      invalidateTokenStateIndex(cursor.state);
+    }
+    return { state: cursor.state, rng: cursor.rng };
+  }
+
+  return {
+    state: {
+      ...cursor.state,
+      zones: {
+        ...cursor.state.zones,
+        [occurrence.zoneId]: zoneAfter,
+      },
+    },
+    rng: cursor.rng,
+  };
 };
 
 export const applyDraw = (

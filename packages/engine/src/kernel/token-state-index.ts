@@ -21,10 +21,14 @@ interface TokenOccurrence {
   readonly token: Token;
 }
 
+interface ActiveTokenStateIndexScope {
+  draft: MutableTokenStateIndex;
+}
+
 const NO_DUPLICATE_OCCURRENCE_ZONE_IDS: readonly string[] = Object.freeze([]);
 
 const tokenStateIndexByZones = new WeakMap<GameState['zones'], ReadonlyMap<string, TokenStateIndexEntry>>();
-const activeDraftTokenStateIndexes: MutableTokenStateIndex[] = [];
+const activeDraftTokenStateIndexes: ActiveTokenStateIndexScope[] = [];
 let buildTokenStateIndexCount = 0;
 let draftTokenStateIndexAttachCount = 0;
 let draftTokenStateIndexDeltaCount = 0;
@@ -227,7 +231,7 @@ export function createDraftTokenStateIndex(initialState: GameState): MutableToke
 }
 
 export function withDraftTokenStateIndex<T>(draft: MutableTokenStateIndex, fn: () => T): T {
-  activeDraftTokenStateIndexes.push(draft);
+  activeDraftTokenStateIndexes.push({ draft });
   try {
     return fn();
   } finally {
@@ -235,10 +239,46 @@ export function withDraftTokenStateIndex<T>(draft: MutableTokenStateIndex, fn: (
   }
 }
 
+export function copyCachedTokenStateIndex(fromState: GameState, toState: GameState): void {
+  const cached = tokenStateIndexByZones.get(fromState.zones);
+  if (cached !== undefined) {
+    tokenStateIndexByZones.set(toState.zones, new Map(cached));
+  }
+}
+
+export function refreshCachedTokenStateIndexEntries(state: GameState, tokenIds: ReadonlySet<string>): boolean {
+  const cached = tokenStateIndexByZones.get(state.zones);
+  if (cached === undefined) {
+    return false;
+  }
+  const updated = cached instanceof Map ? cached : new Map(cached);
+  for (const tokenId of tokenIds) {
+    const occurrences: TokenOccurrence[] = [];
+    for (const [zoneId, tokens] of Object.entries(state.zones)) {
+      for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+        const token = tokens[tokenIndex];
+        if (token !== undefined && String(token.id) === tokenId) {
+          occurrences.push({ zoneId, index: tokenIndex, token });
+        }
+      }
+    }
+    const entry = toIndexEntry(occurrences);
+    if (entry === undefined) {
+      updated.delete(tokenId);
+    } else {
+      updated.set(tokenId, entry);
+    }
+  }
+  if (!(cached instanceof Map)) {
+    tokenStateIndexByZones.set(state.zones, updated);
+  }
+  return true;
+}
+
 export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
-  const activeDraft = activeDraftTokenStateIndexes.at(-1);
-  if (activeDraft !== undefined) {
-    return activeDraft.readForState(state);
+  const activeScope = activeDraftTokenStateIndexes.at(-1);
+  if (activeScope !== undefined) {
+    return activeScope.draft.readForState(state);
   }
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached !== undefined) {

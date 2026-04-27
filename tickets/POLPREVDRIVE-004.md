@@ -92,7 +92,7 @@ Add a perf-bench assertion that `resolveRef` self-time on the scoped repro drops
 
 1. New `packages/engine/test/kernel/resolve-ref-memoised.test.ts` — property test: cached path returns deep-equal output to direct path across a corpus drawn from production drive shapes.
 2. `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green; no behavioural drift.
-3. `zobrist-incremental-parity-fitl.test.ts` — replay parity green within the 30-min budget on the `fitl-parity-zobrist` shard.
+3. Seed-split `zobrist-incremental-parity-fitl-*` tests — replay parity green within the 30-min budget on the `fitl-parity-zobrist-seed-42` and `fitl-parity-zobrist-seed-123` shards.
 4. `spec-140-replay-identity.test.js` — kernel replay identity unchanged.
 5. `pnpm turbo lint typecheck` — green.
 

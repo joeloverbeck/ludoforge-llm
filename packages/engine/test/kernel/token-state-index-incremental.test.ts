@@ -1,5 +1,5 @@
 // @test-class: architectural-invariant
-// @witness: POLPREVDRIVE-002
+// @witness: POLPREVDRIVE-002, POLPREVDRIVE-007
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -11,7 +11,22 @@ import {
 } from '../../src/kernel/token-state-index.js';
 import { applyPublishedDecisionFromCanonicalState } from '../../src/kernel/microturn/apply.js';
 import { publishMicroturnGreedyChooseOne } from '../../src/kernel/microturn/publish.js';
-import type { GameState } from '../../src/kernel/types.js';
+import {
+  applyEffects,
+  asPlayerId,
+  asTokenId,
+  asZoneId,
+  buildAdjacencyGraph,
+  createCollector,
+  createRng,
+  type EffectAST,
+  type EffectContext,
+  type GameDef,
+  type GameState,
+  type Token,
+} from '../../src/kernel/index.js';
+import { makeExecutionEffectContext } from '../helpers/effect-context-test-helpers.js';
+import { eff } from '../helpers/effect-tag-helper.js';
 import {
   PREVIEW_DEPTH_CAP,
   collectChooseOneDriveFixtures,
@@ -97,6 +112,31 @@ describe('POLPREVDRIVE-002 draft token-state index', () => {
   });
 });
 
+describe('POLPREVDRIVE-007 residual token-state index cache', () => {
+  it('preserves a cached index across prop-only token mutations', () => {
+    const ctx = makeEffectScopedIndexContext();
+    assertIndexMatchesFreshRebuild('initial cached state', ctx.state, getTokenStateIndex(ctx.state));
+    __internal_for_tests.resetBuildTokenStateIndexCount();
+
+    const result = applyEffects([
+      bindActiveCount('$before'),
+      eff({ setTokenProp: { token: '$unit', prop: 'status', value: 'inactive' } }),
+      eff({ setTokenProp: { token: '$unit', prop: 'status', value: 'inactive' } }),
+      bindActiveCount('$after'),
+    ], ctx);
+
+    assert.equal(result.bindings.$before, 2);
+    assert.equal(result.bindings.$after, 1);
+    assert.equal(result.state.zones['battlefield:none']?.[0]?.props.status, 'inactive');
+    assert.equal(
+      __internal_for_tests.getBuildTokenStateIndexCount(),
+      0,
+      'outer mutable effect scopes should inherit and preserve the cached token-state index',
+    );
+    assertIndexMatchesFreshRebuild('effect-scoped final state', result.state, getTokenStateIndex(result.state));
+  });
+});
+
 function assertIndexMatchesFreshRebuild(
   label: string,
   state: GameState,
@@ -132,4 +172,58 @@ function makeTokenState(zones: GameState['zones']): GameState {
     activeLastingEffects: undefined,
     interruptPhaseStack: undefined,
   } as unknown as GameState;
+}
+
+function bindActiveCount(bind: string): EffectAST {
+  return eff({
+    bindValue: {
+      bind,
+      value: {
+        _t: 5 as const,
+        aggregate: {
+          op: 'count',
+          query: {
+            query: 'tokensInZone',
+            zone: 'battlefield:none',
+            filter: { op: 'and', args: [{ prop: 'status', op: 'eq', value: 'active' }] },
+          },
+        },
+      },
+    },
+  });
+}
+
+function makeEffectScopedIndexContext(): EffectContext {
+  const def: GameDef = {
+    metadata: { id: 'effect-scoped-token-state-index-test', players: { min: 1, max: 1 } },
+    constants: {},
+    globalVars: [],
+    perPlayerVars: [],
+    zones: [
+      { id: asZoneId('battlefield:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
+    ],
+    tokenTypes: [{ id: 'unit', props: { status: 'string' } }],
+    setup: [],
+    turnStructure: { phases: [] },
+    actions: [],
+    triggers: [],
+    terminal: { conditions: [] },
+  };
+  const tokens: readonly Token[] = [
+    { id: asTokenId('u1'), type: 'unit', props: { status: 'active' } },
+    { id: asTokenId('u2'), type: 'unit', props: { status: 'active' } },
+  ];
+  const state = makeTokenState({ 'battlefield:none': tokens });
+
+  return makeExecutionEffectContext({
+    def,
+    adjacencyGraph: buildAdjacencyGraph(def.zones),
+    state,
+    rng: createRng(7n),
+    activePlayer: asPlayerId(0),
+    actorPlayer: asPlayerId(0),
+    bindings: { $unit: 'u1' },
+    moveParams: {},
+    collector: createCollector(),
+  });
 }

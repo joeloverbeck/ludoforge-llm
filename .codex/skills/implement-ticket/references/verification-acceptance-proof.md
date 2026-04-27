@@ -43,6 +43,13 @@ When a wrapper times out a focused witness that passes directly, calibrate the w
 4. rerun the wrapper after the timeout change; do not claim the wrapper lane green from the direct child proof alone
 5. record the calibration rationale in the active ticket outcome/report when it changes a named acceptance command
 
+When a focused explicit-path invocation changes the wrapper semantics, treat that as command substitution rather than direct lane proof:
+
+1. inspect the wrapper plan or source to determine whether explicit paths preserve the lane timeout, execution mode, environment, reporter, and process boundary
+2. if the explicit-path mode drops a timeout or batches files differently, run the focused witness with an explicit bounded wrapper when budget matters
+3. record both facts in the active ticket: the original lane semantics and the focused substitute semantics
+4. do not claim the manifest-driven lane is green from an explicit-path run unless the semantics match or the active ticket has been corrected to accept the substitute proof
+
 ## Silent-But-Healthy Lanes
 
 When a focused proof lane is expected to be valid but runs silently for a long time in the current environment, do not immediately classify it as hung or non-final:
@@ -131,3 +138,13 @@ For long tickets whose final proof requires multiple expensive lanes after ticke
 5. reconcile the final command ledger against the active ticket only after that exact rerun set completes
 
 If a late artifact rewrite or benchmark rebaseline lands between those steps, treat every affected downstream proof lane as stale and restart the choreography from the earliest impacted step rather than appending one more run to the end.
+
+## Acceptance Harness Rewrite Checkpoint
+
+When implementation work changes the acceptance harness shape itself — for example splitting a test file, changing shard membership, moving a witness between CI matrix entries, or replacing a trace-heavy assertion with a hook-based witness — insert a checkpoint before final proof:
+
+1. record the old acceptance lane and why it was redundant, stale, over-broad, or otherwise not the truthful final shape
+2. record the new lane(s), including CI/workflow ownership when applicable
+3. update the active ticket's acceptance wording before rerunning final proof
+4. rerun each new lane after the final build/artifact producer has completed
+5. keep the old lane out of the final proof ledger unless it still exists and was intentionally run

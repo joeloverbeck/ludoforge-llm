@@ -24,7 +24,7 @@ This ticket adds a perf-test (or a dedicated fast-mode CI lane) that runs the sc
 1. **`packages/engine/scripts/profile-fitl-preview-drive.mjs` exists and runs in ~35 s on PR / ~3 s on `main`.** Verified — POLPREVDRIVE-001 §Outcome and §Repro Setup. The harness itself is the right shape for a perf gate.
 2. **Existing `packages/engine/test/perf/agents/preview-pipeline.perf.test.ts` does not exercise this workload.** Verified by reading POLPREVDRIVE-001 §Problem: "the perf-microbenchmark targeted by the `fitl-preview-perf` campaign … does not exercise the determinism-parity code path with `verifyIncrementalHash: true` × 4 named profiles concurrently".
 3. **The new lane must respect WSL2 budget.** Verified — POLPREVDRIVE-001's harness completes in <60 s under WSL2 with the chosen seed/maxTurns/profilesAll shape. The same shape is the perf gate.
-4. **The existing `fitl-parity-zobrist` shard is the determinism gate, not a perf gate.** Verified — `.github/workflows/engine-determinism.yml:54`. The parity shard runs replay correctness with a 30-min CI budget; it is too slow to be a perf signal. A separate shorter-budget perf gate is needed.
+4. **The existing seed-split `fitl-parity-zobrist-*` shards are the determinism gates, not perf gates.** Verified — `.github/workflows/engine-determinism.yml:54`. The parity shards run replay correctness with a 30-min CI budget; they are too slow to be a perf signal. A separate shorter-budget perf gate is needed.
 
 ## Architecture Check
 
@@ -44,7 +44,7 @@ Two viable shapes:
 - Pro: integrated with existing perf infrastructure, runs alongside other perf benchmarks.
 - Con: perf lane budget pressure. The current FITL parity workload at `--maxTurns 10 --profilesAll` runs in ~35 s on PR; on faster CI hardware it may be ~10–20 s. Multiplied across the perf matrix, this adds load.
 
-**Option B — dedicated CI shard `fitl-parity-perf` in `.github/workflows/engine-determinism.yml`.** A new matrix entry sibling to `fitl-parity-zobrist` that runs the harness in an assertion mode (exit non-zero on threshold breach).
+**Option B — dedicated CI shard `fitl-parity-perf` in `.github/workflows/engine-determinism.yml`.** A new matrix entry sibling to the seed-split `fitl-parity-zobrist-*` shards that runs the harness in an assertion mode (exit non-zero on threshold breach).
 
 - Pro: isolated budget, no impact on other perf benchmarks.
 - Con: more workflow yaml; one more shard to maintain.
@@ -94,7 +94,7 @@ No engine source code is modified by this ticket.
 2. The new test **fails** when run against the pre-POLPREVDRIVE-001 commit `7677e4d8` (or the calibration baseline pre-perf-fix). This proves the gate would have caught the original regression. Verification documented in the ticket Outcome.
 3. `pnpm -F @ludoforge/engine test` — green (perf lane included).
 4. `pnpm turbo lint typecheck` — green.
-5. `zobrist-incremental-parity-fitl.test.ts` — unaffected; remains the determinism gate.
+5. Seed-split `zobrist-incremental-parity-fitl-*` tests — unaffected; remain the determinism gates.
 
 ### Invariants
 

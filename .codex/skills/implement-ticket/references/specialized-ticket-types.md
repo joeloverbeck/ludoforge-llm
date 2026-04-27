@@ -24,11 +24,25 @@ For tickets whose primary deliverable is a measured decision:
 
 When an audit compares profile, policy, feature-flag, or config variants, prefer a repeatable harness-level or in-memory override over temporary production-data edits until the measured verdict is known. The override must be explicit in the command and output/report, and any production config edit should happen only after the evidence shows a direct benefit. This preserves F#14 by avoiding compatibility aliases or speculative YAML churn while still making the A/B comparison reproducible.
 
+When a profiling or benchmark failure appears after a candidate lands, separate **acceptance ownership** from **candidate causality**:
+
+1. classify the red lane as active-ticket-owned when it exercises a touched execution path or ticket-named invariant
+2. do not state that the candidate caused the failure until a same-environment baseline, A/B temp worktree, disabled/enabled comparison, or other direct causal probe proves it
+3. if the distinction matters to the next action, run the cheapest causal probe before optimizing around the apparent failure
+4. record the result as `owned/unclassified`, `candidate-caused`, `preexisting`, or `harness/substitution-caused` in the ticket outcome or working notes
+
 For profiling or benchmark tickets that create or update a checked-in baseline, make the comparison itself durable. The active ticket outcome, report, or final closeout should include the baseline measurement, current measurement, absolute delta, ratio or percent change, threshold comparison, whether the warning/failure gate fired, and the exact command that produced the numbers. Do not leave the decisive "how much slower/faster" answer implicit in a passing harness.
 
 For benchmark tickets that combine a production/code migration with an explicit measured acceptance gate, closeout depends on both halves. If the migration lands and focused correctness checks pass but the measured gate still misses, record the exact samples, mean, variance metric, threshold, and verdict; keep the active ticket `BLOCKED`, `PARTIAL`, or equivalent rather than `COMPLETED`; create or update the follow-up investigation/optimization owner named by the ticket or spec; update sibling/spec status so the series tells the same story; and run the repo's ticket-dependency integrity check after changing deps or adding the follow-up.
 
 When a benchmark/perf test exits green but only emits advisory warnings or omits the ticket-owned metric, treat it as a harness smoke, not final acceptance proof. Inspect the test or harness output shape, then either use the existing repo-owned command that prints/asserts the required metric or add a durable measurement path before final closeout. Record the green-but-non-asserting lane separately from the decisive measured verdict.
+
+For exploratory optimization loops, make abandoned-candidate cleanup explicit before final proof:
+
+1. keep negative evidence in a compact attempt ledger when it prevents repeated work
+2. remove abandoned runtime helpers, exports, imports, tests, counters, and ticket wording that belong only to the rejected design
+3. rerun the smallest focused correctness proof after cleanup when the cleanup touches code or tests
+4. only keep an abandoned diff in the worktree when it is intentionally preserved as a follow-up artifact and called out in closeout
 
 When an audit matrix spans surfaces that do not share a meaningful metric, do not force a fake scalar comparison. Classify each row as `comparable metric`, `covered by existing smoke`, or `no meaningful comparable metric`, and record the rationale in the ticket outcome/report. Use this especially when a broad acceptance criterion names multiple games, profiles, packages, or corpora but only one subset participates in the measured harness.
 

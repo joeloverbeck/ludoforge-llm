@@ -110,7 +110,7 @@ export const compileFitlDef = (): ValidatedGameDef => {
  * errors so coverage stays focused on hash parity.
  * The broad property sweep samples this invariant periodically; the exact
  * move-by-move oracle lives in `zobrist-incremental-parity.test.ts` (Texas)
- * and `zobrist-incremental-parity-fitl.test.ts` (FITL).
+ * and the seed-split `zobrist-incremental-parity-fitl-*` tests (FITL).
  *
  * Run-boundary contract:
  * like `runGame`, callers may pass a shared `GameDefRuntime` reused across

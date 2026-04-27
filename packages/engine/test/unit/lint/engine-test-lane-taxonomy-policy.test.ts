@@ -173,7 +173,8 @@ describe('engine test lane taxonomy policy', () => {
     };
 
     const slowZobristTests = [
-      'test/determinism/zobrist-incremental-parity-fitl.test.ts',
+      'test/determinism/zobrist-incremental-parity-fitl-seed-42.test.ts',
+      'test/determinism/zobrist-incremental-parity-fitl-seed-123.test.ts',
       'test/determinism/zobrist-incremental-parity.test.ts',
       'test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.ts',
       'test/determinism/zobrist-incremental-property-fitl-short-diverse.test.ts',

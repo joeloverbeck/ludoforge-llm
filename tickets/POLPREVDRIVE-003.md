@@ -61,7 +61,7 @@ The ticket Outcome must contain the full distribution table, the chosen value, a
 If the data supports lowering:
 
 - Update `K_PREVIEW_DEPTH = N` at `policy-preview.ts:42`.
-- Re-run replay corpus (`spec-140-replay-identity.test.js`, `zobrist-incremental-parity-fitl.test.ts`) and update any pinned witness traces whose final state shifts deterministically. Per `.claude/rules/testing.md`'s `convergence-witness` Update Protocol, evaluate whether each shifted trace can be distilled into an architectural-invariant assertion before re-blessing.
+- Re-run replay corpus (`spec-140-replay-identity.test.js`, the seed-split `zobrist-incremental-parity-fitl-*` tests) and update any pinned witness traces whose final state shifts deterministically. Per `.claude/rules/testing.md`'s `convergence-witness` Update Protocol, evaluate whether each shifted trace can be distilled into an architectural-invariant assertion before re-blessing.
 - Re-run `profile-fitl-preview-drive.mjs --profilesAll` and record the new total wall-clock and the new per-function self-time table.
 
 If any FITL baseline profile's downstream replay diverges in a way that distillation can't capture, set `profile.preview.completionDepthCap = 8` for that specific profile in `data/games/fire-in-the-lake/92-agents.md` to preserve its current behaviour, document why in the ticket Outcome, and proceed.
@@ -71,7 +71,8 @@ If any FITL baseline profile's downstream replay diverges in a way that distilla
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` (modify) or `packages/engine/scripts/profile-fitl-preview-drive-depths.mjs` (new)
 - `packages/engine/src/agents/policy-preview.ts` (modify — `K_PREVIEW_DEPTH` constant + optional `onDriveExit` hook)
 - `data/games/fire-in-the-lake/92-agents.md` (modify, only if a per-profile override is needed to preserve replay)
-- `packages/engine/test/determinism/zobrist-incremental-parity-fitl.test.ts` (re-run; update pinned witnesses only if the cap change is the verified root cause of any shift, per `.claude/rules/testing.md` Update Protocol)
+- `packages/engine/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.ts` (re-run; update pinned witnesses only if the cap change is the verified root cause of any shift, per `.claude/rules/testing.md` Update Protocol)
+- `packages/engine/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.ts` (re-run; update pinned witnesses only if the cap change is the verified root cause of any shift, per `.claude/rules/testing.md` Update Protocol)
 
 ## Out of Scope
 
@@ -88,7 +89,7 @@ If any FITL baseline profile's downstream replay diverges in a way that distilla
 
 1. The depth-distribution harness produces a JSON histogram and the ticket Outcome records the table.
 2. `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green at the new default.
-3. `zobrist-incremental-parity-fitl.test.ts` — replay parity green within the 30-min CI budget on the `fitl-parity-zobrist` shard.
+3. Seed-split `zobrist-incremental-parity-fitl-*` tests — replay parity green within the 30-min CI budget on the `fitl-parity-zobrist-seed-42` and `fitl-parity-zobrist-seed-123` shards.
 4. `spec-140-replay-identity.test.js` — kernel replay identity unchanged or migrated witnesses re-blessed/distilled per `.claude/rules/testing.md`.
 5. `pnpm turbo lint typecheck` — green.
 
@@ -118,4 +119,4 @@ If any FITL baseline profile's downstream replay diverges in a way that distilla
 3. *(after applying the change)* `node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --seed 42 --maxTurns 10 --label depths-after`
 4. `pnpm -F @ludoforge/engine test:integration:fitl-rules`
 5. `pnpm turbo lint typecheck`
-6. CI: `zobrist-incremental-parity-fitl.test.ts` lane (`fitl-parity-zobrist` shard).
+6. CI: seed-split `zobrist-incremental-parity-fitl-*` lanes (`fitl-parity-zobrist-seed-42` and `fitl-parity-zobrist-seed-123` shards).

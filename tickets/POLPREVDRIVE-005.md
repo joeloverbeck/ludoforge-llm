@@ -93,7 +93,7 @@ Before merging:
 2. New `packages/engine/test/integration/agents/policy-eval-cross-candidate-cache.test.ts` — bot evaluation outputs are byte-identical pre/post.
 3. `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green.
 4. `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-a` — green.
-5. `zobrist-incremental-parity-fitl.test.ts` — replay parity green within the 30-min budget.
+5. Seed-split `zobrist-incremental-parity-fitl-*` tests — replay parity green within the 30-min budget.
 6. `spec-140-replay-identity.test.js` — kernel replay identity unchanged.
 7. `pnpm turbo lint typecheck` — green.
 
@@ -124,4 +124,4 @@ Before merging:
 3. `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-a`
 4. `pnpm turbo lint typecheck`
 5. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42 --label after`
-6. CI: `zobrist-incremental-parity-fitl.test.ts` lane (`fitl-parity-zobrist` shard).
+6. CI: seed-split `zobrist-incremental-parity-fitl-*` lanes (`fitl-parity-zobrist-seed-42` and `fitl-parity-zobrist-seed-123` shards).

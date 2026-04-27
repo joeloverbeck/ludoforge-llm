@@ -25,6 +25,7 @@ import type { EffectBudgetState } from './effects-control.js';
 import type { EffectAST, EffectKindTag, GameState, TriggerEvent } from './types.js';
 import { registry, TAG_TO_KIND } from './effect-registry.js';
 import { createMutableState, createDraftTracker } from './state-draft.js';
+import { copyCachedTokenStateIndex } from './token-state-index.js';
 
 export const createEffectBudgetState = (ctx: Pick<EffectContext, 'maxEffectOps'>): EffectBudgetState => {
   const maxEffectOps = getMaxEffectOps(ctx);
@@ -112,12 +113,24 @@ export const applyEffectsWithBudgetState = (
   cursor: EffectCursor,
   budget: EffectBudgetState,
 ): NormalizedEffectResult => {
+  return applyEffectsWithBudgetStateScoped(effects, env, cursor, budget);
+};
+
+const applyEffectsWithBudgetStateScoped = (
+  effects: readonly EffectAST[],
+  env: EffectEnv,
+  cursor: EffectCursor,
+  budget: EffectBudgetState,
+): NormalizedEffectResult => {
   // Reuse parent scope's mutable state + tracker when already in a scope
   // (cursor.tracker is set by the parent). Only create fresh clones at
   // the outermost scope entry (cursor.tracker is undefined).
   const isNestedScope = cursor.tracker !== undefined;
   const tracker = isNestedScope ? cursor.tracker! : createDraftTracker();
   let currentState: GameState = isNestedScope ? cursor.state : createMutableState(cursor.state) as GameState;
+  if (!isNestedScope) {
+    copyCachedTokenStateIndex(cursor.state, currentState);
+  }
   let currentRng = cursor.rng;
   let currentBindings = cursor.bindings;
   let currentDecisionScope = cursor.decisionScope;

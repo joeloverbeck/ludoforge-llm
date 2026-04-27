@@ -1,6 +1,6 @@
 # POLPREVDRIVE-007: Residual non-drive TokenStateIndex rebuilds in effect/query paths
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — likely `packages/engine/src/kernel/eval-query.ts`, `packages/engine/src/kernel/effects-choice.ts`, `packages/engine/src/kernel/effects-token.ts`, and token-index runtime context plumbing
@@ -108,7 +108,7 @@ Add a production-shaped correctness test proving the residual scoped index equal
 1. New or modified correctness test proving residual scoped token-index reads equal fresh rebuilds for the affected non-drive effect/query paths.
 2. `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green; no behavioural drift.
 3. `spec-140-replay-identity.test.js` — kernel replay identity unchanged.
-4. `zobrist-incremental-parity-fitl.test.ts` — replay parity green within the 30-min budget on the `fitl-parity-zobrist` shard.
+4. FITL Zobrist parity shards — replay parity green within the 30-min budget.
 5. `pnpm turbo lint typecheck` — green.
 
 ### Invariants
@@ -129,3 +129,50 @@ Add a production-shaped correctness test proving the residual scoped index equal
 3. `node --cpu-prof --cpu-prof-dir=/tmp/polprev-after-residual packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42 --label after-residual`
 4. `pnpm -F @ludoforge/engine test:integration:fitl-rules`
 5. `pnpm turbo lint typecheck`
+
+## Outcome (2026-04-27)
+
+**Completed.** The residual non-drive rebuild fix landed as cache propagation/preservation rather than a global effect-scoped draft. The first candidate proved that a global outer-effect draft can make `buildTokenStateIndex` disappear from the profile, but it also caused pathological draft-delta churn in FITL parity (`seed=123` timed out under the 30-minute guard). A clean `HEAD` A/B run showed the same lean seed-123 witness passed pre-change in `23410.937831 ms`, so the timeout was candidate-caused.
+
+**What changed:**
+
+- Added `copyCachedTokenStateIndex(fromState, toState)` in `packages/engine/src/kernel/token-state-index.ts` and call it when an outer effect batch creates its mutable state wrapper. This lets read-heavy non-drive query/effect probes inherit an already-built token index from the source state instead of rebuilding for each transient mutable `zones` object.
+- Added `refreshCachedTokenStateIndexEntries(state, tokenIds)` for small token-zone mutations. When a cache exists and the affected token-id set is small, mutable token writes refresh only those entries; larger mutations still invalidate conservatively.
+- Updated `setTokenProp` to preserve the token-state cache after prop-only token replacement.
+- Split the heavy FITL Zobrist parity file into seed-specific tests with a shared helper. The helper disables unnecessary deltas/full decision retention and counts decisions through `decisionHook`.
+- Extended `packages/engine/test/kernel/token-state-index-incremental.test.ts` with a `POLPREVDRIVE-007` witness proving an outer mutable effect scope inherits/preserves the cached token-state index, performs zero full `buildTokenStateIndex` calls in the focused prop-only sequence, and matches a fresh rebuild for the final state.
+
+**Measured result:**
+
+- `node --cpu-prof --cpu-prof-dir=/tmp/polprev-after-residual-copy-cache packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42 --label after-residual-copy-cache`
+  - `elapsedMs=19627.04`
+  - `tokenStateIndexBuildCount=3673`
+  - `draftTokenStateIndexDeltaCount=25371`
+  - `draftTokenStateIndexAttachCount=218`
+- CPU-profile parser:
+  - profile artifact: `/tmp/polprev-after-residual-copy-cache/CPU.20260427.115939.2.0.001.cpuprofile`
+  - total sampled `buildTokenStateIndex` self-time: `56.743 ms`
+  - threshold: `<= 336.8 ms` (`4x` the `84.2 ms` merge-base baseline from `POLPREVDRIVE-001`)
+  - verdict: **PASS** (`0.67x` vs baseline)
+
+**Zobrist parity harness result:**
+
+- The original two-seed `zobrist-incremental-parity-fitl.test.ts` did redundant retention work for this witness: it retained full decision logs and deltas even though the assertion only needed hash parity to not throw and at least one decision to occur.
+- The test was split into seed-specific shards and switched to `skipDeltas: true`, `traceRetention: 'finalStateOnly'`, and `decisionHook` decision counting.
+- Final candidate proof:
+  - `timeout 30m node --test dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js` — green in `21181.993964 ms` after final `dist` rebuild.
+  - `timeout 30m node --test dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js` — green in `21943.641071 ms` after final `dist` rebuild.
+
+**Residual risk if continuing this candidate:**
+
+- The ticket-owned `buildTokenStateIndex` gate is green. The scoped repro remains dominated by other hot paths outside this ticket and still belongs to the sibling `POLPREVDRIVE-*` optimization tickets.
+
+**Verification:**
+
+- `pnpm -F @ludoforge/engine build` — green.
+- `cd packages/engine && node --test dist/test/kernel/token-state-index-incremental.test.js` — green.
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green, 79/79 files passed.
+- `cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/spec-140-replay-identity.test.js` — green.
+- `pnpm turbo lint typecheck` — green, 5/5 tasks passed.
+- `timeout 30m node --test dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js` — green in `21181.993964 ms` after final `dist` rebuild.
+- `timeout 30m node --test dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js` — green in `21943.641071 ms` after final `dist` rebuild.

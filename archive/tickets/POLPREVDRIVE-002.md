@@ -95,7 +95,7 @@ Add a property test that, for each drive iteration, asserts the drive-scoped inc
 
 ### Performance Gate
 
-5. On the `profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42` repro, the drive-scoped `buildTokenStateIndex` samples are eliminated. The original total `buildTokenStateIndex` self-time target **≤ 4× vs the `1e64d085` merge-base** is now classified as a stale broad metric for this ticket: after the drive-scoped fix, remaining `buildTokenStateIndex` samples are outside `driveSyntheticCompletion` and are owned by `tickets/POLPREVDRIVE-007.md`.
+5. On the `profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42` repro, the drive-scoped `buildTokenStateIndex` samples are eliminated. The original total `buildTokenStateIndex` self-time target **≤ 4× vs the `1e64d085` merge-base** is now classified as a stale broad metric for this ticket: after the drive-scoped fix, remaining `buildTokenStateIndex` samples are outside `driveSyntheticCompletion` and are owned by `archive/tickets/POLPREVDRIVE-007.md`.
 
 ## Test Plan
 
@@ -114,6 +114,8 @@ Add a property test that, for each drive iteration, asserts the drive-scoped inc
 5. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42 --label after`
 
 ## Outcome (2026-04-27)
+
+Outcome amended: 2026-04-27
 
 **Completed drive-scoped slice.** `POLPREVDRIVE-002` now owns and proves the drive-local token-state-index sharing seam only. The broader total `buildTokenStateIndex` self-time target from the draft is red but reclassified as a residual non-drive hotspot after reassessment against `docs/FOUNDATIONS.md` F15 and the live CPU profile.
 
@@ -150,7 +152,7 @@ After this ticket:
 
 **Acceptance correction and follow-up ownership:**
 
-The draft performance gate's total `buildTokenStateIndex <= 4x` metric remains red (`848.9 ms / 84.2 ms = 10.1x`). The live profile proves that red residue is no longer drive-scoped: the remaining sampled stacks are effect/query paths such as `applyChooseN`, `evalTokensInMapSpacesQuery`, aggregate conditions, and token effects outside the preview-drive scoped override. Under F15, that residual is not completed by weakening this ticket's claim or by widening this ticket ad hoc. It is split to `tickets/POLPREVDRIVE-007.md`.
+The draft performance gate's total `buildTokenStateIndex <= 4x` metric remains red (`848.9 ms / 84.2 ms = 10.1x`). The live profile proves that red residue is no longer drive-scoped: the remaining sampled stacks are effect/query paths such as `applyChooseN`, `evalTokensInMapSpacesQuery`, aggregate conditions, and token effects outside the preview-drive scoped override. Under F15, that residual is not completed by weakening this ticket's claim or by widening this ticket ad hoc. It is split to `archive/tickets/POLPREVDRIVE-007.md`.
 
 **Verification completed before final proof:**
 

@@ -63,13 +63,17 @@ jobs:
       fail-fast: false
       matrix:
         lane:
-          - { id: fitl-events,       script: 'test:integration:fitl-events',       timeout: 30 }
-          - { id: fitl-rules,        script: 'test:integration:fitl-rules',        timeout: 30 }
-          - { id: texas-cross-game,  script: 'test:integration:texas-cross-game',  timeout: 30 }
-          - { id: slow-parity,       script: 'test:integration:slow-parity',       timeout: 30 }
-          - { id: e2e-all,           script: 'test:e2e:all',                       timeout: 30 }
-          - { id: memory,            script: 'test:memory',                        timeout: 10 }
-          - { id: performance,       script: 'test:performance',                   timeout: 30 }
+          - { id: fitl-events-shard-a, script: 'test:integration:fitl-events:shard-a', timeout: 30 }
+          - { id: fitl-events-shard-b, script: 'test:integration:fitl-events:shard-b', timeout: 30 }
+          - { id: fitl-events-shard-c, script: 'test:integration:fitl-events:shard-c', timeout: 30 }
+          - { id: fitl-rules,          script: 'test:integration:fitl-rules',          timeout: 30 }
+          - { id: texas-cross-game,    script: 'test:integration:texas-cross-game',    timeout: 30 }
+          - { id: slow-parity-shard-a, script: 'test:integration:slow-parity:shard-a', timeout: 30 }
+          - { id: slow-parity-shard-b, script: 'test:integration:slow-parity:shard-b', timeout: 30 }
+          - { id: slow-parity-shard-c, script: 'test:integration:slow-parity:shard-c', timeout: 30 }
+          - { id: e2e-all,             script: 'test:e2e:all',                         timeout: 30 }
+          - { id: memory,              script: 'test:memory',                          timeout: 10 }
+          - { id: performance,         script: 'test:performance',                     timeout: 30 }
     steps:
       - uses: actions/checkout@v6
       - uses: pnpm/action-setup@v5

@@ -43,6 +43,21 @@ const laneConfigs = {
     patterns: listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath),
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
+  'integration:fitl-events-shard-a': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-a').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events-shard-b': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-b').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events-shard-c': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-c').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
   'integration:fitl-rules': {
     execution: 'sequential',
     patterns: listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
@@ -55,6 +70,21 @@ const laneConfigs = {
   'integration:slow-parity': {
     execution: 'sequential',
     patterns: listIntegrationTestsForLane('integration:slow-parity').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-a': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-a').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-b': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-b').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-c': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-c').map(toDistTestPath),
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
   determinism: {

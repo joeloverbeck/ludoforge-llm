@@ -72,16 +72,59 @@ const [
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
+  { __internal_for_tests: policyPreviewInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
   import(join(DIST_ROOT, 'src', 'sim', 'index.js')),
   import(join(DIST_ROOT, 'test', 'helpers', 'production-spec-helpers.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-preview.js')),
 ]);
 
 const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
 const runtime = createGameDefRuntime(def);
+
+// FITL seat order matches FITL_BASELINE_PROFILES so we can pin each running
+// profile to its seat under --profilesAll (the per-agent override changes the
+// running profile away from `def.agents.bindingsBySeat`'s catalog default).
+const FITL_SEAT_ORDER = ['us', 'arvn', 'nva', 'vc'];
+const buildSeatToProfileId = () => {
+  const map = new Map();
+  if (config.profilesAll) {
+    FITL_SEAT_ORDER.forEach((seatId, index) => {
+      map.set(seatId, FITL_BASELINE_PROFILES[index]);
+    });
+  } else {
+    for (const seatId of FITL_SEAT_ORDER) {
+      map.set(seatId, config.profileId);
+    }
+  }
+  // Backfill any unseen seats with the catalog default so non-FITL games still resolve.
+  const bindings = def.agents?.bindingsBySeat ?? {};
+  for (const [seatId, profileId] of Object.entries(bindings)) {
+    if (!map.has(seatId)) {
+      map.set(seatId, profileId);
+    }
+  }
+  return map;
+};
+const seatToProfileId = buildSeatToProfileId();
+
+// (profileId, exitKind) -> Map<depth, count>
+const driveExitHistogram = new Map();
+let driveExitTotal = 0;
+const recordDriveExit = (info) => {
+  driveExitTotal += 1;
+  const profileId = seatToProfileId.get(info.seatId) ?? `seat:${info.seatId}`;
+  const bucketKey = `${profileId}|${info.kind}`;
+  let depthMap = driveExitHistogram.get(bucketKey);
+  if (depthMap === undefined) {
+    depthMap = new Map();
+    driveExitHistogram.set(bucketKey, depthMap);
+  }
+  depthMap.set(info.depth, (depthMap.get(info.depth) ?? 0) + 1);
+};
 
 const buildAgents = () => {
   if (config.profilesAll) {
@@ -96,6 +139,9 @@ const buildAgents = () => {
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  driveExitHistogram.clear();
+  driveExitTotal = 0;
+  policyPreviewInternals.setDriveExitSink(recordDriveExit);
   const agents = buildAgents();
   const startedAt = performance.now();
   const trace = runGame(
@@ -115,6 +161,8 @@ const runOnce = () => {
   const turnsCount = trace.turnsCount ?? 0;
   const decisions = trace.decisions?.length ?? 0;
   const stopReason = trace.stopReason ?? 'unknown';
+  const driveExitSnapshot = snapshotDriveExitHistogram();
+  policyPreviewInternals.setDriveExitSink(undefined);
   return {
     elapsedMs,
     turnsCount,
@@ -123,8 +171,64 @@ const runOnce = () => {
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+    driveExitTotal: driveExitSnapshot.total,
+    driveExitBuckets: driveExitSnapshot.buckets,
+    driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
   };
 };
+
+function snapshotDriveExitHistogram() {
+  const buckets = [];
+  // depthsByProfile[profileId] = number[] of completed-exit depths
+  const completedDepthsByProfile = new Map();
+  for (const [bucketKey, depthMap] of driveExitHistogram) {
+    const [profileId, kind] = bucketKey.split('|');
+    const depths = [...depthMap.entries()]
+      .sort((left, right) => left[0] - right[0])
+      .map(([depth, count]) => ({ depth, count }));
+    const totalForBucket = depths.reduce((sum, entry) => sum + entry.count, 0);
+    buckets.push({ profileId, kind, total: totalForBucket, depths });
+    if (kind === 'completed') {
+      let depthsForProfile = completedDepthsByProfile.get(profileId);
+      if (depthsForProfile === undefined) {
+        depthsForProfile = [];
+        completedDepthsByProfile.set(profileId, depthsForProfile);
+      }
+      for (const { depth, count } of depths) {
+        for (let index = 0; index < count; index += 1) {
+          depthsForProfile.push(depth);
+        }
+      }
+    }
+  }
+  buckets.sort((left, right) =>
+    left.profileId === right.profileId
+      ? left.kind.localeCompare(right.kind)
+      : left.profileId.localeCompare(right.profileId),
+  );
+  const depthQuantilesByProfile = {};
+  for (const [profileId, depths] of completedDepthsByProfile) {
+    depths.sort((left, right) => left - right);
+    depthQuantilesByProfile[profileId] = {
+      n: depths.length,
+      min: depths[0] ?? null,
+      p50: percentile(depths, 0.5),
+      p75: percentile(depths, 0.75),
+      p90: percentile(depths, 0.9),
+      p95: percentile(depths, 0.95),
+      max: depths.length > 0 ? depths[depths.length - 1] : null,
+    };
+  }
+  return { total: driveExitTotal, buckets, depthQuantilesByProfile };
+}
+
+function percentile(sortedAsc, fraction) {
+  if (sortedAsc.length === 0) {
+    return null;
+  }
+  const rank = Math.min(sortedAsc.length - 1, Math.max(0, Math.ceil(fraction * sortedAsc.length) - 1));
+  return sortedAsc[rank];
+}
 
 if (config.warmup) {
   // Trigger module/closure JIT and warm caches without polluting timed run.
@@ -157,6 +261,9 @@ const summary = {
     tokenStateIndexBuildCount: result.tokenStateIndexBuildCount,
     draftTokenStateIndexDeltaCount: result.draftTokenStateIndexDeltaCount,
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
+    driveExitTotal: result.driveExitTotal,
+    driveExitBuckets: result.driveExitBuckets,
+    driveExitDepthQuantiles: result.driveExitDepthQuantiles,
   },
 };
 
@@ -166,8 +273,16 @@ process.stderr.write(
   `stopReason=${summary.result.stopReason} msPerTurn=${summary.result.msPerTurn} ` +
   `verifyIncrementalHash=${summary.config.verifyIncrementalHash} ` +
   `tokenStateIndexBuildCount=${summary.result.tokenStateIndexBuildCount} ` +
-  `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount}\n`,
+  `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
+  `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
+for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
+  process.stderr.write(
+    `[profile-fitl-preview-drive] depth-quantiles profile=${profileId} ` +
+    `n=${quantiles.n} min=${quantiles.min} p50=${quantiles.p50} p75=${quantiles.p75} ` +
+    `p90=${quantiles.p90} p95=${quantiles.p95} max=${quantiles.max}\n`,
+  );
+}
 
 console.log(JSON.stringify(summary));
 

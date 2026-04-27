@@ -18,6 +18,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
+  K_PREVIEW_DEPTH,
   type Phase1ActionPreviewEntry,
   type PolicyPreviewDependencies,
   type PolicyPreviewCompletionMetadata,
@@ -131,7 +132,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
-    completionDepthCap: activeProfile?.preview.completionDepthCap ?? 8,
+    completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
     ...(profileHasCompletionConsiderations
       ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),

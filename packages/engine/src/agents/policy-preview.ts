@@ -40,7 +40,17 @@ import {
 } from './policy-surface.js';
 import { buildCompletionChooseCallback, selectBestCompletionChooseOneValue } from './completion-guidance-choice.js';
 
-const K_PREVIEW_DEPTH = 8;
+export const K_PREVIEW_DEPTH = 6;
+
+interface DriveExitInfo {
+  readonly kind: 'completed' | 'depthCap' | 'stochastic' | 'failed';
+  readonly depth: number;
+  readonly seatId: string;
+  readonly playerId: number;
+  readonly actionId: string;
+}
+
+let driveExitSink: ((info: DriveExitInfo) => void) | undefined;
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -689,12 +699,25 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   }
 
   function driveSyntheticCompletion(trustedMove: TrustedExecutableMove): DriveResult {
+    const emitExit = (result: DriveResult): DriveResult => {
+      if (driveExitSink !== undefined) {
+        driveExitSink({
+          kind: result.kind,
+          depth: result.depth ?? 0,
+          seatId: input.seatId,
+          playerId: Number(input.playerId),
+          actionId: String(trustedMove.move.actionId),
+        });
+      }
+      return result;
+    };
+
     if (trustedMove.sourceStateHash !== input.state.stateHash) {
-      return {
+      return emitExit({
         kind: 'failed',
         reason: 'failed',
         failureReason: 'sourceStateHashMismatch',
-      };
+      });
     }
 
     try {
@@ -738,7 +761,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         // context kind/seatId/turnId.
         const top = state.decisionStack?.at(-1);
         if (top === undefined) {
-          return { kind: 'completed', state, depth };
+          return emitExit({ kind: 'completed', state, depth });
         }
         const ctxKind = top.context.kind;
         const topSeatId = top.context.seatId;
@@ -749,13 +772,13 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           || topSeatId !== origin.seatId
           || top.turnId !== origin.turnId
         ) {
-          return { kind: 'completed', state, depth };
+          return emitExit({ kind: 'completed', state, depth });
         }
         if (ctxKind === 'stochasticResolve') {
-          return { kind: 'stochastic', state, depth };
+          return emitExit({ kind: 'stochastic', state, depth });
         }
         if (depth >= completionDepthCap) {
-          return { kind: 'depthCap', state, depth };
+          return emitExit({ kind: 'depthCap', state, depth });
         }
 
         // Fast path for greedy chooseOne: let the kernel own the bounded inner
@@ -771,20 +794,20 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           );
           const resultDepth = depth + result.depth;
           if (result.kind === 'failed') {
-            return {
+            return emitExit({
               kind: 'failed',
               reason: 'noPreviewDecision',
               depth: resultDepth,
               failureReason: result.failureReason ?? 'noPreviewDecision',
-            };
+            });
           }
-          return { kind: result.kind, state: result.state, depth: resultDepth };
+          return emitExit({ kind: result.kind, state: result.state, depth: resultDepth });
         }
 
         const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);
         const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
         if (decision === undefined) {
-          return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
+          return emitExit({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
         }
         const prevState = state;
         state = applyPublishedDecisionFromCanonicalState(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
@@ -793,11 +816,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         depth += 1;
       }
     } catch (error) {
-      return {
+      return emitExit({
         kind: 'failed',
         reason: 'failed',
         failureReason: truncatePreviewFailureReason(error),
-      };
+      });
     }
   }
 
@@ -968,3 +991,9 @@ function truncatePreviewFailureReason(error: unknown): string {
   const message = error instanceof Error ? error.message : String(error);
   return message.length <= 160 ? message : `${message.slice(0, 157)}...`;
 }
+
+export const __internal_for_tests = {
+  setDriveExitSink: (sink: ((info: DriveExitInfo) => void) | undefined): void => {
+    driveExitSink = sink;
+  },
+};

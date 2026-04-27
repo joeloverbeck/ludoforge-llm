@@ -765,12 +765,7 @@ function lowerPreviewConfig(
 ): CompiledAgentProfile['preview'] | undefined {
   const authored = profileDef.preview;
   if (authored === undefined) {
-    return {
-      mode: 'exactWorld',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
-    };
+    return { mode: 'exactWorld' };
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
@@ -910,9 +905,9 @@ function lowerPreviewConfig(
 
   return {
     mode,
-    completion: completion ?? 'greedy',
-    completionDepthCap: completionDepthCap ?? 8,
-    topK: topK ?? 4,
+    ...(completion === undefined ? {} : { completion }),
+    ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
+    ...(topK === undefined ? {} : { topK }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
   };

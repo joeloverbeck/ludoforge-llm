@@ -1067,9 +1067,6 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
       phase1: false,
       phase1CompletionsPerAction: 1,
     });
@@ -1156,9 +1153,6 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.selection, {
       mode: 'argmax',
@@ -1201,9 +1195,6 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
       phase1: true,
       phase1CompletionsPerAction: 1,
     });
@@ -1246,9 +1237,6 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
       phase1: true,
       phase1CompletionsPerAction: 3,
     });
@@ -1876,9 +1864,6 @@ describe('agents authoring surface', () => {
     );
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
-      completion: 'greedy',
-      completionDepthCap: 8,
-      topK: 4,
       phase1: false,
       phase1CompletionsPerAction: 2,
     });

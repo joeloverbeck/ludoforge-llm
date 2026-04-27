@@ -10,7 +10,6 @@ export interface TokenStateIndexEntry {
 
 export interface MutableTokenStateIndex {
   read(): ReadonlyMap<string, TokenStateIndexEntry>;
-  readForState(state: GameState): ReadonlyMap<string, TokenStateIndexEntry>;
   applyZoneDelta(prevZones: GameState['zones'], nextZones: GameState['zones']): void;
   attachAsCanonical(state: GameState): void;
 }
@@ -21,14 +20,9 @@ interface TokenOccurrence {
   readonly token: Token;
 }
 
-interface ActiveTokenStateIndexScope {
-  draft: MutableTokenStateIndex;
-}
-
 const NO_DUPLICATE_OCCURRENCE_ZONE_IDS: readonly string[] = Object.freeze([]);
 
 const tokenStateIndexByZones = new WeakMap<GameState['zones'], ReadonlyMap<string, TokenStateIndexEntry>>();
-const activeDraftTokenStateIndexes: ActiveTokenStateIndexScope[] = [];
 let buildTokenStateIndexCount = 0;
 let draftTokenStateIndexAttachCount = 0;
 let draftTokenStateIndexDeltaCount = 0;
@@ -186,10 +180,6 @@ function buildMutableTokenStateIndex(initialState: GameState): MutableTokenState
     read() {
       return index;
     },
-    readForState(state) {
-      this.applyZoneDelta(currentZones, state.zones);
-      return index;
-    },
     applyZoneDelta(prevZones, nextZones) {
       if (currentZones === nextZones) {
         return;
@@ -230,15 +220,6 @@ export function createDraftTokenStateIndex(initialState: GameState): MutableToke
   return buildMutableTokenStateIndex(initialState);
 }
 
-export function withDraftTokenStateIndex<T>(draft: MutableTokenStateIndex, fn: () => T): T {
-  activeDraftTokenStateIndexes.push({ draft });
-  try {
-    return fn();
-  } finally {
-    activeDraftTokenStateIndexes.pop();
-  }
-}
-
 export function copyCachedTokenStateIndex(fromState: GameState, toState: GameState): void {
   const cached = tokenStateIndexByZones.get(fromState.zones);
   if (cached !== undefined) {
@@ -276,10 +257,6 @@ export function refreshCachedTokenStateIndexEntries(state: GameState, tokenIds: 
 }
 
 export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
-  const activeScope = activeDraftTokenStateIndexes.at(-1);
-  if (activeScope !== undefined) {
-    return activeScope.draft.readForState(state);
-  }
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached !== undefined) {
     return cached;

@@ -1,6 +1,6 @@
 # POLPREVDRIVE-001: Investigate policy-preview drive perf regression vs main on FITL determinism parity
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts`, `packages/engine/src/kernel/microturn/drive.ts`, possibly `policy-eval.ts` and `policy-runtime.ts`
@@ -142,3 +142,79 @@ Investigation may add (under follow-up tickets):
 3. `pnpm -F @ludoforge/engine test:integration:fitl-rules`
 4. `pnpm turbo lint typecheck`
 5. `pnpm -F @ludoforge/engine build && cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/zobrist-incremental-parity-fitl.test.js` (CI parity for the shard, may exceed local WSL2 budget — defer to CI)
+
+## Investigation Findings (2026-04-27)
+
+Full report: [`reports/polprevdrive-001-investigation.md`](../reports/polprevdrive-001-investigation.md).
+
+**Repro:** `packages/engine/scripts/profile-fitl-preview-drive.mjs` (seed 42, maxTurns 10, 4 baseline profiles, `verifyIncrementalHash: true`). Runs in ~35 s on PR (~3 s on `main`); both produce `.cpuprofile` artifacts under WSL2 budget. Acceptance criterion 1 satisfied.
+
+**Wall-clock delta:** 11.4× total slowdown (3 069 ms → 34 917 ms), decomposed into:
+- 6.1× game-length amplification (79 → 479 microturn decisions to terminal at the same seed) caused by post-microturn preview information changing agent move selection. Design-intentional (spec 146 motivation) but not free.
+- 1.88× per-decision cost regression.
+
+**Call-tree dominance:** `driveSyntheticCompletion` accounts for **51.26%** of total sampled time on PR vs **0%** on `main` (function did not exist). The greedy-chooseOne fast path `applyPreviewDriveGreedyChooseOne` is only 1.86% of total — most drive work goes through the `publishMicroturnFromCanonicalState` + `applyPublishedDecisionFromCanonicalState` fallback at `policy-preview.ts:777-782`. `pickTopKByMoveOnlyScore` is free (0.01%); cost amplification from top-K=4 lives in the four downstream `driveSyntheticCompletion` calls.
+
+**Hot functions inside the drive subtree (≥60% of drive self-time, 12 functions):**
+
+| % drive | Function | Source |
+|---------|----------|--------|
+| 27.00%  | `fnv1a64` | `packages/engine/src/kernel/zobrist.ts:12` |
+| 6.83%   | `resolveRef` | `packages/engine/src/kernel/resolve-ref.ts:89` |
+| 5.22%   | `evalCondition` | `packages/engine/src/kernel/eval-condition.ts:21` |
+| 4.95%   | `buildTokenStateIndex` | `packages/engine/src/kernel/token-state-index.ts:2` |
+| 3.87%   | `canonicalizeHashValue` | `packages/engine/src/kernel/zobrist.ts:149` |
+| 3.62%   | `evaluateVia` | `packages/engine/src/kernel/spatial.ts:166` |
+| 3.09%   | `evalValue` | `packages/engine/src/kernel/eval-value.ts:211` |
+| 2.47%   | (arrow) | `packages/engine/src/kernel/eval-query.ts:337` |
+| 2.30%   | `zobristKey` | `packages/engine/src/kernel/zobrist.ts:248` |
+| 1.76%   | (arrow inside `canonicalizeHashValue`) | `packages/engine/src/kernel/zobrist.ts:151` |
+| 1.69%   | `queryConnectedZones` | `packages/engine/src/kernel/spatial.ts:190` |
+| 1.61%   | `digestDecisionStackFrame` | `packages/engine/src/kernel/zobrist.ts:175` |
+| **64.41%** | **subtotal** | |
+
+**Classification:** primary (a) per-iteration cost regression + secondary (b) iteration-count regression + secondary (c) per-candidate amplification. Hypothesis (d) `verifyIncrementalHash` interaction is **rejected** — `computeFullHash` (25.31% total) and `digestDecisionStackFrame` (1.61% of drive) scale ~9× linearly with decision count, not super-linearly with drive depth.
+
+**Recommended follow-up tickets** (illustrative; each lands separately with its own determinism-replay verification):
+
+1. Cache `buildTokenStateIndex` across drive iterations within a single `driveSyntheticCompletion` — the 21.5× amplification (vs main) is the largest non-zobrist gap; class (a).
+2. Lower default `K_PREVIEW_DEPTH` from 8 to 4 with explicit profile override — class (b); profile depth distribution first.
+3. Memoise `resolveRef` results inside a single drive — class (a); the 7.7× amplification implies repeated identifier resolution.
+4. Reuse drive results across structurally-equal candidates within the same evaluation pass — class (c).
+
+Acceptance criterion 2 (written analysis classifying the regression and naming files/functions/line numbers responsible for ≥60% of drive self-time) satisfied.
+
+## Outcome
+
+**Completed:** 2026-04-27
+
+**What changed:**
+- Added `packages/engine/scripts/profile-fitl-preview-drive.mjs` — scoped local-repro profiling harness for the FITL preview-drive perf regression. Not a test (no assertions); excluded from default test lanes. Runs in ~35 s on PR / ~3 s on `main` worktree under WSL2 budget; produces a usable `.cpuprofile` artifact under `node --cpu-prof`.
+- Added `reports/polprevdrive-001-investigation.md` — full investigation report with PR-vs-`main` wall-clock comparison, call-tree attribution, hot-function breakdown, regression classification, and four recommended follow-up tickets.
+- Appended `## Investigation Findings (2026-04-27)` to this ticket file with the condensed findings.
+
+**No engine source modified.** This was an investigation-first ticket per its own §4 ("This ticket is investigation-first. Implementation work is gated on findings and may produce a follow-up ticket per concrete fix."). Concrete fixes land as their own follow-up tickets.
+
+**Key findings:**
+- 11.4× total slowdown on the scoped repro vs `1e64d085` merge-base (3 069 ms → 34 917 ms), decomposed into 6.1× game-length amplification × 1.88× per-decision cost regression.
+- `driveSyntheticCompletion` (`packages/engine/src/agents/policy-preview.ts:690`) accounts for 51.26% of total sampled time on PR vs 0% on `main` (function did not exist there).
+- Inside the drive subtree, 12 named functions account for 64.41% of drive self-time, satisfying the ≥60% acceptance threshold. Top contributors: `fnv1a64` (27.00%), `resolveRef` (6.83%), `evalCondition` (5.22%), `buildTokenStateIndex` (4.95%).
+- `applyPreviewDriveGreedyChooseOne` (the chooseOne fast path) is only 1.86% of total — most drive work flows through the `publishMicroturnFromCanonicalState` + `applyPublishedDecisionFromCanonicalState` fallback at `policy-preview.ts:777-782`. Tightening the chooseOne fast path will not move the needle.
+- `pickTopKByMoveOnlyScore` is essentially free (0.01%); cost amplification from top-K=4 lives in the four downstream `driveSyntheticCompletion` calls per outer move.
+- Hypothesis (d) from the original ticket — that `verifyIncrementalHash` × deep decision stacks make `digestDecisionStackFrame` dominant — was **rejected**: `computeFullHash` (25.31% total) and `digestDecisionStackFrame` (1.61% of drive) scale ~9× linearly with decision count, not super-linearly with drive depth.
+
+**Classification:** primary (a) per-iteration cost regression + secondary (b) iteration-count regression + secondary (c) per-candidate amplification. (d) rejected. (e) confirmed in (a) + (b) + (c) form.
+
+**Deviations from original plan:**
+- The ticket suggested a single-profile harness shape (1 seed × 50 turns × 1 profile). The harness as authored supports both that shape (default) and `--profilesAll` (4 baseline profiles), and was actually run in the 4-profile mode at `--maxTurns 10` because the FITL parity workload only manifests the regression with all four named profiles concurrent. The reduced turn count (10 vs 50) keeps total time well under the 60 s WSL2 budget.
+- The investigation produced the analysis in `reports/polprevdrive-001-investigation.md` rather than only inline in this ticket — both surfaces are populated, with the ticket carrying the condensed findings and the report carrying the full attribution tables and replication script.
+
+**Verification:**
+- `pnpm turbo lint typecheck` — 5/5 tasks passed.
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` — 79/79 files passed.
+- `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-a` — 38/38 files passed.
+- `zobrist-incremental-parity-fitl.test.ts` is untouched and remains shielded by the `a2e59e80` shard split (`fitl-parity-zobrist` matrix entry in `.github/workflows/engine-determinism.yml:54`); no behavioural change to the test or its lane.
+- Harness lives in `packages/engine/scripts/` and is excluded from `node --test` lanes by virtue of its `.mjs` extension and location outside `dist/test/`.
+
+**Residual risk:**
+- Acceptance criterion 3 (the determinism shard continues to pass on CI within 30-min budget) is left to CI to verify on the next push, since running the full FITL parity shard locally exceeds WSL2 budget. The split itself is unchanged from `a2e59e80`, so no new risk introduced by this ticket.

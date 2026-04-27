@@ -74,7 +74,7 @@ describe('FITL production data integration compilation', () => {
     const catalog = compiled.gameDef.agents;
 
     assert.ok(catalog, 'Expected compiled FITL policy catalog');
-    assert.deepEqual(catalog.library.stateFeatures.patronage?.expr, {
+    assert.deepEqual(catalog.compiled.stateFeatures.patronage?.expr, {
       kind: 'ref',
       ref: {
         kind: 'currentSurface',
@@ -82,7 +82,7 @@ describe('FITL production data integration compilation', () => {
         id: 'patronage',
       },
     });
-    assert.deepEqual(catalog.library.stateFeatures.coinControlPop?.expr, {
+    assert.deepEqual(catalog.compiled.stateFeatures.coinControlPop?.expr, {
       kind: 'ref',
       ref: {
         kind: 'currentSurface',

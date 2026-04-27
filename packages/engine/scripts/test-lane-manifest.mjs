@@ -34,7 +34,8 @@ export const E2E_SLOW_EXACT_TESTS = [
 // Heavy parametric runGame parity tests. Each iterates a seed × profile-variant
 // matrix and runs full bounded simulations, so individually they cost minutes.
 // Excluded from the default/integration:core lane to keep local development
-// `pnpm turbo test` fast; covered by the dedicated engine-slow-parity workflow.
+// `pnpm turbo test` fast; covered by sharded slow-parity lanes in
+// engine-tests.yml.
 export const SLOW_INTEGRATION_TESTS = [
   'classified-move-parity.test.ts',
   'diagnose-parity-runGame.test.ts',
@@ -43,6 +44,26 @@ export const SLOW_INTEGRATION_TESTS = [
   'spec-140-foundations-conformance.test.ts',
   'spec-140-profile-migration.test.ts',
 ];
+
+// Shard assignment for slow-parity. Hand-balanced from observed CI durations
+// to keep each shard well under the 30-min lane timeout.
+// shard-a ~12.5m, shard-b ~16m, shard-c ~6-12m.
+const SLOW_INTEGRATION_SHARD_BASENAMES = {
+  'shard-a': new Set([
+    'classified-move-parity.test.ts',
+    'spec-140-bounded-termination.test.ts',
+  ]),
+  'shard-b': new Set([
+    'diagnose-parity-runGame.test.ts',
+    'spec-140-foundations-conformance.test.ts',
+  ]),
+  'shard-c': new Set([
+    'spec-140-compound-turn-summary.test.ts',
+    'spec-140-profile-migration.test.ts',
+  ]),
+};
+
+const FITL_EVENTS_SHARD_COUNT = 3;
 
 function collectTestFiles(dir) {
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -105,6 +126,17 @@ export function listIntegrationTestsForLane(lane) {
       );
     case 'integration:slow-parity':
       return ALL_INTEGRATION_TESTS.filter((sourcePath) => slowIntegrationTests.has(sourcePath));
+    case 'integration:slow-parity-shard-a':
+    case 'integration:slow-parity-shard-b':
+    case 'integration:slow-parity-shard-c': {
+      const shardKey = lane.slice('integration:slow-parity-'.length);
+      const shardSet = SLOW_INTEGRATION_SHARD_BASENAMES[shardKey];
+      return ALL_INTEGRATION_TESTS.filter((sourcePath) => {
+        if (!slowIntegrationTests.has(sourcePath)) return false;
+        const baseName = sourcePath.split('/').at(-1) ?? sourcePath;
+        return shardSet.has(baseName);
+      });
+    }
     case 'integration:game-packages':
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath),
@@ -113,6 +145,17 @@ export function listIntegrationTestsForLane(lane) {
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && isFitlEventCardTest(sourcePath),
       );
+    case 'integration:fitl-events-shard-a':
+    case 'integration:fitl-events-shard-b':
+    case 'integration:fitl-events-shard-c': {
+      const shardKey = lane.slice('integration:fitl-events-'.length);
+      const shardIndex = { 'shard-a': 0, 'shard-b': 1, 'shard-c': 2 }[shardKey];
+      const all = ALL_INTEGRATION_TESTS.filter(
+        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && isFitlEventCardTest(sourcePath),
+      );
+      const chunkSize = Math.ceil(all.length / FITL_EVENTS_SHARD_COUNT);
+      return all.slice(shardIndex * chunkSize, (shardIndex + 1) * chunkSize);
+    }
     case 'integration:fitl-rules':
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && sourcePath.split('/').at(-1)?.startsWith('fitl-') && !isFitlEventCardTest(sourcePath),

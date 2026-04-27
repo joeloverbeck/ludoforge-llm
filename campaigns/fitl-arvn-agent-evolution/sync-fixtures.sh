@@ -18,35 +18,34 @@ console.error('  fitl-policy-catalog.golden.json regenerated');
 echo "Regenerating FITL policy summary golden fixture..." >&2
 node -e "
 const { compileProductionSpec } = await import('$PROJECT_ROOT/packages/engine/dist/test/helpers/production-spec-helpers.js');
-const { assertValidatedGameDef, createGameDefRuntime, createRng, enumerateLegalMoves, initialState } = await import('$PROJECT_ROOT/packages/engine/dist/src/kernel/index.js');
+const { assertValidatedGameDef, createGameDefRuntime, createRng, initialState, publishMicroturn } = await import('$PROJECT_ROOT/packages/engine/dist/src/kernel/index.js');
 const { PolicyAgent } = await import('$PROJECT_ROOT/packages/engine/dist/src/agents/index.js');
 const { writeFileSync } = await import('node:fs');
 const def = assertValidatedGameDef(compileProductionSpec().compiled.gameDef);
 const runtime = createGameDefRuntime(def);
-const state = initialState(def, 7, 4).state;
-const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
-  def, state, playerId: state.activePlayer, legalMoves: moves, rng: createRng(7n), runtime,
+const state = initialState(def, 7, 4, undefined, runtime).state;
+const microturn = publishMicroturn(def, state, runtime);
+const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
+  def, state, microturn, rng: createRng(7n), runtime,
 });
-writeFileSync('$PROJECT_ROOT/packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json', JSON.stringify({ move: result.move.move, agentDecision: result.agentDecision }, null, 2) + '\n');
+writeFileSync('$PROJECT_ROOT/packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json', JSON.stringify({ move: result.decision.move, agentDecision: result.agentDecision }, null, 2) + '\n');
 console.error('  fitl-policy-summary.golden.json regenerated');
 "
 
 echo "Regenerating Texas policy summary golden fixture..." >&2
 node -e "
 const { compileTexasProductionSpec } = await import('$PROJECT_ROOT/packages/engine/dist/test/helpers/production-spec-helpers.js');
-const { assertValidatedGameDef, createGameDefRuntime, createRng, enumerateLegalMoves, initialState, advanceToDecisionPoint } = await import('$PROJECT_ROOT/packages/engine/dist/src/kernel/index.js');
+const { assertValidatedGameDef, createGameDefRuntime, createRng, initialState, publishMicroturn } = await import('$PROJECT_ROOT/packages/engine/dist/src/kernel/index.js');
 const { PolicyAgent } = await import('$PROJECT_ROOT/packages/engine/dist/src/agents/index.js');
 const { writeFileSync } = await import('node:fs');
 const def = assertValidatedGameDef(compileTexasProductionSpec().compiled.gameDef);
 const runtime = createGameDefRuntime(def);
-const seeded = initialState(def, 23, 4).state;
-const state = advanceToDecisionPoint(def, seeded);
-const moves = enumerateLegalMoves(def, state, undefined, runtime).moves;
-const result = new PolicyAgent({ traceLevel: 'summary' }).chooseMove({
-  def, state, playerId: state.activePlayer, legalMoves: moves, rng: createRng(23n), runtime,
+const state = initialState(def, 23, 4, undefined, runtime).state;
+const microturn = publishMicroturn(def, state, runtime);
+const result = new PolicyAgent({ traceLevel: 'summary' }).chooseDecision({
+  def, state, microturn, rng: createRng(23n), runtime,
 });
-writeFileSync('$PROJECT_ROOT/packages/engine/test/fixtures/trace/texas-policy-summary.golden.json', JSON.stringify({ move: result.move.move, agentDecision: result.agentDecision }, null, 2) + '\n');
+writeFileSync('$PROJECT_ROOT/packages/engine/test/fixtures/trace/texas-policy-summary.golden.json', JSON.stringify({ move: result.decision.move, agentDecision: result.agentDecision }, null, 2) + '\n');
 console.error('  texas-policy-summary.golden.json regenerated');
 "
 

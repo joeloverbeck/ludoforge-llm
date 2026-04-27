@@ -47,11 +47,18 @@ jobs:
             test_paths: |
               dist/test/determinism/draft-state-determinism-parity.test.js
           - shard_id: zobrist-core
-            shard_label: Zobrist determinism
+            shard_label: Zobrist determinism core
             test_paths: |
               dist/test/determinism/zobrist-incremental-parity.test.js
-              dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js
               dist/test/determinism/zobrist-incremental-property-texas.test.js
+          - shard_id: fitl-parity-zobrist
+            shard_label: FITL parity Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-parity-fitl.test.js
+          - shard_id: fitl-short-zobrist
+            shard_label: FITL short Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js
           - shard_id: grant-canary
             shard_label: grant determinism canary
             test_paths: |

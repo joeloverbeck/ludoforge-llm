@@ -1,6 +1,6 @@
 # Spec 142: Card-Driven Campaign-End and Final-Coup Semantics
 
-**Status**: Draft
+**Status**: ✅ COMPLETED
 **Priority**: P2
 **Complexity**: S
 **Dependencies**: Spec 17 [fitl-turn-sequence-eligibility-and-card-flow], Spec 19, Spec 140, Spec 141 (all completed; parallel-friendly)
@@ -103,3 +103,17 @@ An earlier draft proposed `currentCard`, `futureCards`, `futureCardsMatching(<pr
 
 - `142CARDENDS-001`: Document the Future-Stream Class-Filter Pattern in the authored-conventions documentation, citing the FITL witness and existing regressions.
 - `142CARDENDS-002`: Add the generic non-FITL regression for the Future-Stream Class-Filter Pattern.
+
+## Outcome
+
+Completed on 2026-04-24. Both follow-on tickets (`142CARDENDS-001`, `142CARDENDS-002`) landed and are archived under `archive/tickets/`.
+
+What changed:
+
+- Added `docs/card-driven-terminal-authoring.md` naming and documenting the Future-Stream Class-Filter Pattern, citing the canonical FITL witness at `data/games/fire-in-the-lake/90-terminal.md:273-315` and the existing regressions at `packages/engine/test/integration/fitl-coup-victory-phase-gating.test.ts:153,197`.
+- Cross-linked the new convention doc from `docs/fitl-event-authoring-cookbook.md` and `docs/architecture.md`.
+- Added `packages/engine/test/unit/terminal-future-stream-class-filter.test.ts` — generic, non-FITL architectural-invariant regression using a synthetic card-driven `GameDef` with arbitrary `class: "special"` / `class: "ordinary"` card properties. Proves (a) the checkpoint fires in both authored phases when the class is exhausted across the full future stream and (b) `advanceToDecisionPoint` publishes no further decisions, phase advances, or card reveals after the checkpoint becomes terminal.
+
+Deviations from original plan: none. No new DSL keywords, compiler changes, or engine primitives were introduced (per Non-Goals and Foundation 15). FITL final-coup behavior unchanged.
+
+Verification: `pnpm turbo lint`, `pnpm turbo test`, `pnpm turbo typecheck`, plus the targeted `node --test dist/test/unit/terminal-future-stream-class-filter.test.js` run during ticket execution.

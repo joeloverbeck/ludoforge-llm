@@ -138,3 +138,9 @@ pnpm turbo schema:artifacts
 ## Measured-Gate Outcome
 
 For profiling/audit tickets, capture: measured surface, command(s), decisive result, threshold comparison, downstream action (archived/amended/deferred/not-actionable).
+
+For benchmark tickets with a baseline or disabled/enabled comparison, include the concrete comparison fields in the same durable outcome: baseline value, current value, absolute delta, ratio or percent change, threshold, gate result, and command. A green benchmark lane is not enough if the ticket's useful decision depends on the magnitude of the difference.
+
+If a benchmark or perf lane passes at the process/test-runner level but does not assert or print the ticket-owned metric, classify it as `harness smoke only`. Do not cite it as final measured acceptance proof until a repo-owned lane reports the metric, variance/quality bound when required, threshold, and pass/fail verdict.
+
+If implementation is correct but the measured gate fails, the final durable state should make that split explicit: `owned migration landed`, `measured gate red`, `follow-up owner`, and `status` (`BLOCKED`, `PARTIAL`, or the repo's equivalent). Do not weaken the target or silently convert the failed gate into a completed ticket.

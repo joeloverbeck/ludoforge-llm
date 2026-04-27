@@ -82,7 +82,7 @@ function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' 
       throw missingBindingError(`Scoped variable name binding not found: ${ref.var.name}`, {
         reference: ref,
         binding: ref.var.name,
-        availableBindings: Object.keys(ctx.bindings).sort(),
+        availableBindings: Object.keys(ctx.bindings),
       });
     }
     throw typeMismatchError(`Scoped variable name binding must resolve to string: ${ref.var.name}`, {
@@ -96,7 +96,7 @@ function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' 
     throw missingVarError(`Scoped variable name grantContext not found: ${ref.var.key}`, {
       reference: ref,
       key: ref.var.key,
-      availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
+      availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}),
     });
   }
   throw typeMismatchError(`Scoped variable name grantContext must resolve to string: ${ref.var.key}`, {
@@ -398,7 +398,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'markerState') {
     const spaceId = resolveMapSpaceId(ref.space, ctx);
-    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id)).sort();
+    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id));
     if (!availableMapSpaceIds.includes(String(spaceId))) {
       throw missingVarError(`Unknown map-space id for markerState: ${String(spaceId)}`, {
         reference: ref,
@@ -421,7 +421,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     throw missingVarError(`Marker lattice not found: ${ref.marker}`, {
       reference: ref,
       markerId: ref.marker,
-      availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+      availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id),
     });
   }
 
@@ -439,7 +439,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     throw missingVarError(`Global marker lattice not found: ${ref.marker}`, {
       reference: ref,
       markerId: ref.marker,
-      availableGlobalMarkerLattices: (ctx.def.globalMarkerLattices ?? []).map((candidate) => candidate.id).sort(),
+      availableGlobalMarkerLattices: (ctx.def.globalMarkerLattices ?? []).map((candidate) => candidate.id),
     });
   }
 
@@ -454,7 +454,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
         reference: ref,
         zoneId,
-        availableZoneIds: ctx.def.zones.map((zone) => zone.id).sort(),
+        availableZoneIds: ctx.def.zones.map((zone) => zone.id),
       });
     }
 
@@ -469,7 +469,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
           reference: ref,
           zoneId,
           prop: ref.prop,
-          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
         });
       }
       return zoneDef.category;
@@ -481,7 +481,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
         reference: ref,
         zoneId,
         prop: ref.prop,
-        availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+        availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
       });
     }
 

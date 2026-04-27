@@ -35,6 +35,8 @@ If the implemented ticket is already archived, still proceed with the review.
 
 Inspect `git status --short` early. Separate unrelated dirty files from the implemented-ticket review scope, and leave them alone unless the completed ticket or concrete same-seam evidence makes them part of the review.
 
+If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice.
+
 ## Evidence Model
 
 Use concrete evidence only. Review against:
@@ -112,6 +114,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - keep the scope specific and actionable
    - if the new follow-up changes the truth of any sibling active ticket's dependency, audit boundary, or ownership wording, update those sibling tickets in the same review turn
    - after later archive/rewrite commands run, reread every active ticket you created or edited in this review turn and confirm `Deps`, `Files to Touch`, and any archive-path references are still literal-path correct
+    - classify later old-path grep hits as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable handoff references such as `Deps`, target snippets, live-path instructions, and markdown links that would send the next implementer to the wrong file
 11. If review evidence shows the implementation can stand but the original ticket was not fully satisfied as written:
    - amend the original ticket's closeout text so it truthfully records the deviation
    - state what landed, what did not, and which active follow-up ticket now owns the remainder
@@ -121,6 +124,17 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 13. If no unresolved `must-fix-now` cleanup remains, archive the implemented ticket per `docs/archival-workflow.md`.
+14. After archival:
+   - confirm the original source path is gone
+   - inspect `git status --short` for the moved ticket and classify the archive state as `tracked rename`, `delete-plus-untracked archive`, or `plain untracked archive`; mention unusual archive state in the final handoff when it affects commit or staging readiness
+   - run a literal old-path sweep across active tickets, the implemented spec or roadmap/doc that owns the ticket family, and the newly archived ticket
+   - remember that `scripts/archive-ticket.mjs` rewrites active tickets only; specs, roadmaps, reports, and archived-ticket prose may still contain stale markdown links or live-path instructions
+   - classify each old-path hit as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable references, not harmless historical prose
+   - reread every file changed by the archive script or by the old-path sweep and confirm the remaining literals are ownership-correct
+15. Run verification for review-created edits:
+   - always run `pnpm run check:ticket-deps` after archiving or changing ticket dependencies
+   - run `git diff --check -- <all-review-created-edited-files>` after must-fix cleanup or archive edits; for markdown-only archive fallout, the edited ticket/spec/archive markdown files are the minimum
+   - if review-created edits changed production runtime, compiler, schema, or shared tests, rerun the affected original acceptance lanes before archival closeout
 
 ## Ticket Authoring Rules
 
@@ -145,6 +159,7 @@ For any ticket you create or extend:
   - active ticket extended
   - new ticket created
   - original ticket archived
+  - archive move status when it is unusual or affects commit/staging readiness
   - unrelated dirty paths only when needed to keep the ticket-review output distinct from other same-session or pre-existing work
 
 ## Guardrails

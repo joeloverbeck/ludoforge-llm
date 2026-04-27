@@ -1,19 +1,21 @@
 import { asPlayerId, type PlayerId, type ZoneId } from '../kernel/branded.js';
-import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
+import type { AgentPolicyZoneScope, AgentPolicyZoneTokenAggOp, AgentPolicyZoneTokenAggOwner } from '../contracts/index.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext } from '../kernel/eval-context.js';
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import type {
+  AgentPreviewCompletionPolicy,
   AttributeValue,
   AgentParameterValue,
   AgentPolicyCatalog,
-  AgentPolicyExpr,
   AgentPolicyTokenFilter,
   AgentPolicyZoneFilter,
   ChoicePendingRequest,
-  CompiledAgentConsideration,
   CompiledAgentPolicyRef,
+  CompiledPolicyExpr,
+  CompiledPolicyConsideration,
+  CompiledPolicyZoneSource,
   CompiledSurfaceRef,
   GameDef,
   GameState,
@@ -36,6 +38,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import { buildPolicyExprClosure, type CompiledPolicyExprClosure } from './compiled-policy-runtime.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -58,6 +61,8 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  previewDriveDepth?: number;
+  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
@@ -221,6 +226,7 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
+  private readonly compiledExprClosureCache = new WeakMap<CompiledPolicyExpr, CompiledPolicyExprClosure>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
   private transientZoneReadContext: { readonly stateHash: bigint; readonly context: ReadContext } | null = null;
@@ -294,17 +300,29 @@ export class PolicyEvaluationContext {
     if (candidateCache.has(featureId)) {
       return candidateCache.get(featureId);
     }
-    const feature = this.input.catalog.library.candidateFeatures[featureId];
+    const feature = this.input.catalog.compiled.candidateFeatures[featureId];
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate feature "${featureId}".`, { featureId });
     }
-    const value = this.evaluateExpr(feature.expr, candidate);
+    const value = this.evaluateCompiledExpr(feature.expr, candidate);
     candidateCache.set(featureId, value);
     return value;
   }
 
   hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
     return this.runtimeProviders.previewSurface.hasPreviewData(candidate);
+  }
+
+  markPreviewGated(candidate: PolicyEvaluationCandidate): void {
+    this.runtimeProviders.previewSurface.markGated(candidate);
+    candidate.previewOutcome = 'gated';
+    candidate.previewFailureReason = 'gated';
+    delete candidate.previewDriveDepth;
+    delete candidate.previewCompletionPolicy;
+  }
+
+  hasMaterializedPreview(candidate: PolicyEvaluationCandidate): boolean {
+    return this.runtimeProviders.previewSurface.hasMaterializedOutcome(candidate);
   }
 
   /** Ensure the candidate's previewOutcome is set from the preview surface.
@@ -320,13 +338,13 @@ export class PolicyEvaluationContext {
     if (this.aggregateCache.has(aggregateId)) {
       return this.aggregateCache.get(aggregateId);
     }
-    const aggregate = this.input.catalog.library.candidateAggregates[aggregateId];
+    const aggregate = this.input.catalog.compiled.candidateAggregates[aggregateId];
     if (aggregate === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown candidate aggregate "${aggregateId}".`, { aggregateId });
     }
 
     const included = this.currentCandidates.filter((candidate) => {
-      const where = aggregate.where === undefined ? true : this.evaluateExpr(aggregate.where, candidate);
+      const where = aggregate.where === undefined ? true : this.evaluateCompiledExpr(aggregate.where, candidate);
       return where === true;
     });
 
@@ -338,7 +356,7 @@ export class PolicyEvaluationContext {
       case 'max':
       case 'min': {
         const numericValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
+          .map((candidate) => this.evaluateCompiledExpr(aggregate.of, candidate))
           .filter((entry): entry is number => typeof entry === 'number');
         if (numericValues.length === 0) {
           value = undefined;
@@ -351,21 +369,21 @@ export class PolicyEvaluationContext {
       }
       case 'sum': {
         const numericValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
+          .map((candidate) => this.evaluateCompiledExpr(aggregate.of, candidate))
           .filter((entry): entry is number => typeof entry === 'number');
         value = numericValues.length === 0 ? undefined : numericValues.reduce((sum, entry) => sum + entry, 0);
         break;
       }
       case 'any': {
         const booleanValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
+          .map((candidate) => this.evaluateCompiledExpr(aggregate.of, candidate))
           .filter((entry): entry is boolean => typeof entry === 'boolean');
         value = booleanValues.length === 0 ? undefined : booleanValues.some(Boolean);
         break;
       }
       case 'all': {
         const booleanValues = included
-          .map((candidate) => this.evaluateExpr(aggregate.of, candidate))
+          .map((candidate) => this.evaluateCompiledExpr(aggregate.of, candidate))
           .filter((entry): entry is boolean => typeof entry === 'boolean');
         value = booleanValues.length === 0 ? undefined : booleanValues.every(Boolean);
         break;
@@ -390,7 +408,7 @@ export class PolicyEvaluationContext {
   }
 
   evaluateConsideration(
-    considerations: Readonly<Record<string, CompiledAgentConsideration>>,
+    considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
     considerationId: string,
     candidate: PolicyEvaluationCandidate | undefined,
     onContribution?: (contribution: number) => void,
@@ -401,14 +419,14 @@ export class PolicyEvaluationContext {
     }
 
     if (consideration.when !== undefined) {
-      const when = this.evaluateExpr(consideration.when, candidate);
+      const when = this.evaluateCompiledExpr(consideration.when, candidate);
       if (when !== true) {
         return 0;
       }
     }
 
-    const weight = this.evaluateExpr(consideration.weight, candidate);
-    const value = this.evaluateExpr(consideration.value, candidate);
+    const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
+    const value = this.evaluateCompiledExpr(consideration.value, candidate);
     if (typeof weight !== 'number' || typeof value !== 'number') {
       const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
@@ -428,147 +446,47 @@ export class PolicyEvaluationContext {
     return contribution;
   }
 
-  evaluateExpr(expr: AgentPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
-    switch (expr.kind) {
-      case 'literal':
-        return expr.value === null ? undefined : expr.value;
-      case 'param':
-        return this.input.parameterValues[expr.id];
-      case 'ref':
-        return this.resolveRef(expr.ref, candidate);
-      case 'op':
-        switch (expr.op) {
-          case 'add':
-            return sumValues(this.evaluateExprList(expr.args, candidate));
-          case 'sub':
-            return binaryNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => left - right);
-          case 'mul':
-            return multiplyValues(this.evaluateExprList(expr.args, candidate));
-          case 'div':
-            return binaryNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => {
-              if (right === 0) {
-                throw this.runtimeError('RUNTIME_EVALUATION_ERROR', 'Policy expression division evaluated with a zero denominator.');
-              }
-              return left / right;
-            });
-          case 'min':
-            return reduceNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => Math.min(left, right));
-          case 'max':
-            return reduceNumeric(this.evaluateExprList(expr.args, candidate), (left, right) => Math.max(left, right));
-          case 'abs': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'number' ? Math.abs(entry) : undefined;
-          }
-          case 'neg': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'number' ? -entry : undefined;
-          }
-          case 'eq':
-          case 'ne': {
-            const entriesToCompare = this.evaluateExprList(expr.args, candidate);
-            if (entriesToCompare.length !== 2 || entriesToCompare[0] === undefined || entriesToCompare[1] === undefined) {
-              return undefined;
-            }
-            const equals = deepPolicyEqual(entriesToCompare[0], entriesToCompare[1]);
-            return expr.op === 'eq' ? equals : !equals;
-          }
-          case 'lt':
-          case 'lte':
-          case 'gt':
-          case 'gte': {
-            const compared = this.evaluateExprList(expr.args, candidate);
-            if (compared.length !== 2 || typeof compared[0] !== 'number' || typeof compared[1] !== 'number') {
-              return undefined;
-            }
-            if (expr.op === 'lt') return compared[0] < compared[1];
-            if (expr.op === 'lte') return compared[0] <= compared[1];
-            if (expr.op === 'gt') return compared[0] > compared[1];
-            return compared[0] >= compared[1];
-          }
-          case 'and':
-            return andValues(this.evaluateExprList(expr.args, candidate));
-          case 'or':
-            return orValues(this.evaluateExprList(expr.args, candidate));
-          case 'not': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'boolean' ? !entry : undefined;
-          }
-          case 'if': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 3 || typeof args[0] !== 'boolean') {
-              return undefined;
-            }
-            return args[0] ? args[1] : args[2];
-          }
-          case 'in': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 2 || args[0] === undefined || args[1] === undefined) {
-              return undefined;
-            }
-            if (Array.isArray(args[1])) {
-              return args[1].includes(String(args[0]));
-            }
-            return undefined;
-          }
-          case 'coalesce': {
-            for (const entry of this.evaluateExprList(expr.args, candidate)) {
-              if (entry !== undefined) {
-                return entry;
-              }
-            }
-            return undefined;
-          }
-          case 'clamp': {
-            const args = this.evaluateExprList(expr.args, candidate);
-            if (args.length !== 3 || typeof args[0] !== 'number' || typeof args[1] !== 'number' || typeof args[2] !== 'number') {
-              return undefined;
-            }
-            return Math.max(args[1], Math.min(args[2], args[0]));
-          }
-          case 'boolToNumber': {
-            const entry = this.evaluateFirstArg(expr, candidate);
-            return typeof entry === 'boolean' ? (entry ? 1 : 0) : undefined;
-          }
-        }
-        return undefined;
-      case 'zoneProp':
-        return this.evaluateZoneProp(expr, candidate);
-      case 'zoneTokenAgg':
-        return this.evaluateZoneTokenAggregate(expr, candidate);
-      case 'globalTokenAgg':
-        return this.evaluateGlobalTokenAggregate(expr);
-      case 'globalZoneAgg':
-        return this.evaluateGlobalZoneAggregate(expr);
-      case 'adjacentTokenAgg':
-        return this.evaluateAdjacentTokenAggregate(expr, candidate);
-      case 'seatAgg':
-        return this.evaluateSeatAggregate(expr, candidate);
+  evaluateCompiledExpr(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    let closure = this.compiledExprClosureCache.get(expr);
+    if (closure === undefined) {
+      closure = buildPolicyExprClosure(expr, this);
+      this.compiledExprClosureCache.set(expr, closure);
     }
+    return closure(candidate);
   }
 
-  private evaluateZoneProp(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneProp' }>,
+  resolveCompiledPolicyParam(id: string): PolicyValue {
+    return this.input.parameterValues[id];
+  }
+
+  resolveCompiledPolicyRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    return this.resolveAgentPolicyRef(ref, candidate);
+  }
+
+  evaluateCompiledZoneProp(
+    zone: CompiledPolicyZoneSource,
+    prop: string,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
-    const zoneId = this.resolvePolicyZoneId(expr.zone, 'none', candidate);
+    const zoneId = this.resolveCompiledPolicyZoneId(zone, 'none', candidate);
     if (zoneId === undefined) {
       return undefined;
     }
-    const zoneDef = this.input.def.zones.find((zone) => zone.id === zoneId);
+    const zoneDef = this.input.def.zones.find((entry) => entry.id === zoneId);
     if (zoneDef === undefined) {
       return undefined;
     }
-    if (expr.prop === 'id') {
+    if (prop === 'id') {
       return zoneDef.id;
     }
-    if (expr.prop === 'category') {
+    if (prop === 'category') {
       return zoneDef.category;
     }
-    return scalarZonePropValue(zoneDef.attributes?.[expr.prop]);
+    return scalarZonePropValue(zoneDef.attributes?.[prop]);
   }
 
-  private evaluateZoneTokenAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
+  evaluateCompiledZoneTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'zoneTokenAgg' }>,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     const currentState = this.activeState;
@@ -576,7 +494,7 @@ export class PolicyEvaluationContext {
     if (resolvedOwner === undefined) {
       return undefined;
     }
-    const zoneId = this.resolvePolicyZoneId(expr.zone, resolvedOwner, candidate);
+    const zoneId = this.resolveCompiledPolicyZoneId(expr.zone, resolvedOwner, candidate);
     if (zoneId === undefined) {
       return undefined;
     }
@@ -606,8 +524,8 @@ export class PolicyEvaluationContext {
     }
   }
 
-  private evaluateGlobalTokenAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
+  evaluateCompiledGlobalTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalTokenAgg' }>,
   ): PolicyValue {
     const currentState = this.activeState;
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
@@ -627,8 +545,80 @@ export class PolicyEvaluationContext {
     return this.aggregateTokensAcrossZones(zoneIds, expr, resolvedFilter);
   }
 
+  evaluateCompiledGlobalZoneAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
+  ): PolicyValue {
+    return this.evaluateGlobalZoneAggregate(expr);
+  }
+
+  evaluateCompiledAdjacentTokenAggregate(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const currentState = this.activeState;
+    const anchorZoneId = this.resolveCompiledPolicyZoneId(expr.anchorZone, 'none', candidate);
+    if (anchorZoneId === undefined) {
+      return undefined;
+    }
+    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
+    const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
+    const seatIds = this.input.def.seats?.map((seat) => seat.id);
+    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
+    return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
+  }
+
+  evaluateCompiledSeatAggregate(
+    over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+    aggOp: AgentPolicyZoneTokenAggOp,
+    inner: CompiledPolicyExprClosure,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const seatIds = this.resolveSeatAggregateSeatIds(over);
+    if (seatIds === undefined || seatIds.length === 0) {
+      return aggOp === 'count' || aggOp === 'sum' ? 0 : undefined;
+    }
+
+    const values: number[] = [];
+    for (const seatId of seatIds) {
+      const previousSeatContext = this.currentSeatContext;
+      this.currentSeatContext = seatId;
+      try {
+        const value = inner(candidate);
+        if (typeof value === 'number') {
+          values.push(value);
+        }
+      } finally {
+        this.currentSeatContext = previousSeatContext;
+      }
+    }
+
+    if (aggOp === 'count') {
+      return values.length;
+    }
+    if (values.length === 0) {
+      return aggOp === 'sum' ? 0 : undefined;
+    }
+
+    switch (aggOp) {
+      case 'sum':
+        return values.reduce((acc, value) => acc + value, 0);
+      case 'min':
+        return Math.min(...values);
+      case 'max':
+        return Math.max(...values);
+    }
+  }
+
+  createCompiledPolicyRuntimeError(
+    code: string,
+    message: string,
+    detail?: Readonly<Record<string, unknown>>,
+  ): PolicyRuntimeError {
+    return this.runtimeError(code, message, detail);
+  }
+
   private evaluateGlobalZoneAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'globalZoneAgg' }>,
   ): PolicyValue {
     const currentState = this.activeState;
     let count = 0;
@@ -677,78 +667,8 @@ export class PolicyEvaluationContext {
     return aggregate;
   }
 
-  private evaluateAdjacentTokenAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'adjacentTokenAgg' }>,
-    candidate: PolicyEvaluationCandidate | undefined,
-  ): PolicyValue {
-    const currentState = this.activeState;
-    const anchorZoneId = this.resolvePolicyZoneId(expr.anchorZone, 'none', candidate);
-    if (anchorZoneId === undefined) {
-      return undefined;
-    }
-    const adjacencyGraph = this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones);
-    const adjacentZoneIds = queryAdjacentZones(adjacencyGraph, anchorZoneId);
-    const seatIds = this.input.def.seats?.map((seat) => seat.id);
-    const resolvedFilter = resolveTokenFilter(expr.tokenFilter, this.input.playerId, currentState, seatIds);
-    return this.aggregateTokensAcrossZones(adjacentZoneIds, expr, resolvedFilter);
-  }
-
-  private evaluateSeatAggregate(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'seatAgg' }>,
-    candidate: PolicyEvaluationCandidate | undefined,
-  ): PolicyValue {
-    const seatIds = this.resolveSeatAggregateSeatIds(expr.over);
-    if (seatIds === undefined || seatIds.length === 0) {
-      return expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined;
-    }
-
-    const values: number[] = [];
-    for (const seatId of seatIds) {
-      const previousSeatContext = this.currentSeatContext;
-      this.currentSeatContext = seatId;
-      try {
-        const value = this.evaluateExpr(expr.expr, candidate);
-        if (typeof value === 'number') {
-          values.push(value);
-        }
-      } finally {
-        this.currentSeatContext = previousSeatContext;
-      }
-    }
-
-    if (expr.aggOp === 'count') {
-      return values.length;
-    }
-    if (values.length === 0) {
-      return expr.aggOp === 'sum' ? 0 : undefined;
-    }
-
-    switch (expr.aggOp) {
-      case 'sum':
-        return values.reduce((acc, value) => acc + value, 0);
-      case 'min':
-        return Math.min(...values);
-      case 'max':
-        return Math.max(...values);
-    }
-  }
-
-  private evaluateExprList(
-    expressions: readonly AgentPolicyExpr[],
-    candidate: PolicyEvaluationCandidate | undefined,
-  ): readonly PolicyValue[] {
-    return expressions.map((entry) => this.evaluateExpr(entry, candidate));
-  }
-
-  private evaluateFirstArg(
-    expr: Extract<AgentPolicyExpr, { readonly kind: 'op' }>,
-    candidate: PolicyEvaluationCandidate | undefined,
-  ): PolicyValue {
-    return expr.args.length === 0 ? undefined : this.evaluateExpr(expr.args[0]!, candidate);
-  }
-
   private resolveSeatAggregateSeatIds(
-    over: Extract<AgentPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
+    over: 'opponents' | 'all' | readonly string[],
   ): readonly string[] | undefined {
     const seatIds = this.input.def.seats?.map((seat) => seat.id);
     if (seatIds === undefined) {
@@ -763,7 +683,7 @@ export class PolicyEvaluationContext {
     return over;
   }
 
-  private resolveRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+  private resolveAgentPolicyRef(ref: CompiledAgentPolicyRef, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
     switch (ref.kind) {
       case 'library':
         if (ref.refKind === 'aggregate') {
@@ -816,7 +736,7 @@ export class PolicyEvaluationContext {
       return this.strategicConditionCache.get(cacheKey);
     }
 
-    const condition = this.input.catalog.library.strategicConditions[conditionId];
+    const condition = this.input.catalog.compiled.strategicConditions[conditionId];
     if (condition === undefined) {
       throw this.runtimeError(
         'RUNTIME_EVALUATION_ERROR',
@@ -827,12 +747,12 @@ export class PolicyEvaluationContext {
 
     let value: PolicyValue;
     if (field === 'satisfied') {
-      value = this.evaluateExpr(condition.target, undefined);
+      value = this.evaluateCompiledExpr(condition.target, undefined);
     } else {
       if (condition.proximity === undefined) {
         value = undefined;
       } else {
-        const current = this.evaluateExpr(condition.proximity.current, undefined);
+        const current = this.evaluateCompiledExpr(condition.proximity.current, undefined);
         if (typeof current !== 'number') {
           value = undefined;
         } else {
@@ -845,14 +765,14 @@ export class PolicyEvaluationContext {
     return value;
   }
 
-  private resolvePolicyZoneId(
-    zoneExpr: string | AgentPolicyExpr,
+  private resolveCompiledPolicyZoneId(
+    zoneExpr: CompiledPolicyZoneSource,
     owner: 'none' | PlayerId,
     candidate: PolicyEvaluationCandidate | undefined,
   ): ZoneId | undefined {
     const resolvedZone = typeof zoneExpr === 'string'
       ? zoneExpr
-      : this.evaluateExpr(zoneExpr, candidate);
+      : buildPolicyExprClosure(zoneExpr, this)(candidate);
     if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
       return undefined;
     }
@@ -861,7 +781,7 @@ export class PolicyEvaluationContext {
 
   private aggregateTokensAcrossZones(
     zoneIds: readonly string[],
-    expr: Pick<Extract<AgentPolicyExpr, { readonly kind: 'globalTokenAgg' | 'adjacentTokenAgg' }>, 'aggOp' | 'prop'>,
+    expr: { readonly aggOp: AgentPolicyZoneTokenAggOp; readonly prop?: string },
     resolvedFilter: ResolvedTokenFilter | undefined,
   ): PolicyValue {
     const currentState = this.activeState;
@@ -1001,6 +921,13 @@ export class PolicyEvaluationContext {
         candidate.previewFailureReason = previewFailureReason;
       }
     }
+    if (candidate.previewDriveDepth === undefined || candidate.previewCompletionPolicy === undefined) {
+      const completionMetadata = this.runtimeProviders.previewSurface.getCompletionMetadata(candidate);
+      if (completionMetadata !== undefined) {
+        candidate.previewDriveDepth = completionMetadata.depth;
+        candidate.previewCompletionPolicy = completionMetadata.policy;
+      }
+    }
   }
 
   private evaluateStateFeatureAgainstState(featureId: string, state: GameState): PolicyValue {
@@ -1008,11 +935,11 @@ export class PolicyEvaluationContext {
     if (cache.has(featureId)) {
       return cache.get(featureId);
     }
-    const feature = this.input.catalog.library.stateFeatures[featureId];
+    const feature = this.input.catalog.compiled.stateFeatures[featureId];
     if (feature === undefined) {
       throw this.runtimeError('RUNTIME_EVALUATION_ERROR', `Unknown state feature "${featureId}".`, { featureId });
     }
-    const value = this.withEvaluationState(state, () => this.evaluateExpr(feature.expr, undefined));
+    const value = this.withEvaluationState(state, () => this.evaluateCompiledExpr(feature.expr, undefined));
     cache.set(featureId, value);
     return value;
   }
@@ -1061,75 +988,4 @@ function previewRefKey(ref: CompiledSurfaceRef): string {
   return ref.selector.kind === 'role'
     ? `${ref.family}.${ref.id}.${ref.selector.seatToken}`
     : `${ref.family}.${ref.id}.${ref.selector.player}`;
-}
-
-function sumValues(values: readonly PolicyValue[]): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  return numericValues.length === values.length
-    ? numericValues.reduce((sum, entry) => sum + entry, 0)
-    : undefined;
-}
-
-function multiplyValues(values: readonly PolicyValue[]): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  return numericValues.length === values.length
-    ? numericValues.reduce((product, entry) => product * entry, 1)
-    : undefined;
-}
-
-function binaryNumeric(
-  values: readonly PolicyValue[],
-  reducer: (left: number, right: number) => number,
-): PolicyValue {
-  if (values.length !== 2 || typeof values[0] !== 'number' || typeof values[1] !== 'number') {
-    return undefined;
-  }
-  return reducer(values[0], values[1]);
-}
-
-function reduceNumeric(
-  values: readonly PolicyValue[],
-  reducer: (left: number, right: number) => number,
-): PolicyValue {
-  const numericValues = values.filter((entry): entry is number => typeof entry === 'number');
-  if (numericValues.length !== values.length || numericValues.length === 0) {
-    return undefined;
-  }
-  return numericValues.slice(1).reduce((total, entry) => reducer(total, entry), numericValues[0]!);
-}
-
-function andValues(values: readonly PolicyValue[]): PolicyValue {
-  let sawUnknown = false;
-  for (const value of values) {
-    if (value === false) {
-      return false;
-    }
-    if (value !== true) {
-      sawUnknown = true;
-    }
-  }
-  return sawUnknown ? undefined : true;
-}
-
-function orValues(values: readonly PolicyValue[]): PolicyValue {
-  let sawUnknown = false;
-  for (const value of values) {
-    if (value === true) {
-      return true;
-    }
-    if (value !== false) {
-      sawUnknown = true;
-    }
-  }
-  return sawUnknown ? undefined : false;
-}
-
-function deepPolicyEqual(left: AgentParameterValue, right: AgentParameterValue): boolean {
-  if (Array.isArray(left) || Array.isArray(right)) {
-    if (!Array.isArray(left) || !Array.isArray(right) || left.length !== right.length) {
-      return false;
-    }
-    return left.every((entry, index) => entry === right[index]);
-  }
-  return left === right;
 }

@@ -19,6 +19,10 @@ import {
   type CompiledAgentPolicyRef,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import {
+  withCompiledPolicyCatalog,
+  type AgentPolicyCatalogFixtureLibrary,
+} from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
@@ -31,8 +35,8 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
 
 function completionConsiderations(
-  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
-): AgentPolicyCatalog['library']['considerations'] {
+  definitions: Record<string, Omit<AgentPolicyCatalogFixtureLibrary['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalogFixtureLibrary['considerations'] {
   return Object.fromEntries(
     Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
   );
@@ -53,10 +57,10 @@ function createAction(id: string): ActionDef {
 }
 
 function createCatalog(
-  considerations: AgentPolicyCatalog['library']['considerations'],
+  considerations: AgentPolicyCatalogFixtureLibrary['considerations'],
   parameterDefs: AgentPolicyCatalog['parameterDefs'] = {},
 ): AgentPolicyCatalog {
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'completion-guidance-catalog',
     surfaceVisibility: {
@@ -124,7 +128,7 @@ function createCatalog(
     bindingsBySeat: {
       us: 'baseline',
     },
-  };
+  });
 }
 
 function createDef(agents: AgentPolicyCatalog): GameDef {
@@ -166,7 +170,7 @@ function createChoiceRequest(overrides: Partial<ChoicePendingRequest> = {}): Cho
 }
 
 function createHarness(
-  considerations: AgentPolicyCatalog['library']['considerations'],
+  considerations: AgentPolicyCatalogFixtureLibrary['considerations'],
   parameterDefs: AgentPolicyCatalog['parameterDefs'] = {},
 ) {
   const catalog = createCatalog(considerations, parameterDefs);

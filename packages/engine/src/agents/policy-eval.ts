@@ -4,9 +4,11 @@ import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
+  AgentPreviewCompletionPolicy,
   AgentSelectionMode,
   AgentPolicyCatalog,
-  CompiledAgentTieBreaker,
+  CompiledPolicyConsideration,
+  CompiledPolicyTieBreaker,
   GameDef,
   GameState,
   Move,
@@ -100,6 +102,8 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
+  readonly previewDriveDepth?: number;
+  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -151,6 +155,8 @@ export interface PolicyEvaluationMetadata {
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
   readonly finalScore: number | null;
+  readonly previewGatedCount?: number;
+  readonly previewGatedTopFlipDetected?: boolean;
   readonly phase1Score?: number | null;
   readonly phase2Score?: number | null;
   readonly phase1ActionRanking?: readonly string[];
@@ -208,6 +214,8 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
+  previewDriveDepth?: number;
+  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
 }
@@ -221,7 +229,7 @@ function applyTieBreaker(
   tieBreakerId: string,
   rng: Rng,
 ): { readonly candidates: readonly CandidateEntry[]; readonly rng: Rng } {
-  const tieBreaker = catalog.library.tieBreakers[tieBreakerId];
+  const tieBreaker = catalog.compiled.tieBreakers[tieBreakerId];
   if (tieBreaker === undefined) {
     throw new PolicyRuntimeError({
       code: 'RUNTIME_EVALUATION_ERROR',
@@ -246,7 +254,7 @@ function applyTieBreaker(
         candidates: selectByScalarExpr(
           candidates,
           (left, right) => (tieBreaker.kind === 'higherExpr' ? left > right : left < right),
-          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+          (candidate) => evaluation.evaluateCompiledExpr(tieBreaker.value!, candidate),
         ),
         rng,
       };
@@ -256,7 +264,7 @@ function applyTieBreaker(
         candidates: selectByPreferredOrder(
           candidates,
           tieBreaker,
-          (candidate) => evaluation.evaluateExpr(tieBreaker.value!, candidate),
+          (candidate) => evaluation.evaluateCompiledExpr(tieBreaker.value!, candidate),
         ),
         rng,
       };
@@ -477,7 +485,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       for (const candidate of activeCandidates) {
         for (const featureId of profile.plan.candidateFeatures) {
           const feature = catalog.library.candidateFeatures[featureId];
-          if (feature?.costClass === 'preview' && !evaluation.hasPreviewData(candidate)) {
+          if (feature?.costClass === 'preview') {
             continue;
           }
           evaluation.evaluateCandidateFeature(candidate, featureId);
@@ -485,7 +493,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       }
 
       for (const pruningRuleId of profile.use.pruningRules) {
-        const pruningRule = catalog.library.pruningRules[pruningRuleId];
+        const pruningRule = catalog.compiled.pruningRules[pruningRuleId];
         if (pruningRule === undefined) {
           throw new PolicyRuntimeError({
             code: 'RUNTIME_EVALUATION_ERROR',
@@ -494,7 +502,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           });
         }
         const survivors = activeCandidates.filter((candidate) => {
-          const shouldPrune = evaluation.evaluateExpr(pruningRule.when, candidate);
+          const shouldPrune = evaluation.evaluateCompiledExpr(pruningRule.when, candidate);
           if (shouldPrune === true) {
             candidate.prunedBy.push(pruningRuleId);
             return false;
@@ -534,10 +542,39 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         });
       }
 
-      const considerations = catalog.library.considerations ?? {};
+      const considerations = catalog.compiled.considerations;
       const moveConsiderationIds = (profile.use.considerations ?? []).filter(
         (considerationId) => considerations[considerationId]?.scopes?.includes('move') === true,
       );
+      const moveOnlyConsiderationIds = moveConsiderationIds.filter(
+        (considerationId) => considerations[considerationId]?.costClass !== 'preview',
+      );
+      const previewTopK = profile.preview.mode === 'disabled'
+        ? activeCandidates.length
+        : Math.min(profile.preview.topK ?? 4, activeCandidates.length);
+      const previewAllowedKeys = pickTopKByMoveOnlyScore(
+        evaluation,
+        considerations,
+        activeCandidates,
+        moveOnlyConsiderationIds,
+        previewTopK,
+      );
+      let previewGatedCount = 0;
+      let maxCachedGatedPreviewScore = Number.NEGATIVE_INFINITY;
+      if (previewAllowedKeys.size < activeCandidates.length) {
+        for (const candidate of activeCandidates) {
+          if (!previewAllowedKeys.has(candidate.stableMoveKey)) {
+            previewGatedCount += 1;
+            if (evaluation.hasMaterializedPreview(candidate)) {
+              maxCachedGatedPreviewScore = Math.max(
+                maxCachedGatedPreviewScore,
+                scoreCandidateForGateFlipProbe(evaluation, considerations, candidate, moveConsiderationIds),
+              );
+            }
+            evaluation.markPreviewGated(candidate);
+          }
+        }
+      }
       for (const candidate of activeCandidates) {
         candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
           total + evaluation.evaluateConsideration(
@@ -669,6 +706,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,
           finalScore: Number.isFinite(selected.score) ? selected.score : null,
+          previewGatedCount,
+          ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
+            ? { previewGatedTopFlipDetected: true }
+            : {}),
           usedFallback: false,
           failure: null,
         },
@@ -833,7 +874,7 @@ function selectRepresentativeCandidatesByActionId(
 
   let nextRng = rng;
   const representativeTieBreakerIds = tieBreakerIds.filter((tieBreakerId) =>
-    catalog.library.tieBreakers[tieBreakerId]?.kind !== 'stableMoveKey');
+    catalog.compiled.tieBreakers[tieBreakerId]?.kind !== 'stableMoveKey');
   const representatives = [...actionGroups.values()].map((groupCandidates) => {
     const bestScore = groupCandidates.reduce((best, candidate) => Math.max(best, candidate.score), Number.NEGATIVE_INFINITY);
     let bestCandidates = groupCandidates.filter((candidate) => candidate.score === bestScore);
@@ -883,9 +924,69 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
+    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
     ...(grantedOperationMetadata ?? {}),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
   };
+}
+
+function scoreCandidateForGateFlipProbe(
+  evaluation: PolicyEvaluationContext,
+  considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
+  candidate: CandidateEntry,
+  considerationIds: readonly string[],
+): number {
+  const probe: CandidateEntry = {
+    move: candidate.move,
+    stableMoveKey: candidate.stableMoveKey,
+    actionId: candidate.actionId,
+    canonicalIndex: candidate.canonicalIndex,
+    prunedBy: [...candidate.prunedBy],
+    scoreContributions: [],
+    previewRefIds: new Set(candidate.previewRefIds),
+    unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
+    score: candidate.score,
+    ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+    ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
+    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
+    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
+    ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
+  };
+  return considerationIds.reduce((total, considerationId) => (
+    total + evaluation.evaluateConsideration(considerations, considerationId, probe)
+  ), 0);
+}
+
+function pickTopKByMoveOnlyScore(
+  evaluation: PolicyEvaluationContext,
+  considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
+  candidates: readonly CandidateEntry[],
+  moveOnlyConsiderationIds: readonly string[],
+  topK: number,
+): ReadonlySet<string> {
+  if (topK >= candidates.length) {
+    return new Set(candidates.map((candidate) => candidate.stableMoveKey));
+  }
+  if (topK <= 0) {
+    return new Set();
+  }
+
+  const ranked = candidates.map((candidate) => ({
+    candidate,
+    score: moveOnlyConsiderationIds.reduce((total, considerationId) => (
+      total + evaluation.evaluateConsideration(considerations, considerationId, candidate)
+    ), 0),
+  }));
+
+  ranked.sort((left, right) => {
+    const scoreOrder = right.score - left.score;
+    return scoreOrder === 0
+      ? left.candidate.stableMoveKey.localeCompare(right.candidate.stableMoveKey)
+      : scoreOrder;
+  });
+
+  return new Set(ranked.slice(0, topK).map((entry) => entry.candidate.stableMoveKey));
 }
 
 function traceGrantedOperation(
@@ -941,6 +1042,9 @@ function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
+      unknownDepthCap: 0,
+      unknownNoPreviewDecision: 0,
+      unknownGated: 0,
       unknownFailed: 0,
     },
   };
@@ -954,6 +1058,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unknownRandom: 0,
       unknownHidden: 0,
       unknownUnresolved: 0,
+      unknownDepthCap: 0,
+      unknownNoPreviewDecision: 0,
+      unknownGated: 0,
       unknownFailed: 0,
     };
   }
@@ -963,6 +1070,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
   let random = 0;
   let hidden = 0;
   let unresolved = 0;
+  let depthCap = 0;
+  let noPreviewDecision = 0;
+  let gated = 0;
   let failed = 0;
 
   for (const candidate of evaluatedCandidates) {
@@ -987,6 +1097,18 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
       unresolved += 1;
       continue;
     }
+    if (outcome === 'depthCap') {
+      depthCap += 1;
+      continue;
+    }
+    if (outcome === 'noPreviewDecision') {
+      noPreviewDecision += 1;
+      continue;
+    }
+    if (outcome === 'gated') {
+      gated += 1;
+      continue;
+    }
     failed += 1;
   }
 
@@ -996,6 +1118,9 @@ function summarizePreviewOutcomes(evaluatedCandidates: readonly CandidateEntry[]
     unknownRandom: random,
     unknownHidden: hidden,
     unknownUnresolved: unresolved,
+    unknownDepthCap: depthCap,
+    unknownNoPreviewDecision: noPreviewDecision,
+    unknownGated: gated,
     unknownFailed: failed,
   };
 }
@@ -1024,7 +1149,7 @@ function selectByScalarExpr(
 
 function selectByPreferredOrder(
   candidates: readonly CandidateEntry[],
-  tieBreaker: CompiledAgentTieBreaker,
+  tieBreaker: CompiledPolicyTieBreaker,
   evaluate: (candidate: CandidateEntry) => PolicyValue,
 ): readonly CandidateEntry[] {
   const orderIndex = new Map((tieBreaker.order ?? []).map((entry, index): readonly [string, number] => [entry, index]));

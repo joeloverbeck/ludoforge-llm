@@ -10,6 +10,7 @@ import {
 } from './test-lane-manifest.mjs';
 
 const DEFAULT_DETERMINISM_TIMEOUT_MS = 20 * 60 * 1000;
+const DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_FITL_RULES_TIMEOUT_MS = 5 * 60 * 1000;
 const KILL_SIGNAL = 'SIGTERM';
 const TEST_CLASS_REPORTER_ARGS = ['--test-reporter=./scripts/test-class-reporter.mjs', '--test-reporter-destination=stdout'];
@@ -26,10 +27,37 @@ const laneConfigs = {
   e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },
   'e2e:slow': { execution: 'batched', patterns: listE2eTestsForLane('e2e:slow').map(toDistTestPath) },
   'e2e:all': { execution: 'batched', patterns: listE2eTestsForLane('e2e:all').map(toDistTestPath) },
-  integration: { execution: 'batched', patterns: listIntegrationTestsForLane('integration').map(toDistTestPath) },
+  integration: {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
   'integration:core': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:core').map(toDistTestPath) },
-  'integration:game-packages': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath) },
-  'integration:fitl-events': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath) },
+  'integration:game-packages': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events-shard-a': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-a').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events-shard-b': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-b').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:fitl-events-shard-c': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:fitl-events-shard-c').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
   'integration:fitl-rules': {
     execution: 'sequential',
     patterns: listIntegrationTestsForLane('integration:fitl-rules').map(toDistTestPath),
@@ -40,8 +68,24 @@ const laneConfigs = {
     patterns: listIntegrationTestsForLane('integration:texas-cross-game').map(toDistTestPath),
   },
   'integration:slow-parity': {
-    execution: 'batched',
+    execution: 'sequential',
     patterns: listIntegrationTestsForLane('integration:slow-parity').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-a': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-a').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-b': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-b').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
+  'integration:slow-parity-shard-c': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:slow-parity-shard-c').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
   determinism: {
     execution: 'sequential',

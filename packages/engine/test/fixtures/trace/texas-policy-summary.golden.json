@@ -1,7 +1,9 @@
 {
   "move": {
-    "actionId": "fold",
-    "params": {}
+    "actionId": "raise",
+    "params": {
+      "raiseAmount": 120
+    }
   },
   "agentDecision": {
     "kind": "policy",
@@ -11,10 +13,10 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588",
+    "profileFingerprint": "611471255deffbc5e1be0d2d1571449adba6a69cd37f8b56235f1f76ab08e9d1",
     "initialCandidateCount": 12,
-    "selectedStableMoveKey": "fold|{}|false|unclassified",
-    "finalScore": 100,
+    "selectedStableMoveKey": "raise|{\"raiseAmount\":120}|false|unclassified",
+    "finalScore": 90,
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {
@@ -28,19 +30,31 @@
         "unknownRandom": 0,
         "unknownHidden": 0,
         "unknownUnresolved": 0,
+        "unknownDepthCap": 0,
+        "unknownNoPreviewDecision": 0,
+        "unknownGated": 0,
         "unknownFailed": 0
       }
     },
     "selection": {
       "mode": "softmaxSample",
       "temperature": 0.5,
-      "candidateCount": 3,
+      "candidateCount": 12,
       "samplingProbabilities": [
-        4.248354246535078e-18,
-        0.9999999979388463,
-        2.0611536181902033e-9
+        2.0611536220137227e-10,
+        1.8048513874734075e-36,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847,
+        0.09999999997938847
       ],
-      "selectedIndex": 1
+      "selectedIndex": 3
     },
     "emergencyFallback": false,
     "failure": null,

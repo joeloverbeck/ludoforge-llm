@@ -1,5 +1,7 @@
 # GitHub Workflow Consolidation — Design
 
+**Status**: ✅ COMPLETED
+
 ## Brainstorm Context
 
 - **Original request**: Audit `.github/workflows/` for redundant work — within a single workflow or across workflows — and decide whether to remove tests or whole suites that are truly redundant.
@@ -326,3 +328,34 @@ The 7 deleted workflows each had a near-identical `paths:` filter that reference
 ## FOUNDATIONS.md alignment
 
 This is a CI infrastructure change, not source code governed by FOUNDATIONS.md. Not applicable.
+
+## Outcome
+
+**Completion date**: 2026-04-25
+
+**What changed**:
+
+- Deleted strict-duplicate workflows: `.github/workflows/runner-tests.yml`, `.github/workflows/engine-grant-determinism.yml`.
+- Deleted seven near-identical engine test-slice workflows: `engine-fitl-events.yml`, `engine-fitl-rules.yml`, `engine-texas-cross-game.yml`, `engine-slow-parity.yml`, `engine-e2e-all.yml`, `engine-memory.yml`, `engine-performance.yml`.
+- Added `.github/workflows/engine-tests.yml` — single matrix workflow with a `build` job that uploads `engine-dist` and a `test` job that fans out to 7 lanes (`fitl-events`, `fitl-rules`, `texas-cross-game`, `slow-parity`, `e2e-all`, `memory`, `performance`) and downloads the prebuilt artifact. `fail-fast: false`, per-lane `timeout-minutes` from a matrix `lane.timeout` field, shared concurrency group `engine-tests-${{ github.ref }}`.
+- `ci.yml` and `engine-determinism.yml` left untouched per design.
+
+**Deviations from original plan**:
+
+- **Lint test rewrite (not in original plan).** `packages/engine/test/unit/lint/engine-special-suite-workflow-path-policy.test.ts` referenced six of the deleted workflows and would have failed after their removal. Per 1-3-1 user approval, the test was rewritten to validate `engine-tests.yml`'s consolidated path filters (push/pull_request parity, uniqueness, required shared filters present, self-reference present). The architectural-invariant intent (path-filter correctness) is preserved against the new single-workflow shape.
+
+**Verification results**:
+
+- `git status --short .github/workflows/` shows 9 deletions + 1 addition (`engine-tests.yml`).
+- Python YAML structural check on `engine-tests.yml`: `OK: 7 lanes`.
+- `grep -rn '<removed-names>' .github/`: no matches.
+- `pnpm -F @ludoforge/engine build`: passes.
+- `pnpm -F @ludoforge/engine lint`: passes.
+- `pnpm -F @ludoforge/engine typecheck`: passes.
+- Rewritten lint test (`engine-special-suite-workflow-path-policy.test.ts`) passes against `engine-tests.yml`.
+- Phase 1 branch-protection snapshot: `gh api .../required_status_checks` returned 404 — `main` is not protected. Phase 4 reconciliation is therefore a no-op as the design anticipated.
+
+**Post-merge action items (Phases 4–5 from the plan)**:
+
+- Phase 4 reconciliation is a no-op (no branch protection on `main`).
+- Phase 5 post-merge verification (watching the first `engine-tests.yml` run on `main`) remains to be done after this is merged.

@@ -166,6 +166,27 @@ function buildGameDefWithAgentExpr(featureId: string, expr: Record<string, unkno
           [featureId]: {
             type: 'number',
             costClass: 'state',
+            dependencies: {
+              parameters: [],
+              stateFeatures: [],
+              candidateFeatures: [],
+              aggregates: [],
+              strategicConditions: [],
+            },
+          },
+        },
+        candidateAggregates: {},
+        pruningRules: {},
+        considerations: {},
+        tieBreakers: {},
+        strategicConditions: {},
+      },
+      compiled: {
+        stateFeatures: {},
+        candidateFeatures: {
+          [featureId]: {
+            type: 'number',
+            costClass: 'state',
             expr,
             dependencies: {
               parameters: [],
@@ -385,6 +406,39 @@ describe('top-level runtime schemas', () => {
             preferNamedOption: {
               scopes: ['completion'],
               costClass: 'state',
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+                strategicConditions: [],
+              },
+            },
+          },
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+              costClass: 'candidate',
+              dependencies: {
+                parameters: [],
+                stateFeatures: [],
+                candidateFeatures: [],
+                aggregates: [],
+                strategicConditions: [],
+              },
+            },
+          },
+          strategicConditions: {},
+        },
+        compiled: {
+          stateFeatures: {},
+          candidateFeatures: {},
+          candidateAggregates: {},
+          pruningRules: {},
+          considerations: {
+            preferNamedOption: {
+              scopes: ['completion'],
+              costClass: 'state',
               when: {
                 kind: 'op',
                 op: 'eq',
@@ -465,94 +519,10 @@ describe('top-level runtime schemas', () => {
   });
 
   it('accepts candidateIntrinsic.paramCount in compiled policy catalogs', () => {
-    const result = GameDefSchema.safeParse({
-      ...minimalGameDef,
-      agents: {
-        schemaVersion: 2,
-        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        surfaceVisibility: {
-          globalVars: {},
-          globalMarkers: {},
-          perPlayerVars: {},
-          derivedMetrics: {},
-          victory: {
-            currentMargin: {
-              current: 'hidden',
-              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-            },
-            currentRank: {
-              current: 'hidden',
-              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-            },
-          },
-          activeCardIdentity: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardTag: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardMetadata: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardAnnotation: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-        },
-        parameterDefs: {},
-        candidateParamDefs: {},
-        library: {
-          stateFeatures: {},
-          candidateFeatures: {
-            paramLoad: {
-              type: 'number',
-              costClass: 'candidate',
-              expr: {
-                kind: 'ref',
-                ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
-              },
-              dependencies: {
-                parameters: [],
-                stateFeatures: [],
-                candidateFeatures: [],
-                aggregates: [],
-                strategicConditions: [],
-              },
-            },
-          },
-          candidateAggregates: {},
-          pruningRules: {},
-          considerations: {},
-          tieBreakers: {},
-          strategicConditions: {},
-        },
-        profiles: {
-          baseline: {
-            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-            params: {},
-            preview: { mode: 'exactWorld' },
-            selection: { mode: 'argmax' },
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: [],
-            },
-            plan: {
-              stateFeatures: [],
-              candidateFeatures: [],
-              candidateAggregates: [],
-              considerations: [],
-            },
-          },
-        },
-        bindingsBySeat: {
-          us: 'baseline',
-        },
-      },
-    });
+    const result = GameDefSchema.safeParse(buildGameDefWithAgentExpr('paramLoad', {
+      kind: 'ref',
+      ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' },
+    }));
 
     assert.equal(result.success, true);
   });
@@ -654,98 +624,14 @@ describe('top-level runtime schemas', () => {
   });
 
   it('accepts compiled zoneProp expressions in agent policy catalogs', () => {
-    const result = GameDefSchema.safeParse({
-      ...minimalGameDef,
-      agents: {
-        schemaVersion: 2,
-        catalogFingerprint: '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef',
-        surfaceVisibility: {
-          globalVars: {},
-          globalMarkers: {},
-          perPlayerVars: {},
-          derivedMetrics: {},
-          victory: {
-            currentMargin: {
-              current: 'hidden',
-              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-            },
-            currentRank: {
-              current: 'hidden',
-              preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-            },
-          },
-          activeCardIdentity: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardTag: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardMetadata: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-          activeCardAnnotation: {
-            current: 'hidden',
-            preview: { visibility: 'hidden', allowWhenHiddenSampling: false },
-          },
-        },
-        parameterDefs: {},
-        candidateParamDefs: {},
-        library: {
-          stateFeatures: {},
-          candidateFeatures: {
-            frontierPopulation: {
-              type: 'number',
-              costClass: 'candidate',
-              expr: {
-                kind: 'zoneProp',
-                zone: {
-                  kind: 'ref',
-                  ref: { kind: 'candidateParam', id: 'targetZone' },
-                },
-                prop: 'population',
-              },
-              dependencies: {
-                parameters: [],
-                stateFeatures: [],
-                candidateFeatures: [],
-                aggregates: [],
-                strategicConditions: [],
-              },
-            },
-          },
-          candidateAggregates: {},
-          pruningRules: {},
-          considerations: {},
-          tieBreakers: {},
-          strategicConditions: {},
-        },
-        profiles: {
-          baseline: {
-            fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',
-            params: {},
-            preview: { mode: 'exactWorld' },
-            selection: { mode: 'argmax' },
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: [],
-            },
-            plan: {
-              stateFeatures: [],
-              candidateFeatures: ['frontierPopulation'],
-              candidateAggregates: [],
-              considerations: [],
-            },
-          },
-        },
-        bindingsBySeat: {
-          us: 'baseline',
-        },
+    const result = GameDefSchema.safeParse(buildGameDefWithAgentExpr('frontierPopulation', {
+      kind: 'zoneProp',
+      zone: {
+        kind: 'ref',
+        ref: { kind: 'candidateParam', id: 'targetZone' },
       },
-    });
+      prop: 'population',
+    }));
 
     assert.equal(result.success, true);
   });

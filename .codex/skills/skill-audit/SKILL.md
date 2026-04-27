@@ -32,6 +32,7 @@ Use this skill to evaluate a target skill against the work done in the current C
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
    - nearby sibling skills if the target participates in a multi-skill workflow and consistency matters
+   - For sibling skills, use this threshold: cross-check them when a finding changes handoff behavior, shared terminology, archival/review status, follow-up ownership, or another contract shared between skills. If the target merely sits near other skills but the finding is self-contained, state that no sibling cross-check was needed rather than broadening the audit.
 6. Classify each finding:
    - `Issue`: broken, misleading, contradictory, or missing guidance that caused a real problem
    - `Improvement`: a refinement that would make the skill more effective
@@ -42,6 +43,16 @@ Use this skill to evaluate a target skill against the work done in the current C
    - `MEDIUM`
    - `LOW`
 8. Present the report in the template below.
+
+Before the final response for every audit, do a compact structure check:
+
+- header block includes skill name, skill path, session date, session summary, and audit scope when useful
+- `## Alignment Check`, `## Issues`, `## Improvements`, `## Features`, and `## Summary` are present
+- self-audits include the five-item self-audit rubric
+- same-target re-audits include the delta mapping
+- each issue/improvement/feature has the requested classification fields when applicable
+- summary counts match the body
+- `Not Exercised` is included when relevant exercised-vs-unexercised boundaries matter
 
 ## Report Template
 

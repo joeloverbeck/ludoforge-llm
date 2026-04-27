@@ -10,10 +10,7 @@ import {
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
-import {
-  compileProductionSpec,
-  compileTexasProductionSpec,
-} from '../helpers/production-spec-helpers.js';
+import { compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const compileTexasDef = (): ValidatedGameDef => {
   const { parsed, compiled } = compileTexasProductionSpec();
@@ -24,21 +21,6 @@ const compileTexasDef = (): ValidatedGameDef => {
   }
   return assertValidatedGameDef(compiled.gameDef);
 };
-
-const compileFitlDef = (): ValidatedGameDef => {
-  const { parsed, compiled } = compileProductionSpec();
-  assertNoErrors(parsed);
-  assertNoErrors(compiled);
-  if (compiled.gameDef === null) {
-    throw new Error('FITL compilation produced null gameDef');
-  }
-  return assertValidatedGameDef(compiled.gameDef);
-};
-
-const FITL_POLICY_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
-
-const createFitlPolicyAgents = (): readonly PolicyAgent[] =>
-  FITL_POLICY_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
 
 const createTexasPolicyAgents = (count: number): readonly PolicyAgent[] =>
   Array.from({ length: count }, () => new PolicyAgent({ traceLevel: 'summary' }));
@@ -57,27 +39,6 @@ describe('Zobrist incremental parity — Texas Hold\'em', () => {
 
       // Run with verification enabled — throws HASH_DRIFT on mismatch
       const trace = runGame(def, seed, agents, TEXAS_MAX_TURNS, TEXAS_PLAYER_COUNT, {
-        kernel: { verifyIncrementalHash: true },
-      }, runtime);
-
-      assert.ok(trace.decisions.length > 0, `seed=${seed} should produce at least one move`);
-    });
-  }
-});
-
-describe('Zobrist incremental parity — FITL', () => {
-  const FITL_PLAYER_COUNT = 4;
-  const FITL_MAX_TURNS = 200;
-  const FITL_SEEDS = [42, 123];
-
-  const def = compileFitlDef();
-  const runtime = createGameDefRuntime(def);
-
-  for (const seed of FITL_SEEDS) {
-    it(`seed=${seed}: incremental hash matches full recompute every move`, () => {
-      const agents = createFitlPolicyAgents();
-
-      const trace = runGame(def, seed, agents, FITL_MAX_TURNS, FITL_PLAYER_COUNT, {
         kernel: { verifyIncrementalHash: true },
       }, runtime);
 

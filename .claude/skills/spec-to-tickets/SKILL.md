@@ -99,6 +99,7 @@ For each approved ticket, write a file to `tickets/<NAMESPACE>-<NNN>.md` using t
 
 Every ticket MUST include:
 
+- **Title heading**: single-`#` H1 (`# <NAMESPACE>-<NNN>: <Title>`) — match `tickets/_TEMPLATE.md:1` exactly. The remaining sections (`## Problem`, `## Architecture Check`, etc.) are H2; do not promote them or demote the title. Adjacent-section bias (every other section using `##`) makes `##` feel natural for the title row — resist it.
 - **Status**: PENDING
 - **Priority**: HIGH / MEDIUM / LOW (based on dependency order and criticality)
 - **Effort**: Small / Medium / Large, with the following rough calibration (heuristics, not hard thresholds):
@@ -140,6 +141,8 @@ Do NOT commit. Leave files for user review.
 ### Step 8: Spec Back-Link
 
 If the spec does not already have a section listing the actual generated ticket IDs (as distinct from a decomposition *guidance* section with suggested prefixes), offer to append or update one with the generated ticket IDs and their titles. This aids traceability when multiple specs are active. If the user declines, skip. This may be combined with the Step 7 message for efficiency. **In auto mode**: append the back-link proactively in the same response rather than waiting for confirmation — an additive `## Tickets` section is reversible, and auto mode explicitly prefers action over interruption.
+
+**Canonical back-link format**: Use a `## Tickets` heading, a one-line provenance prefix `Decomposed via \`/spec-to-tickets\` on YYYY-MM-DD:`, and a bulleted list with one entry per generated ticket of the form `` - [`tickets/<NS>-NNN.md`](../tickets/<NS>-NNN.md) — <Title> (covers <spec-section>) ``. The `(covers <spec-section>)` annotation references the I-section, D-section, or other decomposition anchor the ticket implements; omit it when the spec has no such anchors. Distinct from any decomposition-guidance section that may already exist in the spec — the back-link lists *generated* tickets and is an additive append, not a rewrite of guidance.
 
 ## Constraints
 

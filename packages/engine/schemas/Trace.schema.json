@@ -3472,6 +3472,14 @@
                   }
                 ]
               },
+              "previewGatedCount": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 9007199254740991
+              },
+              "previewGatedTopFlipDetected": {
+                "type": "boolean"
+              },
               "pruningSteps": {
                 "type": "array",
                 "items": {
@@ -3563,6 +3571,18 @@
                             {
                               "type": "string",
                               "const": "failed"
+                            },
+                            {
+                              "type": "string",
+                              "const": "depthCap"
+                            },
+                            {
+                              "type": "string",
+                              "const": "noPreviewDecision"
+                            },
+                            {
+                              "type": "string",
+                              "const": "gated"
                             }
                           ]
                         }
@@ -3592,6 +3612,15 @@
                       "unknownUnresolved": {
                         "type": "number"
                       },
+                      "unknownDepthCap": {
+                        "type": "number"
+                      },
+                      "unknownNoPreviewDecision": {
+                        "type": "number"
+                      },
+                      "unknownGated": {
+                        "type": "number"
+                      },
                       "unknownFailed": {
                         "type": "number"
                       }
@@ -3602,6 +3631,9 @@
                       "unknownRandom",
                       "unknownHidden",
                       "unknownUnresolved",
+                      "unknownDepthCap",
+                      "unknownNoPreviewDecision",
+                      "unknownGated",
                       "unknownFailed"
                     ],
                     "additionalProperties": false
@@ -3764,6 +3796,18 @@
                               {
                                 "type": "string",
                                 "const": "failed"
+                              },
+                              {
+                                "type": "string",
+                                "const": "depthCap"
+                              },
+                              {
+                                "type": "string",
+                                "const": "noPreviewDecision"
+                              },
+                              {
+                                "type": "string",
+                                "const": "gated"
                               }
                             ]
                           }
@@ -3800,7 +3844,31 @@
                         {
                           "type": "string",
                           "const": "failed"
+                        },
+                        {
+                          "type": "string",
+                          "const": "depthCap"
+                        },
+                        {
+                          "type": "string",
+                          "const": "noPreviewDecision"
+                        },
+                        {
+                          "type": "string",
+                          "const": "gated"
                         }
+                      ]
+                    },
+                    "previewDriveDepth": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991
+                    },
+                    "previewCompletionPolicy": {
+                      "type": "string",
+                      "enum": [
+                        "greedy",
+                        "agentGuided"
                       ]
                     },
                     "grantedOperationSimulated": {

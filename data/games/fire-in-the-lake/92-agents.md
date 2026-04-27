@@ -438,7 +438,7 @@ agents:
         mode: exactWorld
       params:
         projectedMarginWeight: 3
-        governWeight: 5
+        governWeight: 10
         trainWeight: 3
       use:
         pruningRules:

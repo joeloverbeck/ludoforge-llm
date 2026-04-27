@@ -20,6 +20,29 @@ For long-running package lanes that already printed `ok` lines for the ticket-ow
 
 This preserves truthful proof language without requiring unbounded waiting on runner noise.
 
+Before starting or continuing a broad lane that is known or suspected to have heavyweight tail files, set a proportionate triage plan up front when ticket-owned focused witnesses are available: identify the owned witness files, identify likely non-owned tail files from the manifest or recent lane history, decide a bounded wait limit for repeated quiet-progress output, and decide which direct focused command will preserve the owned proof if the broad tail times out. If the broad tail later times out outside the touched seam, record the focused owned witnesses and the timeout location separately instead of rewriting the implementation around the broad tail by default.
+
+## Interrupted Host or Resumed Verification
+
+When the terminal, VM, WSL instance, or host environment hangs or is restarted during a long verification lane, do not count the interrupted lane as green or red. Resume from the last trustworthy observation:
+
+1. check for leftover package-manager, runner, node, build, or test processes before starting another proof lane
+2. record the last printed file/test, last passing file, and whether the lane had plausible slow tail files remaining
+3. avoid rebuilding or cleaning produced artifacts until any leftover consumer process is gone
+4. probe the likely heavy or last-observed files one at a time with bounded commands before rerunning the full corpus
+5. classify the interruption as `host/interrupted`, `likely resource pressure`, `harness-noisy`, or `owned test hang` only after that direct evidence
+6. record the resumed proof strategy and any remaining unproven broad lane explicitly in the active ticket outcome
+
+## Resource-Hotspot Evidence
+
+When a corpus lane may be causing OOM, swap pressure, or host-level stalls, collect resource evidence from the smallest representative command before tuning thresholds or rewriting tests:
+
+1. run the suspected file or smallest corpus slice with a bounded timeout
+2. use `/usr/bin/time -v` or an equivalent local resource wrapper when available to capture wall time and maximum resident set size
+3. keep resource probes one-at-a-time unless the ticket specifically owns concurrency behavior
+4. if an isolated file passes but shows high RSS or long runtime, record it as a resource hotspot rather than an intrinsic test failure
+5. if the package runner batches multiple heavyweight files into one process and that process boundary affects the failure, treat the runner/package script as part of the proof surface before more witness tuning
+
 ## Owned Witness Preservation Under Harness-Noisy Lanes
 
 When a broad package/workspace lane becomes `harness-noisy / not final-confirmed`, preserve one deterministic **owned witness proof** whenever proportionate:

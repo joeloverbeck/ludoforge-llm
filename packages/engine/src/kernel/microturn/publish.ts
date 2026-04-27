@@ -788,11 +788,102 @@ export const publishMicroturn = (
   state: GameState,
   runtime?: GameDefRuntime,
 ): MicroturnState => {
+  const hashed = withComputedHash(def, state, runtime);
+  const top = hashed.decisionStack?.at(-1);
+  if (top === undefined) {
+    return publishActionSelection(def, hashed, runtime);
+  }
+  return publishStackTop(def, hashed, top, runtime);
+};
+
+/**
+ * Fast variant of {@link publishMicroturn} that skips the entry
+ * `withComputedHash` call. The caller MUST guarantee that
+ * `state.stateHash` is the canonical Zobrist hash for this exact state —
+ * i.e., the state object came directly from a hash-emitting kernel call
+ * such as `applyPublishedDecision` or a prior `publishMicroturn` /
+ * `withComputedHash`, with no spread mutations in between.
+ *
+ * Used by the synthetic-completion driver inside `policy-preview.ts`,
+ * where every iteration's `state` is the previous iteration's
+ * `applyPublishedDecision().state` (canonically hashed via `updateHash`).
+ */
+export const publishMicroturnFromCanonicalState = (
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+): MicroturnState => {
   const top = state.decisionStack?.at(-1);
   if (top === undefined) {
-    return publishActionSelection(def, withComputedHash(def, state, runtime), runtime);
+    return publishActionSelection(def, state, runtime);
   }
-  return publishStackTop(def, withComputedHash(def, state, runtime), top, runtime);
+  return publishStackTop(def, state, top, runtime);
+};
+
+/**
+ * Combined publish + greedy-pick fast path for `chooseOne` continuations.
+ *
+ * `publishStackTop` for `chooseOne` runs `isSupportedFrameContinuationMove`
+ * for EVERY non-illegal option (typical 5-10 per pick) and computes a
+ * projected-state observation (66-zone iteration). The synthetic-completion
+ * driver then takes only the first legal action (`pickGreedyChooseOneDecision`).
+ *
+ * This variant short-circuits both:
+ * - iterates options in declaration order, returning at the first one whose
+ *   move passes `isSupportedFrameContinuationMove`,
+ * - omits the projected-state observation (not consumed by
+ *   `applyPublishedDecisionFromCanonicalState`).
+ *
+ * Returns `null` when no legal+supported option exists. Caller MUST guarantee
+ * `state.stateHash` is canonical.
+ */
+export const publishMicroturnGreedyChooseOne = (
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+): { readonly microturn: MicroturnState; readonly decision: ChooseOneDecision } | null => {
+  const top = state.decisionStack?.at(-1);
+  if (top === undefined || top.context.kind !== 'chooseOne') {
+    return null;
+  }
+  const context = top.context;
+  const root = findRootFrame(state, top);
+  const baseMove = rebuildMoveFromFrame(root);
+  const compoundTurnTrace = rootDecisionHistory(root);
+
+  for (const option of context.options) {
+    if (option.legality === 'illegal') {
+      continue;
+    }
+    const move: Move = {
+      ...baseMove,
+      params: {
+        ...baseMove.params,
+        [context.decisionKey]: option.value,
+      },
+    };
+    if (!isSupportedFrameContinuationMove(def, state, top.effectFrame, move, runtime)) {
+      continue;
+    }
+    const decision: ChooseOneDecision = {
+      kind: 'chooseOne',
+      decisionKey: context.decisionKey,
+      value: option.value,
+    };
+    const microturn: MicroturnState = {
+      kind: 'chooseOne',
+      seatId: context.seatId,
+      decisionContext: context,
+      legalActions: [decision],
+      // observation is omitted — applyPublishedDecisionInternal does not consume it.
+      projectedState: { state },
+      turnId: top.turnId,
+      frameId: top.frameId,
+      compoundTurnTrace,
+    };
+    return { microturn, decision };
+  }
+  return null;
 };
 
 export const createRootFrameSnapshot = (

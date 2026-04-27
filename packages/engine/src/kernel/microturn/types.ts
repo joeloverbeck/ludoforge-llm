@@ -220,6 +220,18 @@ export interface DecisionStackFrame {
   readonly effectFrame: EffectExecutionFrameSnapshot;
 }
 
+export interface PreviewDriveResult {
+  readonly state: GameState;
+  readonly depth: number;
+  readonly kind: 'completed' | 'stochastic' | 'depthCap' | 'failed';
+  readonly failureReason?: string;
+}
+
+export interface PreviewDriveOrigin {
+  readonly seatId: SeatId | '__chance' | '__kernel';
+  readonly turnId: TurnId;
+}
+
 export interface ProjectedGameState {
   readonly state: GameState;
   readonly observation?: PlayerObservation;

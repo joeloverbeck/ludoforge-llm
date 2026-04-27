@@ -19,6 +19,10 @@ import {
   type GameState,
   type Move,
 } from '../../../src/kernel/index.js';
+import {
+  withCompiledPolicyCatalog,
+  type AgentPolicyCatalogFixtureLibrary,
+} from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
 
@@ -45,15 +49,15 @@ function refStateFeature(id: string): Extract<AgentPolicyExpr, { readonly kind: 
 }
 
 function moveConsiderations(
-  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
-): AgentPolicyCatalog['library']['considerations'] {
+  definitions: Record<string, Omit<AgentPolicyCatalogFixtureLibrary['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalogFixtureLibrary['considerations'] {
   return Object.fromEntries(
     Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
   );
 }
 
 function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'policy-aggregation-property',
     surfaceVisibility: {
@@ -141,7 +145,7 @@ function createAggregationCatalog(expr: AgentPolicyExpr): AgentPolicyCatalog {
     bindingsBySeat: {
       us: 'baseline',
     },
-  };
+  });
 }
 
 function createDef(expr: AgentPolicyExpr): GameDef {

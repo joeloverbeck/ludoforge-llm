@@ -17,6 +17,10 @@ import {
   type CompiledAgentPolicyRef,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import {
+  withCompiledPolicyCatalog,
+  type AgentPolicyCatalogFixtureLibrary,
+} from '../../helpers/policy-catalog-fixtures.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 
 const phaseId = asPhaseId('main');
@@ -24,15 +28,15 @@ const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'litera
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
 
 function moveConsiderations(
-  definitions: Record<string, Omit<AgentPolicyCatalog['library']['considerations'][string], 'scopes'>>,
-): AgentPolicyCatalog['library']['considerations'] {
+  definitions: Record<string, Omit<AgentPolicyCatalogFixtureLibrary['considerations'][string], 'scopes'>>,
+): AgentPolicyCatalogFixtureLibrary['considerations'] {
   return Object.fromEntries(
     Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['move'], ...definition }]),
   );
 }
 
 function createCatalog(): AgentPolicyCatalog {
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'visibility-catalog',
     surfaceVisibility: {
@@ -128,7 +132,7 @@ function createCatalog(): AgentPolicyCatalog {
     bindingsBySeat: {
       us: 'baseline',
     },
-  };
+  });
 }
 
 function createDef(): GameDef {

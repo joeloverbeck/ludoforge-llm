@@ -3294,6 +3294,616 @@
                       }
                     ]
                   },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "costClass",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "candidateFeatures": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "number"
+                      },
+                      {
+                        "type": "string",
+                        "const": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "const": "id"
+                      },
+                      {
+                        "type": "string",
+                        "const": "idList"
+                      }
+                    ]
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "costClass",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "candidateAggregates": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "number"
+                      },
+                      {
+                        "type": "string",
+                        "const": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "const": "id"
+                      },
+                      {
+                        "type": "string",
+                        "const": "idList"
+                      }
+                    ]
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "op": {
+                    "type": "string"
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "type",
+                  "costClass",
+                  "op",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "pruningRules": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "onEmpty": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "skipRule"
+                      },
+                      {
+                        "type": "string",
+                        "const": "error"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "costClass",
+                  "dependencies",
+                  "onEmpty"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "considerations": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "scopes": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "const": "move"
+                        },
+                        {
+                          "type": "string",
+                          "const": "completion"
+                        }
+                      ]
+                    }
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "unknownAs": {
+                    "type": "number"
+                  },
+                  "clamp": {
+                    "type": "object",
+                    "properties": {
+                      "min": {
+                        "type": "number"
+                      },
+                      "max": {
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "costClass",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "tieBreakers": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string"
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
+                  "order": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "dependencies": {
+                    "type": "object",
+                    "properties": {
+                      "parameters": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "stateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "candidateFeatures": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "aggregates": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "strategicConditions": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      }
+                    },
+                    "required": [
+                      "parameters",
+                      "stateFeatures",
+                      "candidateFeatures",
+                      "aggregates",
+                      "strategicConditions"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "kind",
+                  "costClass",
+                  "dependencies"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "strategicConditions": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "proximity": {
+                    "type": "object",
+                    "properties": {
+                      "threshold": {
+                        "type": "number"
+                      }
+                    },
+                    "required": [
+                      "threshold"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "stateFeatures",
+            "candidateFeatures",
+            "candidateAggregates",
+            "pruningRules",
+            "considerations",
+            "tieBreakers",
+            "strategicConditions"
+          ],
+          "additionalProperties": false
+        },
+        "compiled": {
+          "type": "object",
+          "properties": {
+            "stateFeatures": {
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "number"
+                      },
+                      {
+                        "type": "string",
+                        "const": "boolean"
+                      },
+                      {
+                        "type": "string",
+                        "const": "id"
+                      },
+                      {
+                        "type": "string",
+                        "const": "idList"
+                      }
+                    ]
+                  },
+                  "costClass": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "const": "state"
+                      },
+                      {
+                        "type": "string",
+                        "const": "candidate"
+                      },
+                      {
+                        "type": "string",
+                        "const": "preview"
+                      }
+                    ]
+                  },
                   "expr": {
                     "$ref": "#/definitions/anon_181e0d66"
                   },
@@ -3991,6 +4601,23 @@
                       "disabled"
                     ]
                   },
+                  "completion": {
+                    "type": "string",
+                    "enum": [
+                      "greedy",
+                      "agentGuided"
+                    ]
+                  },
+                  "completionDepthCap": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "topK": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
                   "phase1": {
                     "type": "boolean"
                   },
@@ -4091,6 +4718,7 @@
         "parameterDefs",
         "candidateParamDefs",
         "library",
+        "compiled",
         "profiles",
         "bindingsBySeat"
       ],

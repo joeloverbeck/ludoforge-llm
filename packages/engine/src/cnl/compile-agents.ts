@@ -13,6 +13,7 @@ import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
+  AgentPolicyExpr,
   SurfaceVisibilityClass,
   AgentPolicyValueType,
   CompiledAgentAggregate,
@@ -44,6 +45,7 @@ import type {
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
+import { lowerAgentConsiderations, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
 
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
@@ -51,6 +53,27 @@ type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'prefe
 type ConsiderationScope = 'move' | 'completion';
 type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
+type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
+type AgentStateFeatureWithExpr = CompiledAgentStateFeature & { readonly expr: AgentPolicyExpr };
+type AgentCandidateFeatureWithExpr = CompiledAgentCandidateFeature & { readonly expr: AgentPolicyExpr };
+type AgentAggregateWithExpr = CompiledAgentAggregate & {
+  readonly of: AgentPolicyExpr;
+  readonly where?: AgentPolicyExpr;
+};
+type AgentPruningRuleWithExpr = CompiledAgentPruningRule & { readonly when: AgentPolicyExpr };
+type AgentConsiderationWithExpr = CompiledAgentConsideration & {
+  readonly when?: AgentPolicyExpr;
+  readonly weight: AgentPolicyExpr;
+  readonly value: AgentPolicyExpr;
+};
+type AgentTieBreakerWithExpr = CompiledAgentTieBreaker & { readonly value?: AgentPolicyExpr };
+type StrategicConditionWithExpr = CompiledStrategicCondition & {
+  readonly target: AgentPolicyExpr;
+  readonly proximity?: {
+    readonly current: AgentPolicyExpr;
+    readonly threshold: number;
+  };
+};
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
@@ -102,12 +125,14 @@ export function lowerAgents(
     lowerProfiles(agents.profiles, agents.library, library, parameterDefs, diagnostics),
   );
   const bindingsBySeat = lowerBindings(agents.bindings, profiles, diagnostics, options);
+  const compiled = lowerAgentConsiderations(library);
   const catalogWithoutFingerprint = {
     schemaVersion: 2,
     surfaceVisibility,
     parameterDefs,
     candidateParamDefs,
-    library,
+    library: stripAgentLibraryExpressions(library),
+    compiled,
     profiles,
     bindingsBySeat,
   } satisfies Omit<AgentPolicyCatalog, 'catalogFingerprint'>;
@@ -116,6 +141,80 @@ export function lowerAgents(
     ...catalogWithoutFingerprint,
     catalogFingerprint: fingerprintPolicyIr(catalogWithoutFingerprint),
   } satisfies AgentPolicyCatalog;
+}
+
+function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAgentLibraryIndex {
+  const stateFeatures: Record<string, CompiledAgentStateFeature> = {};
+  const candidateFeatures: Record<string, CompiledAgentCandidateFeature> = {};
+  const candidateAggregates: Record<string, CompiledAgentAggregate> = {};
+  const pruningRules: Record<string, CompiledAgentPruningRule> = {};
+  const considerations: Record<string, CompiledAgentConsideration> = {};
+  const tieBreakers: Record<string, CompiledAgentTieBreaker> = {};
+  const strategicConditions: Record<string, CompiledStrategicCondition> = {};
+
+  for (const [id, feature] of Object.entries(library.stateFeatures)) {
+    stateFeatures[id] = {
+      type: feature.type,
+      costClass: feature.costClass,
+      dependencies: feature.dependencies,
+    };
+  }
+  for (const [id, feature] of Object.entries(library.candidateFeatures)) {
+    candidateFeatures[id] = {
+      type: feature.type,
+      costClass: feature.costClass,
+      dependencies: feature.dependencies,
+    };
+  }
+  for (const [id, aggregate] of Object.entries(library.candidateAggregates)) {
+    candidateAggregates[id] = {
+      type: aggregate.type,
+      costClass: aggregate.costClass,
+      op: aggregate.op,
+      dependencies: aggregate.dependencies,
+    };
+  }
+  for (const [id, rule] of Object.entries(library.pruningRules)) {
+    pruningRules[id] = {
+      costClass: rule.costClass,
+      dependencies: rule.dependencies,
+      onEmpty: rule.onEmpty,
+    };
+  }
+  for (const [id, consideration] of Object.entries(library.considerations)) {
+    considerations[id] = {
+      ...(consideration.scopes === undefined ? {} : { scopes: consideration.scopes }),
+      costClass: consideration.costClass,
+      ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
+      ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
+      dependencies: consideration.dependencies,
+    };
+  }
+  for (const [id, tieBreaker] of Object.entries(library.tieBreakers)) {
+    tieBreakers[id] = {
+      kind: tieBreaker.kind,
+      costClass: tieBreaker.costClass,
+      ...(tieBreaker.order === undefined ? {} : { order: tieBreaker.order }),
+      dependencies: tieBreaker.dependencies,
+    };
+  }
+  for (const [id, condition] of Object.entries(library.strategicConditions)) {
+    strategicConditions[id] = {
+      ...(condition.proximity === undefined
+        ? {}
+        : { proximity: { threshold: condition.proximity.threshold } }),
+    };
+  }
+
+  return {
+    stateFeatures,
+    candidateFeatures,
+    candidateAggregates,
+    pruningRules,
+    considerations,
+    tieBreakers,
+    strategicConditions,
+  };
 }
 
 /**
@@ -670,7 +769,7 @@ function lowerPreviewConfig(
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const { mode, phase1, phase1CompletionsPerAction } = authored;
+  const { mode, completion, completionDepthCap, topK, phase1, phase1CompletionsPerAction } = authored;
 
   if (mode === undefined) {
     diagnostics.push({
@@ -709,6 +808,56 @@ function lowerPreviewConfig(
       severity: 'error',
       message: `Profile "${profileId}" preview.mode "${mode}" is invalid.`,
       suggestion: 'Use preview.mode exactWorld, tolerateStochastic, or disabled.',
+    });
+    return undefined;
+  }
+
+  if (
+    completion !== undefined
+    && (typeof completion !== 'string' || (completion !== 'greedy' && completion !== 'agentGuided'))
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_COMPLETION_INVALID,
+      path: `${path}.completion`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.completion must be greedy or agentGuided, got ${JSON.stringify(completion)}.`,
+      suggestion: 'Set preview.completion to greedy or agentGuided.',
+    });
+    return undefined;
+  }
+
+  if (
+    completionDepthCap !== undefined
+    && (
+      typeof completionDepthCap !== 'number'
+      || !Number.isSafeInteger(completionDepthCap)
+      || completionDepthCap <= 0
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_COMPLETION_DEPTH_CAP_INVALID,
+      path: `${path}.completionDepthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.completionDepthCap must be a positive safe integer, got ${String(completionDepthCap)}.`,
+      suggestion: 'Set preview.completionDepthCap to a positive integer such as 8.',
+    });
+    return undefined;
+  }
+
+  if (
+    topK !== undefined
+    && (
+      typeof topK !== 'number'
+      || !Number.isSafeInteger(topK)
+      || topK <= 0
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_TOPK_INVALID,
+      path: `${path}.topK`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.topK must be a positive safe integer, got ${String(topK)}.`,
+      suggestion: 'Set preview.topK to a positive integer such as 4.',
     });
     return undefined;
   }
@@ -756,6 +905,9 @@ function lowerPreviewConfig(
 
   return {
     mode,
+    ...(completion === undefined ? {} : { completion }),
+    ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
+    ...(topK === undefined ? {} : { topK }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
   };
@@ -1046,13 +1198,13 @@ function lowerBindings(
 class AgentLibraryCompiler {
   private readonly authoredLibrary: GameSpecAgentLibrary;
   private readonly compiled: {
-    readonly stateFeatures: Record<string, CompiledAgentStateFeature>;
-    readonly candidateFeatures: Record<string, CompiledAgentCandidateFeature>;
-    readonly candidateAggregates: Record<string, CompiledAgentAggregate>;
-    readonly pruningRules: Record<string, CompiledAgentPruningRule>;
-    readonly considerations: Record<string, CompiledAgentConsideration>;
-    readonly tieBreakers: Record<string, CompiledAgentTieBreaker>;
-    readonly strategicConditions: Record<string, CompiledStrategicCondition>;
+    readonly stateFeatures: Record<string, AgentStateFeatureWithExpr>;
+    readonly candidateFeatures: Record<string, AgentCandidateFeatureWithExpr>;
+    readonly candidateAggregates: Record<string, AgentAggregateWithExpr>;
+    readonly pruningRules: Record<string, AgentPruningRuleWithExpr>;
+    readonly considerations: Record<string, AgentConsiderationWithExpr>;
+    readonly tieBreakers: Record<string, AgentTieBreakerWithExpr>;
+    readonly strategicConditions: Record<string, StrategicConditionWithExpr>;
   };
 
   private readonly stateFeatureStatus = new Map<string, 'compiling' | 'done' | 'failed'>();
@@ -1088,7 +1240,7 @@ class AgentLibraryCompiler {
     };
   }
 
-  compile(): CompiledAgentLibraryIndex {
+  compile(): AgentLibraryWithExpr {
     this.validateFeatureNamespaceCollisions();
 
     for (const featureId of Object.keys(this.authoredLibrary.stateFeatures ?? {})) {
@@ -1132,7 +1284,7 @@ class AgentLibraryCompiler {
     }
   }
 
-  private compileStateFeature(featureId: string): CompiledAgentStateFeature | null {
+  private compileStateFeature(featureId: string): AgentStateFeatureWithExpr | null {
     const status = this.stateFeatureStatus.get(featureId);
     if (status === 'done') {
       return this.compiled.stateFeatures[featureId] ?? null;
@@ -1169,7 +1321,7 @@ class AgentLibraryCompiler {
     return result;
   }
 
-  private compileCandidateFeature(featureId: string): CompiledAgentCandidateFeature | null {
+  private compileCandidateFeature(featureId: string): AgentCandidateFeatureWithExpr | null {
     const status = this.candidateFeatureStatus.get(featureId);
     if (status === 'done') {
       return this.compiled.candidateFeatures[featureId] ?? null;
@@ -1211,7 +1363,7 @@ class AgentLibraryCompiler {
     featureId: string,
     def: GameSpecStateFeatureDef | GameSpecCandidateFeatureDef,
     path: string,
-  ): CompiledAgentStateFeature | CompiledAgentCandidateFeature | null {
+  ): AgentStateFeatureWithExpr | AgentCandidateFeatureWithExpr | null {
     const context = this.createExprContext(scope);
     const analysis = analyzePolicyExpr(def.expr, context, this.diagnostics, `${path}.expr`);
     if (analysis === null) {
@@ -1248,7 +1400,7 @@ class AgentLibraryCompiler {
     };
   }
 
-  private compileAggregate(aggregateId: string): CompiledAgentAggregate | null {
+  private compileAggregate(aggregateId: string): AgentAggregateWithExpr | null {
     const status = this.aggregateStatus.get(aggregateId);
     if (status === 'done') {
       return this.compiled.candidateAggregates[aggregateId] ?? null;
@@ -1306,7 +1458,7 @@ class AgentLibraryCompiler {
     }
 
     const dependencies = mergeDependencies([ofAnalysis.dependencies, whereAnalysis?.dependencies ?? emptyDependencies()]);
-    const compiled: CompiledAgentAggregate = {
+    const compiled: AgentAggregateWithExpr = {
       type: resultType,
       costClass: maxCostClass(ofAnalysis.costClass, whereAnalysis?.costClass ?? 'state'),
       op,
@@ -1319,7 +1471,7 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compilePruningRule(ruleId: string): CompiledAgentPruningRule | null {
+  private compilePruningRule(ruleId: string): AgentPruningRuleWithExpr | null {
     const status = this.pruningRuleStatus.get(ruleId);
     if (status === 'done') {
       return this.compiled.pruningRules[ruleId] ?? null;
@@ -1347,7 +1499,7 @@ class AgentLibraryCompiler {
       this.pruningRuleStatus.set(ruleId, 'failed');
       return null;
     }
-    const compiled: CompiledAgentPruningRule = {
+    const compiled: AgentPruningRuleWithExpr = {
       costClass: when.costClass,
       when: when.expr,
       dependencies: when.dependencies,
@@ -1358,7 +1510,7 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compileConsideration(considerationId: string): CompiledAgentConsideration | null {
+  private compileConsideration(considerationId: string): AgentConsiderationWithExpr | null {
     const status = this.considerationStatus.get(considerationId);
     if (status === 'done') {
       return this.compiled.considerations[considerationId] ?? null;
@@ -1423,7 +1575,7 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    const compiled: CompiledAgentConsideration = {
+    const compiled: AgentConsiderationWithExpr = {
       scopes,
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
       ...(def.when === undefined ? {} : { when: when!.expr }),
@@ -1440,7 +1592,7 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compileTieBreaker(tieBreakerId: string): CompiledAgentTieBreaker | null {
+  private compileTieBreaker(tieBreakerId: string): AgentTieBreakerWithExpr | null {
     const status = this.tieBreakerStatus.get(tieBreakerId);
     if (status === 'done') {
       return this.compiled.tieBreakers[tieBreakerId] ?? null;
@@ -1471,7 +1623,7 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    const compiled: CompiledAgentTieBreaker = {
+    const compiled: AgentTieBreakerWithExpr = {
       kind,
       costClass: value?.costClass ?? 'state',
       ...(def.value === undefined ? {} : { value: value!.expr }),
@@ -1483,7 +1635,7 @@ class AgentLibraryCompiler {
     return compiled;
   }
 
-  private compileStrategicCondition(conditionId: string): CompiledStrategicCondition | null {
+  private compileStrategicCondition(conditionId: string): StrategicConditionWithExpr | null {
     const status = this.strategicConditionStatus.get(conditionId);
     if (status === 'done') {
       return this.compiled.strategicConditions[conditionId] ?? null;
@@ -1528,7 +1680,7 @@ class AgentLibraryCompiler {
       return null;
     }
 
-    let proximityCompiled: CompiledStrategicCondition['proximity'];
+    let proximityCompiled: StrategicConditionWithExpr['proximity'];
     if (def.proximity !== undefined) {
       const currentAnalysis = analyzePolicyExpr(def.proximity.current, context, this.diagnostics, `${basePath}.proximity.current`);
       if (currentAnalysis === null) {
@@ -1566,7 +1718,7 @@ class AgentLibraryCompiler {
       };
     }
 
-    const compiled: CompiledStrategicCondition = {
+    const compiled: StrategicConditionWithExpr = {
       target: targetAnalysis.expr,
       ...(proximityCompiled !== undefined ? { proximity: proximityCompiled } : {}),
     };
@@ -1578,7 +1730,7 @@ class AgentLibraryCompiler {
 
   private validateConsiderationScopeRefs(
     considerationId: string,
-    consideration: CompiledAgentConsideration,
+    consideration: AgentConsiderationWithExpr,
     path: string,
   ): void {
     const scopes = consideration.scopes ?? [];
@@ -2454,7 +2606,7 @@ function normalizeConsiderationScopes(
 }
 
 function collectConsiderationRefKinds(
-  consideration: CompiledAgentConsideration,
+  consideration: AgentConsiderationWithExpr,
 ): ReadonlySet<'candidate' | 'preview' | 'decision' | 'contextKind'> {
   const kinds = new Set<'candidate' | 'preview' | 'decision' | 'contextKind'>();
   const visitRef = (ref: import('../kernel/types.js').CompiledAgentPolicyRef): void => {

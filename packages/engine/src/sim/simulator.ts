@@ -1,12 +1,12 @@
 import {
   advanceAutoresolvable,
-  applyPublishedDecision,
+  applyPublishedDecisionFromCanonicalState,
   asPlayerId,
   createGameDefRuntime,
   forkGameDefRuntimeForRun,
   createRng,
   initialState,
-  publishMicroturn,
+  publishMicroturnFromCanonicalState,
   rollbackToActionSelection,
   terminalResult,
 } from '../kernel/index.js';
@@ -206,7 +206,10 @@ export const runGame = (
 
     let microturn;
     try {
-      microturn = publishMicroturn(validatedDef, state, resolvedRuntime);
+      // state is canonical: initialState sets stateHash + _runningHash, every
+      // subsequent advanceAutoresolvable / applyPublishedDecision /
+      // rollbackToActionSelection result preserves canonicality.
+      microturn = publishMicroturnFromCanonicalState(validatedDef, state, resolvedRuntime);
     } catch (error) {
       if (isNoBridgeableMicroturnError(error)) {
         const rollback = rollbackToActionSelection(
@@ -263,7 +266,7 @@ export const runGame = (
 
     const preState = state;
     const t0_apply = perfStart(profiler);
-    const applied = applyPublishedDecision(
+    const applied = applyPublishedDecisionFromCanonicalState(
       validatedDef,
       state,
       microturn,

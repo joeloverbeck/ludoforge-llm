@@ -51,6 +51,10 @@ jobs:
             test_paths: |
               dist/test/determinism/zobrist-incremental-parity.test.js
               dist/test/determinism/zobrist-incremental-property-texas.test.js
+          - shard_id: fitl-parity-zobrist
+            shard_label: FITL parity Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-parity-fitl.test.js
           - shard_id: fitl-short-zobrist
             shard_label: FITL short Zobrist determinism
             test_paths: |

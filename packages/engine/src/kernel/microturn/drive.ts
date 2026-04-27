@@ -21,6 +21,7 @@ import {
   withPendingFreeOperationGrants,
 } from '../grant-lifecycle.js';
 import { advancePhase, buildAdvancePhaseRequest } from '../phase-advance.js';
+import type { MutableTokenStateIndex } from '../token-state-index.js';
 import type { DecisionKey } from '../decision-scope.js';
 import type { ExecutionOptions, GameDef, GameState, Move, TriggerLogEntry } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
@@ -659,6 +660,7 @@ export const applyPreviewDriveGreedyChooseOne = (
   origin: PreviewDriveOrigin,
   depthCap: number,
   runtime?: GameDefRuntime,
+  draftTokenStateIndex?: MutableTokenStateIndex,
 ): PreviewDriveResult => {
   const resolvedRuntime = runtime ?? createGameDefRuntime(def);
   let workingState: GameState = initialState;
@@ -707,25 +709,34 @@ export const applyPreviewDriveGreedyChooseOne = (
         };
       }
 
+      const prevState = workingState;
       workingState = applyPublishedDecisionInternalNoFinalHash(
         def,
-        workingState,
+        prevState,
         greedy.microturn,
         greedy.decision,
         { advanceToDecisionPoint: true },
         resolvedRuntime,
       ).state;
+      draftTokenStateIndex?.applyZoneDelta(prevState.zones, workingState.zones);
+      draftTokenStateIndex?.attachAsCanonical(workingState);
       depth += 1;
     }
 
+    const canonicalState = canonicalizeState(def, workingState, resolvedRuntime);
+    draftTokenStateIndex?.applyZoneDelta(workingState.zones, canonicalState.zones);
+    draftTokenStateIndex?.attachAsCanonical(canonicalState);
     return {
-      state: canonicalizeState(def, workingState, resolvedRuntime),
+      state: canonicalState,
       depth,
       kind,
     };
   } catch (error) {
+    const canonicalState = canonicalizeState(def, workingState, resolvedRuntime);
+    draftTokenStateIndex?.applyZoneDelta(workingState.zones, canonicalState.zones);
+    draftTokenStateIndex?.attachAsCanonical(canonicalState);
     return {
-      state: canonicalizeState(def, workingState, resolvedRuntime),
+      state: canonicalState,
       depth,
       kind: 'failed',
       failureReason: truncateFailureReason(error),

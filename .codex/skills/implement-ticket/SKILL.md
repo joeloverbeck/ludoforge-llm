@@ -58,6 +58,7 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 6. no final proof lane is running in parallel with a build, schema, or artifact producer that can clean or rewrite the same output tree; a zero-test or module-resolution "green" from an overlapped compiled-output lane is invalid until rerun serially
 7. any previously failed ticket-named broad lane has already been classified in the active ticket as `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`; do not use `COMPLETED` while a changed-path or architectural-invariant failure is still unclassified or still active-ticket-owned
 8. the final touched-file sweep uses `git status --short` or an equivalent untracked-aware check, not only `git diff` / `git diff --stat`, so newly added ticket deliverables cannot disappear from the closeout view
+9. if any ticket dependency, successor ticket, sibling ticket, archived-reference path, or other ticket-graph edge changed, the repo's dependency-integrity check has already run and been recorded, or the active ticket explicitly records why no such check exists or applies
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 
@@ -179,6 +180,15 @@ Load `references/verification.md` for non-bounded tickets, or for bounded local 
 
 For performance, profiling, or audit gates, a green TAP/process exit is not enough if the command does not assert or print the ticket-owned metric. Confirm that the lane reports the concrete value, threshold, and verdict the ticket needs; otherwise run or create a repo-owned measurement path before closeout and record that command substitution in the active ticket.
   - For V8 CPU profiles, a compact triage pass is enough before deciding ownership: parse the `.cpuprofile`, rank self-time samples by function/file, and compare the top samples to the ticket-owned seam. Use this to distinguish "the owned hot path still dominates" from "the owned path was removed and a different root cause now dominates" before proposing a split or further optimization.
+  - When a CPU-profile result changes ownership or justifies a follow-up split, record a compact ownership ledger in the active ticket before final proof:
+    - `profile command`
+    - `profile artifact path` or explicit ephemeral-path note
+    - `parser command` or parser method
+    - `baseline metric`
+    - `current metric`
+    - `ticket-owned stack samples`
+    - `residual stack samples`
+    - `successor owner` or explicit no-follow-up rationale
 
 Load `references/verification-acceptance-proof.md` for acceptance-proof discipline: acceptance command reconciliation, wrapper and child command isolation, silent-but-healthy lanes, broad-lane failure classification, post-proof-edit invalidation, focused recovery loop, unrelated failure vs owned regression, package script / runner widening, and final-proof choreography.
 

@@ -71,11 +71,13 @@ const [
   { assertValidatedGameDef, createGameDefRuntime },
   { runGame },
   { getFitlProductionFixture },
+  { __internal_for_tests: tokenStateIndexInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
   import(join(DIST_ROOT, 'src', 'sim', 'index.js')),
   import(join(DIST_ROOT, 'test', 'helpers', 'production-spec-helpers.js')),
+  import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
 ]);
 
 const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
@@ -93,6 +95,7 @@ const buildAgents = () => {
 };
 
 const runOnce = () => {
+  tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   const agents = buildAgents();
   const startedAt = performance.now();
   const trace = runGame(
@@ -112,7 +115,15 @@ const runOnce = () => {
   const turnsCount = trace.turnsCount ?? 0;
   const decisions = trace.decisions?.length ?? 0;
   const stopReason = trace.stopReason ?? 'unknown';
-  return { elapsedMs, turnsCount, decisions, stopReason };
+  return {
+    elapsedMs,
+    turnsCount,
+    decisions,
+    stopReason,
+    tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
+    draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+  };
 };
 
 if (config.warmup) {
@@ -143,6 +154,9 @@ const summary = {
     stopReason: result.stopReason,
     msPerTurn: result.turnsCount > 0 ? round4(result.elapsedMs / result.turnsCount) : null,
     msPerDecision: result.decisions > 0 ? round4(result.elapsedMs / result.decisions) : null,
+    tokenStateIndexBuildCount: result.tokenStateIndexBuildCount,
+    draftTokenStateIndexDeltaCount: result.draftTokenStateIndexDeltaCount,
+    draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
   },
 };
 
@@ -150,7 +164,9 @@ process.stderr.write(
   `[profile-fitl-preview-drive] label=${summary.label} elapsedMs=${summary.result.elapsedMs} ` +
   `turnsCount=${summary.result.turnsCount} decisions=${summary.result.decisions} ` +
   `stopReason=${summary.result.stopReason} msPerTurn=${summary.result.msPerTurn} ` +
-  `verifyIncrementalHash=${summary.config.verifyIncrementalHash}\n`,
+  `verifyIncrementalHash=${summary.config.verifyIncrementalHash} ` +
+  `tokenStateIndexBuildCount=${summary.result.tokenStateIndexBuildCount} ` +
+  `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount}\n`,
 );
 
 console.log(JSON.stringify(summary));

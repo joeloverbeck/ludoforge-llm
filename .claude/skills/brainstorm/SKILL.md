@@ -16,7 +16,7 @@ arguments:
 Confidence-driven collaborative brainstorming. Interviews you until it understands what you **actually want** — not what you think you should want — then proposes approaches, builds a design, and lets you choose what happens next.
 
 <HARD-GATE>
-Do NOT write any code, scaffold any project, invoke any implementation skill, or take any implementation action until you have presented a design and the user has explicitly approved it. This applies to EVERY topic regardless of perceived simplicity.
+Do NOT write any code, scaffold any project, invoke any implementation skill, or take any implementation action until you have presented a design (design mode) or a triage proposal listing the artifacts to be written and their scope (triage mode) and the user has explicitly approved it. This applies to EVERY topic regardless of perceived simplicity.
 </HARD-GATE>
 
 ## Process Flow
@@ -66,7 +66,7 @@ Classify: design | decision/triage | operational
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
-   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision. **Triage compound-move shape**: After Step 1.5 verification, the brief interview may take the form of one consolidated message — findings recap (including any framing corrections surfaced during verification) → proposed artifact set with per-item classifications and tradeoffs → batched multiple-choice gap-closers (scope, sequencing, phasing) with a recommendation. The user's single response then resolves all gaps and authorises Step 5 artifact writes. This mirrors the design-mode compound-move variant in Step 2.
    - **Operational**: The goal is to safely execute a concrete destructive or system-affecting action (rollback, cleanup, repair, migration, dependency upgrade, environment reset). Triggered when the user requests a specific action with side effects, not a design or evaluation of analysis. Follow the shortened flow: brief interview to confirm scope and risk tolerance → verify current system state (git, fs, build, tests) → write an executable plan with explicit numbered steps, expected outputs, and verification checks. Skip Steps 3-4 (approaches, section-by-section design); the action is the request, the design is the step list. The artifact is a plan-style doc, not a spec or ticket. See Step 5 for output format. Operational tasks frequently run under plan mode — see "Plan Mode Interaction" below.
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
@@ -251,7 +251,7 @@ The list above is a starting menu, not a fixed schema — domain-appropriate sub
 
 **Plan mode override**: If plan mode is active, the harness specifies the artifact path; write there instead of the per-mode default below. See "Plan Mode Interaction" earlier in this skill.
 
-**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. Follow established formatting conventions from existing specs.
+**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, `tickets/`, `archive/tickets/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. For tickets continuing an existing prefix series (e.g., `POLPREVDRIVE-001` is archived; new tickets are `POLPREVDRIVE-002+`), inspect `archive/tickets/<PREFIX>-*.md` for the highest existing number and continue from `+1`. Follow established formatting conventions from existing specs.
 
 ### Design mode (default)
 
@@ -269,7 +269,7 @@ Do NOT commit the file. Leave it for user review.
 
 If the brainstorm's output is specs or tickets (not a design requiring further refinement), skip the design doc and write the artifacts directly:
 - **Specs** go to `specs/<number>-<name>.md` following existing spec conventions
-- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following the ticket template
+- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following `tickets/_TEMPLATE.md` for section structure
 
 ### Operational mode
 
@@ -351,6 +351,16 @@ What would you like to do next?
 Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-INITIALS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`. Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
 
 Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
+
+**If triage produced tickets directly** (`tickets/<PREFIX>-<NNN>.md`):
+```
+What would you like to do next?
+1. Implement ticket <PREFIX>-<lowest-NNN> first (invoke implement-ticket skill)
+2. Run `pnpm run check:ticket-deps` to verify dependency integrity, then defer
+3. Done for now — I'll review the tickets later
+```
+
+Recommend option 1 only when the lowest-numbered ticket is genuinely independent (no `Deps` line listing other newly-written tickets); otherwise default to option 3.
 
 **If triage produced spec(s) and/or report updates**:
 ```

@@ -5,6 +5,7 @@ import { probeMoveViability } from '../kernel/apply-move.js';
 import { applyPreviewDriveGreedyChooseOne } from '../kernel/microturn/drive.js';
 import { applyPublishedDecisionFromCanonicalState } from '../kernel/microturn/apply.js';
 import { publishMicroturn, publishMicroturnFromCanonicalState } from '../kernel/microturn/publish.js';
+import { createDraftTokenStateIndex, withDraftTokenStateIndex } from '../kernel/token-state-index.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
@@ -702,29 +703,35 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       // come from applyPublishedDecision().state, which the kernel emits with
       // hash already computed (via updateHash). Use the canonical-state fast
       // variants to skip the redundant entry hash recomputation each iteration.
-      const origin = cachedOrigin === undefined
-        ? (cachedOrigin = publishMicroturnFromCanonicalState(input.def, input.state, input.runtime))
-        : cachedOrigin;
-      let state: GameState;
-      try {
-        state = deps.applyMove(
-          input.def,
-          input.state,
-          trustedMove,
-          { advanceToDecisionPoint: true },
-          input.runtime,
-        ).state;
-      } catch {
-        const actionDecision: Decision = {
-          kind: 'actionSelection',
-          actionId: trustedMove.move.actionId,
-          move: trustedMove.move,
-        };
-        state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
-      }
-      let depth = 1;
+      const draftTokenStateIndex = createDraftTokenStateIndex(input.state);
+      return withDraftTokenStateIndex(draftTokenStateIndex, () => {
+        const origin = cachedOrigin === undefined
+          ? (cachedOrigin = publishMicroturnFromCanonicalState(input.def, input.state, input.runtime))
+          : cachedOrigin;
+        let state: GameState;
+        try {
+          state = deps.applyMove(
+            input.def,
+            input.state,
+            trustedMove,
+            { advanceToDecisionPoint: true },
+            input.runtime,
+          ).state;
+          draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
+          draftTokenStateIndex.attachAsCanonical(state);
+        } catch {
+          const actionDecision: Decision = {
+            kind: 'actionSelection',
+            actionId: trustedMove.move.actionId,
+            move: trustedMove.move,
+          };
+          state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
+          draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
+          draftTokenStateIndex.attachAsCanonical(state);
+        }
+        let depth = 1;
 
-      while (true) {
+        while (true) {
         // Cheap exit-condition check: derive kind/seatId/turnId from
         // state.decisionStack top without enumerating legalActions or
         // computing the projected-state observation. Matches publishMicroturn's
@@ -732,7 +739,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         // context kind/seatId/turnId.
         const top = state.decisionStack?.at(-1);
         if (top === undefined) {
-          return { kind: 'completed', state, depth };
+            return { kind: 'completed', state, depth };
         }
         const ctxKind = top.context.kind;
         const topSeatId = top.context.seatId;
@@ -743,45 +750,50 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           || topSeatId !== origin.seatId
           || top.turnId !== origin.turnId
         ) {
-          return { kind: 'completed', state, depth };
+            return { kind: 'completed', state, depth };
         }
         if (ctxKind === 'stochasticResolve') {
-          return { kind: 'stochastic', state, depth };
+            return { kind: 'stochastic', state, depth };
         }
         if (depth >= completionDepthCap) {
-          return { kind: 'depthCap', state, depth };
+            return { kind: 'depthCap', state, depth };
         }
 
         // Fast path for greedy chooseOne: let the kernel own the bounded inner
         // drive and canonicalize the final state once at exit.
         if (ctxKind === 'chooseOne' && completionPolicy === 'greedy') {
-          const result = applyPreviewDriveGreedyChooseOne(
+            const result = applyPreviewDriveGreedyChooseOne(
             input.def,
             state,
             { seatId: origin.seatId, turnId: origin.turnId },
             completionDepthCap - depth,
             input.runtime,
+            draftTokenStateIndex,
           );
-          const resultDepth = depth + result.depth;
-          if (result.kind === 'failed') {
-            return {
-              kind: 'failed',
-              reason: 'noPreviewDecision',
-              depth: resultDepth,
-              failureReason: result.failureReason ?? 'noPreviewDecision',
-            };
+            const resultDepth = depth + result.depth;
+            if (result.kind === 'failed') {
+              return {
+                kind: 'failed',
+                reason: 'noPreviewDecision',
+                depth: resultDepth,
+                failureReason: result.failureReason ?? 'noPreviewDecision',
+              };
+            }
+            return { kind: result.kind, state: result.state, depth: resultDepth };
           }
-          return { kind: result.kind, state: result.state, depth: resultDepth };
-        }
 
-        const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);
-        const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
-        if (decision === undefined) {
-          return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
+          const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);
+          const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
+          if (decision === undefined) {
+            return { kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' };
+          }
+          const prevState = state;
+          state = applyPublishedDecisionFromCanonicalState(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
+          draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
+          draftTokenStateIndex.attachAsCanonical(state);
+          depth += 1;
         }
-        state = applyPublishedDecisionFromCanonicalState(input.def, state, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
-        depth += 1;
-      }
+      });
     } catch (error) {
       return {
         kind: 'failed',

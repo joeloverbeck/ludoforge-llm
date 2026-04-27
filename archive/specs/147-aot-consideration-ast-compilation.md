@@ -1,6 +1,6 @@
 # Spec 147: Ahead-Of-Time Compilation Of Consideration AST Trees
 
-**Status**: PROPOSED — scope corrected 2026-04-26 after 147AOTCON-003 post-migration measurement; 147AOTCON-004 closed on an explicit close-enough decision with the strict hard target still red
+**Status**: ✅ COMPLETED — 2026-04-26; all four tickets (147AOTCON-001 through -004) implemented and archived; AOT policy descriptor compilation landed and the AST interpreter was deleted; final hard-target probe accepted close-enough at `mean_totalMs=26784.93` against the `25600 ms` target by explicit user decision
 **Priority**: P2 (compounds with Spec 146; addresses the post-fitl-preview-perf-campaign profile concentrated in interpretive AST evaluation; live 147AOTCON-003 evidence showed the remaining hard-target miss was Zobrist/GC dominated, and 147AOTCON-004 landed a weak decision-frame digest cache accepted as close enough at `mean_totalMs=26784.93` despite `pass=false`)
 **Complexity**: L (compiler-side AST→closure-tree compilation, kernel-side runtime path that consumes compiled closures, GameDef schema addition for the compiled artifact, fixture migration of every shipped agent profile; no GameSpecDoc YAML change)
 **Dependencies**:
@@ -260,3 +260,29 @@ Anticipated decomposition (final ordering and granularity owned by `/spec-to-tic
 2. **147AOTCON-002** — Extend descriptor coverage to every `AgentPolicyExpr.kind` (`zoneProp`, `zoneTokenAgg`, `globalTokenAgg`, `globalZoneAgg`, `adjacentTokenAgg`, `seatAgg`) and every operator under `op`, plus the determinism invariant test (D5.2).
 3. **147AOTCON-003** — Enable the compiled path as default, delete the AST interpreter (`evaluateExpr`, the AST-bearing `library` shape that's no longer needed), regenerate the policy-catalog goldens, validate policy-summary trace goldens, and re-measure the hard-target profile. If the hard target still misses outside the AOT seam, record and split it.
 4. **147AOTCON-004** — Completed 2026-04-26 with a weak decision-stack frame digest cache. Final hard-target script remained `pass=false` at `mean_totalMs=26784.93`, but the result was explicitly accepted as close enough for this ticket.
+
+## Outcome
+
+**Completion date**: 2026-04-26
+
+**What actually changed**:
+- D1 (Compiled IR): `CompiledPolicyExpr` and `CompiledPolicyConsideration` descriptor unions added under the existing `CompiledAgentPolicyRef` family in `kernel/types-core.ts`; `compiled` field added to `AgentPolicyCatalog`. After 147AOTCON-003 the optional marker was removed and the field is now required.
+- D2 (Lowering pass): `cnl/lower-agent-considerations.ts` walks every reachable `AgentPolicyExpr` and emits the descriptor mirror; invoked from `lowerAgents` before `fingerprintPolicyIr` runs, so the compiled tree contributes to `catalogFingerprint` automatically.
+- D3 (Runtime closure factory): `agents/compiled-policy-runtime.ts` materializes a closure tree per `PolicyEvaluationContext`, cached on the context and reused across candidates.
+- D4 (Runtime integration): The AST interpreter (`evaluateExpr`) and AST-bearing `library` shape were deleted in 147AOTCON-003 in the same change as the fixture migration. No fallback shim retained (per F#14).
+- D5 (Equivalence + determinism): `compiled-evaluator-equivalence.test.ts` and `compiled-policy-determinism.test.ts` added; both gate CI.
+- D6 (ABI + fingerprint): Schema artifacts regenerated; `fitl-policy-catalog.golden.json` and `texas-policy-catalog.golden.json` regenerated with the compiled tree; policy-summary trace goldens validated unchanged.
+- 147AOTCON-004 follow-on: Weak decision-stack frame digest cache landed in `kernel/zobrist.ts` (revised in commit `0e3f9bab` to revert the module-level cache form after CI evidence; final form keyed by frame identity).
+
+**Deviations from original plan**:
+- Acceptance Criterion 1 (performance hard-target `pass=true`) was **not met**. After 147AOTCON-003 deleted the policy AST interpreter, the 3-run hard-target probe reported `mean_totalMs=27884.08` against `hardTargetMs=25600 ms`. The remaining miss was split to 147AOTCON-004 per the spec's own correction. 147AOTCON-004 reduced the gap to `mean_totalMs=26784.93` via the weak digest cache and was explicitly accepted as close-enough by the user despite `pass=false`.
+- Acceptance Criteria 2 (equivalence), 3 (determinism), 4 (full gate), and 5 (profile evidence — interpreter no longer the bottleneck) were all met.
+- The dominant remaining hotspot after 147AOTCON-004 is GC and Zobrist/hash-family work (`fnv1a64`, `digestDecisionStackFrame`, `zobristKey`), not the policy evaluation seam this spec targeted.
+
+**Verification results**:
+- `pnpm turbo test`, `pnpm turbo typecheck`, `pnpm turbo lint`, `pnpm turbo schema:artifacts` — all green at each ticket landing.
+- `compiled-evaluator-equivalence.test.ts` and `compiled-policy-determinism.test.ts` — green; CI-enforced.
+- Hard-target probe: `previewOn_totalMs_ms=27307.05,26554.94,26492.8`, `mean_totalMs=26784.93`, `mad_pct=1.3`, `hardTargetMs=25600`, `pass=false`, `candidateBudget=465`, `sampledActionSelectionCount=50`. Accepted close-enough.
+- CPU profile post-migration confirms the AST interpreter is no longer present and policy evaluation is no longer a top-of-profile sample.
+
+**Follow-up work**: GC and Zobrist/hash bottlenecks remain the next architectural ceiling for FITL preview-perf. POLPREVDRIVE-001 (in flight as of 2026-04-27) is the active successor effort; further hash-side reductions are owned outside this spec.

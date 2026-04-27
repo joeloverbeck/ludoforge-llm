@@ -16,6 +16,7 @@ import {
   type PolicyAgentDecisionTrace,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
+import { __internal_for_tests as tokenStateIndexInternals } from '../../../src/kernel/token-state-index.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
 
 const CORPUS = {
@@ -51,6 +52,9 @@ interface Measurement {
   readonly totalMs: number;
   readonly candidateBudget: number;
   readonly sampledActionSelectionCount: number;
+  readonly tokenStateIndexBuildCount: number;
+  readonly draftTokenStateIndexAttachCount: number;
+  readonly draftTokenStateIndexDeltaCount: number;
 }
 
 describe('Spec 145 preview pipeline performance', () => {
@@ -64,12 +68,20 @@ describe('Spec 145 preview pipeline performance', () => {
     assert.equal(current.sampledActionSelectionCount, CORPUS.sampleSize);
     assert.ok(current.candidateBudget > 0, 'Expected sampled ARVN action-selection decisions to expose candidates.');
     assert.ok(Number.isFinite(current.totalMs) && current.totalMs > 0, `Expected positive totalMs, got ${current.totalMs}.`);
+    assert.ok(
+      current.draftTokenStateIndexDeltaCount >= current.candidateBudget,
+      `POLICY_PREVIEW_TOKEN_INDEX_DRAFT_INACTIVE draftTokenStateIndexDeltaCount=${current.draftTokenStateIndexDeltaCount} ` +
+      `draftTokenStateIndexAttachCount=${current.draftTokenStateIndexAttachCount} candidateBudget=${current.candidateBudget} ` +
+      `sampledActionSelectionCount=${current.sampledActionSelectionCount}`,
+    );
 
     if (current.totalMs > thresholdMs) {
       console.warn(
         `POLICY_PERF_REGRESSION previewPipeline totalMs=${round2(current.totalMs)} ` +
         `thresholdMs=${round2(thresholdMs)} baselineMs=${round2(baseline.totalMs)} ` +
-        `candidateBudget=${current.candidateBudget} sampledActionSelectionCount=${current.sampledActionSelectionCount}`,
+        `candidateBudget=${current.candidateBudget} sampledActionSelectionCount=${current.sampledActionSelectionCount} ` +
+        `tokenStateIndexBuildCount=${current.tokenStateIndexBuildCount} ` +
+        `draftTokenStateIndexDeltaCount=${current.draftTokenStateIndexDeltaCount}`,
       );
     }
   });
@@ -85,6 +97,7 @@ function measurePreviewPipeline(def: ValidatedGameDef): Measurement {
     new PolicyAgent({ profileId: 'vc-baseline', traceLevel: 'summary' }),
   ];
 
+  tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   const startedAt = performance.now();
   let completed: CorpusComplete | null = null;
   try {
@@ -113,6 +126,9 @@ function measurePreviewPipeline(def: ValidatedGameDef): Measurement {
     totalMs,
     candidateBudget: completed.candidateBudget,
     sampledActionSelectionCount: completed.sampledActionSelectionCount,
+    tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+    draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
   };
 }
 

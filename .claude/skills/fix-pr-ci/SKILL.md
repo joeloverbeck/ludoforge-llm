@@ -56,7 +56,7 @@ Record what was found: list of (check-name, run-id, job-name, conclusion, durati
 
 For each failing job, derive the local reproduction command. The workflow YAML is the authoritative source — when in doubt, read it.
 
-**Known lanes** (canonical mapping; update this list when workflows change):
+**Known lanes** (canonical mapping; shard lists may drift from this table — defer to `.github/workflows/*.yml` for current shard IDs and run commands when names don't match):
 
 | Workflow | Job / Lane | Local repro |
 |----------|------------|-------------|
@@ -66,10 +66,10 @@ For each failing job, derive the local reproduction command. The workflow YAML i
 | `ci.yml` | `ci` (test step)       | `pnpm turbo test` |
 | `ci.yml` | `node-compat` (build only, Node 20) | `nvm use 20 && pnpm install --frozen-lockfile && pnpm turbo build` (advisory; `continue-on-error: true`) |
 | `engine-tests.yml` | `build`                                | `pnpm -F @ludoforge/engine build` |
-| `engine-tests.yml` | `test (fitl-events)`                   | `pnpm -F @ludoforge/engine test:integration:fitl-events` |
+| `engine-tests.yml` | `test (fitl-events-shard-<id>)`        | `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-<id>` |
 | `engine-tests.yml` | `test (fitl-rules)`                    | `pnpm -F @ludoforge/engine test:integration:fitl-rules` |
 | `engine-tests.yml` | `test (texas-cross-game)`              | `pnpm -F @ludoforge/engine test:integration:texas-cross-game` |
-| `engine-tests.yml` | `test (slow-parity)`                   | `pnpm -F @ludoforge/engine test:integration:slow-parity` |
+| `engine-tests.yml` | `test (slow-parity-shard-<id>)`        | `pnpm -F @ludoforge/engine test:integration:slow-parity:shard-<id>` |
 | `engine-tests.yml` | `test (e2e-all)`                       | `pnpm -F @ludoforge/engine test:e2e:all` |
 | `engine-tests.yml` | `test (memory)`                        | `pnpm -F @ludoforge/engine test:memory` |
 | `engine-tests.yml` | `test (performance)`                   | `pnpm -F @ludoforge/engine test:performance` |
@@ -87,10 +87,10 @@ Classify each failure and cluster lanes by suspected root cause. One root cause 
 
 **Failure classes**:
 - `lint` — ESLint errors. Usually quick: unused imports, unsafe types, formatting.
-- `typecheck` — TypeScript errors. FOUNDATIONS F2 (Spec/Schema Synchronization) is a frequent culprit when types and schemas have drifted.
+- `typecheck` — TypeScript errors. CLAUDE.md "Schema synchronization" (the coding convention) is a frequent culprit when types and schemas have drifted.
 - `build` — `tsc` or `vite` build failure. Usually downstream of typecheck or import-path drift.
 - `test-lane` — assertion failures within an integration / e2e / memory / performance lane.
-- `determinism-shard` — replay-identity, Zobrist parity, or runtime-parity break. **High stakes** — FOUNDATIONS F1 (Determinism). Treat as critical.
+- `determinism-shard` — replay-identity, Zobrist parity, or runtime-parity break. **High stakes** — FOUNDATIONS F8 (Determinism Is Sacred). Treat as critical.
 - `policy-profile-quality` — quality regression on an evolved profile. Advisory (continue-on-error).
 - `node-compat` — Node 20 build failure. Advisory (continue-on-error).
 - `timeout` — job hit `timeout-minutes`. Sub-classify (see below).
@@ -112,6 +112,16 @@ Classify each failure and cluster lanes by suspected root cause. One root cause 
 - Same recently modified module (per `git log` on the PR branch) implicated by multiple lanes → likely cluster.
 - Lint/typecheck/build failures often cluster together as one cause.
 - Multiple determinism shards failing → almost always one cause (look at the recent commits touching `kernel/`, `sim/`, `agents/`).
+- If the failing lane has not run on main since a recent CI/workflow restructure (check `gh run list --branch main --workflow=<name> --limit 5 --json conclusion,createdAt,headSha` against the workflow file's git history), the regression may be pre-existing on main, surfaced by workflow changes rather than introduced by the PR — bisect against main commits, not just `<base>..HEAD`. **Special case**: if the lane has *never* run on main (zero results), bisect is impossible — see "Brand-new lane detection" below.
+
+**Brand-new lane detection**: For each failing lane, run `gh run list --workflow=<workflow-file> --branch main --limit 5 --json databaseId,conclusion,createdAt` *before* attempting pre-existing-failure detection. If zero results: the lane is brand new on this PR — its timeout/budget was never validated against main. Treat the cluster as `structural` (lane budget needs adjustment, e.g., shard or raise `timeout-minutes`) by default; surface as such at gate 1. Pre-existing-failure detection and bisect are meaningless for brand-new lanes — skip both. Confirm by inspecting the workflow's git history (`git log --oneline -- .github/workflows/<name>`) for a recent restructure that introduced the lane.
+
+**Pre-existing-failure detection**: After identifying clusters, check whether each failure reproduces on the PR's merge-base (or the last-green main commit). Use a fresh `git worktree add /tmp/<worktree-name> <merge-base-sha>` (or `<last-green-main-sha>`), build the engine, and run the failing test's local repro there.
+- If it FAILS on merge-base / last-green main → cluster is `pre-existing`. Default scope: out-of-scope for this PR; flag in the gate 1 table as "pre-existing on main, not caused by this PR" so the user can decide whether to fix it in this PR or defer to a separate PR.
+- If it PASSES on merge-base / last-green main → cluster is a real PR regression; proceed with the standard diagnosis path.
+- The user may opt in (at gate 1) to fixing pre-existing clusters in this PR. When they do: bisect to find the original breaking commit between last-green and current, then propose a surgical fix at that origin point.
+
+**Bisect when regression source is unclear**: When a `test-lane` failure doesn't point to an obvious recent commit (or after pre-existing-failure detection identifies a regression that originated on main), use `git bisect` rather than manually checking out commits one by one. Identify the last-green SHA via `gh run list --branch main --workflow=<name> --limit 5`, then `git bisect start && git bisect bad HEAD && git bisect good <last-green-sha>`. Mark each bisect step by running the failing test's local repro. This compresses an N-commit linear search to ~log₂(N) bisect steps.
 
 For each cluster, identify:
 - Cluster name (1–3 words).
@@ -134,9 +144,11 @@ Otherwise, present the diagnosis as a structured table:
 
 ### Clusters
 
-| Cluster | Lanes | Class | Root Cause | Proposed Fix | Foundations | Priority |
-|---------|-------|-------|------------|--------------|-------------|----------|
-| <name>  | <lanes> | <class> | <one-line> | <one-paragraph> | <F1, F2, ...> | HIGH/MED/LOW |
+| Cluster | Lanes | Class | Status | Root Cause | Proposed Fix | Foundations | Priority |
+|---------|-------|-------|--------|------------|--------------|-------------|----------|
+| <name>  | <lanes> | <class> | <status> | <one-line> | <one-paragraph> | <F1, F2, ...> | HIGH/MED/LOW |
+
+Status values: `PR regression` (lane was green on main, broken by this PR) | `pre-existing on main` (lane was already failing on merge-base) | `structural` (lane is brand new or budget never validated; needs shard/timeout adjustment) | `flake-suspect` (verified by 3x local re-run).
 
 ### Lane-by-lane detail
 
@@ -166,6 +178,7 @@ Otherwise, present the diagnosis as a structured table:
 - Approve all proposed fixes.
 - Reject or revise specific clusters.
 - Opt in to fixing advisory lanes.
+- Opt in to fixing pre-existing failures (clusters tagged `pre-existing` in the diagnosis table).
 - Decide flakes / network timeouts are not worth fixing this round.
 - Override priorities.
 
@@ -175,8 +188,8 @@ Do not proceed to Step 5 until the user has explicitly approved.
 
 For each approved cluster:
 - Edit the implicated files. Use immutable update patterns (project rule).
-- Never adapt a test to mask a bug — fix the code (CLAUDE.md TDD Bugfixing rule).
-- For typecheck/build failures rooted in schema drift, update the related schema, types, and tests in the same change (FOUNDATIONS F2).
+- Never adapt a test to mask a bug — fix the code (CLAUDE.md TDD Bugfixing rule). However, when a test's expected value asserted the buggy output (e.g., a `deepEqual` snapshot of a misformed compiled artifact), updating the expectation to match the corrected output is required, not a violation. Distinguish: weakening a contract (forbidden) vs updating a snapshot of a now-fixed contract (correct).
+- For typecheck/build failures rooted in schema drift, update the related schema, types, and tests in the same change (CLAUDE.md "Schema synchronization" coding convention).
 - Do NOT edit `.github/workflows/*.yml` to silence a lane. If a workflow change is the right answer, surface it at gate 1 — it is out of scope for this skill's auto-fix.
 
 After edits, mark each cluster as `applied`.
@@ -191,11 +204,15 @@ For each non-advisory lane that was failing:
 4. If it still fails:
    - Re-diagnose. Update the cluster's proposed fix.
    - Return to Step 4 (gate 1) with the revised proposal.
-   - Do NOT proceed to commit until every non-advisory failing lane passes locally.
+   - Do NOT proceed to commit until every non-advisory failing lane passes locally — except per the environment-constrained verification rule below.
+
+**Environment-constrained verification**: If running a lane locally has previously crashed/hung the development environment in this session (e.g., WSL2 hang, OOM kill) OR the lane's CI duration is >15min AND its heaviness is structural (large determinism / property-test sweeps, multi-minute tournament runs), the user may approve a scoped verification: run faster sibling tests + final `pnpm turbo lint typecheck` + a fresh `pnpm -F @ludoforge/engine build`, and rely on CI for the heavy lane itself. Surface this trade-off explicitly in the gate 2 message — list which lanes were verified locally and which were deferred to CI, with the reason. This is a deliberate scoped exception, not a general bypass: every lane that CAN be verified locally without environment risk MUST still be verified locally.
+
+**Crash-triggered fallback**: If a local verification attempt crashes the development environment (WSL2 hang, OOM kill, IDE freeze, system unresponsiveness), the assistant SHOULD immediately surface this rule to the user before any retry — the same lane is likely to crash again on the same hardware. Do not silently retry the same command. Ask the user to choose between (a) scoped local verification per the rule above, (b) deferring the heavy lane to CI, or (c) restructuring the lane (e.g., sharding) so that no single sub-lane exceeds local resource budgets.
 
 If the user opted in to fixing an advisory lane at gate 1, verify it too.
 
-Run any directly relevant supersets the project provides (e.g., when several `engine-tests` lanes are in scope, also run `pnpm -F @ludoforge/engine test:all` once at the end as a wider sanity check). Do not run unrelated full suites that would balloon runtime — verification is scoped to the lanes that were failing.
+Run any directly relevant supersets the project provides (e.g., when several `engine-tests` lanes are in scope, also run `pnpm -F @ludoforge/engine test:all` once at the end as a wider sanity check), **subject to the same environment-constrained verification rule above** — if the superset's resource profile risks a repeat env crash, defer it to CI and note that explicitly at gate 2. Do not run unrelated full suites that would balloon runtime — verification is scoped to the lanes that were failing.
 
 ### Step 7: Commit & Present Diff — GATE 2
 
@@ -240,31 +257,31 @@ Present:
 - FOUNDATIONS conflicts that halted the skill (if any) — these still need resolution.
 - New CI run URL (`gh pr checks <N>` or `gh run list --branch <head> --limit 1`).
 
-Do not commit additional artifacts. The skill is conversational — diagnostic output stays in the transcript. If cluster count is ≥ 4, also write a record to `reports/ci-failures-pr-<N>-YYYY-MM-DD.md` summarizing the diagnosis table for future reference.
+Do not commit additional artifacts. The skill is conversational — diagnostic output stays in the transcript. Write a record to `reports/ci-failures-pr-<N>-YYYY-MM-DD.md` summarizing the diagnosis table for future reference when EITHER (a) cluster count is ≥ 4, OR (b) `git log --oneline <merge-base>..HEAD` shows ≥ 2 commits with subject prefix `fix(` whose subjects reference the same workflow / lane that's still failing now (chronic-PR case — prior fix attempts on this branch did not resolve the lane). For the chronic-PR case, the record should preserve the gate 1 cluster table verbatim plus a one-paragraph "what did NOT work" summary citing the prior fix commits, so the next session can pick up where this one left off without re-bisecting from scratch.
 
 ## Failure-class playbooks
 
 Quick diagnostic angles per class. Not exhaustive — this is orientation for diagnosis, not a substitute for reading the actual log.
 
 - **lint**: Read the ESLint output directly; usually self-explanatory. Check whether the offending rule is project-wide or scoped (`packages/*/eslint.config.js` if present). Common: unused imports, `no-explicit-any`, missing return types, formatting drift.
-- **typecheck**: Read the `tsc` errors. FOUNDATIONS F2 — keep schemas (`packages/engine/schemas/`), types (`packages/engine/src/kernel/`), and tests synchronized. A type error in one place often signals drift in the other two.
+- **typecheck**: Read the `tsc` errors. CLAUDE.md "Schema synchronization" — keep schemas (`packages/engine/schemas/`), types (`packages/engine/src/kernel/`), and tests synchronized. A type error in one place often signals drift in the other two.
 - **build**: Usually downstream of typecheck. Also: missing import paths, `.js` vs `.ts` extension drift in ESM imports, missing files in compiled output.
-- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests).
-- **determinism-shard**: HIGH STAKES. FOUNDATIONS F1. Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, or a state-hash key drift. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`.
+- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests). When the failing test points to a regression but the breaking commit isn't obvious, switch to `git bisect` (see Step 3 "Bisect when regression source is unclear").
+- **determinism-shard**: HIGH STAKES. FOUNDATIONS F8 (Determinism Is Sacred). Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, or a state-hash key drift. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`. When a single shard's test file contains multiple `describe` blocks (e.g., one per game's profile family), use `node --test --test-name-pattern=<...>` to isolate the slow / failing block before suspecting the kernel — a slowdown or break concentrated in one game's profile is a strong hint about the regression's locus (e.g., a policy-preview perf regression that surfaces only on FITL profiles' preview-using considerations, not on Texas default agents).
 - **memory**: Lane budget exceeded. Look for retained references in caches, accumulators, or RNG/state structures that should be transient. Compare allocation patterns in recent commits.
 - **performance**: Lane budget exceeded. Check for accidental quadratic loops, unbounded `forEach`, or new code in hot paths. The performance budget is enforced by the lane itself — read its source to know the budget.
 - **timeout (a) hang**: Add probe logs locally; isolate which `it()` or operation never returns. Often an unawaited promise or an infinite enumeration.
-- **timeout (b) slowness**: Profile the lane locally (`node --inspect`, or naive timing). Determine whether the budget needs to grow (rare; needs justification) or the code regressed.
+- **timeout (b) slowness**: Profile the lane locally — `node --cpu-prof --cpu-prof-dir=<dir> <command>` produces a `.cpuprofile` viewable in Chrome DevTools' Performance panel; use `node --inspect` only when interactive debugging is needed; naive `console.time` / `time` is acceptable for first-pass localization. Determine whether the budget needs to grow (rare; needs justification) or the code regressed.
 - **timeout (c) external**: Not a code defect. Recommend the user retry the lane via `gh run rerun --failed <run-id>` (user action, not skill action).
 - **flake-suspect**: Already verified by 3x local re-run in Step 3. If it doesn't reproduce locally, propose: chase the non-determinism upstream, retry the lane in CI, or skip.
 
 ## Guardrails
 
-- **FOUNDATIONS hard halt**: if any proposed fix violates `docs/FOUNDATIONS.md`, halt at gate 1 with 1-3-1. Never silently accept a Foundations-violating fix.
+- **FOUNDATIONS hard halt**: if any proposed fix violates `docs/FOUNDATIONS.md`, halt at gate 1 with 1-3-1. Never silently accept a Foundations-violating fix. Before citing a FOUNDATIONS principle by number (e.g., "F8") in a diagnosis or commit message, verify the number against the current `docs/FOUNDATIONS.md` — section numbering can shift when principles are added or removed.
 - **Codebase truth**: every implicated file path and function name validated against the actual codebase before being put in the diagnosis table.
 - **Workflow YAML is authoritative**: lane→command mapping derives from `.github/workflows/*.yml`. The reference table in Step 2 is convenience — when in doubt, read the YAML.
 - **No workflow edits**: do NOT modify `.github/workflows/*.yml` to silence a lane. If a workflow change is the right answer, surface it at gate 1; let the user decide. The skill's scope is "fix the code that the lane caught", not "rewrite the lane".
-- **No tests adapted to bugs**: never weaken or skip a test to make it pass. Fix the code.
+- **No tests adapted to bugs**: never weaken or skip a test to make buggy code pass. However, when a test's expected value asserted the buggy output (e.g., a `deepEqual` snapshot of a misformed compiled artifact), updating the expectation to match the corrected output is required, not a violation. Distinguish: weakening a contract (forbidden) vs updating a snapshot of a now-fixed contract (correct).
 - **No `main` push**: HEAD must not be `main` or `master` at push time.
 - **No force push, no `--no-verify`**: never use `--force`, `--force-with-lease`, `--no-verify`, `--no-gpg-sign`, or any other safety bypass unless the user explicitly requested it for this push.
 - **No `git add -A` / `git add .`**: stage by explicit file path to avoid accidental inclusion of secrets or large binaries.
@@ -275,7 +292,7 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **Worktree discipline**: every command and path uses the worktree root if invoked inside a worktree.
 - **Two gates always**: gate 1 (pre-fix) and gate 2 (pre-push) are mandatory. Auto mode does not waive them — auto mode is "not a license to destroy".
 - **Files NOT touched**:
-  - `.github/workflows/*.yml` — out of scope for auto-fix.
+  - `.github/workflows/*.yml` — never modified by auto-fix; modified only when the user explicitly approves a structural change (shard, timeout adjustment) at gate 1.
   - `main` branch — only the PR head branch is touched.
   - Any branch other than the PR head — verified before commit and before push.
 - **Single PR focus**: each invocation handles one PR. If the user wants to recover multiple PRs, run the skill per PR.

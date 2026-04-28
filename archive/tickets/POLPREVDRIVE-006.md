@@ -1,6 +1,6 @@
 # POLPREVDRIVE-006: Add FITL-parity perf gate exercising 4 baseline profiles under verifyIncrementalHash
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: No engine source — adds CI-side perf-test coverage only
@@ -119,3 +119,122 @@ No engine source code is modified by this ticket.
 2. `pnpm -F @ludoforge/engine test` (perf lane runs as part of this)
 3. `pnpm turbo lint typecheck`
 4. *(verification)* `git worktree add /tmp/polprev-pre-fix 7677e4d8 && cd /tmp/polprev-pre-fix && pnpm install --frozen-lockfile && pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:perf` — confirm the new gate fails, record the wall-clock breach in the Outcome, then `git worktree remove /tmp/polprev-pre-fix`.
+
+## Outcome
+
+**Completed:** 2026-04-28
+
+**Disposition:** Authored as a forward-looking regression tripwire. Acceptance
+criterion #2 ("gate fails at pre-fix commit `7677e4d8`") was reframed under a
+1-3-1 reassessment because the post-POLPREVDRIVE-005 wall-clock did not
+materially differ from the pre-fix PR-side wall-clock. See "Reassessment
+divergence from §2 ceiling formula" below.
+
+### What changed
+
+- Added `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts` (new,
+  permanent) — `architectural-invariant` perf gate. Mirrors the
+  determinism-parity workload shape: four FITL baseline profiles concurrent
+  (`us-baseline`, `arvn-baseline`, `nva-baseline`, `vc-baseline`) running
+  `runGame` under `kernel.verifyIncrementalHash: true`, at `seed=42`,
+  `maxTurns=10`. Asserts wall-clock ≤ `WALL_CLOCK_CEILING_MS = 75_000` ms.
+- File-top calibration block records the calibration commit SHA, the harness
+  command used, raw measurements, the chosen ceiling, and the recalibration
+  policy so a future contributor can reproduce or update without spelunking.
+
+No engine source modified. Option A (perf-test under the existing perf lane)
+was chosen per ticket §1; Option B (dedicated CI shard) is left as a
+follow-up if the perf-lane budget becomes a problem post-merge.
+
+### Calibration data (post-POLPREVDRIVE-005)
+
+Calibration commit: `eed7384d`. Harness command:
+
+```
+node packages/engine/scripts/profile-fitl-preview-drive.mjs \
+  --seed 42 --maxTurns 10 --profilesAll
+```
+
+| Run                  | elapsedMs |
+|----------------------|-----------|
+| calibration-1        | 36 895    |
+| calibration-2        | 37 556    |
+| calibration-3        | 36 981    |
+| warmup-1 (`--warmup`)| 34 832    |
+
+Median ≈ 37 000 ms. Ceiling chosen at 75 000 ms (≈ 2× median, per the §2
+formula's first bound). The ceiling absorbs CI variance and warmup/no-warmup
+spread; a 2× regression to ≥ 75 000 ms fails the gate.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build` — green.
+- `pnpm -F @ludoforge/engine test:perf` — 2/2 perf tests green. New gate
+  measured `elapsedMs ≈ 40 800 ms` (well under 75 000 ms ceiling). Existing
+  `preview-pipeline.perf.test.ts` continues to emit its non-blocking
+  `POLICY_PERF_REGRESSION` warning (warn-only by design — see test source).
+- `pnpm -F @ludoforge/engine test` (default lane) — 5712/5712 tests green.
+- `pnpm turbo lint typecheck` — 5/5 tasks green.
+- Seed-split `zobrist-incremental-parity-fitl-*` shards — unaffected (no
+  engine source touched; new file is a perf test, not a determinism test).
+
+### Reassessment divergence from §2 ceiling formula
+
+The §2 formula prescribed `min(2× post-fix measured time, PR-side × 0.6)`.
+Applied verbatim:
+
+- 2× post-fix median = `2 × 37 000 = 74 000` ms
+- PR-side × 0.6 = `34 917 × 0.6 = 20 950` ms
+
+The two bounds disagree because the post-POLPREVDRIVE-005 wall-clock is
+essentially identical to the pre-fix PR-side wall-clock from POLPREVDRIVE-001
+(34 917 ms). The original optimisation envelope shrank between when this
+ticket was authored and when it ran:
+
+- POLPREVDRIVE-002's draft fast-path gain (24 229 → 18 492 ms post-fix) was
+  reverted in commit `51a5a6bb` (`fix(kernel): drop unsound active-draft
+  fast-path in getTokenStateIndex`), which removed an unsound delta-tracking
+  short-circuit that leaked stale occurrences during effect dispatch.
+- POLPREVDRIVE-003 (lower default `K_PREVIEW_DEPTH` from 8 to 6) moved
+  wall-clock within noise (σ ≈ 600 ms) per its Outcome.
+- POLPREVDRIVE-004 (resolveRef cache) moved wall-clock from 35 888 ms to
+  35 872 ms (within noise) per its Outcome.
+- POLPREVDRIVE-005 closed without an engine source change per its §1 gate.
+
+Acceptance criterion #2 ("the new test fails when run against the pre-
+POLPREVDRIVE-001 commit `7677e4d8`") is therefore not demonstrable today: any
+ceiling that catches the historical regression also fails at the current
+calibration commit. The pre-fix verification step from the Test Plan §4 was
+not run for that reason — the verification would have either spuriously
+passed (ceiling above current calibration) or spuriously failed (ceiling
+below current calibration), neither of which proves the gate works as
+intended for that historical comparison.
+
+The gate is therefore published as a forward-looking regression tripwire:
+it catches future drift > 2× the post-005 baseline, which is the same
+regression class that originally caused the 30-min CI shard timeout. The
+calibration block in the test file documents the divergence so a future
+reader can recalibrate under the current rules when a follow-up ticket
+genuinely reduces wall-clock further.
+
+### Residual risk
+
+- The current ceiling (75 000 ms) tolerates a 2× drift before firing. If a
+  future regression delivers < 2× drift on this workload, the gate misses
+  it. This matches the ticket's explicit "not flapping on noise" budget;
+  tighter thresholds become viable once a follow-up ticket actually moves
+  wall-clock below ~20 s on this workload, at which point the ceiling can
+  be lowered.
+- CI hardware variance vs WSL2 is unmeasured. If the perf lane runs on
+  materially slower hardware than the calibration machine, a one-time
+  ceiling bump may be needed; the recalibration policy in the test header
+  documents the procedure.
+
+### F16 deliverable status
+
+The drive-perf regression class (4 baseline profiles concurrent +
+`verifyIncrementalHash: true`) is now guarded by an automated permanent test
+that runs in the existing perf lane, instead of being caught only by 30-min
+CI shard timeouts. F16 (testing as proof) is satisfied for the forward
+direction, even though the historical-regression demonstration step from
+acceptance criterion #2 is not satisfiable at the current calibration.

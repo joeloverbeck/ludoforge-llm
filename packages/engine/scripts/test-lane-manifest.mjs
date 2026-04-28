@@ -35,10 +35,16 @@ export const E2E_SLOW_EXACT_TESTS = [
 // matrix and runs full bounded simulations, so individually they cost minutes.
 // Excluded from the default/integration:core lane to keep local development
 // `pnpm turbo test` fast; covered by sharded slow-parity lanes in
-// engine-tests.yml.
+// engine-tests.yml. Lifecycle regression corpus tests also live here: they are
+// architectural invariants, but their multi-seed FITL simulations and boundary
+// sweeps are too expensive for default/core integration feedback.
 export const SLOW_INTEGRATION_TESTS = [
   'classified-move-parity.test.ts',
   'diagnose-parity-runGame.test.ts',
+  'decision-per-card-presence.test.ts',
+  'fitl-no-turn-1-terminal.test.ts',
+  'lifecycle-invariants-property.test.ts',
+  'lifecycle-token-conservation.test.ts',
   'spec-140-bounded-termination.test.ts',
   'spec-140-compound-turn-summary.test.ts',
   'spec-140-foundations-conformance.test.ts',
@@ -58,6 +64,10 @@ const SLOW_INTEGRATION_SHARD_BASENAMES = {
     'spec-140-foundations-conformance.test.ts',
   ]),
   'shard-c': new Set([
+    'decision-per-card-presence.test.ts',
+    'fitl-no-turn-1-terminal.test.ts',
+    'lifecycle-invariants-property.test.ts',
+    'lifecycle-token-conservation.test.ts',
     'spec-140-compound-turn-summary.test.ts',
     'spec-140-profile-migration.test.ts',
   ]),
@@ -139,11 +149,18 @@ export function listIntegrationTestsForLane(lane) {
     }
     case 'integration:game-packages':
       return ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath),
+        (sourcePath) =>
+          isGamePackageIntegrationTest(sourcePath)
+          && !gamePackageSmokeTests.has(sourcePath)
+          && !slowIntegrationTests.has(sourcePath),
       );
     case 'integration:fitl-events':
       return ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && isFitlEventCardTest(sourcePath),
+        (sourcePath) =>
+          isGamePackageIntegrationTest(sourcePath)
+          && !gamePackageSmokeTests.has(sourcePath)
+          && !slowIntegrationTests.has(sourcePath)
+          && isFitlEventCardTest(sourcePath),
       );
     case 'integration:fitl-events-shard-a':
     case 'integration:fitl-events-shard-b':
@@ -151,18 +168,28 @@ export function listIntegrationTestsForLane(lane) {
       const shardKey = lane.slice('integration:fitl-events-'.length);
       const shardIndex = { 'shard-a': 0, 'shard-b': 1, 'shard-c': 2 }[shardKey];
       const all = ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && isFitlEventCardTest(sourcePath),
+        (sourcePath) =>
+          isGamePackageIntegrationTest(sourcePath)
+          && !gamePackageSmokeTests.has(sourcePath)
+          && !slowIntegrationTests.has(sourcePath)
+          && isFitlEventCardTest(sourcePath),
       );
       const chunkSize = Math.ceil(all.length / FITL_EVENTS_SHARD_COUNT);
       return all.slice(shardIndex * chunkSize, (shardIndex + 1) * chunkSize);
     }
     case 'integration:fitl-rules':
       return ALL_INTEGRATION_TESTS.filter(
-        (sourcePath) => isGamePackageIntegrationTest(sourcePath) && !gamePackageSmokeTests.has(sourcePath) && sourcePath.split('/').at(-1)?.startsWith('fitl-') && !isFitlEventCardTest(sourcePath),
+        (sourcePath) =>
+          isGamePackageIntegrationTest(sourcePath)
+          && !gamePackageSmokeTests.has(sourcePath)
+          && !slowIntegrationTests.has(sourcePath)
+          && sourcePath.split('/').at(-1)?.startsWith('fitl-')
+          && !isFitlEventCardTest(sourcePath),
       );
     case 'integration:texas-cross-game':
       return ALL_INTEGRATION_TESTS.filter((sourcePath) => {
         if (gamePackageSmokeTests.has(sourcePath)) return false;
+        if (slowIntegrationTests.has(sourcePath)) return false;
         if (!isGamePackageIntegrationTest(sourcePath)) return false;
         const baseName = sourcePath.split('/').at(-1) ?? sourcePath;
         return baseName.startsWith('texas-') || GAME_PACKAGE_EXACT_TESTS.includes(baseName);

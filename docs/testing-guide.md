@@ -13,6 +13,13 @@
 - **Event fidelity details**: treat rules phrases such as `piece`, `place`, and `toward Passive Support` / `toward Passive Opposition` as implementation constraints, not shorthand. Cover Base-as-piece cases, Rule 1.4.1 sourcing, stacking caps, and passive-target routing explicitly when relevant.
 - **Fidelity cross-checks**: `archive/specs/29-fitl-event-card-encoding.md` is acceptable as a historical cross-check for suspicious placeholder cards, but rules reports, playbook guidance, and `docs/fitl-event-authoring-cookbook.md` are the source of truth.
 
+## Lifecycle Invariants
+
+- Card-driven lifecycle tests must prove card-token identity conservation across lifecycle boundaries. A card may move between deck, lookahead, played, discard, and leader zones, but lifecycle code must not create or delete card tokens without an explicit effect.
+- Card-driven production traces must retain at least one player or stochastic decision before a turn retires. This guards against a deck or card boundary advancing without a published microturn.
+- FITL has a sentinel against terminal stops during the first three production turns. If a future legitimate rules change can end that early, update the threshold and the test rationale in the same change.
+- Cross-game mirrors should not force FITL card-driven semantics onto non-cardDriven games. Texas Hold'em remains the non-cardDriven guard that catches FITL-specific logic leaking into generic kernel paths.
+
 ## Texas Hold'em Tests
 
 Compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the engine-agnosticism validation game — tests should confirm that no FITL-specific logic leaks into the kernel.

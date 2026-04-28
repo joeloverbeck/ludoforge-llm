@@ -821,6 +821,27 @@ export const publishMicroturnFromCanonicalState = (
 };
 
 /**
+ * Preview-only publication helper for states whose content is current but
+ * whose stored hash may intentionally lag until preview-drive exit.
+ *
+ * Unlike `publishMicroturnFromCanonicalState`, this helper does not make a
+ * canonical-hash promise. It is safe only for bounded preview execution that
+ * does not expose the intermediate state or decision log before a final
+ * canonicalization pass.
+ */
+export const publishMicroturnFromPreviewStateNoHash = (
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+): MicroturnState => {
+  const top = state.decisionStack?.at(-1);
+  if (top === undefined) {
+    return publishActionSelection(def, state, runtime);
+  }
+  return publishStackTop(def, state, top, runtime);
+};
+
+/**
  * Combined publish + greedy-pick fast path for `chooseOne` continuations.
  *
  * `publishStackTop` for `chooseOne` runs `isSupportedFrameContinuationMove`

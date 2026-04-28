@@ -67,6 +67,8 @@ const canonicalizeState = (def: GameDef, state: GameState, runtime?: GameDefRunt
   };
 };
 
+export const canonicalizePreviewDriveState = canonicalizeState;
+
 const clearMicroturnStateNoFinalHash = (
   def: GameDef,
   state: GameState,
@@ -651,6 +653,32 @@ const applyPublishedDecisionInternalNoFinalHash = (
   }
 
   throw new Error(`MICROTURN_DECISION_KIND_UNSUPPORTED:${JSON.stringify(decision)}`);
+};
+
+/**
+ * Preview-only apply helper that intentionally skips the final canonical hash.
+ * Callers must keep the returned state private, ignore the returned log's
+ * stateHash, and canonicalize before exposing preview results or telemetry.
+ */
+export const applyPublishedDecisionFromPreviewStateNoFinalHash = (
+  def: GameDef,
+  state: GameState,
+  microturn: MicroturnState,
+  decision: Decision,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
+): ApplyDecisionResult => {
+  const resolvedRuntime = runtime ?? createGameDefRuntime(def);
+  return applyPublishedDecisionInternalNoFinalHash(
+    def,
+    state,
+    microturn,
+    decision,
+    options,
+    resolvedRuntime,
+    resolveRefCache,
+  );
 };
 
 const truncateFailureReason = (error: unknown): string => {

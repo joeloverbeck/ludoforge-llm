@@ -2,9 +2,17 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import { applyTrustedMove } from '../kernel/apply-move.js';
 import { probeMoveViability } from '../kernel/apply-move.js';
-import { applyPreviewDriveGreedyChooseOne } from '../kernel/microturn/drive.js';
+import {
+  applyPreviewDriveGreedyChooseOne,
+  applyPublishedDecisionFromPreviewStateNoFinalHash,
+  canonicalizePreviewDriveState,
+} from '../kernel/microturn/drive.js';
 import { applyPublishedDecisionFromCanonicalState } from '../kernel/microturn/apply.js';
-import { publishMicroturn, publishMicroturnFromCanonicalState } from '../kernel/microturn/publish.js';
+import {
+  publishMicroturn,
+  publishMicroturnFromCanonicalState,
+  publishMicroturnFromPreviewStateNoHash,
+} from '../kernel/microturn/publish.js';
 import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
 import { createResolveRefCache, type ResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
@@ -763,10 +771,9 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
     try {
       // input.state is the action-selection state delivered to the agent by the
-      // simulator — always canonically hashed. Subsequent loop-iteration states
-      // come from applyPublishedDecision().state, which the kernel emits with
-      // hash already computed (via updateHash). Use the canonical-state fast
-      // variants to skip the redundant entry hash recomputation each iteration.
+      // simulator and is always canonically hashed. Inner preview iterations
+      // intentionally defer final hashing until the drive exits; intermediate
+      // states stay private to this bounded synthetic completion.
       const draftTokenStateIndex = createDraftTokenStateIndex(input.state);
       // POLPREVDRIVE-004: drive-scoped resolveRef memoisation. Allocated fresh
       // per drive call, threaded through every kernel entry point that flows
@@ -800,6 +807,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         draftTokenStateIndex.attachAsCanonical(state);
       }
       let depth = 1;
+      let stateIsCanonical = true;
+
+      const canonicalizeForExit = (): GameState => {
+        if (stateIsCanonical) {
+          return state;
+        }
+        const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
+        draftTokenStateIndex.applyZoneDelta(state.zones, canonical.zones);
+        draftTokenStateIndex.attachAsCanonical(canonical);
+        state = canonical;
+        stateIsCanonical = true;
+        return canonical;
+      };
 
       while (true) {
         // Strategy A: clear the resolveRef cache at the top of each iteration
@@ -814,7 +834,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         // context kind/seatId/turnId.
         const top = state.decisionStack?.at(-1);
         if (top === undefined) {
-          return emitExit({ kind: 'completed', state, depth });
+          return emitExit({ kind: 'completed', state: canonicalizeForExit(), depth });
         }
         const ctxKind = top.context.kind;
         const topSeatId = top.context.seatId;
@@ -825,13 +845,13 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           || topSeatId !== origin.seatId
           || top.turnId !== origin.turnId
         ) {
-          return emitExit({ kind: 'completed', state, depth });
+          return emitExit({ kind: 'completed', state: canonicalizeForExit(), depth });
         }
         if (ctxKind === 'stochasticResolve') {
-          return emitExit({ kind: 'stochastic', state, depth });
+          return emitExit({ kind: 'stochastic', state: canonicalizeForExit(), depth });
         }
         if (depth >= completionDepthCap) {
-          return emitExit({ kind: 'depthCap', state, depth });
+          return emitExit({ kind: 'depthCap', state: canonicalizeForExit(), depth });
         }
 
         // Fast path for greedy chooseOne: let the kernel own the bounded inner
@@ -839,7 +859,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         if (ctxKind === 'chooseOne' && completionPolicy === 'greedy') {
           const result = applyPreviewDriveGreedyChooseOne(
             input.def,
-            state,
+            canonicalizeForExit(),
             { seatId: origin.seatId, turnId: origin.turnId },
             completionDepthCap - depth,
             input.runtime,
@@ -858,13 +878,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           return emitExit({ kind: result.kind, state: result.state, depth: resultDepth });
         }
 
-        const microturn = publishMicroturnFromCanonicalState(input.def, state, input.runtime);
+        const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
         const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
         if (decision === undefined) {
           return emitExit({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
         }
         const prevState = state;
-        state = applyPublishedDecisionFromCanonicalState(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
+        state = applyPublishedDecisionFromPreviewStateNoFinalHash(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
+        stateIsCanonical = false;
         draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
         draftTokenStateIndex.attachAsCanonical(state);
         depth += 1;

@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyPreviewMove, createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
+import { computeFullHash, createZobristTable } from '../../../src/kernel/zobrist.js';
 import {
   asActionId,
   asPhaseId,
@@ -240,6 +241,17 @@ function trustedCandidate(def: GameDef, actionId: string): {
   };
 }
 
+function assertCanonicalPreviewState(def: GameDef, state: GameState | undefined, label: string): asserts state is GameState {
+  if (state === undefined) {
+    assert.fail(`${label}: expected preview state`);
+  }
+  assert.equal(
+    state.stateHash,
+    computeFullHash(createZobristTable(def), state),
+    `${label}: preview state hash should be canonical`,
+  );
+}
+
 describe('policy preview synthetic-completion driver', () => {
   it('returns depthCap when the configured cap is exhausted before the inner decision resolves', () => {
     const def = createDecisionDrivenDef();
@@ -253,12 +265,16 @@ describe('policy preview synthetic-completion driver', () => {
     const branchDef = createDecisionDrivenDef();
     const branch = trustedCandidate(branchDef, 'branch');
     const branchRuntime = createRuntime(branchDef, branch.state, branch.trustedMove, { completionDepthCap: 8 });
-    assert.equal(branchRuntime.getPreviewState({ move: branch.trustedMove.move, stableMoveKey: 'candidate', actionId: 'branch' })?.globalVars.score, 3);
+    const branchPreview = branchRuntime.getPreviewState({ move: branch.trustedMove.move, stableMoveKey: 'candidate', actionId: 'branch' });
+    assertCanonicalPreviewState(branchDef, branchPreview, 'chooseOne');
+    assert.equal(branchPreview.globalVars.score, 3);
 
     const chooseNDef = createChooseNDef();
     const chooseN = trustedCandidate(chooseNDef, 'select');
     const chooseNRuntime = createRuntime(chooseNDef, chooseN.state, chooseN.trustedMove, { completionDepthCap: 8 });
-    assert.equal(chooseNRuntime.getPreviewState({ move: chooseN.trustedMove.move, stableMoveKey: 'candidate', actionId: 'select' })?.globalVars.score, 5);
+    const chooseNPreview = chooseNRuntime.getPreviewState({ move: chooseN.trustedMove.move, stableMoveKey: 'candidate', actionId: 'select' });
+    assertCanonicalPreviewState(chooseNDef, chooseNPreview, 'chooseN');
+    assert.equal(chooseNPreview.globalVars.score, 5);
   });
 
   it('stops at another-seat inner decisions without selecting them', () => {

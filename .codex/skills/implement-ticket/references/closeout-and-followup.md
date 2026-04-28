@@ -168,6 +168,16 @@ For benchmark tickets with tried-and-reverted candidates, add a compact attempt 
 - `measurement`: `<sample/result/profile summary>`
 - `decision`: `kept | reverted | abandoned | accepted by user exception`
 
+For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
+
+- `accepted implementation`: `<landed root-cause reduction and files/seam changed>`
+- `green proof`: `<focused build/test/correctness lanes>`
+- `measured improvement`: `<owned root-cause metric before -> after, plus command/artifact>`
+- `red acceptance lane`: `<ticket-named command and exact red result>`
+- `durable status`: `IN PROGRESS | BLOCKED | PARTIAL | repo-equivalent`
+- `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`
+- `next authorization`: `<already user-approved continuation, 1-3-1 needed, or intentionally deferred>`
+
 For a user-approved acceptance exception on a red measured gate, make the exception explicit:
 
 - `original gate`: `<metric and threshold>`

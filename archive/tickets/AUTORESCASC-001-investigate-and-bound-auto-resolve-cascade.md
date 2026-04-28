@@ -1,6 +1,6 @@
 # AUTORESCASC-001: Investigate and bound the `advanceAutoresolvable` cascade that processes the deck without player decisions
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED
 **Priority**: HIGH
 **Effort**: Medium-Large
 **Engine Changes**: Yes — `packages/engine/src/kernel/microturn/advance.ts`, `packages/engine/src/kernel/microturn/apply.ts`, `packages/engine/src/kernel/turn-flow-eligibility.ts`, `packages/engine/src/kernel/phase-advance.ts`, plus tests/observability.
@@ -146,3 +146,32 @@ The user must approve Phase 1's report before Phase 2 begins.
 - **Determinism re-bless**: removing the cascade changes trajectory hashes for every cardDriven game seed. Re-blessing must be itemized.
 - **CI runtime**: post-fix, every card flip produces at least one decision microturn. Combined with `LIFECYCFIX-001`, FITL parity tests will run far longer than today; coordinate the merge with `TURNPERF-001`.
 - **Texas regression**: if Texas relies on the cascade behaviour (e.g., to auto-resolve certain phases), Phase 1 must catch this and Phase 2 must accommodate it without re-introducing the cardDriven bug.
+
+## Outcome
+
+**Completed**: 2026-04-28 (closed as already-satisfied; no engine code changes)
+
+### Phase 1 reassessment supersedes the original Phase 2 plan
+
+Phase 1 diagnostic ran against the live codebase post-`LIFECYCFIX-001` (`8ca1df07`). The full investigation is in `reports/auto-resolve-cascade-investigation-2026-04-28.md`. Three load-bearing claims from the original ticket failed verification:
+
+1. **No production code path constructs a `TurnRetirementContext` frame.** Every `kind: 'turnRetirement'` literal in `packages/engine/src/**` either translates an existing stack frame to a Decision/published microturn (`microturn/publish.ts:360,773`) or applies a Decision (`microturn/apply.ts:208,764`, `microturn/drive.ts:629`, `microturn/advance.ts:48`). Construction sites for the *frame* exist only in unit-test fixtures. The `turnRetirement` branch of `isAutoresolvableKind` (`microturn/advance.ts:7-8`) is unreachable from `runGame`.
+2. **The original "`decisionLogs.length = 0`" symptom does not reproduce.** A probe at `seed=42, profilesAll, maxTurns=1, traceRetention='full'` returned 159 player decisions (`actionSelection: 65, chooseNStep: 44, chooseOne: 50`), `longestTurnRetirementChain = 0`, `firstAutoresolvedDecisionIdx = -1`, and cards accumulating correctly (`played=12, deck=64, lookahead=1, leader=5`). The original "`decisionLogs.length = 0`" figure was almost certainly an instrumentation artifact: with any `traceRetention !== 'full'`, `simulator.ts:301` returns `decisions: []` regardless of how many decisions were actually published.
+3. **Even if a `TurnRetirementContext` were pushed, no cascade is possible.** `microturn/apply.ts:777` clears `decisionStack` to `[]` after applying a `turnRetirement` decision, so the next iteration's `top` is `undefined` and `advanceAutoresolvable` exits.
+
+The actual mechanism that historically pumped FITL's deck without surfacing decisions was the **silent card deletion** in `applyTurnFlowCardBoundary` driven by `advanceToDecisionPoint`'s phase-pumping loop in `phase-advance.ts:653`. That mechanism was fixed by `LIFECYCFIX-001` (cards now accumulate in `played:none` per `discardZone === played`). The "auto-resolve cascade" framing was a misdiagnosis of the same underlying bug.
+
+### What changed
+
+- **No engine code changes.** Resolution is `code: no-change`; the cascade described in this ticket is mechanistically impossible in the current pipeline and the cited symptom does not reproduce.
+- **`reports/auto-resolve-cascade-investigation-2026-04-28.md`**: Phase 1 diagnostic report (created). Documents the code-search results, the probe configuration and output, the evidence-classification verdict (`incidence verified: no`, `mechanism verified: no`), and the recommendation to close as already-satisfied.
+
+### Out-of-scope follow-ups
+
+- **Decision-per-card invariant + property sweep**: owned by `LIFECYCREG-001` items 2 and 5. The architectural-invariant regression net for both `LIFECYCFIX-001` and the (non-existent in current code) `AUTORESCASC-001` cascade is owned by that ticket.
+- **`MAX_AUTO_RESOLVE_CHAIN` documentation/tightening (original ticket §3)**: not actionable until a legitimate auto-resolve composition is observed in production traces. The empirical bound from this Phase 1 probe is 0; revisit only when a future ticket has data to characterize.
+- **Dead-code cleanup of the `turnRetirement` branch in `microturn/advance.ts` and `apply.ts`**: deferred. The dead code is pinned by synthetic unit tests (`atomic-legal-actions.test.ts`, `rollback.test.ts`, `microturn-publication.test.ts`) and ripples through `schemas-core.ts`. Speculative cleanup; should be its own scoped ticket if revisited.
+
+### Verification
+
+No engine code changes, so build/lint/typecheck/test were not re-run for this ticket. The Phase 1 probe was run against the post-`LIFECYCFIX-001` build (`pnpm -F @ludoforge/engine build` at `8ca1df07`).

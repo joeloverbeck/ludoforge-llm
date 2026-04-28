@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Small-Medium
 **Engine Changes**: Yes — test/ additions only; possibly minor instrumentation hooks in `packages/engine/src/sim/simulator.ts` and `packages/engine/src/kernel/turn-flow-lifecycle.ts` to expose counters cheaply.
-**Deps**: archive/tickets/LIFECYCFIX-001-card-discard-zone-honored-by-turn-flow-lifecycle.md, tickets/AUTORESCASC-001-investigate-and-bound-auto-resolve-cascade.md, reports/ci-failures-pr-231-2026-04-28.md, .claude/rules/testing.md
+**Deps**: archive/tickets/LIFECYCFIX-001-card-discard-zone-honored-by-turn-flow-lifecycle.md, archive/tickets/AUTORESCASC-001-investigate-and-bound-auto-resolve-cascade.md, reports/ci-failures-pr-231-2026-04-28.md, .claude/rules/testing.md
 
 ## Problem
 
-Two structural bugs that have lived in production for an extended period — silent card deletion in the cardDriven turn-flow lifecycle (owned by `LIFECYCFIX-001`) and an unbounded auto-resolve cascade that processes the deck without player decisions (owned by `AUTORESCASC-001`) — were not caught by the existing test corpus. This is partly because the existing tests focused on stop-reason / replay determinism and not on the structural invariants those bugs violate.
+A structural bug that lived in production for an extended period — silent card deletion in the cardDriven turn-flow lifecycle (owned by `LIFECYCFIX-001`) — was not caught by the existing test corpus, even though its symptom was severe (FITL `seed=42, maxTurns=5` produced 0 player decisions and a degenerate 1-turn "terminal" stop). A separate hypothesized "auto-resolve cascade" (originally tracked by `AUTORESCASC-001`) was investigated in parallel; Phase 1 of that ticket (`reports/auto-resolve-cascade-investigation-2026-04-28.md`) determined the cascade does not exist as a distinct mechanism in current code — `LIFECYCFIX-001`'s deletion bug fully accounts for the historical symptom — and AUTORESCASC-001 closed as already-satisfied with no engine code changes. Both the bug and the original mis-framing were missed because the existing tests focused on stop-reason and replay determinism, not on the structural invariants they violated.
 
 The test architecture is largely sound: there are good architectural-invariant tests (`@test-class: architectural-invariant`), convergence-witness tests, and golden-trace tests per `.claude/rules/testing.md`. The gap is **which invariants** are encoded. Specifically the corpus did not assert:
 
@@ -17,7 +17,7 @@ The test architecture is largely sound: there are good architectural-invariant t
 3. Game-end timing realism (no `terminal` on turn 1 with a deep deck).
 4. Zone-token-count realism for cardDriven games (the deck does not lose ≥ N cards in a single auto-step).
 
-This ticket adds those invariants as proper architectural-invariant tests (per the taxonomy in `.claude/rules/testing.md`) so future regressions in the same shape fail loudly. It does NOT fix either bug — those are owned by the two precursor tickets.
+This ticket adds those invariants as proper architectural-invariant tests (per the taxonomy in `.claude/rules/testing.md`) so future regressions in the same shape fail loudly. It does NOT fix the underlying lifecycle bug — that is owned by `LIFECYCFIX-001` (already landed). The decision-per-card invariant in particular guards against any future regression that would re-create a "deck advances without surfacing player decisions" symptom, regardless of which mechanism produces it.
 
 ## Assumption Reassessment (2026-04-28)
 
@@ -25,7 +25,7 @@ This ticket adds those invariants as proper architectural-invariant tests (per t
 2. **Token conservation is generic.** Verified by reading the current kernel: token creation/destruction is gated by explicit `createToken`/`destroyToken` effects. Lifecycle steps (initial reveal, card boundary advance, coup hand-off, phase advance) MUST NOT introduce or remove tokens by themselves.
 3. **Trace decision-per-card is generic.** Verified against `data/games/texas-holdem/**` and `data/games/fire-in-the-lake/**`: every published microturn produces a decision log entry; no published microturn is supposed to be skipped silently.
 4. **Existing fixtures are usable.** Verified that `packages/engine/test/helpers/production-spec-helpers.ts` provides `compileProductionSpec()` and `getFitlProductionFixture()`; new tests can reuse those without re-wiring fixtures.
-5. **Some tests will run the full FITL game.** This is necessary to catch the seed-specific deletion patterns. After `LIFECYCFIX-001` and `AUTORESCASC-001`, full-game runs will be longer; we coordinate with `TURNPERF-001` so the runtime fits in CI.
+5. **Some tests will run the full FITL game.** This is necessary to catch the seed-specific deletion patterns. With `LIFECYCFIX-001` landed (and AUTORESCASC-001 closed as already-satisfied), full-game runs are now significantly longer than the pre-fix degenerate runs; we coordinate with `TURNPERF-001` so the runtime fits in CI.
 
 ## Architecture Check
 
@@ -44,7 +44,7 @@ This is the single test that would have caught `LIFECYCFIX-001` directly. It is 
 
 ### 2. Decision-per-card presence test
 
-For each `cardDriven` game (FITL + Texas), `runGame(seed=42, all baselines, maxTurns=200)`. Walk the trace's `decisionLogs`. For each `turnId` covered by the trace, assert at least one player or stochastic decision exists before any `turnRetirement` for that turn. This is the test that would have caught `AUTORESCASC-001`.
+For each `cardDriven` game (FITL + Texas), `runGame(seed=42, all baselines, maxTurns=200)`. Walk the trace's `decisionLogs`. For each `turnId` covered by the trace, assert at least one player or stochastic decision exists before any `turnRetirement` for that turn. This invariant guards against any future regression that would advance the deck (or otherwise retire a turn) without surfacing a player decision — regardless of mechanism. (See `reports/auto-resolve-cascade-investigation-2026-04-28.md` for why the historical AUTORESCASC-001 framing was a misdiagnosis of the LIFECYCFIX-001 deletion bug.)
 
 ### 3. Game-end timing realism for FITL
 
@@ -82,7 +82,7 @@ Add a short "Lifecycle invariants" subsection to `docs/testing-guide.md` that ex
 
 ## Out of Scope
 
-- Fixing the bugs themselves (owned by `LIFECYCFIX-001` and `AUTORESCASC-001`).
+- Fixing the underlying lifecycle deletion bug (owned by `LIFECYCFIX-001`, landed). AUTORESCASC-001 closed as already-satisfied (no engine code change); see its archived Outcome and `reports/auto-resolve-cascade-investigation-2026-04-28.md`.
 - Property-test infrastructure rewrites (we use existing helpers).
 - Cross-game fuzzing for non-existent games — the corpus is FITL + Texas Hold'em.
 
@@ -127,7 +127,7 @@ Add a short "Lifecycle invariants" subsection to `docs/testing-guide.md` that ex
 
 ## Sequencing
 
-This ticket lands AFTER `LIFECYCFIX-001` and `AUTORESCASC-001`. It is the regression net that proves the fixes hold and prevents re-introduction. If either precursor ticket is delayed, the tests in this ticket will fail (which is the point — they are the proof that the fixes are real). Land this ticket as the closing commit of the LIFECYCFIX/AUTORESCASC sequence.
+This ticket lands AFTER `LIFECYCFIX-001` (already merged at `8ca1df07`). It is the regression net that proves the fix holds and prevents re-introduction. AUTORESCASC-001 closed as already-satisfied with no engine code changes; the decision-per-card invariant in this ticket still has independent value as a generic guard against any future regression that retires turns without surfacing player decisions. Land this ticket as the closing commit of the LIFECYCFIX sequence.
 
 ## Risks
 

@@ -4,11 +4,13 @@
 **Priority**: HIGH
 **Effort**: Medium-Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview*`, `packages/engine/src/kernel/eval-query.ts`, `packages/engine/src/kernel/effects-token.ts`, `packages/engine/src/kernel/token-state-index.ts`, `packages/engine/src/kernel/microturn/*`, plus tests/profiling.
-**Deps**: archive/tickets/POLPREVDRIVE-006.md, archive/tickets/POLPREVDRIVE-007.md, archive/tickets/LIFECYCFIX-001-card-discard-zone-honored-by-turn-flow-lifecycle.md, tickets/AUTORESCASC-001-investigate-and-bound-auto-resolve-cascade.md, reports/ci-failures-pr-231-2026-04-28.md
+**Deps**: archive/tickets/POLPREVDRIVE-006.md, archive/tickets/POLPREVDRIVE-007.md, archive/tickets/LIFECYCFIX-001-card-discard-zone-honored-by-turn-flow-lifecycle.md, archive/tickets/AUTORESCASC-001-investigate-and-bound-auto-resolve-cascade.md, reports/ci-failures-pr-231-2026-04-28.md
 
 ## Problem
 
-Even running a **degenerate** FITL game (the auto-resolve cascade documented in `AUTORESCASC-001` produces a single-turn "game" where 67 of 130 cards are deleted before terminal fires), the harness wall-clock is **~35-40 s** for `seed=42, profilesAll, maxTurns=5, verifyIncrementalHash: true`:
+The pre-`LIFECYCFIX-001` baseline measurements below were captured during the degenerate single-turn run where the lifecycle silently deleted played cards before terminal fired. Earlier framing of this ticket also referenced a separate "auto-resolve cascade" tracked by `AUTORESCASC-001`; that ticket's Phase 1 reassessment (`reports/auto-resolve-cascade-investigation-2026-04-28.md`) determined the cascade does not exist as described in current code, and AUTORESCASC-001 was closed as already-satisfied with no engine code changes. The lifecycle deletion was the actual mechanism, fixed by `LIFECYCFIX-001` alone.
+
+Pre-`LIFECYCFIX-001` baseline (single-turn degenerate game), `seed=42, profilesAll, maxTurns=5, verifyIncrementalHash: true`:
 
 | Workload | Local wall-clock | Drive previews | Token-index builds |
 |---|---|---|---|
@@ -18,11 +20,11 @@ Even running a **degenerate** FITL game (the auto-resolve cascade documented in 
 | `seed=123 maxTurns=1 profileId us-baseline` | 5 952 ms | 177 | 2 157 |
 | `seed=123 maxTurns=2 profileId us-baseline` | 29 312 ms | 652 | 12 268 |
 
-This is a single, allegedly-1-turn FITL game (or a single early-pass at most). Spending **~35 s of CPU time** on one card-played's worth of preview drives (with ~600 drives, ~7 000 token-index builds) is far above any reasonable per-card budget for a deterministic kernel-driven game. Once `LIFECYCFIX-001` and `AUTORESCASC-001` land and the engine plays full FITL games (78 cards), this per-card cost will multiply: 78 × 35 s ≈ 45 minutes per game per shard. The 30-min CI budget cannot accommodate this; more importantly, this is too slow for any practical evolution / quality-of-design pipeline that runs millions of seeds.
+That degenerate run spent **~35 s of CPU time** on a single card-played's worth of preview drives (with ~600 drives, ~7 000 token-index builds) — far above any reasonable per-card budget for a deterministic kernel-driven game. Now that `LIFECYCFIX-001` has landed and the engine plays full FITL games (~78 cards), this per-card cost multiplies directly: 78 × 35 s ≈ 45 minutes per game per shard. The 30-min CI budget cannot accommodate this; more importantly, this is too slow for any practical evolution / quality-of-design pipeline that runs millions of seeds.
 
 The POLPREVDRIVE campaign (001 → 007) has materially reduced specific hot stacks (e.g., the active-draft soundness fix in `51a5a6bb` and the recently-merged `b362038a` scoped refresh). But the residual baseline is still dominated by token-index work and preview drive work that is not yet attributed to a single owner. Per `archive/tickets/POLPREVDRIVE-006.md`, the campaign's perf gate was published as a "forward-looking regression tripwire" rather than a baseline target — i.e., the team explicitly accepted that the calibrated 75 s ceiling is not a healthy steady-state.
 
-This ticket targets the steady-state per-turn cost. The goal is to drive the post-`LIFECYCFIX-001`, post-`AUTORESCASC-001` per-card cost to a budget that lets a full FITL game complete inside the 30-min CI shard at all 4 baselines.
+This ticket targets the steady-state per-turn cost. The goal is to drive the post-`LIFECYCFIX-001` per-card cost to a budget that lets a full FITL game complete inside the 30-min CI shard at all 4 baselines.
 
 ## Assumption Reassessment (2026-04-28)
 
@@ -42,7 +44,7 @@ This ticket targets the steady-state per-turn cost. The goal is to drive the pos
 
 ## Investigation Plan (Phase 1 — diagnostic, no code changes)
 
-1. **Re-baseline post-`LIFECYCFIX-001` + post-`AUTORESCASC-001`.** This ticket cannot use the current degenerate-game baseline because it is not a real game. Once those two land, capture:
+1. **Re-baseline post-`LIFECYCFIX-001`.** This ticket cannot use the original pre-`LIFECYCFIX-001` degenerate-game baseline because it is not a real game. `LIFECYCFIX-001` has landed; `AUTORESCASC-001` closed as already-satisfied (no code changes), so the post-fix baseline is the current `8ca1df07` build. Capture:
    - per-card wall-clock (median, p95, p99) on `seed=42` and `seed=123` with all 4 baselines, full game (no maxTurns cap).
    - `driveExitTotal`, `tokenStateIndexBuildCount`, `draftTokenStateIndexAttachCount`, `draftTokenStateIndexDeltaCount` per card.
    - CPU-profile attribution: `node --cpu-prof --cpu-prof-dir=/tmp/turnperf-baseline packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 50 --profilesAll`.
@@ -104,8 +106,8 @@ Implement the smallest combination of A-F that achieves the budget. Each change 
 
 ## Out of Scope
 
-- Card-deletion in lifecycle (owned by `LIFECYCFIX-001`).
-- Auto-resolve cascade fix (owned by `AUTORESCASC-001`).
+- Card-deletion in lifecycle (owned by `LIFECYCFIX-001`, landed).
+- Auto-resolve cascade investigation (owned by `AUTORESCASC-001`, closed as already-satisfied — no code changes).
 - Re-architecting MAP-Elites or evolution pipeline for parallel runs.
 - Re-blessing golden traces unrelated to perf changes (each re-bless that DOES become necessary must be itemized in the commit body per `.claude/rules/testing.md`).
 
@@ -115,7 +117,7 @@ Implement the smallest combination of A-F that achieves the budget. Each change 
 
 1. **Per-card budget gate**: New `fitl-per-card-cost.perf.test.ts` measures median wall-clock per played card across at least 5 cards (warmup + 4 measured) under all 4 baselines + `verifyIncrementalHash`. Median must satisfy a documented budget (target: ≤ 250 ms; final budget set by Phase 1's data, justified in the test docblock).
 2. **`fitl-parity-drive.perf.test.ts` recalibrated**: Its ceiling is reduced to a number that reflects the post-fix steady-state, NOT the pre-fix degenerate ~37 s baseline. Recalibration follows the test's existing protocol (3-run median × 2× safety margin, calibration block updated).
-3. **Determinism shard fits in budget**: With `LIFECYCFIX-001` + `AUTORESCASC-001` already merged, both `zobrist-incremental-parity-fitl-seed-{42,123}` shards complete inside the 30-min `Engine Determinism Parity` job budget.
+3. **Determinism shard fits in budget**: With `LIFECYCFIX-001` already merged (and `AUTORESCASC-001` closed as already-satisfied), both `zobrist-incremental-parity-fitl-seed-{42,123}` shards complete inside the 30-min `Engine Determinism Parity` job budget.
 4. **Replay identity preserved**: Every full-game seed in the existing parity corpus produces the same final-state hash before and after this ticket's changes (subject to legitimate re-blessing for distinct, non-perf-related reasons).
 5. **Texas perf neutral**: Existing Texas Hold'em performance gates remain green; no Texas regression > 10 %.
 6. **Existing suites**: `pnpm turbo test`, `pnpm -F @ludoforge/engine test:integration`, `pnpm -F @ludoforge/engine test:e2e:all`, full determinism shards.
@@ -158,5 +160,5 @@ The user must approve Phase 1's report and proposed fix surface before Phase 2 b
 
 - **Determinism fragility**: any change touching the kernel hot path can shift state hashes. Re-blessing must be itemized.
 - **`verifyIncrementalHash` scope**: lowering its scope inside drives is correct but subtle; the parity test must still verify hash identity at every committed canonical state.
-- **CI cost**: even with this ticket's improvements, the determinism shards may need continued attention. Coordinate with `LIFECYCFIX-001` and `AUTORESCASC-001` merges.
+- **CI cost**: even with this ticket's improvements, the determinism shards may need continued attention. `LIFECYCFIX-001` has landed; `AUTORESCASC-001` closed as already-satisfied. Coordinate any remaining workflow-budget changes around this ticket alone.
 - **Polishing vs structural fixes**: easy wins (e.g., redundant memoization) may mask deeper issues (e.g., preview-drive design assumes too-deep exploration). Phase 1 must distinguish these.

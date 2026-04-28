@@ -6,6 +6,7 @@ import { describe, it } from 'node:test';
 import {
   createDraftTokenStateIndex,
   getTokenStateIndex,
+  refreshCachedTokenStateIndexEntries,
   type TokenStateIndexEntry,
   __internal_for_tests,
 } from '../../src/kernel/token-state-index.js';
@@ -112,6 +113,117 @@ describe('POLPREVDRIVE-002 draft token-state index', () => {
   });
 });
 
+describe('refreshCachedTokenStateIndexEntries scoped scan (Option A)', () => {
+  it('matches a fresh rebuild when a token is removed from a non-mutated zone counterpart', () => {
+    const before = makeTokenState({
+      'zone-a': [{ id: 'shared', type: 'card', props: {} }],
+      'zone-b': [{ id: 'shared', type: 'card', props: {} }],
+      'zone-c': [{ id: 'other', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    primeCache(before);
+
+    // Mutate zone-b to remove `shared`. zone-a is untouched, but the cached
+    // entry's occurrenceZoneIds must let us know to keep scanning it.
+    (before.zones as Record<string, Token[]>)['zone-b'] = [];
+    const ok = refreshCachedTokenStateIndexEntries(
+      before,
+      new Set(['shared']),
+      new Set(['zone-b']),
+    );
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('shared remains in non-mutated zone-a', before, getTokenStateIndex(before));
+  });
+
+  it('matches a fresh rebuild when a multi-occurrence token gains a new zone', () => {
+    const state = makeTokenState({
+      'zone-a': [{ id: 'shared', type: 'card', props: {} }],
+      'zone-b': [{ id: 'other', type: 'card', props: {} }],
+      'zone-c': [{ id: 'shared', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    primeCache(state);
+
+    // Add `shared` into zone-b — a zone the token was NOT previously in.
+    (state.zones as Record<string, readonly Token[]>)['zone-b'] = [
+      { id: asTokenId('other'), type: 'card', props: {} },
+      { id: asTokenId('shared'), type: 'card', props: {} },
+    ];
+    const ok = refreshCachedTokenStateIndexEntries(
+      state,
+      new Set(['shared']),
+      new Set(['zone-b']),
+    );
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('shared now in zone-a, zone-b, zone-c', state, getTokenStateIndex(state));
+  });
+
+  it('matches a fresh rebuild when the primary zone changes due to mutation', () => {
+    // Prior: shared in zone-b (primary, since we omit zone-a from initial state).
+    const state = makeTokenState({
+      'zone-a': [{ id: 'unrelated', type: 'card', props: {} }],
+      'zone-b': [{ id: 'shared', type: 'card', props: {} }],
+      'zone-c': [{ id: 'shared', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    primeCache(state);
+
+    // Remove from zone-b (its prior primary). zone-c becomes the sole occurrence.
+    (state.zones as Record<string, Token[]>)['zone-b'] = [];
+    const ok = refreshCachedTokenStateIndexEntries(
+      state,
+      new Set(['shared']),
+      new Set(['zone-b']),
+    );
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('primary collapses from zone-b → zone-c', state, getTokenStateIndex(state));
+  });
+
+  it('matches a fresh rebuild when the same zone holds multiple occurrences and one is removed', () => {
+    const state = makeTokenState({
+      'zone-a': [
+        { id: 'shared', type: 'card', props: {} },
+        { id: 'shared', type: 'card', props: {} },
+      ],
+      'zone-b': [{ id: 'other', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    primeCache(state);
+
+    (state.zones as Record<string, readonly Token[]>)['zone-a'] = [
+      { id: asTokenId('shared'), type: 'card', props: {} },
+    ];
+    const ok = refreshCachedTokenStateIndexEntries(
+      state,
+      new Set(['shared']),
+      new Set(['zone-a']),
+    );
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('multi-occurrence in same zone collapses to one', state, getTokenStateIndex(state));
+  });
+
+  it('matches a fresh rebuild when a token is fully removed from every zone', () => {
+    const state = makeTokenState({
+      'zone-a': [{ id: 'doomed', type: 'card', props: {} }],
+      'zone-b': [{ id: 'doomed', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    primeCache(state);
+
+    (state.zones as Record<string, Token[]>)['zone-a'] = [];
+    (state.zones as Record<string, Token[]>)['zone-b'] = [];
+    const ok = refreshCachedTokenStateIndexEntries(
+      state,
+      new Set(['doomed']),
+      new Set(['zone-a', 'zone-b']),
+    );
+    assert.equal(ok, true);
+    assertIndexMatchesFreshRebuild('doomed token deleted', state, getTokenStateIndex(state));
+    assert.equal(getTokenStateIndex(state).get('doomed'), undefined);
+  });
+
+  it('returns false when no cache entry exists yet', () => {
+    const state = makeTokenState({ 'zone-a': [] } as unknown as GameState['zones']);
+    const ok = refreshCachedTokenStateIndexEntries(state, new Set(['x']), new Set(['zone-a']));
+    assert.equal(ok, false);
+  });
+});
+
 describe('POLPREVDRIVE-007 residual token-state index cache', () => {
   it('preserves a cached index across prop-only token mutations', () => {
     const ctx = makeEffectScopedIndexContext();
@@ -144,6 +256,12 @@ function assertIndexMatchesFreshRebuild(
 ): void {
   const expected = __internal_for_tests.buildTokenStateIndex(state);
   assert.deepEqual(toSortedEntries(actual), toSortedEntries(expected), label);
+}
+
+function primeCache(state: GameState): void {
+  // Force the WeakMap entry to exist so refreshCachedTokenStateIndexEntries
+  // has a baseline to update.
+  getTokenStateIndex(state);
 }
 
 function toSortedEntries(index: ReadonlyMap<string, TokenStateIndexEntry>): readonly (readonly [string, TokenStateIndexEntry])[] {

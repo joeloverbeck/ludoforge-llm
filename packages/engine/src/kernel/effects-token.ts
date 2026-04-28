@@ -48,9 +48,11 @@ const writeZoneMutations = (
   if (cursor.tracker) {
     const ms = cursor.state as MutableGameState;
     const affectedTokenIds = new Set<string>();
+    const mutatedZoneIds = new Set<string>();
     for (const zoneId in mutations) {
       addTokenIds(affectedTokenIds, cursor.state.zones[zoneId]);
       addTokenIds(affectedTokenIds, mutations[zoneId]);
+      mutatedZoneIds.add(zoneId);
     }
     for (const zoneId in mutations) {
       ensureZoneCloned(ms, cursor.tracker, zoneId);
@@ -59,7 +61,7 @@ const writeZoneMutations = (
     if (
       affectedTokenIds.size === 0 ||
       affectedTokenIds.size > TOKEN_INDEX_INCREMENTAL_REFRESH_LIMIT ||
-      !refreshCachedTokenStateIndexEntries(cursor.state, affectedTokenIds)
+      !refreshCachedTokenStateIndexEntries(cursor.state, affectedTokenIds, mutatedZoneIds)
     ) {
       invalidateTokenStateIndex(cursor.state);
     }
@@ -763,7 +765,7 @@ export const applySetTokenProp = (
     const ms = cursor.state as MutableGameState;
     ensureZoneCloned(ms, cursor.tracker, occurrence.zoneId);
     (ms.zones as Record<string, Token[]>)[occurrence.zoneId] = zoneAfter;
-    if (!refreshCachedTokenStateIndexEntries(cursor.state, new Set([tokenId]))) {
+    if (!refreshCachedTokenStateIndexEntries(cursor.state, new Set([tokenId]), new Set([occurrence.zoneId]))) {
       invalidateTokenStateIndex(cursor.state);
     }
     return { state: cursor.state, rng: cursor.rng };

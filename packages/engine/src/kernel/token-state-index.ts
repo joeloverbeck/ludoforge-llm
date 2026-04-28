@@ -227,15 +227,55 @@ export function copyCachedTokenStateIndex(fromState: GameState, toState: GameSta
   }
 }
 
-export function refreshCachedTokenStateIndexEntries(state: GameState, tokenIds: ReadonlySet<string>): boolean {
+export function refreshCachedTokenStateIndexEntries(
+  state: GameState,
+  affectedTokenIds: ReadonlySet<string>,
+  mutatedZoneIds: ReadonlySet<string>,
+): boolean {
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached === undefined) {
     return false;
   }
   const updated = cached instanceof Map ? cached : new Map(cached);
-  for (const tokenId of tokenIds) {
+
+  // Zone rank reproduces buildTokenStateIndex's iteration-order primacy
+  // (the first zone encountered in `Object.keys(state.zones)` becomes the
+  // primary occurrence). Computed lazily — only allocated when we have a
+  // multi-occurrence token whose occurrences need a deterministic order.
+  let zoneRank: Map<string, number> | null = null;
+  const ensureZoneRank = (): Map<string, number> => {
+    if (zoneRank !== null) {
+      return zoneRank;
+    }
+    const ranks = new Map<string, number>();
+    let rank = 0;
+    for (const zoneId in state.zones) {
+      ranks.set(zoneId, rank);
+      rank += 1;
+    }
+    zoneRank = ranks;
+    return ranks;
+  };
+
+  for (const tokenId of affectedTokenIds) {
+    const prior = updated.get(tokenId);
+    const zonesToScan = new Set<string>(mutatedZoneIds);
+    if (prior !== undefined) {
+      if (prior.occurrenceCount <= 1) {
+        zonesToScan.add(prior.zoneId);
+      } else {
+        for (const zoneId of prior.occurrenceZoneIds) {
+          zonesToScan.add(zoneId);
+        }
+      }
+    }
+
     const occurrences: TokenOccurrence[] = [];
-    for (const [zoneId, tokens] of Object.entries(state.zones)) {
+    for (const zoneId of zonesToScan) {
+      const tokens = state.zones[zoneId];
+      if (tokens === undefined) {
+        continue;
+      }
       for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
         const token = tokens[tokenIndex];
         if (token !== undefined && String(token.id) === tokenId) {
@@ -243,6 +283,16 @@ export function refreshCachedTokenStateIndexEntries(state: GameState, tokenIds: 
         }
       }
     }
+
+    if (occurrences.length > 1) {
+      const ranks = ensureZoneRank();
+      occurrences.sort((left, right) => {
+        const leftRank = ranks.get(left.zoneId) ?? Number.MAX_SAFE_INTEGER;
+        const rightRank = ranks.get(right.zoneId) ?? Number.MAX_SAFE_INTEGER;
+        return leftRank - rightRank || left.index - right.index;
+      });
+    }
+
     const entry = toIndexEntry(occurrences);
     if (entry === undefined) {
       updated.delete(tokenId);

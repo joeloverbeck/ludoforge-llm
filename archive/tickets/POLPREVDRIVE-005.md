@@ -1,9 +1,9 @@
 # POLPREVDRIVE-005: Cross-candidate drive memoisation by structural fingerprint
 
-**Status**: PENDING
+**Status**: ✅ COMPLETED — closed without implementation per §1 gate (fingerprint identity property fails on the FITL corpus)
 **Priority**: MEDIUM
 **Effort**: Large
-**Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-preview.ts`
+**Engine Changes**: No source modified — only adds a test-only `setDriveResultSink` hook on `__internal_for_tests` and the permanent gate test
 **Deps**: archive/tickets/POLPREVDRIVE-001.md, reports/polprevdrive-001-investigation.md
 
 ## Problem
@@ -125,3 +125,142 @@ Before merging:
 4. `pnpm turbo lint typecheck`
 5. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --maxTurns 10 --seed 42 --label after`
 6. CI: seed-split `zobrist-incremental-parity-fitl-*` lanes (`fitl-parity-zobrist-seed-42` and `fitl-parity-zobrist-seed-123` shards).
+
+## Outcome
+
+**Completed:** 2026-04-28
+
+**Disposition:** Closed without an engine-source code change per §1 gate
+("If this test cannot be made to pass, the ticket is closed without a
+code change, and the gate test stays as a permanent record of why the
+dedupe is not currently sound").
+
+### What changed
+
+- Added `packages/engine/test/integration/agents/drive-fingerprint-property.test.ts` (new) — the
+  permanent gate evidence. It runs the FITL §1 corpus (seed 42, maxTurns 10, four baseline
+  profiles concurrent, `verifyIncrementalHash: true`), captures every
+  `driveSyntheticCompletion` result, partitions captures by the proposed fingerprint shape
+  `(actionId, paramsJSON, sourceStateHash)`, and asserts that **at least one partition
+  contains divergent DriveResults** — empirically proving the dedupe fingerprint is not a
+  sound identity oracle. Documentation block at the top of the test file carries the full
+  finding for future readers.
+- Added `policy-preview.ts:__internal_for_tests.setDriveResultSink(sink)` (new) — a
+  test-only hook that emits `(seatId, playerId, actionId, stableMoveKey, paramsJSON,
+  sourceStateHash, resultKind, resultDepth?, resultStateHash?, resultReason?,
+  resultFailureReason?)` per `driveSyntheticCompletion` exit. Sink is `undefined` outside
+  tests; production paths are inert. Mirrors the existing `setDriveExitSink` shape.
+- Exported `DriveResultCapture` type from `policy-preview.ts` for the gate test.
+- No `policy-eval.ts` change. No new cache. No new behaviour. The existing per-
+  `PolicyPreviewRuntime` cache at `policy-preview.ts:cache = new Map<string,
+  PreviewOutcome>()` (keyed by `stableMoveKey`) remains the only drive memoisation layer
+  inside an `evaluatePolicyMoveCore` pass.
+
+**Files changed:**
+- `packages/engine/src/agents/policy-preview.ts` (modified — added `DriveResultCapture`
+  type, capture emission inside `driveSyntheticCompletion.emitExit`,
+  `setDriveResultSink` on `__internal_for_tests`, and a small `stableStringify` helper for
+  canonical params hashing)
+- `packages/engine/test/integration/agents/drive-fingerprint-property.test.ts` (new, permanent)
+- `tickets/POLPREVDRIVE-005.md` (this Outcome)
+
+### Empirical evidence (FITL §1 corpus)
+
+| Metric                         | Value          |
+|--------------------------------|----------------|
+| Total drives captured          | 617            |
+| Distinct fingerprints          | 564            |
+| Partitions with >1 drive       | 48             |
+| **Partitions with divergent results** | **19 of 48** |
+| Would-be cross-candidate hit rate | 8.59 %      |
+
+Sample violations (every observed pair shared `(actionId, params={}, sourceStateHash)`
+but produced distinct post-state hashes):
+
+```
+fingerprint=rally|{}|5578f9412c34b9ef
+  drive A: kind=completed depth=3 stateHash=6d649c9bfd8478d1
+  drive B: kind=completed depth=3 stateHash=2d2d88bc48f3261f
+
+fingerprint=march|{}|397f4209d6160471
+  drive A: kind=completed depth=4 stateHash=3963d209d61150c4
+  drive B: kind=completed depth=4 stateHash=3963d109d61152b7
+
+fingerprint=march|{}|950b274af1d1c2af
+  drive A: kind=completed depth=5 stateHash=950ada4af1d1a3aa
+  drive B: kind=completed depth=5 stateHash=950ad94af1d1a1d9
+```
+
+### Why the fingerprint is unsound
+
+The proposed fingerprint hashes `params` but not the rest of `Move`. The kernel's
+`stableMoveKey` (`kernel/move-identity.ts:toMoveIdentityKey`) includes `actionId`,
+`JSON.stringify(params)`, `freeOperation`, AND the resolved `actionClass` overlay. The
+FITL turn-flow option matrix (`kernel/legal-moves.ts:tryPushOptionMatrixFilteredMove`)
+enumerates a single nominal `(actionId, params)` pair multiple times when the second-
+eligible-action constraint produces multiple constrained `actionClass` overlays. Those
+distinct enumerations have distinct `stableMoveKey`s and produce distinct drive results
+because `actionClass` and `freeOperation` affect post-state turn-flow tracking and the
+running zobrist hash.
+
+In every observed identity violation the captures shared `(actionId, params)` but were
+distinct `stableMoveKey`s under the option-matrix overlay rule. There is no
+fingerprint shape narrower than `stableMoveKey` that is sound on the FITL corpus.
+
+### Why fingerprint enrichment does not unlock the dedupe
+
+Adding `actionClass` and `freeOperation` to the fingerprint makes it equivalent to
+`stableMoveKey` within a single `evaluatePolicyMoveCore` pass (because `sourceStateHash`
+is invariant inside one pass). The existing per-`PolicyPreviewRuntime` cache at
+`policy-preview.ts:cache = new Map<string, PreviewOutcome>()` already memoises drive
+outcomes by `stableMoveKey` for the lifetime of the runtime, which is exactly one
+`evaluatePolicyMoveCore` pass. A "cross-candidate" cache keyed by anything ≥
+`stableMoveKey`-strong cannot collapse anything beyond what the existing cache already
+collapses. The class of redundancy POLPREVDRIVE-001 §Recommended Follow-Ups #4
+hypothesised — "Several FITL event card actions resolve to the same post-effect state
+when the agent picks identical follow-on decisions — a dedupe by `(cardId, side,
+sideEffectFingerprint)` could collapse 2–3 candidates per outer move into one drive" —
+is not present in the empirical FITL corpus at the natural fingerprint shape.
+
+### Why the perf gate would also have failed
+
+POLPREVDRIVE-005 §Acceptance Criteria 5 requires hit rate ≥ 25 %. The empirical
+would-be hit rate at the natural fingerprint shape is 8.59 %, which is already below
+that floor — even ignoring the soundness violations. Per the ticket's own threshold
+clause ("Below 25% hit rate, the implementation overhead may not justify the change"),
+implementation would be reverted on the perf measurement alone.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build` — passes.
+- New permanent test green: `dist/test/integration/agents/drive-fingerprint-property.test.js`
+  asserts ≥ 1 fingerprint-partition violation exists; passes with
+  violatingGroups=19 / collapsibleGroups=48 on the canonical FITL corpus.
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` — green (verified in this
+  ticket's verification run).
+- `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-a` — green (verified).
+- `pnpm turbo lint typecheck` — green.
+- Seed-split `zobrist-incremental-parity-fitl-*` and `spec-140-replay-identity.test.js`
+  are unaffected by this ticket — no engine source behaviour changed; only an inert
+  test-only sink hook was added (the sink is `undefined` outside the gate test).
+
+### Residual risk
+
+None. The ticket made no changes to drive behaviour, the policy-evaluation pipeline, or
+the existing per-runtime drive cache. The new sink hook on `__internal_for_tests` is
+opt-in and inert when no test sets it. The gate test is a permanent regression tripwire
+— if a future kernel change accidentally makes the natural fingerprint sound (for
+example by removing the actionClass/freeOperation overlay enumeration), the assertion
+will fail and POLPREVDRIVE-005 should be reassessed before any cache implementation is
+attempted.
+
+### Recommendation for POLPREVDRIVE-001 Recommended Follow-Up #4
+
+The cross-candidate drive dedupe class proposed in
+`reports/polprevdrive-001-investigation.md` is not actionable at the natural fingerprint
+shape on the FITL corpus. Future investigation could explore alternative collapse
+strategies — for example, hoisting the drive's post-effect *state hash* (after the
+trusted move applies but before the inner microturn loop) into a shared cache key, so
+two candidates whose first-step post-effect states converge could share inner-microturn
+work — but that strategy moves work from the drive into the fingerprint computation
+itself, partly defeating the purpose, and was not in scope here.

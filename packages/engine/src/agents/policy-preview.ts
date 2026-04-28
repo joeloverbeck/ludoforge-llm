@@ -9,6 +9,7 @@ import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
 import { createResolveRefCache, type ResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
+import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
 import { createTrustedExecutableMove } from '../kernel/trusted-move.js';
 import { selectChoiceOptionsByLegalityPrecedence, selectUniqueChoiceOptionValuesByLegalityPrecedence } from '../kernel/choice-option-policy.js';
@@ -51,7 +52,22 @@ interface DriveExitInfo {
   readonly actionId: string;
 }
 
+interface DriveResultCapture {
+  readonly seatId: string;
+  readonly playerId: number;
+  readonly actionId: string;
+  readonly stableMoveKey: string;
+  readonly paramsJSON: string;
+  readonly sourceStateHash: bigint;
+  readonly resultKind: 'completed' | 'stochastic' | 'depthCap' | 'failed';
+  readonly resultDepth?: number;
+  readonly resultStateHash?: bigint;
+  readonly resultReason?: PolicyPreviewUnavailabilityReason;
+  readonly resultFailureReason?: string;
+}
+
 let driveExitSink: ((info: DriveExitInfo) => void) | undefined;
+let driveResultSink: ((capture: DriveResultCapture) => void) | undefined;
 
 export interface PolicyPreviewCandidate {
   readonly move: Move;
@@ -712,6 +728,28 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           actionId: String(trustedMove.move.actionId),
         });
       }
+      if (driveResultSink !== undefined) {
+        const move = trustedMove.move;
+        driveResultSink({
+          seatId: input.seatId,
+          playerId: Number(input.playerId),
+          actionId: String(move.actionId),
+          stableMoveKey: toMoveIdentityKey(input.def, move),
+          paramsJSON: stableStringify(move.params),
+          sourceStateHash: trustedMove.sourceStateHash,
+          resultKind: result.kind,
+          ...(result.kind === 'failed'
+            ? {
+                ...(result.depth === undefined ? {} : { resultDepth: result.depth }),
+                resultReason: result.reason,
+                ...(result.failureReason === undefined ? {} : { resultFailureReason: result.failureReason }),
+              }
+            : {
+                resultDepth: result.depth,
+                resultStateHash: result.state.stateHash,
+              }),
+        });
+      }
       return result;
     };
 
@@ -1008,8 +1046,26 @@ function truncatePreviewFailureReason(error: unknown): string {
   return message.length <= 160 ? message : `${message.slice(0, 157)}...`;
 }
 
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`);
+  return `{${entries.join(',')}}`;
+}
+
 export const __internal_for_tests = {
   setDriveExitSink: (sink: ((info: DriveExitInfo) => void) | undefined): void => {
     driveExitSink = sink;
   },
+  setDriveResultSink: (sink: ((capture: DriveResultCapture) => void) | undefined): void => {
+    driveResultSink = sink;
+  },
 };
+
+export type { DriveResultCapture };

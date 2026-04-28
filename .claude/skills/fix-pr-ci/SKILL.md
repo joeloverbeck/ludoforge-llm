@@ -50,6 +50,9 @@ Follow these steps in order. Do not skip any step.
    - For each failed run/job: `gh run view <run-id> --log-failed > /tmp/ci-fix-<run-id>.log`.
    - For determinism / policy-profile-quality lanes that upload artifacts: `gh run download <run-id> -n <artifact-name> -D /tmp/ci-fix-artifacts/` to inspect shard-specific output (e.g., `policy-profile-quality-shard-<id>` artifacts).
 
+6. **Verify clean working tree** (per CLAUDE.md Concurrent Session Awareness).
+   - Run `git status --porcelain`. If non-empty, surface the unrelated edits to the user before proceeding. Assume another session or user may be active; do not overwrite or "clean up" those changes. The skill must isolate its diff from any pre-existing in-progress state.
+
 Record what was found: list of (check-name, run-id, job-name, conclusion, duration, log-path) tuples for use in subsequent steps.
 
 ### Step 2: Build Lane→Command Lookup
@@ -116,12 +119,16 @@ Classify each failure and cluster lanes by suspected root cause. One root cause 
 
 **Brand-new lane detection**: For each failing lane, run `gh run list --workflow=<workflow-file> --branch main --limit 5 --json databaseId,conclusion,createdAt` *before* attempting pre-existing-failure detection. If zero results: the lane is brand new on this PR — its timeout/budget was never validated against main. Treat the cluster as `structural` (lane budget needs adjustment, e.g., shard or raise `timeout-minutes`) by default; surface as such at gate 1. Pre-existing-failure detection and bisect are meaningless for brand-new lanes — skip both. Confirm by inspecting the workflow's git history (`git log --oneline -- .github/workflows/<name>`) for a recent restructure that introduced the lane.
 
-**Pre-existing-failure detection**: After identifying clusters, check whether each failure reproduces on the PR's merge-base (or the last-green main commit). Use a fresh `git worktree add /tmp/<worktree-name> <merge-base-sha>` (or `<last-green-main-sha>`), build the engine, and run the failing test's local repro there.
-- If it FAILS on merge-base / last-green main → cluster is `pre-existing`. Default scope: out-of-scope for this PR; flag in the gate 1 table as "pre-existing on main, not caused by this PR" so the user can decide whether to fix it in this PR or defer to a separate PR.
-- If it PASSES on merge-base / last-green main → cluster is a real PR regression; proceed with the standard diagnosis path.
-- The user may opt in (at gate 1) to fixing pre-existing clusters in this PR. When they do: bisect to find the original breaking commit between last-green and current, then propose a surgical fix at that origin point.
+**Pre-existing-failure detection**: After identifying clusters, check whether each failure reproduces on the **last-green main commit** — the most recent main SHA whose CI run for the relevant workflow concluded green (`gh run list --branch main --workflow=<name> --limit 5 --json conclusion,headSha`). Last-green-main is the right reference for both pre-existing-failure detection and as the bisect lower bound; merge-base (where the PR diverged) is only relevant when the PR has diverged significantly and you need to understand the inheritance window. Use a fresh `git worktree add /tmp/<worktree-name> <last-green-main-sha>`, build the engine, and run the failing test's local repro there.
+- If it FAILS on last-green main → cluster is `pre-existing`. Default scope: out-of-scope for this PR; flag in the gate 1 table as "pre-existing on main, not caused by this PR" so the user can decide whether to fix it in this PR or defer to a separate PR.
+- If it PASSES on last-green main → cluster is a real PR regression; proceed with the standard diagnosis path.
+- The user may opt in (at gate 1) to fixing pre-existing clusters in this PR. When they do: bisect to find the original breaking commit between last-green-main and current main HEAD, then propose a surgical fix at that origin point.
 
 **Bisect when regression source is unclear**: When a `test-lane` failure doesn't point to an obvious recent commit (or after pre-existing-failure detection identifies a regression that originated on main), use `git bisect` rather than manually checking out commits one by one. Identify the last-green SHA via `gh run list --branch main --workflow=<name> --limit 5`, then `git bisect start && git bisect bad HEAD && git bisect good <last-green-sha>`. Mark each bisect step by running the failing test's local repro. This compresses an N-commit linear search to ~log₂(N) bisect steps.
+
+**Bisect optimizations**:
+- **Automate when possible**: when the failing test's local repro is a single repeatable command, prefer `git bisect run <script>` (where the script exits 0 = good, 1 = bad, 125 = skip) over manual marking — the loop runs unattended.
+- **Skip-as-good for non-source commits**: a commit whose `git diff-tree --no-commit-id --name-only -r <sha>` shows only `docs/`, `tickets/`, `archive/`, `.github/`, `.claude/`, `.codex/`, or other non-source paths cannot introduce engine regressions — mark it good without rebuilding/running. Inspect with `git diff-tree` first; only build/test commits that touch `packages/`.
 
 For each cluster, identify:
 - Cluster name (1–3 words).
@@ -137,6 +144,8 @@ Read `docs/FOUNDATIONS.md` if not already read in this session. Validate every p
 
 **If any proposed fix would violate FOUNDATIONS**: HARD HALT. Do not present the fix as approvable. Apply the 1-3-1 rule: state the conflict (1 problem), give 3 alternative options (e.g., redesign, defer with ticket, escalate the Foundation principle), and 1 recommendation. Do not proceed until the user resolves the conflict.
 
+**Hypothesis-validation prototype (allowed)**: Diagnosis confidence often requires testing the proposed fix to prove it eliminates the failure. Editing the implicated files at this step solely to validate the diagnosis hypothesis is permitted — present the gate 1 diagnosis with a "Verification done locally" line listing what was tested and observed. The user-approval requirement still applies before the fix's final shape/scope is committed; if the user rejects or revises the cluster, revert the prototype edits before proceeding. Do not commit, do not push, and do not run the full Step 6 verification suite during prototyping — that comes after gate 1 approval.
+
 Otherwise, present the diagnosis as a structured table:
 
 ```
@@ -148,7 +157,7 @@ Otherwise, present the diagnosis as a structured table:
 |---------|-------|-------|--------|------------|--------------|-------------|----------|
 | <name>  | <lanes> | <class> | <status> | <one-line> | <one-paragraph> | <F1, F2, ...> | HIGH/MED/LOW |
 
-Status values: `PR regression` (lane was green on main, broken by this PR) | `pre-existing on main` (lane was already failing on merge-base) | `structural` (lane is brand new or budget never validated; needs shard/timeout adjustment) | `flake-suspect` (verified by 3x local re-run).
+Status values: `PR regression` (lane was green on main, broken by this PR) | `pre-existing on main` (lane was already failing on last-green main) | `structural` (lane is brand new or budget never validated; needs shard/timeout adjustment) | `flake-suspect` (verified by 3x local re-run).
 
 ### Lane-by-lane detail
 
@@ -181,6 +190,7 @@ Status values: `PR regression` (lane was green on main, broken by this PR) | `pr
 - Opt in to fixing pre-existing failures (clusters tagged `pre-existing` in the diagnosis table).
 - Decide flakes / network timeouts are not worth fixing this round.
 - Override priorities.
+- Choose fix scope when a cluster admits multiple shapes (e.g., minimal correctness fix vs. minimal fix + dead-code cleanup vs. broader refactor). Surface these alternatives explicitly in the gate 1 message when removing the broken path leaves unreachable code, when the fix surface naturally extends to adjacent dead exports, or when a more invasive redesign exists.
 
 Do not proceed to Step 5 until the user has explicitly approved.
 
@@ -266,8 +276,8 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **lint**: Read the ESLint output directly; usually self-explanatory. Check whether the offending rule is project-wide or scoped (`packages/*/eslint.config.js` if present). Common: unused imports, `no-explicit-any`, missing return types, formatting drift.
 - **typecheck**: Read the `tsc` errors. CLAUDE.md "Schema synchronization" — keep schemas (`packages/engine/schemas/`), types (`packages/engine/src/kernel/`), and tests synchronized. A type error in one place often signals drift in the other two.
 - **build**: Usually downstream of typecheck. Also: missing import paths, `.js` vs `.ts` extension drift in ESM imports, missing files in compiled output.
-- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests). When the failing test points to a regression but the breaking commit isn't obvious, switch to `git bisect` (see Step 3 "Bisect when regression source is unclear").
-- **determinism-shard**: HIGH STAKES. FOUNDATIONS F8 (Determinism Is Sacred). Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, or a state-hash key drift. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`. When a single shard's test file contains multiple `describe` blocks (e.g., one per game's profile family), use `node --test --test-name-pattern=<...>` to isolate the slow / failing block before suspecting the kernel — a slowdown or break concentrated in one game's profile is a strong hint about the regression's locus (e.g., a policy-preview perf regression that surfaces only on FITL profiles' preview-using considerations, not on Texas default agents).
+- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests). When the failing test points to a regression but the breaking commit isn't obvious, switch to `git bisect` (see Step 3 "Bisect when regression source is unclear"). When the failure trace points to stale state queries during effect dispatch, suspect a violation of FOUNDATIONS F11's scoped-internal-mutation contract — a private working state observed before finalization, or aliasing that leaked outside the effect scope. When a test-lane assertion compares only a status / kind field (`'failed' !== 'ready'`, `null !== <value>`, etc.), write a quick `.mjs` diagnostic that re-creates the call and prints all result fields — opaque outcome assertions usually have a richer adjacent error / reason / context field that names the actual defect.
+- **determinism-shard**: HIGH STAKES. FOUNDATIONS F8 (Determinism Is Sacred), often interacting with F11 (Immutability — scoped internal mutation must remain isolated from caller-visible state). Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, a state-hash key drift, or a private working state leaking across scopes. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`. When a single shard's test file contains multiple `describe` blocks (e.g., one per game's profile family), use `node --test --test-name-pattern=<...>` to isolate the slow / failing block before suspecting the kernel — a slowdown or break concentrated in one game's profile is a strong hint about the regression's locus (e.g., a policy-preview perf regression that surfaces only on FITL profiles' preview-using considerations, not on Texas default agents).
 - **memory**: Lane budget exceeded. Look for retained references in caches, accumulators, or RNG/state structures that should be transient. Compare allocation patterns in recent commits.
 - **performance**: Lane budget exceeded. Check for accidental quadratic loops, unbounded `forEach`, or new code in hot paths. The performance budget is enforced by the lane itself — read its source to know the budget.
 - **timeout (a) hang**: Add probe logs locally; isolate which `it()` or operation never returns. Often an unawaited promise or an infinite enumeration.

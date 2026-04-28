@@ -117,7 +117,7 @@ describe('game-loop API shape', () => {
       {
         kind: 'turnFlowLifecycle',
         step: 'revealLookahead',
-        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none', discard: 'played:none' },
         before: { playedCardId: 'card-1', lookaheadCardId: null, leaderCardId: null },
         after: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
       },

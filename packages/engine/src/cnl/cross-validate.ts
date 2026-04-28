@@ -539,6 +539,66 @@ export function crossValidateSpec(
     );
   }
 
+  if (cardDrivenTurnFlow !== null && sections.eventDecks !== null && sections.eventDecks.length > 0) {
+    const lifecycle = cardDrivenTurnFlow.cardLifecycle;
+    // Per-eventDeck slot-aliasing check: discardZone must not collide with the
+    // lookahead or leader slots, since those are kernel-owned by the lifecycle.
+    // discardZone === lifecycle.played is the accumulating case and is
+    // explicitly allowed.
+    for (const [index, deck] of sections.eventDecks.entries()) {
+      const discardZone = String(deck.discardZone);
+      if (discardZone === lifecycle.lookahead) {
+        diagnostics.push({
+          code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT,
+          severity: 'error',
+          path: `doc.eventDecks.${index}.discardZone`,
+          message: `Event deck "${deck.id}" discardZone "${discardZone}" aliases turn-flow cardLifecycle.lookahead.`,
+          suggestion: 'Use a distinct discardZone, or set discardZone to the played slot for accumulating semantics.',
+        });
+      }
+      if (discardZone === lifecycle.leader) {
+        diagnostics.push({
+          code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT,
+          severity: 'error',
+          path: `doc.eventDecks.${index}.discardZone`,
+          message: `Event deck "${deck.id}" discardZone "${discardZone}" aliases turn-flow cardLifecycle.leader.`,
+          suggestion: 'Use a distinct discardZone, or set discardZone to the played slot for accumulating semantics.',
+        });
+      }
+    }
+    // Ambiguous resolution: if multiple eventDecks share a drawZone but declare
+    // different discardZones, the kernel's runtime resolution cannot
+    // deterministically pick a discard slot.
+    const decksByDrawZone = new Map<string, { readonly index: number; readonly id: string; readonly discardZone: string }[]>();
+    for (const [index, deck] of sections.eventDecks.entries()) {
+      const drawZone = String(deck.drawZone);
+      const entry = { index, id: String(deck.id), discardZone: String(deck.discardZone) };
+      const existing = decksByDrawZone.get(drawZone);
+      if (existing === undefined) {
+        decksByDrawZone.set(drawZone, [entry]);
+      } else {
+        existing.push(entry);
+      }
+    }
+    for (const [drawZone, decks] of decksByDrawZone) {
+      if (decks.length < 2) {
+        continue;
+      }
+      const distinctDiscardZones = new Set(decks.map((entry) => entry.discardZone));
+      if (distinctDiscardZones.size > 1) {
+        for (const { index, id } of decks) {
+          diagnostics.push({
+            code: CNL_XREF_DIAGNOSTIC_CODES.CNL_XREF_LIFECYCLE_DISCARD_AMBIGUOUS,
+            severity: 'error',
+            path: `doc.eventDecks.${index}.discardZone`,
+            message: `Multiple eventDecks share drawZone "${drawZone}" but declare different discardZones; cardLifecycle cannot deterministically resolve which discard pile to use for "${id}".`,
+            suggestion: 'Make the eventDecks share the same discardZone, or split them onto distinct drawZones.',
+          });
+        }
+      }
+    }
+  }
+
   if (cardDrivenTurnFlow !== null && sections.globalVars !== null) {
     for (const [rewardIndex, reward] of cardDrivenTurnFlow.passRewards.entries()) {
       if (validateSeatReferences) {

@@ -1,5 +1,8 @@
 // @test-class: golden-trace
 import * as assert from 'node:assert/strict';
+import { existsSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, it } from 'node:test';
 
 import {
@@ -254,6 +257,30 @@ describe('FITL turn-flow golden trace', () => {
       actual.steps.some((step) => step.boundaryTrace.some((entry) => entry.kind === 'turnFlowLifecycle' && entry.step === 'coupHandoff')),
       true,
     );
+    if (process.env.UPDATE_GOLDEN === '1') {
+      // Resolve fixture path against the repo so it works whether the test runs
+      // from `test/` (TypeScript via tsx) or `dist/test/` (compiled output).
+      const here = dirname(fileURLToPath(import.meta.url));
+      let cursor = here;
+      while (!existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
+        const parent = dirname(cursor);
+        if (parent === cursor) {
+          throw new Error('Unable to locate repo root for golden re-bless.');
+        }
+        cursor = parent;
+      }
+      const fixturePath = join(
+        cursor,
+        'packages',
+        'engine',
+        'test',
+        'fixtures',
+        'trace',
+        'fitl-turn-flow.golden.json',
+      );
+      writeFileSync(fixturePath, `${JSON.stringify(actual, null, 2)}\n`);
+      return;
+    }
     assert.deepEqual(actual, fixture);
   });
 });

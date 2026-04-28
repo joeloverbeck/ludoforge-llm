@@ -288,7 +288,8 @@ export type TurnFlowLifecycleStep =
   | 'promoteLookaheadToPlayed'
   | 'revealLookahead'
   | 'coupToLeader'
-  | 'coupHandoff';
+  | 'coupHandoff'
+  | 'discardPlayed';
 
 export interface TurnFlowLifecycleTraceEntry {
   readonly kind: 'turnFlowLifecycle';
@@ -297,6 +298,7 @@ export interface TurnFlowLifecycleTraceEntry {
     readonly played: string;
     readonly lookahead: string;
     readonly leader: string;
+    readonly discard: string;
   };
   readonly before: {
     readonly playedCardId: string | null;

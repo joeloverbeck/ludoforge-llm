@@ -390,6 +390,75 @@ describe('crossValidateSpec', () => {
     assert.equal(diagnostics.some((entry) => entry.code === 'CNL_XREF_LIFECYCLE_ZONE_MISSING'), true);
   });
 
+  it('emits CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT when discardZone aliases the lookahead slot', () => {
+    const sections = compileRichSections();
+    assert.equal(sections.turnOrder?.type, 'cardDriven');
+    const eventDecks = requireValue(sections.eventDecks);
+    const aliased = eventDecks.map((deck) => ({ ...deck, discardZone: 'lookahead:none' }));
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: aliased,
+    });
+
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT'),
+      true,
+    );
+  });
+
+  it('emits CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT when discardZone aliases the leader slot', () => {
+    const sections = compileRichSections();
+    const eventDecks = requireValue(sections.eventDecks);
+    const aliased = eventDecks.map((deck) => ({ ...deck, discardZone: 'leader:none' }));
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: aliased,
+    });
+
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT'),
+      true,
+    );
+  });
+
+  it('emits CNL_XREF_LIFECYCLE_DISCARD_AMBIGUOUS when multiple eventDecks share drawZone with different discardZones', () => {
+    const sections = compileRichSections();
+    const eventDecks = requireValue(sections.eventDecks);
+    const firstDeck = requireValue(eventDecks[0]);
+    const ambiguous = [
+      firstDeck,
+      { ...firstDeck, id: 'events-secondary', discardZone: 'played:none' },
+    ];
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: ambiguous,
+    });
+
+    assert.equal(
+      diagnostics.some((entry) => entry.code === 'CNL_XREF_LIFECYCLE_DISCARD_AMBIGUOUS'),
+      true,
+    );
+  });
+
+  it('accepts discardZone === played slot (FITL accumulating semantic)', () => {
+    const sections = compileRichSections();
+    const eventDecks = requireValue(sections.eventDecks);
+    const accumulating = eventDecks.map((deck) => ({ ...deck, discardZone: 'played:none' }));
+    const diagnostics = crossValidate({
+      ...sections,
+      eventDecks: accumulating,
+    });
+
+    assert.equal(
+      diagnostics.some(
+        (entry) =>
+          entry.code === 'CNL_XREF_LIFECYCLE_DISCARD_ALIASES_SLOT' ||
+          entry.code === 'CNL_XREF_LIFECYCLE_DISCARD_AMBIGUOUS',
+      ),
+      false,
+    );
+  });
+
   it('cross-ref skips validation when target section is null', () => {
     const sections = compileRichSections();
     const action = requireValue(sections.actions?.[0]);

@@ -1554,7 +1554,7 @@ describe('top-level runtime schemas', () => {
       {
         kind: 'turnFlowLifecycle',
         step: 'promoteLookaheadToPlayed',
-        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+        slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none', discard: 'played:none' },
         before: { playedCardId: null, lookaheadCardId: 'card-1', leaderCardId: null },
         after: { playedCardId: 'card-1', lookaheadCardId: null, leaderCardId: null },
       },

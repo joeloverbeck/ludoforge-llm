@@ -662,6 +662,7 @@ export const TurnFlowLifecycleStepSchema = z.union([
   z.literal('revealLookahead'),
   z.literal('coupToLeader'),
   z.literal('coupHandoff'),
+  z.literal('discardPlayed'),
 ]);
 
 export const TurnFlowLifecycleTraceEntrySchema = z
@@ -673,6 +674,7 @@ export const TurnFlowLifecycleTraceEntrySchema = z
         played: StringSchema.min(1),
         lookahead: StringSchema.min(1),
         leader: StringSchema.min(1),
+        discard: StringSchema.min(1),
       })
       .strict(),
     before: z

@@ -76,7 +76,7 @@ const traceFixture: GameTrace = {
         {
           kind: 'turnFlowLifecycle',
           step: 'promoteLookaheadToPlayed',
-          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none', discard: 'played:none' },
           before: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
           after: { playedCardId: 'card-2', lookaheadCardId: 'card-3', leaderCardId: null },
         },

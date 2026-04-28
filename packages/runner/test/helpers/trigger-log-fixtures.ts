@@ -21,7 +21,7 @@ export const TRIGGER_LOG_ENTRIES_EXHAUSTIVE: readonly TriggerLogEntry[] = [
   {
     kind: 'turnFlowLifecycle',
     step: 'initialRevealPlayed',
-    slots: { played: 'played', lookahead: 'lookahead', leader: 'leader' },
+    slots: { played: 'played', lookahead: 'lookahead', leader: 'leader', discard: 'played' },
     before: { playedCardId: null, lookaheadCardId: 'c-1', leaderCardId: 'c-2' },
     after: { playedCardId: 'c-1', lookaheadCardId: null, leaderCardId: 'c-2' },
   },

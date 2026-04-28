@@ -754,6 +754,10 @@
                         {
                           "type": "string",
                           "const": "coupHandoff"
+                        },
+                        {
+                          "type": "string",
+                          "const": "discardPlayed"
                         }
                       ]
                     },
@@ -771,12 +775,17 @@
                         "leader": {
                           "type": "string",
                           "minLength": 1
+                        },
+                        "discard": {
+                          "type": "string",
+                          "minLength": 1
                         }
                       },
                       "required": [
                         "played",
                         "lookahead",
-                        "leader"
+                        "leader",
+                        "discard"
                       ],
                       "additionalProperties": false
                     },

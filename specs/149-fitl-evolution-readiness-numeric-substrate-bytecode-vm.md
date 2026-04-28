@@ -1,5 +1,13 @@
 # Spec 149 — FITL Evolution-Readiness: Numeric Substrate + Bytecode VM (TS first, WASM phase 2)
 
+**Status**: DRAFT
+**Priority**: P0 — blocks evolution-readiness; PR #231 (`implemented-147`) determinism + integration CI lanes red.
+**Complexity**: XL — multi-phase architectural change spanning kernel encoded-state projection, agent preview-drive apply/undo, compiler bytecode lowering, runtime VM, and CI workflow rebalancing.
+**Dependencies**:
+- `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` (in-progress) — provides the "incremental TS optimization plateaued" evidence that motivates a structural change.
+- `archive/specs/147-aot-consideration-ast-compilation.md` (archived 2026-04-26) — predecessor that landed AOT closure-tree compilation. This spec's bytecode VM lowers from the same compile-time IR (`AgentPolicyExpr`) and replaces the closure-tree runtime path on Phase 4 default-flip.
+- `reports/turnperf-001-investigation-2026-04-28.md`, `reports/turnperf-002-implementation-2026-04-28.md`, `reports/ci-failures-pr-231-2026-04-28.md` — measurement and CI-failure evidence consumed by §1 and §Phase 0.
+
 ## Brainstorm Context
 
 **Original request**: After ~1 month of incremental optimization on the FITL preview-drive pipeline, performance remains unworkable for evolving AI agent policies under the new microturn structure. PR #231 (`implemented-147`) has multiple timing-out CI workflows. The user asked to (a) investigate the failing workflows and rule out rule-encoding bugs, (b) profile thoroughly if the code is correct but slow, and (c) consider compiling hot paths to a faster language (likely Rust→WASM).
@@ -25,7 +33,7 @@
 3. **Incremental TS optimization has plateaued.** POLPREVDRIVE-001..007 + TURNPERF-001/002 produced movement-within-noise on the load-bearing parity gates. F15 (Architectural Completeness) calls for a root-cause structural change.
 4. **CI regressions on PR #231 are scaling regressions, not new bugs.** `fitl-events-sihanouk.test.js` was 1m 31s in the last green run; it is now 10+ minutes. `fitl-march-free-operation.test.js` was 1m 10s; now 5+ minutes. Same code paths, more depth, no breakpoint.
 
-**Final confidence**: 92% on diagnosis; 95% after user selected approach **B + T** with prior-art research. Remaining uncertainty is implementation detail at phase boundaries, addressed inside each phase.
+**Final confidence**: 92% on diagnosis; 95% after user selected approach **B + T** (Bytecode VM + Typed-array encoded state) with prior-art research. Remaining uncertainty is implementation detail at phase boundaries, addressed inside each phase.
 
 **Assumptions made (please correct if wrong)**:
 - Evolution readiness target is ~250 ms per FITL card under all 4 baseline profiles (the `<= 250 ms` figure from `reports/turnperf-001-investigation-2026-04-28.md`).
@@ -36,9 +44,9 @@
 
 ## 1. Overview
 
-This spec defines the multi-phase architectural change to make FITL agent-policy evolution practical. The current TypeScript object-walking interpreter spends ~62% of its wall-clock evaluating policy expressions through generic `evaluatePolicyExpression` and ~10% in `resolveRef`/`evalCondition` traversals. Incremental optimization has plateaued at 35× over the per-card budget.
+This spec defines the multi-phase architectural change to make FITL agent-policy evolution practical. The current runtime — `evaluatePolicyMove` (telemetered as the `agent:evaluatePolicyExpression` perf bucket) walking the `CompiledPolicyExpr` discriminated-union IR through closure trees built by `buildPolicyExprClosure` in `packages/engine/src/agents/compiled-policy-runtime.ts` — spends ~62% of one-card wall-clock on policy evaluation, with `resolveRef`/`evalCondition` traversals plus decision-stack hashing dominating self-time inside that bucket. Spec 147 (archived 2026-04-26) already replaced the original interpretive AST evaluator with this AOT-compiled closure-tree runtime; the closure-tree gain is real but insufficient — incremental optimization has plateaued at 35× over the per-card budget.
 
-The fix is a structural one: introduce a **numeric encoded-state** view (typed arrays, bitsets, integer IDs) that the agent preview pipeline reads from, plus a **bytecode VM** that executes pre-compiled policy expressions without object traversal. The kernel's authoritative immutable `GameState` is unchanged; the encoded view is a derived projection consulted only by agent preview drives, with apply/undo replacing clone/apply inside bounded inner-preview microturns (F11 scoped-mutation exception).
+The fix is a structural one: introduce a **numeric encoded-state** view (typed arrays, bitsets, integer IDs) that the agent preview pipeline reads from, plus a **bytecode VM** that executes pre-compiled policy expressions without object traversal or closure dispatch. The kernel's authoritative immutable `GameState` is unchanged; the encoded view is a derived projection consulted only by agent preview drives, with apply/undo replacing clone/apply inside bounded inner-preview microturns (F11 scoped-mutation exception).
 
 The architecture is **fully game-agnostic**: no FITL-specific opcodes, no FITL-specific encoding fields. Each game's `EncodedStateLayout` is derived from its GameDef at compile time from generic primitives. Engine and compiler stay generic.
 
@@ -88,7 +96,7 @@ Phase 5 is **explicitly deferred** to a follow-up spec authored after Phase 4 la
                                                       │
                                 ┌─────────────────────┴────────────────────┐
                                 │  DSL→bytecode compiler (NEW, phase 3)     │
-                                │  - lowers existing PolicyExpression AST   │
+                                │  - lowers AgentPolicyExpr IR             │
                                 │  - emits bytecode + feature-id table     │
                                 └──────────────────────────────────────────┘
 ```
@@ -156,7 +164,7 @@ The undo log is an append-only typed array. Rollback unwinds in O(mutated cells)
 
 ### 2.4 Policy DSL → bytecode (phase 3)
 
-Existing `PolicyExpression` AST → flat numeric bytecode. Opcodes are game-agnostic:
+Lowering source is the compile-time `AgentPolicyExpr` IR (defined in `packages/engine/src/kernel/types.ts` and consumed by Spec 147's AOT compiler to produce `CompiledPolicyExpr`). Bytecode lowering bypasses the closure-tree intermediate (`buildPolicyExprClosure`) entirely — once the bytecode VM is the runtime path (Phase 4 default-flip), the closure-tree machinery becomes dead code and is deleted per F14. Opcodes are game-agnostic:
 
 ```
 LOAD_FEATURE   <feature-id>          → push feature value onto stack
@@ -170,11 +178,11 @@ AGGREGATE_SUM, AGGREGATE_COUNT, ...  → over selector results
 HALT
 ```
 
-Compiler stage in `packages/engine/src/cnl/policy-bytecode/`. Round-trip property test: for every existing FITL policy profile, AST and bytecode produce **bit-identical scores** on a corpus of seeded states.
+Compiler stage in `packages/engine/src/cnl/policy-bytecode/`. Round-trip property test: for every existing FITL policy profile, the closure-tree evaluator (Spec 147 AOT artifact) and the bytecode VM produce **bit-identical scores** on a corpus of seeded states.
 
 ### 2.5 TS bytecode VM (phase 4)
 
-A tight switch loop over `Int32Array` opcodes operating on `EncodedState` typed arrays. ~200 LOC. Drop-in replacement for `evaluatePolicyExpression` controlled by an A/B flag in `policy-runtime.ts`. After parity is proven on all FITL profiles, the AST evaluator becomes the fallback for non-bytecoded expressions and the bytecode path becomes default.
+A tight switch loop over `Int32Array` opcodes operating on `EncodedState` typed arrays. ~200 LOC. Drop-in replacement for `evaluatePolicyMove` (the function telemetered as `agent:evaluatePolicyExpression`) controlled by an A/B flag in `policy-runtime.ts`. After parity is proven on all FITL profiles for ≥3 consecutive CI runs, the bytecode path becomes default and the closure-tree evaluation path (`compiled-policy-runtime.ts:buildPolicyExprClosure` and downstream callees in `policy-evaluation-core.ts`) is deleted per F14 — no fallback retained.
 
 ### 2.6 WASM port (phase 5, deferred to own spec)
 
@@ -206,11 +214,18 @@ When phase 4 ships and the bytecode shape is stable, port the VM to Rust:
 
 Goal: the `implemented-147` branch's CI is green via configuration alone, so the strategic work isn't blocked by the gate. F15 acceptance: this phase is **explicitly tactical** and tracked by a follow-up restoration ticket; it is not the answer.
 
-Concrete edits:
-- `.github/workflows/engine-determinism.yml`: bump `timeout-minutes: 30` → `60` for the determinism job.
-- `.github/workflows/engine-determinism.yml`: add `continue-on-error: true` on the three `slow-parity-shard-*` matrix entries; emit a non-blocking summary so the signal is visible.
-- `packages/engine/scripts/run-tests.mjs` (or per-test file `// @timeout` annotation, whichever the lane runner respects): bump `fitl-events-sihanouk` to 20 m and `fitl-march-free-operation` to 10 m.
-- New ticket `149FITLEVNUMVM-CI-RESTORE` tracks the unwind: when phase 4 lands and per-card cost ≤ 250 ms, revert all four CI bumps in a single commit.
+The slow tests live in two different workflow files. Phase 0 touches both:
+
+**Workflow target A — `.github/workflows/engine-determinism.yml`** (determinism shards, including timing-out `fitl-parity-zobrist-seed-{42,123}` per TURNPERF-002 evidence):
+- Bump job-level `timeout-minutes: 30 → 60` on the `determinism` job (applies to all 10 determinism shards under that job).
+
+**Workflow target B — `.github/workflows/engine-tests.yml`** (integration matrix, including the `slow-parity-shard-{a,b,c}` lanes that run the slow integration tests):
+- First deliverable: confirm via `packages/engine/scripts/test-lane-manifest.mjs` (`SLOW_INTEGRATION_TESTS` array) which `slow-parity-shard-*` lane contains `fitl-events-sihanouk.test.ts` and which contains `fitl-march-free-operation.test.ts`. Cite the lane mapping in the ticket.
+- Either add `continue-on-error: true` to the affected `slow-parity-shard-*` matrix entries, or bump per-shard `lane.timeout: 30 → 60`. Default lean: `continue-on-error: true` plus a non-blocking summary so the signal is visible without gating PR #231.
+
+**Per-test budgets**: the spec's earlier draft proposed `// @timeout` annotations; that mechanism does not exist in `run-tests.mjs` (lane-level only). If per-test relief is still required after the workflow-level bumps, options are: (a) extend the lane-manifest to support per-test timeout overrides; (b) carve sihanouk and march-free-operation into a dedicated lane with a longer lane-level timeout; (c) override at runtime via env vars (`ENGINE_DETERMINISM_TEST_TIMEOUT_MS`, `ENGINE_FITL_RULES_TEST_TIMEOUT_MS`). Default lean: option (a) is the F15-aligned answer; option (c) is acceptable as a further temporary unblock.
+
+**Restoration tracking**: New ticket `149FITLEVNUMVM-CI-RESTORE` tracks the unwind — when phase 4 lands and per-card cost ≤ 250 ms, revert all CI bumps (job-level, matrix-level, and any per-test mechanism) in a single commit.
 
 Out of scope for phase 0: any kernel code change. Phase 0 is configuration-only.
 
@@ -245,7 +260,7 @@ Acceptance:
 
 ### Phase 3 — Policy DSL → bytecode compiler (~2-3 weeks)
 
-Goal: lower existing `PolicyExpression` AST nodes into a flat numeric bytecode + feature-id table.
+Goal: lower the compile-time `AgentPolicyExpr` IR (Spec 147's compiler input, defined in `packages/engine/src/kernel/types.ts`) into a flat numeric bytecode + feature-id table. The lowering bypasses the closure-tree intermediate (`buildPolicyExprClosure`) — once Phase 4 default-flips, that intermediate is deleted per F14.
 
 Modules:
 - `packages/engine/src/cnl/policy-bytecode/compile.ts` — AST → bytecode.
@@ -254,7 +269,7 @@ Modules:
 - `packages/engine/src/agents/policy-bytecode/disassemble.ts` — debugging tool.
 
 Acceptance:
-- Round-trip property test: for every FITL policy profile (us-baseline, arvn-baseline, nva-baseline, vc-baseline) on a corpus of 20 seeded states, AST and bytecode produce **bit-identical scores**.
+- Round-trip property test: for every FITL policy profile (us-baseline, arvn-baseline, nva-baseline, vc-baseline) on a corpus of 20 seeded states, the closure-tree evaluator (current production) and the bytecode VM produce **bit-identical scores**.
 - Compile-time test: same GameSpecDoc compiles to byte-identical bytecode twice (F8 compiler determinism).
 - No runtime use yet — compiler stage is gated by an experimental flag.
 
@@ -268,11 +283,12 @@ Modules:
 
 Acceptance:
 - Replay-identity tests stay green on all determinism shards.
-- Score-equivalence tests against the AST evaluator stay green.
+- Score-equivalence tests against the closure-tree evaluator stay green.
 - **Per-card cost: ≤ 250 ms under 4 baseline profiles, `verifyIncrementalHash=true`** — the original target met.
-- `slow-parity-shard-*` re-enabled (no longer `continue-on-error`).
-- Determinism workflow timeout restored to 30 m.
-- Sihanouk and March-Free-Operation per-test budgets restored.
+- `engine-tests.yml` `slow-parity-shard-*` re-enabled (no longer `continue-on-error`, per-shard `timeout: 30` restored).
+- `engine-determinism.yml` job-level `timeout-minutes` restored to 30 m.
+- Sihanouk and March-Free-Operation per-test budgets restored (whichever mechanism Phase 0 selected).
+- **Closure-tree evaluation path deleted**: `compiled-policy-runtime.ts:buildPolicyExprClosure` and downstream closure callees in `policy-evaluation-core.ts` removed. Per F14, no fallback retained. Spec 147's AOT compile path now produces bytecode directly; the compiled-closure runtime is dead code post-flip.
 - The phase 0 CI restoration ticket closes.
 
 ### Phase 5 — Rust→WASM port (deferred; own spec when justified)
@@ -293,7 +309,7 @@ The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` seri
 - **chooseN combinatorics**: action templates encode as compact `(action-id, target-id, target-id, ...)` tuples in `Int32Array`, not object trees. Kernel still owns enumeration; the encoded list is consumed read-only by the VM.
 - **Preview depth-cap exit**: the apply/undo log records every mutation; on depth-cap exit, the log canonicalizes to a `GameState` (not a partial one).
 - **NaN/floats**: forbidden by construction. All score math is `Int32` (with overflow guard at compile time — bytecode compiler refuses expressions whose static range exceeds 2^30).
-- **Unknown features at compile time**: the compiler emits a `RESOLVE_DYNAMIC` opcode that falls back to the AST evaluator for that single expression. Logged as a perf warning so it gets eliminated.
+- **Unknown features at compile time**: during Phases 3-4 rollout, the compiler emits a `RESOLVE_DYNAMIC` opcode that falls back to the closure-tree evaluator (Spec 147's runtime) for that single expression. Logged as a perf warning so it gets eliminated. Per F14, all `RESOLVE_DYNAMIC` cases must be eliminated before the Phase 4 default-flip deletes the closure-tree path; remaining cases are a Phase 4 blocker.
 - **Backwards compatibility during phase rollout**: A/B switches are explicit env-var gates; the default flips at phase boundaries. No `_legacy` fallbacks in production code (F14).
 
 ---
@@ -305,11 +321,11 @@ The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` seri
 | 0 | architectural-invariant | CI workflows are green; existing test suite passes; restoration ticket exists. |
 | 1 | architectural-invariant | `state → encoded → state` round-trip canonical equality on FITL replay fixtures. |
 | 2 | architectural-invariant | Replay-identity preserved on all determinism shards; preview drive's canonical-hash on exit equals the cloning-path hash on the same trajectory. |
-| 3 | architectural-invariant | AST↔bytecode score equivalence on FITL profile corpus; compiler determinism (byte-identical bytecode on two compiles). |
+| 3 | architectural-invariant | Closure-tree↔bytecode score equivalence on FITL profile corpus (closure-tree is current production runtime per Spec 147); compiler determinism (byte-identical bytecode on two compiles). |
 | 4 | architectural-invariant | Replay-identity on all determinism shards with VM enabled; per-card cost ≤ 250 ms; no convergence-witness regressions. |
 | 5 | architectural-invariant | TS-VM ↔ WASM-VM equivalence on golden corpus; replay-identity preserved across FFI. |
 
-A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is added in phase 1 (calibrated to 5500 ms), tightened at each phase boundary (3000 ms → 250 ms → 50 ms when phase 5 lands).
+A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is added in phase 1 (calibrated to 5500 ms), tightened at each phase boundary (3000 ms → 250 ms → 50 ms when phase 5 lands). This gate is **additive** to the existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts`, which gates parity-drive cost on a different metric and continues to run unchanged through Phase 4 (recalibrated only if necessary based on Phase 1/2 measurements).
 
 Convergence-witness tests are explicitly **out of scope** for this spec — score equivalence is proven by property tests, not trajectory-pinned witnesses (`.claude/rules/testing.md` Distillation guidance applies).
 
@@ -325,13 +341,13 @@ Convergence-witness tests are explicitly **out of scope** for this spec — scor
 | **F5 One Rules Protocol, Many Clients** | The legality protocol is unchanged. The simulator, runner, and agent all consume the same `legalMoves`/`applyMove` API. The bytecode VM lives below `chooseDecision`, not in the protocol. |
 | **F6 Schema Ownership Stays Generic** | `EncodedStateLayout` is derived; `PolicyBytecode.schema.json` is one generic schema, not per-game. |
 | **F7 Specs Are Data, Not Code** | Bytecode is generated by the compiler, not authored. Spec authors continue to write declarative YAML. |
-| **F8 Determinism Is Sacred** | Integer-only math; canonical hashing unchanged; AST↔bytecode↔WASM-VM equivalence proven by property tests; replay-identity preserved on every phase. |
+| **F8 Determinism Is Sacred** | Integer-only math; canonical hashing unchanged; closure-tree↔bytecode↔WASM-VM equivalence proven by property tests; replay-identity preserved on every phase. |
 | **F10 Bounded Computation** | VM execution is bounded by bytecode length (compile-time) and depth-cap (runtime). No general recursion in the VM. |
 | **F11 Immutability** | Authoritative `GameState` remains immutable. Apply/undo on encoded state is the documented scoped-mutation exception, fully isolated to preview-drive scope. |
 | **F12 Compiler-Kernel Validation Boundary** | Bytecode compilation is a compiler responsibility. The kernel validates state-dependent execution. The boundary is preserved. |
 | **F14 No Backwards Compatibility** | A/B switches are temporary phase-rollout gates; default flips at phase end; no `_legacy` paths remain after phase 4. |
 | **F15 Architectural Completeness** | This spec is the structural answer to a measured 35× over-budget gap. The previous 7+ incremental optimizations did not move the load-bearing gate; this is the root-cause attack on the 62% wall-clock bucket. |
-| **F17 Strongly Typed Domain Identifiers** | Encoded id-tables convert branded `ZoneId`/`TokenId`/etc. to dense integer indices; the conversion is the typed boundary. Read paths return branded IDs, not raw integers. |
+| **F17 Strongly Typed Domain Identifiers** | Encoded id-tables convert the already-branded subset (`ZoneId`, `TokenId`, `PlayerId`, `ActionId`, `PhaseId`, `TriggerId`, `SeatId` per `packages/engine/src/kernel/branded.ts`) to dense integer indices; the conversion is the typed boundary. Read paths return branded IDs, not raw integers. `MarkerId` and `VariableId` are not currently branded types in the codebase; the encoded view treats them uniformly as integer indices over their string-identifier domain. F17 alignment applies to the already-branded subset; introducing brands for `MarkerId`/`VariableId` is out of scope here (a separate F17-completion ticket may follow). |
 | **F18 Constructibility Is Part of Legality** | Untouched. Legality publication remains the kernel's responsibility; the VM scores already-published actions. |
 | **F19 Decision-Granularity Uniformity** | Untouched. Microturn protocol is unchanged. |
 
@@ -366,7 +382,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 | Phase | Approx tickets | Rough scope per ticket |
 |---|---:|---|
-| 0 | 2 | (a) bump CI timeouts + per-test budgets; (b) create restoration tracking ticket. |
+| 0 | 3 | (a) `engine-determinism.yml` job-level timeout bump; (b) `engine-tests.yml` `slow-parity-shard-*` continue-on-error or per-shard timeout bump (after lane-mapping confirmation); (c) create `149FITLEVNUMVM-CI-RESTORE` tracking ticket. |
 | 1 | 3-4 | (a) layout builder; (b) view builder; (c) wire into read paths; (d) perf gate test. |
 | 2 | 3-4 | (a) PreviewDriveScope skeleton; (b) replace cloning path; (c) canonicalize-on-exit verification; (d) property tests. |
 | 3 | 4-5 | (a) opcode set + IR types; (b) AST→bytecode compiler; (c) feature-id table; (d) round-trip equivalence harness; (e) disassembler. |
@@ -395,5 +411,25 @@ These questions are scoped to be resolved inside their respective phases without
 - **Phase 4** does not reach 250 ms even after VM is correct. Likely cause: the encoded-state shape is sub-optimal; common feature reads still fan out. Action: redesign EncodedState layout based on phase 4 profiling data (one extra ticket), or jump to phase 5.
 
 ---
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-04-28:
+- [`archive/tickets/149FITLEVNUMVM-001.md`](../archive/tickets/149FITLEVNUMVM-001.md) — Bump engine-determinism.yml job-level timeout 30→60 (covers Phase 0)
+- [`tickets/149FITLEVNUMVM-002.md`](../tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml slow-parity-shard lanes for sihanouk + march-free-operation (covers Phase 0)
+- [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
+- [`tickets/149FITLEVNUMVM-004.md`](../tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
+- [`tickets/149FITLEVNUMVM-005.md`](../tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
+- [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1)
+- [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1)
+- [`tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — PreviewDriveScope skeleton + apply/undo log primitives (covers Phase 2)
+- [`tickets/149FITLEVNUMVM-009.md`](../tickets/149FITLEVNUMVM-009.md) — Replace cloning path with PreviewDriveScope, F14 atomic cut (covers Phase 2)
+- [`tickets/149FITLEVNUMVM-010.md`](../tickets/149FITLEVNUMVM-010.md) — Property tests for apply/undo equivalence + canonicalize-on-exit (covers Phase 2)
+- [`tickets/149FITLEVNUMVM-011.md`](../tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
+- [`tickets/149FITLEVNUMVM-012.md`](../tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
+- [`tickets/149FITLEVNUMVM-013.md`](../tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
+- [`tickets/149FITLEVNUMVM-014.md`](../tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
+- [`tickets/149FITLEVNUMVM-015.md`](../tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
+- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Phase 4 default-flip + closure-tree deletion, F14 atomic cut (covers Phase 4)
 
 **End of spec 149.**

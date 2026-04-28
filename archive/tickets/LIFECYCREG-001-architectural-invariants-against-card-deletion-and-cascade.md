@@ -25,7 +25,7 @@ This ticket adds those invariants as proper architectural-invariant tests (per t
 2. **Token conservation is generic.** Verified by reading the current kernel: token creation/destruction is gated by explicit `createToken`/`destroyToken` effects. Lifecycle steps (initial reveal, card boundary advance, coup hand-off, phase advance) MUST NOT introduce or remove tokens by themselves.
 3. **Trace decision-per-card is generic.** Verified against `data/games/texas-holdem/**` and `data/games/fire-in-the-lake/**`: every published microturn produces a decision log entry; no published microturn is supposed to be skipped silently.
 4. **Existing fixtures are usable.** Verified that `packages/engine/test/helpers/production-spec-helpers.ts` provides `compileProductionSpec()` and `getFitlProductionFixture()`; new tests can reuse those without re-wiring fixtures.
-5. **Some tests will run the full FITL game.** This is necessary to catch the seed-specific deletion patterns. With `LIFECYCFIX-001` landed (and AUTORESCASC-001 closed as already-satisfied), full-game runs are now significantly longer than the pre-fix degenerate runs; we coordinate with `TURNPERF-001` so the runtime fits in CI.
+5. **Some tests will run the full FITL game.** This is necessary to catch the seed-specific deletion patterns. With `LIFECYCFIX-001` landed (and AUTORESCASC-001 closed as already-satisfied), full-game runs are now significantly longer than the pre-fix degenerate runs; coordinate with `TURNPERF-002` so the runtime fits in CI.
 
 ### Boundary Reset (2026-04-28)
 
@@ -149,6 +149,8 @@ This ticket lands AFTER `LIFECYCFIX-001` (already merged at `8ca1df07`). It is t
 ## Outcome
 
 **Completed**: 2026-04-28
+
+Outcome amended: 2026-04-28 — Post-review after `TURNPERF-001` archival: active per-card performance implementation ownership now lives in `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
 
 ### What changed
 

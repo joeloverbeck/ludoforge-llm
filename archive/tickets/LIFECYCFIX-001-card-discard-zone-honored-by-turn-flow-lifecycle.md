@@ -108,7 +108,7 @@ Add a kernel-internal assertion (gated by `kernel.verifyTokenConservation` or al
 ## Out of Scope
 
 - Fixing the auto-resolve cascade that triggers the boundary repeatedly within one "turn" (owned by `AUTORESCASC-001`).
-- Per-turn FITL preview-drive performance (owned by `TURNPERF-001`).
+- Per-turn FITL preview-drive performance (owned by `TURNPERF-002` after `TURNPERF-001` Phase 1 archival).
 - Re-blessing existing FITL replay/golden-trace fixtures if their stateHash changes; that re-blessing must happen in this ticket only after a reviewer approves the new (correct) trajectory.
 
 ## Acceptance Criteria
@@ -162,12 +162,14 @@ node /tmp/probe-fitl-card-tracking.mjs
 ## Risks
 
 - **Re-blessing golden fixtures**: state hashes for FITL determinism shards will change because the trajectory is fundamentally different post-fix. Every affected golden trace re-bless must be itemized in the commit body per `.claude/rules/testing.md`.
-- **CI budget breakage**: post-fix, both seed-42 and seed-123 play full FITL games. Without the perf work owned by `TURNPERF-001`, both will time out the 30-min determinism shard budget. This ticket lands the correctness fix and is expected to require `TURNPERF-001` (and/or a temporary budget extension) before merging to `main`.
+- **CI budget breakage**: post-fix, both seed-42 and seed-123 play full FITL games. Without the perf work owned by `TURNPERF-002`, both will time out the 30-min determinism shard budget. This ticket lands the correctness fix and is expected to require `TURNPERF-002` (and/or a temporary budget extension) before merging to `main`.
 - **Texas parity**: Texas Hold'em uses a different discard semantic. Verify before landing that the new `discard` slot resolution produces Texas's expected behavior.
 
 ## Outcome
 
 **Completed**: 2026-04-28
+
+Outcome amended: 2026-04-28 — Post-review after `TURNPERF-001` archival: active per-card performance implementation ownership now lives in `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
 
 ### What actually changed
 
@@ -205,5 +207,5 @@ node /tmp/probe-fitl-card-tracking.mjs
 
 ### Out-of-scope follow-ups (per ticket Risks/Out of Scope)
 
-- **TURNPERF-001**: Now that the lifecycle correctly preserves cards, FITL `seed=42` and `seed=123` actually play full games. The `drive-fingerprint-property.test.js` and `zobrist-incremental-parity-fitl-seed-{42,123}` determinism shards are expected to need TURNPERF-001 before merging to `main`. They were deliberately not run as part of this ticket's verification.
+- **TURNPERF-002**: Now that the lifecycle correctly preserves cards, FITL `seed=42` and `seed=123` actually play full games. The `drive-fingerprint-property.test.js` and `zobrist-incremental-parity-fitl-seed-{42,123}` determinism shards are expected to need TURNPERF-002 before merging to `main`. They were deliberately not run as part of this ticket's verification.
 - **AUTORESCASC-001**: The auto-resolve cascade that pumps the entire deck through the lifecycle in one chain remains owned by AUTORESCASC-001. This ticket fixes the per-card deletion mechanism only.

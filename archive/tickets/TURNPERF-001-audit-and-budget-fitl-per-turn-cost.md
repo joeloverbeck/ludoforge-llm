@@ -1,6 +1,6 @@
 # TURNPERF-001: Audit and budget the FITL per-turn cost (~35-40 s/turn for 4 baselines under verifyIncrementalHash)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium-Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview*`, `packages/engine/src/kernel/eval-query.ts`, `packages/engine/src/kernel/effects-token.ts`, `packages/engine/src/kernel/token-state-index.ts`, `packages/engine/src/kernel/microturn/*`, plus tests/profiling.
@@ -155,6 +155,66 @@ This ticket is split into two gated phases:
 - **Phase 2 — Implement** (gated on Phase 1 review). Lands the chosen fix combination and recalibrates the perf gates.
 
 The user must approve Phase 1's report and proposed fix surface before Phase 2 begins.
+
+## Phase 1 Outcome (2026-04-28)
+
+Phase 1 landed the diagnostic harness extension in `packages/engine/scripts/profile-fitl-preview-drive.mjs` and created `reports/turnperf-001-investigation-2026-04-28.md`.
+
+Boundary correction approved by user on 2026-04-28: the original Phase 1 request for a 5-card/full-game corpus was narrowed to the completed one-card evidence plus the stopped five-card probes, because both five-card probes exceeded a normal bounded feedback window on this checkout. The narrowed Phase 1 result is not a passing performance gate and does not satisfy Phase 2 implementation.
+
+Completed evidence:
+
+```bash
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label turnperf-smoke
+```
+
+Result: one card took `8710.05 ms`, with `driveExitTotal=211`, `tokenStateIndexBuildCount=2381`, `draftTokenStateIndexDeltaCount=198`, and `draftTokenStateIndexAttachCount=623`. The largest profiler buckets were `simAgentChooseMove=5381.26 ms` and `simApplyMove=1065.35 ms`.
+
+Stopped bounded probes:
+
+```bash
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 5 --profilesAll --perCard --profileBuckets --label turnperf-seed42-max5
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 5 --profilesAll --perCard --label turnperf-seed42-max5-light
+```
+
+Recommended Phase 2 surface: start with Option B (`MutableTokenStateIndex` as the WeakMap value) and rerun the one-card probe before adding or recalibrating a hard per-card test. If `simAgentChooseMove` remains dominant after token-index work is reduced, profile policy-preview evaluation next.
+
+Verification run for Phase 1:
+
+```bash
+node --check packages/engine/scripts/profile-fitl-preview-drive.mjs
+pnpm -F @ludoforge/engine build
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label turnperf-smoke
+```
+
+Schema and generated artifacts were not touched. Phase 2 remains gated and has not been implemented.
+
+## Outcome
+
+**Completed**: 2026-04-28
+
+### What actually changed
+
+- **`packages/engine/scripts/profile-fitl-preview-drive.mjs`**: added `--perCard` measurement rows and `--profileBuckets` profiler summaries. The harness remains diagnostic-only and does not change production kernel behavior or game semantics.
+- **`reports/turnperf-001-investigation-2026-04-28.md`**: created the Phase 1 investigation report with the completed one-card measurement, stopped five-card probes, interpretation, and recommended Phase 2 surface.
+- **`tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`**: created as the active owner for Phase 2 implementation and final per-card budget/perf-gate work.
+
+### Deviations from original plan
+
+- The original Phase 1 request for a 5-card/full-game corpus was narrowed after `1-3-1` confirmation. Both five-card probes exceeded the bounded feedback window on this checkout, so the durable Phase 1 evidence is the completed one-card run plus the classified stopped probes.
+- Phase 2 implementation, perf-gate creation, and determinism-shard budget closure did not land in this ticket. They are now owned by `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
+
+### Verification
+
+- `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs`
+- `pnpm -F @ludoforge/engine build`
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label turnperf-smoke`
+- `git diff --check`
+- `pnpm run check:ticket-deps`
+
+### Follow-up owner
+
+- **TURNPERF-002** owns the remaining implementation loop: first measured token-index cache candidate, residual policy-preview attribution, hard per-card perf gate creation/recalibration, and final determinism/parity budget proof.
 
 ## Risks
 

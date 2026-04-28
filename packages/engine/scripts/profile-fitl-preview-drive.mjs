@@ -18,6 +18,7 @@
 //   node packages/engine/scripts/profile-fitl-preview-drive.mjs --maxTurns 30
 //   node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll
 //   node packages/engine/scripts/profile-fitl-preview-drive.mjs --noVerifyIncrementalHash
+//   node packages/engine/scripts/profile-fitl-preview-drive.mjs --profilesAll --perCard --profileBuckets
 //   node --cpu-prof --cpu-prof-dir=/tmp/cpu-profile \
 //     packages/engine/scripts/profile-fitl-preview-drive.mjs --label pr
 
@@ -59,6 +60,8 @@ const config = {
   profileId: flagValue('profileId', 'us-baseline'),
   profilesAll: flagBoolean('profilesAll'),
   verifyIncrementalHash: !flagBoolean('noVerifyIncrementalHash'),
+  perCard: flagBoolean('perCard'),
+  profileBuckets: flagBoolean('profileBuckets'),
   retainDecisions: flagBoolean('retainDecisions'),
   warmup: flagBoolean('warmup'),
   label: flagValue('label', 'run'),
@@ -68,7 +71,7 @@ const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 
 
 const [
   { PolicyAgent },
-  { assertValidatedGameDef, createGameDefRuntime },
+  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
@@ -143,7 +146,11 @@ const runOnce = () => {
   driveExitTotal = 0;
   policyPreviewInternals.setDriveExitSink(recordDriveExit);
   const agents = buildAgents();
+  const profiler = config.profileBuckets ? createPerfProfiler() : undefined;
   const startedAt = performance.now();
+  const perCardRecorder = config.perCard
+    ? createPerCardRecorder(startedAt)
+    : undefined;
   const trace = runGame(
     def,
     config.seed,
@@ -154,10 +161,13 @@ const runOnce = () => {
       kernel: config.verifyIncrementalHash ? { verifyIncrementalHash: true } : undefined,
       skipDeltas: true,
       traceRetention: config.retainDecisions ? 'full' : 'finalStateOnly',
+      ...(profiler === undefined ? {} : { profiler }),
+      ...(perCardRecorder === undefined ? {} : { decisionHook: perCardRecorder.observe }),
     },
     runtime,
   );
   const elapsedMs = performance.now() - startedAt;
+  const perCardRows = perCardRecorder?.finish(elapsedMs) ?? [];
   const turnsCount = trace.turnsCount ?? 0;
   const decisions = trace.decisions?.length ?? 0;
   const stopReason = trace.stopReason ?? 'unknown';
@@ -174,8 +184,87 @@ const runOnce = () => {
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
+    perCardRows,
+    profileBuckets: profiler === undefined ? [] : snapshotProfilerBuckets(profiler),
   };
 };
+
+function readCounterSnapshot() {
+  return {
+    tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
+    draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+    driveExitTotal,
+  };
+}
+
+function createPerCardRecorder(startedAt) {
+  const rows = [];
+  let currentTurnCount = 0;
+  let currentStartedAtMs = 0;
+  let currentCounters = readCounterSnapshot();
+  let decisionCount = 0;
+
+  const closeCurrent = (endedAtMs, reason) => {
+    const counters = readCounterSnapshot();
+    const elapsedMs = endedAtMs - currentStartedAtMs;
+    rows.push({
+      turnCount: currentTurnCount,
+      elapsedMs: round2(elapsedMs),
+      decisions: decisionCount,
+      closeReason: reason,
+      msPerDecision: decisionCount > 0 ? round4(elapsedMs / decisionCount) : null,
+      tokenStateIndexBuildCount: counters.tokenStateIndexBuildCount - currentCounters.tokenStateIndexBuildCount,
+      draftTokenStateIndexDeltaCount:
+        counters.draftTokenStateIndexDeltaCount - currentCounters.draftTokenStateIndexDeltaCount,
+      draftTokenStateIndexAttachCount:
+        counters.draftTokenStateIndexAttachCount - currentCounters.draftTokenStateIndexAttachCount,
+      driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
+    });
+    decisionCount = 0;
+  };
+
+  const openCurrent = (turnCount, startedAtMs) => {
+    currentTurnCount = turnCount;
+    currentStartedAtMs = startedAtMs;
+    currentCounters = readCounterSnapshot();
+    decisionCount = 0;
+  };
+
+  return {
+    observe: (ctx) => {
+      if (ctx.kind !== 'decision') {
+        return;
+      }
+      const nowMs = performance.now() - startedAt;
+      decisionCount += 1;
+      if (ctx.turnCount > currentTurnCount) {
+        closeCurrent(nowMs, 'turnCountAdvanced');
+        openCurrent(ctx.turnCount, nowMs);
+      }
+    },
+    finish: (elapsedMs) => {
+      closeCurrent(elapsedMs, 'runFinished');
+      return rows.filter((row) => row.decisions > 0 || row.driveExitTotal > 0 || row.tokenStateIndexBuildCount > 0);
+    },
+  };
+}
+
+function snapshotProfilerBuckets(profiler) {
+  const rows = [];
+  for (const [key, bucket] of Object.entries(profiler.data)) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ key, count: bucket.count, totalMs: round2(bucket.totalMs) });
+    }
+  }
+  for (const [key, bucket] of profiler.dynamic) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ key, count: bucket.count, totalMs: round2(bucket.totalMs) });
+    }
+  }
+  rows.sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
+  return rows;
+}
 
 function snapshotDriveExitHistogram() {
   const buckets = [];
@@ -249,6 +338,8 @@ const summary = {
     playerCount: config.playerCount,
     profileId: config.profilesAll ? FITL_BASELINE_PROFILES : config.profileId,
     verifyIncrementalHash: config.verifyIncrementalHash,
+    perCard: config.perCard,
+    profileBuckets: config.profileBuckets,
     warmup: config.warmup,
   },
   result: {
@@ -264,6 +355,8 @@ const summary = {
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
+    perCardRows: result.perCardRows,
+    profileBuckets: result.profileBuckets,
   },
 };
 
@@ -281,6 +374,20 @@ for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDept
     `[profile-fitl-preview-drive] depth-quantiles profile=${profileId} ` +
     `n=${quantiles.n} min=${quantiles.min} p50=${quantiles.p50} p75=${quantiles.p75} ` +
     `p90=${quantiles.p90} p95=${quantiles.p95} max=${quantiles.max}\n`,
+  );
+}
+for (const row of summary.result.perCardRows ?? []) {
+  process.stderr.write(
+    `[profile-fitl-preview-drive] per-card turnCount=${row.turnCount} elapsedMs=${row.elapsedMs} ` +
+    `decisions=${row.decisions} driveExitTotal=${row.driveExitTotal} ` +
+    `tokenStateIndexBuildCount=${row.tokenStateIndexBuildCount} ` +
+    `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
+    `closeReason=${row.closeReason}\n`,
+  );
+}
+for (const row of (summary.result.profileBuckets ?? []).slice(0, 12)) {
+  process.stderr.write(
+    `[profile-fitl-preview-drive] profile-bucket key=${row.key} count=${row.count} totalMs=${row.totalMs}\n`,
   );
 }
 

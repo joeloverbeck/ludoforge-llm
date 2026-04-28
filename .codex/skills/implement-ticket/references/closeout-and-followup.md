@@ -60,6 +60,7 @@ When the active tracked ticket was truthfully narrowed or rewritten and the owne
 
 - `COMPLETED`: the rewritten active ticket's owned boundary is fully satisfied and no remaining blocker sits outside the ticket.
 - `BLOCKED by prerequisite`: the active ticket's owned work is done or partially done, but truthful closure still depends on another active ticket or unresolved external blocker. Record the landed slice and the blocker in the ticket outcome rather than leaving the state implicit.
+- `PHASE 1 COMPLETE / BLOCKED by Phase 2 approval`: the ticket itself is phase-gated, the investigation/report/harness phase landed, and the implementation phase remains explicitly gated by user or review approval. Record the completed phase artifact, approved boundary corrections, remaining gated phase, whether Phase 2 stays in the same ticket or moves to a successor, and the exact verification run for the completed phase.
 - `PENDING untouched`: reassessment showed the ticket should stay forward-looking because implementation did not yet land any owned deliverable.
 
 Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.

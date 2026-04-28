@@ -91,7 +91,7 @@ Every published microturn in a cardDriven game MUST appear in `decisionLogs`. Ev
 ## Out of Scope
 
 - Card-deletion in lifecycle (owned by `LIFECYCFIX-001`).
-- Per-turn FITL preview-drive performance (owned by `TURNPERF-001`).
+- Per-turn FITL preview-drive performance (owned by `TURNPERF-002` after `TURNPERF-001` Phase 1 archival).
 - Re-architecting `cardDriven` turn flow as a whole.
 - Texas Hold'em decision-stack reshaping unless the Phase 1 investigation determines it shares the bug.
 
@@ -144,12 +144,14 @@ The user must approve Phase 1's report before Phase 2 begins.
 ## Risks
 
 - **Determinism re-bless**: removing the cascade changes trajectory hashes for every cardDriven game seed. Re-blessing must be itemized.
-- **CI runtime**: post-fix, every card flip produces at least one decision microturn. Combined with `LIFECYCFIX-001`, FITL parity tests will run far longer than today; coordinate the merge with `TURNPERF-001`.
+- **CI runtime**: post-fix, every card flip produces at least one decision microturn. Combined with `LIFECYCFIX-001`, FITL parity tests will run far longer than today; coordinate the merge with `TURNPERF-002`.
 - **Texas regression**: if Texas relies on the cascade behaviour (e.g., to auto-resolve certain phases), Phase 1 must catch this and Phase 2 must accommodate it without re-introducing the cardDriven bug.
 
 ## Outcome
 
 **Completed**: 2026-04-28 (closed as already-satisfied; no engine code changes)
+
+Outcome amended: 2026-04-28 — Post-review after `TURNPERF-001` archival: active per-card performance implementation ownership now lives in `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
 
 ### Phase 1 reassessment supersedes the original Phase 2 plan
 

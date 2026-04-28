@@ -3,7 +3,7 @@ import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
 import { evalQuery } from './eval-query.js';
 import { computeTierAdmissibility } from './prioritized-tier-legality.js';
-import { resolveRef } from './resolve-ref.js';
+import { resolveRef, resolveRefMemoised } from './resolve-ref.js';
 import { VALUE_EXPR_TAG } from './types.js';
 import type { ScalarArrayValue, ScalarValue, Token, ValueExpr, ValueExprTag } from './types.js';
 
@@ -170,9 +170,15 @@ function evalAggregate(expr: Extract<ValueExpr, { readonly _t: 5 }>, ctx: ReadCo
   const itemCtx = { ...ctx, bindings: itemBindings };
   const op = aggregate.op;
   let accumulator = op === 'min' ? Number.MAX_SAFE_INTEGER : op === 'max' ? Number.MIN_SAFE_INTEGER : 0;
+  // Soundness hook for the resolveRef memoisation cache (POLPREVDRIVE-004):
+  // `itemBindings` is mutated below, so any cache entries keyed on its
+  // reference identity reflect prior-iteration content. Drop them per
+  // iteration so the cache cannot return stale values.
+  const refCache = ctx.resources.resolveRefCache;
 
   for (let index = 0; index < items.length; index++) {
     itemBindings[aggregate.bind] = items[index]!;
+    refCache?.invalidateBindings(itemBindings);
     const value = evalValue(aggregate.valueExpr, itemCtx);
     const intValue = expectSafeInteger(value, 'Aggregate valueExpr must evaluate to a finite safe integer', {
       expr,
@@ -247,7 +253,11 @@ export function evalValue(expr: ValueExpr, ctx: ReadContext): ScalarValue | Scal
   }
   switch ((expr as { readonly _t: ValueExprTag })._t) {
     case VALUE_EXPR_TAG.SCALAR_ARRAY: return (expr as Extract<ValueExpr, { readonly _t: 1 }>).scalarArray;
-    case VALUE_EXPR_TAG.REF: return resolveRef(expr as Extract<ValueExpr, { readonly _t: 2 }>, ctx);
+    case VALUE_EXPR_TAG.REF: {
+      const refExpr = expr as Extract<ValueExpr, { readonly _t: 2 }>;
+      const cache = ctx.resources.resolveRefCache;
+      return cache === undefined ? resolveRef(refExpr, ctx) : resolveRefMemoised(refExpr, ctx, cache);
+    }
     case VALUE_EXPR_TAG.CONCAT: return evalConcat(expr as Extract<ValueExpr, { readonly _t: 3 }>, ctx);
     case VALUE_EXPR_TAG.IF: {
       const ifExpr = (expr as Extract<ValueExpr, { readonly _t: 4 }>).if;

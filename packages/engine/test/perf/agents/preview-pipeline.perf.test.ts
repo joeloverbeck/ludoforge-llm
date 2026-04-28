@@ -68,10 +68,18 @@ describe('Spec 145 preview pipeline performance', () => {
     assert.equal(current.sampledActionSelectionCount, CORPUS.sampleSize);
     assert.ok(current.candidateBudget > 0, 'Expected sampled ARVN action-selection decisions to expose candidates.');
     assert.ok(Number.isFinite(current.totalMs) && current.totalMs > 0, `Expected positive totalMs, got ${current.totalMs}.`);
+    // Pre-`51a5a6bb`, every `getTokenStateIndex` read inside the drive
+    // routed through `readForState`, which fired `applyZoneDelta` as a
+    // side effect — so `deltaCount` tracked drive-iteration engagement.
+    // `51a5a6bb` dropped that unsound fast-path, leaving `deltaCount` as
+    // a measure of explicit zone-changing kernel mutations only.
+    // `attachCount` is the natural successor: every drive iteration's
+    // explicit kernel mutation calls `attachAsCanonical`, so it remains
+    // a valid floor for "draft is engaged with every iteration".
     assert.ok(
-      current.draftTokenStateIndexDeltaCount >= current.candidateBudget,
-      `POLICY_PREVIEW_TOKEN_INDEX_DRAFT_INACTIVE draftTokenStateIndexDeltaCount=${current.draftTokenStateIndexDeltaCount} ` +
-      `draftTokenStateIndexAttachCount=${current.draftTokenStateIndexAttachCount} candidateBudget=${current.candidateBudget} ` +
+      current.draftTokenStateIndexAttachCount >= current.candidateBudget,
+      `POLICY_PREVIEW_TOKEN_INDEX_DRAFT_INACTIVE draftTokenStateIndexAttachCount=${current.draftTokenStateIndexAttachCount} ` +
+      `draftTokenStateIndexDeltaCount=${current.draftTokenStateIndexDeltaCount} candidateBudget=${current.candidateBudget} ` +
       `sampledActionSelectionCount=${current.sampledActionSelectionCount}`,
     );
 

@@ -14,6 +14,7 @@ import {
 } from './types.js';
 import { applyMove } from '../apply-move.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
+import type { ResolveRefCache } from '../resolve-ref.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import {
   expireReadyBlockingGrantsForSeat,
@@ -266,9 +267,10 @@ const applyChosenMoveNoFinalHash = (
   decision: Decision,
   options?: ExecutionOptions,
   runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
 ): ApplyDecisionResult => {
   const baseState = clearMicroturnStateNoFinalHash(def, state);
-  const applied = applyMove(def, baseState, move, options, runtime);
+  const applied = applyMove(def, baseState, move, options, runtime, resolveRefCache);
   const triggerFirings = [...applied.triggerFirings];
   const nextState = {
     ...applied.state,
@@ -349,13 +351,14 @@ const continueResolvedMoveNoFinalHash = (
   decision: Decision,
   options: ExecutionOptions | undefined,
   runtime: GameDefRuntime,
+  resolveRefCache: ResolveRefCache | undefined,
 ): ApplyDecisionResult => {
   const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, runtime);
   if (continuation.illegal !== undefined) {
     throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
   }
   if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-    return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, runtime);
+    return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, runtime, resolveRefCache);
   }
   return spawnPendingFrameNoFinalHash(def, canonicalState, microturn, decision, continuation, runtime);
 };
@@ -367,6 +370,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
   decision: Decision,
   options: ExecutionOptions | undefined,
   resolvedRuntime: GameDefRuntime,
+  resolveRefCache: ResolveRefCache | undefined,
 ): ApplyDecisionResult => {
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
@@ -381,7 +385,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
       throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
     }
     if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-      return applyChosenMoveNoFinalHash(def, grantReconciledState, continuation.move, microturn, decision, options, resolvedRuntime);
+      return applyChosenMoveNoFinalHash(def, grantReconciledState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
     }
 
     const rootFrameId = grantReconciledState.nextFrameId ?? asDecisionFrameId(0);
@@ -461,11 +465,11 @@ const applyPublishedDecisionInternalNoFinalHash = (
         resolvedRuntime,
       );
       if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-        return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+        return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       return spawnPendingFrameNoFinalHash(def, canonicalState, microturn, decision, continuation, resolvedRuntime);
     }
-    return continueResolvedMoveNoFinalHash(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMoveNoFinalHash(def, canonicalState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'chooseNStep') {
@@ -538,7 +542,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
             [decision.decisionKey]: advanced.nextContext.selectedSoFar,
           },
         };
-        return continueResolvedMoveNoFinalHash(def, nextState, move, microturn, decision, options, resolvedRuntime);
+        return continueResolvedMoveNoFinalHash(def, nextState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       return {
         state: nextState,
@@ -562,7 +566,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
         resolvedRuntime,
       );
       if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-        return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+        return applyChosenMoveNoFinalHash(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       const nextState = {
         ...canonicalState,
@@ -574,7 +578,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
       ...canonicalState,
       decisionStack: [tracedRoot, top],
     };
-    return continueResolvedMoveNoFinalHash(def, nextState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMoveNoFinalHash(def, nextState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'stochasticResolve') {
@@ -590,7 +594,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
         [decision.decisionKey]: decision.value,
       },
     };
-    return continueResolvedMoveNoFinalHash(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMoveNoFinalHash(def, canonicalState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'outcomeGrantResolve') {
@@ -661,6 +665,7 @@ export const applyPreviewDriveGreedyChooseOne = (
   depthCap: number,
   runtime?: GameDefRuntime,
   draftTokenStateIndex?: MutableTokenStateIndex,
+  resolveRefCache?: ResolveRefCache,
 ): PreviewDriveResult => {
   const resolvedRuntime = runtime ?? createGameDefRuntime(def);
   let workingState: GameState = initialState;
@@ -717,6 +722,7 @@ export const applyPreviewDriveGreedyChooseOne = (
         greedy.decision,
         { advanceToDecisionPoint: true },
         resolvedRuntime,
+        resolveRefCache,
       ).state;
       draftTokenStateIndex?.applyZoneDelta(prevState.zones, workingState.zones);
       draftTokenStateIndex?.attachAsCanonical(workingState);

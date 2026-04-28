@@ -6,6 +6,7 @@ import { applyPreviewDriveGreedyChooseOne } from '../kernel/microturn/drive.js';
 import { applyPublishedDecisionFromCanonicalState } from '../kernel/microturn/apply.js';
 import { publishMicroturn, publishMicroturnFromCanonicalState } from '../kernel/microturn/publish.js';
 import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
+import { createResolveRefCache, type ResolveRefCache } from '../kernel/resolve-ref.js';
 import type { ChooseNStepContext, ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
 import { classifyMoveAdmissibility } from '../kernel/move-admissibility.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
@@ -77,6 +78,7 @@ export interface PolicyPreviewDependencies {
     move: import('../kernel/types.js').TrustedExecutableMove,
     options?: ExecutionOptions,
     runtime?: GameDefRuntime,
+    resolveRefCache?: ResolveRefCache,
   ) => { readonly state: GameState };
   readonly derivePlayerObservation?: typeof derivePlayerObservation;
   readonly evaluateGrantedOperation?: (
@@ -281,8 +283,9 @@ export function applyPreviewMove(
   move: TrustedExecutableMove,
   options: ExecutionOptions = { advanceToDecisionPoint: false },
   runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
 ): { readonly state: GameState } {
-  return applyTrustedMove(def, state, move, options, runtime);
+  return applyTrustedMove(def, state, move, options, runtime, resolveRefCache);
 }
 
 const createChooseOneRequest = (
@@ -727,6 +730,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       // hash already computed (via updateHash). Use the canonical-state fast
       // variants to skip the redundant entry hash recomputation each iteration.
       const draftTokenStateIndex = createDraftTokenStateIndex(input.state);
+      // POLPREVDRIVE-004: drive-scoped resolveRef memoisation. Allocated fresh
+      // per drive call, threaded through every kernel entry point that flows
+      // into apply-move's effect-execution path, and cleared at the top of
+      // each inner-microturn iteration so cross-iteration state changes never
+      // leak stale entries (Strategy A).
+      const refCache = createResolveRefCache();
       const origin = cachedOrigin === undefined
         ? (cachedOrigin = publishMicroturnFromCanonicalState(input.def, input.state, input.runtime))
         : cachedOrigin;
@@ -738,6 +747,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           trustedMove,
           { advanceToDecisionPoint: true },
           input.runtime,
+          refCache,
         ).state;
         draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
         draftTokenStateIndex.attachAsCanonical(state);
@@ -747,13 +757,18 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           actionId: trustedMove.move.actionId,
           move: trustedMove.move,
         };
-        state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime).state;
+        state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
         draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
         draftTokenStateIndex.attachAsCanonical(state);
       }
       let depth = 1;
 
       while (true) {
+        // Strategy A: clear the resolveRef cache at the top of each iteration
+        // so entries keyed on the prior-iteration state/bindings cannot leak
+        // forward. The drive iterates through fresh canonical states each
+        // pass, so cross-iteration cache hits are unsafe by construction.
+        refCache.clear();
         // Cheap exit-condition check: derive kind/seatId/turnId from
         // state.decisionStack top without enumerating legalActions or
         // computing the projected-state observation. Matches publishMicroturn's
@@ -791,6 +806,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
             completionDepthCap - depth,
             input.runtime,
             draftTokenStateIndex,
+            refCache,
           );
           const resultDepth = depth + result.depth;
           if (result.kind === 'failed') {
@@ -810,7 +826,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           return emitExit({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
         }
         const prevState = state;
-        state = applyPublishedDecisionFromCanonicalState(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime).state;
+        state = applyPublishedDecisionFromCanonicalState(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
         draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
         draftTokenStateIndex.attachAsCanonical(state);
         depth += 1;

@@ -20,6 +20,7 @@ import {
 import { resolveActionExecutor } from './action-executor.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
+import type { ResolveRefCache } from './resolve-ref.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -864,6 +865,13 @@ interface ApplyMoveCoreOptions {
   readonly skipAdvanceToDecisionPoint?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly executionRuntime?: MoveExecutionRuntime;
+  /**
+   * Drive-scoped resolveRef memoisation cache (POLPREVDRIVE-004). When
+   * provided, the inner `EvalRuntimeResources` carries it so
+   * `eval-value.ts` dispatches through `resolveRefMemoised`. `undefined`
+   * on every non-drive path; behaviour is unchanged.
+   */
+  readonly resolveRefCache?: ResolveRefCache;
 }
 
 interface SharedMoveExecutionContext {
@@ -1386,6 +1394,7 @@ const applyMoveCore = (
   }
   const evalRuntimeResources = createEvalRuntimeResources({
     collector: runtime.collector,
+    ...(coreOptions?.resolveRefCache === undefined ? {} : { resolveRefCache: coreOptions.resolveRefCache }),
   });
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
@@ -1797,11 +1806,25 @@ const reconcilePassFallbackMoveState = (
   };
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions, runtime?: GameDefRuntime): ApplyMoveResult => {
+export const applyMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
+): ApplyMoveResult => {
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, reconcilePassFallbackMoveState(def, state, move), move, options, undefined, runtime);
+  return applyMoveCore(
+    def,
+    reconcilePassFallbackMoveState(def, state, move),
+    move,
+    options,
+    resolveRefCache === undefined ? undefined : { resolveRefCache },
+    runtime,
+  );
 };
 
 const assertTrustedExecutableMove = (
@@ -1825,6 +1848,7 @@ export const applyTrustedMove = (
   trustedMove: TrustedExecutableMove,
   options?: ExecutionOptions,
   runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
 ): ApplyMoveResult => {
   assertTrustedExecutableMove(trustedMove, state);
   if (def.turnOrder?.type === 'simultaneous') {
@@ -1836,7 +1860,10 @@ export const applyTrustedMove = (
     reconciledState,
     trustedMove.move,
     options,
-    { skipValidation: true },
+    {
+      skipValidation: true,
+      ...(resolveRefCache === undefined ? {} : { resolveRefCache }),
+    },
     runtime,
   );
 };

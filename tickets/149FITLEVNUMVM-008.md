@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new modules in `packages/engine/src/agents/` and `packages/engine/src/kernel/encoded-state/`
-**Deps**: `tickets/149FITLEVNUMVM-005.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`
 
 ## Problem
 
@@ -32,10 +32,15 @@ Export typed-array mutation primitives:
 - `function mutateTokenFlag(state: EncodedState, log: PreviewMutationLog, tokenIndex: number, flagIndex: number, newValue: boolean): void`
 - `function mutateZoneOccupancy(state: EncodedState, log: PreviewMutationLog, zoneIndex: number, typeIndex: number, delta: number): void`
 - `function mutatePlayerInt(state: EncodedState, log: PreviewMutationLog, playerIndex: number, slot: number, newValue: number): void`
+- `function mutateZoneInt(state: EncodedState, log: PreviewMutationLog, zoneIndex: number, slot: number, newValue: number): void`
 - `function mutateZoneMarker(state: EncodedState, log: PreviewMutationLog, zoneIndex: number, markerBit: number, newValue: boolean): void`
+- `function mutateGlobalMarker(state: EncodedState, log: PreviewMutationLog, markerBit: number, newValue: boolean): void`
 - `function mutateGlobal(state: EncodedState, log: PreviewMutationLog, slot: number, newValue: number): void`
 
 Each primitive packs the old value into the log before writing.
+If `mutateTokenZone` moves a token with duplicate occurrence metadata, it must keep
+`tokenOccurrenceOffset`, `tokenOccurrenceCount`, and `tokenOccurrenceZones`
+consistent with the canonical-zone rule from ticket 005.
 
 ### 2. `PreviewMutationLog` type and rollback
 

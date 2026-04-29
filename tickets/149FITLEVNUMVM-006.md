@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-004.md`, `tickets/149FITLEVNUMVM-005.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-004.md`, `archive/tickets/149FITLEVNUMVM-005.md`
 
 ## Problem
 

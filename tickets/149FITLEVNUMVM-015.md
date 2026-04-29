@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `packages/engine/src/agents/policy-vm/vm.ts`, modify `policy-runtime.ts`
-**Deps**: `tickets/149FITLEVNUMVM-005.md`, `tickets/149FITLEVNUMVM-011.md`, `tickets/149FITLEVNUMVM-013.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `tickets/149FITLEVNUMVM-011.md`, `tickets/149FITLEVNUMVM-013.md`
 
 ## Problem
 

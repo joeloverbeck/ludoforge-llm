@@ -122,20 +122,36 @@ interface EncodedStateLayout {
 }
 
 interface EncodedState {
+  // Effective token table for this state. Starts with layout.tokenIds, then
+  // appends runtime-created token ids absent from the layout in canonical order.
+  readonly tokenIds: readonly TokenId[];
+  readonly tokenIndexById: Readonly<Record<string, number>>;
   // Position/zone of each token. Index = tokenIndex; value = zoneIndex (or SENTINEL_NONE)
   readonly tokenZone: Int16Array;
+  // Duplicate-token metadata. Offset is SENTINEL_NONE for absent or single-occurrence tokens.
+  readonly tokenOccurrenceOffset: Int32Array;
+  readonly tokenOccurrenceCount: Int16Array;
+  readonly tokenOccurrenceZones: Int16Array;
   // Per-token property bitset (e.g., underground, tunneled, activated). 64-bit lanes.
   readonly tokenFlags: BigUint64Array;
   // Per-zone occupant count (denormalized for fast queries).
   readonly zoneOccupancy: Int16Array; // [zoneIndex * tokenTypeCount + typeIndex]
   // Per-player resources / counters.
   readonly playerInts: Int32Array;
-  // Per-zone marker bitset (population, support, terror, sabotage, etc.).
+  // Per-zone variable values.
+  readonly zoneInts: Int32Array;
+  // Per-zone marker-state bitset (population, support, terror, sabotage, etc.).
   readonly zoneMarkers: BigUint64Array;
+  // Global marker-state bitset.
+  readonly globalMarkers: BigUint64Array;
   // Global game variables (turn count, monsoon flag, etc.).
   readonly globals: Int32Array;
 }
 ```
+
+Phase 1 proves parity only for this encoded read surface. It does not reconstruct
+canonical `GameState`; later apply/undo/finalize work owns any conversion from
+mutated encoded state back to authoritative immutable state.
 
 The layout is **derived from GameDef at compile time** by a generic builder that walks compiled GameDef surfaces such as `zones`, `tokenTypes`, marker lattices, variable definitions, and asset-derived runtime surfaces when a descriptor needs them. Raw `dataAssets` remain a GameSpecDoc/CNL input and do not become a separate kernel contract. No FITL-specific code.
 
@@ -240,7 +256,7 @@ Modules:
 
 Acceptance:
 - Unit tests for layout/view correctness against existing FITL fixtures.
-- Property test: round-trip `state → encoded → state` produces canonical-equal `state` for the corpus of FITL replay fixtures.
+- Property test: `state → encoded` preserves every Phase 1 encoded read surface for the corpus of FITL replay fixtures. Full `encoded → state` reconstruction is deferred to the Phase 2 apply/undo/finalize scope.
 - Profiling smoke: one-card cost reduced to ≤ 5500 ms (≥15% gain).
 
 ### Phase 2 — Apply/undo for inner-preview drive (~1-2 weeks)
@@ -319,7 +335,7 @@ The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` seri
 | Phase | Test class | What proves it works |
 |---|---|---|
 | 0 | architectural-invariant | CI workflows are green; existing test suite passes; restoration ticket exists. |
-| 1 | architectural-invariant | `state → encoded → state` round-trip canonical equality on FITL replay fixtures. |
+| 1 | architectural-invariant | `state → encoded` parity for every Phase 1 encoded read surface on FITL replay fixtures. |
 | 2 | architectural-invariant | Replay-identity preserved on all determinism shards; preview drive's canonical-hash on exit equals the cloning-path hash on the same trajectory. |
 | 3 | architectural-invariant | Closure-tree↔bytecode score equivalence on FITL profile corpus (closure-tree is current production runtime per Spec 147); compiler determinism (byte-identical bytecode on two compiles). |
 | 4 | architectural-invariant | Replay-identity on all determinism shards with VM enabled; per-card cost ≤ 250 ms; no convergence-witness regressions. |
@@ -419,7 +435,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-002.md`](../archive/tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml lanes for sihanouk + march-free-operation (covers Phase 0)
 - [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
 - [`archive/tickets/149FITLEVNUMVM-004.md`](../archive/tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
-- [`tickets/149FITLEVNUMVM-005.md`](../tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
+- [`archive/tickets/149FITLEVNUMVM-005.md`](../archive/tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — PreviewDriveScope skeleton + apply/undo log primitives (covers Phase 2)

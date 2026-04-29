@@ -61,6 +61,12 @@ const indexByString = (ids: readonly string[]): Readonly<Record<string, number>>
 
 const wordCount64 = (bitCount: number): number => Math.ceil(bitCount / 64);
 
+const stateBitCount = (
+  markerIds: readonly string[],
+  markerStateIdsByMarkerId: Readonly<Record<string, readonly string[]>>,
+): number =>
+  markerIds.reduce((count, markerId) => count + (markerStateIdsByMarkerId[markerId]?.length ?? 0), 0);
+
 const variableKey = (variable: EncodedVariableId): string => `${variable.scope}:${variable.name}`;
 
 const collectSetupTokenIds = (effects: readonly EffectAST[]): readonly TokenId[] => {
@@ -149,6 +155,8 @@ export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
     (count, tokenTypeId) => count + (propIdsByTokenType[tokenTypeId]?.length ?? 0),
     0,
   );
+  const zoneMarkerBitCount = stateBitCount(zoneMarkerIds, markerStateIdsByMarkerId);
+  const globalMarkerBitCount = stateBitCount(globalMarkerIds, markerStateIdsByMarkerId);
 
   return Object.freeze({
     zoneIds: Object.freeze(zoneIds),
@@ -180,10 +188,10 @@ export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
     bitsetLayout: Object.freeze({
       tokenFlagCount,
       tokenFlagWordCount: wordCount64(tokenFlagCount),
-      zoneMarkerBitCount: zoneMarkerIds.length,
-      zoneMarkerWordCount: wordCount64(zoneMarkerIds.length),
-      globalMarkerBitCount: globalMarkerIds.length,
-      globalMarkerWordCount: wordCount64(globalMarkerIds.length),
+      zoneMarkerBitCount,
+      zoneMarkerWordCount: wordCount64(zoneMarkerBitCount),
+      globalMarkerBitCount,
+      globalMarkerWordCount: wordCount64(globalMarkerBitCount),
     }),
   });
 }

@@ -219,9 +219,9 @@ The slow tests live in two different workflow files. Phase 0 touches both:
 **Workflow target A — `.github/workflows/engine-determinism.yml`** (determinism shards, including timing-out `fitl-parity-zobrist-seed-{42,123}` per TURNPERF-002 evidence):
 - Bump job-level `timeout-minutes: 30 → 60` on the `determinism` job (applies to all 10 determinism shards under that job).
 
-**Workflow target B — `.github/workflows/engine-tests.yml`** (integration matrix, including the `slow-parity-shard-{a,b,c}` lanes that run the slow integration tests):
-- First deliverable: confirm via `packages/engine/scripts/test-lane-manifest.mjs` (`SLOW_INTEGRATION_TESTS` array) which `slow-parity-shard-*` lane contains `fitl-events-sihanouk.test.ts` and which contains `fitl-march-free-operation.test.ts`. Cite the lane mapping in the ticket.
-- Either add `continue-on-error: true` to the affected `slow-parity-shard-*` matrix entries, or bump per-shard `lane.timeout: 30 → 60`. Default lean: `continue-on-error: true` plus a non-blocking summary so the signal is visible without gating PR #231.
+**Workflow target B — `.github/workflows/engine-tests.yml`** (integration matrix, including the live lanes that run the slow integration tests):
+- First deliverable: confirm via `packages/engine/scripts/test-lane-manifest.mjs` which matrix lane contains `fitl-events-sihanouk.test.ts` and which contains `fitl-march-free-operation.test.ts`. Live reassessment on 2026-04-28 found `fitl-events-sihanouk.test.ts` in `fitl-events-shard-c` and `fitl-march-free-operation.test.ts` in `fitl-rules`. Cite the lane mapping in the ticket.
+- Either add matrix-driven step-level `continue-on-error: true` to the affected matrix entries, or bump per-lane `timeout: 30 → 60`. Default lean: `continue-on-error: true` plus a non-blocking summary so the signal is visible without gating PR #231.
 
 **Per-test budgets**: the spec's earlier draft proposed `// @timeout` annotations; that mechanism does not exist in `run-tests.mjs` (lane-level only). If per-test relief is still required after the workflow-level bumps, options are: (a) extend the lane-manifest to support per-test timeout overrides; (b) carve sihanouk and march-free-operation into a dedicated lane with a longer lane-level timeout; (c) override at runtime via env vars (`ENGINE_DETERMINISM_TEST_TIMEOUT_MS`, `ENGINE_FITL_RULES_TEST_TIMEOUT_MS`). Default lean: option (a) is the F15-aligned answer; option (c) is acceptable as a further temporary unblock.
 
@@ -285,7 +285,7 @@ Acceptance:
 - Replay-identity tests stay green on all determinism shards.
 - Score-equivalence tests against the closure-tree evaluator stay green.
 - **Per-card cost: ≤ 250 ms under 4 baseline profiles, `verifyIncrementalHash=true`** — the original target met.
-- `engine-tests.yml` `slow-parity-shard-*` re-enabled (no longer `continue-on-error`, per-shard `timeout: 30` restored).
+- `engine-tests.yml` Phase 0 tactical relief re-enabled as blocking (no longer `continue-on-error`, per-lane `timeout: 30` restored).
 - `engine-determinism.yml` job-level `timeout-minutes` restored to 30 m.
 - Sihanouk and March-Free-Operation per-test budgets restored (whichever mechanism Phase 0 selected).
 - **Closure-tree evaluation path deleted**: `compiled-policy-runtime.ts:buildPolicyExprClosure` and downstream closure callees in `policy-evaluation-core.ts` removed. Per F14, no fallback retained. Spec 147's AOT compile path now produces bytecode directly; the compiled-closure runtime is dead code post-flip.
@@ -382,7 +382,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 | Phase | Approx tickets | Rough scope per ticket |
 |---|---:|---|
-| 0 | 3 | (a) `engine-determinism.yml` job-level timeout bump; (b) `engine-tests.yml` `slow-parity-shard-*` continue-on-error or per-shard timeout bump (after lane-mapping confirmation); (c) create `149FITLEVNUMVM-CI-RESTORE` tracking ticket. |
+| 0 | 3 | (a) `engine-determinism.yml` job-level timeout bump; (b) `engine-tests.yml` affected matrix-lane continue-on-error or per-lane timeout bump (after lane-mapping confirmation); (c) create `149FITLEVNUMVM-CI-RESTORE` tracking ticket. |
 | 1 | 3-4 | (a) layout builder; (b) view builder; (c) wire into read paths; (d) perf gate test. |
 | 2 | 3-4 | (a) PreviewDriveScope skeleton; (b) replace cloning path; (c) canonicalize-on-exit verification; (d) property tests. |
 | 3 | 4-5 | (a) opcode set + IR types; (b) AST→bytecode compiler; (c) feature-id table; (d) round-trip equivalence harness; (e) disassembler. |
@@ -416,7 +416,7 @@ These questions are scoped to be resolved inside their respective phases without
 
 Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-001.md`](../archive/tickets/149FITLEVNUMVM-001.md) — Bump engine-determinism.yml job-level timeout 30→60 (covers Phase 0)
-- [`tickets/149FITLEVNUMVM-002.md`](../tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml slow-parity-shard lanes for sihanouk + march-free-operation (covers Phase 0)
+- [`archive/tickets/149FITLEVNUMVM-002.md`](../archive/tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml lanes for sihanouk + march-free-operation (covers Phase 0)
 - [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
 - [`tickets/149FITLEVNUMVM-004.md`](../tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-005.md`](../tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)

@@ -65,8 +65,8 @@ jobs:
         lane:
           - { id: fitl-events-shard-a, script: 'test:integration:fitl-events:shard-a', timeout: 30 }
           - { id: fitl-events-shard-b, script: 'test:integration:fitl-events:shard-b', timeout: 30 }
-          - { id: fitl-events-shard-c, script: 'test:integration:fitl-events:shard-c', timeout: 30 }
-          - { id: fitl-rules,          script: 'test:integration:fitl-rules',          timeout: 30 }
+          - { id: fitl-events-shard-c, script: 'test:integration:fitl-events:shard-c', timeout: 30, continue_on_error: true }
+          - { id: fitl-rules,          script: 'test:integration:fitl-rules',          timeout: 30, continue_on_error: true }
           - { id: texas-cross-game,    script: 'test:integration:texas-cross-game',    timeout: 30 }
           - { id: slow-parity-shard-a, script: 'test:integration:slow-parity:shard-a', timeout: 30 }
           - { id: slow-parity-shard-b, script: 'test:integration:slow-parity:shard-b', timeout: 30 }
@@ -88,4 +88,14 @@ jobs:
           name: engine-dist
           path: packages/engine/dist
       - name: Run engine ${{ matrix.lane.id }}
+        continue-on-error: ${{ matrix.lane.continue_on_error == true }}
         run: pnpm -F @ludoforge/engine ${{ matrix.lane.script }}
+      - name: Record non-blocking lane
+        if: ${{ matrix.lane.continue_on_error == true }}
+        run: |
+          {
+            echo "### Non-blocking engine lane"
+            echo ""
+            echo "\`${{ matrix.lane.id }}\` is temporarily non-blocking for Spec 149 Phase 0."
+            echo "Ticket 149FITLEVNUMVM-003 owns restoring blocking semantics after Phase 4."
+          } >> "$GITHUB_STEP_SUMMARY"

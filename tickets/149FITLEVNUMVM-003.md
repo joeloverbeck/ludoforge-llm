@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
-**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `tickets/149FITLEVNUMVM-002.md`, `tickets/149FITLEVNUMVM-016.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `tickets/149FITLEVNUMVM-016.md`
 
 ## Problem
 
@@ -14,7 +14,7 @@ Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes 
 
 ## Assumption Reassessment (2026-04-28)
 
-1. Tickets 001 and 002 land Phase 0 CI bumps; the exact deltas are recorded in their Outcome sections at completion time. This ticket's scope is to revert whatever those tickets changed.
+1. Tickets 001 and 002 land Phase 0 CI bumps; the exact deltas are recorded in their Outcome sections at completion time. Ticket 002 corrected its draft slow-parity assumption: the affected live lanes are `fitl-events-shard-c` and `fitl-rules`. This ticket's scope is to revert whatever those tickets changed.
 2. Ticket 016 is the Phase 4 default-flip + closure-tree deletion ticket; its acceptance includes the ≤250 ms perf gate.
 3. The "single commit" requirement comes from spec §Phase 0 and is preserved here — split commits would leave intermediate states with mismatched expectations.
 
@@ -41,9 +41,10 @@ Restore `timeout-minutes: 60` → `timeout-minutes: 30` on the determinism job (
 
 ### 3. Revert `.github/workflows/engine-tests.yml`
 
-Restore the `slow-parity-shard-*` matrix entries to their pre-bump state:
-- Remove any `continue-on-error: true` entries added by ticket 002.
-- Restore `lane.timeout: 30` if ticket 002 bumped them.
+Restore the ticket-002 matrix entries to their pre-bump state:
+- Remove any `continue_on_error: true` entries added by ticket 002 (currently `fitl-events-shard-c` and `fitl-rules`).
+- Remove the non-blocking summary step if it is no longer used by any matrix entry.
+- Restore `lane.timeout: 30` if ticket 002 bumped any lane.
 
 Reference ticket 002's Outcome section for the exact entries that were modified.
 
@@ -66,14 +67,14 @@ All four reverts (job-level timeout, matrix-level changes, any per-test mechanis
 
 ### Tests That Must Pass
 
-1. After revert, full CI runs green on PR #231 (or main): determinism shards complete within 30 m, slow-parity-shards complete within 30 m and are blocking again.
+1. After revert, full CI runs green on PR #231 (or main): determinism shards complete within 30 m, ticket-002 engine-test lanes complete within 30 m and are blocking again.
 2. `fitl-per-card-cost.perf.test.ts` continues to pass at ≤ 250 ms (recalibrated by ticket 016).
 3. Existing suite: `pnpm turbo build && pnpm turbo lint`.
 
 ### Invariants
 
 1. No silent retention of any Phase 0 bump in either workflow file post-revert.
-2. CI gating semantics fully restored — no `continue-on-error` left on determinism or slow-parity shards.
+2. CI gating semantics fully restored — no Phase 0 `continue-on-error` remains on determinism or ticket-002 engine-test lanes.
 3. Per F14, no fallback configuration shims retained.
 
 ## Test Plan

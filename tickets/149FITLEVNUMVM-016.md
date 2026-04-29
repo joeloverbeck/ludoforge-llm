@@ -100,7 +100,7 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 1. Replay-identity tests stay green on ALL 10 determinism shards (no `LUDOFORGE_POLICY_VM` env var needed — bytecode is default).
 2. Score-equivalence: ticket 014's harness still passes (now exercising the VM as the default path; closure-tree no longer exists to compare against, so harness is repurposed as a VM correctness check).
 3. **Per-card cost: ≤ 250 ms under all 4 baseline profiles** (`verifyIncrementalHash=true`).
-4. `engine-tests.yml` slow-parity-shard lanes complete within their pre-Phase-0 budgets.
+4. `engine-tests.yml` ticket-002 lanes (`fitl-events-shard-c` and `fitl-rules`) complete within their pre-Phase-0 budgets.
 5. `engine-determinism.yml` job-level timeout (still 60 m at this ticket; ticket 003 reverts) accommodates the determinism shards comfortably.
 6. No surviving import sites for `buildPolicyExprClosure` or `CompiledPolicyExprClosure` (verify via grep).
 7. Existing suite: `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:perf`.

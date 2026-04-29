@@ -79,7 +79,7 @@ Boundary notes:
 - The `policy-profile-quality-report` job remains `timeout-minutes: 15`.
 - No determinism matrix entries changed, and no `continue-on-error` was introduced
   on the blocking `determinism` job.
-- `engine-tests.yml` slow-parity relief remains sibling-owned by
+- `engine-tests.yml` lane relief remains sibling-owned by
   `tickets/149FITLEVNUMVM-002.md`.
 
 Verification set:

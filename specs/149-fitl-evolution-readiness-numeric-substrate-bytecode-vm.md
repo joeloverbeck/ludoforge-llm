@@ -137,7 +137,7 @@ interface EncodedState {
 }
 ```
 
-The layout is **derived from GameDef at compile time** by a generic builder that walks `dataAssets`, `tokenTypes`, `markerTypes`, etc. No FITL-specific code.
+The layout is **derived from GameDef at compile time** by a generic builder that walks compiled GameDef surfaces such as `zones`, `tokenTypes`, marker lattices, variable definitions, and asset-derived runtime surfaces when a descriptor needs them. Raw `dataAssets` remain a GameSpecDoc/CNL input and do not become a separate kernel contract. No FITL-specific code.
 
 ### 2.3 Apply/undo for inner-preview (phase 2)
 
@@ -418,7 +418,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-001.md`](../archive/tickets/149FITLEVNUMVM-001.md) — Bump engine-determinism.yml job-level timeout 30→60 (covers Phase 0)
 - [`archive/tickets/149FITLEVNUMVM-002.md`](../archive/tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml lanes for sihanouk + march-free-operation (covers Phase 0)
 - [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
-- [`tickets/149FITLEVNUMVM-004.md`](../tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
+- [`archive/tickets/149FITLEVNUMVM-004.md`](../archive/tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-005.md`](../tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1)
 - [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1)

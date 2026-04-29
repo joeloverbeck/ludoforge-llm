@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/encoded-state/view.ts`
-**Deps**: `tickets/149FITLEVNUMVM-004.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-004.md`
 
 ## Problem
 
@@ -12,10 +12,11 @@ Phase 1 of spec 149 needs a typed-array view of authoritative `GameState` derive
 
 ## Assumption Reassessment (2026-04-28)
 
-1. `GameState` is defined in `packages/engine/src/kernel/types.ts` and exposes `tokens`, `zones`, `markers`, `playerInts`, `globals`, and the canonical hash machinery.
+1. `GameState` is defined in `packages/engine/src/kernel/types.ts` and exposes `zones`, `markers`, `globalVars`, `perPlayerVars`, `zoneVars`, `nextTokenOrdinal`, and the canonical hash machinery. There is no top-level `state.tokens`, `playerInts`, or `globals` field; the encoded view derives those arrays from the live `GameState` shape.
 2. `EncodedStateLayout` from ticket 004 provides the shape descriptors needed to size the typed arrays.
 3. Spec §2.2 specifies the typed-array shapes: `tokenZone: Int16Array`, `tokenFlags: BigUint64Array`, `zoneOccupancy: Int16Array` (denormalized), `playerInts: Int32Array`, `zoneMarkers: BigUint64Array`, `globals: Int32Array`.
 4. Multi-occurrence tokens require a sentinel + occurrence-list pointer per spec §5 edge cases — mirrors the invariant `MutableTokenStateIndex` enforces in `packages/engine/src/kernel/token-state-index.ts`.
+5. Post-004 review: `EncodedStateLayout.tokenIds` currently covers deterministic initial setup token ids generated through `createToken` (`tok_<type>_<ordinal>`). This ticket owns the generic view-builder decision for any `GameState` token id not already present in the layout (for example later `createToken` effects via `nextTokenOrdinal`); do not assume every live token id is predeclared on `GameDef`.
 
 ## Architecture Check
 
@@ -34,6 +35,7 @@ Export:
 
 Implementation notes:
 - Allocate typed arrays of the correct sizes from `layout.zoneIds.length`, `layout.tokenIds.length`, etc.
+- Before relying on `layout.tokenIds` as a complete slot table, compare it with the token ids in `state.zones`. If live state can contain additional runtime-created token ids, implement a generic deterministic extension/overflow strategy here and update the layout/view contract truthfully before final proof.
 - For multi-occurrence tokens, store the canonical (lowest zone-rank) zone in `tokenZone[i]` and a sentinel + occurrence-list pointer (mirror `MutableTokenStateIndex` semantics).
 - Use `SENTINEL_NONE` (export this constant) for "absent" zones/players.
 - Bitset population for `tokenFlags` and `zoneMarkers` walks the layout's bit positions.
@@ -63,7 +65,7 @@ Add a property test verifying `state → encoded → reconstruct → canonical-e
 
 ### Tests That Must Pass
 
-1. New test: `buildEncodedState` produces a view whose `tokenZone[i]` matches `state.tokens` for single-occurrence tokens.
+1. New test: `buildEncodedState` produces a view whose `tokenZone[i]` matches the token occurrences in `state.zones` for single-occurrence tokens.
 2. New test: multi-occurrence tokens use the canonical zone + occurrence-list pointer convention.
 3. New test: round-trip `state → encoded → reconstruct` produces canonical-equal `state` on FITL replay fixtures.
 4. New test: works on both FITL and Texas Hold'em (game-agnostic check).

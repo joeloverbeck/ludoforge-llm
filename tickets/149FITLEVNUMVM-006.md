@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`
-**Deps**: `tickets/149FITLEVNUMVM-004.md`, `tickets/149FITLEVNUMVM-005.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-004.md`, `tickets/149FITLEVNUMVM-005.md`
 
 ## Problem
 
@@ -27,7 +27,7 @@ Phase 1's measurable gain comes from routing hot read paths (`evalCondition`, `r
 
 ### 1. `packages/engine/src/agents/policy-runtime.ts`
 
-Extend `PolicyRuntimeProviders` interface (or `createPolicyRuntimeProviders` signature) to accept an optional `EncodedState` and `EncodedStateLayout`. When present, route the hot read functions (the ones currently consulting `state.zones`, `state.tokens`, `state.markers`, etc. via object walks) through encoded-view lookups.
+Extend `PolicyRuntimeProviders` interface (or `createPolicyRuntimeProviders` signature) to accept an optional `EncodedState` and `EncodedStateLayout`. When present, route the hot read functions (the ones currently consulting `state.zones`, token occurrences, `state.markers`, etc. via object walks) through encoded-view lookups.
 
 Specifically:
 - `resolveRef`-style providers (zone props, token aggregates, marker counts, global vars) — replace object walks with encoded-view index lookups.

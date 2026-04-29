@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-004: EncodedStateLayout builder from GameDef
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `packages/engine/src/kernel/encoded-state/` module
@@ -8,11 +8,11 @@
 
 ## Problem
 
-Phase 1 of spec 149 introduces a derived numeric encoded-state projection consulted by agent preview drives. The first deliverable is a generic builder that walks `GameDef` (specifically `dataAssets`, `tokenTypes`, `markerTypes`, `playerIds`, `zones`, and the variable namespace) at compile time to produce an `EncodedStateLayout` — the shape descriptor for the typed-array view that subsequent tickets (005, 006) will populate and consume.
+Phase 1 of spec 149 introduces a derived numeric encoded-state projection consulted by agent preview drives. The first deliverable is a generic builder that walks compiled `GameDef` surfaces (specifically `tokenTypes`, marker lattices, the player-count domain, `zones`, the variable namespace, and asset-derived runtime surfaces when a descriptor needs them) at compile time to produce an `EncodedStateLayout` — the shape descriptor for the typed-array view that subsequent tickets (005, 006) will populate and consume.
 
 ## Assumption Reassessment (2026-04-28)
 
-1. `GameDef` is defined in `packages/engine/src/kernel/types.ts` and exposes `dataAssets`, `tokenTypes`, `markerTypes`, `zones`, and `playerIds` (verified during spec 149 reassessment).
+1. `GameDef` is defined in `packages/engine/src/kernel/types.ts` and exposes `runtimeDataAssets`, `tokenTypes`, `markerLattices`/`globalMarkerLattices`, `zones`, player-count metadata, and compiled variable definitions. Raw `dataAssets` belong to `GameSpecDoc`/CNL input and are lowered into `runtimeDataAssets` before the kernel boundary.
 2. The branded id types `ZoneId`, `TokenId`, `PlayerId`, `ActionId`, `PhaseId`, `TriggerId`, `SeatId` exist in `packages/engine/src/kernel/branded.ts`. `MarkerId` and `VariableId` are NOT currently branded — the layout treats them uniformly as integer indices over their string-identifier domain (per spec §7 F17 row).
 3. No existing `EncodedStateLayout`, `TokenLayout`, `MarkerLayout`, `VarLayout`, or `BitsetLayout` type exists in the codebase (confirmed via Glob).
 
@@ -42,7 +42,7 @@ Create the directory with two files (this ticket lands `layout.ts`; ticket 005 l
 
 ### 3. Type tests for layout shape
 
-Add a unit test verifying layout shape against a reference FITL fixture (`data/games/fitl/`'s compiled GameDef).
+Add a unit test verifying layout shape against the reference FITL fixture (`data/games/fire-in-the-lake*`'s compiled GameDef).
 
 ## Files to Touch
 
@@ -83,3 +83,26 @@ Add a unit test verifying layout shape against a reference FITL fixture (`data/g
 1. `pnpm -F @ludoforge/engine build`.
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/encoded-state-layout.test.js`.
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
+
+## Outcome (2026-04-29)
+
+Completed under the Foundations-aligned boundary reset approved on 2026-04-29:
+
+- Corrected the ticket/spec boundary from raw `dataAssets` to compiled `GameDef` surfaces; raw `dataAssets` remain a GameSpecDoc/CNL input, and `runtimeDataAssets` is the compiled asset boundary for future descriptors that need asset payloads.
+- Added `packages/engine/src/kernel/encoded-state/layout.ts` and `index.ts`.
+- Exported the encoded-state module from the kernel barrel for later Phase 1/Phase 3 consumers.
+- Added `packages/engine/test/unit/kernel/encoded-state-layout.test.ts` covering FITL, Texas Hold'em, deterministic layout output, and malformed player-count metadata.
+
+Initial proof completed before this closeout note:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/encoded-state-layout.test.js` — PASS.
+
+Final acceptance proof:
+
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/encoded-state-layout.test.js` — PASS after the final broad build/typecheck output.
+- `pnpm -F @ludoforge/engine test:unit` — RED, repo-preexisting unrelated blocker: `dist/test/unit/lint/engine-test-lane-taxonomy-policy.test.js` reports `test/integration/fitl-no-turn-1-terminal.test.ts` present in `integration:game-packages` but missing from the guard's expected set. This ticket does not touch `packages/engine/scripts/test-lane-manifest.mjs`, the integration file, or the taxonomy guard.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/lint/engine-test-lane-taxonomy-policy.test.js` — RED with the same unrelated taxonomy mismatch.
+- `pnpm turbo build` — PASS.
+- `pnpm turbo lint` — PASS.
+- `pnpm turbo typecheck` — PASS.

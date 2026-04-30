@@ -6,12 +6,12 @@ import { describe, it } from 'node:test';
 
 import { Ajv2020 } from 'ajv/dist/2020.js';
 
+import { disassemble } from '../../../src/agents/policy-bytecode/index.js';
 import {
   Opcode,
   POLICY_BYTECODE_VERSION,
   POLICY_BYTECODE_VM_VERSION,
   SCORE_RANGE_LIMIT,
-  disassemble,
   validateScoreRange,
   type PolicyBytecode,
 } from '../../../src/cnl/policy-bytecode/index.js';
@@ -88,9 +88,23 @@ describe('policy bytecode foundational types', () => {
         'LT',
         'EQ',
         'NEQ',
+        'GTE',
+        'LTE',
         'JUMP_IF_FALSE',
         'ADD_SCORE',
+        'SUB_SCORE',
         'MUL_SCORE',
+        'DIV_SCORE',
+        'NEG',
+        'ABS',
+        'MIN',
+        'MAX',
+        'AND',
+        'OR',
+        'NOT',
+        'COALESCE',
+        'BOOL_TO_NUMBER',
+        'IN',
         'RESOLVE_REF',
         'AGGREGATE_SUM',
         'AGGREGATE_COUNT',
@@ -130,9 +144,9 @@ describe('policy bytecode foundational types', () => {
     assert.equal(validate(serializePolicyBytecode(bytecode)), true, JSON.stringify(validate.errors));
   });
 
-  it('reserves ABI hooks for later compiler and disassembler tickets', () => {
+  it('exposes compiler and disassembler ABI hooks', () => {
     const range = validateScoreRange({ kind: 'literal', value: SCORE_RANGE_LIMIT - 1 });
-    assert.equal(range.kind, 'unknown');
+    assert.equal(range.kind, 'bounded');
 
     const bytecode: PolicyBytecode = {
       instructions: Int32Array.from([Opcode.HALT]),
@@ -144,6 +158,6 @@ describe('policy bytecode foundational types', () => {
         targetVmVersion: POLICY_BYTECODE_VM_VERSION,
       },
     };
-    assert.throws(() => disassemble(bytecode), /disassembly lands with the bytecode compiler/u);
+    assert.equal(disassemble(bytecode), '0000: HALT');
   });
 });

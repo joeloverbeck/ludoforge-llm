@@ -197,10 +197,13 @@ Lowering source is the compile-time `AgentPolicyExpr` IR (defined in `packages/e
 ```
 LOAD_FEATURE   <feature-id>          → push feature value onto stack
 LOAD_CONST     <int>                 → push constant
-GT, LT, EQ, NEQ                      → pop 2, compare, push bool
+GT, LT, GTE, LTE, EQ, NEQ            → pop 2, compare, push bool
 JUMP_IF_FALSE  <offset>              → conditional skip
-ADD_SCORE      <action-tag-id> <int> → score boost for action tag
-MUL_SCORE      <action-tag-id> <int>
+ADD_SCORE, SUB_SCORE                 → pop 2, exact integer arithmetic
+MUL_SCORE, DIV_SCORE                 → pop 2, multiply or Math.trunc division
+NEG, ABS, MIN, MAX                   → generic score helpers
+AND, OR, NOT, COALESCE               → generic boolean/null helpers
+BOOL_TO_NUMBER, IN                   → policy DSL helper lowering
 RESOLVE_REF    <ref-id>              → push resolved binding value
 AGGREGATE_SUM, AGGREGATE_COUNT, ...  → over selector results
 HALT
@@ -488,7 +491,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-010.md`](../archive/tickets/149FITLEVNUMVM-010.md) — Deferred apply/undo equivalence property tests (old Phase 2 branch)
 - [`archive/tickets/149FITLEVNUMVM-011.md`](../archive/tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-012.md`](../archive/tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
-- [`tickets/149FITLEVNUMVM-013.md`](../tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-013.md`](../archive/tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-014.md`](../tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-015.md`](../tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
 - [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Phase 4 default-flip + closure-tree deletion, F14 atomic cut (covers Phase 4)

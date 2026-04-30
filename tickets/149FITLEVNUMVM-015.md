@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `packages/engine/src/agents/policy-vm/vm.ts`, modify `policy-runtime.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `archive/tickets/149FITLEVNUMVM-011.md`, `tickets/149FITLEVNUMVM-013.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `archive/tickets/149FITLEVNUMVM-011.md`, `archive/tickets/149FITLEVNUMVM-013.md`
 
 ## Problem
 
@@ -15,7 +15,7 @@ Phase 4's core deliverable: a tight switch-loop VM over `Int32Array` opcodes ope
 1. `EncodedState` from ticket 005 is the typed-array surface the VM reads.
 2. The bytecode IR from ticket 011 + the compiler from ticket 013 + the feature table from ticket 012 are all in place.
 3. `policy-runtime.ts` is the dispatcher — adding an A/B switch here is structurally clean (only 1 source consumer of policy-runtime exports per blast radius analysis).
-4. Spec §2.5 specifies ~200 LOC VM. The spec calibration is reasonable for a simple stack-based VM with the ticket 011 opcode set.
+4. Spec §2.5 specifies ~200 LOC VM. Ticket 013 expanded the original ticket-011 seed opcode set to cover the live FITL baseline policy DSL surface; the VM must implement the current `Opcode` enum, not the archived ticket-011 subset.
 
 ## Architecture Check
 
@@ -34,9 +34,9 @@ Export:
 - `interface VMContext` — candidate metadata (current candidate index, depth, seat info).
 - `interface VMResult` — score array, optional pruning info.
 
-Implementation: tight switch loop over `Int32Array` opcodes. Stack is a fixed-size `Int32Array` (e.g., 256 deep — well under any real expression's needs). Score array accumulates `ADD_SCORE` / `MUL_SCORE` contributions per action tag.
+Implementation: tight switch loop over `Int32Array` opcodes. Stack is a fixed-size `Int32Array` (e.g., 256 deep — well under any real expression's needs). Score array accumulates generic score operations from the compiled policy bytecode.
 
-Handle every opcode from ticket 011: `LOAD_FEATURE`, `LOAD_CONST`, `GT`/`LT`/`EQ`/`NEQ`, `JUMP_IF_FALSE`, `ADD_SCORE`, `MUL_SCORE`, `RESOLVE_REF`, `AGGREGATE_SUM`/`COUNT`/`MIN`/`MAX`, `RESOLVE_DYNAMIC` (delegates to closure-tree fallback per spec §5), `HALT`.
+Handle every opcode from the live `packages/engine/src/cnl/policy-bytecode/types.ts` enum, including the ticket-013 generic policy helpers: `GTE`, `LTE`, `SUB_SCORE`, `DIV_SCORE`, `NEG`, `ABS`, `MIN`, `MAX`, `AND`, `OR`, `NOT`, `COALESCE`, `BOOL_TO_NUMBER`, and `IN`, plus the original feature/constant/comparison/aggregate/dynamic/halt opcodes. `RESOLVE_DYNAMIC` delegates to the closure-tree fallback per spec §5 during the Phase 4 rollout.
 
 ### 2. `packages/engine/src/agents/policy-vm/index.ts` (new)
 
@@ -84,7 +84,7 @@ LUDOFORGE_POLICY_VM=on cd packages/engine && node scripts/run-tests.mjs --lane d
 
 ### Tests That Must Pass
 
-1. New test: VM executes hand-crafted bytecode correctly for each opcode (unit-level coverage).
+1. New test: VM executes hand-crafted bytecode correctly for each live `Opcode` enum member (unit-level coverage, including ticket-013 helper opcodes).
 2. Activated `policy-bytecode-equivalence.test.ts` (ticket 014): bit-identical scores between closure-tree and VM with `LUDOFORGE_POLICY_VM=on`.
 3. Replay-identity tests stay green on ALL determinism shards with VM enabled.
 4. Default behavior (env var unset) unchanged: closure-tree path active, all existing tests pass.
@@ -101,7 +101,7 @@ LUDOFORGE_POLICY_VM=on cd packages/engine && node scripts/run-tests.mjs --lane d
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/agents/policy-vm-core.test.ts` — opcode-level coverage, hand-crafted bytecode execution.
+1. `packages/engine/test/unit/agents/policy-vm-core.test.ts` — opcode-level coverage for the live enum, hand-crafted bytecode execution.
 
 ### Commands
 

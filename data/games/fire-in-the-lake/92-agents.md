@@ -5,57 +5,57 @@ agents:
   parameters:
     eventWeight:
       type: number
-      default: 1
-      min: -10
-      max: 10
+      default: 100
+      min: -1000
+      max: 1000
       tunable: true
     projectedMarginWeight:
       type: number
-      default: 1
-      min: -10
-      max: 10
+      default: 100
+      min: -1000
+      max: 1000
       tunable: true
     resourceWeight:
       type: number
       default: 0
-      min: -1
-      max: 1
+      min: -100
+      max: 100
       tunable: true
     rallyWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
     taxWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
     governWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
     trainWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
     sweepWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
     assaultWeight:
       type: number
-      default: 1
+      default: 100
       min: 0
-      max: 10
+      max: 1000
       tunable: true
 
   library:
@@ -188,43 +188,43 @@ agents:
             ref: candidate.tag.event-play
       preferTrainAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.train
       preferPatrolAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.patrol
       preferAssaultAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.assault
       preferAdviseAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.advise
       preferSweepAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.sweep
       preferGovernAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.govern
       preferRallyAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.rally
@@ -237,25 +237,25 @@ agents:
             ref: candidate.tag.rally
       preferMarchAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.march
       preferAttackAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.attack
       preferTerrorAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.terror
       preferTaxAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.tax
@@ -296,19 +296,19 @@ agents:
             ref: candidate.tag.assault
       preferSubvertAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.subvert
       preferInfiltrateAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.infiltrate
       preferBombardAction:
         scopes: [move]
-        weight: 1
+        weight: 100
         value:
           boolToNumber:
             ref: candidate.tag.bombard
@@ -318,7 +318,7 @@ agents:
           lt:
             - { ref: feature.arvnTroopCount }
             - 10
-        weight: 2
+        weight: 200
         value:
           boolToNumber:
             ref: candidate.tag.train
@@ -328,7 +328,7 @@ agents:
           lt:
             - { ref: feature.patronage }
             - 20
-        weight: 8
+        weight: 800
         value:
           boolToNumber:
             ref: candidate.tag.govern
@@ -338,13 +338,13 @@ agents:
           lt:
             - { ref: feature.coinControlPop }
             - 25
-        weight: 5
+        weight: 500
         value:
           boolToNumber:
             ref: candidate.tag.train
       preferNormalizedMargin:
         scopes: [move]
-        weight: 5
+        weight: 500
         value:
           div:
             - sub:
@@ -357,7 +357,7 @@ agents:
                     - { ref: aggregate.minMarginScore }
       preferStrongNormalizedMargin:
         scopes: [move]
-        weight: 8
+        weight: 800
         value:
           div:
             - sub:
@@ -370,12 +370,12 @@ agents:
                     - { ref: aggregate.minMarginScore }
       valueCapabilityGain:
         scopes: [move]
-        weight: 3
+        weight: 300
         value:
           ref: feature.projectedCapabilityGain
       penalizeAttack:
         scopes: [move]
-        weight: -0.1
+        weight: -10
         value:
           boolToNumber:
             ref: candidate.tag.attack
@@ -399,9 +399,9 @@ agents:
     us-baseline:
       observer: currentPlayer
       params:
-        eventWeight: 2
-        projectedMarginWeight: 1
-        resourceWeight: 0.02
+        eventWeight: 200
+        projectedMarginWeight: 100
+        resourceWeight: 2
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -421,8 +421,8 @@ agents:
       preview:
         mode: exactWorld
       params:
-        projectedMarginWeight: 8
-        governWeight: 5
+        projectedMarginWeight: 800
+        governWeight: 500
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -437,9 +437,9 @@ agents:
       preview:
         mode: exactWorld
       params:
-        projectedMarginWeight: 3
-        governWeight: 10
-        trainWeight: 3
+        projectedMarginWeight: 300
+        governWeight: 1000
+        trainWeight: 300
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -456,9 +456,9 @@ agents:
     nva-baseline:
       observer: currentPlayer
       params:
-        eventWeight: 1.5
-        projectedMarginWeight: 1
-        resourceWeight: 0.03
+        eventWeight: 150
+        projectedMarginWeight: 100
+        resourceWeight: 3
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist
@@ -480,8 +480,8 @@ agents:
       preview:
         mode: tolerateStochastic
       params:
-        projectedMarginWeight: 5
-        rallyWeight: 5
+        projectedMarginWeight: 500
+        rallyWeight: 500
       use:
         pruningRules:
           - dropPassWhenOtherMovesExist

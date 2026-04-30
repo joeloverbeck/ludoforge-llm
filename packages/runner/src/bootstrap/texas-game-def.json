@@ -13874,6 +13874,194 @@
         "callAmount": {
           "type": "number",
           "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "facingBet": {
+          "type": "boolean",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [
+              "callAmount"
+            ],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "potOddsFavorable": {
+          "type": "boolean",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [
+              "callAmount"
+            ],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "handHighCard": {
+          "type": "number",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "handLowCard": {
+          "type": "number",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "premiumHand": {
+          "type": "boolean",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [
+              "handHighCard"
+            ],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "isDealer": {
+          "type": "boolean",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "hasPair": {
+          "type": "boolean",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [
+              "handHighCard",
+              "handLowCard"
+            ],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        }
+      },
+      "candidateFeatures": {},
+      "candidateAggregates": {},
+      "pruningRules": {},
+      "considerations": {
+        "preferCheck": {
+          "scopes": [
+            "move"
+          ],
+          "costClass": "candidate",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "preferCall": {
+          "scopes": [
+            "move"
+          ],
+          "costClass": "candidate",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "avoidFold": {
+          "scopes": [
+            "move"
+          ],
+          "costClass": "candidate",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "foldWhenBadPotOdds": {
+          "scopes": [
+            "move"
+          ],
+          "costClass": "candidate",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [
+              "facingBet",
+              "potOddsFavorable"
+            ],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        },
+        "alwaysRaise": {
+          "scopes": [
+            "move"
+          ],
+          "costClass": "candidate",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        }
+      },
+      "tieBreakers": {
+        "stableMoveKey": {
+          "kind": "stableMoveKey",
+          "costClass": "state",
+          "dependencies": {
+            "parameters": [],
+            "stateFeatures": [],
+            "candidateFeatures": [],
+            "aggregates": [],
+            "strategicConditions": []
+          }
+        }
+      },
+      "strategicConditions": {}
+    },
+    "compiled": {
+      "stateFeatures": {
+        "callAmount": {
+          "type": "number",
+          "costClass": "state",
           "expr": {
             "kind": "op",
             "op": "max",
@@ -14159,36 +14347,7 @@
           }
         }
       },
-      "candidateFeatures": {
-        "raiseAmount": {
-          "type": "number",
-          "costClass": "candidate",
-          "expr": {
-            "kind": "op",
-            "op": "coalesce",
-            "args": [
-              {
-                "kind": "ref",
-                "ref": {
-                  "kind": "candidateParam",
-                  "id": "raiseAmount"
-                }
-              },
-              {
-                "kind": "literal",
-                "value": 0
-              }
-            ]
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [],
-            "aggregates": [],
-            "strategicConditions": []
-          }
-        }
-      },
+      "candidateFeatures": {},
       "candidateAggregates": {},
       "pruningRules": {},
       "considerations": {
@@ -14289,7 +14448,7 @@
           "costClass": "candidate",
           "weight": {
             "kind": "literal",
-            "value": 200
+            "value": 150
           },
           "value": {
             "kind": "op",
@@ -14372,33 +14531,6 @@
             "aggregates": [],
             "strategicConditions": []
           }
-        },
-        "preferLargerRaise": {
-          "scopes": [
-            "move"
-          ],
-          "costClass": "candidate",
-          "weight": {
-            "kind": "literal",
-            "value": 0.002
-          },
-          "value": {
-            "kind": "ref",
-            "ref": {
-              "kind": "library",
-              "refKind": "candidateFeature",
-              "id": "raiseAmount"
-            }
-          },
-          "dependencies": {
-            "parameters": [],
-            "stateFeatures": [],
-            "candidateFeatures": [
-              "raiseAmount"
-            ],
-            "aggregates": [],
-            "strategicConditions": []
-          }
         }
       },
       "tieBreakers": {
@@ -14426,15 +14558,16 @@
             "preferCall",
             "avoidFold",
             "foldWhenBadPotOdds",
-            "alwaysRaise",
-            "preferLargerRaise"
+            "alwaysRaise"
           ],
           "tieBreakers": [
             "stableMoveKey"
           ]
         },
         "preview": {
-          "mode": "disabled"
+          "mode": "disabled",
+          "phase1": false,
+          "phase1CompletionsPerAction": 1
         },
         "selection": {
           "mode": "softmaxSample",
@@ -14446,26 +14579,23 @@
             "facingBet",
             "potOddsFavorable"
           ],
-          "candidateFeatures": [
-            "raiseAmount"
-          ],
+          "candidateFeatures": [],
           "candidateAggregates": [],
           "considerations": [
             "preferCheck",
             "preferCall",
             "avoidFold",
             "foldWhenBadPotOdds",
-            "alwaysRaise",
-            "preferLargerRaise"
+            "alwaysRaise"
           ]
         },
-        "fingerprint": "b9fcfb4a3b4636428377a55de123bdf5d2365d3c4074b036d52660ce28ffcced"
+        "fingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588"
       }
     },
     "bindingsBySeat": {
       "neutral": "baseline"
     },
-    "catalogFingerprint": "c020b0df2f801b0c22faa9a3a7b5934880cbafdfcaf15f3b7b037570a11b4212"
+    "catalogFingerprint": "0861216bbd710ab34dae98926b5662d709383f944afbf9ff69656003abbbc8dd"
   },
   "actions": [
     {
@@ -14535,7 +14665,8 @@
         "river"
       ],
       "tags": [
-        "check"
+        "check",
+        "pass"
       ],
       "params": [],
       "pre": {
@@ -15380,7 +15511,8 @@
         "fold"
       ],
       "check": [
-        "check"
+        "check",
+        "pass"
       ],
       "call": [
         "call"
@@ -15404,6 +15536,9 @@
       ],
       "fold": [
         "fold"
+      ],
+      "pass": [
+        "check"
       ],
       "raise": [
         "raise"

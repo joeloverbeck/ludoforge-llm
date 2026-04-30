@@ -598,24 +598,24 @@
       "type": "number",
       "required": false,
       "tunable": true,
-      "min": -10,
-      "max": 10,
-      "default": 1
+      "min": -1000,
+      "max": 1000,
+      "default": 100
     },
     "projectedMarginWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
-      "min": -10,
-      "max": 10,
-      "default": 1
+      "min": -1000,
+      "max": 1000,
+      "default": 100
     },
     "resourceWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
-      "min": -1,
-      "max": 1,
+      "min": -100,
+      "max": 100,
       "default": 0
     },
     "rallyWeight": {
@@ -623,48 +623,48 @@
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     },
     "taxWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     },
     "governWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     },
     "trainWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     },
     "sweepWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     },
     "assaultWeight": {
       "type": "number",
       "required": false,
       "tunable": true,
       "min": 0,
-      "max": 10,
-      "default": 1
+      "max": 1000,
+      "default": 100
     }
   },
   "candidateParamDefs": {
@@ -2006,7 +2006,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2036,7 +2036,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2066,7 +2066,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2096,7 +2096,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2126,7 +2126,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2156,7 +2156,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2186,7 +2186,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2248,7 +2248,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2278,7 +2278,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2308,7 +2308,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2338,7 +2338,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2528,7 +2528,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2558,7 +2558,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2588,7 +2588,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": 1
+          "value": 100
         },
         "value": {
           "kind": "op",
@@ -2636,7 +2636,7 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 2
+          "value": 200
         },
         "value": {
           "kind": "op",
@@ -2686,7 +2686,7 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 8
+          "value": 800
         },
         "value": {
           "kind": "op",
@@ -2736,7 +2736,7 @@
         },
         "weight": {
           "kind": "literal",
-          "value": 5
+          "value": 500
         },
         "value": {
           "kind": "op",
@@ -2768,7 +2768,7 @@
         "costClass": "preview",
         "weight": {
           "kind": "literal",
-          "value": 5
+          "value": 500
         },
         "value": {
           "kind": "op",
@@ -2850,7 +2850,7 @@
         "costClass": "preview",
         "weight": {
           "kind": "literal",
-          "value": 8
+          "value": 800
         },
         "value": {
           "kind": "op",
@@ -2932,7 +2932,7 @@
         "costClass": "preview",
         "weight": {
           "kind": "literal",
-          "value": 3
+          "value": 300
         },
         "value": {
           "kind": "ref",
@@ -2959,7 +2959,7 @@
         "costClass": "candidate",
         "weight": {
           "kind": "literal",
-          "value": -0.1
+          "value": -10
         },
         "value": {
           "kind": "op",
@@ -3074,9 +3074,9 @@
     "us-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "eventWeight": 2,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.02
+        "eventWeight": 200,
+        "projectedMarginWeight": 100,
+        "resourceWeight": 2
       },
       "use": {
         "pruningRules": [
@@ -3096,10 +3096,7 @@
         ]
       },
       "preview": {
-        "mode": "exactWorld",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4
+        "mode": "exactWorld"
       },
       "selection": {
         "mode": "argmax"
@@ -3125,13 +3122,13 @@
           "preferAdviseAction"
         ]
       },
-      "fingerprint": "cb70458191639a96121de3d8ba59933773274cff9f24dcd703c3b7651f9a06d8"
+      "fingerprint": "549d63ba107dca28e6bd59327645ddf5ce1b9b9066e21315f1c1066d872fb0f0"
     },
     "arvn-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "projectedMarginWeight": 8,
-        "governWeight": 5
+        "projectedMarginWeight": 800,
+        "governWeight": 500
       },
       "use": {
         "pruningRules": [
@@ -3147,9 +3144,6 @@
       },
       "preview": {
         "mode": "exactWorld",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -3171,14 +3165,14 @@
           "preferGovernWeighted"
         ]
       },
-      "fingerprint": "53b9c8ae7447b3e1b3c45fdebdf5630f9dcfccbb088f34878e0a4a5bc454ea72"
+      "fingerprint": "258d5a8cf8140c7b8337f888913a3bb82c3febac14e269f000fccc56c7c042c0"
     },
     "arvn-evolved": {
       "observerName": "currentPlayer",
       "params": {
-        "projectedMarginWeight": 3,
-        "governWeight": 10,
-        "trainWeight": 3
+        "projectedMarginWeight": 300,
+        "governWeight": 1000,
+        "trainWeight": 300
       },
       "use": {
         "pruningRules": [
@@ -3198,9 +3192,6 @@
       },
       "preview": {
         "mode": "exactWorld",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -3230,14 +3221,14 @@
           "trainWhenControlLow"
         ]
       },
-      "fingerprint": "86673fb4e11192bcfe50894a26aa22ec0bbe23bdca3d35f0b969c32dd5c0d088"
+      "fingerprint": "ff0e89acea604a4b254803924d4da12b4fa7a5f5999667850dea686da9805864"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "eventWeight": 1.5,
-        "projectedMarginWeight": 1,
-        "resourceWeight": 0.03
+        "eventWeight": 150,
+        "projectedMarginWeight": 100,
+        "resourceWeight": 3
       },
       "use": {
         "pruningRules": [
@@ -3259,10 +3250,7 @@
         ]
       },
       "preview": {
-        "mode": "exactWorld",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4
+        "mode": "exactWorld"
       },
       "selection": {
         "mode": "argmax"
@@ -3290,13 +3278,13 @@
           "preferBombardAction"
         ]
       },
-      "fingerprint": "be331f71c86b50e98fc452b36ef60ac3fd8423ac9e08bb5ffb562cd143f16872"
+      "fingerprint": "30afed71576db548feee0ee92851898c3539eb4a4a272c87937dc672e05f1e3c"
     },
     "vc-baseline": {
       "observerName": "currentPlayer",
       "params": {
-        "projectedMarginWeight": 5,
-        "rallyWeight": 5
+        "projectedMarginWeight": 500,
+        "rallyWeight": 500
       },
       "use": {
         "pruningRules": [
@@ -3313,9 +3301,6 @@
       },
       "preview": {
         "mode": "tolerateStochastic",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -3342,7 +3327,7 @@
           "valueCapabilityGain"
         ]
       },
-      "fingerprint": "5edf2d1f4c5ad6dcd16e408e32bdd35b3ba0f78b55c1600f8a05211a28b63e86"
+      "fingerprint": "e3c116110d533bd187971bbd0ab21d20587073bc72769d9f231540034e3bacea"
     }
   },
   "bindingsBySeat": {
@@ -3351,5 +3336,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "d568fede8aa02e20ba6726804d7e2c816f09c3faa80741fd2f1bc699eefd6d2d"
+  "catalogFingerprint": "7627dacd454d9e8164ce0be33c63e7d2088e6503bde581db71adde452385f0db"
 }

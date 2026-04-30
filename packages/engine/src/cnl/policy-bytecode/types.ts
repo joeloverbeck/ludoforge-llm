@@ -1,5 +1,3 @@
-import type { AgentPolicyExpr, CompiledPolicyExpr } from '../../kernel/types.js';
-
 export const POLICY_BYTECODE_VERSION = 1;
 export const POLICY_BYTECODE_VM_VERSION = 1;
 export const SCORE_RANGE_LIMIT = 2 ** 30;
@@ -11,9 +9,23 @@ export enum Opcode {
   LT,
   EQ,
   NEQ,
+  GTE,
+  LTE,
   JUMP_IF_FALSE,
   ADD_SCORE,
+  SUB_SCORE,
   MUL_SCORE,
+  DIV_SCORE,
+  NEG,
+  ABS,
+  MIN,
+  MAX,
+  AND,
+  OR,
+  NOT,
+  COALESCE,
+  BOOL_TO_NUMBER,
+  IN,
   RESOLVE_REF,
   AGGREGATE_SUM,
   AGGREGATE_COUNT,
@@ -30,9 +42,23 @@ export const OPCODE_NAMES: Readonly<Record<Opcode, string>> = {
   [Opcode.LT]: 'LT',
   [Opcode.EQ]: 'EQ',
   [Opcode.NEQ]: 'NEQ',
+  [Opcode.GTE]: 'GTE',
+  [Opcode.LTE]: 'LTE',
   [Opcode.JUMP_IF_FALSE]: 'JUMP_IF_FALSE',
   [Opcode.ADD_SCORE]: 'ADD_SCORE',
+  [Opcode.SUB_SCORE]: 'SUB_SCORE',
   [Opcode.MUL_SCORE]: 'MUL_SCORE',
+  [Opcode.DIV_SCORE]: 'DIV_SCORE',
+  [Opcode.NEG]: 'NEG',
+  [Opcode.ABS]: 'ABS',
+  [Opcode.MIN]: 'MIN',
+  [Opcode.MAX]: 'MAX',
+  [Opcode.AND]: 'AND',
+  [Opcode.OR]: 'OR',
+  [Opcode.NOT]: 'NOT',
+  [Opcode.COALESCE]: 'COALESCE',
+  [Opcode.BOOL_TO_NUMBER]: 'BOOL_TO_NUMBER',
+  [Opcode.IN]: 'IN',
   [Opcode.RESOLVE_REF]: 'RESOLVE_REF',
   [Opcode.AGGREGATE_SUM]: 'AGGREGATE_SUM',
   [Opcode.AGGREGATE_COUNT]: 'AGGREGATE_COUNT',
@@ -84,15 +110,3 @@ export type RangeAnalysis =
       readonly kind: 'unknown';
       readonly reason: string;
     };
-
-export function validateScoreRange(_expr: AgentPolicyExpr | CompiledPolicyExpr): RangeAnalysis {
-  return {
-    kind: 'unknown',
-    reason: 'Static policy-bytecode range analysis lands with the bytecode compiler.',
-  };
-}
-
-export function disassemble(_bytecode: PolicyBytecode): string {
-  throw new Error('Policy bytecode disassembly lands with the bytecode compiler.');
-}
-

@@ -52,6 +52,18 @@ When the user approves continuing under the **same ticket** after a `FOUNDATIONS
 
 Use this path when the user explicitly authorizes the widened same-ticket boundary. Do not force an unnecessary successor-ticket split once the user has chosen completion under the active ticket.
 
+## Foundation Numeric Normalization
+
+When a `FOUNDATIONS.md` reset requires replacing non-integer rule-authoritative values with an exact integer representation, do not treat the edit as a mechanical value rewrite. Use this proof shape:
+
+1. identify every authored and generated value in the same mismatch class, not just the first literal that blocked the ticket
+2. state the integer scale factor or transformation rule and why it preserves the intended score ordering, ratios, thresholds, or other semantics the ticket relies on
+3. update the active ticket/spec before final proof with the corrected numeric-domain assumption and any widened touched-file/artifact surface
+4. regenerate or validate every committed mirror produced from the authored source, then classify unexpected generator output as owned fallout, stale canonical drift, or unrelated churn
+5. add a focused probe or test that proves the normalized compiled/runtime surface is integer-only for the owned family when that surface is part of the acceptance claim
+
+Reject rounding, truncation, or silent compiler/runtime coercion unless the user explicitly changes the spec to make that lossy behavior rule-authoritative.
+
 ## Successor Ticket Re-Entry
 
 When the user approves continuing under a successor ticket in the same session, use this re-entry order before more implementation work:

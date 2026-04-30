@@ -54,6 +54,7 @@ interface ClosureScoreRow {
 }
 
 type PolicyVmModule = {
+  readonly PolicyBytecodeVmUnsupportedError?: new (...args: never[]) => Error;
   readonly executeBytecode?: (
     bytecode: PolicyBytecode,
     encoded: EncodedState,
@@ -202,11 +203,37 @@ const captureClosureScores = (
     trustedMoveIndex: new Map(),
     rng: { state: corpusState.state.rng },
     profileIdOverride: profileId,
+    policyVmMode: 'disabled',
     runtime: createGameDefRuntime(def),
   });
 
   assert.equal(result.kind, 'success', `seed ${corpusState.seed} profile ${profileId} policy evaluation should succeed`);
   assert.ok(result.metadata.candidates.length > 0, `seed ${corpusState.seed} profile ${profileId} should expose score rows`);
+  return result.metadata.candidates.map((candidate) => ({
+    stableMoveKey: candidate.stableMoveKey,
+    score: candidate.score,
+  }));
+};
+
+const captureVmScores = (
+  def: GameDef,
+  corpusState: CorpusState,
+  profileId: string,
+): readonly ClosureScoreRow[] => {
+  const result = evaluatePolicyMoveCore({
+    def,
+    state: corpusState.state,
+    playerId: corpusState.state.activePlayer,
+    legalMoves: corpusState.legalMoves,
+    trustedMoveIndex: new Map(),
+    rng: { state: corpusState.state.rng },
+    profileIdOverride: profileId,
+    policyVmMode: 'enabled',
+    runtime: createGameDefRuntime(def),
+  });
+
+  assert.equal(result.kind, 'success', `seed ${corpusState.seed} profile ${profileId} VM policy evaluation should succeed`);
+  assert.ok(result.metadata.candidates.length > 0, `seed ${corpusState.seed} profile ${profileId} VM should expose score rows`);
   return result.metadata.candidates.map((candidate) => ({
     stableMoveKey: candidate.stableMoveKey,
     score: candidate.score,
@@ -244,7 +271,7 @@ describe('policy bytecode equivalence harness', () => {
     }
   });
 
-  it('defers VM score equivalence until the Phase 4 policy VM is enabled', async (t) => {
+  it('compares VM score rows against the closure-tree evaluator when the Phase 4 policy VM is enabled', async (t) => {
     if (process.env.LUDOFORGE_POLICY_VM !== 'on') {
       t.skip('pending Phase 4 VM: set LUDOFORGE_POLICY_VM=on after ticket 015 lands');
       return;
@@ -261,17 +288,26 @@ describe('policy bytecode equivalence harness', () => {
       const encoded = buildEncodedState(corpusState.state, layout);
       for (const profileId of POLICY_PROFILE_VARIANTS) {
         const closureScores = captureClosureScores(def, corpusState, profileId);
+        const vmScores = captureVmScores(def, corpusState, profileId);
+        assert.deepEqual(vmScores, closureScores, `seed ${seed} profile ${profileId} VM scores should match closure-tree scores`);
         assert.ok(closureScores.length > 0);
         for (const expr of collectProfileExprs(def)) {
           const bytecode = compilePolicyBytecode(expr, def, layout);
-          const result = vm.executeBytecode(bytecode, encoded, {
-            def,
-            layout,
-            state: corpusState.state,
-            profileId,
-            legalMoves: corpusState.legalMoves,
-          });
-          assert.ok(result.scores !== undefined, `VM should return scores for seed ${seed} profile ${profileId}`);
+          try {
+            const result = vm.executeBytecode(bytecode, encoded, {
+              def,
+              layout,
+              state: corpusState.state,
+              profileId,
+              legalMoves: corpusState.legalMoves,
+            });
+            assert.ok(result.scores !== undefined, `VM should return scores for seed ${seed} profile ${profileId}`);
+          } catch (error) {
+            const unsupported = vm.PolicyBytecodeVmUnsupportedError;
+            if (unsupported === undefined || !(error instanceof unsupported)) {
+              throw error;
+            }
+          }
         }
       }
     }

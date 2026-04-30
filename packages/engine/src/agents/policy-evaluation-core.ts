@@ -5,6 +5,10 @@ import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
+import {
+  compilePolicyBytecode,
+  type FeatureRef,
+} from '../cnl/policy-bytecode/index.js';
 import type {
   AgentPreviewCompletionPolicy,
   AttributeValue,
@@ -28,6 +32,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyRuntimeProviders,
+  isPolicyVmEnabled,
   type PolicyRuntimeCandidate,
   type PolicyRuntimeProviders,
 } from './policy-runtime.js';
@@ -40,6 +45,7 @@ import type {
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 import { buildPolicyExprClosure, type CompiledPolicyExprClosure } from './compiled-policy-runtime.js';
+import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -80,6 +86,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly runtime?: GameDefRuntime;
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
+  readonly policyVmMode?: 'enabled' | 'disabled';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -230,6 +237,7 @@ export class PolicyEvaluationContext {
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly compiledExprClosureCache = new WeakMap<CompiledPolicyExpr, CompiledPolicyExprClosure>();
+  private readonly compiledExprBytecodeCache = new WeakMap<CompiledPolicyExpr, ReturnType<typeof compilePolicyBytecode>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
@@ -456,12 +464,73 @@ export class PolicyEvaluationContext {
   }
 
   evaluateCompiledExpr(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    const vmEnabled = this.input.policyVmMode === 'enabled'
+      || (this.input.policyVmMode !== 'disabled' && isPolicyVmEnabled());
+    if (vmEnabled) {
+      const bytecodeValue = this.evaluateCompiledExprWithVm(expr, candidate);
+      if (bytecodeValue !== undefined) {
+        return bytecodeValue;
+      }
+    }
     let closure = this.compiledExprClosureCache.get(expr);
     if (closure === undefined) {
       closure = buildPolicyExprClosure(expr, this);
       this.compiledExprClosureCache.set(expr, closure);
     }
     return closure(candidate);
+  }
+
+  private evaluateCompiledExprWithVm(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    const view = this.getRootEncodedView();
+    if (view === undefined) {
+      return undefined;
+    }
+    let bytecode = this.compiledExprBytecodeCache.get(expr);
+    if (bytecode === undefined) {
+      bytecode = compilePolicyBytecode(expr, this.input.def, view.layout);
+      this.compiledExprBytecodeCache.set(expr, bytecode);
+    }
+    const fallback = (): PolicyValue => {
+      let closure = this.compiledExprClosureCache.get(expr);
+      if (closure === undefined) {
+        closure = buildPolicyExprClosure(expr, this);
+        this.compiledExprClosureCache.set(expr, closure);
+      }
+      return closure(candidate);
+    };
+    const vmContext: VMContext = {
+      def: this.input.def,
+      layout: view.layout,
+      state: this.input.state,
+      ...(candidate === undefined ? {} : { candidateIndex: this.currentCandidates.indexOf(candidate) }),
+      playerId: Number(this.input.playerId),
+      seatId: this.input.seatId,
+      resolveFeature: (ref) => this.resolveVmFallbackFeature(ref),
+      resolveRef: () => undefined,
+      resolveDynamic: fallback,
+    };
+    try {
+      const result = executeBytecode(bytecode, view.encoded, vmContext);
+      return result.value;
+    } catch (error) {
+      if (error instanceof PolicyBytecodeVmUnsupportedError) {
+        return fallback();
+      }
+      throw error;
+    }
+  }
+
+  private resolveVmFallbackFeature(ref: FeatureRef): PolicyValue {
+    switch (ref.kind) {
+      case 'dynamicRef':
+      case 'dynamicSurface':
+      case 'dynamicExpr':
+      case 'adjacentTokenAgg':
+      case 'seatAgg':
+        throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" falls back to the closure-tree evaluator.`);
+      default:
+        return undefined;
+    }
   }
 
   resolveCompiledPolicyParam(id: string): PolicyValue {

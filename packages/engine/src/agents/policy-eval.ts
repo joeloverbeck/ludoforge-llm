@@ -186,6 +186,7 @@ export interface EvaluatePolicyMoveInput {
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly selectionGrouping?: 'none' | 'actionId';
   readonly encodedStateMode?: 'enabled' | 'disabled';
+  readonly policyVmMode?: 'enabled' | 'disabled';
 }
 
 function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
@@ -496,6 +497,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         previewDependencies,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
         ...(encodedView === undefined ? {} : { encodedStateLayout: encodedView.layout, encodedState: encodedView.encoded }),
+        ...(input.policyVmMode === undefined ? {} : { policyVmMode: input.policyVmMode }),
       }, candidates);
       evaluationForDispose = evaluation;
       let activeCandidates = [...candidates];

@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-015: TS bytecode VM core + A/B integration via env var
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `packages/engine/src/agents/policy-vm/vm.ts`, modify `policy-runtime.ts`
@@ -110,3 +110,69 @@ LUDOFORGE_POLICY_VM=on cd packages/engine && node scripts/run-tests.mjs --lane d
 3. `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`.
 4. `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine test` (full suite with VM enabled).
 5. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
+
+## Closeout Notes (2026-04-30)
+
+Implemented the Phase 4 TypeScript VM slice behind `LUDOFORGE_POLICY_VM=on`.
+
+Correction ledger:
+- The ticket named `policy-runtime.ts` as the dispatcher. Live reassessment found
+  `policy-runtime.ts` owns provider construction, while compiled-expression
+  dispatch happens in `PolicyEvaluationContext.evaluateCompiledExpr`. The
+  implementation keeps the env helper in `policy-runtime.ts` and routes through
+  the real dispatcher in `policy-evaluation-core.ts`.
+- The VM executes supported bytecode directly and raises a typed
+  `PolicyBytecodeVmUnsupportedError` for feature/ref families that still require
+  closure-tree semantics during rollout. The env-gated dispatcher catches that
+  typed fallback at the whole-expression boundary, preserving bit-identical
+  scores while the default closure-tree path remains unchanged.
+- The Phase 3 equivalence harness now has an internal per-call VM override so it
+  compares closure-disabled score rows against VM-enabled score rows in the same
+  process instead of letting the env flag affect both sides.
+
+Owned files touched:
+- Added `packages/engine/src/agents/policy-vm/vm.ts`.
+- Added `packages/engine/src/agents/policy-vm/index.ts`.
+- Modified `packages/engine/src/agents/policy-runtime.ts`.
+- Modified `packages/engine/src/agents/policy-evaluation-core.ts`.
+- Modified `packages/engine/src/agents/policy-eval.ts`.
+- Added `packages/engine/test/unit/agents/policy-vm-core.test.ts`.
+- Modified `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`.
+
+Verification completed before final proof:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-vm-core.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-runtime.test.js`
+- `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine exec node dist/test/integration/policy-bytecode-equivalence.test.js`
+
+Final proof:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-vm-core.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-runtime.test.js`
+- `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`
+- `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine test`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `git diff --check`
+- `pnpm run check:ticket-deps`
+
+Review amendment (2026-04-30):
+- Post-ticket review added missing unit coverage for `JUMP_IF_FALSE`.
+- The original ticket's all-10-determinism-shards replay-identity acceptance
+  item was not literally rerun during ticket 015 closeout. The VM-enabled full
+  package suite and equivalence harness passed, and existing
+  `tickets/149FITLEVNUMVM-016.md` already owns the all-10-shard VM determinism
+  gate before any default flip or closure-tree deletion. This ticket therefore
+  lands the A/B VM slice only; ticket 016 retains the full determinism-shard
+  proof requirement.
+
+## Outcome
+
+Completed: 2026-04-30
+
+Default behavior remains closure-tree evaluation unless `LUDOFORGE_POLICY_VM=on`
+or the test-only `policyVmMode: 'enabled'` override is supplied. The VM-enabled
+FITL equivalence harness now proves closure-tree and VM score rows are
+bit-identical across the 20-state corpus and all four baseline profiles.

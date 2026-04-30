@@ -120,6 +120,8 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
 }
 
+export const isPolicyVmEnabled = (): boolean => process.env.LUDOFORGE_POLICY_VM === 'on';
+
 const hasBit = (array: BigUint64Array, bitIndex: number): boolean => {
   const word = Math.trunc(bitIndex / 64);
   const offset = BigInt(bitIndex % 64);

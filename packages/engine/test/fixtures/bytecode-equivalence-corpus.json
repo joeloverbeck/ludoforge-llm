@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "description": "Spec 149 policy-bytecode equivalence corpus. Each seed is advanced deterministically to the first action-selection microturn at or after targetDecisionCount.",
+  "targetDecisionCount": 20,
+  "maxSearchDecisionCount": 80,
+  "seeds": [
+    1002,
+    1005,
+    1010,
+    1012,
+    1013,
+    1040,
+    2,
+    7,
+    13,
+    17,
+    1000,
+    12345,
+    1,
+    4,
+    8,
+    12,
+    16,
+    20,
+    24,
+    44444
+  ]
+}

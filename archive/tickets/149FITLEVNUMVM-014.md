@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-014: Round-trip equivalence harness (closure-tree↔bytecode)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test file
@@ -46,7 +46,7 @@ Reuse ticket 013's compiler-determinism test — assert `compilePolicyBytecode` 
 
 ### 4. Activation flag
 
-Until ticket 015 lands, the bytecode-side execution is gated behind `LUDOFORGE_BYTECODE_VM=on`. The harness reads the env var; if unset, the test asserts only the compile-side determinism and marks the equivalence assertion as deferred (with a clear pending message).
+Until ticket 015 lands, the bytecode-side execution is gated behind the live Phase 4 runtime flag `LUDOFORGE_POLICY_VM=on` (the sibling VM ticket owns this flag). The harness reads the env var; if unset, the test asserts closure-tree score capture and compile-side determinism, then marks the equivalence assertion as deferred with a clear pending message.
 
 ## Files to Touch
 
@@ -85,5 +85,30 @@ Until ticket 015 lands, the bytecode-side execution is gated behind `LUDOFORGE_B
 
 1. `pnpm -F @ludoforge/engine build`.
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` (closure-tree side only at this ticket's scope).
-3. After ticket 015 lands: re-run with `LUDOFORGE_BYTECODE_VM=on` to validate equivalence.
+3. After ticket 015 lands: re-run with `LUDOFORGE_POLICY_VM=on` to validate equivalence.
 4. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
+
+## Closeout Notes (2026-04-30)
+
+Implemented the Phase 3 equivalence harness skeleton and pinned corpus fixture. The harness derives 20 deterministic FITL action-selection corpus states, captures closure-tree score rows for all four baseline profiles, verifies byte-identical bytecode compiler output across repeated compilations, and defers VM score execution until ticket 015 provides `packages/engine/src/agents/policy-vm`.
+
+Correction ledger:
+- Replaced the stale draft activation flag `LUDOFORGE_BYTECODE_VM=on` with the live sibling/spec flag `LUDOFORGE_POLICY_VM=on`.
+- The checked-in corpus fixture pins the seed set and deterministic capture policy instead of storing full serialized `GameState` payloads; state hashes are asserted at runtime through canonical serialization.
+
+## Outcome
+
+Completed: 2026-04-30
+
+What changed:
+- Added `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`.
+- Added `packages/engine/test/fixtures/bytecode-equivalence-corpus.json`.
+- The new focused test passes in default closure-tree mode and reports the VM branch as skipped until Phase 4 lands.
+
+Verification:
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`

@@ -4,6 +4,7 @@ import { createEvalContext, createEvalRuntimeResources, type ReadContext } from 
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
+import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type {
   AgentPreviewCompletionPolicy,
   AttributeValue,
@@ -77,6 +78,8 @@ export interface CreatePolicyEvaluationContextInput {
   readonly phase1ActionPreviewIndex?: ReadonlyMap<string, Phase1ActionPreviewEntry>;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
+  readonly encodedStateLayout?: EncodedStateLayout;
+  readonly encodedState?: EncodedState;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -228,6 +231,7 @@ export class PolicyEvaluationContext {
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly compiledExprClosureCache = new WeakMap<CompiledPolicyExpr, CompiledPolicyExprClosure>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
+  private readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
   private transientZoneReadContext: { readonly stateHash: bigint; readonly context: ReadContext } | null = null;
   private currentCandidates: PolicyEvaluationCandidate[];
@@ -240,6 +244,9 @@ export class PolicyEvaluationContext {
   ) {
     this.currentCandidates = candidates;
     this.activeState = input.state;
+    this.encodedZoneIndexById = input.encodedStateLayout === undefined
+      ? undefined
+      : new Map(input.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
       state: input.state,
@@ -251,6 +258,8 @@ export class PolicyEvaluationContext {
       ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(input.encodedStateLayout === undefined ? {} : { encodedStateLayout: input.encodedStateLayout }),
+      ...(input.encodedState === undefined ? {} : { encodedState: input.encodedState }),
       ...(input.completion === undefined ? {} : { completion: input.completion }),
     });
   }
@@ -498,6 +507,10 @@ export class PolicyEvaluationContext {
     if (zoneId === undefined) {
       return undefined;
     }
+    const encodedResult = this.evaluateEncodedZoneTokenAggregate([String(zoneId)], expr, undefined, true);
+    if (encodedResult !== undefined) {
+      return encodedResult.value;
+    }
     const tokens = currentState.zones[zoneId];
     if (tokens === undefined || tokens.length === 0) {
       return expr.aggOp === 'count' ? 0 : expr.aggOp === 'sum' ? 0 : undefined;
@@ -638,7 +651,7 @@ export class PolicyEvaluationContext {
       }
 
       const rawValue = expr.source === 'variable'
-        ? currentState.zoneVars[String(zoneDef.id)]?.[expr.field]
+        ? this.resolveEncodedZoneVariable(String(zoneDef.id), expr.field) ?? currentState.zoneVars[String(zoneDef.id)]?.[expr.field]
         : scalarZonePropValue(zoneDef.attributes?.[expr.field]);
       if (typeof rawValue !== 'number') {
         continue;
@@ -784,6 +797,10 @@ export class PolicyEvaluationContext {
     expr: { readonly aggOp: AgentPolicyZoneTokenAggOp; readonly prop?: string },
     resolvedFilter: ResolvedTokenFilter | undefined,
   ): PolicyValue {
+    const encodedResult = this.evaluateEncodedZoneTokenAggregate(zoneIds, expr, resolvedFilter);
+    if (encodedResult !== undefined) {
+      return encodedResult.value;
+    }
     const currentState = this.activeState;
     let count = 0;
     let aggregate: number | undefined;
@@ -826,6 +843,187 @@ export class PolicyEvaluationContext {
       return aggregate ?? 0;
     }
     return aggregate;
+  }
+
+  private getRootEncodedView(): { readonly layout: EncodedStateLayout; readonly encoded: EncodedState } | undefined {
+    if (this.activeState !== this.input.state || this.input.encodedStateLayout === undefined || this.input.encodedState === undefined) {
+      return undefined;
+    }
+    return { layout: this.input.encodedStateLayout, encoded: this.input.encodedState };
+  }
+
+  private resolveEncodedZoneVariable(zoneId: string, variableId: string): number | undefined {
+    const view = this.getRootEncodedView();
+    if (view === undefined || this.encodedZoneIndexById === undefined) {
+      return undefined;
+    }
+    const zoneIndex = this.encodedZoneIndexById.get(zoneId);
+    const variableIndex = view.layout.varLayout.zoneVariableIds.indexOf(variableId);
+    if (zoneIndex === undefined || variableIndex < 0) {
+      return undefined;
+    }
+    return view.encoded.zoneInts[zoneIndex * view.layout.varLayout.zoneVariableIds.length + variableIndex];
+  }
+
+  private evaluateEncodedZoneTokenAggregate(
+    zoneIds: readonly string[],
+    expr: { readonly aggOp: AgentPolicyZoneTokenAggOp; readonly prop?: string },
+    resolvedFilter: ResolvedTokenFilter | undefined,
+    countRequiresNumericProp = false,
+  ): { readonly value: PolicyValue } | undefined {
+    const view = this.getRootEncodedView();
+    if (view === undefined || this.encodedZoneIndexById === undefined) {
+      return undefined;
+    }
+    const selectedZoneIndexes = new Set<number>();
+    for (const zoneId of zoneIds) {
+      const zoneIndex = this.encodedZoneIndexById.get(zoneId);
+      if (zoneIndex !== undefined) {
+        selectedZoneIndexes.add(zoneIndex);
+      }
+    }
+    if (selectedZoneIndexes.size === 0) {
+      return { value: expr.aggOp === 'count' || expr.aggOp === 'sum' ? 0 : undefined };
+    }
+
+    let count = 0;
+    let aggregate: number | undefined;
+    for (let tokenIndex = 0; tokenIndex < view.encoded.tokenIds.length; tokenIndex += 1) {
+      const occurrenceCount = view.encoded.tokenOccurrenceCount[tokenIndex] ?? 0;
+      if (occurrenceCount <= 0 || !this.encodedTokenMatchesFilter(view, tokenIndex, resolvedFilter)) {
+        continue;
+      }
+      const matchingOccurrences = this.countEncodedTokenOccurrencesInZones(view.encoded, tokenIndex, selectedZoneIndexes);
+      if (matchingOccurrences === 0) {
+        continue;
+      }
+      if (expr.aggOp === 'count') {
+        if (countRequiresNumericProp) {
+          const value = expr.prop === undefined
+            ? undefined
+            : this.resolveEncodedTokenNumericProp(view, tokenIndex, expr.prop);
+          if (value === undefined) {
+            continue;
+          }
+        }
+        count += matchingOccurrences;
+        continue;
+      }
+      if (expr.prop === undefined) {
+        return { value: undefined };
+      }
+      const value = this.resolveEncodedTokenNumericProp(view, tokenIndex, expr.prop);
+      if (value === undefined) {
+        continue;
+      }
+      for (let occurrence = 0; occurrence < matchingOccurrences; occurrence += 1) {
+        if (aggregate === undefined) {
+          aggregate = value;
+        } else if (expr.aggOp === 'sum') {
+          aggregate += value;
+        } else if (expr.aggOp === 'min') {
+          aggregate = Math.min(aggregate, value);
+        } else {
+          aggregate = Math.max(aggregate, value);
+        }
+      }
+    }
+
+    if (expr.aggOp === 'count') {
+      return { value: count };
+    }
+    if (expr.aggOp === 'sum') {
+      return { value: aggregate ?? 0 };
+    }
+    return { value: aggregate };
+  }
+
+  private countEncodedTokenOccurrencesInZones(
+    encoded: EncodedState,
+    tokenIndex: number,
+    selectedZoneIndexes: ReadonlySet<number>,
+  ): number {
+    const occurrenceCount = encoded.tokenOccurrenceCount[tokenIndex] ?? 0;
+    if (occurrenceCount <= 1) {
+      const zoneIndex = encoded.tokenZone[tokenIndex];
+      return zoneIndex !== undefined && selectedZoneIndexes.has(zoneIndex) ? 1 : 0;
+    }
+    const offset = encoded.tokenOccurrenceOffset[tokenIndex];
+    if (offset === undefined || offset < 0) {
+      return 0;
+    }
+    let count = 0;
+    for (let index = 0; index < occurrenceCount; index += 1) {
+      const zoneIndex = encoded.tokenOccurrenceZones[offset + index];
+      if (zoneIndex !== undefined && selectedZoneIndexes.has(zoneIndex)) {
+        count += 1;
+      }
+    }
+    return count;
+  }
+
+  private encodedTokenMatchesFilter(
+    view: { readonly layout: EncodedStateLayout; readonly encoded: EncodedState },
+    tokenIndex: number,
+    filter: ResolvedTokenFilter | undefined,
+  ): boolean {
+    if (filter === undefined) {
+      return true;
+    }
+    const tokenType = view.encoded.tokenTypeByIndex[tokenIndex];
+    if (filter.type !== undefined && tokenType !== filter.type) {
+      return false;
+    }
+    if (filter.props === undefined) {
+      return true;
+    }
+    return Object.entries(filter.props).every(([propId, comparison]) =>
+      this.encodedTokenPropEquals(view, tokenIndex, propId, comparison.eq),
+    );
+  }
+
+  private encodedTokenPropEquals(
+    view: { readonly layout: EncodedStateLayout; readonly encoded: EncodedState },
+    tokenIndex: number,
+    propId: string,
+    expected: string | number | boolean,
+  ): boolean {
+    const propIndex = view.layout.tokenLayout.scalarPropIndexById[propId];
+    if (propIndex === undefined) {
+      return false;
+    }
+    const offset = tokenIndex * view.layout.tokenLayout.scalarPropIds.length + propIndex;
+    if (view.encoded.tokenScalarPropPresent[offset] !== 1) {
+      return false;
+    }
+    const encodedValue = view.encoded.tokenScalarPropValues[offset];
+    if (typeof expected === 'number') {
+      return encodedValue === expected;
+    }
+    if (typeof expected === 'boolean') {
+      return encodedValue === (expected ? 1 : 0);
+    }
+    const expectedIndex = view.encoded.tokenScalarStringValuesByProp[propId]?.indexOf(expected);
+    return expectedIndex !== undefined && expectedIndex >= 0 && encodedValue === expectedIndex;
+  }
+
+  private resolveEncodedTokenNumericProp(
+    view: { readonly layout: EncodedStateLayout; readonly encoded: EncodedState },
+    tokenIndex: number,
+    propId: string,
+  ): number | undefined {
+    const propIndex = view.layout.tokenLayout.scalarPropIndexById[propId];
+    if (propIndex === undefined) {
+      return undefined;
+    }
+    const offset = tokenIndex * view.layout.tokenLayout.scalarPropIds.length + propIndex;
+    if (view.encoded.tokenScalarPropPresent[offset] !== 1) {
+      return undefined;
+    }
+    const propType = view.layout.tokenLayout.scalarPropTypesById[propId];
+    return propType === 'int' || propType === 'mixed'
+      ? view.encoded.tokenScalarPropValues[offset]
+      : undefined;
   }
 
   private resolveSurfaceRef(

@@ -8,11 +8,15 @@ export const SENTINEL_NONE = -1;
 export interface EncodedState {
   readonly tokenIds: readonly TokenId[];
   readonly tokenIndexById: Readonly<Record<string, number>>;
+  readonly tokenTypeByIndex: readonly string[];
   readonly tokenZone: Int16Array;
   readonly tokenOccurrenceOffset: Int32Array;
   readonly tokenOccurrenceCount: Int16Array;
   readonly tokenOccurrenceZones: Int16Array;
   readonly tokenFlags: BigUint64Array;
+  readonly tokenScalarPropValues: Int32Array;
+  readonly tokenScalarPropPresent: Uint8Array;
+  readonly tokenScalarStringValuesByProp: Readonly<Record<string, readonly string[]>>;
   readonly zoneOccupancy: Int16Array;
   readonly playerInts: Int32Array;
   readonly zoneInts: Int32Array;
@@ -97,6 +101,35 @@ const tokenFlagBitPositions = (
   return positions;
 };
 
+const collectTokenScalarStringValues = (
+  state: GameState,
+  layout: EncodedStateLayout,
+): Readonly<Record<string, readonly string[]>> => {
+  const valuesByProp = new Map<string, Set<string>>();
+  for (const propId of layout.tokenLayout.scalarPropIds) {
+    if (layout.tokenLayout.scalarPropTypesById[propId] === 'int' || layout.tokenLayout.scalarPropTypesById[propId] === 'boolean') {
+      continue;
+    }
+    valuesByProp.set(propId, new Set());
+  }
+  for (const tokens of Object.values(state.zones)) {
+    for (const token of tokens) {
+      for (const [propId, propValue] of Object.entries(token.props)) {
+        if (typeof propValue !== 'string') {
+          continue;
+        }
+        valuesByProp.get(propId)?.add(propValue);
+      }
+    }
+  }
+  return Object.freeze(Object.fromEntries(
+    [...valuesByProp.entries()].map(([propId, values]) => [
+      propId,
+      Object.freeze([...values].sort(compareStrings)),
+    ]),
+  ));
+};
+
 const collectEffectiveTokenIds = (
   state: GameState,
   layout: EncodedStateLayout,
@@ -163,14 +196,31 @@ const assertKnownTokenType = (
   return typeIndex;
 };
 
+const encodeScalarTokenProp = (
+  propId: string,
+  propValue: number | string | boolean,
+  stringValuesByProp: Readonly<Record<string, readonly string[]>>,
+): number | undefined => {
+  if (typeof propValue === 'number') {
+    return propValue;
+  }
+  if (typeof propValue === 'boolean') {
+    return propValue ? 1 : 0;
+  }
+  const stringIndex = stringValuesByProp[propId]?.indexOf(propValue);
+  return stringIndex === undefined || stringIndex < 0 ? undefined : stringIndex;
+};
+
 export function buildEncodedState(state: GameState, layout: EncodedStateLayout): EncodedState {
   const tokenIds = collectEffectiveTokenIds(state, layout);
   const tokenIndexById = indexByString(tokenIds.map(String));
   const tokenOccurrences = collectTokenOccurrences(state, layout);
   const tokenFlagPositions = tokenFlagBitPositions(layout);
+  const tokenScalarStringValuesByProp = collectTokenScalarStringValues(state, layout);
   const zoneMarkerPositions = markerStateBitPositions(layout.markerLayout.zoneMarkerIds, layout.markerLayout.markerStateIdsByMarkerId);
   const globalMarkerPositions = markerStateBitPositions(layout.markerLayout.globalMarkerIds, layout.markerLayout.markerStateIdsByMarkerId);
 
+  const tokenTypeByIndex = Array.from({ length: tokenIds.length }, () => '');
   const tokenZone = new Int16Array(tokenIds.length);
   tokenZone.fill(SENTINEL_NONE);
   const tokenOccurrenceOffset = new Int32Array(tokenIds.length);
@@ -178,6 +228,8 @@ export function buildEncodedState(state: GameState, layout: EncodedStateLayout):
   const tokenOccurrenceCount = new Int16Array(tokenIds.length);
   const occurrenceZones: number[] = [];
   const tokenFlags = new BigUint64Array(tokenIds.length * layout.bitsetLayout.tokenFlagWordCount);
+  const tokenScalarPropValues = new Int32Array(tokenIds.length * layout.tokenLayout.scalarPropIds.length);
+  const tokenScalarPropPresent = new Uint8Array(tokenIds.length * layout.tokenLayout.scalarPropIds.length);
   const zoneOccupancy = new Int16Array(layout.zoneIds.length * layout.tokenLayout.tokenTypeIds.length);
 
   for (const [tokenId, occurrences] of tokenOccurrences.entries()) {
@@ -189,6 +241,7 @@ export function buildEncodedState(state: GameState, layout: EncodedStateLayout):
     if (canonical === undefined) {
       continue;
     }
+    tokenTypeByIndex[tokenIndex] = canonical.token.type;
     tokenZone[tokenIndex] = canonical.zoneIndex;
     tokenOccurrenceCount[tokenIndex] = occurrences.length;
     if (occurrences.length > 1) {
@@ -208,6 +261,19 @@ export function buildEncodedState(state: GameState, layout: EncodedStateLayout):
         if (bitIndex !== undefined) {
           setBitInStride(tokenFlags, tokenIndex, layout.bitsetLayout.tokenFlagWordCount, bitIndex);
         }
+      }
+      for (const [propId, propValue] of Object.entries(occurrence.token.props)) {
+        const propIndex = layout.tokenLayout.scalarPropIndexById[propId];
+        if (propIndex === undefined) {
+          continue;
+        }
+        const encodedValue = encodeScalarTokenProp(propId, propValue, tokenScalarStringValuesByProp);
+        if (encodedValue === undefined) {
+          continue;
+        }
+        const scalarIndex = tokenIndex * layout.tokenLayout.scalarPropIds.length + propIndex;
+        tokenScalarPropValues[scalarIndex] = encodedValue;
+        tokenScalarPropPresent[scalarIndex] = 1;
       }
     }
   }
@@ -265,11 +331,15 @@ export function buildEncodedState(state: GameState, layout: EncodedStateLayout):
   return {
     tokenIds,
     tokenIndexById,
+    tokenTypeByIndex: Object.freeze(tokenTypeByIndex),
     tokenZone,
     tokenOccurrenceOffset,
     tokenOccurrenceCount,
     tokenOccurrenceZones: Int16Array.from(occurrenceZones),
     tokenFlags,
+    tokenScalarPropValues,
+    tokenScalarPropPresent,
+    tokenScalarStringValuesByProp,
     zoneOccupancy,
     playerInts,
     zoneInts,

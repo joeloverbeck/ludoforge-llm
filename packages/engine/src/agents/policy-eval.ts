@@ -1,5 +1,6 @@
 import { asPlayerId, type PlayerId } from '../kernel/branded.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue } from '../kernel/identity.js';
+import { buildEncodedState, buildEncodedStateLayout } from '../kernel/encoded-state/index.js';
 import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
@@ -38,6 +39,7 @@ const FNV_PRIME_64 = 0x100000001b3n;
 const POLICY_EVAL_TRACE_INTERVAL = 25;
 let policyEvalCallCount = 0;
 let policyEvalDepth = 0;
+const encodedStateLayoutCache = new WeakMap<GameDef, ReturnType<typeof buildEncodedStateLayout>>();
 
 const shouldLogPolicyEvalOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
 
@@ -183,6 +185,23 @@ export interface EvaluatePolicyMoveInput {
   readonly profileIdOverride?: string;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly selectionGrouping?: 'none' | 'actionId';
+  readonly encodedStateMode?: 'enabled' | 'disabled';
+}
+
+function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
+  readonly layout: ReturnType<typeof buildEncodedStateLayout>;
+  readonly encoded: ReturnType<typeof buildEncodedState>;
+} | undefined {
+  try {
+    let layout = encodedStateLayoutCache.get(def);
+    if (layout === undefined) {
+      layout = buildEncodedStateLayout(def);
+      encodedStateLayoutCache.set(def, layout);
+    }
+    return { layout, encoded: buildEncodedState(state, layout) };
+  } catch {
+    return undefined;
+  }
 }
 
 /**
@@ -462,6 +481,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         ...createGrantedOperationPreviewDependencies(input.def, profileId),
         ...input.previewDependencies,
       } satisfies PolicyPreviewDependencies;
+      const encodedView = input.encodedStateMode === 'disabled'
+        ? undefined
+        : tryBuildPolicyEncodedState(input.def, input.state);
       const evaluation = new PolicyEvaluationContext({
         def: input.def,
         state: input.state,
@@ -473,6 +495,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
         previewDependencies,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+        ...(encodedView === undefined ? {} : { encodedStateLayout: encodedView.layout, encodedState: encodedView.encoded }),
       }, candidates);
       evaluationForDispose = evaluation;
       let activeCandidates = [...candidates];

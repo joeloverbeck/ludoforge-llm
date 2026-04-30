@@ -15,6 +15,9 @@ export interface TokenLayout {
   readonly tokenIndexById: Readonly<Record<string, number>>;
   readonly tokenTypeIndexById: Readonly<Record<string, number>>;
   readonly propIdsByTokenType: Readonly<Record<string, readonly string[]>>;
+  readonly scalarPropIds: readonly string[];
+  readonly scalarPropIndexById: Readonly<Record<string, number>>;
+  readonly scalarPropTypesById: Readonly<Record<string, 'int' | 'string' | 'boolean' | 'mixed'>>;
 }
 
 export interface MarkerLayout {
@@ -68,6 +71,16 @@ const stateBitCount = (
   markerIds.reduce((count, markerId) => count + (markerStateIdsByMarkerId[markerId]?.length ?? 0), 0);
 
 const variableKey = (variable: EncodedVariableId): string => `${variable.scope}:${variable.name}`;
+
+const mergeScalarPropType = (
+  left: 'int' | 'string' | 'boolean' | 'mixed' | undefined,
+  right: 'int' | 'string' | 'boolean',
+): 'int' | 'string' | 'boolean' | 'mixed' => {
+  if (left === undefined) {
+    return right;
+  }
+  return left === right ? left : 'mixed';
+};
 
 const collectSetupTokenIds = (effects: readonly EffectAST[]): readonly TokenId[] => {
   const tokenIds: TokenId[] = [];
@@ -132,6 +145,16 @@ export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
       .sort((left, right) => compareStrings(left.id, right.id))
       .map((tokenType) => [tokenType.id, Object.freeze(Object.keys(tokenType.props).sort(compareStrings))]),
   ));
+  const scalarPropTypes = new Map<string, 'int' | 'string' | 'boolean' | 'mixed'>();
+  for (const tokenType of def.tokenTypes) {
+    for (const [propId, propType] of Object.entries(tokenType.props)) {
+      scalarPropTypes.set(propId, mergeScalarPropType(scalarPropTypes.get(propId), propType));
+    }
+  }
+  const scalarPropIds = [...scalarPropTypes.keys()].sort(compareStrings);
+  const scalarPropTypesById = Object.freeze(Object.fromEntries(
+    scalarPropIds.map((propId) => [propId, scalarPropTypes.get(propId)!]),
+  ));
 
   const zoneMarkerIds = [...(def.markerLattices ?? [])].map((marker) => marker.id).sort(compareStrings);
   const globalMarkerIds = [...(def.globalMarkerLattices ?? [])].map((marker) => marker.id).sort(compareStrings);
@@ -170,6 +193,9 @@ export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
       tokenIndexById: indexByString(tokenIds.map(String)),
       tokenTypeIndexById: indexByString(tokenTypeIds),
       propIdsByTokenType,
+      scalarPropIds: Object.freeze(scalarPropIds),
+      scalarPropIndexById: indexByString(scalarPropIds),
+      scalarPropTypesById,
     }),
     markerLayout: Object.freeze({
       markerCount: markerIds.length,

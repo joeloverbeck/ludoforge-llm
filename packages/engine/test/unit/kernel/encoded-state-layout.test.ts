@@ -48,6 +48,9 @@ const variableIds = (def: GameDef): readonly EncodedVariableId[] => [
     .sort((left, right) => compareStrings(left.name, right.name)),
 ];
 
+const scalarTokenPropIds = (def: GameDef): readonly string[] =>
+  [...new Set(def.tokenTypes.flatMap((tokenType) => Object.keys(tokenType.props)))].sort(compareStrings);
+
 const assertLayoutMatchesGameDef = (def: GameDef): void => {
   const layout = buildEncodedStateLayout(def);
 
@@ -58,12 +61,16 @@ const assertLayoutMatchesGameDef = (def: GameDef): void => {
   assert.deepEqual(layout.variableIds, variableIds(def));
 
   assert.deepEqual(layout.tokenLayout.tokenTypeIds, sortedStrings(def.tokenTypes.map((tokenType) => tokenType.id)));
+  assert.deepEqual(layout.tokenLayout.scalarPropIds, scalarTokenPropIds(def));
   assert.equal(layout.tokenLayout.tokenCount, layout.tokenIds.length);
   for (const [index, tokenId] of layout.tokenIds.entries()) {
     assert.equal(layout.tokenLayout.tokenIndexById[String(tokenId)], index);
   }
   for (const [index, tokenTypeId] of layout.tokenLayout.tokenTypeIds.entries()) {
     assert.equal(layout.tokenLayout.tokenTypeIndexById[tokenTypeId], index);
+  }
+  for (const [index, propId] of layout.tokenLayout.scalarPropIds.entries()) {
+    assert.equal(layout.tokenLayout.scalarPropIndexById[propId], index);
   }
 
   assert.equal(layout.markerLayout.markerCount, layout.markerIds.length);

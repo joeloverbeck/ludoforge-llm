@@ -131,6 +131,23 @@ export const assertEncodedSurfaceParity = (
         `encoded occupancy should include ${occurrence.token.type} in ${occurrence.zoneId}`,
       );
       for (const [propId, propValue] of Object.entries(occurrence.token.props)) {
+        const scalarPropIndex = layout.tokenLayout.scalarPropIndexById[propId];
+        if (scalarPropIndex !== undefined) {
+          const encodedPropOffset = resolvedTokenIndex * layout.tokenLayout.scalarPropIds.length + scalarPropIndex;
+          assert.equal(
+            encoded.tokenScalarPropPresent[encodedPropOffset],
+            1,
+            `encoded tokenScalarPropPresent should set ${occurrence.token.type}.${propId}`,
+          );
+          const expectedValue = typeof propValue === 'string'
+            ? encoded.tokenScalarStringValuesByProp[propId]?.indexOf(propValue)
+            : encodeValue(propValue);
+          assert.equal(
+            encoded.tokenScalarPropValues[encodedPropOffset],
+            expectedValue,
+            `encoded tokenScalarPropValues should preserve ${occurrence.token.type}.${propId}`,
+          );
+        }
         const bitIndex = tokenFlagPositions.get(`${occurrence.token.type}:${propId}`);
         if (bitIndex !== undefined && propValue === true) {
           assert.equal(

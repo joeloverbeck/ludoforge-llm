@@ -4,11 +4,15 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new modules in `packages/engine/src/agents/` and `packages/engine/src/kernel/encoded-state/`
-**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `tickets/149FITLEVNUMVM-017.md`
 
 ## Problem
 
 Phase 2 of spec 149 replaces per-step state cloning inside the preview drive with mutation + an undo log on the encoded view. This ticket lands the scope abstraction (`PreviewDriveScope`) and the underlying typed-array mutation primitives + undo log. The actual migration of the cloning path lives in ticket 009.
+
+## Dependency Update (2026-04-29)
+
+Ticket 006 landed the Phase 1 encoded read-path correctness slice, but the measured Phase 1 gate stayed above the 5500 ms calibration. This ticket now depends on `149FITLEVNUMVM-017` because that follow-up owns the Phase 1 measured-gate resolution and may re-spec, skip, or reorder Phase 2 under Spec 149's stop conditions. Do not start the apply/undo Phase 2 entry ticket until `017` either resolves the miss or records a user-approved corrected phase plan.
 
 ## Assumption Reassessment (2026-04-28)
 

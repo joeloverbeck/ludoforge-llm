@@ -134,6 +134,11 @@ interface EncodedState {
   readonly tokenOccurrenceZones: Int16Array;
   // Per-token property bitset (e.g., underground, tunneled, activated). 64-bit lanes.
   readonly tokenFlags: BigUint64Array;
+  // Per-token scalar property ids and values, derived from GameDef.tokenTypes.
+  // Used by aggregate/filter reads without walking GameState token objects.
+  readonly tokenScalarPropIds: readonly string[];
+  readonly tokenScalarPropValues: Int32Array;
+  readonly tokenScalarPropPresent: Uint8Array;
   // Per-zone occupant count (denormalized for fast queries).
   readonly zoneOccupancy: Int16Array; // [zoneIndex * tokenTypeCount + typeIndex]
   // Per-player resources / counters.
@@ -148,6 +153,13 @@ interface EncodedState {
   readonly globals: Int32Array;
 }
 ```
+
+Scalar token-property descriptors are generic and GameDef-derived. Numeric props
+are stored directly, booleans as `0`/`1`, and string props through deterministic
+view-local per-property value tables derived from the current `GameState`.
+`GameDef.tokenTypes` declares string-valued props but does not enumerate every
+legal string value, so the string dictionaries are not rule-authoritative data;
+they are an implementation detail of the read-only encoded view.
 
 Phase 1 proves parity only for this encoded read surface. It does not reconstruct
 canonical `GameState`; later apply/undo/finalize work owns any conversion from
@@ -252,7 +264,7 @@ Goal: a derived typed-array view of authoritative state, refreshed once per agen
 Modules:
 - `packages/engine/src/kernel/encoded-state/layout.ts` — `buildEncodedStateLayout(def: GameDef): EncodedStateLayout`.
 - `packages/engine/src/kernel/encoded-state/view.ts` — `buildEncodedState(state: GameState, layout: EncodedStateLayout): EncodedState`.
-- `packages/engine/src/agents/policy-runtime.ts` — accept optional `EncodedState` parameter; route hot read paths through it when present.
+- `packages/engine/src/agents/policy-runtime.ts` / `policy-evaluation-core.ts` — build or accept an optional `EncodedState`; route hot current-state read paths, including token aggregate/filter scalar prop reads, through it when present.
 
 Acceptance:
 - Unit tests for layout/view correctness against existing FITL fixtures.
@@ -426,6 +438,10 @@ These questions are scoped to be resolved inside their respective phases without
 - **Phase 3** round-trip equivalence cannot be proven for >5% of FITL expressions due to dynamic `RESOLVE_REF` patterns the bytecode opcode set doesn't cover. Action: extend the opcode set, or selectively enable bytecode only for static expressions.
 - **Phase 4** does not reach 250 ms even after VM is correct. Likely cause: the encoded-state shape is sub-optimal; common feature reads still fan out. Action: redesign EncodedState layout based on phase 4 profiling data (one extra ticket), or jump to phase 5.
 
+### 2026-04-29 Phase 1 gate status
+
+Ticket `149FITLEVNUMVM-006` landed the encoded read-path implementation and score-equivalence proof, but the one-card smoke remained above the 5500 ms Phase 1 calibration (`elapsedMs=5986.48`, `agent:evaluatePolicyExpression=3455.01 ms`; `elapsedMs=5999.65` after layout caching). The correctness slice is retained, but Phase 1's measured gate is blocked pending `149FITLEVNUMVM-017`. Ticket `149FITLEVNUMVM-007` must not author the 5500 ms gate until `017` either resolves the measured miss or updates this spec with a user-approved corrected phase plan. The Phase 2 entry ticket `149FITLEVNUMVM-008` must also wait on `017`, because the corrected plan may re-spec, skip, or reorder apply/undo work under this stop condition.
+
 ---
 
 ## Tickets
@@ -436,9 +452,10 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
 - [`archive/tickets/149FITLEVNUMVM-004.md`](../archive/tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
 - [`archive/tickets/149FITLEVNUMVM-005.md`](../archive/tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
-- [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1)
-- [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1)
-- [`tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — PreviewDriveScope skeleton + apply/undo log primitives (covers Phase 2)
+- [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1 correctness; measured gate blocked)
+- [`tickets/149FITLEVNUMVM-017.md`](../tickets/149FITLEVNUMVM-017.md) — Resolve Phase 1 encoded-read measured-gate miss (covers Phase 1 measured-gate blocker)
+- [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1, blocked on 017)
+- [`tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — PreviewDriveScope skeleton + apply/undo log primitives (covers Phase 2, blocked on 017)
 - [`tickets/149FITLEVNUMVM-009.md`](../tickets/149FITLEVNUMVM-009.md) — Replace cloning path with PreviewDriveScope, F14 atomic cut (covers Phase 2)
 - [`tickets/149FITLEVNUMVM-010.md`](../tickets/149FITLEVNUMVM-010.md) — Property tests for apply/undo equivalence + canonicalize-on-exit (covers Phase 2)
 - [`tickets/149FITLEVNUMVM-011.md`](../tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)

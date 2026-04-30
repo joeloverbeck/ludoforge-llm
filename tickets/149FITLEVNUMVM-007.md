@@ -4,11 +4,15 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — new test file
-**Deps**: `tickets/149FITLEVNUMVM-006.md`
+**Deps**: `tickets/149FITLEVNUMVM-006.md`, `tickets/149FITLEVNUMVM-017.md`
 
 ## Problem
 
-Spec 149 §6 mandates a new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` calibrated to 5500 ms after Phase 1 lands. The gate tightens at each phase boundary (3000 ms after Phase 2, 250 ms after Phase 4, 50 ms after Phase 5). This ticket adds the gate at its initial 5500 ms calibration after ticket 006's wiring lands.
+Spec 149 §6 mandates a new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` calibrated to 5500 ms after Phase 1 lands. The gate tightens at each phase boundary (3000 ms after Phase 2, 250 ms after Phase 4, 50 ms after Phase 5). This ticket adds the gate at its initial 5500 ms calibration after ticket 006's wiring lands and the follow-up measured-gate blocker is resolved.
+
+## Dependency Update (2026-04-29)
+
+Ticket 006 landed the encoded read-path implementation and score-equivalence proof, but its profiling smoke remained above the 5500 ms calibration (`elapsedMs=5986.48` / `agent:evaluatePolicyExpression=3455.01 ms` on the bucketed run; `elapsedMs=5999.65` after layout caching). This gate ticket now also depends on `149FITLEVNUMVM-017`, which owns the measured-gate investigation/optimization or re-spec decision. Do not author this perf gate while the calibrated budget is known-red.
 
 ## Assumption Reassessment (2026-04-28)
 

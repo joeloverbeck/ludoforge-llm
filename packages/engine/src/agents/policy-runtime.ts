@@ -1,6 +1,7 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
+import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
@@ -110,11 +111,63 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly catalog: AgentPolicyCatalog;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
+  readonly encodedStateLayout?: EncodedStateLayout;
+  readonly encodedState?: EncodedState;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
   };
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
+}
+
+const hasBit = (array: BigUint64Array, bitIndex: number): boolean => {
+  const word = Math.trunc(bitIndex / 64);
+  const offset = BigInt(bitIndex % 64);
+  return ((array[word] ?? 0n) & (1n << offset)) !== 0n;
+};
+
+function resolveEncodedCurrentSurface(
+  input: CreatePolicyRuntimeProvidersInput,
+  ref: CompiledCurrentSurfaceRef,
+  state: GameState,
+  targetPlayerIndex: number | undefined,
+): PolicyValue | undefined {
+  const layout = input.encodedStateLayout;
+  const encoded = input.encodedState;
+  if (state !== input.state || layout === undefined || encoded === undefined) {
+    return undefined;
+  }
+  if (ref.family === 'globalVar') {
+    const index = layout.varLayout.globalVariableIds.indexOf(ref.id);
+    return index < 0 ? undefined : encoded.globals[index];
+  }
+  if (ref.family === 'perPlayerVar') {
+    const varIndex = layout.varLayout.perPlayerVariableIds.indexOf(ref.id);
+    if (targetPlayerIndex === undefined || varIndex < 0) {
+      return undefined;
+    }
+    return encoded.playerInts[targetPlayerIndex * layout.varLayout.perPlayerVariableIds.length + varIndex];
+  }
+  if (ref.family === 'globalMarker') {
+    const markerStates = layout.markerLayout.markerStateIdsByMarkerId[ref.id];
+    if (markerStates === undefined) {
+      return undefined;
+    }
+    let bitOffset = 0;
+    for (const markerId of layout.markerLayout.globalMarkerIds) {
+      if (markerId === ref.id) {
+        for (const [stateOffset, stateId] of markerStates.entries()) {
+          if (hasBit(encoded.globalMarkers, bitOffset + stateOffset)) {
+            return stateId;
+          }
+        }
+        const lattice = input.def.globalMarkerLattices?.find((entry) => entry.id === ref.id);
+        return lattice?.defaultState;
+      }
+      bitOffset += layout.markerLayout.markerStateIdsByMarkerId[markerId]?.length ?? 0;
+    }
+  }
+  return undefined;
 }
 
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
@@ -283,6 +336,10 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return undefined;
         }
         try {
+          const encodedValue = resolveEncodedCurrentSurface(input, ref, state, targetPlayerIndex);
+          if (encodedValue !== undefined) {
+            return encodedValue;
+          }
           return resolveSurfaceRefValue(state, ref, input.seatId, input.playerId, surfaceContext, seatContext);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown runtime surface evaluation failure.';

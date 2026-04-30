@@ -125,7 +125,7 @@ jobs:
           node scripts/run-tests.mjs --lane policy-profile-quality "${test_paths[@]}" 2>&1 | tee "${GITHUB_WORKSPACE}/policy-profile-quality-${{ matrix.shard_id }}.log"
       - name: Upload shard policy-profile-quality log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: policy-profile-quality-shard-${{ matrix.shard_id }}
           path: |
@@ -189,7 +189,7 @@ jobs:
           fi
           node packages/engine/scripts/emit-policy-profile-quality-report.mjs "${args[@]}"
       - name: Upload aggregated policy-profile-quality log
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: policy-profile-quality-log
           path: |

@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-012: Feature-id table assignment from GameDef
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/policy-bytecode/feature-table.ts`
@@ -104,3 +104,41 @@ Build the feature table twice on the same GameDef; assert byte-identical output 
 1. `pnpm -F @ludoforge/engine build`.
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-feature-table.test.js`.
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
+
+## Outcome (2026-04-30)
+
+Completed the Phase 3 feature-id table slice:
+
+- Added `packages/engine/src/cnl/policy-bytecode/feature-table.ts` with deterministic `buildFeatureTable(def, layout)`, stable `canonicalKey(ref)`, `getFeatureId(...)`, and compiled-policy expression feature-ref collection helpers.
+- Extended `packages/engine/src/cnl/policy-bytecode/index.ts` so the feature-table helpers are exported through the existing policy-bytecode barrel.
+- Added `packages/engine/test/unit/cnl/policy-bytecode-feature-table.test.ts` covering deterministic dense id assignment, FITL baseline profile feature-ref coverage, and Texas Hold'em game-agnostic coverage.
+
+Ticket corrections applied:
+
+- The landed `FeatureTable` / `FeatureRef` artifact shape from ticket 011 remains authoritative. This ticket does not redefine it or add schema fields.
+- Static feature refs are assigned from the compiled production policy catalog and the `EncodedStateLayout` index tables. Runtime-dependent refs that cannot be decoded from the Phase 1 layout alone are represented as deterministic `dynamicRef`, `dynamicSurface`, or `dynamicExpr` feature refs so ticket 013 can lower them to `RESOLVE_DYNAMIC` or eliminate them when the bytecode compiler owns that decision.
+
+Verification set:
+
+- PASS — `pnpm -F @ludoforge/engine build`
+- PASS — `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-feature-table.test.js`
+- PASS — `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-types.test.js`
+- PASS — `pnpm turbo build`
+- PASS — `pnpm turbo lint`
+- PASS — `pnpm turbo typecheck`
+- PASS — `pnpm -F @ludoforge/engine test`
+
+Post-investigation harness correction:
+
+- The earlier default-lane timeout was not caused by `dist/test/unit/zobrist-table.test.js`; that was only the reporter's last unit-file label from the previous batched child process.
+- `dist/test/integration/agents/drive-fingerprint-property.test.js` is a slow FITL drive witness, so the lane manifest now classifies it into `integration:slow-parity` / `integration:slow-parity-shard-b` and keeps it out of `default`, `integration:core`, and `integration:game-packages`.
+- The default runner lane now executes sequentially with a per-child timeout, so future long or stuck files are attributed to the exact test file instead of the last TAP event from a large batch.
+- A second slow default-lane witness was `dist/test/integration/sim/snapshot-serialization.test.js`. Its FITL golden only inspects the first decision snapshot, so the test now uses seeded choice agents and one turn instead of a ten-turn `PolicyAgent` simulation.
+
+Additional verification:
+
+- PASS — `pnpm -F @ludoforge/engine exec node --test dist/test/unit/run-tests-script.test.js`
+- PASS — `pnpm -F @ludoforge/engine exec node --test dist/test/unit/lint/engine-test-lane-taxonomy-policy.test.js`
+- PASS — `timeout 90s pnpm -F @ludoforge/engine exec node --test dist/test/integration/sim/snapshot-serialization.test.js`
+
+Deferred sibling scope: bytecode compiler consumption and concrete dynamic-resolution policy remain in `149FITLEVNUMVM-013`; round-trip equivalence remains in `149FITLEVNUMVM-014`; VM `LOAD_FEATURE` execution remains in `149FITLEVNUMVM-015`.

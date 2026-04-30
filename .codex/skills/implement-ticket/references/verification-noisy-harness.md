@@ -20,7 +20,17 @@ For long-running package lanes that already printed `ok` lines for the ticket-ow
 
 This preserves truthful proof language without requiring unbounded waiting on runner noise.
 
+Do not assume the last printed TAP line or custom reporter "current file" label is the file still executing. In batched runners, a reporter may retain the last event from an earlier child process while a later integration file, wrapper tail, or quiet heartbeat is actually stuck. Before recording the timeout location durably, inspect the wrapper/reporter semantics or rerun with a per-child diagnostic plan when feasible.
+
 Before starting or continuing a broad lane that is known or suspected to have heavyweight tail files, set a proportionate triage plan up front when ticket-owned focused witnesses are available: identify the owned witness files, identify likely non-owned tail files from the manifest or recent lane history, decide a bounded wait limit for repeated quiet-progress output, and decide which direct focused command will preserve the owned proof if the broad tail times out. If the broad tail later times out outside the touched seam, record the focused owned witnesses and the timeout location separately instead of rewriting the implementation around the broad tail by default.
+
+Compact reporter-semantics diagnostic recipe:
+
+1. inspect the package script or wrapper execution mode (`batched`, `sequential`, shard manifest, child timeout, environment)
+2. inspect the reporter state model: whether "current file" means active child, last received test event, last completed file, or heartbeat context
+3. compare direct child execution with the wrapper's exact invocation shape before blaming the test file alone
+4. if the wrapper cannot attribute the tail accurately, prefer a temporary or permanent per-child attribution path before changing production test logic
+5. record in the active ticket whether the observed label was an actual failing file, a stale reporter label, or an unknown non-final location
 
 ## Interrupted Host or Resumed Verification
 

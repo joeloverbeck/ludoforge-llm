@@ -98,6 +98,17 @@ For expensive evidence or measurement tickets, distinguish **transcription edits
 2. if the edit changes status, metric values, thresholds, acceptance boundaries, command semantics, touched-file ownership, or follow-up/dependency classification, rerun the narrowest affected proof lane before citing final acceptance
 3. if the distinction is unclear, treat the edit as acceptance-story affecting and rerun or stop for 1-3-1 when the rerun cost or boundary change is no longer clearly authorized
 
+## Post-Closeout Verification Correction
+
+If a follow-up investigation after a ticket was marked `COMPLETED` shows that a cited proof lane was misleading, stale, or misattributed, treat the ticket proof ledger as the owned artifact under repair:
+
+1. reopen the active ticket outcome/proof block and identify the exact prior claim that is now superseded
+2. classify whether the old result was `stale reporter label`, `harness-noisy / not final-confirmed`, `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`
+3. if the corrected evidence changes the ticket's acceptance story, status, command semantics, touched-file ownership, or proof boundary, update the ticket before rerunning final proof
+4. if the correction requires package-script, runner, lane-manifest, shard, or reporter changes, apply the Package Script / Runner Widening checklist below before final proof
+5. rerun the narrowest affected proof lane first, then any ticket-named broad lane whose final status was previously ambiguous
+6. preserve the historical observation as superseded evidence rather than deleting it when that context prevents future misdiagnosis
+
 ## Focused Recovery Loop
 
 If the first broader proof lane fails on a newly added or modified test, do one focused recovery loop before rerunning the full lane:
@@ -126,6 +137,8 @@ When a ticket begins as "test-only" or "single-file-only" but truthful proof req
 2. widen `Files to Touch` / `What to Change` to include the package script and any new helper runner before final proof
 3. add or update the smallest guard test that pins the new script contract
 4. keep the widening surgical: prefer a dedicated package runner or narrow script change over broader lane-taxonomy edits unless the wider taxonomy is genuinely the owned boundary
+
+When noisy-harness triage shows the broad lane cannot identify the active child, or that a stale lane assignment is pulling an unrelated slow witness into a ticket-named acceptance command, evaluate package-script / runner widening before closing with a noisy-lane substitution. If you change the runner to improve attribution or move a witness between lanes, update the active ticket proof ledger and rerun the new final lane rather than treating the old lane result as final.
 
 ## Final-Proof Choreography
 

@@ -18,11 +18,12 @@ const TEST_PROGRESS_LANE_ENV = 'ENGINE_TEST_PROGRESS_LANE';
 
 const laneConfigs = {
   default: {
-    execution: 'batched',
+    execution: 'sequential',
     patterns: [
       'dist/test/unit/**/*.test.js',
       ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
     ],
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
   e2e: { execution: 'batched', patterns: listE2eTestsForLane('e2e').map(toDistTestPath) },
   'e2e:slow': { execution: 'batched', patterns: listE2eTestsForLane('e2e:slow').map(toDistTestPath) },

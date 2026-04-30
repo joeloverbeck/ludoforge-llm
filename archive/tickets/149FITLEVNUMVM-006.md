@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-006: Wire encoded state into policy-runtime hot read paths
 
-**Status**: PARTIAL / BLOCKED by measured gate
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`
@@ -142,10 +142,11 @@ Measured gate status:
 Status classification:
 
 - Correctness implementation is landed and focused proof is green.
-- The ticket's explicit measured acceptance gate remains red, so this ticket is not archive-ready as `COMPLETED`.
+- The ticket's original measured acceptance gate remains red, but the gate was resolved by the user-approved corrected plan in `archive/tickets/149FITLEVNUMVM-017.md`.
 - User approved option 1 on 2026-04-29: keep this ticket as `PARTIAL / BLOCKED by measured gate`, record the red metrics, and create a follow-up owner instead of continuing speculative optimization inside this ticket.
-- Follow-up owner: `tickets/149FITLEVNUMVM-017.md`.
-- `tickets/149FITLEVNUMVM-007.md` now depends on the follow-up because the 5500 ms perf gate should not be authored while the calibrated budget is known-red.
+- Follow-up owner: `archive/tickets/149FITLEVNUMVM-017.md` (completed by user-approved corrected plan).
+- `archive/tickets/149FITLEVNUMVM-007.md` was archived as `NOT IMPLEMENTED` because the 5500 ms Phase 1 perf gate is not truthful after the stop-condition decision.
+- Final status after `149FITLEVNUMVM-017`: this ticket is complete as the Phase 1 encoded-read correctness slice. No further `006` implementation should resume; the active path continues at bytecode/VM tickets `149FITLEVNUMVM-011` through `016`.
 
 Final proof before this status update:
 

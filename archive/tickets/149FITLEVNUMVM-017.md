@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-017: Resolve Phase 1 encoded-read measured-gate miss
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — likely `packages/engine/src/agents/*` and/or `packages/engine/src/kernel/encoded-state/*`
-**Deps**: `tickets/149FITLEVNUMVM-006.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-006.md`
 
 ## Problem
 
@@ -33,9 +33,9 @@ Spec 149 §12 says a Phase 1 miss after encoded-state read-path wiring should tr
 
 ## Files to Touch
 
-- `tickets/149FITLEVNUMVM-017.md` (outcome)
+- `archive/tickets/149FITLEVNUMVM-017.md` (outcome)
 - `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` (if the stop condition fires)
-- `tickets/149FITLEVNUMVM-007.md` (dependency/status after resolution)
+- `archive/tickets/149FITLEVNUMVM-007.md` (dependency/status after resolution)
 - Engine profiling/encoded-read files only if the measured root cause justifies a generic optimization.
 
 ## Out of Scope
@@ -60,3 +60,35 @@ Spec 149 §12 says a Phase 1 miss after encoded-state read-path wiring should tr
 2. Focused correctness proof for any touched encoded/policy path.
 3. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase1-gate-resolution`.
 4. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck` when code changes land.
+
+## Outcome (2026-04-30)
+
+No runtime code change is retained. The decisive live evidence showed that Phase
+1 encoded reads are active but insufficient, so the spec's Phase 1 stop condition
+has fired.
+
+Profile evidence:
+
+- `pnpm -F @ludoforge/engine build` — PASS before profiling.
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label 149-017-reassess` — RED: `elapsedMs=5774.89`, `agent:evaluatePolicyExpression=3338.25 ms`, threshold `<=5500`.
+- CPU profile command: `node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-149-017-cpu packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label 149-017-cpu`.
+- CPU-profile classification: `buildEncodedState` was not the dominant stack. Hot samples were concentrated under preview application, hashing, `resolveRef` / `evalCondition`, and token-state-index copy work inside `evaluatePolicyMoveCore`.
+- Exploratory candidate: a copy-on-write token-state-index cache avoided eager map copies but remained red at `elapsedMs=5857.01`; the candidate was removed before closeout.
+
+Root-cause classification:
+
+- Encoded read path is active but insufficient.
+- The remaining measured miss is not fixed by a small same-ticket encoded-read optimization.
+- The Phase 1 5500 ms gate is false for the live architecture.
+
+User-approved corrected plan:
+
+- Fire Spec 149's Phase 1 stop condition.
+- Supersede `149FITLEVNUMVM-007`; do not author the false 5500 ms Phase 1 perf gate.
+- Defer/supersede old Phase 2 apply/undo tickets `149FITLEVNUMVM-008` through `010` unless later VM-path profiling proves preview clone/apply cost is the next generic bottleneck.
+- Continue the active architectural path at bytecode/VM tickets `149FITLEVNUMVM-011` through `016`.
+- Add or update the per-card perf gate only when the VM path owns the truthful Phase 4 `<=250 ms` target.
+
+Consistency proof after the corrected-plan rewrite:
+
+- `pnpm run check:ticket-deps` — PASS (`14` active tickets, `2160` archived tickets).

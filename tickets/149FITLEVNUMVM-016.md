@@ -4,14 +4,14 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `tickets/149FITLEVNUMVM-010.md`, `tickets/149FITLEVNUMVM-014.md`, `tickets/149FITLEVNUMVM-015.md`
+**Deps**: `tickets/149FITLEVNUMVM-014.md`, `tickets/149FITLEVNUMVM-015.md`
 
 ## Problem
 
 Phase 4's terminal deliverable. After ticket 015 lands the VM and parity is proven for ≥3 consecutive CI runs on all FITL baseline profiles, this ticket:
 1. Flips the default policy evaluation path from closure-tree to bytecode VM.
 2. Deletes the closure-tree evaluation infrastructure (`buildPolicyExprClosure` and downstream callees) per F14.
-3. Tightens the per-card perf gate from 3000 ms to ≤ 250 ms (the original spec target).
+3. Adds or updates the per-card perf gate at ≤ 250 ms (the original spec target).
 4. Triggers ticket 003 (CI restoration unwind).
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
@@ -60,9 +60,9 @@ Delete the closure-tree consumer code paths:
 - Replace `evaluateCompiledZoneTokenAggregate` and similar closure-driven dispatch with bytecode VM calls (per ticket 015's `executeBytecode`).
 - Per F14, no `_legacy` fallback retained.
 
-### 5. Tighten the perf gate
+### 5. Perf gate
 
-Update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`: change the asserted budget from 3000 ms (set in ticket 009) to ≤ 250 ms. Update the calibration comment.
+Create or update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` at the truthful Phase 4 budget: ≤ 250 ms. The earlier Phase 1 5500 ms and Phase 2 3000 ms gate calibrations were superseded by the `149FITLEVNUMVM-017` stop-condition decision. Update the calibration comment so future readers do not chase the false Phase 1 gate.
 
 ### 6. Restore CI workflows (delegated to ticket 003)
 

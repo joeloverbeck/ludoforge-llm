@@ -1,14 +1,24 @@
 # 149FITLEVNUMVM-010: Property tests for apply/undo equivalence + canonicalize-on-exit
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test files
-**Deps**: `tickets/149FITLEVNUMVM-009.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-009.md`
 
 ## Problem
 
 Phase 2's correctness proof: prove that the apply/undo trajectory through `PreviewDriveScope` produces the same canonical `GameState` as the prior cloning trajectory on every test seed. Spec §6 (Phase 2 testing row) specifies replay-identity preservation across all determinism shards plus a canonical-hash equivalence assertion.
+
+## Deferred Update (2026-04-30)
+
+Ticket `149FITLEVNUMVM-017` fired the Phase 1 stop condition and the user approved a corrected plan that defers the old Phase 2 apply/undo branch. This property-test ticket is not an active implementation target unless the Phase 2 branch is explicitly reopened or rewritten after later VM-path profiling.
+
+## Outcome (2026-04-30)
+
+Deferred and archived. The old Phase 2 apply/undo equivalence proof is no longer
+an active Spec 149 target after the Phase 1 stop-condition decision. Reopen only
+with a new or rewritten ticket if the Phase 2 branch becomes active again.
 
 ## Assumption Reassessment (2026-04-28)
 

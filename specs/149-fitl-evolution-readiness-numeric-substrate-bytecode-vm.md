@@ -56,7 +56,7 @@ The work is decomposed into six phases:
 |---|---|---|---:|
 | **0** | Tactical CI unblock | ~half day | Existing baselines preserved; CI green via configuration. |
 | **1** | `EncodedState` view (read-only) | ~1 week | ≤ 5500 ms (~15% gain from cheaper feature reads). |
-| **2** | Apply/undo for inner-preview drive | ~1-2 weeks | ≤ 3000 ms (~50% gain from removing per-step state cloning in preview). |
+| **2** | Apply/undo for inner-preview drive | Deferred after Phase 1 stop condition | Not on the active path; revisit only if later profiling proves preview cloning/apply cost is the next generic bottleneck. |
 | **3** | Policy DSL → bytecode compiler | ~2-3 weeks | n/a (compiler-only; round-trip equivalence proven). |
 | **4** | TS bytecode VM | ~1-2 weeks | ≤ 250 ms (the original target — bytecode VMs over typed arrays are routinely 10-50× the speed of object-walking interpreters). |
 | **5** | Rust→WASM port (deferred; own spec) | ~6-10 weeks when justified | ≤ 50 ms (5× gain on top of phase 4) plus parallelism via worker pool + SAB. |
@@ -271,7 +271,16 @@ Acceptance:
 - Property test: `state → encoded` preserves every Phase 1 encoded read surface for the corpus of FITL replay fixtures. Full `encoded → state` reconstruction is deferred to the Phase 2 apply/undo/finalize scope.
 - Profiling smoke: one-card cost reduced to ≤ 5500 ms (≥15% gain).
 
-### Phase 2 — Apply/undo for inner-preview drive (~1-2 weeks)
+### Phase 2 — Apply/undo for inner-preview drive (deferred)
+
+**Status (2026-04-30)**: Deferred by the Phase 1 stop-condition reassessment.
+Phase 1 encoded reads are correct and active, but the measured one-card smoke did
+not reach the 5500 ms gate. The decisive 2026-04-30 profile showed the remaining
+hot samples in preview application/hashing and closure/interpreter-adjacent
+runtime work rather than encoded-state construction or provider setup. Per §12,
+this phase is not the next active implementation path. Keep the old phase design
+as a possible future branch only if later VM profiling proves clone/apply cost is
+the next generic bottleneck.
 
 Goal: replace per-step state cloning inside the preview drive with mutation + undo log on the encoded view. The outer kernel contract is unchanged.
 
@@ -348,12 +357,12 @@ The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` seri
 |---|---|---|
 | 0 | architectural-invariant | CI workflows are green; existing test suite passes; restoration ticket exists. |
 | 1 | architectural-invariant | `state → encoded` parity for every Phase 1 encoded read surface on FITL replay fixtures. |
-| 2 | architectural-invariant | Replay-identity preserved on all determinism shards; preview drive's canonical-hash on exit equals the cloning-path hash on the same trajectory. |
+| 2 | deferred | Old apply/undo branch retained as a documented fallback, not an active proof lane after the Phase 1 stop condition. |
 | 3 | architectural-invariant | Closure-tree↔bytecode score equivalence on FITL profile corpus (closure-tree is current production runtime per Spec 147); compiler determinism (byte-identical bytecode on two compiles). |
 | 4 | architectural-invariant | Replay-identity on all determinism shards with VM enabled; per-card cost ≤ 250 ms; no convergence-witness regressions. |
 | 5 | architectural-invariant | TS-VM ↔ WASM-VM equivalence on golden corpus; replay-identity preserved across FFI. |
 
-A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is added in phase 1 (calibrated to 5500 ms), tightened at each phase boundary (3000 ms → 250 ms → 50 ms when phase 5 lands). This gate is **additive** to the existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts`, which gates parity-drive cost on a different metric and continues to run unchanged through Phase 4 (recalibrated only if necessary based on Phase 1/2 measurements).
+A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is no longer added at the false Phase 1 5500 ms calibration. Ticket `149FITLEVNUMVM-007` is superseded by the 2026-04-30 stop-condition decision. The next truthful gate is added or updated when the VM path owns the target, calibrated to the Phase 4 `<= 250 ms` budget, and can tighten to `<= 50 ms` only if Phase 5 is later justified. This gate is **additive** to the existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts`, which gates parity-drive cost on a different metric and continues to run unchanged through Phase 4 unless VM-path measurements require recalibration.
 
 Convergence-witness tests are explicitly **out of scope** for this spec — score equivalence is proven by property tests, not trajectory-pinned witnesses (`.claude/rules/testing.md` Distillation guidance applies).
 
@@ -442,6 +451,25 @@ These questions are scoped to be resolved inside their respective phases without
 
 Ticket `149FITLEVNUMVM-006` landed the encoded read-path implementation and score-equivalence proof, but the one-card smoke remained above the 5500 ms Phase 1 calibration (`elapsedMs=5986.48`, `agent:evaluatePolicyExpression=3455.01 ms`; `elapsedMs=5999.65` after layout caching). The correctness slice is retained, but Phase 1's measured gate is blocked pending `149FITLEVNUMVM-017`. Ticket `149FITLEVNUMVM-007` must not author the 5500 ms gate until `017` either resolves the measured miss or updates this spec with a user-approved corrected phase plan. The Phase 2 entry ticket `149FITLEVNUMVM-008` must also wait on `017`, because the corrected plan may re-spec, skip, or reorder apply/undo work under this stop condition.
 
+### 2026-04-30 Phase 1 stop-condition decision
+
+Ticket `149FITLEVNUMVM-017` reran the live one-card smoke and confirmed the gate
+remains red: `elapsedMs=5774.89`, `agent:evaluatePolicyExpression=3338.25 ms`,
+threshold `<=5500`. A CPU-profile pass showed `buildEncodedState` at only a tiny
+sample share while the dominant samples sat under preview application, hashing,
+`resolveRef` / `evalCondition`, and token-state-index copy paths inside
+`evaluatePolicyMoveCore`. A small generic copy-on-write token-state-index cache
+candidate remained red at `elapsedMs=5857.01` and was abandoned.
+
+User-approved resolution on 2026-04-30: the Phase 1 stop condition is fired.
+Do not force the false 5500 ms gate and do not proceed into the old Phase 2
+apply/undo branch as the next active implementation path. The active path is now
+the bytecode/VM branch (`149FITLEVNUMVM-011` through `016`), with the first
+truthful per-card gate owned when the VM path can assert the Phase 4 `<=250 ms`
+target. The old Phase 2 tickets (`008` through `010`) are deferred/superseded
+planning artifacts unless later VM-path profiling proves preview clone/apply cost
+is again the next generic bottleneck.
+
 ---
 
 ## Tickets
@@ -452,12 +480,12 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
 - [`archive/tickets/149FITLEVNUMVM-004.md`](../archive/tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
 - [`archive/tickets/149FITLEVNUMVM-005.md`](../archive/tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
-- [`tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1 correctness; measured gate blocked)
-- [`tickets/149FITLEVNUMVM-017.md`](../tickets/149FITLEVNUMVM-017.md) — Resolve Phase 1 encoded-read measured-gate miss (covers Phase 1 measured-gate blocker)
-- [`tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — fitl-per-card-cost perf gate calibrated to 5500 ms (covers Phase 1, blocked on 017)
-- [`tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — PreviewDriveScope skeleton + apply/undo log primitives (covers Phase 2, blocked on 017)
-- [`tickets/149FITLEVNUMVM-009.md`](../tickets/149FITLEVNUMVM-009.md) — Replace cloning path with PreviewDriveScope, F14 atomic cut (covers Phase 2)
-- [`tickets/149FITLEVNUMVM-010.md`](../tickets/149FITLEVNUMVM-010.md) — Property tests for apply/undo equivalence + canonicalize-on-exit (covers Phase 2)
+- [`archive/tickets/149FITLEVNUMVM-006.md`](../archive/tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1 correctness; measured gate resolved by 017 stop-condition decision)
+- [`archive/tickets/149FITLEVNUMVM-017.md`](../archive/tickets/149FITLEVNUMVM-017.md) — Resolve Phase 1 encoded-read measured-gate miss (covers Phase 1 stop-condition decision)
+- [`archive/tickets/149FITLEVNUMVM-007.md`](../archive/tickets/149FITLEVNUMVM-007.md) — Superseded 5500 ms Phase 1 perf gate (not truthful after 017)
+- [`archive/tickets/149FITLEVNUMVM-008.md`](../archive/tickets/149FITLEVNUMVM-008.md) — Deferred PreviewDriveScope skeleton + apply/undo log primitives (old Phase 2 branch)
+- [`archive/tickets/149FITLEVNUMVM-009.md`](../archive/tickets/149FITLEVNUMVM-009.md) — Deferred cloning-path replacement with PreviewDriveScope (old Phase 2 branch)
+- [`archive/tickets/149FITLEVNUMVM-010.md`](../archive/tickets/149FITLEVNUMVM-010.md) — Deferred apply/undo equivalence property tests (old Phase 2 branch)
 - [`tickets/149FITLEVNUMVM-011.md`](../tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-012.md`](../tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-013.md`](../tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)

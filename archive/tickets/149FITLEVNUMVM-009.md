@@ -1,14 +1,25 @@
 # 149FITLEVNUMVM-009: Replace cloning path with PreviewDriveScope (F14 atomic cut)
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts`, `packages/engine/src/kernel/microturn/drive.ts`
-**Deps**: `tickets/149FITLEVNUMVM-006.md`, `tickets/149FITLEVNUMVM-008.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-006.md`, `archive/tickets/149FITLEVNUMVM-008.md`
 
 ## Problem
 
 Phase 2's measurable gain comes from replacing the preview drive's per-step cloning with mutation + undo on the encoded view. This is a Foundation 14 atomic cut: the existing `applyPublishedDecisionFromPreviewStateNoFinalHash` cloning path is removed, replaced by `PreviewDriveScope.apply()` calls. The kernel's external `applyMove(state) → newState` contract is unchanged.
+
+## Deferred Update (2026-04-30)
+
+Ticket `149FITLEVNUMVM-017` fired the Phase 1 stop condition and the user approved a corrected plan that does not proceed into this old Phase 2 branch as the next active path. Do not implement this ticket unless it is explicitly reopened or rewritten after later VM-path profiling proves preview clone/apply cost is again the next generic bottleneck. The active path now continues at bytecode/VM tickets `149FITLEVNUMVM-011` through `016`.
+
+## Outcome (2026-04-30)
+
+Deferred and archived. The old Phase 2 cloning-path replacement branch is no
+longer the active Spec 149 path after the Phase 1 stop-condition decision.
+Reopen only with a new or rewritten ticket if later VM-path profiling proves
+preview clone/apply cost is again the next generic bottleneck.
 
 ## Assumption Reassessment (2026-04-28)
 

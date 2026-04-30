@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-007: fitl-per-card-cost perf gate (5500 ms calibration)
 
-**Status**: PENDING
+**Status**: NOT IMPLEMENTED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — new test file
-**Deps**: `tickets/149FITLEVNUMVM-006.md`, `tickets/149FITLEVNUMVM-017.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-006.md`, `archive/tickets/149FITLEVNUMVM-017.md`
 
 ## Problem
 
@@ -13,6 +13,17 @@ Spec 149 §6 mandates a new perf gate `packages/engine/test/perf/agents/fitl-per
 ## Dependency Update (2026-04-29)
 
 Ticket 006 landed the encoded read-path implementation and score-equivalence proof, but its profiling smoke remained above the 5500 ms calibration (`elapsedMs=5986.48` / `agent:evaluatePolicyExpression=3455.01 ms` on the bucketed run; `elapsedMs=5999.65` after layout caching). This gate ticket now also depends on `149FITLEVNUMVM-017`, which owns the measured-gate investigation/optimization or re-spec decision. Do not author this perf gate while the calibrated budget is known-red.
+
+## Superseded Update (2026-04-30)
+
+Ticket `149FITLEVNUMVM-017` confirmed the Phase 1 stop condition and the user approved the corrected plan. The 5500 ms Phase 1 gate is not truthful, so this ticket must not add `fitl-per-card-cost.perf.test.ts` at that calibration. The per-card gate should be added or updated by the VM/default-flip path when `149FITLEVNUMVM-016` owns the Phase 4 `<=250 ms` budget.
+
+## Outcome (2026-04-30)
+
+Not implemented. The Phase 1 5500 ms gate was superseded by the user-approved
+Spec 149 stop-condition decision in `149FITLEVNUMVM-017`. Keep the per-card gate
+ownership with the VM/default-flip path at the truthful Phase 4 `<=250 ms`
+budget.
 
 ## Assumption Reassessment (2026-04-28)
 

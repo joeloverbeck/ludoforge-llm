@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-008: PreviewDriveScope skeleton + apply/undo log primitives
 
-**Status**: PENDING
+**Status**: DEFERRED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new modules in `packages/engine/src/agents/` and `packages/engine/src/kernel/encoded-state/`
-**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `tickets/149FITLEVNUMVM-017.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-005.md`, `archive/tickets/149FITLEVNUMVM-017.md`
 
 ## Problem
 
@@ -13,6 +13,17 @@ Phase 2 of spec 149 replaces per-step state cloning inside the preview drive wit
 ## Dependency Update (2026-04-29)
 
 Ticket 006 landed the Phase 1 encoded read-path correctness slice, but the measured Phase 1 gate stayed above the 5500 ms calibration. This ticket now depends on `149FITLEVNUMVM-017` because that follow-up owns the Phase 1 measured-gate resolution and may re-spec, skip, or reorder Phase 2 under Spec 149's stop conditions. Do not start the apply/undo Phase 2 entry ticket until `017` either resolves the miss or records a user-approved corrected phase plan.
+
+## Deferred Update (2026-04-30)
+
+Ticket `149FITLEVNUMVM-017` recorded a user-approved corrected plan: the Phase 1 stop condition has fired, the false 5500 ms gate is superseded, and the old Phase 2 apply/undo branch is no longer the next active implementation path. Keep this ticket as a deferred planning artifact only. Reopen or rewrite it only if later bytecode/VM profiling proves preview clone/apply cost is again the next generic bottleneck.
+
+## Outcome (2026-04-30)
+
+Deferred and archived. The old Phase 2 apply/undo branch is no longer the active
+Spec 149 path after the Phase 1 stop-condition decision. Reopen only with a new
+or rewritten ticket if later VM-path profiling proves preview clone/apply cost is
+again the next generic bottleneck.
 
 ## Assumption Reassessment (2026-04-28)
 

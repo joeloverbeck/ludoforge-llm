@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/policy-bytecode/feature-table.ts`
-**Deps**: `tickets/149FITLEVNUMVM-011.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-011.md`
 
 ## Problem
 
@@ -15,6 +15,7 @@ Phase 3's compiler needs a deterministic mapping from DSL refs (zone props, mark
 1. `EncodedStateLayout` from ticket 004 already has the index-based id tables for zones/tokens/players/markers/variables. The feature-id table is one level above: it maps full DSL refs (e.g., `zone:hue.population`, `globals.monsoonFlag`) to dense ints whose decoded form references those layout indices.
 2. The closure-tree evaluator (Spec 147 AOT) currently resolves refs via `CompiledAgentPolicyRef` — the type referenced by `compiled-policy-runtime.ts:CompiledPolicyRuntimeContext.resolveCompiledPolicyRef`. The feature-id table aligns with this existing resolution structure.
 3. Determinism: same `GameDef` input must produce byte-identical feature-id tables across compilations (F8).
+4. Post-011 review correction: ticket 011 already introduced the serializable `FeatureTable` / `FeatureRef` shape in `packages/engine/src/cnl/policy-bytecode/types.ts` so `PolicyBytecode.schema.json` can validate checked artifacts. This ticket extends that landed shape with deterministic builder and lookup helpers; it must not redefine `FeatureTable` with an incompatible `ReadonlyMap` field.
 
 ## Architecture Check
 
@@ -28,11 +29,11 @@ Phase 3's compiler needs a deterministic mapping from DSL refs (zone props, mark
 ### 1. `packages/engine/src/cnl/policy-bytecode/feature-table.ts` (new)
 
 Export:
-- `interface FeatureTable` (concretized from ticket 011's forward declaration):
+- Use the existing `FeatureTable` / `FeatureRef` exports from `types.ts` as the serialized artifact shape:
   ```ts
   interface FeatureTable {
-    refs: readonly FeatureRef[];           // index → ref descriptor
-    refToId: ReadonlyMap<string, number>;  // canonical-key → feature-id
+    refs: readonly FeatureRef[];              // index → ref descriptor
+    refToId: Readonly<Record<string, number>>; // canonical-key → feature-id
   }
   interface FeatureRef {
     kind: 'zoneProp' | 'globalVar' | 'playerInt' | 'markerCount' | 'tokenAgg' | /* etc */;
@@ -42,6 +43,7 @@ Export:
   ```
 - `function buildFeatureTable(def: GameDef, layout: EncodedStateLayout): FeatureTable` — pure deterministic function.
 - `function canonicalKey(ref: FeatureRef): string` — stable string serialization for sort + map keys.
+- Optional runtime lookup helpers may wrap `refToId` in a local `Map` for execution efficiency, but the exported artifact remains the serializable record shape from ticket 011.
 
 ### 2. Coverage of all `CompiledPolicyExpr` variants
 
@@ -61,7 +63,7 @@ Add a unit test verifying that `buildFeatureTable` against the FITL GameDef prod
 
 ### 4. Determinism test
 
-Build the feature table twice on the same GameDef; assert byte-identical output (`refs` and `refToId` Map iteration order canonical).
+Build the feature table twice on the same GameDef; assert byte-identical output (`refs` order and `refToId` object key order canonical).
 
 ## Files to Touch
 

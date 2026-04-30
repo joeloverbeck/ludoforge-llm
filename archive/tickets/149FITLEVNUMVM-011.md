@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-011: Bytecode opcode set + IR types + PolicyBytecode schema
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new module `packages/engine/src/cnl/policy-bytecode/`
@@ -32,7 +32,7 @@ Export:
 - `interface BytecodeInstruction` — operand shape per opcode.
 - `interface PolicyBytecode` — top-level shape: `{ instructions: Int32Array; featureTable: FeatureTable; constants: Int32Array; metadata: BytecodeMetadata }`.
 - `interface BytecodeMetadata` — version, source `AgentPolicyExpr` fingerprint, target VM version.
-- `interface FeatureTable` (forward-declared; concrete impl lands in ticket 012).
+- `interface FeatureTable` / `interface FeatureRef` — serializable placeholder artifact shape; deterministic builder and lookup helpers land in ticket 012.
 
 ### 2. `packages/engine/schemas/PolicyBytecode.schema.json` (new)
 
@@ -50,6 +50,7 @@ Reserve a `disassemble(bytecode: PolicyBytecode): string` function signature in 
 
 - `packages/engine/src/cnl/policy-bytecode/types.ts` (new)
 - `packages/engine/src/cnl/policy-bytecode/index.ts` (new — barrel export)
+- `packages/engine/src/cnl/index.ts` (modify — expose policy-bytecode through the existing CNL package entrypoint)
 - `packages/engine/schemas/PolicyBytecode.schema.json` (new)
 - `packages/engine/test/unit/cnl/policy-bytecode-types.test.ts` (new — basic shape coverage)
 
@@ -86,3 +87,32 @@ Reserve a `disassemble(bytecode: PolicyBytecode): string` function signature in 
 1. `pnpm -F @ludoforge/engine build`.
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-types.test.js`.
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo schema:artifacts`.
+
+## Outcome (2026-04-30)
+
+Completed the Phase 3 bytecode foundation slice:
+
+- Added `packages/engine/src/cnl/policy-bytecode/types.ts` with the generic opcode enum, flat bytecode shape, serializable feature-table placeholder shape, metadata/version constants, score-range analysis stub, and disassembler ABI stub.
+- Added `packages/engine/src/cnl/policy-bytecode/index.ts` and exported it through `packages/engine/src/cnl/index.ts` so the new CNL surface is reachable without an internal import path.
+- Added `packages/engine/schemas/PolicyBytecode.schema.json` as a generic Draft 2020-12 schema for serialized bytecode artifacts.
+- Added `packages/engine/test/unit/cnl/policy-bytecode-types.test.ts` covering opcode names, exhaustive policy-expression variant mapping, schema validation with Ajv 2020, and the reserved range-analysis/disassembler hooks.
+
+Ticket corrections applied:
+
+- Draft note "`PolicyBytecode.schema.json` uses Draft 2020-12 (matches existing schemas)" -> live repo existing generated schemas are draft-7, but this ticket's explicit `PolicyBytecode` artifact remains Draft 2020-12 and is validated with Ajv 2020.
+- Draft `Files to Touch` omitted the existing CNL public barrel; it was updated because the new module is an exported shared CNL surface.
+- `PolicyBytecode.schema.json` is a manual new schema for this staged bytecode artifact; the current `schema:artifacts` generator still owns only `GameDef`, `Trace`, and `EvalReport`.
+
+Verification set:
+
+- PASS — `pnpm -F @ludoforge/engine build`
+- PASS — `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-types.test.js`
+- HARNESS-NOISY / NOT FINAL-CONFIRMED — `pnpm -F @ludoforge/engine test` passed `schema:artifacts:check` and several integration files, then repeatedly stalled in the wrapper at `dist/test/unit/zobrist-table.test.js`; direct bounded rerun of that file passed via `timeout 180s pnpm -F @ludoforge/engine exec node --test dist/test/unit/zobrist-table.test.js` in about 0.3s. A bounded package retry `timeout 600s pnpm -F @ludoforge/engine test` reproduced the wrapper stall and exited 124.
+- PASS — `pnpm turbo build`
+- PASS — `pnpm turbo lint`
+- PASS — `pnpm turbo typecheck`
+- PASS — `pnpm turbo schema:artifacts`
+
+Proof gaps: the ticket-named package test lane is not final-confirmed because of the wrapper stall described above. The direct stalled file is green, and the owned bytecode focused test, build, lint, typecheck, and schema-artifact lanes are green; this is classified as a noisy broad-lane proof gap outside the bytecode type/schema boundary.
+
+Deferred sibling scope: feature-table construction remains in `149FITLEVNUMVM-012`; bytecode compilation and concrete disassembly remain in `149FITLEVNUMVM-013`; equivalence and VM work remain in `149FITLEVNUMVM-014` and `149FITLEVNUMVM-015`.

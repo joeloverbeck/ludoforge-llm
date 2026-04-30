@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/cnl/policy-bytecode/compile.ts`, `packages/engine/src/agents/policy-bytecode/disassemble.ts`
-**Deps**: `tickets/149FITLEVNUMVM-011.md`, `tickets/149FITLEVNUMVM-012.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-011.md`, `tickets/149FITLEVNUMVM-012.md`
 
 ## Problem
 

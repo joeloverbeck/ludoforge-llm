@@ -486,7 +486,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-008.md`](../archive/tickets/149FITLEVNUMVM-008.md) — Deferred PreviewDriveScope skeleton + apply/undo log primitives (old Phase 2 branch)
 - [`archive/tickets/149FITLEVNUMVM-009.md`](../archive/tickets/149FITLEVNUMVM-009.md) — Deferred cloning-path replacement with PreviewDriveScope (old Phase 2 branch)
 - [`archive/tickets/149FITLEVNUMVM-010.md`](../archive/tickets/149FITLEVNUMVM-010.md) — Deferred apply/undo equivalence property tests (old Phase 2 branch)
-- [`tickets/149FITLEVNUMVM-011.md`](../tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-011.md`](../archive/tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-012.md`](../tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-013.md`](../tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
 - [`tickets/149FITLEVNUMVM-014.md`](../tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)

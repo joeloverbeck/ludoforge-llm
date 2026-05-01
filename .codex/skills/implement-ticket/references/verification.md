@@ -47,6 +47,7 @@ If a verification lane fails immediately after overlapping output-contending com
    - In this repo, `packages/engine/scripts/run-tests.mjs` may change execution mode when explicit patterns are provided. Confirm whether the requested lane still applies its timeout before treating a focused explicit-path command as equivalent to the manifest-driven lane; use an external `timeout` wrapper when the focused proof needs a hard wall-clock budget.
 7. **Long-running commands**: Some ticket-required commands may run for minutes with sparse output. Treat that as normal when consistent with repo history; keep running and provide periodic progress updates.
 8. **Post-clean reruns**: If a later authoritative command cleans shared build output (e.g., `dist`), rerun earlier test lanes after rebuilding. Treat the first post-clean module-resolution failure as an ordering issue.
+9. **Ticket-named Turbo rebuilds**: When a ticket-named broad Turbo lane internally rebuilds or cleans a shared output tree, the command may still be valid broad proof, but any earlier compiled-output tests that consumed that tree must be rerun afterward before closeout. If rerunning is disproportionate, substitute package-local serial lanes only when the ticket allows that substitution and the active ticket records it before final proof.
 
 ## Build Ordering & Output Contention
 
@@ -57,6 +58,8 @@ Before running broader commands, check whether they share generated output trees
 Do not launch contending commands in the same parallel tool batch.
 
 **In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run serially.
+
+Ticket-named Turbo lanes can also contain unavoidable internal rebuilds through the task graph. Do not overlap an external compiled-output proof with those lanes; after the broad lane finishes, rerun any earlier `dist`-consuming proof you still intend to cite as final acceptance evidence.
 
 ## Verification Safety
 
@@ -78,6 +81,7 @@ Do not launch contending commands in the same parallel tool batch.
 - Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution. When the change is a shared contract or identifier migration, explicitly check for downstream committed fixture consumers in other packages as well, such as runner bootstrap `*-game-def.json`, compiled production snapshots, or other checked-in generated runtime artifacts that may need regeneration before runtime verification is trustworthy.
 - After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
   - If the canonical generator updates additional committed targets outside the ticket's named artifact list, do not automatically revert them as churn. Classify each spillover target as `owned fallout` when it serializes the active change, `stale canonical drift` when the generator is bringing an already-stale repo-owned artifact back in sync, or `unrelated churn` when it is neither caused by nor required for the active boundary. Keep `stale canonical drift` only when the generator's check mode proves the artifact is canonical and update the ticket touched-file/proof ledger so the diff is not unexplained.
+  - When a recursive schema or other generated public-contract change causes broad `$ref`/definition reshuffling inside a single generated artifact, do not attempt line-by-line exhaustion as the primary proof. Summarize the semantic owner path in source, verify generator determinism with the repo's check mode, run the affected schema/build tests, and keep the artifact only if those checks prove the reshuffle is canonical owned fallout.
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
 
 ## Escalation Ladder

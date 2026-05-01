@@ -43,7 +43,7 @@ Acceptance-proof runs are invalidated by later edits to the proved surface or ac
 
 Purely clerical ticket/spec edits, such as typo fixes or appending evidence that does not alter status, scope, command coverage, or proof claims, may preserve earlier proof only when you record an explicit no-invalidation decision in the ticket outcome or final closeout. If there is any doubt whether the edit changes the acceptance story, treat it as proof-affecting and rerun the affected lane.
 
-Examples: changing status, scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. When uncertain, rerun the focused affected lane or record the no-invalidation decision explicitly.
+Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 

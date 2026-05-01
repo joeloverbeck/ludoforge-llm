@@ -1,6 +1,6 @@
 # 151DECSTACSER-003: Tighten EffectExecutionFrameSnapshotSchema.suspendedFrame to typed schema
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/schemas-core.ts` (Zod schema tightening)
@@ -116,3 +116,21 @@ None directly; 005 owns the schema-rejection test that exercises this ticket's t
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo lint typecheck`
+
+## Outcome (2026-05-01)
+
+Completed. `EffectExecutionFrameSnapshotSchema.suspendedFrame` now uses a lazy typed `SerializedSuspendedEffectFrameSnapshotSchema` instead of `z.unknown()`. The new suspended-frame schema mirrors the runtime serialized shape from 001: recursively serialized `state`, wrapped serialized `rng`, actor player, bindings, optional free-operation overlay, suspended decision leaf, and resume stack.
+
+Supporting schemas were added for the suspended decision leaf/resume-frame payloads, the wrapped `SerializedRng` form, and the optional free-operation execution overlay fields needed by suspended frames. Recursive schema knots are explicitly annotated so TypeScript can compile the `SerializedGameStateSchema -> DecisionStackFrameSchema -> EffectExecutionFrameSnapshotSchema -> SerializedSuspendedEffectFrameSnapshotSchema -> SerializedGameStateSchema` cycle.
+
+Schema artifact fallout was expected and owned: `packages/engine/schemas/Trace.schema.json` was regenerated. `GameDef.schema.json` and `EvalReport.schema.json` remained unchanged after the generator ran.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine run schema:artifacts:check` — initially reported `Trace.schema.json` out of sync, then passed after `pnpm -F @ludoforge/engine run schema:artifacts`.
+3. `pnpm -F @ludoforge/engine test` — passed before root lint/typecheck (`59/59 files passed`).
+4. `pnpm turbo lint typecheck` — passed (`5 successful, 5 total`).
+5. `pnpm -F @ludoforge/engine test` — rerun after the Turbo build cleaned/rebuilt `dist`; passed (`59/59 files passed`).
+
+Deferred sibling scope remains unchanged: 004 owns walker body deletion and grep enforcement; 005 owns the schema-rejection and round-trip tests.

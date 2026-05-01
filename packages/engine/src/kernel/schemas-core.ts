@@ -16,6 +16,7 @@ import {
   ActionExecutorSelSchema,
   ConditionASTSchema,
   EffectASTSchema,
+  FreeOperationTokenInterpretationRuleSchema,
   IntegerSchema,
   MacroOriginSchema,
   NumberSchema,
@@ -43,8 +44,9 @@ import {
   VictoryTerminalMetadataSchema,
   EventDeckSchema,
   ActionPipelineSchema,
+  ActionPipelineStageSchema,
   ActionRestrictionDefSchema,
-  TurnOrderSchema
+  TurnOrderSchema,
 } from './schemas-extensions.js';
 import {
   AttributeValueSchema,
@@ -1345,14 +1347,144 @@ export const StochasticDistributionSchema = z
   })
   .strict();
 
-export const EffectExecutionFrameSnapshotSchema = z
+export const DecisionScopeSchema = z
+  .object({
+    iterationPath: StringSchema,
+    counters: z.record(StringSchema, NumberSchema),
+  })
+  .strict();
+
+export const SuspendedChoiceBindingOptionSchema = z
+  .object({
+    comparable: MoveParamScalarSchema,
+    binding: z.unknown(),
+  })
+  .strict();
+
+export const SuspendedChooseOneLeafSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    decisionKey: StringSchema,
+    bind: StringSchema,
+    decisionScope: DecisionScopeSchema,
+    bindingOptions: z.array(SuspendedChoiceBindingOptionSchema),
+  })
+  .strict();
+
+export const SuspendedChooseNLeafSchema = z
+  .object({
+    kind: z.literal('chooseN'),
+    decisionKey: StringSchema,
+    bind: StringSchema,
+    decisionScope: DecisionScopeSchema,
+    bindingOptions: z.array(SuspendedChoiceBindingOptionSchema),
+  })
+  .strict();
+
+export const SuspendedDecisionLeafSchema = z.discriminatedUnion('kind', [
+  SuspendedChooseOneLeafSchema,
+  SuspendedChooseNLeafSchema,
+]);
+
+export const SuspendedSequenceResumeFrameSchema = z
+  .object({
+    kind: z.literal('sequence'),
+    effects: z.array(EffectASTSchema),
+  })
+  .strict();
+
+export const SuspendedForEachResumeFrameSchema = z
+  .object({
+    kind: z.literal('forEach'),
+    bind: StringSchema,
+    items: z.array(z.unknown()),
+    nextIndex: NumberSchema,
+    effects: z.array(EffectASTSchema),
+    parentBindings: z.record(StringSchema, z.unknown()),
+    parentIterationPath: StringSchema,
+  })
+  .strict();
+
+export const SuspendedLetResumeFrameSchema = z
+  .object({
+    kind: z.literal('let'),
+    bind: StringSchema,
+    parentBindings: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const SuspendedReduceResumeFrameSchema = z
+  .object({
+    kind: z.literal('reduce'),
+    bind: StringSchema,
+    parentBindings: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const SuspendedPipelineResumeFrameSchema = z
+  .object({
+    kind: z.literal('pipeline'),
+    actionId: StringSchema,
+    profileId: StringSchema,
+    atomicity: z.union([z.literal('atomic'), z.literal('partial')]),
+    remainingStages: z.array(ActionPipelineStageSchema),
+    eventEffects: z.array(EffectASTSchema),
+  })
+  .strict();
+
+export const SuspendedResumeFrameSchema = z.discriminatedUnion('kind', [
+  SuspendedSequenceResumeFrameSchema,
+  SuspendedForEachResumeFrameSchema,
+  SuspendedLetResumeFrameSchema,
+  SuspendedReduceResumeFrameSchema,
+  SuspendedPipelineResumeFrameSchema,
+]);
+
+export const FreeOperationZoneFilterDiagnosticsSchema = z
+  .object({
+    source: StringSchema,
+    actionId: StringSchema,
+    moveParams: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const FreeOperationExecutionOverlaySchema = z
+  .object({
+    zoneFilter: ConditionASTSchema.optional(),
+    bindingCountZoneFilter: ConditionASTSchema.optional(),
+    zoneFilterDiagnostics: FreeOperationZoneFilterDiagnosticsSchema.optional(),
+    grantContext: z.record(StringSchema, MoveParamValueSchema).optional(),
+    capturedSequenceZonesByKey: z.record(StringSchema, z.array(StringSchema)).optional(),
+    tokenInterpretations: z.array(FreeOperationTokenInterpretationRuleSchema).optional(),
+  })
+  .strict();
+
+export const SerializedRngSchema = z
+  .object({
+    state: z.lazy(() => SerializedRngStateSchema),
+  })
+  .strict();
+
+export const SerializedSuspendedEffectFrameSnapshotSchema: z.ZodTypeAny = z
+  .object({
+    state: z.lazy((): z.ZodTypeAny => SerializedGameStateSchema),
+    rng: SerializedRngSchema,
+    actorPlayer: IntegerSchema,
+    bindings: z.record(StringSchema, z.unknown()),
+    freeOperationOverlay: FreeOperationExecutionOverlaySchema.optional(),
+    leaf: SuspendedDecisionLeafSchema,
+    resumeStack: z.array(SuspendedResumeFrameSchema),
+  })
+  .strict();
+
+export const EffectExecutionFrameSnapshotSchema: z.ZodTypeAny = z
   .object({
     programCounter: NumberSchema,
     boundedIterationCursors: z.record(StringSchema, NumberSchema),
     localBindings: z.record(StringSchema, MoveParamValueSchema),
     pendingTriggerQueue: z.array(StringSchema),
     decisionHistory: z.array(z.lazy(() => CompoundTurnTraceEntrySchema)).optional(),
-    suspendedFrame: z.unknown().optional(),
+    suspendedFrame: z.lazy((): z.ZodTypeAny => SerializedSuspendedEffectFrameSnapshotSchema).optional(),
   })
   .strict();
 
@@ -1510,7 +1642,7 @@ export const DecisionContextSchema = z.union([
   TurnRetirementContextSchema,
 ]);
 
-export const DecisionStackFrameSchema = z
+export const DecisionStackFrameSchema: z.ZodTypeAny = z
   .object({
     frameId: NumberSchema,
     parentFrameId: NumberSchema.nullable(),
@@ -2135,7 +2267,7 @@ export const SerializedRngStateSchema = z
   })
   .strict();
 
-export const SerializedGameStateSchema = z
+export const SerializedGameStateSchema: z.ZodTypeAny = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
@@ -2155,7 +2287,7 @@ export const SerializedGameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
-    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    decisionStack: z.array(z.lazy((): z.ZodTypeAny => DecisionStackFrameSchema)),
     unavailableActionsPerTurn: z.record(StringSchema, z.array(StringSchema)).optional(),
     nextFrameId: NumberSchema,
     nextTurnId: NumberSchema,

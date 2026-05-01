@@ -1,6 +1,6 @@
 # Spec 150: Card-Driven Turn-Flow Lifecycle Termination Contract
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P1 (closes the F10 gap that the PR #231 hot-fix patched with an opt-in flag; deliver before any future card-driven game is added so the contract is consistent across all clients)
 **Complexity**: M (kernel state-shape addition, public-API contract change for `applyTurnFlowCardBoundary`, simulator + helper consumer updates; no GameSpecDoc YAML change, no compiler IR change)
 **Dependencies**:
@@ -224,4 +224,12 @@ The PR #231 fix landed because CI was burning. This spec is the architectural co
 Decomposed via `/spec-to-tickets` on 2026-05-01:
 
 - [`archive/tickets/150LIFECYCONTR-001.md`](../archive/tickets/150LIFECYCONTR-001.md) — Atomic cut: replace `LIFECYCLE_NO_PROGRESS` exception/flag pair with `lifecycleStatus.stalled` state field (covers What to Change §1–§14)
-- [`tickets/150LIFECYCONTR-002.md`](../tickets/150LIFECYCONTR-002.md) — End-to-end FITL deck-exhaustion integration test (covers Acceptance Criterion #3)
+- [`archive/tickets/150LIFECYCONTR-002.md`](../archive/tickets/150LIFECYCONTR-002.md) — End-to-end FITL deck-exhaustion integration test (covers Acceptance Criterion #3)
+
+## Outcome (2026-05-01)
+
+Spec 150 is complete. Ticket `150LIFECYCONTR-001` landed the atomic kernel contract cut from the PR #231 exception/flag pair to the durable `lifecycleStatus.stalled` state field, including source consumers, serialization/schema support, and unit/integration proof. Ticket `150LIFECYCONTR-002` added the end-to-end short-deck FITL-style `runGame` sentinel proving deck exhaustion stops with `stopReason === 'noLegalMoves'` and `lifecycleStatus.stalled === true`.
+
+Deviation from the original plan: the final end-to-end sentinel uses the fast isolated short-deck fixture fallback rather than the historical full-production FITL seed, because the production seed probe was too slow to serve as a standing acceptance test.
+
+Verification is recorded in the archived ticket outcomes. The final ticket review for `150LIFECYCONTR-002` also passed `pnpm run check:ticket-deps` after archiving both Spec 150 tickets.

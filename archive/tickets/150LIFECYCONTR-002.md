@@ -1,9 +1,9 @@
 # 150LIFECYCONTR-002: End-to-end FITL deck-exhaustion integration test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: None — test-only addition (with optional fixture file)
+**Engine Changes**: Yes — primary deliverable is a test-only addition; verification fallout repaired nested suspended-frame serde deserialization
 **Deps**: `archive/tickets/150LIFECYCONTR-001.md`
 
 ## Problem
@@ -22,7 +22,7 @@ This is the regression sentinel for the original PR #231 incident: maxTurns=2 ma
 ## Architecture Check
 
 1. **End-to-end coverage of the F10 enforcement claim**: the kernel's lifecycle-bound contract from spec 150 is asserted at the highest integration scope — a real FITL game played to deck exhaustion through the canonical `runGame` entry point. Ticket 001's unit tests cover the contract *surface*; this ticket covers the *regression scenario* that motivated the spec.
-2. **No game-specific kernel branching**: this is a test-only addition. Even the optional fixture (if Option B is chosen below) is a YAML/data file under `test/fixtures/`, not engine source — F1 preserved.
+2. **No game-specific kernel branching**: this is a test-only addition. Even the optional fixture (if Option B is chosen below) is a test fixture under `test/fixtures/`, not engine source — F1 preserved.
 3. **F8 alignment**: the test uses a fixed seed and runtime, asserting deterministic `lifecycleStatus.stalled === true` on the final state. Replay-identity is implicit in the field assertion (re-running the same seed must produce the same field value).
 4. **F16 (Testing as Proof)**: the regression that PR #231 patched gets a permanent guard. Without this test, a future kernel change could re-introduce the stall without tripping any signal until production CI.
 5. **Architectural-invariant classification (per `.claude/rules/testing.md`)**: the test asserts a property that holds across any legitimate trajectory ending in deck exhaustion — not a single-trajectory witness. This survives sampler tweaks, profile updates, and other unrelated kernel evolutions because the property is structural, not seed-pinned.
@@ -32,7 +32,7 @@ This is the regression sentinel for the original PR #231 incident: maxTurns=2 ma
 ### 1. Identify or construct the deck-exhaustion fixture
 
 - **Option A (preferred if available)**: locate an existing FITL seed where the deck empties before the final-coup terminal fires. The PR #231 commit body (`343912bc`) names a specific configuration: maxTurns=2 produced the stall. Audit `packages/engine/test/integration/`, `packages/engine/test/determinism/`, and `packages/engine/test/fixtures/` for an existing seed/profile combination that exhibits this trajectory. If found, the test consumes it directly with no new fixture file.
-- **Option B (fallback)**: author a minimal FITL scenario fixture under `packages/engine/test/fixtures/lifecycle-stalled-fitl.yaml` (or equivalent naming pattern matching the directory's convention) with a short deck explicitly configured to exhaust within ~10 turns. Keep the fixture isolated — referenced by no other test.
+- **Option B (fallback)**: author a minimal FITL scenario fixture under `packages/engine/test/fixtures/lifecycle-stalled-fitl.ts` (or equivalent naming pattern matching the directory's convention) with a short deck explicitly configured to exhaust within ~10 turns. Keep the fixture isolated — referenced by no other test.
 
 Document the choice in the test file's leading comment so a future maintainer understands the reproducer's provenance.
 
@@ -78,6 +78,7 @@ The replay assertion reinforces F8 determinism for this trajectory specifically 
 
 - `packages/engine/test/integration/lifecycle-stalled-deck-exhaustion.test.ts` (new)
 - (Conditional, only if Option B is taken) a new fixture file under `packages/engine/test/fixtures/` (path determined by the directory's existing naming convention)
+- Verification fallout: `packages/engine/src/kernel/serde.ts` and `packages/runner/test/model/project-render-model-state.test.ts`
 
 ## Out of Scope
 
@@ -112,3 +113,26 @@ The replay assertion reinforces F8 determinism for this trajectory specifically 
 2. Targeted run of the new test (e.g., `node --test packages/engine/dist/test/integration/lifecycle-stalled-deck-exhaustion.test.js` or via the engine's `test:integration` script — confirm against `packages/engine/package.json`).
 3. `pnpm -F @ludoforge/engine test` (full).
 4. `pnpm turbo lint typecheck`.
+
+## Outcome (2026-05-01)
+
+Landed the Option B fallback: `packages/engine/test/fixtures/lifecycle-stalled-fitl.ts` defines an isolated short-deck FITL-style card-driven fixture with an accumulating played/discard zone, and `packages/engine/test/integration/lifecycle-stalled-deck-exhaustion.test.ts` drives it through `runGame`.
+
+The new test is marked `architectural-invariant` and asserts the owned structural contract only: `stopReason === 'noLegalMoves'`, `finalState.turnOrderState.runtime.lifecycleStatus.stalled === true`, draw/lookahead zones empty, and replay identity for `lifecycleStatus.stalled` plus `stateHash`. It intentionally does not assert turn or move counts.
+
+Verification fallout resolved:
+- `packages/runner/test/model/project-render-model-state.test.ts` had two stale card-driven runtime fixtures missing the already-required `lifecycleStatus` field from ticket 001; updated them to `{ stalled: false }` so repo-wide typecheck remains compatible with the Spec 150 state shape.
+- `packages/engine/src/kernel/serde.ts` serialized nested suspended effect-frame `GameState` BigInts to hex strings but did not restore those nested fields on deserialization. The existing `effect-frame-suspend-resume.test.ts` caught the bug during the ticket-named engine package test lane; the deserializer now restores nested `stateHash`, `_runningHash`, and RNG-state words in suspended snapshots.
+
+Ticket corrections applied:
+- Historical full-production seed probe -> not used as standing acceptance proof; it timed out during reassessment, so the fast isolated short-deck fixture fallback is the durable sentinel.
+- Optional fixture path example `lifecycle-stalled-fitl.yaml` -> live fixture module `packages/engine/test/fixtures/lifecycle-stalled-fitl.ts`, matching existing TypeScript test-fixture patterns and avoiding a new CNL/YAML compiler fixture surface.
+
+Schema/artifact fallout: no generated schema artifacts, goldens, or compiled GameDef fixtures changed. The serde repair is runtime deserialization logic only and preserves the existing serialized schema shape.
+
+Verification set:
+1. `pnpm -F @ludoforge/engine build`
+2. `node --test packages/engine/dist/test/integration/lifecycle-stalled-deck-exhaustion.test.js`
+3. `node --test packages/engine/dist/test/unit/kernel/effect-frame-suspend-resume.test.js`
+4. `pnpm -F @ludoforge/engine test`
+5. `pnpm turbo lint typecheck`

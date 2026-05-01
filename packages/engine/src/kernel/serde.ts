@@ -70,6 +70,50 @@ const sanitizeNestedBigInts = (value: unknown): unknown => {
   return value;
 };
 
+const restoreNestedSerializedBigInts = (value: unknown): unknown => {
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next: unknown[] = new Array(value.length);
+    for (let i = 0; i < value.length; i += 1) {
+      const restored = restoreNestedSerializedBigInts(value[i]);
+      next[i] = restored;
+      if (restored !== value[i]) {
+        changed = true;
+      }
+    }
+    return changed ? next : value;
+  }
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    let changed = false;
+    const next: Record<string, unknown> = {};
+    const isRngState =
+      typeof obj.algorithm === 'string'
+      && typeof obj.version === 'number'
+      && Array.isArray(obj.state);
+
+    for (const key of Object.keys(obj)) {
+      const current = obj[key];
+      const restored =
+        (key === 'stateHash' || key === '_runningHash') && typeof current === 'string' && HEX_BIGINT_PATTERN.test(current)
+          ? BigInt(current)
+          : isRngState && key === 'state' && Array.isArray(current)
+            ? current.map((word, index) =>
+                typeof word === 'string' && HEX_BIGINT_PATTERN.test(word)
+                  ? fromHexBigInt(word as HexBigInt, `nested rng.state[${index}]`)
+                  : restoreNestedSerializedBigInts(word),
+              )
+            : restoreNestedSerializedBigInts(current);
+      next[key] = restored;
+      if (restored !== current) {
+        changed = true;
+      }
+    }
+    return changed ? next : obj;
+  }
+  return value;
+};
+
 export const serializeGameState = (state: GameState): SerializedGameState => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to strip internal field from serialized output
   const { _runningHash, ...rest } = state;
@@ -115,8 +159,9 @@ export const deserializeGameState = (state: SerializedGameState): GameState => {
     activeLastingEffects: state.activeLastingEffects,
     interruptPhaseStack: state.interruptPhaseStack,
   };
-  validateTurnFlowRuntimeStateInvariants(deserialized);
-  return deserialized;
+  const restored = restoreNestedSerializedBigInts(deserialized) as GameState;
+  validateTurnFlowRuntimeStateInvariants(restored);
+  return restored;
 };
 
 export const serializeTrace = (trace: GameTrace): SerializedGameTrace => ({

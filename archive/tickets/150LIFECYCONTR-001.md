@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel state shape, kernel API contract (`applyTurnFlowCardBoundary`, `finalizeSuspendedOrEndedCard`, `applyTurnFlowEligibilityAfterMove`), `ExecutionOptions`, `KernelRuntimeErrorCode` union, simulator main loop, `apply-move.ts` transit sites, `legal-moves.ts` and `microturn/publish.ts` guards, `serde.ts` + `schemas-core.ts`, test helper, related test files
-**Deps**: `specs/150-card-driven-lifecycle-termination-contract.md`
+**Deps**: `archive/specs/150-card-driven-lifecycle-termination-contract.md`
 
 ## Problem
 
@@ -203,7 +203,7 @@ The live Spec 144 runtime safety net already treats the existing microturn const
 - Hot-path perf budget for accumulating-zone workloads — deferred to Spec 153 candidate.
 - Card-driven *initialization* validation (deck=0 by author error) — that's a compile-time concern, F12.
 - Runner UI changes — runner consumes `stopReason` via trace; no kernel-side runner change.
-- The new end-to-end FITL deck-exhaustion integration test (AC #3) — owned by ticket `tickets/150LIFECYCONTR-002.md`.
+- The new end-to-end FITL deck-exhaustion integration test (AC #3) — owned by ticket `archive/tickets/150LIFECYCONTR-002.md`.
 - Spec 152's shared-loop refactor — Spec 152 is a downstream consumer that lands cleanly after this ticket.
 
 ## Acceptance Criteria
@@ -252,6 +252,7 @@ The live Spec 144 runtime safety net already treats the existing microturn const
 ## Outcome
 
 Completed: 2026-05-01
+Outcome amended: 2026-05-01
 
 Implemented the Foundation-aligned atomic cut:
 

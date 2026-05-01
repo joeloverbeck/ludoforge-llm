@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/` (new test files + modifications)
-**Deps**: `tickets/151DECSTACSER-002.md`, `tickets/151DECSTACSER-003.md`, `tickets/151DECSTACSER-004.md`
+**Deps**: `archive/tickets/151DECSTACSER-002.md`, `tickets/151DECSTACSER-003.md`, `tickets/151DECSTACSER-004.md`
 
 ## Problem
 

@@ -133,7 +133,10 @@ const deserializeDecisionStack = (
  * the canonical hot path stays cheap. F11 is preserved: the input is never
  * mutated; new arrays/objects are returned for any subtree that contains a
  * BigInt.
+ *
+ * Retained for 151DECSTACSER-004, which owns deletion plus grep enforcement.
  */
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- retained until 151DECSTACSER-004 deletes the walker bodies
 const sanitizeNestedBigInts = (value: unknown): unknown => {
   if (typeof value === 'bigint') {
     return toHexBigInt(value);
@@ -166,6 +169,7 @@ const sanitizeNestedBigInts = (value: unknown): unknown => {
   return value;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- retained until 151DECSTACSER-004 deletes the walker bodies
 const restoreNestedSerializedBigInts = (value: unknown): unknown => {
   if (Array.isArray(value)) {
     let changed = false;
@@ -211,9 +215,8 @@ const restoreNestedSerializedBigInts = (value: unknown): unknown => {
 };
 
 export const serializeGameState = (state: GameState): SerializedGameState => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to strip internal field from serialized output
   const {
-    _runningHash,
+    _runningHash: strippedRunningHash,
     decisionStack,
     unavailableActionsPerTurn,
     nextFrameId,
@@ -222,6 +225,7 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
     turnOrderState,
     ...rest
   } = state;
+  void strippedRunningHash;
   const serialized = {
     ...rest,
     rng: {
@@ -251,7 +255,7 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
   if (serialized.interruptPhaseStack === undefined) {
     delete serialized.interruptPhaseStack;
   }
-  return sanitizeNestedBigInts(serialized) as SerializedGameState;
+  return serialized;
 };
 
 export const deserializeGameState = (state: SerializedGameState): GameState => {
@@ -272,9 +276,8 @@ export const deserializeGameState = (state: SerializedGameState): GameState => {
     interruptPhaseStack: state.interruptPhaseStack,
     ...(decisionStack !== undefined ? { decisionStack: deserializeDecisionStack(decisionStack) } : {}),
   };
-  const restored = restoreNestedSerializedBigInts(deserialized) as GameState;
-  validateTurnFlowRuntimeStateInvariants(restored);
-  return restored;
+  validateTurnFlowRuntimeStateInvariants(deserialized);
+  return deserialized;
 };
 
 export const serializeTrace = (trace: GameTrace): SerializedGameTrace => ({

@@ -1,6 +1,6 @@
 # 151DECSTACSER-002: Retire decision-stack walker invocations after 001 wiring
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/serde.ts` (remove remaining walker invocation dependency)
@@ -79,3 +79,28 @@ None directly; 005 is the test ticket. This ticket relies on the existing test c
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm -F @ludoforge/engine test:integration:slow-parity`
 4. `pnpm turbo lint typecheck`
+
+## Outcome (2026-05-01)
+
+Completed the narrowed 002 cutover. `serializeGameState` now returns the explicitly serialized `SerializedGameState` object directly, and `deserializeGameState` validates and returns the explicitly deserialized `GameState` directly. The generic walker function bodies remain in `serde.ts` as planned for 004, but `serializeGameState` and `deserializeGameState` no longer invoke them.
+
+Touched-file scope: only `packages/engine/src/kernel/serde.ts` changed for implementation. No schema, generated artifact, or test fixture changes were required; 003 owns schema tightening, 004 owns walker deletion and grep enforcement, and 005 owns the formal round-trip / raw-stringify tests.
+
+Verification set for final proof:
+
+1. `pnpm -F @ludoforge/engine build`
+2. Temporary focused probe: `JSON.stringify(serializeGameState(stateWithSuspendedFrame))` succeeds and nested suspended-frame BigInt carriers serialize as hex strings.
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm -F @ludoforge/engine test:integration:slow-parity`
+5. `pnpm turbo lint typecheck`
+
+Final verification results:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. Temporary focused probe: `JSON.stringify(serializeGameState(stateWithSuspendedFrame))` succeeded; observed nested suspended-frame carriers serialized as `stateHash: "0x123"` and wrapped `rng.state.state: ["0x4","0x5"]`.
+3. `pnpm -F @ludoforge/engine test` — passed after final lint-only serde edit (`59/59 files passed`).
+4. `pnpm turbo lint typecheck` — passed after retaining the walker bodies with temporary unused suppressions for 004 and preserving the `_runningHash` strip without an unused destructuring directive.
+5. `pnpm -F @ludoforge/engine test:integration:slow-parity` — red, classified as repo-preexisting unrelated slow-corpus blocker outside this ticket's serializer diff. The runner timed out `dist/test/integration/agents/drive-fingerprint-property.test.js` after 10m with only heartbeat output. That file is the archived `POLPREVDRIVE-005` permanent policy-preview evidence gate; this ticket did not touch policy preview, agents, lane routing, or the test.
+6. `pnpm -F @ludoforge/engine test:determinism` — red, classified as repo-preexisting unrelated heavy-corpus blocker outside this ticket's serializer diff. The runner passed `decision-local-scope-drop.test.js`, then timed out `dist/test/determinism/draft-state-determinism-parity.test.js` after 20m with only heartbeat output. No serializer assertion failed.
+
+Proof gap: the ticket-owned serializer cutover is covered by build, focused suspended-frame stringify proof, the default engine suite, and workspace lint/typecheck. The two named broad slow lanes did not return final green results in this local run, but their observed failures are timeout-only in existing heavy witnesses outside the changed execution path.

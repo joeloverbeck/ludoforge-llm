@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/serde.ts` (delete walker function bodies), one new test file
-**Deps**: `tickets/151DECSTACSER-002.md`
+**Deps**: `archive/tickets/151DECSTACSER-002.md`
 
 ## Problem
 

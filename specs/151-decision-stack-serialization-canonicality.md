@@ -207,6 +207,7 @@ This section is a placeholder for `/spec-to-tickets` decomposition.
 - `151DECSTACSER-003` — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` with the typed `SerializedSuspendedEffectFrameSnapshotSchema` in `kernel/schemas-core.ts` (use `z.lazy`).
 - `151DECSTACSER-004` — Delete `sanitizeNestedBigInts` and `restoreNestedSerializedBigInts` atomically with the type/serializer/schema work above. Add the grep enforcement test.
 - `151DECSTACSER-005` — Tests: `serialize-decision-stack-roundtrip.test.ts`, `serialize-suspended-frame.test.ts`, schema-rejection case in `serde.test.ts`, and the explicit assertion in `spec-140-replay-identity.test.ts`. Add the lint-rule-or-grep enforcement for raw `JSON.stringify(state)` outside `kernel/serde.ts`.
+- `151DECSTACSER-006` — Resolve the residual live simulator `noLegalMoves` suspended-frame witness from 005: either land a bounded durable live witness/fixture or record that no cheap live witness exists and keep the synthetic public-seam proof as authoritative.
 
 ## Tickets
 
@@ -216,4 +217,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-01:
 - [`archive/tickets/151DECSTACSER-002.md`](../archive/tickets/151DECSTACSER-002.md) — Retire decision-stack walker invocations after 001 wiring
 - [`archive/tickets/151DECSTACSER-003.md`](../archive/tickets/151DECSTACSER-003.md) — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` to typed schema
 - [`archive/tickets/151DECSTACSER-004.md`](../archive/tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
-- [`tickets/151DECSTACSER-005.md`](../tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement
+- [`archive/tickets/151DECSTACSER-005.md`](../archive/tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement
+- [`tickets/151DECSTACSER-006.md`](../tickets/151DECSTACSER-006.md) — Live noLegalMoves suspended-frame witness

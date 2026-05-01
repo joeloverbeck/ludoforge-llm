@@ -1,6 +1,6 @@
 # 151DECSTACSER-005: Tests + raw JSON.stringify enforcement
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/` (new test files + modifications)
@@ -139,3 +139,48 @@ The pragmatic implementation: grep for the literal patterns and assert zero hits
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm -F @ludoforge/engine test:integration:slow-parity`
 4. `pnpm turbo lint typecheck`
+
+## Implementation Notes (2026-05-01)
+
+Live reassessment confirmed the production serializer/schema/walker-deletion work from 001-004 is already landed. This ticket remains a bounded test/invariant slice.
+
+Correction ledger:
+
+1. The raw `JSON.stringify(state|trace)` enforcement is implemented as a source-tree heuristic over literal `JSON.stringify(state)` / `JSON.stringify(trace)` forms outside `packages/engine/src/kernel/serde.ts`. It intentionally allows ordinary stringification of non-state values.
+2. Current 002 behavior keeps `SuspendedEffectFrameSnapshot.bindings` pass-through. The synthetic BigInt-bindings test therefore locks in the native `JSON.stringify` BigInt failure rather than a recursive conversion.
+3. A bounded live seed probe for a simulator-produced `noLegalMoves` trace with a populated final-state decision stack was too slow for the local feedback loop and found no cheap witness before timeout. The explicit `spec-140-replay-identity.test.ts` assertion instead uses a focused synthetic `GameTrace` with `stopReason: 'noLegalMoves'` and a populated suspended final-state frame, proving the ticket-owned serialization invariant without broad fixture search.
+
+Final proof plan:
+
+1. `pnpm -F @ludoforge/engine build`
+2. Focused compiled unit tests for `serialize-decision-stack-roundtrip`, `serialize-suspended-frame`, `json-stringify-state-enforcement`, and `serde`.
+3. Focused compiled replay-identity assertion with `--test-name-pattern "serializes a noLegalMoves stopped trace"`.
+4. `pnpm -F @ludoforge/engine test`
+5. `pnpm turbo lint typecheck`
+
+Ticket-named broad slow lanes:
+
+- `pnpm -F @ludoforge/engine test:integration:slow-parity` and full determinism were classified in archived 002/004 closeouts as pre-existing timeout-heavy broad witnesses outside the serializer/test slice. They remain supplementary for this ticket unless a focused owned witness fails.
+
+## Outcome (2026-05-01)
+
+Completed. Added the Spec 151 test coverage owned by this ticket:
+
+1. `packages/engine/test/unit/serialize-decision-stack-roundtrip.test.ts` covers empty, single-frame, and one-level-recursive suspended-frame decision-stack round-trips through `serializeGameState -> JSON.stringify -> JSON.parse -> SerializedGameStateSchema.parse -> deserializeGameState`.
+2. `packages/engine/test/unit/serialize-suspended-frame.test.ts` covers suspended-frame round-trip identity, wrapped suspended-frame RNG hex encoding/restoration, and BigInt-valued `bindings` failing at native JSON serialization under the current pass-through contract from 002.
+3. `packages/engine/test/unit/serde.test.ts` now rejects an old BigInt-bearing nested suspended-frame `stateHash` payload at the Zod schema boundary and asserts the error path mentions `decisionStack`, `suspendedFrame`, and `stateHash`.
+4. `packages/engine/test/determinism/spec-140-replay-identity.test.ts` now asserts a `noLegalMoves` stopped trace with a populated suspended final-state frame survives `JSON.stringify(serializeTrace(trace))`.
+5. `packages/engine/test/unit/json-stringify-state-enforcement.test.ts` enforces the pragmatic raw `JSON.stringify(state|trace)` source heuristic outside `kernel/serde.ts`.
+
+Final verification results:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `timeout 60s pnpm -F @ludoforge/engine exec node --test dist/test/unit/serialize-decision-stack-roundtrip.test.js dist/test/unit/serialize-suspended-frame.test.js dist/test/unit/json-stringify-state-enforcement.test.js dist/test/unit/serde.test.js` — passed (`4/4` compiled unit files).
+3. `timeout 60s pnpm -F @ludoforge/engine exec node --test --test-name-pattern "serializes a noLegalMoves stopped trace" dist/test/determinism/spec-140-replay-identity.test.js` — passed.
+4. `pnpm -F @ludoforge/engine test` — passed (`59/59 files passed`).
+5. `pnpm turbo lint typecheck` — passed (`5 successful, 5 total`).
+6. `git diff --check` — passed.
+
+Residual follow-up: the original draft's live simulator seed/fixture witness did not land. `tickets/151DECSTACSER-006.md` now owns the bounded live noLegalMoves suspended-frame witness decision.
+
+No-invalidation note: the post-review residual follow-up split changes ticket ownership metadata only. It does not change code, tests, generated artifacts, command meanings, or the serializer proof results above; ticket graph integrity is covered by the archival dependency check.

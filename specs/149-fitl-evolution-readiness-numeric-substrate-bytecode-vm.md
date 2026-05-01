@@ -4,7 +4,7 @@
 **Priority**: P0 — blocks evolution-readiness; PR #231 (`implemented-147`) determinism + integration CI lanes red.
 **Complexity**: XL — multi-phase architectural change spanning kernel encoded-state projection, agent preview-drive apply/undo, compiler bytecode lowering, runtime VM, and CI workflow rebalancing.
 **Dependencies**:
-- `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` (in-progress) — provides the "incremental TS optimization plateaued" evidence that motivates a structural change.
+- `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` (deferred/superseded 2026-05-01) — provides the "incremental TS optimization plateaued" evidence that motivates a structural change.
 - `archive/specs/147-aot-consideration-ast-compilation.md` (archived 2026-04-26) — predecessor that landed AOT closure-tree compilation. This spec's bytecode VM lowers from the same compile-time IR (`AgentPolicyExpr`) and replaces the closure-tree runtime path on Phase 4 default-flip.
 - `reports/turnperf-001-investigation-2026-04-28.md`, `reports/turnperf-002-implementation-2026-04-28.md`, `reports/ci-failures-pr-231-2026-04-28.md` — measurement and CI-failure evidence consumed by §1 and §Phase 0.
 
@@ -17,7 +17,7 @@
 - `reports/turnperf-001-investigation-2026-04-28.md` (one-card FITL probe: `elapsedMs=8710` under 4 baseline profiles; `agent:evaluatePolicyExpression=5378 ms` = 62% of wall-clock; `tokenStateIndexBuildCount=2381`).
 - `reports/turnperf-002-implementation-2026-04-28.md` (preview-no-final-hash seam yielded ~20% smoke improvement; multiple speculative caches removed; parity lanes still red).
 - `reports/ci-failures-pr-231-2026-04-28.md` (chronic seed-123 timeout root cause: `refreshCachedTokenStateIndexEntries` O(K·Z·T); fix already landed in commit `b362038a` as Option A).
-- `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` (Phase 2 outcome shows incremental TS optimizations have plateaued).
+- `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` (Phase 2 outcome shows incremental TS optimizations have plateaued).
 - `docs/FOUNDATIONS.md` (validated against F1, F5, F8, F10, F11, F15, F17).
 
 **Prior-art surveyed**:

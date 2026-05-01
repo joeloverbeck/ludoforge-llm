@@ -192,6 +192,8 @@ Status values: `PR regression` (lane was green on main, broken by this PR) | `pr
 - Override priorities.
 - Choose fix scope when a cluster admits multiple shapes (e.g., minimal correctness fix vs. minimal fix + dead-code cleanup vs. broader refactor). Surface these alternatives explicitly in the gate 1 message when removing the broken path leaves unreachable code, when the fix surface naturally extends to adjacent dead exports, or when a more invasive redesign exists.
 
+Gate 1 may iterate. If the user rejects the diagnosis or asks for deeper investigation (e.g., a profile, a bisect, a source-modification experiment to confirm the root cause), return to Step 3 with the additional evidence and re-present at Step 4. The gate is closed only when the user explicitly approves the cluster table — first-round approval is the happy path, not the contract.
+
 Do not proceed to Step 5 until the user has explicitly approved.
 
 ### Step 5: Apply Approved Fixes
@@ -266,8 +268,22 @@ Present:
 - Suspected flakes / network timeouts left for the user to decide on (if any).
 - FOUNDATIONS conflicts that halted the skill (if any) — these still need resolution.
 - New CI run URL (`gh pr checks <N>` or `gh run list --branch <head> --limit 1`).
+- Optional follow-up: if the affected lanes are heavy (>15 min CI duration), or verification was scoped per the environment-constrained rule in Step 6, end the reply with a one-line `/schedule` offer to recheck CI status in 30–60 min. Keep this soft — many fixes complete CI fast enough that a schedule isn't needed, and the offer should not delay closing the workflow.
 
 Do not commit additional artifacts. The skill is conversational — diagnostic output stays in the transcript. Write a record to `reports/ci-failures-pr-<N>-YYYY-MM-DD.md` summarizing the diagnosis table for future reference when EITHER (a) cluster count is ≥ 4, OR (b) `git log --oneline <merge-base>..HEAD` shows ≥ 2 commits with subject prefix `fix(` whose subjects reference the same workflow / lane that's still failing now (chronic-PR case — prior fix attempts on this branch did not resolve the lane). For the chronic-PR case, the record should preserve the gate 1 cluster table verbatim plus a one-paragraph "what did NOT work" summary citing the prior fix commits, so the next session can pick up where this one left off without re-bisecting from scratch.
+
+### Step 10: Architectural-Gap Scan (post-push)
+
+Hot-fixes for CI failures often paper over an architectural gap rather than close it. After the push lands, scan the staged diff for any of these patterns; each is a candidate architectural gap that warrants a follow-up spec in `specs/<NNN>-<slug>.md`:
+
+- **Opt-in flags on `ExecutionOptions` or similar config bags** that gate alternative behavior between callers (e.g., simulator vs. test helpers). Often signals that the kernel needs a structural state field every caller observes uniformly, rather than a flag that splits the behavior tree.
+- **New typed errors caught at >1 call site and translated to a different signal**. Often signals that the condition should be a queryable, deterministic state-shape property rather than an exception thrown at one boundary and caught at another.
+- **Generic walkers or sanitizers added defensively to a serialization, validation, or normalization pass** (e.g., a recursive BigInt walker added to a serializer that previously handled BigInts only at named fields). Often signals that the schema's structural recursion is incomplete; a typed traversal is the architectural fix.
+- **Test helpers or downstream consumers that re-implement a kernel loop** to inject behavior the kernel doesn't expose as a hook (e.g., a verification helper with its own `while (true)` simulation loop). Often signals an F5 violation; the kernel should expose the loop body as a reusable primitive.
+
+For each pattern observed, name the gap (one short sentence), suggest a candidate spec number (the next free `specs/` index) and slug, and offer to write the spec. Use existing specs as the format template (e.g., `specs/148-runtime-interned-identifier-comparison.md` or `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`). Do NOT auto-write specs without user approval — produce hints; leave authorship to the user.
+
+This step is post-push and additive: the fix is already shipped. The architectural-gap follow-up is a separate effort, not a blocker for closing CI failures. If no patterns match, say so and skip — false positives here would dilute the signal.
 
 ## Failure-class playbooks
 
@@ -281,7 +297,7 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **memory**: Lane budget exceeded. Look for retained references in caches, accumulators, or RNG/state structures that should be transient. Compare allocation patterns in recent commits.
 - **performance**: Lane budget exceeded. Check for accidental quadratic loops, unbounded `forEach`, or new code in hot paths. The performance budget is enforced by the lane itself — read its source to know the budget.
 - **timeout (a) hang**: Add probe logs locally; isolate which `it()` or operation never returns. Often an unawaited promise or an infinite enumeration.
-- **timeout (b) slowness**: Profile the lane locally — `node --cpu-prof --cpu-prof-dir=<dir> <command>` produces a `.cpuprofile` viewable in Chrome DevTools' Performance panel; use `node --inspect` only when interactive debugging is needed; naive `console.time` / `time` is acceptable for first-pass localization. Determine whether the budget needs to grow (rare; needs justification) or the code regressed.
+- **timeout (b) slowness**: Profile the lane locally — `node --cpu-prof --cpu-prof-dir=<dir> <command>` produces a `.cpuprofile` viewable in Chrome DevTools' Performance panel; use `node --inspect` only when interactive debugging is needed; naive `console.time` / `time` is acceptable for first-pass localization. Determine whether the budget needs to grow (rare; needs justification) or the code regressed. **For lanes that genuinely hang** (don't terminate cleanly, so SIGTERM kills the process before `--cpu-prof` flushes), fall back to V8's statistical profiler: `node --prof <command>` streams `isolate-*.log` continuously to disk and survives a SIGKILL. After the process is killed, summarize with `node --prof-process isolate-*.log` to get bottom-up call attribution.
 - **timeout (c) external**: Not a code defect. Recommend the user retry the lane via `gh run rerun --failed <run-id>` (user action, not skill action).
 - **flake-suspect**: Already verified by 3x local re-run in Step 3. If it doesn't reproduce locally, propose: chase the non-determinism upstream, retry the lane in CI, or skip.
 

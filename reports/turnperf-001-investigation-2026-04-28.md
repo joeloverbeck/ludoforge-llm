@@ -4,7 +4,7 @@
 
 Phase 1 produced a repeatable harness extension and a bounded live measurement, but did not run the originally drafted 5-card or full-game corpus to completion. The user approved narrowing Phase 1 to the completed one-card evidence plus the bounded-probe timeouts after both 5-card probes exceeded a normal feedback window.
 
-Current evidence is enough to reject the draft's `<= 250 ms` per-card target as immediately attainable on this checkout and to identify the first implementation owner: `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`, which should reduce preview-drive policy evaluation and token-index rebuild cost before adding a hard per-card gate.
+Current evidence is enough to reject the draft's `<= 250 ms` per-card target as immediately attainable on this checkout and to identify the first implementation owner: `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`, later archived as deferred/superseded after proving incremental TS optimization had plateaued.
 
 ## Harness Changes
 

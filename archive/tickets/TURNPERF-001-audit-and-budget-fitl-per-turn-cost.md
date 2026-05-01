@@ -197,12 +197,12 @@ Schema and generated artifacts were not touched. Phase 2 remains gated and has n
 
 - **`packages/engine/scripts/profile-fitl-preview-drive.mjs`**: added `--perCard` measurement rows and `--profileBuckets` profiler summaries. The harness remains diagnostic-only and does not change production kernel behavior or game semantics.
 - **`reports/turnperf-001-investigation-2026-04-28.md`**: created the Phase 1 investigation report with the completed one-card measurement, stopped five-card probes, interpretation, and recommended Phase 2 surface.
-- **`tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`**: created as the active owner for Phase 2 implementation and final per-card budget/perf-gate work.
+- **`archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`**: created as the then-active owner for Phase 2 implementation and final per-card budget/perf-gate work; later archived as deferred/superseded on 2026-05-01.
 
 ### Deviations from original plan
 
 - The original Phase 1 request for a 5-card/full-game corpus was narrowed after `1-3-1` confirmation. Both five-card probes exceeded the bounded feedback window on this checkout, so the durable Phase 1 evidence is the completed one-card run plus the classified stopped probes.
-- Phase 2 implementation, perf-gate creation, and determinism-shard budget closure did not land in this ticket. They are now owned by `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
+- Phase 2 implementation, perf-gate creation, and determinism-shard budget closure did not land in this ticket. They were moved to `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`, which was later archived as deferred/superseded on 2026-05-01.
 
 ### Verification
 

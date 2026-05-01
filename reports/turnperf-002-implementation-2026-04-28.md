@@ -4,6 +4,8 @@
 
 TURNPERF-002 is not complete. The live scoped token-index refresh and preview no-final-hash reduction are correct and measured, but they do not close the per-card or determinism-parity budget gates. Token-index/cache candidates and scalar/digest hash-cache candidates that did not improve the owned probes were measured and removed; the preview no-final-hash seam remains landed as a real root-cause reduction.
 
+2026-05-01 archival note: the ticket was later archived as `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` with status `DEFERRED`, because the project moved this work out of the local TURNPERF performance loop and into newer architectural repair specs.
+
 ## Live Baseline Reassessment
 
 The live checkout already contains the scoped token-index refresh from the PR diagnosis:
@@ -207,7 +209,7 @@ The scoped token-index refresh is not enough, and the stronger token-index/cache
 2. Policy-expression path: `resolveRef`, `evalCondition`, `evalValue`, and `evalQuery`.
 3. Workflow/budget path: raise or split long-running perf/determinism gates while a narrower implementation ticket handles the next optimization.
 
-Updated next step after Foundation-aligned boundary reset: TURNPERF-002 should remain open. Token-index cache variants, compact scalar Zobrist key caching, and decision-stack digest caching have all been measured and removed. User approved the preview-inner no-final-hash implementation seam on 2026-04-28.
+Historical next step after Foundation-aligned boundary reset: TURNPERF-002 should remain open as of 2026-04-28. Token-index cache variants, compact scalar Zobrist key caching, and decision-stack digest caching had all been measured and removed. User approved the preview-inner no-final-hash implementation seam on 2026-04-28. This was superseded by the 2026-05-01 archival decision noted above.
 
 ## Hash Reduction (2026-04-28)
 
@@ -333,4 +335,4 @@ timeout 300s bash -lc 'cd packages/engine && node scripts/run-tests.mjs --lane d
 
 Result: still timed out after 300s.
 
-Verdict: keep the implementation as a real root-cause reduction in decision-stack hashing, but TURNPERF-002 remains open. The CPU-profile and attribution signals improved, while the smoke run stayed noisy/red and the broad parity lane still misses the 300s bounded probe.
+Historical verdict as of 2026-04-28: keep the implementation as a real root-cause reduction in decision-stack hashing, but TURNPERF-002 remained open. The CPU-profile and attribution signals improved, while the smoke run stayed noisy/red and the broad parity lane still missed the 300s bounded probe. The ticket was later archived as deferred on 2026-05-01.

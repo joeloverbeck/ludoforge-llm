@@ -169,7 +169,7 @@ node /tmp/probe-fitl-card-tracking.mjs
 
 **Completed**: 2026-04-28
 
-Outcome amended: 2026-04-28 — Post-review after `TURNPERF-001` archival: active per-card performance implementation ownership now lives in `tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md`.
+Outcome amended: 2026-05-01 — `TURNPERF-002` ownership reference is now historical. The ticket was archived as deferred/superseded at `archive/tickets/TURNPERF-002-implement-fitl-per-card-cost-reduction.md` after the project moved current repair work to newer architecture specs.
 
 ### What actually changed
 

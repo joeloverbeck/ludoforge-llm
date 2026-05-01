@@ -1,6 +1,6 @@
 # TURNPERF-002: Implement FITL per-card cost reduction after Phase 1 profiling
 
-**Status**: IN PROGRESS — preview no-final-hash reduction landed, broad perf/parity gates still red
+**Status**: DEFERRED — archived as superseded by current architectural repair work
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/kernel/token-state-index.ts`, `packages/engine/src/kernel/effects-token.ts`, `packages/engine/src/agents/policy-preview*`, `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/kernel/eval-query.ts`, `packages/engine/src/kernel/microturn/*`, and perf tests as evidence requires.
@@ -183,3 +183,15 @@ Blocking lane still red:
 - `timeout 300s bash -lc 'cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js'` still timed out after 300s.
 
 Current classification: the no-final-hash preview seam is a real root-cause reduction in decision-stack hashing, but it does not close TURNPERF-002. Per F8/F10/F15, the ticket remains open with exact red metrics rather than weakening parity coverage or declaring success from a CPU-profile-only improvement.
+
+## Archival Outcome (2026-05-01)
+
+This ticket is archived as deferred/superseded, not completed. The ticket produced useful measured evidence and kept the preview no-final-hash reduction, but it did not close the per-card or parity-budget acceptance bars.
+
+Latest relevance check before archival:
+
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label turnperf-002-relevance-check`
+- Result: `elapsedMs=6729.16`, per-card `elapsedMs=6728.93`, `driveExitTotal=211`, `tokenStateIndexBuildCount=2377`, `draftTokenStateIndexDeltaCount=198`, `draftTokenStateIndexAttachCount=682`.
+- Residual attribution remained dominated by policy evaluation: `simAgentChooseMove=3914.54 ms`, `agent:evaluatePolicyExpression=3912.2 ms`, `simApplyMove=900.69 ms`.
+
+Reason for archival: the project is moving away from this local performance-ticket loop toward new architectural repair specs for the current issues. Do not resume TURNPERF-002 as the active implementation vehicle. Preserve this ticket and `reports/turnperf-002-implementation-2026-04-28.md` as evidence that incremental token-index/hash tuning plateaued and that the durable fix must come from the newer architecture track.

@@ -1,6 +1,6 @@
 # 151DECSTACSER-006: Live noLegalMoves suspended-frame witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/test/` only unless reassessment proves a live serialization bug
@@ -46,7 +46,7 @@ If a live witness exists within the bounded search:
 
 If no bounded live witness exists:
 
-- update this ticket and `specs/151-decision-stack-serialization-canonicality.md` to state that the live simulator witness is currently unavailable or disproportionate
+- update this ticket and `archive/specs/151-decision-stack-serialization-canonicality.md` to state that the live simulator witness is currently unavailable or disproportionate
 - keep the synthetic public-seam proof from 005 as the active invariant
 - do not add game-specific behavior or mutate production GameSpecDoc data solely to manufacture the state
 
@@ -54,7 +54,7 @@ If no bounded live witness exists:
 
 - `packages/engine/test/determinism/spec-140-replay-identity.test.ts` (modify — only if a cheap live witness fits)
 - `packages/engine/test/fixtures/` (new/modify — only if a fixture is the bounded durable shape)
-- `specs/151-decision-stack-serialization-canonicality.md` (modify — if no bounded live witness exists or if the witness shape changes the spec's proof story)
+- `archive/specs/151-decision-stack-serialization-canonicality.md` (modify — if no bounded live witness exists or if the witness shape changes the spec's proof story)
 - `tickets/151DECSTACSER-006.md` (modify — record probe outcome and final proof)
 
 ## Out of Scope
@@ -91,3 +91,30 @@ If no bounded live witness exists:
 2. Bounded witness probe command chosen during reassessment
 3. Focused serializer/witness test command
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome (2026-05-01)
+
+Outcome amended: 2026-05-01 — residual spec path updated after Spec 151 archival.
+
+Completed with a negative bounded live-witness result. No production serializer, schema, GameSpecDoc, or fixture change was required.
+
+Bounded live witness probe:
+
+1. `pnpm -F @ludoforge/engine build` — passed; required because the probe consumed compiled `dist/` modules.
+2. FITL bounded probe command: `timeout 180s node --input-type=module -e "<compiled runGame probe over FITL seeds 1000,1001,1002,1005,1013 and maxTurns 3,12,50>"` — timed out before completing the first `fitl seed=1000 maxTurns=3` candidate. Classification: `probe timed out`; this confirms the FITL live simulator witness remains disproportionate for this bounded ticket.
+3. Texas bounded probe command: `timeout 90s node --input-type=module -e "<compiled runGame probe over Texas seeds 2000,2001,2002 and maxTurns 12,50>"` — completed all six candidates. Each candidate ended with `stopReason=terminal`, `decisionStack=0`, and classification `no noLegalMoves`; `foundLiveWitness=false`.
+
+Durable result:
+
+1. No bounded production live witness was found.
+2. The existing synthetic public-seam assertion in `packages/engine/test/determinism/spec-140-replay-identity.test.ts` remains the authoritative automated proof for a `noLegalMoves` trace with a populated suspended final-state frame surviving `JSON.stringify(serializeTrace(trace))`.
+3. No game-specific behavior or authored production game data was added to manufacture a witness.
+4. `archive/specs/151-decision-stack-serialization-canonicality.md` now records the residual witness decision.
+
+Final verification results:
+
+1. `timeout 60s pnpm -F @ludoforge/engine exec node --test --test-name-pattern "serializes a noLegalMoves stopped trace" dist/test/determinism/spec-140-replay-identity.test.js` — passed.
+2. `pnpm -F @ludoforge/engine test` — passed (`59/59 files passed`).
+3. `git diff --check` — passed.
+
+No-invalidation note: recording these probe outcomes, final proof results, and terminal status is the ticket-owned closeout artifact for this investigation ticket. It does not alter serializer code, test code, generated artifacts, or the existing synthetic proof invariant.

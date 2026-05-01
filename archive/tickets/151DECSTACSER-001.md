@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small-Medium
 **Engine Changes**: Yes — kernel types and minimal serialization wiring (`packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/microturn/types.ts`, `packages/engine/src/kernel/serde.ts`)
-**Deps**: `specs/151-decision-stack-serialization-canonicality.md`
+**Deps**: `archive/specs/151-decision-stack-serialization-canonicality.md`
 
 ## Problem
 
@@ -153,6 +153,8 @@ No new dedicated tests. Existing serde tests are adjusted only where their typed
 3. `pnpm -F @ludoforge/engine test`
 
 ## Outcome (2026-05-01)
+
+Outcome amended: 2026-05-01 — spec dependency path updated after Spec 151 archival.
 
 Completed with a Foundation-driven boundary correction. The original type-only split was invalid under live `tsc`: once `SerializedGameState.decisionStack` was narrowed to `SerializedDecisionStackFrame[]`, current `serde.ts` and typed serde fixtures could no longer spread raw `DecisionStackFrame[]` into `SerializedGameState`. Per F14/F15, this ticket absorbed the minimum `serde.ts` decision-stack codec wiring from 002 required to keep the serialized type contract and runtime serializer coherent.
 

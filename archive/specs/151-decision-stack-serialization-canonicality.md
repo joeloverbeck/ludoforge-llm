@@ -1,6 +1,6 @@
 # Spec 151: Decision-Stack Serialization Canonicality
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P2 (corrects a determinism / artifact-identity blind spot exposed by PR #231; not a CI blocker once Spec 150's lifecycle termination lands and stalls become rarer, but the gap is structural and silently affects every decision-stack-bearing artifact)
 **Complexity**: S-M (schema-driven recursion through the existing decision-stack types; no public-API change, no GameSpecDoc YAML change, additive Zod schema constraints)
 **Dependencies**:
@@ -213,9 +213,15 @@ This section is a placeholder for `/spec-to-tickets` decomposition.
 
 Decomposed via `/spec-to-tickets` on 2026-05-01:
 
-- [`archive/tickets/151DECSTACSER-001.md`](../archive/tickets/151DECSTACSER-001.md) — Add `Serialized*` decision-stack types and minimal codecs
-- [`archive/tickets/151DECSTACSER-002.md`](../archive/tickets/151DECSTACSER-002.md) — Retire decision-stack walker invocations after 001 wiring
-- [`archive/tickets/151DECSTACSER-003.md`](../archive/tickets/151DECSTACSER-003.md) — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` to typed schema
-- [`archive/tickets/151DECSTACSER-004.md`](../archive/tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
-- [`archive/tickets/151DECSTACSER-005.md`](../archive/tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement
-- [`tickets/151DECSTACSER-006.md`](../tickets/151DECSTACSER-006.md) — Live noLegalMoves suspended-frame witness
+- [`archive/tickets/151DECSTACSER-001.md`](../tickets/151DECSTACSER-001.md) — Add `Serialized*` decision-stack types and minimal codecs
+- [`archive/tickets/151DECSTACSER-002.md`](../tickets/151DECSTACSER-002.md) — Retire decision-stack walker invocations after 001 wiring
+- [`archive/tickets/151DECSTACSER-003.md`](../tickets/151DECSTACSER-003.md) — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` to typed schema
+- [`archive/tickets/151DECSTACSER-004.md`](../tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
+- [`archive/tickets/151DECSTACSER-005.md`](../tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement
+- [`archive/tickets/151DECSTACSER-006.md`](../tickets/151DECSTACSER-006.md) — Live noLegalMoves suspended-frame witness
+
+## Final Residual Witness Decision (2026-05-01)
+
+`151DECSTACSER-006` resolved the remaining live simulator witness question. A bounded FITL production probe over representative seeds and small turn budgets timed out before completing its first minimal candidate (`fitl seed=1000 maxTurns=3`), so the FITL live witness remains disproportionate for this spec's bounded proof surface. A bounded Texas production probe over seeds `2000`, `2001`, and `2002` at `maxTurns=12` and `maxTurns=50` completed, but every candidate terminated normally with an empty final-state decision stack.
+
+No checked-in production fixture was added. The authoritative automated proof for the serialization invariant remains the synthetic public-seam `noLegalMoves` trace in `packages/engine/test/determinism/spec-140-replay-identity.test.ts`, plus the explicit decision-stack serializer/schema tests from `151DECSTACSER-005`. This keeps the spec aligned with Foundations 10, 15, and 16: the search is bounded, no production game behavior is manufactured solely for a witness, and the invariant is still covered by automated tests.

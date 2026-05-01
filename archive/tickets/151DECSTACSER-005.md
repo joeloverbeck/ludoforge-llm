@@ -164,6 +164,8 @@ Ticket-named broad slow lanes:
 
 ## Outcome (2026-05-01)
 
+Outcome amended: 2026-05-01 — residual follow-up path updated after `151DECSTACSER-006` archival.
+
 Completed. Added the Spec 151 test coverage owned by this ticket:
 
 1. `packages/engine/test/unit/serialize-decision-stack-roundtrip.test.ts` covers empty, single-frame, and one-level-recursive suspended-frame decision-stack round-trips through `serializeGameState -> JSON.stringify -> JSON.parse -> SerializedGameStateSchema.parse -> deserializeGameState`.
@@ -181,6 +183,6 @@ Final verification results:
 5. `pnpm turbo lint typecheck` — passed (`5 successful, 5 total`).
 6. `git diff --check` — passed.
 
-Residual follow-up: the original draft's live simulator seed/fixture witness did not land. `tickets/151DECSTACSER-006.md` now owns the bounded live noLegalMoves suspended-frame witness decision.
+Residual follow-up resolved: the original draft's live simulator seed/fixture witness did not land in this ticket. `archive/tickets/151DECSTACSER-006.md` now records the bounded live noLegalMoves suspended-frame witness decision.
 
 No-invalidation note: the post-review residual follow-up split changes ticket ownership metadata only. It does not change code, tests, generated artifacts, command meanings, or the serializer proof results above; ticket graph integrity is covered by the archival dependency check.

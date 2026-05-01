@@ -19,8 +19,10 @@
   - `$.decisionStack.1.effectFrame.suspendedFrame.state._runningHash`
   - `$.decisionStack.1.effectFrame.suspendedFrame.rng.state.state.0`
   - `$.decisionStack.1.effectFrame.suspendedFrame.rng.state.state.1`
-- The shipped PR #231 fix: a generic `sanitizeNestedBigInts(value)` recursive walker invoked as a defensive pass at the bottom of `serializeGameState`. Functional, but catches BigInts wherever they appear — too permissive and not type-checked.
+- The shipped fix (commit `343912bc`, instrumentation per PR #231): a generic `sanitizeNestedBigInts(value)` recursive walker invoked as a defensive pass at the bottom of `serializeGameState` (`kernel/serde.ts:143`). Functional, but catches BigInts wherever they appear — too permissive and not type-checked.
+- The deserializer was subsequently patched with a symmetric walker `restoreNestedSerializedBigInts` (`kernel/serde.ts:73-115`) in commit `147b3521` (Spec 150's implementation), invoked from `deserializeGameState` (line 162). Both walkers form the same generic-walker pattern; this spec deletes them atomically. Removing only one would leave F15 incomplete.
 - `kernel/serde.ts` already has explicit conversions for the top-level fields: `state.stateHash`, `state.rng.state[]`, `state._runningHash` (stripped). The nested fields under `decisionStack[i].effectFrame.suspendedFrame.state` are GameState snapshots that recursively contain the same fields. The serialization code was written before the suspended-frame state was fully realized as "another GameState."
+- A subtle structural asymmetry to honor in the new serializers: `GameState.rng: RngState` (flat: `{algorithm, version, state: bigint[]}`) but `SuspendedEffectFrameSnapshot.rng: Rng` (wrapper: `{state: RngState}`). This explains the probe's three-level path `suspendedFrame.rng.state.state.0`. Any explicit serializer for the suspended-frame `rng` field must traverse the wrapper.
 
 ## Brainstorm Context
 
@@ -42,13 +44,13 @@ The PR #231 fix added a generic walker, `sanitizeNestedBigInts`, that recursivel
 - **Protobuf / Cap'n Proto serialization** — the encoder follows the schema, not the runtime values. Foreign types fail-fast at compile time. We can't import that machinery, but we can match the discipline.
 - **Spec 12 (CLI)** — every CLI artifact roundtrips through `serializeTrace` / `deserializeTrace`. Any consumer downstream of the simulator that pauses execution and snapshots state today is at silent risk if the snapshot lands on a suspended-frame state.
 
-**Synthesis.** Replace the generic `sanitizeNestedBigInts` walker with explicit recursion driven by the schema:
+**Synthesis.** Replace BOTH generic walkers (`sanitizeNestedBigInts` and the symmetric deserializer walker `restoreNestedSerializedBigInts`) with explicit recursion driven by the schema:
 
-1. `SuspendedEffectFrameSnapshot.state: SerializedGameState` (typed; same nominal type as the top-level serialized state).
-2. `serializeSuspendedFrame(frame): SerializedSuspendedFrame` calls `serializeGameState(frame.state)` recursively.
-3. The decision-stack serializer iterates frames and applies `serializeSuspendedFrame` per frame.
-4. Zod schemas mirror the structure: `SerializedGameStateSchema.refine(...)` includes `decisionStack[i].effectFrame.suspendedFrame.state: SerializedGameStateSchema` (the recursive Zod ref).
-5. Delete `sanitizeNestedBigInts`. F14: no compat shim.
+1. `SuspendedEffectFrameSnapshot` gets a `Serialized*` sibling whose nested-state field is typed as `SerializedGameState`.
+2. `serializeSuspendedFrame(frame): SerializedSuspendedEffectFrameSnapshot` calls `serializeGameState(frame.state)` recursively and `serializeRng(frame.rng)` for the wrapped `Rng`. Symmetric `deserializeSuspendedFrame` performs the inverse.
+3. The decision-stack serializer iterates frames and applies `serializeSuspendedFrame`/`deserializeSuspendedFrame` per frame.
+4. The Zod schema gap is concrete: `EffectExecutionFrameSnapshotSchema.suspendedFrame` is currently `z.unknown().optional()` (`schemas-core.ts:1355`). Replace it with a typed `SerializedSuspendedEffectFrameSnapshotSchema` that references `SerializedGameStateSchema` recursively via `z.lazy`. The outer `decisionStack` is already recursive via `z.lazy(() => DecisionStackFrameSchema)` (line 2158) — reuse that pattern.
+5. Delete BOTH `sanitizeNestedBigInts` and `restoreNestedSerializedBigInts`. F14: no compat shim.
 
 **Alternatives explicitly considered (and rejected).**
 - **Keep the generic walker.** It works today and is one function. Rejected — F15 (architectural completeness) and the fact that future schema drift is silent.
@@ -66,26 +68,28 @@ The PR #231 fix added a generic walker, `sanitizeNestedBigInts`, that recursivel
 ## Overview
 
 ```ts
-// kernel/types-core.ts (additions)
-export interface SerializedSuspendedEffectFrame {
-  // ...existing scalar fields, all already JSON-safe...
-  readonly state: SerializedGameState;        // recursively serialized
-  readonly rng: SerializedRng;                // explicit, not piggybacked
-  // ...other nested-state fields, each explicitly typed...
+// kernel/types-core.ts (additions; source type lives in kernel/microturn/types.ts)
+export interface SerializedSuspendedEffectFrameSnapshot {
+  readonly state: SerializedGameState;                   // recursively serialized (BigInt carrier)
+  readonly rng: SerializedRng;                           // wraps SerializedRngState, mirroring Rng/RngState (BigInt carrier)
+  readonly actorPlayer: GameState['activePlayer'];       // already JSON-safe
+  readonly bindings: Readonly<Record<string, unknown>>;  // see Tests — bindings BigInt-safety check required
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay; // already JSON-safe
+  readonly leaf: SuspendedDecisionLeaf;                  // already JSON-safe
+  readonly resumeStack: readonly SuspendedResumeFrame[]; // already JSON-safe
 }
 
-// kernel/serde.ts (replaces walker)
-const serializeSuspendedFrame = (frame: SuspendedEffectFrameSnapshot): SerializedSuspendedEffectFrame => ({
+// kernel/serde.ts (replaces both walkers)
+const serializeSuspendedFrame = (frame: SuspendedEffectFrameSnapshot): SerializedSuspendedEffectFrameSnapshot => ({
   ...frame,
   state: serializeGameState(frame.state),
-  rng: serializeRng(frame.rng),
+  rng: serializeRng(frame.rng), // Rng is the wrapper; serializeRng descends into rng.state.state[]
 });
 
-const serializeDecisionStack = (stack: readonly DecisionStackFrame[] | undefined): readonly SerializedDecisionStackFrame[] | undefined => {
-  if (stack === undefined) return undefined;
+const serializeDecisionStack = (stack: readonly DecisionStackFrame[]): readonly SerializedDecisionStackFrame[] => {
   return stack.map((frame) => ({
     ...frame,
-    ...(frame.effectFrame === undefined ? {} : { effectFrame: serializeEffectFrame(frame.effectFrame) }),
+    effectFrame: serializeEffectFrame(frame.effectFrame),
   }));
 };
 
@@ -94,46 +98,65 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
   //   decisionStack: serializeDecisionStack(state.decisionStack)
   // sanitizeNestedBigInts is DELETED.
 };
+
+export const deserializeGameState = (state: SerializedGameState): GameState => {
+  // existing top-level conversions PLUS:
+  //   decisionStack: deserializeDecisionStack(state.decisionStack)
+  // restoreNestedSerializedBigInts is DELETED.
+};
 ```
 
-Symmetric `deserializeSuspendedFrame` / `deserializeDecisionStack` functions in the inverse direction. The Zod schema `SerializedGameStateSchema` becomes recursively self-referential at `decisionStack[i].effectFrame.suspendedFrame.state`.
+Symmetric `deserializeSuspendedFrame` / `deserializeDecisionStack` functions in the inverse direction. The Zod schema gap is concrete: `EffectExecutionFrameSnapshotSchema.suspendedFrame` is currently `z.unknown().optional()` and bottoms out the recursion that already exists at the `decisionStack` level (line 2158 references `DecisionStackFrameSchema` via `z.lazy`). Replace it with a typed `SerializedSuspendedEffectFrameSnapshotSchema` that references `SerializedGameStateSchema` via `z.lazy`.
 
 ## What to Change
 
-### 1. `kernel/types-core.ts`
+### 1. `kernel/types-core.ts` (and `kernel/microturn/types.ts` for the source type)
 
-- Promote `SuspendedEffectFrameSnapshot` to have a `Serialized*` sibling typed with `SerializedGameState` for its nested-state fields.
-- Same for any other state-bearing snapshot type the decision stack can carry (audit all `.state: GameState` occurrences inside `decisionStack` schema).
+- Add `SerializedSuspendedEffectFrameSnapshot` mirroring `SuspendedEffectFrameSnapshot` (`microturn/types.ts:140-148`) with all 7 fields explicitly typed:
+  - `state: SerializedGameState` — recursively serialized (BigInt carrier).
+  - `rng: SerializedRng` — wraps `SerializedRngState`, matching the `Rng → RngState` shape (BigInt carrier).
+  - `actorPlayer: GameState['activePlayer']` — JSON-safe scalar.
+  - `bindings: Readonly<Record<string, unknown>>` — JSON-safe in practice today; see Tests for the BigInt-safety lock-in.
+  - `freeOperationOverlay?: FreeOperationExecutionOverlay` — already JSON-safe; verify with grep when implementing.
+  - `leaf: SuspendedDecisionLeaf` — already JSON-safe; verify with grep when implementing.
+  - `resumeStack: readonly SuspendedResumeFrame[]` — already JSON-safe; verify with grep when implementing.
+- Add `SerializedDecisionStackFrame` mirroring `DecisionStackFrame` (`microturn/types.ts:205-221`) with `effectFrame: SerializedEffectExecutionFrameSnapshot`.
+- Add `SerializedRng` (`{ state: SerializedRngState }`) and confirm `SerializedRngState` exists or add it.
 
 ### 2. `kernel/serde.ts`
 
-- Add `serializeSuspendedFrame`, `serializeDecisionStackFrame`, `serializeDecisionStack` (and inverses).
+- Add `serializeSuspendedFrame`, `serializeEffectFrame`, `serializeDecisionStackFrame`, `serializeDecisionStack`, and `serializeRng` (and the symmetric `deserialize*` family).
 - Wire `serializeGameState` to call `serializeDecisionStack` on `state.decisionStack`.
 - Wire `deserializeGameState` to call `deserializeDecisionStack`.
-- **Delete `sanitizeNestedBigInts`** and remove its invocation from `serializeGameState`.
+- **Delete BOTH `sanitizeNestedBigInts` AND `restoreNestedSerializedBigInts`** and remove their invocations from `serializeGameState` (line 143) and `deserializeGameState` (line 162). Both walkers form the same generic-walker pattern; removing only one leaves F15 incomplete.
 
 ### 3. `kernel/schemas-core.ts`
 
-- Add a recursive Zod schema for `SerializedGameStateSchema` so `decisionStack[i].effectFrame.suspendedFrame.state` validates as a nested `SerializedGameStateSchema`. Use `z.lazy(() => ...)` for the cycle.
+- The outer recursion is already in place: `SerializedGameStateSchema` (line 2138) references `DecisionStackFrameSchema` via `z.lazy(() => ...)` at line 2158. The concrete gap is `EffectExecutionFrameSnapshotSchema.suspendedFrame: z.unknown().optional()` at line 1355.
+- Replace `z.unknown().optional()` with a typed `SerializedSuspendedEffectFrameSnapshotSchema` that references `SerializedGameStateSchema` recursively via `z.lazy`. The precedent at lines 1308, 1354, and 2158 covers this exact pattern.
+- Add `SerializedRngSchema` for the wrapped `Rng` form; reuse the existing flat `rng` schema embedded inside `SerializedGameStateSchema` for the top-level case.
 
-### 4. Audit pass — find any other `state: GameState` field reachable through serialized artifacts
+### 4. Audit pass — confirmed scope
 
-Suspect locations (verify and add explicit serialization where any are found):
-- `interruptPhaseStack[i].suspendedState`?
-- `runtime.snapshotForRollback`?
-- `runtime.lastTerminalCheckpoint`?
+Codebase audit (per the references in **Source**) established: today the only nested-`state: GameState` field reachable through serialized artifacts is `decisionStack[i].effectFrame.suspendedFrame.state`. The previously-suspected locations do NOT exist:
 
-For each one, write a targeted unit test: "round-trip preserves nested state hashes."
+- `InterruptPhaseFrame` (`types-core.ts:1203-1206`) has only `phase` and `resumePhase` — no nested state.
+- `runtime.snapshotForRollback` — not present in `GameState` or related types (zero grep hits across `packages/engine/src/`).
+- `runtime.lastTerminalCheckpoint` — not present (zero grep hits).
+
+Outcome: the explicit `Serialized*` sibling pattern this spec introduces becomes the contract for nested state. Any future state-bearing snapshot type added to the decision stack (or anywhere inside `GameState`) MUST follow the same pattern: a `Serialized*` sibling with explicit `SerializedGameState`/`SerializedRng` typing, plus a `serialize*`/`deserialize*` pair. Once both walkers are deleted, the type system rejects a raw `GameState` field appearing in any `Serialized*` shape, so a missing migration fails compilation rather than silently degrading at runtime.
 
 ### 5. Tests
 
-- `test/kernel/serialize-decision-stack-roundtrip.test.ts` — given a state with a non-empty `decisionStack` containing a `suspendedFrame.state`, serialize → JSON.stringify → JSON.parse → deserialize → `assert.deepEqual` to the original (using a content-equality helper since BigInts compare ok).
+- `test/unit/serialize-decision-stack-roundtrip.test.ts` — new, given a state with a non-empty `decisionStack` containing a `suspendedFrame.state`, serialize → JSON.stringify → JSON.parse → deserialize → `assert.deepEqual` to the original (using a content-equality helper since BigInts compare ok). Co-located under `test/unit/` to match the existing `test/unit/serde.test.ts` convention.
+- `test/unit/serialize-suspended-frame.test.ts` — new, exercises nested round-trip on synthetic states. Includes a synthetic-`bindings` BigInt-safety case to lock in the assumption that `bindings: Record<string, unknown>` does not silently carry unconvertible values today.
+- Update `test/unit/serde.test.ts` to add the schema-rejection case from Acceptance Criterion 6.
 - Update `test/determinism/spec-140-replay-identity.test.ts` to actively assert on traces that would have hit the BigInt issue (use a seed where the simulator stops mid-decision-chain).
-- A grep test: `grep -rn 'sanitizeNestedBigInts' packages/engine/src` → must return zero hits.
+- A grep test: `grep -rn 'sanitizeNestedBigInts\|restoreNestedSerializedBigInts' packages/engine/src` → must return zero hits.
 
 ## Out of Scope
 
-- The PR #231 BigInt walker stays in place for the period between the PR landing and this spec landing. F14 says no shim post-this-spec; the walker is deleted in the atomic change.
+- The two BigInt walkers (`sanitizeNestedBigInts` and `restoreNestedSerializedBigInts`) stay in place between today and the moment this spec lands. F14 says no shim post-this-spec; both walkers are deleted in the atomic change.
 - Changing the trace's `decisions[i]` shape — that's already explicit and correct.
 - Reducing the size of suspended-frame snapshots (a separate perf optimization; this spec is correctness-only).
 
@@ -144,22 +167,23 @@ For each one, write a targeted unit test: "round-trip preserves nested state has
 1. `JSON.stringify(serializeGameState(stateWithSuspendedFrame))` succeeds without exception.
 2. `deserializeGameState(serializeGameState(state))` is a content-identity for any FITL or Texas state from the determinism corpus, including states captured mid-suspended-frame.
 3. `serializeTrace(trace)` for a `runGame` trace that stops via `noLegalMoves` (so `finalState` carries a suspended frame) round-trips canonically.
-4. `grep -rn 'sanitizeNestedBigInts' packages/engine/src` returns zero hits.
+4. `grep -rn 'sanitizeNestedBigInts\|restoreNestedSerializedBigInts' packages/engine/src` returns zero hits.
 5. Replay-identity tests stay green.
-6. The Zod recursive schema accepts the new shape and rejects the old (BigInt-bearing) shape with a clear error message — exercise this in `test/kernel/schemas-core.test.ts`.
+6. The Zod schema (with the new typed `SerializedSuspendedEffectFrameSnapshotSchema`) accepts the new shape and rejects the old (BigInt-bearing) shape with a clear error message. Exercise this in `test/unit/serde.test.ts` (co-locate with existing serde tests; do NOT create `test/kernel/schemas-core.test.ts`, which does not exist today).
 
 ### Invariants
 
 1. Per F8: same `(GameDef, seed, agents, maxTurns)` → `JSON.stringify(serializeTrace(run1.trace))` is byte-identical to `JSON.stringify(serializeTrace(run2.trace))`.
-2. No code path stringifies a GameState that has been touched by the runtime *without* going through `serializeGameState`. (Compile-time enforced by the type system: `JSON.stringify` of `GameState` directly is a TS error because `bigint` is not assignable to a JSON-serializable type. We add a lint rule if needed.)
+2. No code path stringifies a GameState that has been touched by the runtime *without* going through `serializeGameState`. TypeScript does NOT catch raw `JSON.stringify(state)` calls — `JSON.stringify` accepts `any`/`unknown`, and the BigInt failure surfaces only at runtime (which is precisely why the walkers were added in the first place). Enforce via a grep test or lint rule that scans `packages/engine/src/` for `JSON.stringify(` calls referencing values typed as `GameState` or `GameTrace` outside `kernel/serde.ts`.
 3. The walker pattern is gone — the only BigInt encoding path is explicit in `serde.ts`.
 
 ## Test Plan
 
 ### New/Modified Tests
 
-- `test/kernel/serialize-decision-stack-roundtrip.test.ts` — new.
-- `test/kernel/serialize-suspended-frame.test.ts` — new, exercises nested round-trip on synthetic states.
+- `test/unit/serialize-decision-stack-roundtrip.test.ts` — new (co-located with existing `test/unit/serde.test.ts`).
+- `test/unit/serialize-suspended-frame.test.ts` — new, exercises nested round-trip on synthetic states, including a synthetic-`bindings` BigInt-safety case.
+- Update `test/unit/serde.test.ts` to add the schema-rejection case from Acceptance Criterion 6.
 - Update `test/determinism/spec-140-replay-identity.test.ts` to add an explicit assertion that a noLegalMoves-stopped trace's serialized `finalState` survives `JSON.stringify`.
 
 ### Commands
@@ -168,4 +192,28 @@ For each one, write a targeted unit test: "round-trip preserves nested state has
 2. `pnpm -F @ludoforge/engine test`.
 3. `pnpm -F @ludoforge/engine test:integration:slow-parity` and the determinism shards.
 4. `pnpm turbo lint typecheck`.
-5. Grep enforcement: `grep -rn 'sanitizeNestedBigInts' packages/engine/` → expected zero.
+5. Grep enforcement: `grep -rn 'sanitizeNestedBigInts\|restoreNestedSerializedBigInts' packages/engine/` → expected zero.
+
+## Follow-On Tickets
+
+This section is a placeholder for `/spec-to-tickets` decomposition.
+
+**Proposed namespace**: `151DECSTACSER`
+
+**Anticipated decomposition outline** (informational; finalized by `/spec-to-tickets`):
+
+- `151DECSTACSER-001` — Add `Serialized*` sibling types for `SuspendedEffectFrameSnapshot`, `DecisionStackFrame`, `EffectExecutionFrameSnapshot`, and `Rng` in `kernel/types-core.ts` / `kernel/microturn/types.ts`; also add the minimum `kernel/serde.ts` decision-stack codecs required for the corrected serialized type contract to compile.
+- `151DECSTACSER-002` — Remove the remaining generic-walker invocations from `serializeGameState` and `deserializeGameState` after 001's explicit decision-stack codecs are in place.
+- `151DECSTACSER-003` — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` with the typed `SerializedSuspendedEffectFrameSnapshotSchema` in `kernel/schemas-core.ts` (use `z.lazy`).
+- `151DECSTACSER-004` — Delete `sanitizeNestedBigInts` and `restoreNestedSerializedBigInts` atomically with the type/serializer/schema work above. Add the grep enforcement test.
+- `151DECSTACSER-005` — Tests: `serialize-decision-stack-roundtrip.test.ts`, `serialize-suspended-frame.test.ts`, schema-rejection case in `serde.test.ts`, and the explicit assertion in `spec-140-replay-identity.test.ts`. Add the lint-rule-or-grep enforcement for raw `JSON.stringify(state)` outside `kernel/serde.ts`.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-01:
+
+- [`archive/tickets/151DECSTACSER-001.md`](../archive/tickets/151DECSTACSER-001.md) — Add `Serialized*` decision-stack types and minimal codecs
+- [`tickets/151DECSTACSER-002.md`](../tickets/151DECSTACSER-002.md) — Retire decision-stack walker invocations after 001 wiring
+- [`tickets/151DECSTACSER-003.md`](../tickets/151DECSTACSER-003.md) — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` to typed schema
+- [`tickets/151DECSTACSER-004.md`](../tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
+- [`tickets/151DECSTACSER-005.md`](../tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement

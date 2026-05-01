@@ -52,6 +52,7 @@ import type {
   DecisionLog,
   DecisionFrameId,
   DecisionStackFrame,
+  SerializedDecisionStackFrame,
   SuspendedEffectFrameSnapshot,
   TurnId,
 } from './microturn/types.js';
@@ -75,6 +76,10 @@ export interface RngState {
 
 export interface Rng {
   readonly state: RngState;
+}
+
+export interface SerializedRng {
+  readonly state: SerializedRngState;
 }
 
 export interface IntVariableDef {
@@ -1916,7 +1921,14 @@ export interface SerializedDecisionLog extends Omit<DecisionLog, 'stateHash'> {
 
 export interface SerializedGameState extends Omit<
   GameState,
-  'rng' | 'stateHash' | '_runningHash' | 'reveals' | 'globalMarkers' | 'activeLastingEffects' | 'interruptPhaseStack'
+  | 'rng'
+  | 'stateHash'
+  | '_runningHash'
+  | 'reveals'
+  | 'globalMarkers'
+  | 'activeLastingEffects'
+  | 'interruptPhaseStack'
+  | 'decisionStack'
 > {
   readonly reveals?: GameState['reveals'];
   readonly globalMarkers?: GameState['globalMarkers'];
@@ -1924,6 +1936,7 @@ export interface SerializedGameState extends Omit<
   readonly interruptPhaseStack?: GameState['interruptPhaseStack'];
   readonly rng: SerializedRngState;
   readonly stateHash: HexBigInt;
+  readonly decisionStack?: readonly SerializedDecisionStackFrame[];
 }
 
 export interface SerializedProbeHoleRecoveryLog extends Omit<ProbeHoleRecoveryLog, 'stateHashBefore' | 'stateHashAfter'> {

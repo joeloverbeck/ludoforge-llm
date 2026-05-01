@@ -29,6 +29,7 @@ When a change touches schemas or contracts, check updates across these layers:
 **Required-field migrations**:
 - When an earlier ticket made a field required, add empty/default placeholders across constructors, defaults, fixtures, and goldens for atomicity.
 - When the current ticket makes a shared field required, repo-owned constructors, helpers, fixtures, runtime schemas, and generated artifacts are in-scope immediately.
+- For type-only serialized/exported contract tickets, do a source-producer preflight before coding: inspect the runtime serializers, deserializers, builders, fixtures, and public construction helpers that must actually create the narrowed type. If live typecheck would require runtime or fixture wiring for the new type to be true, treat the ticket as a Foundation 14/15 atomicity mismatch and stop for `1-3-1` before preserving a type-only split with casts or partial state.
 - Update shared helpers first, then use focused typecheck output for remaining inline fixtures.
 - For large hand-authored fixture fanout, use a guarded migration loop: update shared builders/default factories first; run the smallest build/typecheck lane that reveals remaining object literals; patch inline literals in small batches; avoid broad regex rewrites unless the pattern is structurally unambiguous; inspect `git diff --check` and targeted diffs for high-risk unrelated fixtures before broad verification. If a bulk rewrite goes wrong, restore only the affected files or hunks, rerun the focused typecheck/build, and continue from the shared-helper-first path.
 - Do not preserve a ticket's original slice when doing so would leave the repository in a broken mid-migration state. `FOUNDATIONS.md` SS14 and SS15 override slicing.
@@ -80,6 +81,8 @@ When reassessing whether a ticket has underspecified constraints, inspect these 
 ## In-Memory vs Serialized Decisions
 
 When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
+
+For canonical serialized state or trace surfaces, preserve existing JSON property order unless the ticket explicitly owns a canonical-order migration. Golden snapshot failures that differ only by object key order are still real F8/F13 evidence: fix the producer order or truth the ticket before re-blessing.
 
 ## Post-Implementation Sweep for Broad Contract Migrations
 

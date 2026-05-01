@@ -109,7 +109,7 @@ describe('kernel bigint serialization codecs', () => {
 
   it('deserializeGameState reconstructs exact bigint values', () => {
     const serializedState: SerializedGameState = {
-      ...gameStateFixture,
+      ...serializeGameState(gameStateFixture),
       rng: { algorithm: 'pcg-dxsm-128', version: 1, state: ['0x0', '0x2aab'] },
       stateHash: '0xabcd',
     };
@@ -175,7 +175,7 @@ describe('kernel bigint serialization codecs', () => {
 
   it('rejects deserialized card-driven state with invalid deferred actorPlayer', () => {
     const serializedState: SerializedGameState = {
-      ...gameStateFixture,
+      ...serializeGameState(gameStateFixture),
       playerCount: 2,
       turnOrderState: {
         type: 'cardDriven',

@@ -2,9 +2,19 @@ import type {
   GameState,
   GameTrace,
   HexBigInt,
+  Rng,
+  SerializedRng,
   SerializedGameState,
   SerializedGameTrace,
 } from './types.js';
+import type {
+  DecisionStackFrame,
+  EffectExecutionFrameSnapshot,
+  SerializedDecisionStackFrame,
+  SerializedEffectExecutionFrameSnapshot,
+  SerializedSuspendedEffectFrameSnapshot,
+  SuspendedEffectFrameSnapshot,
+} from './microturn/types.js';
 import { validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 
 const HEX_BIGINT_PATTERN = /^0x[0-9a-f]+$/;
@@ -24,6 +34,92 @@ const fromHexBigInt = (value: HexBigInt, path: string): bigint => {
 
   return BigInt(value);
 };
+
+const serializeRng = (rng: Rng): SerializedRng => ({
+  state: {
+    algorithm: rng.state.algorithm,
+    version: rng.state.version,
+    state: rng.state.state.map((word) => toHexBigInt(word)),
+  },
+});
+
+const deserializeRng = (serialized: SerializedRng): Rng => ({
+  state: {
+    algorithm: serialized.state.algorithm,
+    version: serialized.state.version,
+    state: serialized.state.state.map((word, index) => fromHexBigInt(word, `rng.state.state[${index}]`)),
+  },
+});
+
+const serializeSuspendedFrame = (
+  frame: SuspendedEffectFrameSnapshot,
+): SerializedSuspendedEffectFrameSnapshot => ({
+  state: serializeGameState(frame.state),
+  rng: serializeRng(frame.rng),
+  actorPlayer: frame.actorPlayer,
+  bindings: frame.bindings,
+  ...(frame.freeOperationOverlay !== undefined ? { freeOperationOverlay: frame.freeOperationOverlay } : {}),
+  leaf: frame.leaf,
+  resumeStack: frame.resumeStack,
+});
+
+const deserializeSuspendedFrame = (
+  serialized: SerializedSuspendedEffectFrameSnapshot,
+): SuspendedEffectFrameSnapshot => ({
+  state: deserializeGameState(serialized.state),
+  rng: deserializeRng(serialized.rng),
+  actorPlayer: serialized.actorPlayer,
+  bindings: serialized.bindings,
+  ...(serialized.freeOperationOverlay !== undefined ? { freeOperationOverlay: serialized.freeOperationOverlay } : {}),
+  leaf: serialized.leaf,
+  resumeStack: serialized.resumeStack,
+});
+
+const serializeEffectFrame = (
+  frame: EffectExecutionFrameSnapshot,
+): SerializedEffectExecutionFrameSnapshot => ({
+  programCounter: frame.programCounter,
+  boundedIterationCursors: frame.boundedIterationCursors,
+  localBindings: frame.localBindings,
+  pendingTriggerQueue: frame.pendingTriggerQueue,
+  ...(frame.decisionHistory !== undefined ? { decisionHistory: frame.decisionHistory } : {}),
+  ...(frame.suspendedFrame !== undefined ? { suspendedFrame: serializeSuspendedFrame(frame.suspendedFrame) } : {}),
+});
+
+const deserializeEffectFrame = (
+  serialized: SerializedEffectExecutionFrameSnapshot,
+): EffectExecutionFrameSnapshot => ({
+  programCounter: serialized.programCounter,
+  boundedIterationCursors: serialized.boundedIterationCursors,
+  localBindings: serialized.localBindings,
+  pendingTriggerQueue: serialized.pendingTriggerQueue,
+  ...(serialized.decisionHistory !== undefined ? { decisionHistory: serialized.decisionHistory } : {}),
+  ...(serialized.suspendedFrame !== undefined ? { suspendedFrame: deserializeSuspendedFrame(serialized.suspendedFrame) } : {}),
+});
+
+const serializeDecisionStack = (
+  stack: readonly DecisionStackFrame[],
+): readonly SerializedDecisionStackFrame[] =>
+  stack.map((frame) => ({
+    frameId: frame.frameId,
+    parentFrameId: frame.parentFrameId,
+    turnId: frame.turnId,
+    context: frame.context,
+    ...(frame.continuationBindings !== undefined ? { continuationBindings: frame.continuationBindings } : {}),
+    effectFrame: serializeEffectFrame(frame.effectFrame),
+  }));
+
+const deserializeDecisionStack = (
+  serialized: readonly SerializedDecisionStackFrame[],
+): readonly DecisionStackFrame[] =>
+  serialized.map((frame) => ({
+    frameId: frame.frameId,
+    parentFrameId: frame.parentFrameId,
+    turnId: frame.turnId,
+    context: frame.context,
+    ...(frame.continuationBindings !== undefined ? { continuationBindings: frame.continuationBindings } : {}),
+    effectFrame: deserializeEffectFrame(frame.effectFrame),
+  }));
 
 /**
  * Recursively converts any residual BigInt values inside a serialized
@@ -116,7 +212,16 @@ const restoreNestedSerializedBigInts = (value: unknown): unknown => {
 
 export const serializeGameState = (state: GameState): SerializedGameState => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to strip internal field from serialized output
-  const { _runningHash, ...rest } = state;
+  const {
+    _runningHash,
+    decisionStack,
+    unavailableActionsPerTurn,
+    nextFrameId,
+    nextTurnId,
+    activeDeciderSeatId,
+    turnOrderState,
+    ...rest
+  } = state;
   const serialized = {
     ...rest,
     rng: {
@@ -125,6 +230,12 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
       state: state.rng.state.map((word) => toHexBigInt(word)),
     },
     stateHash: toHexBigInt(state.stateHash),
+    ...(decisionStack !== undefined ? { decisionStack: serializeDecisionStack(decisionStack) } : {}),
+    ...(unavailableActionsPerTurn !== undefined ? { unavailableActionsPerTurn } : {}),
+    ...(nextFrameId !== undefined ? { nextFrameId } : {}),
+    ...(nextTurnId !== undefined ? { nextTurnId } : {}),
+    ...(activeDeciderSeatId !== undefined ? { activeDeciderSeatId } : {}),
+    turnOrderState,
   } as {
     -readonly [K in keyof SerializedGameState]: SerializedGameState[K];
   };
@@ -145,8 +256,9 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
 
 export const deserializeGameState = (state: SerializedGameState): GameState => {
   const stateHash = fromHexBigInt(state.stateHash, 'stateHash');
+  const { decisionStack, ...rest } = state;
   const deserialized: GameState = {
-    ...state,
+    ...rest,
     rng: {
       algorithm: state.rng.algorithm,
       version: state.rng.version,
@@ -158,6 +270,7 @@ export const deserializeGameState = (state: SerializedGameState): GameState => {
     globalMarkers: state.globalMarkers,
     activeLastingEffects: state.activeLastingEffects,
     interruptPhaseStack: state.interruptPhaseStack,
+    ...(decisionStack !== undefined ? { decisionStack: deserializeDecisionStack(decisionStack) } : {}),
   };
   const restored = restoreNestedSerializedBigInts(deserialized) as GameState;
   validateTurnFlowRuntimeStateInvariants(restored);

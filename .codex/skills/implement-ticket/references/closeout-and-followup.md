@@ -154,6 +154,13 @@ Suggested compact sibling ledger:
 
 - `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
 
+When the sibling remains active but is narrowed rather than closed, use a compact handoff ledger instead of a historical-resolution note:
+
+- `absorbed by active ticket`: `<ticket id>` absorbed `<specific former sibling slice>` due to `<Foundation/live-proof reason>`
+- `remaining owned slice`: `<what this sibling still owns>`
+- `deps`: `unchanged | updated to <ticket id> | removed because <reason>`
+- `verification impact`: `<new proof lane or no change because <reason>>`
+
 ## Compact Final-Proof Ledger
 
 Suggested compact final-proof ledger:

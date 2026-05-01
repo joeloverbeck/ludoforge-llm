@@ -20,6 +20,7 @@ interface LifecycleSlots {
 interface LifecycleResult {
   readonly state: GameState;
   readonly traceEntries: readonly TriggerLogEntry[];
+  readonly progressed: boolean;
 }
 
 const topCardId = (state: GameState, zoneId: string): string | null => state.zones[zoneId]?.[0]?.id ?? null;
@@ -312,12 +313,12 @@ export const applyTurnFlowInitialReveal = (
 ): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
-    return { state, traceEntries: [] };
+    return { state, traceEntries: [], progressed: true };
   }
 
   const drawPileId = resolveDrawPileId(def, slots);
   if (drawPileId === null) {
-    return { state, traceEntries: [] };
+    return { state, traceEntries: [], progressed: true };
   }
 
   const traceEntries: TriggerLogEntry[] = [];
@@ -341,7 +342,7 @@ export const applyTurnFlowInitialReveal = (
     }
   }
 
-  return { state: nextState, traceEntries };
+  return { state: nextState, traceEntries, progressed: true };
 };
 
 export const applyTurnFlowCardBoundary = (
@@ -351,12 +352,19 @@ export const applyTurnFlowCardBoundary = (
 ): LifecycleResult => {
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
-    return { state, traceEntries: [] };
+    // Non-card-driven game: the boundary is not applicable; this is a valid
+    // no-op rather than a stalled lifecycle.
+    return { state, traceEntries: [], progressed: true };
   }
 
   const beforeBoundary = state;
   const traceEntries: TriggerLogEntry[] = [];
   let nextState = state;
+  // Forward-progress signal: true iff a played-card was retired (coup-handoff
+  // or discard route), a lookahead promoted, or a draw revealed. F10 requires
+  // bounded computation; if the card lifecycle stops advancing, callers must
+  // be able to detect it and terminate rather than spin.
+  let progressed = false;
 
   const playedTop = nextState.zones[slots.played]?.[0] ?? null;
   const maxConsecutiveRounds = cardDrivenConfig(def)?.coupPlan?.maxConsecutiveRounds;
@@ -375,6 +383,7 @@ export const applyTurnFlowCardBoundary = (
     nextState = prependToken(nextState, slots.leader, playedTop, options?.tracker);
     pushLifecycleEntry(traceEntries, 'coupToLeader', slots, beforeLeaderMove, nextState);
     pushLifecycleEntry(traceEntries, 'coupHandoff', slots, nextState, nextState);
+    progressed = true;
   } else if (playedTop !== null && slots.discard !== slots.played) {
     // Non-accumulating semantic: pop the played top and route it to the discard zone.
     const popResult = popTopToken(nextState, slots.played, options?.tracker);
@@ -382,6 +391,7 @@ export const applyTurnFlowCardBoundary = (
     const beforeDiscard = nextState;
     nextState = prependToken(nextState, slots.discard, playedTop, options?.tracker);
     pushLifecycleEntry(traceEntries, 'discardPlayed', slots, beforeDiscard, nextState);
+    progressed = true;
   }
   // else (slots.discard === slots.played AND not a coup-handoff): leave the
   // popped card on top of played; the new card prepends above it. This is the
@@ -404,6 +414,7 @@ export const applyTurnFlowCardBoundary = (
   if (promoted.moved !== null) {
     pushLifecycleEntry(traceEntries, 'promoteLookaheadToPlayed', slots, beforePromotion, nextState);
     nextState = applyPromotedCoupImmediateEffects(def, nextState, slots, options?.tracker);
+    progressed = true;
   }
 
   const drawPileId = resolveDrawPileId(def, slots);
@@ -413,10 +424,11 @@ export const applyTurnFlowCardBoundary = (
     nextState = revealed.state;
     if (revealed.moved !== null) {
       pushLifecycleEntry(traceEntries, 'revealLookahead', slots, beforeReveal, nextState);
+      progressed = true;
     }
   }
 
   assertCardTokenConservation(beforeBoundary, nextState);
 
-  return { state: nextState, traceEntries };
+  return { state: nextState, traceEntries, progressed };
 };

@@ -139,8 +139,15 @@ export const runVerifiedGameWithDiagnostics = (
   runtime: GameDefRuntime,
 ): RunVerifiedGameDiagnostics => {
   const agents = createSeededChoiceAgents(playerCount);
+  // Mirror runGame's contract: opt into the lifecycle-stall bail so the helper
+  // terminates on deck exhaustion rather than spinning. The helper's existing
+  // `swallowedKernelRuntimeError` catch is wide enough to trap the typed
+  // `LIFECYCLE_NO_PROGRESS` error if a future caller wants to inspect it; the
+  // determinism comparison only cares that helper and canonical paths reach
+  // the same stopping point.
   const kernelOptions = {
     verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
+    bailOnLifecycleStall: true,
   } as const;
   const runRuntime = forkGameDefRuntimeForRun(runtime);
   const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
@@ -149,10 +156,10 @@ export const runVerifiedGameWithDiagnostics = (
     (_, playerIndex) => createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX)),
   );
 
+  let state = initialState(def, seed, playerCount, kernelOptions, runRuntime).state;
+  let currentChanceRng = chanceRng;
+  let decisionCount = 0;
   try {
-    let state = initialState(def, seed, playerCount, kernelOptions, runRuntime).state;
-    let currentChanceRng = chanceRng;
-    let decisionCount = 0;
 
     while (true) {
       const autoResult = advanceAutoresolvable(def, state, currentChanceRng, runRuntime);
@@ -215,6 +222,18 @@ export const runVerifiedGameWithDiagnostics = (
   } catch (err) {
     if (isKernelRuntimeError(err) && err.code === 'HASH_DRIFT') {
       throw err;
+    }
+    if (isKernelRuntimeError(err) && err.code === 'LIFECYCLE_NO_PROGRESS') {
+      // Mirror runGame's translation: a stalled card lifecycle terminates
+      // cleanly with `noLegalMoves`. The kernel error is the carrier signal,
+      // not a swallowed regression.
+      return {
+        outcome: 'completed',
+        decisionCount,
+        stopReason: 'noLegalMoves',
+        finalStateHash: state.stateHash,
+        turnsCount: state.turnCount,
+      };
     }
     if (isKernelRuntimeError(err)) {
       return {

@@ -1437,6 +1437,7 @@ const applyMoveCore = (
       const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move, undefined, {
         originatingPhase: state.currentPhase,
         tracker,
+        bailOnLifecycleStall: options?.bailOnLifecycleStall === true,
       });
       return {
         state: progressed.state,
@@ -1451,6 +1452,7 @@ const applyMoveCore = (
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.sideEffectManifest, {
       originatingPhase: state.currentPhase,
       tracker,
+      bailOnLifecycleStall: options?.bailOnLifecycleStall === true,
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
 

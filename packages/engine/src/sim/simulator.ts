@@ -10,6 +10,7 @@ import {
   rollbackToActionSelection,
   terminalResult,
 } from '../kernel/index.js';
+import { isKernelErrorCode } from '../kernel/runtime-error.js';
 import { assertValidatedGameDef } from '../kernel/index.js';
 import { CHANCE_RNG_MIX } from '../kernel/microturn/constants.js';
 import { perfStart, perfEnd } from '../kernel/perf-profiler.js';
@@ -151,7 +152,14 @@ export const runGame = (
     : forkGameDefRuntimeForRun(runtime);
   const snapshotDepth = options?.snapshotDepth ?? 'none';
   const traceRetention = options?.traceRetention ?? 'full';
-  const kernelOptions = options?.kernel;
+  // Default `bailOnLifecycleStall: true` for simulator runs so a deck-exhausted
+  // card-driven game terminates with `noLegalMoves` instead of spinning on the
+  // last resolved card. Direct `applyMove` callers (tests, isolated fixtures)
+  // bypass this by not going through `runGame`.
+  const callerKernelOptions = options?.kernel;
+  const kernelOptions = callerKernelOptions === undefined
+    ? { bailOnLifecycleStall: true }
+    : { bailOnLifecycleStall: true, ...callerKernelOptions };
   const profiler = options?.profiler;
   const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
   const shouldRetainTrace = traceRetention === 'full';
@@ -179,7 +187,21 @@ export const runGame = (
   while (true) {
     maybeLogOomTrace('loop-start', state, appliedDecisionCount, resolvedRuntime);
     const t0_auto = perfStart(profiler);
-    const autoResult = advanceAutoresolvable(validatedDef, state, currentChanceRng, resolvedRuntime);
+    let autoResult;
+    try {
+      autoResult = advanceAutoresolvable(validatedDef, state, currentChanceRng, resolvedRuntime);
+    } catch (error) {
+      perfEnd(profiler, 'simLegalMoves', t0_auto);
+      // Auto-resolved decisions (stochastic resolves, outcome-grant resolves,
+      // turn retirements) can also drive `applyTurnFlowEligibilityAfterMove`;
+      // a stalled lifecycle surfaced from auto-resolution still terminates
+      // the simulation cleanly via `noLegalMoves`.
+      if (isKernelErrorCode(error, 'LIFECYCLE_NO_PROGRESS')) {
+        stopReason = 'noLegalMoves';
+        break;
+      }
+      throw error;
+    }
     perfEnd(profiler, 'simLegalMoves', t0_auto);
     state = autoResult.state;
     currentChanceRng = autoResult.rng;
@@ -266,14 +288,29 @@ export const runGame = (
 
     const preState = state;
     const t0_apply = perfStart(profiler);
-    const applied = applyPublishedDecisionFromCanonicalState(
-      validatedDef,
-      state,
-      microturn,
-      selected.decision,
-      kernelOptions,
-      resolvedRuntime,
-    );
+    let applied;
+    try {
+      applied = applyPublishedDecisionFromCanonicalState(
+        validatedDef,
+        state,
+        microturn,
+        selected.decision,
+        kernelOptions,
+        resolvedRuntime,
+      );
+    } catch (error) {
+      perfEnd(profiler, 'simApplyMove', t0_apply);
+      // F10 forward-progress contract: if the kernel signals that the card
+      // lifecycle cannot advance (e.g., the FITL deck is exhausted with the
+      // played pile still holding cards), the simulator stops with
+      // `noLegalMoves` rather than letting the loop spin on a state that
+      // cannot make progress.
+      if (isKernelErrorCode(error, 'LIFECYCLE_NO_PROGRESS')) {
+        stopReason = 'noLegalMoves';
+        break;
+      }
+      throw error;
+    }
     perfEnd(profiler, 'simApplyMove', t0_apply);
     state = applied.state;
     appliedDecisionCount += 1;

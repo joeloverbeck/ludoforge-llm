@@ -72,7 +72,11 @@ const assertTraceConformance = (
     const slice = trace.decisions.slice(summary.decisionIndexRange.start, summary.decisionIndexRange.end);
     assert.ok(slice.length > 0);
     assert.ok(slice.every((entry) => entry.turnId === summary.turnId));
-    assert.equal(slice.at(-1)?.turnRetired, true);
+    // Only fully-retired turns end with a turn-retirement decision; the last
+    // summary may be cut off by `terminal`, `maxTurns`, or `noLegalMoves`.
+    if (summary.turnStopReason === 'retired') {
+      assert.equal(slice.at(-1)?.turnRetired, true);
+    }
   }
 };
 

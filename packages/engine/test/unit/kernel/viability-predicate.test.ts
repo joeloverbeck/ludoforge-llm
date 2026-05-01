@@ -199,6 +199,7 @@ const assertExhaustiveVerdictCode = (code: MoveViabilityVerdictCode): string => 
     case 'DERIVED_VALUE_CONTRACT_MISSING':
     case 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID':
     case 'HASH_DRIFT':
+    case 'LIFECYCLE_NO_PROGRESS':
       return code;
     default: {
       const exhaustive: never = code;

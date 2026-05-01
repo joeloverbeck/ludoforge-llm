@@ -1792,6 +1792,16 @@ export interface ExecutionOptions {
   readonly verifyIncrementalHash?: boolean | {
     readonly interval: number;
   };
+  /**
+   * When `true`, the kernel throws `KernelRuntimeError('LIFECYCLE_NO_PROGRESS')`
+   * if a card-driven turn-flow boundary cannot make forward progress (no card
+   * retired, promoted, or revealed) — i.e., the deck and lookahead are
+   * exhausted. Off by default so direct `applyMove` callers (test helpers,
+   * isolated fixtures) observe a stalled-but-stable post-move state. The
+   * simulator opts in via this flag to convert the stall into a clean
+   * `noLegalMoves` stop instead of spinning on the same already-resolved card.
+   */
+  readonly bailOnLifecycleStall?: boolean;
 }
 
 export interface ExecutionCollector {
@@ -1837,7 +1847,7 @@ export interface CompoundTurnSummary {
     readonly end: number;
   };
   readonly microturnCount: number;
-  readonly turnStopReason: 'retired' | 'terminal' | 'maxTurns';
+  readonly turnStopReason: 'retired' | 'terminal' | 'maxTurns' | 'noLegalMoves';
 }
 
 export interface GameTrace {

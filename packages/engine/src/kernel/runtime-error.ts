@@ -38,7 +38,8 @@ export type KernelRuntimeErrorCode =
   | 'DERIVED_VALUE_FORMULA_NON_NUMERIC_VAR'
 | 'DERIVED_VALUE_CONTRACT_MISSING'
   | 'DERIVED_VALUE_ZONE_ATTRIBUTE_INVALID'
-  | 'HASH_DRIFT';
+  | 'HASH_DRIFT'
+  | 'LIFECYCLE_NO_PROGRESS';
 
 export type SelectorBoundarySurface = 'applyMove' | 'legalChoices' | 'legalMoves';
 
@@ -242,6 +243,12 @@ export interface KernelRuntimeErrorContextByCode {
     readonly actual: bigint;
     readonly turnCount: number;
     readonly currentPhase: string;
+  }>;
+  readonly LIFECYCLE_NO_PROGRESS: Readonly<{
+    readonly playedTopId: string | null;
+    readonly playedSize: number;
+    readonly lookaheadSize: number;
+    readonly turnCount: number;
   }>;
 }
 

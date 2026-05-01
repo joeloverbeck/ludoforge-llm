@@ -25,6 +25,51 @@ const fromHexBigInt = (value: HexBigInt, path: string): bigint => {
   return BigInt(value);
 };
 
+/**
+ * Recursively converts any residual BigInt values inside a serialized
+ * structure into hex strings, returning a new object. The top-level
+ * conversions in `serializeGameState` and `serializeTrace` cover the primary
+ * BigInt fields (`stateHash`, `rng.state`, etc.); this walker catches
+ * BigInts that live inside nested snapshots — most notably
+ * `decisionStack[i].effectFrame.suspendedFrame.state` and similar
+ * effect-frame closures the kernel preserves verbatim through immutable
+ * updates. Only invoked as a defensive pass after the primary conversion so
+ * the canonical hot path stays cheap. F11 is preserved: the input is never
+ * mutated; new arrays/objects are returned for any subtree that contains a
+ * BigInt.
+ */
+const sanitizeNestedBigInts = (value: unknown): unknown => {
+  if (typeof value === 'bigint') {
+    return toHexBigInt(value);
+  }
+  if (Array.isArray(value)) {
+    let changed = false;
+    const next: unknown[] = new Array(value.length);
+    for (let i = 0; i < value.length; i += 1) {
+      const sanitized = sanitizeNestedBigInts(value[i]);
+      next[i] = sanitized;
+      if (sanitized !== value[i]) {
+        changed = true;
+      }
+    }
+    return changed ? next : value;
+  }
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>;
+    let changed = false;
+    const next: Record<string, unknown> = {};
+    for (const key of Object.keys(obj)) {
+      const sanitized = sanitizeNestedBigInts(obj[key]);
+      next[key] = sanitized;
+      if (sanitized !== obj[key]) {
+        changed = true;
+      }
+    }
+    return changed ? next : obj;
+  }
+  return value;
+};
+
 export const serializeGameState = (state: GameState): SerializedGameState => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars -- destructure to strip internal field from serialized output
   const { _runningHash, ...rest } = state;
@@ -51,7 +96,7 @@ export const serializeGameState = (state: GameState): SerializedGameState => {
   if (serialized.interruptPhaseStack === undefined) {
     delete serialized.interruptPhaseStack;
   }
-  return serialized;
+  return sanitizeNestedBigInts(serialized) as SerializedGameState;
 };
 
 export const deserializeGameState = (state: SerializedGameState): GameState => {

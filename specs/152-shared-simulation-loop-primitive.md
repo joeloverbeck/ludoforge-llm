@@ -1,18 +1,20 @@
 # Spec 152: Shared Simulation Loop Primitive
 
 **Status**: PROPOSED
-**Priority**: P3 (smallest of the three architectural specs falling out of PR #231; lands cleanly only after Spec 150's lifecycle termination contract is in place, since the loop primitive consumes that contract)
+**Priority**: P3 (smallest of the three architectural specs falling out of PR #231; the dependency gate has cleared — Spec 150's lifecycle termination contract has landed, so the loop primitive can be built directly on the field-based signal)
 **Complexity**: M (kernel-level extraction of the simulator's iteration shape into a reusable function; consumer-side migrations for `runVerifiedGameWithDiagnostics` and any future custom-loop callers; no public-API regression for existing `runGame` callers)
 **Dependencies**:
 - Foundation 1 (Engine Agnosticism) — the loop primitive is generic; no game-specific code.
 - Foundation 5 (One Rules Protocol, Many Clients) — this is the foundation the spec exists to honor. The simulator's loop logic must be the canonical implementation; helpers and probes consume it, not re-implement it.
 - Foundation 8 (Determinism Is Sacred) — the primitive's iteration order, RNG threading, and decision-log emission are deterministic; same inputs yield same outputs across all consumers.
 - Foundation 15 (Architectural Completeness) — PR #231's fix had to patch `runVerifiedGameWithDiagnostics` in lockstep with the simulator (`bailOnLifecycleStall` opt-in + catch arm). Two clients, two patches, same logic. F15 says address the duplication.
-- Spec 150 (lifecycle termination contract) — provides the structural state field the loop primitive checks. Spec 152 cannot land before Spec 150 because the primitive needs the post-150 field-based contract; if 152 lands first it would just bake in the same exception-and-flag mechanism PR #231 used.
+- Foundation 19 (Decision-Granularity Uniformity) — the primitive yields one step per kernel-atomic decision (auto / player / recovery / terminal); the iteration grain matches the kernel's microturn protocol.
+- Spec 150 (lifecycle termination contract) — **COMPLETED**. Provides the structural state field (`cardDrivenRuntime(state)?.lifecycleStatus.stalled`) the loop primitive checks. The bail-flag-and-exception mechanism PR #231 introduced has been removed from both the simulator and `runVerifiedGameWithDiagnostics`; the primitive can now be built directly on the field-based signal.
+- Spec 151 (decision-stack serialization canonicality) — **COMPLETED**. The trace shape the primitive emits is canonically serializable.
 
 **Source**:
-- PR #231 investigation. After fixing the simulator's loop with the new `bailOnLifecycleStall` opt-in flag and `LIFECYCLE_NO_PROGRESS` catch sites, the same fixes had to be ported into `test/helpers/zobrist-incremental-property-helpers.ts:runVerifiedGameWithDiagnostics`. That helper has its own `while (true)` simulation loop with its own kernel options, its own try/catch, and its own decision-count book-keeping.
-- `grep -rln 'while (true)' packages/engine/test/helpers/ packages/engine/test/integration/` (run during PR #231): multiple custom-loop sites including drive-parity-helpers, the diagnose CLI helper, and a handful of integration tests that drive `runGame`-style iteration manually.
+- PR #231 investigation. PR #231 introduced a kernel termination contract (`bailOnLifecycleStall` opt-in + `LIFECYCLE_NO_PROGRESS` catch sites) that had to be ported across both the simulator and `test/helpers/zobrist-incremental-property-helpers.ts:runVerifiedGameWithDiagnostics`. Spec 150 has since unified the termination signal as a structural `lifecycleStatus.stalled` field, and the bail flag plus catch arms have been deleted from both call sites. The residual duplication this spec addresses is the loop body itself — `runVerifiedGameWithDiagnostics` still has its own `while (true)` at `zobrist-incremental-property-helpers.ts:158`, its own kernel-options plumbing (`verifyIncrementalHash`), and its own decision-count book-keeping.
+- Verified `while (true)` sites that drive `runGame`-style iteration manually (post-Spec-150): `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts:158` (`runVerifiedGameWithDiagnostics`) and `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs:535` (heap-profiling diagnostic). Other `while (true)` sites under `packages/engine/test/helpers/` (`drive-parity-helpers.ts:117` preview-drive, `lint-policy-helpers.ts:8,23` directory-traversal) are not full simulation loops and are out of scope.
 
 ## Brainstorm Context
 
@@ -74,7 +76,7 @@ export interface RunGameStepAuto {
 export interface RunGameStepPlayer {
   readonly kind: 'player';
   readonly state: GameState;
-  readonly microturn: PublishedMicroturn;
+  readonly microturn: MicroturnState;
   readonly applied: ApplyDecisionResult;     // populated AFTER the agent decides
   readonly decisionLog: DecisionLog;
 }
@@ -110,7 +112,7 @@ The helper migrates:
 // test/helpers/zobrist-incremental-property-helpers.ts
 export const runVerifiedGameWithDiagnostics = (def, seed, ...): RunVerifiedGameDiagnostics => {
   let decisionCount = 0;
-  for (const step of runGameSteps({ def, seed, agents: ..., kernelOptions: { verifyIncrementalHash: { interval: ... } }, ... })) {
+  for (const step of runGameSteps({ def, seed, agents: ..., options: { kernel: { verifyIncrementalHash: { interval: ... } } }, ... })) {
     if (step.kind === 'auto') decisionCount += step.autoResolvedLogs.length;
     if (step.kind === 'player') decisionCount += 1;
     if (step.kind === 'terminal' || step.kind === 'maxTurns' || step.kind === 'noLegalMoves') {
@@ -138,9 +140,9 @@ export const runVerifiedGameWithDiagnostics = (def, seed, ...): RunVerifiedGameD
 
 ### 3. Migrate consumer helpers
 
-- `test/helpers/zobrist-incremental-property-helpers.ts:runVerifiedGameWithDiagnostics` — consume the generator, drop its custom kernelOptions handling for the bail flag (Spec 150 removes the flag entirely), drop its own `while (true)` body.
-- `test/integration/agents-never-throw-microturn.test.ts` — likely also has a custom loop; audit and migrate.
-- `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` and similar diagnostic CLIs — audit and migrate.
+- `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts:runVerifiedGameWithDiagnostics` — consume the generator, drop its own `while (true)` body and decision-count book-keeping; pass `verifyIncrementalHash` through `runGameSteps`'s `options.kernel` field. (Bail-flag handling is already gone — Spec 150 removed it.)
+- `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs:535` — verified custom simulation loop in a heap-profiling diagnostic. Migrate to consume `runGameSteps` while preserving its periodic snapshot/sample emissions.
+- Out of scope (verified to lack custom simulation loops): `packages/engine/test/integration/agents-never-throw-microturn.test.ts` (tests `publishMicroturn` in isolation per case), `campaigns/fitl-arvn-agent-evolution/diagnose-nolegalmoves.mjs` (calls `runGame` directly), `packages/engine/test/helpers/drive-parity-helpers.ts:117` (preview-drive loop, not a full simulation loop).
 
 ### 4. Tests
 
@@ -162,7 +164,7 @@ export const runVerifiedGameWithDiagnostics = (def, seed, ...): RunVerifiedGameD
 2. The generator emits exactly one terminal step per run (terminal, maxTurns, or noLegalMoves).
 3. Steps emitted are deterministic and replayable.
 4. The helper rewrite passes `helper-vs-canonical-run-parity.test.ts` without regression.
-5. Lint enforcement: `grep -rn 'while (true)' packages/engine/test/helpers packages/engine/test/integration | grep -v 'run-game-steps' | wc -l` — should be small and shrinking with each migration.
+5. Lint enforcement: after migration, the only sites in `packages/engine/test/helpers/`, `packages/engine/test/integration/`, `packages/engine/test/determinism/`, and `campaigns/` that drive `runGame`-style iteration (calls to `advanceAutoresolvable` and `publishMicroturn` inside a `while`/`for` body) MUST live in `sim/run-game-steps.ts`. Verified out-of-scope `while (true)` sites — `drive-parity-helpers.ts` (preview drive), `lint-policy-helpers.ts` (directory traversal) — remain permitted because they are not simulation loops.
 
 ### Invariants
 
@@ -186,6 +188,26 @@ export const runVerifiedGameWithDiagnostics = (def, seed, ...): RunVerifiedGameD
 4. Determinism shards: full set.
 5. `pnpm turbo lint typecheck`.
 
+## Follow-On Tickets
+
+Namespace: `152SIMLOOPRIM`
+
+Anticipated decomposition (finalized by `/spec-to-tickets`):
+1. Extract `runGameSteps` generator from `runGame`'s loop body into `packages/engine/src/sim/run-game-steps.ts`; export `RunGameStep*` types and `RunGameInput`.
+2. Refactor `sim/simulator.ts:runGame` into a thin wrapper that consumes the generator and assembles the `GameTrace`. All existing `runGame` callers stay green byte-for-byte.
+3. Migrate `runVerifiedGameWithDiagnostics` (`packages/engine/test/helpers/zobrist-incremental-property-helpers.ts`) to consume `runGameSteps`; drop its `while (true)` body and decision-count book-keeping. Verify with `test/determinism/helper-vs-canonical-run-parity.test.ts`.
+4. Migrate `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` to consume `runGameSteps` while preserving its periodic-sample emissions.
+5. Add `test/integration/run-game-steps-protocol.test.ts` (one-terminal-step invariant) and `test/determinism/run-game-steps-replay-identity.test.ts` (replay identity).
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-02:
+
+- [`archive/tickets/152SIMLOOPRIM-001.md`](../archive/tickets/152SIMLOOPRIM-001.md) — Extract `runGameSteps` generator and refactor `runGame` into thin wrapper (covers What to Change §1 + §2)
+- [`tickets/152SIMLOOPRIM-002.md`](../tickets/152SIMLOOPRIM-002.md) — Migrate `runVerifiedGameWithDiagnostics` to consume `runGameSteps` (covers What to Change §3, helper)
+- [`tickets/152SIMLOOPRIM-003.md`](../tickets/152SIMLOOPRIM-003.md) — Migrate `diagnose-spec-143-heap.mjs` to consume `runGameSteps` (covers What to Change §3, campaign script)
+- [`tickets/152SIMLOOPRIM-004.md`](../tickets/152SIMLOOPRIM-004.md) — Add `runGameSteps` protocol and replay-identity tests (covers What to Change §4)
+
 ## Notes
 
-This spec is intentionally last in the dependency chain — it should land *after* Spec 150 (so the primitive doesn't bake in the exception/flag pattern PR #231 used) and *after* Spec 151 (so the trace shape the primitive emits is canonically serializable). It's the smallest of the three by impact and lowest priority; the F5 violation it addresses is real but not a CI blocker.
+This spec is intentionally last in the dependency chain. Spec 150 (so the primitive doesn't bake in the exception/flag pattern PR #231 used) and Spec 151 (so the trace shape the primitive emits is canonically serializable) have both landed; the dependency gate is cleared. It's the smallest of the three by impact and lowest priority; the F5 violation it addresses is real but not a CI blocker.

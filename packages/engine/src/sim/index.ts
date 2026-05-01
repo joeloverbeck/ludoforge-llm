@@ -18,5 +18,14 @@ export type {
 } from './snapshot-types.js';
 export { evaluateTrace } from './trace-eval.js';
 export { enrichTrace } from './trace-enrichment.js';
+export { runGameSteps } from './run-game-steps.js';
+export type {
+  RunGameInput,
+  RunGameStep,
+  RunGameStepAuto,
+  RunGameStepPlayer,
+  RunGameStepRecovery,
+  RunGameStepTerminal,
+} from './run-game-steps.js';
 export { runGame, runGames } from './simulator.js';
 export { writeEnrichedTrace } from './trace-writer.js';

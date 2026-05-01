@@ -109,6 +109,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level failure without nested assertion details, rerun the built module directly or with a repo-approved verbose reporter so the failing subtest becomes visible before patching.
 
+**Opaque Node test child failure**: If `node --test <compiled-test-file>` or a package wrapper reports only `test failed`, run the compiled module directly with `node <compiled-test-file>` from the package cwd when safe. This often exposes nested assertion, cwd, or child-process errors hidden by the test-runner child boundary. If repo-root and package-cwd behavior differ, classify the cwd/process-boundary difference before patching code or tests.
+
 **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 
 **Fallback paths**: When a ticket changes a fallback compilation or runtime path, verify that path directly AND check the primary production path for non-regression.

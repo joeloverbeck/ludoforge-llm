@@ -18,8 +18,14 @@ Take actions first, then summarize only the decisions made.
 
 ## Required Inputs
 
-- The path to the implemented ticket file
+- The path to the implemented ticket file, or an unambiguous most-recent implemented ticket from current Codex context
 - Any extra review scope from the user
+
+Resolve the implemented ticket in this order:
+
+1. Use an explicit user-provided ticket path when present.
+2. If no path is provided, use the most recent implemented ticket from the current conversation only when it is unambiguous.
+3. If the ticket cannot be resolved unambiguously, ask for the implemented ticket path before acting.
 
 ## Required Reads
 
@@ -128,6 +134,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - confirm the original source path is gone
    - inspect `git status --short` for the moved ticket and classify the archive state as `tracked rename`, `delete-plus-untracked archive`, or `plain untracked archive`; mention unusual archive state in the final handoff when it affects commit or staging readiness
    - run a literal old-path sweep across active tickets, the implemented spec or roadmap/doc that owns the ticket family, and the newly archived ticket
+   - when sweeping markdown literals that may include backticks, use single-quoted shell patterns or split the search into plain-string anchors so the shell does not execute backtick contents before `rg` runs
    - remember that `scripts/archive-ticket.mjs` rewrites active tickets only; specs, roadmaps, reports, and archived-ticket prose may still contain stale markdown links or live-path instructions
    - classify each old-path hit as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable references, not harmless historical prose
    - reread every file changed by the archive script or by the old-path sweep and confirm the remaining literals are ownership-correct

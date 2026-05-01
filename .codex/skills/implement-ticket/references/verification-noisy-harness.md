@@ -68,8 +68,9 @@ When a broad package/workspace lane becomes `harness-noisy / not final-confirmed
 When a **single focused proof file** emits only an initial harness header (for example `TAP version 13`) and then stays silent, do not immediately classify it as the same package-lane noise pattern. First inspect the file or its obvious helper corpus to determine whether the lane legitimately fronts a heavy deterministic workload (large replay corpus, repeated production-spec compile, benchmark-scale fixture setup, or similar). If the workload is plausibly heavy:
 
 1. rerun the file once with a proportionate longer bounded timeout rather than an open-ended wait
-2. if it later returns cleanly, record the observed runtime in the ticket outcome so the slow-but-valid lane is distinguishable from harness drift
-3. only fall back to `harness-noisy / not final-confirmed` language when source inspection and the bounded rerun still do not explain or complete the silence
+2. when several focused files or test-name families are candidates, run one file or one family at a time before combining them, so the first slow or noisy witness is isolated cleanly
+3. if it later returns cleanly, record the observed runtime in the ticket outcome so the slow-but-valid lane is distinguishable from harness drift
+4. only fall back to `harness-noisy / not final-confirmed` language when source inspection and the bounded rerun still do not explain or complete the silence
 
 If the focused file is synthetic, simulator-facing, or otherwise owns its own tiny witness fixture, do one more stale-witness check before calling it harness noise:
 

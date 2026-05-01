@@ -72,6 +72,14 @@ When a ticket-named **broad verification lane** (for example `pnpm turbo test`, 
 
 Status stop: if the broad lane was named by the active ticket and any direct-rerun failure exercises the changed execution path, changed serialized/shared contract, or an architectural invariant touched by the ticket, default the classification to `owned failure`. Do not set `**Status**: COMPLETED` until that failure is fixed, proven pre-existing outside the active boundary, or the user confirms a 1-3-1 boundary reset / sibling handoff that rewrites the active ticket's durable state.
 
+Same-environment baseline mini-protocol: when broad-lane timeout, benchmark, or wrapper behavior may be pre-existing and the classification matters to closeout, use a clean temporary worktree when proportionate:
+
+1. create a temp worktree at the comparison revision, usually current `HEAD` before your edits
+2. install/bootstrap/build only what that isolated worktree needs for the exact comparison command
+3. run the same bounded command with the same cwd and wrapper shape
+4. record both results and classify the current lane as introduced, pre-existing, or still unclassified
+5. remove the temp worktree and clean up the repo worktree registry; if cleanup is blocked by sandbox permissions, request approval rather than leaving stale worktree metadata
+
 Verification-fallout repair rule: when a ticket-named broad lane exposes a real repo bug that appears pre-existing but blocks the ticket's required acceptance lane, first decide whether it is small, low-risk, and in the same package or architectural contract family as the ticket-owned proof. If yes, fix it as verification fallout, keep the proof on a TDD-style red-green path when practical, and record the added touched file plus fallout rationale in the active ticket. If the fix would materially widen ownership, change an explicit deliverable, or has multiple plausible designs, stop for `1-3-1` or classify the blocker truthfully instead of absorbing it silently.
 
 When a ticket-named broad lane fails after otherwise successful focused proof, use this red-lane closeout choreography before any final status edit:

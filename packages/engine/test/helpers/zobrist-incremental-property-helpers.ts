@@ -11,6 +11,7 @@ import {
   type ValidatedGameDef,
   type SimulationStopReason,
 } from '../../src/kernel/index.js';
+import { cardDrivenRuntime } from '../../src/kernel/card-driven-accessors.js';
 import { createGameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import type { GameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import { CHANCE_RNG_MIX } from '../../src/kernel/microturn/constants.js';
@@ -139,15 +140,8 @@ export const runVerifiedGameWithDiagnostics = (
   runtime: GameDefRuntime,
 ): RunVerifiedGameDiagnostics => {
   const agents = createSeededChoiceAgents(playerCount);
-  // Mirror runGame's contract: opt into the lifecycle-stall bail so the helper
-  // terminates on deck exhaustion rather than spinning. The helper's existing
-  // `swallowedKernelRuntimeError` catch is wide enough to trap the typed
-  // `LIFECYCLE_NO_PROGRESS` error if a future caller wants to inspect it; the
-  // determinism comparison only cares that helper and canonical paths reach
-  // the same stopping point.
   const kernelOptions = {
     verifyIncrementalHash: { interval: PROPERTY_HASH_VERIFY_INTERVAL },
-    bailOnLifecycleStall: true,
   } as const;
   const runRuntime = forkGameDefRuntimeForRun(runtime);
   const chanceRng = createRng(BigInt(seed) ^ CHANCE_RNG_MIX);
@@ -167,11 +161,22 @@ export const runVerifiedGameWithDiagnostics = (
       currentChanceRng = autoResult.rng;
       decisionCount += autoResult.autoResolvedLogs.length;
 
-      if (terminalResult(def, state, runRuntime) !== null || state.turnCount >= maxTurns) {
+      const terminal = terminalResult(def, state, runRuntime);
+      if (terminal !== null || state.turnCount >= maxTurns) {
         return {
           outcome: 'completed',
           decisionCount,
-          stopReason: terminalResult(def, state, runRuntime) !== null ? 'terminal' : 'maxTurns',
+          stopReason: terminal !== null ? 'terminal' : 'maxTurns',
+          finalStateHash: state.stateHash,
+          turnsCount: state.turnCount,
+        };
+      }
+
+      if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+        return {
+          outcome: 'completed',
+          decisionCount,
+          stopReason: 'noLegalMoves',
           finalStateHash: state.stateHash,
           turnsCount: state.turnCount,
         };
@@ -222,18 +227,6 @@ export const runVerifiedGameWithDiagnostics = (
   } catch (err) {
     if (isKernelRuntimeError(err) && err.code === 'HASH_DRIFT') {
       throw err;
-    }
-    if (isKernelRuntimeError(err) && err.code === 'LIFECYCLE_NO_PROGRESS') {
-      // Mirror runGame's translation: a stalled card lifecycle terminates
-      // cleanly with `noLegalMoves`. The kernel error is the carrier signal,
-      // not a swallowed regression.
-      return {
-        outcome: 'completed',
-        decisionCount,
-        stopReason: 'noLegalMoves',
-        finalStateHash: state.stateHash,
-        turnsCount: state.turnCount,
-      };
     }
     if (isKernelRuntimeError(err)) {
       return {

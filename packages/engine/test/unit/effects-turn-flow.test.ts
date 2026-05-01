@@ -122,7 +122,8 @@ const makeCardDrivenState = (overrides?: Partial<GameState>): GameState => ({
     runtime: {
       seatOrder: ['0', '1', '2', '3'],
       eligibility: { '0': true, '1': true, '2': true, '3': true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: '0',
         secondEligible: '1',
         actedSeats: [],

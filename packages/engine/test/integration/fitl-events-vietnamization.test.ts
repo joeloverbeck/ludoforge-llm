@@ -82,7 +82,7 @@ const setupVietnamizationState = (
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: 'arvn',
           secondEligible: 'us',

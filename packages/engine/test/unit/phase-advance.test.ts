@@ -523,7 +523,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -611,7 +612,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -698,7 +700,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['US', 'ARVN'],
           eligibility: { US: true, ARVN: true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: 'US',
             secondEligible: 'ARVN',
             actedSeats: [],
@@ -803,7 +806,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -974,7 +978,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1058,7 +1063,8 @@ phase: [asPhaseId('p2')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1391,7 +1397,8 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1494,7 +1501,8 @@ describe('advanceToDecisionPoint — free-operation completion policy handling',
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],

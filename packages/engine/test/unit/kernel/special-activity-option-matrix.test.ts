@@ -82,7 +82,8 @@ const makeCardDrivenState = (overrides?: {
       seatOrder: ['seat0', 'seat1', 'seat2', 'seat3'],
       eligibility: { seat0: true, seat1: true, seat2: true, seat3: true },
       pendingEligibilityOverrides: [],
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+          currentCard: {
         firstEligible: 'seat0',
         secondEligible: 'seat1',
         actedSeats: ['seat0'],

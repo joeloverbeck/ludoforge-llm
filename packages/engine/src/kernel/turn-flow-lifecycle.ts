@@ -23,6 +23,11 @@ interface LifecycleResult {
   readonly progressed: boolean;
 }
 
+interface BoundaryLifecycleResult {
+  readonly state: GameState;
+  readonly traceEntries: readonly TriggerLogEntry[];
+}
+
 const topCardId = (state: GameState, zoneId: string): string | null => state.zones[zoneId]?.[0]?.id ?? null;
 
 const snapshot = (state: GameState, slots: LifecycleSlots): { readonly playedCardId: string | null; readonly lookaheadCardId: string | null; readonly leaderCardId: string | null } => ({
@@ -105,6 +110,40 @@ const resolveLifecycleSlots = (def: GameDef, state: GameState): LifecycleSlots |
 
 const resolveDrawPileId = (def: GameDef, slots: LifecycleSlots): string | null =>
   resolveDrawPileFromZones(def, slots.played, slots.lookahead, slots.leader);
+
+const withLifecycleStatus = (
+  state: GameState,
+  stalled: boolean,
+  tracker?: DraftTracker,
+): GameState => {
+  if (state.turnOrderState.type !== 'cardDriven') {
+    return state;
+  }
+  const runtime = state.turnOrderState.runtime;
+  if (runtime.lifecycleStatus.stalled === stalled) {
+    return state;
+  }
+  const nextRuntime = {
+    ...runtime,
+    lifecycleStatus: { stalled },
+  };
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
+};
 
 const moveTopToken = (
   state: GameState,
@@ -349,12 +388,16 @@ export const applyTurnFlowCardBoundary = (
   def: GameDef,
   state: GameState,
   options?: { readonly tracker?: DraftTracker },
-): LifecycleResult => {
+): BoundaryLifecycleResult => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    return { state, traceEntries: [] };
+  }
+
   const slots = resolveLifecycleSlots(def, state);
   if (slots === null) {
     // Non-card-driven game: the boundary is not applicable; this is a valid
     // no-op rather than a stalled lifecycle.
-    return { state, traceEntries: [], progressed: true };
+    return { state, traceEntries: [] };
   }
 
   const beforeBoundary = state;
@@ -430,5 +473,8 @@ export const applyTurnFlowCardBoundary = (
 
   assertCardTokenConservation(beforeBoundary, nextState);
 
-  return { state: nextState, traceEntries, progressed };
+  return {
+    state: withLifecycleStatus(nextState, !progressed, options?.tracker),
+    traceEntries,
+  };
 };

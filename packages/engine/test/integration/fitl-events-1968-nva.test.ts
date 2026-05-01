@@ -109,7 +109,7 @@ const setupWarPhotographerState = (
       runtime: {
         ...runtime,
         seatOrder: [...WAR_PHOTOGRAPHER_SEAT_ORDER],
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: overrides?.firstEligible ?? 'NVA',
           secondEligible: overrides?.secondEligible ?? 'VC',
@@ -782,7 +782,8 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
           ...baseRuntime,
           seatOrder: [...gameSeatOrder],
           eligibility: { ...allEligible },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...baseRuntime.currentCard,
             firstEligible,
             secondEligible,

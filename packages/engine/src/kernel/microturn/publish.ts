@@ -26,6 +26,7 @@ import {
 } from './continuation.js';
 import { isBridgeableNextDecision, MICROTURN_PROBE_DEPTH_BUDGET } from './probe.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
+import { cardDrivenRuntime } from '../card-driven-accessors.js';
 import {
   asDecisionFrameId,
   asTurnId,
@@ -788,6 +789,9 @@ export const publishMicroturn = (
   state: GameState,
   runtime?: GameDefRuntime,
 ): MicroturnState => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw microturnConstructibilityInvariant('actionSelection context has no bridgeable continuations');
+  }
   const hashed = withComputedHash(def, state, runtime);
   const top = hashed.decisionStack?.at(-1);
   if (top === undefined) {
@@ -813,6 +817,9 @@ export const publishMicroturnFromCanonicalState = (
   state: GameState,
   runtime?: GameDefRuntime,
 ): MicroturnState => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw microturnConstructibilityInvariant('actionSelection context has no bridgeable continuations');
+  }
   const top = state.decisionStack?.at(-1);
   if (top === undefined) {
     return publishActionSelection(def, state, runtime);

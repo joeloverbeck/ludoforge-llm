@@ -548,6 +548,11 @@ export const TurnFlowRuntimeStateSchema = z
     seatOrder: z.array(StringSchema.min(1)),
     eligibility: z.record(StringSchema, BooleanSchema),
     currentCard: TurnFlowRuntimeCardStateSchema,
+    lifecycleStatus: z
+      .object({
+        stalled: BooleanSchema,
+      })
+      .strict(),
     pendingEligibilityOverrides: z
       .array(
         z

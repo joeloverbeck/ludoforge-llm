@@ -137,7 +137,7 @@ const setupCardDrivenState = (
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: 'arvn',
           secondEligible: 'vc',

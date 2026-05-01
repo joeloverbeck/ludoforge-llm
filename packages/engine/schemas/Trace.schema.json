@@ -4554,6 +4554,10 @@
               {
                 "type": "string",
                 "const": "maxTurns"
+              },
+              {
+                "type": "string",
+                "const": "noLegalMoves"
               }
             ]
           }
@@ -4877,6 +4881,18 @@
                         "passedSeats",
                         "nonPassCount",
                         "firstActionClass"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "lifecycleStatus": {
+                      "type": "object",
+                      "properties": {
+                        "stalled": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "stalled"
                       ],
                       "additionalProperties": false
                     },
@@ -5739,7 +5755,8 @@
                   "required": [
                     "seatOrder",
                     "eligibility",
-                    "currentCard"
+                    "currentCard",
+                    "lifecycleStatus"
                   ],
                   "additionalProperties": false
                 }

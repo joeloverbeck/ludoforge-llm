@@ -698,7 +698,7 @@ const makeGrantReadyState = (
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: seat,
           secondEligible: null,

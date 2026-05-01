@@ -281,7 +281,8 @@ describe('legalMoves', () => {
         runtime: {
         seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '1',
           secondEligible: '2',
           actedSeats: [],
@@ -305,7 +306,8 @@ describe('legalMoves', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -489,7 +491,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '1',
           secondEligible: '2',
           actedSeats: ['0'],
@@ -592,7 +595,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1', '2'],
         eligibility: { '0': true, '1': true, '2': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '1',
           secondEligible: '2',
           actedSeats: ['0'],
@@ -745,7 +749,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '0',
           secondEligible: '1',
           actedSeats: [],
@@ -843,7 +848,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '0',
           secondEligible: '1',
           actedSeats: [],
@@ -937,7 +943,8 @@ capabilities: ['cardEvent'],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1034,7 +1041,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '0',
           secondEligible: '1',
           actedSeats: [],
@@ -1130,7 +1138,8 @@ capabilities: ['cardEvent'],
         runtime: {
         seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '1',
           secondEligible: '0',
           actedSeats: [],
@@ -1235,7 +1244,8 @@ capabilities: ['cardEvent'],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '0',
             actedSeats: [],
@@ -1340,7 +1350,8 @@ capabilities: ['cardEvent'],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1427,7 +1438,8 @@ capabilities: ['cardEvent'],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],

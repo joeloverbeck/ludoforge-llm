@@ -116,6 +116,7 @@ import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viabilit
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveDecisionContinuation, type DecisionContinuationCache } from './microturn/continuation.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -532,6 +533,11 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: ReadContext, m
   }
 };
 
+const lifecycleStalledMoveError = (move: Move): KernelRuntimeError<'ILLEGAL_MOVE'> =>
+  illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+    detail: 'card-driven lifecycle is stalled',
+  });
+
 interface ValidatedMoveContext {
   readonly preflight: MovePreflightContext;
 }
@@ -792,6 +798,9 @@ const validateMove = (
   evalRuntimeResources: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): ValidatedMoveContext => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw lifecycleStalledMoveError(move);
+  }
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
@@ -1386,6 +1395,9 @@ const applyMoveCore = (
   const tracker = createDraftTracker();
   const profiler: PerfProfiler | undefined = options?.profiler;
   validateTurnFlowRuntimeStateInvariants(state);
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw lifecycleStalledMoveError(move);
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);
@@ -1437,7 +1449,6 @@ const applyMoveCore = (
       const progressed = applyTurnFlowEligibilityAfterMove(def, consumed.state, move, undefined, {
         originatingPhase: state.currentPhase,
         tracker,
-        bailOnLifecycleStall: options?.bailOnLifecycleStall === true,
       });
       return {
         state: progressed.state,
@@ -1452,7 +1463,6 @@ const applyMoveCore = (
     : applyTurnFlowEligibilityAfterMove(def, executed.stateWithRng, move, executed.sideEffectManifest, {
       originatingPhase: state.currentPhase,
       tracker,
-      bailOnLifecycleStall: options?.bailOnLifecycleStall === true,
     });
   perfEnd(profiler, 'applyTurnFlowEligibility', t0_turnFlow);
 
@@ -1877,6 +1887,15 @@ export const probeMoveLegality = (
   runtime?: GameDefRuntime,
 ): MoveLegalityProbeResult => {
   const probedState = reconcilePassFallbackMoveState(def, state, move);
+  if (cardDrivenRuntime(probedState)?.lifecycleStatus.stalled === true) {
+    const error = lifecycleStalledMoveError(move);
+    return {
+      legal: false,
+      code: error.code,
+      context: error.context as IllegalMoveContext,
+      error,
+    };
+  }
   try {
     validateMove(
       def,
@@ -1917,6 +1936,21 @@ const probeMoveViabilityRaw = (
   runtime?: GameDefRuntime,
   discoveryCache?: DecisionContinuationCache,
 ): MoveViabilityProbeResult => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    const error = lifecycleStalledMoveError(move);
+    return {
+      viable: false,
+      complete: undefined,
+      move: undefined,
+      warnings: undefined,
+      code: error.code,
+      context: error.context as IllegalMoveContext,
+      error,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
+    };
+  }
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
     const evalRuntimeResources = createEvalRuntimeResources();

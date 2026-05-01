@@ -111,7 +111,8 @@ const createState = (overrides: Partial<GameState> = {}): GameState => ({
     runtime: {
       seatOrder: ['alpha', 'beta'],
       eligibility: { alpha: true, beta: true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: 'alpha',
         secondEligible: 'beta',
         actedSeats: [],

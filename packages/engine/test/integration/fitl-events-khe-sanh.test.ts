@@ -42,7 +42,7 @@ const setupState = (def: GameDef, seed: number, zones: Readonly<Record<string, r
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: 'nva',
           secondEligible: 'us',

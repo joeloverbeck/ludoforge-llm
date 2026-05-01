@@ -566,7 +566,6 @@ const finalizeSuspendedOrEndedCard = (
   activeSeat: string,
   endedReason: 'rightmostPass' | 'twoNonPass',
   tracker?: DraftTracker,
-  bailOnLifecycleStall: boolean = false,
 ): TurnFlowTransitionResult => {
   let nextEligibility: Readonly<Record<string, boolean>>;
   let nextSeatOrder = runtime.seatOrder;
@@ -588,44 +587,6 @@ const finalizeSuspendedOrEndedCard = (
     const lifecycle = tracker === undefined
       ? applyTurnFlowCardBoundary(def, rewardState)
       : applyTurnFlowCardBoundary(def, rewardState, { tracker });
-    if (!lifecycle.progressed) {
-      // F10 invariant: when the card lifecycle cannot make forward progress
-      // (no card retired, promoted, or revealed — e.g., the FITL deck and
-      // lookahead are both exhausted) we have two compatible exits:
-      //   - Simulator-driven runs (`bailOnLifecycleStall: true`) need a hard
-      //     stop, otherwise the loop spins on the already-resolved card. We
-      //     surface a typed `LIFECYCLE_NO_PROGRESS` error the simulator
-      //     translates into `noLegalMoves`.
-      //   - Direct `applyMove` callers (tests, isolated fixtures, evolution
-      //     probes) need the move's effects to survive without exception.
-      //     We return that — but suppress the boundary advance and runtime
-      //     reset entirely, so the caller observes the post-effects state
-      //     unchanged from the perspective of the eligibility runtime. The
-      //     caller is responsible for either re-seeding the deck or treating
-      //     this as terminal.
-      if (bailOnLifecycleStall) {
-        const playedZoneId = cardDrivenConfig(def)?.turnFlow.cardLifecycle.played;
-        const lookaheadZoneId = cardDrivenConfig(def)?.turnFlow.cardLifecycle.lookahead;
-        const playedTokens = playedZoneId === undefined ? undefined : rewardState.zones[playedZoneId];
-        const lookaheadTokens = lookaheadZoneId === undefined ? undefined : rewardState.zones[lookaheadZoneId];
-        throw kernelRuntimeError(
-          'LIFECYCLE_NO_PROGRESS',
-          'Card-driven lifecycle made no forward progress: no card retired, promoted, or revealed. The draw pile and lookahead are exhausted.',
-          {
-            playedTopId: playedTokens?.[0]?.id ?? null,
-            playedSize: playedTokens?.length ?? 0,
-            lookaheadSize: lookaheadTokens?.length ?? 0,
-            turnCount: rewardState.turnCount,
-          },
-        );
-      }
-      // Non-bail caller: skip the runtime reset entirely. The move-effects
-      // state stands; the eligibility runtime keeps its pre-finalize shape.
-      return {
-        state: rewardState,
-        traceEntries: [],
-      };
-    }
     baseState = lifecycle.state;
     traceEntries.push(...lifecycle.traceEntries);
     boundaryDurations = resolveBoundaryDurationsAtTurnEnd(lifecycle.traceEntries);
@@ -809,6 +770,7 @@ export const initializeTurnFlowEligibilityState = (def: GameDef, state: GameStat
         seatOrder,
         eligibility,
         pendingEligibilityOverrides: [],
+        lifecycleStatus: { stalled: false },
         currentCard: {
           firstEligible: candidates.first,
           secondEligible: candidates.second,
@@ -868,10 +830,8 @@ export const applyTurnFlowEligibilityAfterMove = (
   options?: {
     readonly originatingPhase?: GameState['currentPhase'];
     readonly tracker?: DraftTracker;
-    readonly bailOnLifecycleStall?: boolean;
   },
 ): TurnFlowTransitionResult => {
-  const bailOnLifecycleStall = options?.bailOnLifecycleStall === true;
   const runtime = cardDrivenRuntime(state);
   if (runtime === null) {
     return { state, traceEntries: [] };
@@ -1180,7 +1140,6 @@ export const applyTurnFlowEligibilityAfterMove = (
       activeSeat,
       endedReason,
       options?.tracker,
-      bailOnLifecycleStall,
     );
     return {
       state: finalized.state,

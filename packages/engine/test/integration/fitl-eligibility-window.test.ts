@@ -205,7 +205,8 @@ describe('FITL eligibility window integration', () => {
         runtime: {
           ...runtime,
           eligibility: { US: false, ARVN: false, NVA: true, VC: true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: 'NVA',
             secondEligible: 'VC',
@@ -250,7 +251,8 @@ describe('FITL eligibility window integration', () => {
         runtime: {
           ...runtime,
           eligibility: { US: true, ARVN: true, NVA: true, VC: false },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: 'US',
             secondEligible: 'ARVN',
@@ -295,7 +297,8 @@ describe('FITL eligibility window integration', () => {
         runtime: {
           ...runtime,
           eligibility: { US: true, ARVN: true, NVA: true, VC: false },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: 'US',
             secondEligible: 'ARVN',
@@ -424,7 +427,8 @@ describe('FITL eligibility window integration', () => {
         runtime: {
           ...runtime,
           eligibility: { US: true, ARVN: true, NVA: true, VC: true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: 'NVA',
             secondEligible: 'VC',
@@ -461,7 +465,8 @@ describe('FITL eligibility window integration', () => {
         runtime: {
           ...runtime,
           eligibility: { US: true, ARVN: true, NVA: true, VC: true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: 'ARVN',
             secondEligible: 'US',

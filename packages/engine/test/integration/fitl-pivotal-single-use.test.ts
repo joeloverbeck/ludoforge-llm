@@ -74,7 +74,8 @@ const withEligibilityPair = (
           nva: options.activeSeat === 'nva' || options.firstEligible === 'nva' || options.secondEligible === 'nva',
           vc: options.activeSeat === 'vc' || options.firstEligible === 'vc' || options.secondEligible === 'vc',
         },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: options.firstEligible,
           secondEligible: options.secondEligible,

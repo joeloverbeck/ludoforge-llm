@@ -10,10 +10,11 @@
 - Foundation 11 (Immutability) — the termination signal is carried in the immutable `GameState`, not in caller-side bookkeeping.
 - Foundation 15 (Architectural Completeness) — the PR #231 fix added a typed exception (`LIFECYCLE_NO_PROGRESS`) plus an opt-in `ExecutionOptions.bailOnLifecycleStall` flag and a parallel "skip the runtime advance" branch for direct callers. That is two paths for the same condition; this spec consolidates them into one structural state.
 - Foundation 18 (Constructibility Is Part of Legality) — when no card lifecycle progress is possible, no further legal microturns SHOULD be enumerable from the same canonical state. The contract makes that derivable from state shape, not from an exception thrown by a downstream apply call.
-- Spec 144 (microturn pass-fallback) — the pass-fallback recovery path already establishes the precedent that the kernel can surface "no further play" as a state condition rather than an error; this spec extends that precedent to lifecycle termination.
+- Spec 144 (microturn pass-fallback) — the pass-fallback recovery path already establishes the precedent that the kernel can surface "no further play" via kernel-owned artifacts (rollback trace event + `tags: [pass]` fallback action) rather than thrown errors; this spec extends the same architectural principle to lifecycle termination, with a state-property field as the surface.
+- Spec 152 (shared simulation loop primitive) — downstream consumer; explicitly waits on this contract per its own Dependencies. Spec 152 cannot land before this spec because the loop primitive needs the post-150 field-based check (otherwise it would bake in PR #231's exception-and-flag mechanism).
 
 **Source**:
-- PR #231 root-cause investigation (`reports/ci-failures-pr-231-2026-05-01.md` if written; otherwise the conversation log of that PR's gate-1 diagnosis). Instrumented evidence: with FITL's accumulating-played semantic from LIFECYFIX-001, the simulator spun at ~13 finalize-calls/sec on the same already-resolved card after the deck and lookahead emptied, never advancing turn 2. `applyCardBoundary` count at 1205+ in 90 s with `playedSize=77, lookaheadSize=0, turnCount=1` frozen across all subsequent calls.
+- PR #231 hot-fix commit `343912bc` (`fix(kernel): bound card-lifecycle iteration when deck and lookahead are exhausted`). Its commit body is the authoritative root-cause investigation for this contract. Instrumented evidence quoted from that commit: with FITL's accumulating-played semantic from LIFECYFIX-001, `maxTurns=1` finished in 2.4 s with 24 boundary calls, but `maxTurns=2` made `1205+` `applyTurnFlowCardBoundary` calls in 90 s without completing turn 2 — `playedSize=77, lookaheadSize=0, turnCount=1` frozen across all subsequent calls. (`reports/ci-failures-pr-231-2026-04-28.md` exists but covers a different cluster — the token-state-index slow-path regression — not this lifecycle stall.)
 - The shipped PR #231 fix: `applyTurnFlowCardBoundary` returns `progressed: boolean`; `finalizeSuspendedOrEndedCard` throws typed `KernelRuntimeError('LIFECYCLE_NO_PROGRESS')` when `bailOnLifecycleStall: true` is set on `ExecutionOptions`; otherwise skips the runtime advance and returns the rewardState unchanged. Two simulator catch sites translate the typed error to `stopReason='noLegalMoves'`. `runVerifiedGameWithDiagnostics` has its own opt-in catch.
 - LIFECYFIX-001 (`archive/tickets/LIFECYCFIX-001-card-discard-zone-honored-by-turn-flow-lifecycle.md`) — the correctness fix that exposed the gap. The ticket fixed token deletion at the boundary but did not introduce a paired termination contract; the kernel was implicitly relying on played going empty to drive `noLegalMoves` via legal-moves enumeration.
 - FITL canonical rules: `rules/fire-in-the-lake/fire-in-the-lake-rules-section-2.md` §2.3.7 (cards accumulate on played by design) and §7.3 (game ends after final coup; the spec does not contemplate "deck exhausted without final coup," confirming the kernel needs a generic stall guard).
@@ -31,7 +32,7 @@ The eligibility runtime, however, does not know the lifecycle stalled. `finalize
 4. **F15 root-cause completeness.** The PR #231 hot-fix patched the symptom; this spec closes the design gap.
 
 **Prior art surveyed.**
-- **F18 pass-fallback recovery (Spec 144).** When the kernel cannot publish a constructible action, it rolls back to the nearest `actionSelection` frame, blacklists the offending action, and re-publishes — emitting a structured trace event. Same architectural shape: the kernel embeds the recovery signal in state + trace, never as a thrown error the client must catch. This spec extends the same shape to lifecycle termination.
+- **F18 pass-fallback recovery (Spec 144).** When the kernel cannot publish a constructible action, it rolls back to the nearest `actionSelection` frame, blacklists the offending action, and re-publishes — emitting a structured trace event and (when no non-blacklisted action remains) publishing a generic game-authored fallback action tagged `pass`. Same architectural principle: the kernel embeds the recovery signal in kernel-owned artifacts (trace event + fallback action), never as a thrown error the client must catch. This spec extends the same principle to lifecycle termination, surfacing the signal as a state-property field rather than a trace event because the condition is durable across boundary calls and must be queryable by enumeration callers (legalMoves, publishMicroturn) before any apply-move runs.
 - **Magic: the Gathering Comprehensive Rules §103.4 ("If a player would draw from an empty library, that player loses the game").** The card lifecycle ends explicitly as a game-state condition, not an error; the rules engine treats it as a deterministic terminal. The same generic shape — the kernel makes "lifecycle has stalled" a state property — generalizes to FITL's deck exhaustion.
 - **Spec 144 generic `tags: [pass]` fallback action** — the kernel publishes a generic terminal-style microturn rather than throwing. Reuse the precedent: when the lifecycle stalls, the kernel publishes a no-op microturn (or marks the state terminal) rather than an exception.
 
@@ -114,6 +115,7 @@ Default value at `initializeTurnFlowEligibilityState`: `{ stalled: false }`.
 - Update `state.turnOrderState.runtime.lifecycleStatus.stalled = !progressed`.
 - Drop the `progressed` field from the result type — the returned `state` already carries it.
 - Once `stalled === true`, subsequent calls that observe `stalled === true` MUST short-circuit and return state unchanged (idempotent).
+- Caller migration: the function has exactly two call sites today. `kernel/turn-flow-eligibility.ts` (inside `finalizeSuspendedOrEndedCard`) reads `lifecycle.progressed` and must be refactored to read the new state field. `kernel/phase-advance.ts` only consumes `state` and `traceEntries` from the result and is unaffected by the type change.
 
 ### 3. `kernel/turn-flow-eligibility.ts:finalizeSuspendedOrEndedCard`
 
@@ -121,14 +123,19 @@ Default value at `initializeTurnFlowEligibilityState`: `{ stalled: false }`.
 - Delete the bailOnLifecycleStall parameter and the `nextEligibility = all-false` branch.
 - The runtime advance still proceeds; the new `lifecycleStatus.stalled = true` field IS the termination signal. `nextEligibility` is computed normally so test/probe callers observe the post-effects state structurally identical to the simulator.
 
-### 4. `kernel/legal-moves.ts:legalMoves` and `microturn/publish.ts:publishMicroturn*`
+### 4. `kernel/legal-moves.ts:legalMoves` and `kernel/microturn/publish.ts:publishMicroturn*`
 
-- Top-of-function: if `cardDrivenRuntime(state).lifecycleStatus.stalled === true`, return empty / throw `MICROTURN_NO_BRIDGEABLE` per the existing F18 contract. The lifecycleStatus field IS the F18 derivability signal.
+The two functions have distinct contracts and require distinct top-of-function guards:
+
+- `legalMoves`: if `cardDrivenRuntime(state)?.lifecycleStatus.stalled === true`, return `[]`. This makes the F18 derivability signal directly observable to enumeration callers (agents, evaluation probes, runner) without going through finalize.
+- `publishMicroturn*`: if `cardDrivenRuntime(state)?.lifecycleStatus.stalled === true`, throw the existing microturn constructibility no-bridgeable error shape. The live Spec 144 runtime safety net already treats those errors as no-bridgeable signals by message; this spec does not introduce a new `KernelRuntimeErrorCode` for that path.
+
+The `lifecycleStatus.stalled` field IS the F18 derivability signal in both cases; the difference is only in how each function surfaces it.
 
 ### 5. `sim/simulator.ts`
 
 - Delete the two `catch (error) { isKernelErrorCode(error, 'LIFECYCLE_NO_PROGRESS') }` blocks.
-- Add a top-of-loop check after `advanceAutoresolvable`: `if (cardDrivenRuntime(state)?.lifecycleStatus.stalled) { stopReason = 'noLegalMoves'; break; }`. This MUST come before `terminalResult` so a configured terminal can still fire on the same state if both apply (e.g., final-coup scoring resolves, then the lifecycle stall is observed — the configured terminal wins).
+- Add a top-of-loop check after `terminalResult`: `if (cardDrivenRuntime(state)?.lifecycleStatus.stalled) { stopReason = 'noLegalMoves'; break; }`. This MUST come after `terminalResult` so a configured terminal can still fire on the same state if both apply (e.g., final-coup scoring resolves, then the lifecycle stall is observed — the configured terminal wins).
 - Delete `bailOnLifecycleStall: true` from the default kernelOptions.
 
 ### 6. `test/helpers/zobrist-incremental-property-helpers.ts:runVerifiedGameWithDiagnostics`
@@ -146,15 +153,23 @@ Default value at `initializeTurnFlowEligibilityState`: `{ stalled: false }`.
 
 - Delete `bailOnLifecycleStall?: boolean` from `ExecutionOptions`.
 
-### 9. `kernel/serde.ts` + `kernel/schemas-core.ts`
+### 9. `kernel/apply-move.ts`
 
-- Add `lifecycleStatus` to the serialization protocol for `TurnFlowRuntimeState`.
+The `bailOnLifecycleStall` option propagates from `ExecutionOptions` through `apply-move.ts` into `applyTurnFlowEligibilityAfterMove` and finally into `finalizeSuspendedOrEndedCard`. Deleting the field on `ExecutionOptions` (§8) without removing these transit sites is a TypeScript compile error.
+
+- Delete the two transit sites that pass `bailOnLifecycleStall: options?.bailOnLifecycleStall === true` into `applyTurnFlowEligibilityAfterMove` (current `apply-move.ts:1440` and `apply-move.ts:1455` — both branches of the move-vs-freeOperation conditional).
+- Drop the `bailOnLifecycleStall` parameter from `applyTurnFlowEligibilityAfterMove` itself (current `kernel/turn-flow-eligibility.ts:874` extracts it from the inner options object); the inner `finalizeSuspendedOrEndedCard` parameter removal is covered in §3 above.
+
+### 10. `kernel/serde.ts` + `kernel/schemas-core.ts`
+
+- Add `lifecycleStatus` to the serialization protocol for `TurnFlowRuntimeState`. **Additive only** — a new field on `TurnFlowRuntimeState`, independent of Spec 151's `serializeGameState` BigInt sanitization fix.
 - Add Zod literal schema for `lifecycleStatus.stalled`.
 
-### 10. Tests
+### 11. Tests
 
 - Update `test/kernel/turn-flow-lifecycle-no-progress.test.ts` to assert the field instead of throw shape.
 - Update `test/integration/spec-140-compound-turn-summary.test.ts` and `test/integration/spec-140-foundations-conformance.test.ts` to reference the lifecycleStatus field if useful (the existing `turnStopReason === 'retired'` relaxation continues to work).
+- Update `test/unit/kernel/viability-predicate.test.ts` (current line 202): remove the `case 'LIFECYCLE_NO_PROGRESS': return code;` arm from the `KernelRuntimeErrorCode` exhaustiveness switch. The `never`-typed default arm becomes the exhaustiveness oracle once the union member is gone in §7.
 - Add a dedicated integration test: "FITL deck exhaustion produces `lifecycleStatus.stalled === true` AND `stopReason === 'noLegalMoves'` on `runGame`."
 
 ## Out of Scope
@@ -173,7 +188,7 @@ Default value at `initializeTurnFlowEligibilityState`: `{ stalled: false }`.
 3. New integration: FITL with seed where deck exhausts before terminal — `runGame` returns `stopReason === 'noLegalMoves'`, `finalState.turnOrderState.runtime.lifecycleStatus.stalled === true`.
 4. Replay-identity preserved: re-running the same seed produces the same `lifecycleStatus.stalled` trajectory.
 5. F18: `legalMoves(state-with-stalled-lifecycle)` returns `[]`.
-6. Test that `applyMove` directly applied to a state that subsequently stalls returns the post-effects state with `stalled === true` and no thrown error.
+6. Test that `applyMove` directly applied to a state that subsequently stalls returns the post-effects state with `stalled === true` and no thrown error AND the eligibility runtime reflects the recomputed shape (`currentCard.actedSeats` reset to `[]`, `nextEligibility` recomputed, runtime advanced) — i.e., not the pre-finalize stale shape that PR #231's non-bail branch returned. Direct callers must observe the same post-finalize state shape that simulator callers see.
 7. The full pre-fix slow-parity, fitl-events, fitl-rules, and determinism shards all pass with the simplified consumer code (no more catch blocks).
 
 ### Invariants
@@ -203,3 +218,10 @@ Default value at `initializeTurnFlowEligibilityState`: `{ stalled: false }`.
 ## Notes
 
 The PR #231 fix landed because CI was burning. This spec is the architectural completeness pass that should follow once CI is green and the team has bandwidth for the consumer-site rewrites. None of the consumers are large; the disruption is mostly mechanical.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-01:
+
+- [`archive/tickets/150LIFECYCONTR-001.md`](../archive/tickets/150LIFECYCONTR-001.md) — Atomic cut: replace `LIFECYCLE_NO_PROGRESS` exception/flag pair with `lifecycleStatus.stalled` state field (covers What to Change §1–§14)
+- [`tickets/150LIFECYCONTR-002.md`](../tickets/150LIFECYCONTR-002.md) — End-to-end FITL deck-exhaustion integration test (covers Acceptance Criterion #3)

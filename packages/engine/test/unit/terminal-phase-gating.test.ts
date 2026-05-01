@@ -66,7 +66,8 @@ const createBaseState = (overrides: Partial<GameState> = {}): GameState => ({
     runtime: {
       seatOrder: ['us', 'nva', 'arvn'],
       eligibility: { us: true, nva: true, arvn: true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: 'us',
         secondEligible: 'nva',
         actedSeats: [],

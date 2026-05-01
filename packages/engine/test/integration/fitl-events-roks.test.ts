@@ -122,7 +122,7 @@ const setupCardDrivenState = (
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible,
           secondEligible,

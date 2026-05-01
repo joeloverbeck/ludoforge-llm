@@ -618,7 +618,8 @@ describe('event effect timing integration', () => {
         runtime: {
           ...runtime,
           eligibility: { '0': true, '1': true, '2': true, '3': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             ...runtime.currentCard,
             firstEligible: '1',
             secondEligible: '2',

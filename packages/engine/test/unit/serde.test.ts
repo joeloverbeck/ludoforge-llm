@@ -182,7 +182,8 @@ describe('kernel bigint serialization codecs', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],

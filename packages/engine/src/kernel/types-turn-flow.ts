@@ -259,10 +259,15 @@ export interface SimultaneousCommitTraceEntry {
   readonly pendingCount: number;
 }
 
+export interface CardDrivenLifecycleStatus {
+  readonly stalled: boolean;
+}
+
 export interface TurnFlowRuntimeState {
   readonly seatOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
+  readonly lifecycleStatus: CardDrivenLifecycleStatus;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly freeOperationSequenceContexts?: Readonly<Record<string, TurnFlowFreeOperationSequenceBatchContext>>;

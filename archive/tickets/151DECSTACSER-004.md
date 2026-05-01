@@ -1,6 +1,6 @@
 # 151DECSTACSER-004: Delete generic BigInt walkers + grep enforcement
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/serde.ts` (delete walker function bodies), one new test file
@@ -100,3 +100,25 @@ The test must run from the repo root so the `packages/engine/src` path resolves 
 2. `pnpm -F @ludoforge/engine test`
 3. `grep -rn 'sanitizeNestedBigInts\|restoreNestedSerializedBigInts' packages/engine/src` (manual sanity check)
 4. `pnpm turbo lint typecheck`
+
+## Outcome (2026-05-01)
+
+Completed the F14 deletion cut for the generic BigInt walker pattern. `packages/engine/src/kernel/serde.ts` no longer defines `sanitizeNestedBigInts` or `restoreNestedSerializedBigInts`; `serializeGameState` and `deserializeGameState` continue to rely on the explicit type-driven recursion landed by 001/002. Added `packages/engine/test/unit/walker-deletion-enforcement.test.ts` as an architectural-invariant unit test that greps the live engine source tree and fails if either walker name re-enters `packages/engine/src`.
+
+Ticket corrections applied: the enforcement test uses `src` when run from the engine package root and `packages/engine/src` when run from the repository root, preserving the ticket's intended source-tree invariant under the live `pnpm -F @ludoforge/engine ...` cwd.
+
+Generated fallout: none. No schemas, compiled JSON, goldens, or fixtures changed.
+
+Deferred sibling/spec scope: `151DECSTACSER-005` still owns raw `JSON.stringify(state|trace)` enforcement plus round-trip and synthetic-binding tests; `151DECSTACSER-003` remains the completed schema-tightening owner.
+
+Final verification results:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/walker-deletion-enforcement.test.js` — passed.
+3. `pnpm -F @ludoforge/engine test` — passed; `59/59 files passed`, including the new enforcement test.
+4. `pnpm turbo lint typecheck` — passed; `5 successful, 5 total`.
+5. `grep -rn 'sanitizeNestedBigInts\|restoreNestedSerializedBigInts' packages/engine/src` — returned zero matches; `rg -n "sanitizeNestedBigInts|restoreNestedSerializedBigInts" packages/engine/src` also returned zero matches.
+6. `pnpm -F @ludoforge/engine test:integration:slow-parity` — red, classified as repo-preexisting unrelated slow-corpus blocker outside this ticket's serializer deletion. The runner timed out `dist/test/integration/agents/drive-fingerprint-property.test.js` after `10m 1s` with heartbeat-only progress, matching the archived 002 closeout classification. This ticket did not touch policy preview, agents, lane routing, or that test.
+7. `pnpm -F @ludoforge/engine test:determinism` — red, classified as repo-preexisting unrelated heavy-corpus blocker outside this ticket's serializer deletion. The lane passed `dist/test/determinism/decision-local-scope-drop.test.js`, then timed out `dist/test/determinism/draft-state-determinism-parity.test.js` after `20m 1s` with heartbeat-only progress, matching the archived 002 closeout classification. No serializer assertion failed.
+
+No-invalidation note: this outcome/status update only transcribes the final command results and classifies the two already-documented broad-lane timeouts; it does not change scope, acceptance semantics, code, tests, or generated artifacts after the proof runs.

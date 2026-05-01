@@ -215,5 +215,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-01:
 - [`archive/tickets/151DECSTACSER-001.md`](../archive/tickets/151DECSTACSER-001.md) — Add `Serialized*` decision-stack types and minimal codecs
 - [`archive/tickets/151DECSTACSER-002.md`](../archive/tickets/151DECSTACSER-002.md) — Retire decision-stack walker invocations after 001 wiring
 - [`archive/tickets/151DECSTACSER-003.md`](../archive/tickets/151DECSTACSER-003.md) — Tighten `EffectExecutionFrameSnapshotSchema.suspendedFrame` to typed schema
-- [`tickets/151DECSTACSER-004.md`](../tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
+- [`archive/tickets/151DECSTACSER-004.md`](../archive/tickets/151DECSTACSER-004.md) — Delete generic BigInt walkers + grep enforcement
 - [`tickets/151DECSTACSER-005.md`](../tickets/151DECSTACSER-005.md) — Tests + raw `JSON.stringify` enforcement

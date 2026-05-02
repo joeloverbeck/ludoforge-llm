@@ -340,6 +340,27 @@ A separate spec is authored when phase 4 lands AND any of the following is true:
 
 The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` serialization across FFI, SAB worker pool, COOP/COEP headers in the runner, side-by-side TS-VM ↔ WASM-VM equivalence test.
 
+### Phase 4B — Preview-drive runtime closure (inserted after Phase 4 profiling)
+
+Goal: close the remaining VM-enabled one-card wall-time gap before ticket 016 executes the F14 default-flip/deletion cut.
+
+Phase 4B exists because the current policy bytecode VM proved correct but too narrow for the remaining red gate. The current VM covers policy expression scoring; it does not compile or replace the generic kernel rule/query interpreter, preview state/index lifetime, or preview hashing/canonicalization work exercised while speculative moves are applied.
+
+Measured owner buckets from the 2026-05-02 CPU profile:
+
+- kernel expression/query interpretation (`resolveRef`, `evalCondition`, `evalValue`, `evalQuery`, spatial/filter evaluation): about 22.9% — owned by ticket 019.
+- hashing/canonicalization (`fnv1a64`, `zobristKey`, `computeFullHash`, `digestDecisionStackFrame`): about 21.8% — owned by ticket 021.
+- token-index copy/lifetime (`copyCachedTokenStateIndex`, token-state-index build/attach/refresh): about 4.8% — owned by ticket 020.
+- current policy VM / policy bytecode: about 0.8% — no longer the dominant owner.
+
+Acceptance:
+
+- Tickets 019-021 either land measured generic runtime-closure work or record why their bucket is no longer active.
+- Ticket 022 reruns the same-seam one-card profile at `<=250 ms` under all 4 baseline profiles with `verifyIncrementalHash=true`.
+- Only after ticket 022 is green does ticket 016 default-flip the policy VM and delete closure-tree code per F14.
+
+Phase 4B is still generic engine work. No FITL-specific rule branches, opcodes, schemas, or hardcoded identifiers are allowed.
+
 ---
 
 ## 5. Edge cases
@@ -489,7 +510,22 @@ The Phase 4 performance/restoration premise is still false:
 
 Live workflow evidence also moved the current restoration blocker from the old one-card VM/default-flip story to the actual slow engine-test lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules` (`test:integration:fitl-rules`). Ticket `149FITLEVNUMVM-018` profiled those lanes and found no remaining red runtime hot path after stale golden fallout was repaired: both engine-test lanes are now blocking again and inside their 30-minute workflow budgets. The remaining Phase 4 blocker is again the one-card VM perf gate above.
 
-User-approved revision on 2026-05-02: ticket `149FITLEVNUMVM-016` absorbs that remaining one-card VM perf investigation/optimization work instead of creating another prerequisite ticket. `016` now owns the measured VM hot-path closure first, then the default flip and F14 closure-tree deletion once the `<=250 ms` gate is truthful. Per F14, the closure-tree path still must be deleted once the VM default-flip becomes truthful; the deletion is deferred, not abandoned.
+Initial user-approved revision on 2026-05-02 made ticket `149FITLEVNUMVM-016` absorb the remaining one-card VM perf investigation/optimization work instead of creating another prerequisite ticket. Follow-up profiling later the same day proved the remaining hot path is outside the current policy bytecode VM, so the next boundary reset below supersedes that temporary ownership. Per F14, the closure-tree path still must be deleted once the VM default-flip becomes truthful; the deletion is deferred, not abandoned.
+
+### 2026-05-02 Phase 4B boundary reset
+
+Follow-up profiling classified the VM-enabled one-card profile as still red by the wrong order of magnitude:
+
+- `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4-baseline-codex` — RED: `elapsedMs=7101.08`, per-card `elapsedMs=7100.84`, threshold `<=250`.
+- A generic bytecode-cache candidate was rejected because it only moved the same seam to `elapsedMs=7008.38`.
+- CPU-profile run: `timeout 180 env LUDOFORGE_POLICY_VM=on node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-149-016-cpu packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4-cpu-after-bytecode-cache` — RED: `elapsedMs=6882.4`, per-card `elapsedMs=6882.17`.
+
+User-approved resolution: ticket 016 returns to being the final F14 default-flip/deletion owner. The remaining non-policy-VM preview-drive runtime work is formalized as Phase 4B:
+
+- `149FITLEVNUMVM-019`: generic kernel expression/query AOT or bytecode.
+- `149FITLEVNUMVM-020`: preview state and token-index lifetime redesign.
+- `149FITLEVNUMVM-021`: preview hashing and verification strategy.
+- `149FITLEVNUMVM-022`: final reprofile gate that unblocks ticket 016 only when the original `<=250 ms` gate is truthful.
 
 ---
 
@@ -513,6 +549,10 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-014.md`](../archive/tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-015.md`](../archive/tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
 - [`archive/tickets/149FITLEVNUMVM-018.md`](../archive/tickets/149FITLEVNUMVM-018.md) — Completed live FITL event-card CI lane reassessment; stale golden/workflow masking repaired, no runtime hot path accepted
-- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Phase 4 VM perf closure, then default-flip + closure-tree deletion F14 atomic cut
+- [`tickets/149FITLEVNUMVM-019.md`](../tickets/149FITLEVNUMVM-019.md) — Phase 4B generic kernel expression/query AOT or bytecode
+- [`tickets/149FITLEVNUMVM-020.md`](../tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
+- [`tickets/149FITLEVNUMVM-021.md`](../tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
+- [`tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate
+- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final Phase 4 default-flip + closure-tree deletion F14 atomic cut after Phase 4B
 
 **End of spec 149.**

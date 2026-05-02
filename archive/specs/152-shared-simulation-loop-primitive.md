@@ -1,6 +1,6 @@
 # Spec 152: Shared Simulation Loop Primitive
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P3 (smallest of the three architectural specs falling out of PR #231; the dependency gate has cleared — Spec 150's lifecycle termination contract has landed, so the loop primitive can be built directly on the field-based signal)
 **Complexity**: M (kernel-level extraction of the simulator's iteration shape into a reusable function; consumer-side migrations for `runVerifiedGameWithDiagnostics` and any future custom-loop callers; no public-API regression for existing `runGame` callers)
 **Dependencies**:
@@ -206,8 +206,23 @@ Decomposed via `/spec-to-tickets` on 2026-05-02:
 - [`archive/tickets/152SIMLOOPRIM-001.md`](../archive/tickets/152SIMLOOPRIM-001.md) — Extract `runGameSteps` generator and refactor `runGame` into thin wrapper (covers What to Change §1 + §2)
 - [`archive/tickets/152SIMLOOPRIM-002.md`](../archive/tickets/152SIMLOOPRIM-002.md) — Migrate `runVerifiedGameWithDiagnostics` to consume `runGameSteps` (covers What to Change §3, helper)
 - [`archive/tickets/152SIMLOOPRIM-003.md`](../archive/tickets/152SIMLOOPRIM-003.md) — Migrate `diagnose-spec-143-heap.mjs` to consume `runGameSteps` (covers What to Change §3, campaign script)
-- [`tickets/152SIMLOOPRIM-004.md`](../tickets/152SIMLOOPRIM-004.md) — Add `runGameSteps` protocol and replay-identity tests (covers What to Change §4)
+- [`archive/tickets/152SIMLOOPRIM-004.md`](../archive/tickets/152SIMLOOPRIM-004.md) — Add `runGameSteps` protocol and replay-identity tests (covers What to Change §4)
 
 ## Notes
 
 This spec is intentionally last in the dependency chain. Spec 150 (so the primitive doesn't bake in the exception/flag pattern PR #231 used) and Spec 151 (so the trace shape the primitive emits is canonically serializable) have both landed; the dependency gate is cleared. It's the smallest of the three by impact and lowest priority; the F5 violation it addresses is real but not a CI blocker.
+
+## Outcome
+
+Completed: 2026-05-02
+
+Landed through archived tickets `152SIMLOOPRIM-001` through `152SIMLOOPRIM-004`:
+
+1. Extracted the canonical simulator loop into `runGameSteps`.
+2. Refactored `runGame` into a thin wrapper over the shared primitive.
+3. Migrated the verified diagnostics helper and heap diagnostic campaign to consume the primitive.
+4. Added generator protocol and replay-identity coverage.
+
+Deviation from original plan: implementation was split across four archived tickets instead of one monolithic change; `runGame` remained the public canonical entry point.
+
+Verification included package build, engine test suites, focused compiled `runGameSteps` protocol and replay-identity tests, Turbo lint/typecheck, and ticket dependency integrity checks recorded in the archived ticket outcomes.

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/sim/`
-**Deps**: `specs/152-shared-simulation-loop-primitive.md`
+**Deps**: `archive/specs/152-shared-simulation-loop-primitive.md`
 
 ## Problem
 
@@ -84,8 +84,8 @@ Re-export the new primitive and types so external consumers can reach them witho
 ## Out of Scope
 
 - Migrating `runVerifiedGameWithDiagnostics` — owned by `archive/tickets/152SIMLOOPRIM-002.md`.
-- Migrating `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` — owned by `tickets/152SIMLOOPRIM-003.md`.
-- Adding new protocol / replay-identity tests for the generator — owned by `tickets/152SIMLOOPRIM-004.md`.
+- Migrating `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` — owned by `archive/tickets/152SIMLOOPRIM-003.md`.
+- Adding new protocol / replay-identity tests for the generator — owned by `archive/tickets/152SIMLOOPRIM-004.md`.
 - Async iterator variant of `runGameSteps` — explicitly out of scope per spec.
 - Web-runner migration to consume `runGameSteps` — explicitly out of scope per spec.
 - Changing `runGame`'s public signature or argument list — backwards-compatible by design.
@@ -111,7 +111,7 @@ Re-export the new primitive and types so external consumers can reach them witho
 
 ### New/Modified Tests
 
-None in this ticket. The atomic refactor is verified by the existing trace-equality and parity tests staying green. Protocol and replay-identity tests for the new primitive land in `tickets/152SIMLOOPRIM-004.md`.
+None in this ticket. The atomic refactor is verified by the existing trace-equality and parity tests staying green. Protocol and replay-identity tests for the new primitive land in `archive/tickets/152SIMLOOPRIM-004.md`.
 
 ### Commands
 

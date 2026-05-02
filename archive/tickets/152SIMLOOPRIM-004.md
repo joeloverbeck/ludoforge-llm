@@ -1,6 +1,6 @@
 # 152SIMLOOPRIM-004: Add `runGameSteps` protocol and replay-identity tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test additions only
@@ -18,7 +18,7 @@ This ticket adds two tests: a protocol invariant test (one-and-only-one terminal
 2. The replay-identity pattern matches the existing `spec-140-replay-identity.test.ts` shape — run twice, compare canonical step output.
 3. `runGameSteps` from 001 yields a `RunGameStep` union whose terminal variants are `kind: 'terminal' | 'maxTurns' | 'noLegalMoves'`; non-terminal variants are `kind: 'auto' | 'player' | 'recovery'`.
 4. A small fixture corpus is already available for protocol testing — FITL game-spec fixtures plus any synthetic test specs already used in the engine test suite. No new fixture authoring is required.
-5. Step-sequence equality requires comparing key step fields (`kind`, `state.stateHash`, `state.turnCount`, and decision-bearing fields like `decisionLog.decisionId` for player steps). Full structural equality on `state` is unnecessary — the hash is sufficient given F8.
+5. Step-sequence equality requires comparing key step fields (`kind`, `state.stateHash`, `state.turnCount`, and decision-bearing fields for player steps). Live `DecisionLog` has no top-level `decisionId`; the replay projection uses the current stable fields (`decisionContextKind`, `decisionKey`, `turnId`, `decision`, `legalActionCount`) plus per-kind counts. Full structural equality on `state` is unnecessary — the hash is sufficient given F8.
 
 ## Architecture Check
 
@@ -45,7 +45,7 @@ For each fixture in a small determinism corpus:
 - Run `runGameSteps(input)` twice with identical `(def, seed, agents, maxTurns, options)`.
 - For each run, collect a canonical content-equality projection of each step: `{ kind, stateHash: step.state.stateHash, turnCount: step.state.turnCount, ...kind-specific-fields }`.
 - Assert: the two projections are deep-equal.
-- Concretely check player steps' `decisionLog.decisionId` and auto steps' `autoResolvedLogs` length to catch divergences in decision emission.
+- Concretely check player steps' current decision-bearing log fields and auto steps' projected `autoResolvedLogs` to catch divergences in decision emission.
 
 ## Files to Touch
 
@@ -89,3 +89,23 @@ For each fixture in a small determinism corpus:
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-02
+
+Completed. Added the requested protocol and replay-identity guardrails for `runGameSteps`:
+
+1. `packages/engine/test/integration/run-game-steps-protocol.test.ts` proves every collected step sequence has exactly one terminal-family step (`terminal`, `maxTurns`, or `noLegalMoves`) and that the terminal-family step is last. It covers a fast synthetic terminal run and a FITL production `GameDef` representative run bounded by `maxTurns: 0`.
+2. `packages/engine/test/determinism/run-game-steps-replay-identity.test.ts` proves two identical `runGameSteps` inputs produce byte-identical canonical step projections. The projection includes `kind`, `state.stateHash`, `state.turnCount`, auto log projections, player decision-log projections, recovery log projections, and terminal-family stop/result fields.
+
+### Verification
+
+Final proof was run after the last build-producing lane rebuilt `packages/engine/dist`:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/integration/run-game-steps-protocol.test.js` — passed.
+3. `node --test packages/engine/dist/test/determinism/run-game-steps-replay-identity.test.js` — passed.
+4. `pnpm -F @ludoforge/engine test` — passed; default lane summary `60/60 files passed`, including `run-game-steps-protocol.test.js`.
+5. `pnpm turbo lint typecheck` — passed; `5 successful, 5 total`.
+6. `pnpm run check:ticket-deps` — passed for `3 active tickets and 2183 archived tickets`.

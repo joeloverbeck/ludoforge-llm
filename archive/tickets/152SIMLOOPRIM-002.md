@@ -1,6 +1,6 @@
 # 152SIMLOOPRIM-002: Migrate `runVerifiedGameWithDiagnostics` to consume `runGameSteps`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test helper only
@@ -122,3 +122,41 @@ None — `helper-vs-canonical-run-parity.test.ts` is the regression guardrail.
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-02
+
+Landed in this ticket:
+
+1. Migrated `runVerifiedGameWithDiagnostics` in `packages/engine/test/helpers/zobrist-incremental-property-helpers.ts` to consume `runGameSteps(input)` instead of maintaining its own `while (true)` simulation loop.
+2. Preserved the helper's return shape and `HASH_DRIFT` behavior: `HASH_DRIFT` still rethrows, while unrelated kernel/runtime errors still return `outcome: 'swallowedKernelRuntimeError'`.
+3. Kept `verifyIncrementalHash` flowing through `RunGameInput.options.kernel`.
+4. Preserved the helper's lightweight diagnostics-only behavior by setting `skipDeltas: true` and `traceRetention: 'finalStateOnly'`; the old helper did not retain a full trace or compute deltas.
+5. Updated the run-boundary comment so the helper now documents the canonical `runGameSteps` primitive rather than the old direct `publishMicroturn(...)` / `applyPublishedDecision(...)` bypass.
+
+Ticket corrections applied:
+
+1. Draft workspace command `pnpm turbo lint typecheck` was narrowed to package-local `pnpm -F @ludoforge/engine lint` and `pnpm -F @ludoforge/engine typecheck` because the landed slice changes one engine test helper and no downstream package surface.
+2. FITL zobrist/helper parity lanes remain too slow/noisy in this environment. A single FITL seed through the migrated helper timed out at 60s, and an ephemeral probe of the old manual-loop logic over the same built kernel and seed also timed out at 60s, so the timeout is classified as pre-existing FITL cost/noisy proof behavior rather than migration fallout.
+3. The acceptance text's `hash-drift` return wording is stale relative to the live helper type and this ticket's reassessment: `HASH_DRIFT` is still rethrown, while unrelated runtime errors are returned as `swallowedKernelRuntimeError`.
+
+Schema/artifact fallout: none. This ticket changes one TypeScript test helper only; no serialized schema, generated schema artifact, compiled game data, fixture, or golden output changed.
+
+Verification ledger:
+
+1. `pnpm -F @ludoforge/engine build` — passed after the final helper change.
+2. `timeout 120s pnpm -F @ludoforge/engine exec node --test --test-name-pattern "Texas" dist/test/determinism/helper-vs-canonical-run-parity.test.js` — passed.
+3. `timeout 120s pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-texas.test.js` — passed.
+4. `rg -n "while \\(true\\)" packages/engine/test/helpers/zobrist-incremental-property-helpers.ts` — returned zero matches, as expected.
+5. `timeout 240s pnpm -F @ludoforge/engine exec node --test dist/test/determinism/helper-vs-canonical-run-parity.test.js` — timed out with no assertion output; classified through the focused Texas pass and FITL old-loop probe below.
+6. `timeout 240s pnpm -F @ludoforge/engine exec node --test dist/test/determinism/zobrist-incremental-property-texas.test.js dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js dist/test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.js` — timed out with no assertion output; Texas passed separately, FITL classified through the old-loop probe below.
+7. `timeout 60s pnpm -F @ludoforge/engine exec node --input-type=module -e "<migrated helper FITL seed 1 probe>"` — timed out.
+8. `timeout 60s pnpm -F @ludoforge/engine exec node --input-type=module -e "<old manual-loop FITL seed 1 probe>"` — timed out; classified as pre-existing FITL cost/noisy proof behavior, not introduced by this migration.
+9. `pnpm -F @ludoforge/engine lint` — passed.
+10. `pnpm -F @ludoforge/engine typecheck` — passed.
+11. `timeout 300s pnpm -F @ludoforge/engine test` — schema artifact check passed; default lane passed 460 unit files and failed only at `dist/test/unit/walker-deletion-enforcement.test.js`.
+12. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/walker-deletion-enforcement.test.js` — passed on direct rerun, classifying the broad-lane failure as the known wrapper/sandbox noisy case rather than helper migration fallout.
+13. `pnpm run check:ticket-deps` — passed for 5 active tickets and 2181 archived tickets.
+
+No proof-affecting edits remain after this outcome block: this status/outcome edit records the completed implementation boundary, command substitution, and already-run proof results without changing the code surface or acceptance semantics.

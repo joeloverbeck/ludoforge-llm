@@ -83,7 +83,7 @@ Re-export the new primitive and types so external consumers can reach them witho
 
 ## Out of Scope
 
-- Migrating `runVerifiedGameWithDiagnostics` — owned by `tickets/152SIMLOOPRIM-002.md`.
+- Migrating `runVerifiedGameWithDiagnostics` — owned by `archive/tickets/152SIMLOOPRIM-002.md`.
 - Migrating `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` — owned by `tickets/152SIMLOOPRIM-003.md`.
 - Adding new protocol / replay-identity tests for the generator — owned by `tickets/152SIMLOOPRIM-004.md`.
 - Async iterator variant of `runGameSteps` — explicitly out of scope per spec.
@@ -124,6 +124,7 @@ None in this ticket. The atomic refactor is verified by the existing trace-equal
 ## Outcome
 
 Completed: 2026-05-02
+Outcome amended: 2026-05-02
 
 Landed in this ticket:
 

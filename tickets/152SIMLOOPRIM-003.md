@@ -8,7 +8,7 @@
 
 ## Problem
 
-After 152SIMLOOPRIM-001 and `tickets/152SIMLOOPRIM-002.md` land, the heap-profiling diagnostic `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs:535` is the last verified custom full-simulation-loop site outside `runGameSteps`. Spec 152's F5 invariant — that no consumer drives `runGame`-style iteration manually — is not achievable until this script also consumes the canonical primitive.
+After 152SIMLOOPRIM-001 and `archive/tickets/152SIMLOOPRIM-002.md` land, the heap-profiling diagnostic `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs:535` is the last verified custom full-simulation-loop site outside `runGameSteps`. Spec 152's F5 invariant — that no consumer drives `runGame`-style iteration manually — is not achievable until this script also consumes the canonical primitive.
 
 This ticket replaces the script's `while (true)` body with a `for (const step of runGameSteps({...}))` consumer while preserving its periodic snapshot/sample emissions.
 

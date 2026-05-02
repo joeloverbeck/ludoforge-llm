@@ -619,12 +619,20 @@ const finalizeSuspendedOrEndedCard = (
 
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(pendingDeferredEventEffects);
+  const postBoundaryRuntime =
+    baseState.turnOrderState.type === 'cardDriven'
+      ? baseState.turnOrderState.runtime
+      : runtime;
   const nextRuntimeBase: TurnFlowRuntimeState = {
     ...runtime,
     seatOrder: nextSeatOrder,
     eligibility: nextEligibility,
     currentCard: nextTurn,
     pendingEligibilityOverrides: [],
+    lifecycleStatus: postBoundaryRuntime.lifecycleStatus,
+    ...(postBoundaryRuntime.consecutiveCoupRounds === undefined
+      ? {}
+      : { consecutiveCoupRounds: postBoundaryRuntime.consecutiveCoupRounds }),
   };
   const nextRuntime = withPendingDeferredEventEffects(
     withPendingFreeOperationGrants(

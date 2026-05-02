@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `tickets/150FITLWASM-004.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `tickets/150FITLWASM-005.md`
 
 ## Problem
 
-Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 now owns the Phase 5/WASM successor path required before this ticket can execute. Ticket `150FITLWASM-001` landed the skeleton, ticket `150FITLWASM-002` landed supported policy-bytecode value parity, ticket `150FITLWASM-003` landed the supported encoded-state/action batch bridge, and ticket `150FITLWASM-004` is the next active candidate-dependent batch scoring owner.
+Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 now owns the Phase 5/WASM successor path required before this ticket can execute. Ticket `150FITLWASM-001` landed the skeleton, ticket `150FITLWASM-002` landed supported policy-bytecode value parity, ticket `150FITLWASM-003` landed the supported encoded-state/action batch bridge, ticket `150FITLWASM-004` landed supported scalar candidate score rows, and ticket `150FITLWASM-005` is the next active full-profile score-row handoff owner.
 
 This ticket therefore has one ordered stage after the Phase 5/WASM successor gate is green:
 
@@ -17,7 +17,7 @@ This ticket therefore has one ordered stage after the Phase 5/WASM successor gat
 
 When complete, this ticket adds or updates the per-card perf gate and triggers ticket 003 for the remaining CI restoration unwind.
 
-Ticket `150FITLWASM-003` delivered the supported encoded-state/action batch ABI but left candidate-dependent scoring rows fail-closed. Ticket `150FITLWASM-004` is now the active WASM successor gate before this F14 cut may execute.
+Ticket `150FITLWASM-004` delivered supported scalar candidate score rows but left full-profile library candidate-feature, aggregate, preview-backed, and dynamic rows fail-closed. Ticket `150FITLWASM-005` is now the active WASM successor gate before this F14 cut may execute.
 
 ## Reassessment Update (2026-05-02, Phase 5 handoff)
 
@@ -25,7 +25,7 @@ Ticket `149FITLEVNUMVM-022` ran the final Phase 4B same-seam profile and the gat
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`.
 
-User-approved decision: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. This ticket remains the later F14 default-flip/deletion owner, but it must not execute until `specs/150-fitl-policy-vm-wasm-port.md` and its implementation tickets make the `<=250 ms` gate truthful. Post-review of ticket `150FITLWASM-001` created `150FITLWASM-002` for WASM policy-bytecode execution parity; post-review of `150FITLWASM-002` created `150FITLWASM-003` for the encoded-state/action batch bridge; ticket `150FITLWASM-003` created `150FITLWASM-004` for the remaining candidate-dependent batch scoring integration.
+User-approved decision: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. This ticket remains the later F14 default-flip/deletion owner, but it must not execute until `specs/150-fitl-policy-vm-wasm-port.md` and its implementation tickets make the `<=250 ms` gate truthful. Post-review of ticket `150FITLWASM-001` created `150FITLWASM-002` for WASM policy-bytecode execution parity; post-review of `150FITLWASM-002` created `150FITLWASM-003` for the encoded-state/action batch bridge; ticket `150FITLWASM-003` created `150FITLWASM-004` for candidate-dependent batch scoring integration; ticket `150FITLWASM-004` created `150FITLWASM-005` for the remaining full-profile score-row handoff and perf gate preflight.
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
 

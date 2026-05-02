@@ -99,6 +99,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 ### Phase 3: Act
 
 7. If there is a `must-fix-now` item:
+   - when the cleanup corrects a behavior bug, write or identify the smallest failing test/probe first, then patch; if the seam is corpus- or domain-sensitive, run a cheap corpus/domain preflight before broadening rejection semantics
    - implement the small cleanup immediately
    - run targeted verification for that cleanup
    - if the cleanup changes production runtime, compiler, schema, or shared test behavior, also rerun the affected original acceptance lanes before archival; a focused regression alone is not enough for closeout when shared behavior changed
@@ -127,6 +128,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - only archive after that rewrite and after confirming no unresolved `must-fix-now` cleanup remains
 12. Before archival, do a final contract check:
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
+   - if review cleanup changed production runtime, compiler, schema, or shared tests, update the implemented ticket Outcome with a short post-review correction bullet and refreshed proof ledger before archival
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 13. If no unresolved `must-fix-now` cleanup remains, archive the implemented ticket per `docs/archival-workflow.md`.

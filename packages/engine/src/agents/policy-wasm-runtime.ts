@@ -5,10 +5,12 @@ import { fileURLToPath } from 'node:url';
 
 import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
-import type { EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
+import { compilePolicyBytecode } from '../cnl/policy-bytecode/index.js';
+import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
+import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 1;
+export const POLICY_WASM_ABI_VERSION = 2;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -30,6 +32,10 @@ const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   zoneTokenAgg: 5,
   globalTokenAgg: 6,
   globalZoneAgg: 7,
+  candidateIntrinsic: 8,
+  candidateParam: 9,
+  candidateTag: 10,
+  candidateTags: 11,
 };
 
 interface PolicyWasmExports {
@@ -75,7 +81,29 @@ export interface PolicyWasmBytecodeContext {
 export interface PolicyWasmBatchCandidate {
   readonly actionId: string;
   readonly stableMoveKey: string;
+  readonly params?: Readonly<Record<string, unknown>>;
+  readonly tags?: readonly string[];
 }
+
+export interface PolicyWasmScoreRow {
+  readonly stableMoveKey: string;
+  readonly score: number;
+}
+
+export interface PolicyWasmMoveConsideration {
+  readonly id: string;
+  readonly consideration: CompiledPolicyConsideration;
+}
+
+export type PolicyWasmScoreRowsResult =
+  | {
+      readonly kind: 'supported';
+      readonly rows: readonly PolicyWasmScoreRow[];
+    }
+  | {
+      readonly kind: 'unsupported';
+      readonly reason: string;
+    };
 
 export interface PolicyWasmRuntime {
   readonly wasmPath?: string;
@@ -186,15 +214,6 @@ const layoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
   return hash >>> 1;
 };
 
-const stableStringCode = (value: string): number => {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return hash >>> 1;
-};
-
 const zoneKindCode = (def: GameDef, zoneId: string): number => {
   const zone = def.zones.find((entry) => String(entry.id) === zoneId);
   return (zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1;
@@ -278,9 +297,6 @@ const encodeBatchInput = (
   }
   const layoutId = layoutIdentity(context.layout, context.def);
   const expectedLayoutId = context.expectedLayoutId ?? layoutId;
-  const headerAndActionWords = 6 + (candidates.length * 2);
-  const bytes = new Uint8Array((headerAndActionWords * I32_BYTES) + program.byteLength);
-  const view = new DataView(bytes.buffer);
   const words = [
     POLICY_WASM_ABI_MAGIC,
     POLICY_WASM_ABI_VERSION,
@@ -290,14 +306,44 @@ const encodeBatchInput = (
     program.byteLength / I32_BYTES,
   ];
   for (const candidate of candidates) {
-    words.push(stableStringCode(candidate.actionId), stableStringCode(candidate.stableMoveKey));
+    const params = Object.entries(candidate.params ?? {})
+      .map(([id, value]) => encodeCandidateParam(id, value))
+      .sort((left, right) => left[0] - right[0]);
+    const tags = [...new Set(candidate.tags ?? [])].map(stableStringCode).sort((left, right) => left - right);
+    words.push(
+      stablePayloadCode({ literal: candidate.actionId }),
+      stablePayloadCode({ literal: candidate.stableMoveKey }),
+      params.length,
+      tags.length,
+    );
+    for (const [paramCode, tag, value] of params) {
+      words.push(paramCode, tag, value);
+    }
+    writeI32Array(words, tags);
   }
+  const headerAndCandidateWords = words.length;
+  const bytes = new Uint8Array((headerAndCandidateWords * I32_BYTES) + program.byteLength);
+  const view = new DataView(bytes.buffer);
   for (const [index, word] of words.entries()) {
     assertFiniteI32(`batch word ${index}`, word);
     view.setInt32(index * I32_BYTES, word, true);
   }
-  bytes.set(program, headerAndActionWords * I32_BYTES);
+  bytes.set(program, headerAndCandidateWords * I32_BYTES);
   return bytes;
+};
+
+const encodeCandidateParam = (id: string, value: unknown): readonly [number, number, number] => {
+  const paramCode = stableStringCode(id);
+  if (typeof value === 'number' && Number.isSafeInteger(value)) {
+    return [paramCode, VALUE_NUMBER, value];
+  }
+  if (typeof value === 'boolean') {
+    return [paramCode, value ? VALUE_TRUE : VALUE_FALSE, value ? 1 : 0];
+  }
+  if (typeof value === 'string') {
+    return [paramCode, VALUE_NUMBER, stablePayloadCode({ literal: value })];
+  }
+  return [paramCode, VALUE_UNDEFINED, 0];
 };
 
 const decodePolicyValue = (tag: number, value: number): PolicyValue => {
@@ -313,6 +359,139 @@ const decodePolicyValue = (tag: number, value: number): PolicyValue => {
     default:
       throw new Error(`Policy WASM bytecode evaluation returned unknown value tag ${tag}.`);
   }
+};
+
+const isUnsupportedWasmError = (error: unknown): boolean =>
+  error instanceof Error && /status -14/u.test(error.message);
+
+const supportedBatchValues = (
+  runtime: PolicyWasmRuntime,
+  bytecode: PolicyBytecode,
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+  candidates: readonly PolicyWasmBatchCandidate[],
+): readonly PolicyValue[] | null => {
+  try {
+    return runtime.evaluatePolicyBytecodeBatch(bytecode, encoded, context, candidates);
+  } catch (error) {
+    if (isUnsupportedWasmError(error)) {
+      return null;
+    }
+    throw error;
+  }
+};
+
+const materializePolicyParams = (
+  expr: CompiledPolicyExpr,
+  parameterValues: Readonly<Record<string, AgentParameterValue>> | undefined,
+): CompiledPolicyExpr => {
+  if (expr.kind === 'param') {
+    const value = parameterValues?.[expr.id];
+    return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string'
+      ? { kind: 'literal', value }
+      : expr;
+  }
+  if (expr.kind === 'op') {
+    return {
+      ...expr,
+      args: expr.args.map((arg) => materializePolicyParams(arg, parameterValues)),
+    };
+  }
+  if (expr.kind === 'zoneTokenAgg' && typeof expr.zone !== 'string') {
+    return { ...expr, zone: materializePolicyParams(expr.zone, parameterValues) };
+  }
+  if (expr.kind === 'adjacentTokenAgg' && typeof expr.anchorZone !== 'string') {
+    return { ...expr, anchorZone: materializePolicyParams(expr.anchorZone, parameterValues) };
+  }
+  if (expr.kind === 'seatAgg') {
+    return { ...expr, expr: materializePolicyParams(expr.expr, parameterValues) };
+  }
+  if (expr.kind === 'zoneProp' && typeof expr.zone !== 'string') {
+    return { ...expr, zone: materializePolicyParams(expr.zone, parameterValues) };
+  }
+  return expr;
+};
+
+export const evaluateWasmMoveConsiderationScoreRows = (
+  runtime: PolicyWasmRuntime,
+  input: {
+    readonly def: GameDef;
+    readonly encoded: EncodedState;
+    readonly context: PolicyWasmBytecodeContext;
+    readonly parameterValues?: Readonly<Record<string, AgentParameterValue>>;
+    readonly considerations: readonly PolicyWasmMoveConsideration[];
+    readonly candidates: readonly PolicyWasmBatchCandidate[];
+  },
+): PolicyWasmScoreRowsResult => {
+  const scores = input.candidates.map(() => 0);
+  for (const entry of input.considerations) {
+    const consideration = entry.consideration;
+    if (consideration.scopes?.includes('move') !== true) {
+      continue;
+    }
+
+    const whenValues = consideration.when === undefined
+      ? input.candidates.map(() => true as PolicyValue)
+      : supportedBatchValues(
+        runtime,
+        compilePolicyBytecode(materializePolicyParams(consideration.when, input.parameterValues), input.def, input.context.layout),
+        input.encoded,
+        input.context,
+        input.candidates,
+    );
+    if (whenValues === null) {
+      return { kind: 'unsupported', reason: `unsupported when expression for consideration ${entry.id}` };
+    }
+
+    const weightValues = supportedBatchValues(
+      runtime,
+      compilePolicyBytecode(materializePolicyParams(consideration.weight, input.parameterValues), input.def, input.context.layout),
+      input.encoded,
+      input.context,
+      input.candidates,
+    );
+    if (weightValues === null) {
+      return { kind: 'unsupported', reason: `unsupported weight expression for consideration ${entry.id}` };
+    }
+
+    const valueValues = supportedBatchValues(
+      runtime,
+      compilePolicyBytecode(materializePolicyParams(consideration.value, input.parameterValues), input.def, input.context.layout),
+      input.encoded,
+      input.context,
+      input.candidates,
+    );
+    if (valueValues === null) {
+      return { kind: 'unsupported', reason: `unsupported value expression for consideration ${entry.id}` };
+    }
+
+    for (const [index] of input.candidates.entries()) {
+      if (whenValues[index] !== true) {
+        continue;
+      }
+      const weight = weightValues[index];
+      const value = valueValues[index];
+      let contribution = typeof weight === 'number' && typeof value === 'number'
+        ? weight * value
+        : consideration.unknownAs ?? 0;
+      if (consideration.clamp !== undefined) {
+        if (consideration.clamp.min !== undefined) {
+          contribution = Math.max(consideration.clamp.min, contribution);
+        }
+        if (consideration.clamp.max !== undefined) {
+          contribution = Math.min(consideration.clamp.max, contribution);
+        }
+      }
+      scores[index] = (scores[index] ?? 0) + contribution;
+    }
+  }
+  return {
+    kind: 'supported',
+    rows: input.candidates.map((candidate, index) => ({
+      stableMoveKey: candidate.stableMoveKey,
+      score: scores[index] ?? 0,
+    })),
+  };
 };
 
 export const loadPolicyWasmRuntime = async (

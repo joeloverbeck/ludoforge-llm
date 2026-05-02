@@ -1,6 +1,6 @@
 # 150FITLWASM-004: Candidate-dependent WASM batch scoring integration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy evaluation integration, perf gate wiring
@@ -86,3 +86,56 @@ If the supported candidate-dependent batch path is sufficient, run the Spec 150 
 1. `pnpm -F @ludoforge/engine-wasm build`.
 2. `pnpm -F @ludoforge/engine build`.
 3. `pnpm -F @ludoforge/engine exec node --test <dist path for the focused candidate-dependent batch parity test>`.
+
+## Outcome
+
+Completed on 2026-05-03. Implemented generic candidate-dependent WASM batch
+score support for the currently supported scalar subset. The compact batch ABI
+now carries candidate action/stable-key intrinsic codes, scalar candidate params,
+and deterministic action tag membership. The Rust VM consumes those candidate
+records per batch row, while unsupported candidate tag-list, dynamic, aggregate,
+and preview-backed surfaces still fail closed instead of falling back to
+TypeScript inside the WASM result path.
+
+The TypeScript bridge now exposes `evaluateWasmMoveConsiderationScoreRows`,
+which asks the WASM batch runtime for supported move-consideration score rows,
+materializes profile parameters into deterministic literals, applies the
+existing `when`/`weight`/`value`/`unknownAs`/`clamp` contribution rules, and
+returns `unsupported` when any row cannot be represented. The bytecode compiler
+was also tightened so an expression's own candidate refs are included in the
+compiled feature table even when a synthetic test `GameDef` does not already
+catalog that ref globally.
+
+Residual handoff: the full FITL baseline profile-driving score path still has
+unsupported rows for library candidate-feature refs, candidate aggregates,
+preview-backed features, and related dynamic surfaces. The Spec 150 Phase 4
+same-seam `<=250 ms` profile gate was not run as final acceptance because the
+full WASM score path is not yet a truthful gate precondition. Created successor
+`tickets/150FITLWASM-005.md` for full policy score-row WASM handoff and perf
+gate preflight, and rewired dependent active tickets `149FITLEVNUMVM-016` and
+`149FITLEVNUMVM-022` to that active owner.
+
+Ticket corrections applied:
+
+- `Candidate/action feature encoding`: implemented the live supported scalar
+  subset, including candidate tags and scalar params; deferred full candidate
+  feature/aggregate/preview row support to ticket 005.
+- `Post-review candidate param domain`: preserved unsupported non-scalar
+  candidate params as deterministic `undefined` entries in the batch table
+  instead of dropping them, so supported expressions can still batch unrelated
+  candidates while `candidateParamCount` remains truthful.
+- `Perf-gate handoff`: classified the Phase 4 gate as still blocked by
+  unsupported full-profile rows instead of running a misleading same-seam perf
+  gate.
+- `File-size note`: `packages/engine-wasm/policy-vm/src/lib.rs` was already
+  above the repo's nominal 800-line guidance before this ticket series. This
+  ticket extended the existing Rust VM ABI seam; splitting the crate during this
+  candidate-row slice would have widened the ticket beyond the live boundary.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 10 tests.
+4. `timeout 180 pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed in about 50 seconds.
+5. `pnpm run check:ticket-deps` — passed.

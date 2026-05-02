@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 1;
+const ABI_VERSION: i32 = 2;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;
@@ -65,6 +65,10 @@ const FEATURE_ZONE_PROP: i32 = 4;
 const FEATURE_ZONE_TOKEN_AGG: i32 = 5;
 const FEATURE_GLOBAL_TOKEN_AGG: i32 = 6;
 const FEATURE_GLOBAL_ZONE_AGG: i32 = 7;
+const FEATURE_CANDIDATE_INTRINSIC: i32 = 8;
+const FEATURE_CANDIDATE_PARAM: i32 = 9;
+const FEATURE_CANDIDATE_TAG: i32 = 10;
+const FEATURE_CANDIDATE_TAGS: i32 = 11;
 
 const SURFACE_SCOPE_CURRENT: i32 = 0;
 const SELECTOR_NONE: i32 = 0;
@@ -82,6 +86,9 @@ const ZONE_SCOPE_AUX: i32 = 2;
 const OWNER_NONE: i32 = 0;
 const OWNER_SELF: i32 = 1;
 const OWNER_ACTIVE: i32 = 2;
+const CANDIDATE_INTRINSIC_ACTION_ID: i32 = 0;
+const CANDIDATE_INTRINSIC_STABLE_MOVE_KEY: i32 = 1;
+const CANDIDATE_INTRINSIC_PARAM_COUNT: i32 = 2;
 
 #[no_mangle]
 pub extern "C" fn ludoforge_policy_vm_abi_magic() -> i32 {
@@ -311,6 +318,19 @@ struct Program<'a> {
     zone_ints: Vec<i32>,
     globals: Vec<i32>,
     global_markers: Vec<u64>,
+}
+
+#[derive(Clone, Copy)]
+struct CandidateParam {
+    code: i32,
+    value: Value,
+}
+
+struct BatchCandidate {
+    action_id_code: i32,
+    stable_move_key_code: i32,
+    params: Vec<CandidateParam>,
+    tags: Vec<i32>,
 }
 
 fn as_usize(value: i32) -> Result<usize, i32> {
@@ -591,7 +611,11 @@ fn resolve_player_index(
     }
 }
 
-fn resolve_feature(program: &Program<'_>, feature: FeatureRef) -> Result<Value, i32> {
+fn resolve_feature(
+    program: &Program<'_>,
+    candidate: Option<&BatchCandidate>,
+    feature: FeatureRef,
+) -> Result<Value, i32> {
     match feature.kind {
         FEATURE_GLOBAL_VAR => {
             if feature.aux[0] != SURFACE_SCOPE_CURRENT {
@@ -750,12 +774,50 @@ fn resolve_feature(program: &Program<'_>, feature: FeatureRef) -> Result<Value, 
                 aggregate_values(&values, op_code)
             }
         }
+        FEATURE_CANDIDATE_INTRINSIC => {
+            let Some(candidate) = candidate else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            match feature.aux[0] {
+                CANDIDATE_INTRINSIC_ACTION_ID => Ok(Value::Number(candidate.action_id_code)),
+                CANDIDATE_INTRINSIC_STABLE_MOVE_KEY => {
+                    Ok(Value::Number(candidate.stable_move_key_code))
+                }
+                CANDIDATE_INTRINSIC_PARAM_COUNT => Ok(Value::Number(candidate.params.len() as i32)),
+                _ => Err(STATUS_BAD_FEATURE),
+            }
+        }
+        FEATURE_CANDIDATE_PARAM => {
+            let Some(candidate) = candidate else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(candidate
+                .params
+                .iter()
+                .find(|param| param.code == feature.aux[0])
+                .map(|param| param.value)
+                .unwrap_or(Value::Undefined))
+        }
+        FEATURE_CANDIDATE_TAG => {
+            let Some(candidate) = candidate else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(Value::Bool(candidate.tags.contains(&feature.aux[0])))
+        }
+        FEATURE_CANDIDATE_TAGS => Err(STATUS_UNSUPPORTED),
         _ => Err(STATUS_UNSUPPORTED),
     }
 }
 
 fn evaluate_bytecode(cursor: I32Cursor<'_>) -> Result<Value, i32> {
     let program = parse_program(cursor)?;
+    evaluate_program(&program, None)
+}
+
+fn evaluate_program(
+    program: &Program<'_>,
+    candidate: Option<&BatchCandidate>,
+) -> Result<Value, i32> {
     let mut stack: Vec<Value> = Vec::with_capacity(STACK_SIZE);
     let mut pc = 0usize;
 
@@ -770,7 +832,7 @@ fn evaluate_bytecode(cursor: I32Cursor<'_>) -> Result<Value, i32> {
                     .feature_refs
                     .get(feature_id)
                     .ok_or(STATUS_BAD_FEATURE)?;
-                let value = resolve_feature(&program, feature)?;
+                let value = resolve_feature(program, candidate, feature)?;
                 push(&mut stack, value)?;
             }
             OP_LOAD_CONST => {
@@ -946,20 +1008,44 @@ fn evaluate_bytecode_batch(
         return Err(STATUS_BAD_LENGTH);
     }
 
-    // Two deterministic identity words per candidate: action id and stable move key.
-    // Phase 3 validates and transports this action batch; later phases may consume
-    // these words for candidate-dependent opcodes.
-    let action_identity_words = candidate_count.checked_mul(2).ok_or(STATUS_BAD_LENGTH)?;
-    let _action_identity = cursor.read_many(action_identity_words)?;
+    let mut candidates = Vec::with_capacity(candidate_count);
+    for _ in 0..candidate_count {
+        let action_id_code = cursor.read()?;
+        let stable_move_key_code = cursor.read()?;
+        let param_count = as_usize(cursor.read()?)?;
+        let tag_count = as_usize(cursor.read()?)?;
+        let mut params = Vec::with_capacity(param_count);
+        for _ in 0..param_count {
+            let code = cursor.read()?;
+            let tag = cursor.read()?;
+            let raw = cursor.read()?;
+            let value = match tag {
+                VALUE_NUMBER => Value::Number(raw),
+                VALUE_FALSE => Value::Bool(false),
+                VALUE_TRUE => Value::Bool(true),
+                VALUE_UNDEFINED => Value::Undefined,
+                _ => return Err(STATUS_BAD_FEATURE),
+            };
+            params.push(CandidateParam { code, value });
+        }
+        let tags = read_i32_vec(cursor, tag_count)?;
+        candidates.push(BatchCandidate {
+            action_id_code,
+            stable_move_key_code,
+            params,
+            tags,
+        });
+    }
     let program_bytes = cursor.read_many(program_word_len)?;
     if cursor.word * 4 != cursor.bytes.len() {
         return Err(STATUS_BAD_LENGTH);
     }
+    let program = parse_program(I32Cursor::new(program_bytes))?;
 
     let out_tags = unsafe { core::slice::from_raw_parts_mut(out_tags_ptr, candidate_count) };
     let out_values = unsafe { core::slice::from_raw_parts_mut(out_values_ptr, candidate_count) };
     for index in 0..candidate_count {
-        let value = evaluate_bytecode(I32Cursor::new(program_bytes))?;
+        let value = evaluate_program(&program, candidates.get(index))?;
         let (tag, raw) = value.encode();
         out_tags[index] = tag;
         out_values[index] = raw;

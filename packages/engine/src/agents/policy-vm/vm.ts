@@ -1,6 +1,8 @@
 import type { PolicyValue } from '../policy-surface.js';
 import type { EncodedState, EncodedStateLayout } from '../../kernel/encoded-state/index.js';
 import type { GameDef, GameState, Move } from '../../kernel/types.js';
+import { stablePayloadCode, stableStringCode } from '../../cnl/policy-bytecode/feature-table.js';
+import { toMoveIdentityKey } from '../../kernel/move-identity.js';
 import { Opcode, OPCODE_NAMES, type FeatureRef, type PolicyBytecode } from '../../cnl/policy-bytecode/index.js';
 
 const STACK_SIZE = 256;
@@ -21,6 +23,9 @@ const ZONE_SCOPE_AUX = 2;
 const OWNER_NONE = 0;
 const OWNER_SELF = 1;
 const OWNER_ACTIVE = 2;
+const CANDIDATE_INTRINSIC_ACTION_ID = 0;
+const CANDIDATE_INTRINSIC_STABLE_MOVE_KEY = 1;
+const CANDIDATE_INTRINSIC_PARAM_COUNT = 2;
 const UNSUPPORTED_FEATURE = Symbol('unsupported policy bytecode feature');
 
 export class PolicyBytecodeVmUnsupportedError extends Error {
@@ -279,11 +284,44 @@ function resolveBuiltInFeature(
       }
       return opCode === AGG_COUNT ? values.length : aggregateValues(values, opCode);
     }
+    case 'candidateIntrinsic': {
+      const candidate = context.candidateIndex === undefined ? undefined : context.legalMoves?.[context.candidateIndex];
+      if (candidate === undefined) return UNSUPPORTED_FEATURE;
+      const intrinsicCode = ref.aux[0];
+      if (intrinsicCode === CANDIDATE_INTRINSIC_ACTION_ID) {
+        return stablePayloadCode({ literal: String(candidate.actionId) });
+      }
+      if (intrinsicCode === CANDIDATE_INTRINSIC_STABLE_MOVE_KEY) {
+        return stablePayloadCode({ literal: toMoveIdentityKey(context.def, candidate) });
+      }
+      if (intrinsicCode === CANDIDATE_INTRINSIC_PARAM_COUNT) {
+        return Object.keys(candidate.params).length;
+      }
+      return undefined;
+    }
+    case 'candidateParam': {
+      const candidate = context.candidateIndex === undefined ? undefined : context.legalMoves?.[context.candidateIndex];
+      if (candidate === undefined) return UNSUPPORTED_FEATURE;
+      for (const [id, value] of Object.entries(candidate.params)) {
+        if (stableStringCode(id) !== ref.aux[0]) continue;
+        if (typeof value === 'number' || typeof value === 'boolean') return value;
+        if (typeof value === 'string') return stablePayloadCode({ literal: value });
+        return undefined;
+      }
+      return undefined;
+    }
+    case 'candidateTag': {
+      const candidate = context.candidateIndex === undefined ? undefined : context.legalMoves?.[context.candidateIndex];
+      if (candidate === undefined) return UNSUPPORTED_FEATURE;
+      const tags = context.def.actionTagIndex?.byAction[String(candidate.actionId)] ?? [];
+      return tags.some((tag) => stableStringCode(tag) === ref.aux[0]);
+    }
     case 'adjacentTokenAgg':
     case 'seatAgg':
     case 'dynamicRef':
     case 'dynamicSurface':
     case 'dynamicExpr':
+    case 'candidateTags':
       return context.resolveFeature === undefined ? UNSUPPORTED_FEATURE : context.resolveFeature(ref, context);
     default:
       return state === context.state && context.resolveFeature !== undefined

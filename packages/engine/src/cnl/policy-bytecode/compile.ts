@@ -16,6 +16,7 @@ import {
 } from './types.js';
 import {
   buildFeatureTable,
+  canonicalKey,
   collectFeatureRefsFromCompiledPolicyExpr,
   getFeatureId,
   stablePayloadCode,
@@ -39,7 +40,7 @@ export function compilePolicyBytecode(
   layout: EncodedStateLayout,
   options: CompilePolicyBytecodeOptions = {},
 ): PolicyBytecode {
-  const featureTable = buildFeatureTable(def, layout);
+  const featureTable = buildExpressionFeatureTable(def, layout, expr);
   const range = validateScoreRange(expr);
   if (range.kind === 'bounded' && !range.withinScoreBudget) {
     emitWarning(options, 'score range exceeds policy-bytecode budget; emitting RESOLVE_DYNAMIC');
@@ -53,6 +54,22 @@ export function compilePolicyBytecode(
   emitter.emitOp(Opcode.HALT);
 
   return createBytecode(emitter.instructions, featureTable, constants, options);
+}
+
+function buildExpressionFeatureTable(
+  def: GameDef,
+  layout: EncodedStateLayout,
+  expr: PolicyExprInput,
+): FeatureTable {
+  const refsByKey = new Map(buildFeatureTable(def, layout).refs.map((ref) => [canonicalKey(ref), ref]));
+  for (const ref of collectFeatureRefsFromCompiledPolicyExpr(expr as CompiledPolicyExpr, layout)) {
+    refsByKey.set(canonicalKey(ref), ref);
+  }
+  const refs = [...refsByKey.values()].sort((left, right) => canonicalKey(left).localeCompare(canonicalKey(right)));
+  return {
+    refs,
+    refToId: Object.fromEntries(refs.map((ref, index) => [canonicalKey(ref), index])),
+  };
 }
 
 export function validateScoreRange(expr: PolicyExprInput): RangeAnalysis {

@@ -49,7 +49,7 @@ Update Spec 150 and dependent active tickets with any residual unsupported subse
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or a nearby batch parity test (modify or new)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` (modify)
 - `specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
-- `tickets/150FITLWASM-004.md` (new if residual candidate-dependent scoring remains)
+- `archive/tickets/150FITLWASM-004.md` (successor for residual candidate-dependent scoring)
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` (modify if successor deps move)
 - `tickets/150FITLWASM-003.md` (modify Outcome before archival)
 
@@ -105,7 +105,7 @@ whose value domain is already supported by the Rust VM. Dynamic and
 candidate-dependent rows still fail closed instead of falling back to TypeScript
 inside the WASM result path. Because that residual surface still prevents the
 same-seam `<=250 ms` gate from being a truthful default-flip precondition, this
-ticket created successor `tickets/150FITLWASM-004.md` for candidate-dependent
+ticket created successor `archive/tickets/150FITLWASM-004.md` for candidate-dependent
 WASM batch scoring integration and rewired dependent active tickets
 `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` to that active owner.
 

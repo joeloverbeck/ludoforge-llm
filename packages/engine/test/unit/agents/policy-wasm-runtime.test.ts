@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import {
   POLICY_WASM_SMOKE_LAYOUT_ID,
+  evaluateWasmMoveConsiderationScoreRows,
   loadPolicyWasmRuntime,
 } from '../../../src/agents/policy-wasm-runtime.js';
 import {
@@ -168,6 +169,98 @@ describe('policy WASM runtime bridge', () => {
     ]), [18, 18]);
   });
 
+  it('evaluates candidate tag and scalar param refs across a deterministic action batch', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const bytecode = makeBytecode([
+      Opcode.LOAD_FEATURE, 0,
+      Opcode.BOOL_TO_NUMBER,
+      Opcode.LOAD_FEATURE, 1,
+      Opcode.ADD_SCORE,
+      Opcode.HALT,
+    ], [], {
+      refs: [
+        { kind: 'candidateTag', layoutIndex: 0, aux: [stableStringCodeForTest('pass')] },
+        { kind: 'candidateParam', layoutIndex: 0, aux: [stableStringCodeForTest('urgency')] },
+      ],
+      refToId: {},
+    });
+
+    assert.deepEqual(runtime.evaluatePolicyBytecodeBatch(bytecode, makeEncoded(), {
+      def: makeDef(),
+      layout: makeLayout(),
+      state: { activePlayer: 1 } as unknown as GameState,
+      playerId: 0,
+    }, [
+      { actionId: 'move', stableMoveKey: 'move:{"x":1}', params: { urgency: 4 }, tags: [] },
+      { actionId: 'pass', stableMoveKey: 'pass:{}', params: { urgency: 2 }, tags: ['pass'] },
+    ]), [4, 3]);
+  });
+
+  it('preserves unsupported candidate param domains as undefined entries', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const bytecode = makeBytecode([Opcode.LOAD_FEATURE, 0, Opcode.HALT], [], {
+      refs: [
+        { kind: 'candidateIntrinsic', layoutIndex: 0, aux: [2] },
+      ],
+      refToId: {},
+    });
+
+    assert.deepEqual(
+      runtime.evaluatePolicyBytecodeBatch(bytecode, makeEncoded(), {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      }, [
+        { actionId: 'move', stableMoveKey: 'move:{}', params: { payload: { nested: true }, urgency: 3 } },
+      ]),
+      [2],
+    );
+  });
+
+  it('produces supported move-consideration score rows without TypeScript fallback', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const consideration = {
+      id: 'preferPass',
+      scopes: ['move'] as const,
+      costClass: 'candidate' as const,
+      when: {
+        kind: 'ref' as const,
+        ref: { kind: 'candidateTag' as const, tagName: 'pass' },
+      },
+      weight: { kind: 'literal' as const, value: 3 },
+      value: {
+        kind: 'ref' as const,
+        ref: { kind: 'candidateParam' as const, id: 'urgency' },
+      },
+      dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+    };
+
+    const result = evaluateWasmMoveConsiderationScoreRows(runtime, {
+      def: makeDef(),
+      encoded: makeEncoded(),
+      context: {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      },
+      considerations: [{ id: 'preferPass', consideration }],
+      candidates: [
+        { actionId: 'move', stableMoveKey: 'move:{"x":1}', params: { urgency: 4 }, tags: [] },
+        { actionId: 'pass', stableMoveKey: 'pass:{}', params: { urgency: 2 }, tags: ['pass'] },
+      ],
+    });
+
+    assert.deepEqual(result, {
+      kind: 'supported',
+      rows: [
+        { stableMoveKey: 'move:{"x":1}', score: 0 },
+        { stableMoveKey: 'pass:{}', score: 6 },
+      ],
+    });
+  });
+
   it('rejects batch layout mismatches before evaluating action rows', async () => {
     const runtime = await loadPolicyWasmRuntime();
     const bytecode = makeBytecode([Opcode.LOAD_CONST, 0, Opcode.HALT], [7]);
@@ -215,3 +308,12 @@ describe('policy WASM runtime bridge', () => {
     );
   });
 });
+
+const stableStringCodeForTest = (value: string): number => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return hash >>> 1;
+};

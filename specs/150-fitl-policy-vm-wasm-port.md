@@ -98,10 +98,15 @@ Moves the profile-driving encoded state/action batch across the FFI boundary wit
 Ticket `150FITLWASM-003` delivered the deterministic batch ABI for supported
 encoded-state bytecode rows. The batch buffer validates ABI magic, version,
 layout identity, program length, and compact action identity words, and the
-corpus parity test proves supported rows over current action batches. Dynamic
-and candidate-dependent rows still fail closed; ticket `150FITLWASM-004` owns
-the candidate-dependent scoring integration needed before Phase 4 can make a
-truthful same-seam performance claim.
+corpus parity test proves supported rows over current action batches.
+
+Ticket `150FITLWASM-004` delivered candidate-dependent batch score rows for the
+supported scalar subset: action/stable-key intrinsics, scalar candidate params,
+action tag membership, profile-parameter materialization, and supported
+move-consideration scores. Full baseline profile batches still fail closed on
+library candidate-feature refs, candidate aggregates, preview-backed features,
+and related dynamic rows. Ticket `150FITLWASM-005` owns that full score-row
+handoff before Phase 4 can make a truthful same-seam performance claim.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -140,4 +145,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
 - [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
 - [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
-- [`tickets/150FITLWASM-004.md`](../tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
+- [`archive/tickets/150FITLWASM-004.md`](../archive/tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
+- [`tickets/150FITLWASM-005.md`](../tickets/150FITLWASM-005.md) — Full policy score-row WASM handoff and perf gate preflight.

@@ -5,8 +5,9 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { evaluatePolicyMoveCore } from '../../src/agents/policy-eval.js';
+import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../src/agents/policy-evaluation-core.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
-import { loadPolicyWasmRuntime } from '../../src/agents/policy-wasm-runtime.js';
+import { evaluateWasmMoveConsiderationScoreRows, loadPolicyWasmRuntime } from '../../src/agents/policy-wasm-runtime.js';
 import {
   compilePolicyBytecode,
   type PolicyBytecode,
@@ -22,6 +23,7 @@ import {
   publishMicroturn,
   serializeGameState,
   type CompiledPolicyExpr,
+  type CompiledPolicyConsideration,
   type EncodedState,
   type EncodedStateLayout,
   type Decision,
@@ -246,7 +248,92 @@ const captureVmScores = (
 const batchCandidates = (def: GameDef, legalMoves: readonly Move[]) => legalMoves.map((move) => ({
   actionId: String(move.actionId),
   stableMoveKey: toMoveIdentityKey(def, move),
+  params: move.params,
+  tags: def.actionTagIndex?.byAction[String(move.actionId)] ?? [],
 }));
+
+const evaluationCandidates = (def: GameDef, legalMoves: readonly Move[]): PolicyEvaluationCandidate[] => legalMoves.map((move) => ({
+  move,
+  actionId: String(move.actionId),
+  stableMoveKey: toMoveIdentityKey(def, move),
+  previewRefIds: new Set(),
+  unknownPreviewRefs: new Map(),
+}));
+
+const isWasmScoreExprSupported = (expr: CompiledPolicyExpr | undefined): boolean => {
+  if (expr === undefined) return true;
+  switch (expr.kind) {
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+    case 'zoneTokenAgg':
+    case 'zoneProp':
+      return true;
+    case 'op':
+      return expr.args.every(isWasmScoreExprSupported);
+    case 'ref':
+      return expr.ref.kind === 'currentSurface'
+        || expr.ref.kind === 'candidateIntrinsic'
+        || expr.ref.kind === 'candidateParam'
+        || expr.ref.kind === 'candidateTag';
+    case 'adjacentTokenAgg':
+    case 'seatAgg':
+      return false;
+  }
+};
+
+const isWasmScoreConsiderationSupported = (consideration: CompiledPolicyConsideration): boolean =>
+  consideration.costClass !== 'preview'
+    && isWasmScoreExprSupported(consideration.when)
+    && isWasmScoreExprSupported(consideration.weight)
+    && isWasmScoreExprSupported(consideration.value);
+
+const compiledConsiderationEntries = (
+  def: GameDef,
+  considerationIds: readonly string[],
+): readonly { readonly id: string; readonly consideration: CompiledPolicyConsideration }[] =>
+  considerationIds
+    .map((id) => {
+      const consideration = def.agents?.compiled.considerations[id];
+      return consideration === undefined ? undefined : { id, consideration };
+    })
+    .filter((entry): entry is { readonly id: string; readonly consideration: CompiledPolicyConsideration } => entry !== undefined);
+
+const captureSupportedConsiderationScores = (
+  def: GameDef,
+  corpusState: CorpusState,
+  profileId: string,
+  considerations: readonly { readonly id: string; readonly consideration: CompiledPolicyConsideration }[],
+): readonly ClosureScoreRow[] => {
+  const profile = def.agents?.profiles[profileId];
+  assert.ok(profile, `expected profile ${profileId}`);
+  const candidates = evaluationCandidates(def, corpusState.legalMoves);
+  const layout = buildEncodedStateLayout(def);
+  const evaluation = new PolicyEvaluationContext({
+    def,
+    state: corpusState.state,
+    playerId: corpusState.state.activePlayer,
+    seatId: def.seats?.[corpusState.state.activePlayer]?.id ?? String(corpusState.state.activePlayer),
+    catalog: def.agents!,
+    parameterValues: profile.params,
+    trustedMoveIndex: new Map(),
+    runtime: createGameDefRuntime(def),
+    encodedStateLayout: layout,
+    encodedState: buildEncodedState(corpusState.state, layout),
+    policyVmMode: 'disabled',
+  }, candidates);
+  try {
+    return candidates.map((candidate) => ({
+      stableMoveKey: candidate.stableMoveKey,
+      score: considerations.reduce((total, entry) => (
+        total + evaluation.evaluateConsideration({ [entry.id]: entry.consideration }, entry.id, candidate)
+      ), 0),
+    }));
+  } finally {
+    evaluation.dispose();
+  }
+};
 
 const loadVmModule = async (): Promise<PolicyVmModule | null> => {
   if (!existsSync(POLICY_VM_MODULE_PATH)) {
@@ -451,5 +538,68 @@ describe('policy bytecode equivalence harness', () => {
 
     assert.ok(comparedRows > 0, 'WASM VM batch parity must compare at least one supported corpus row.');
     assert.ok(unsupportedRows > 0, 'corpus should still include unsupported batch rows for fail-closed handoff coverage.');
+  });
+
+  it('compares candidate-dependent WASM score rows against the TypeScript reference for supported move considerations', { timeout: 120_000 }, async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    let supportedProfiles = 0;
+    let unsupportedFullProfiles = 0;
+
+    for (const seed of corpus.seeds) {
+      const corpusState = deriveCorpusState(def, corpus, seed);
+      const encoded = buildEncodedState(corpusState.state, layout);
+      const candidates = batchCandidates(def, corpusState.legalMoves);
+      for (const profileId of POLICY_PROFILE_VARIANTS) {
+        const profile = def.agents?.profiles[profileId];
+        assert.ok(profile, `expected profile ${profileId}`);
+        const allMoveConsiderations = compiledConsiderationEntries(def, profile.use.considerations)
+          .filter((entry) => entry.consideration.costClass !== 'preview');
+        const allRows = evaluateWasmMoveConsiderationScoreRows(wasm, {
+          def,
+          encoded,
+          context: {
+            def,
+            layout,
+            state: corpusState.state,
+            playerId: Number(corpusState.state.activePlayer),
+          },
+          parameterValues: profile.params,
+          considerations: allMoveConsiderations,
+          candidates,
+        });
+        if (allRows.kind === 'unsupported') {
+          unsupportedFullProfiles += 1;
+        }
+        const considerations = compiledConsiderationEntries(def, profile.use.considerations)
+          .filter((entry) => isWasmScoreConsiderationSupported(entry.consideration));
+        assert.ok(considerations.length > 0, `profile ${profileId} should have supported move considerations`);
+        const wasmRows = evaluateWasmMoveConsiderationScoreRows(wasm, {
+          def,
+          encoded,
+          context: {
+            def,
+            layout,
+            state: corpusState.state,
+            playerId: Number(corpusState.state.activePlayer),
+          },
+          parameterValues: profile.params,
+          considerations,
+          candidates,
+        });
+        if (wasmRows.kind !== 'supported') {
+          throw new Error(`supported consideration subset unexpectedly failed closed: ${wasmRows.reason}`);
+        }
+        const referenceRows = captureSupportedConsiderationScores(def, corpusState, profileId, considerations);
+        assert.deepEqual(
+          wasmRows.rows,
+          referenceRows,
+          `seed ${seed} profile ${profileId} WASM candidate-dependent scores should match TypeScript reference`,
+        );
+        supportedProfiles += 1;
+      }
+    }
+
+    assert.ok(supportedProfiles > 0, 'WASM score parity must support at least one candidate-dependent profile batch.');
+    assert.ok(unsupportedFullProfiles > 0, 'full corpus score batches should still expose unsupported preview/dynamic rows for fail-closed handoff coverage.');
   });
 });

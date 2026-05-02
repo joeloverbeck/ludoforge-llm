@@ -20,7 +20,6 @@ import type {
   RuntimeWarning,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowGrantLifecycleTraceEntry,
-  TurnFlowRuntimeState,
 } from './types.js';
 
 export interface GrantLifecycleTransitionResult {

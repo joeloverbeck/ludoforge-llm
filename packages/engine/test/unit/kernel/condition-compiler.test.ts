@@ -561,6 +561,11 @@ describe('condition compiler', () => {
     assert.equal(evaluateCompiled(notCondition, andCtx), evalCondition(notCondition, andCtx));
   });
 
+  it('leaves empty boolean combinations to the interpreter error path', () => {
+    assert.equal(tryCompileCondition({ op: 'and', args: [] } as unknown as ConditionAST), null);
+    assert.equal(tryCompileCondition({ op: 'or', args: [] } as unknown as ConditionAST), null);
+  });
+
   it('threads snapshot through nested boolean combinators', () => {
     const ctx = makeCtx();
     const condition: ConditionAST = {

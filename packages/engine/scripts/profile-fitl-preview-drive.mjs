@@ -181,6 +181,8 @@ const runOnce = () => {
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+    draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
+    draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
@@ -194,6 +196,8 @@ function readCounterSnapshot() {
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
+    draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
+    draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
     driveExitTotal,
   };
 }
@@ -219,6 +223,10 @@ function createPerCardRecorder(startedAt) {
         counters.draftTokenStateIndexDeltaCount - currentCounters.draftTokenStateIndexDeltaCount,
       draftTokenStateIndexAttachCount:
         counters.draftTokenStateIndexAttachCount - currentCounters.draftTokenStateIndexAttachCount,
+      draftTokenStateIndexSnapshotCount:
+        counters.draftTokenStateIndexSnapshotCount - currentCounters.draftTokenStateIndexSnapshotCount,
+      draftTokenStateIndexCowCopyCount:
+        counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
       driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
     });
     decisionCount = 0;
@@ -352,6 +360,8 @@ const summary = {
     tokenStateIndexBuildCount: result.tokenStateIndexBuildCount,
     draftTokenStateIndexDeltaCount: result.draftTokenStateIndexDeltaCount,
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
+    draftTokenStateIndexSnapshotCount: result.draftTokenStateIndexSnapshotCount,
+    draftTokenStateIndexCowCopyCount: result.draftTokenStateIndexCowCopyCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
@@ -367,6 +377,8 @@ process.stderr.write(
   `verifyIncrementalHash=${summary.config.verifyIncrementalHash} ` +
   `tokenStateIndexBuildCount=${summary.result.tokenStateIndexBuildCount} ` +
   `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
+  `draftTokenStateIndexSnapshotCount=${summary.result.draftTokenStateIndexSnapshotCount} ` +
+  `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
@@ -382,6 +394,8 @@ for (const row of summary.result.perCardRows ?? []) {
     `decisions=${row.decisions} driveExitTotal=${row.driveExitTotal} ` +
     `tokenStateIndexBuildCount=${row.tokenStateIndexBuildCount} ` +
     `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
+    `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
+    `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +
     `closeReason=${row.closeReason}\n`,
   );
 }

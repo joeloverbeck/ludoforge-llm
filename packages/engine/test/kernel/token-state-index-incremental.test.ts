@@ -111,6 +111,59 @@ describe('POLPREVDRIVE-002 draft token-state index', () => {
 
     assertIndexMatchesFreshRebuild('duplicate move', nextState, draftIndex.read());
   });
+
+  it('snapshots only states that leave the private preview lifetime', () => {
+    const state = makeTokenState({
+      source: [{ id: 'unit', type: 'pawn', props: {} }],
+      middle: [],
+      final: [],
+    } as unknown as GameState['zones']);
+    const privatePreview = {
+      ...state,
+      zones: {
+        ...state.zones,
+        source: [],
+        middle: [{ id: asTokenId('unit'), type: 'pawn', props: {} }],
+      },
+    } as unknown as GameState;
+    const returnedPreview = {
+      ...privatePreview,
+      zones: {
+        ...privatePreview.zones,
+        middle: [],
+        final: [{ id: asTokenId('unit'), type: 'pawn', props: {} }],
+      },
+    } as unknown as GameState;
+    const laterPrivatePreview = {
+      ...returnedPreview,
+      zones: {
+        ...returnedPreview.zones,
+        source: [{ id: asTokenId('unit'), type: 'pawn', props: {} }],
+        final: [],
+      },
+    } as unknown as GameState;
+
+    const draftIndex = createDraftTokenStateIndex(state);
+    __internal_for_tests.resetBuildTokenStateIndexCount();
+
+    draftIndex.applyZoneDelta(state.zones, privatePreview.zones);
+    draftIndex.attachPreviewState(privatePreview);
+    assert.equal(__internal_for_tests.getDraftTokenStateIndexSnapshotCount(), 0);
+    assertIndexMatchesFreshRebuild('private preview reads use live draft index', privatePreview, getTokenStateIndex(privatePreview));
+
+    draftIndex.applyZoneDelta(privatePreview.zones, returnedPreview.zones);
+    draftIndex.attachAsCanonical(returnedPreview);
+    assert.equal(__internal_for_tests.getDraftTokenStateIndexSnapshotCount(), 1);
+    assertIndexMatchesFreshRebuild('returned preview snapshot before later mutation', returnedPreview, getTokenStateIndex(returnedPreview));
+
+    draftIndex.applyZoneDelta(returnedPreview.zones, laterPrivatePreview.zones);
+    draftIndex.attachPreviewState(laterPrivatePreview);
+    assert.equal(__internal_for_tests.getDraftTokenStateIndexSnapshotCount(), 1);
+    assert.equal(__internal_for_tests.getDraftTokenStateIndexCowCopyCount(), 1);
+    assertIndexMatchesFreshRebuild('private preview cache survives copy-on-write detach', privatePreview, getTokenStateIndex(privatePreview));
+    assertIndexMatchesFreshRebuild('returned preview snapshot survives later draft mutation', returnedPreview, getTokenStateIndex(returnedPreview));
+    assertIndexMatchesFreshRebuild('later private preview uses live draft index', laterPrivatePreview, getTokenStateIndex(laterPrivatePreview));
+  });
 });
 
 describe('refreshCachedTokenStateIndexEntries scoped scan (Option A)', () => {

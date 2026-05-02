@@ -11,6 +11,7 @@ export interface TokenStateIndexEntry {
 export interface MutableTokenStateIndex {
   read(): ReadonlyMap<string, TokenStateIndexEntry>;
   applyZoneDelta(prevZones: GameState['zones'], nextZones: GameState['zones']): void;
+  attachPreviewState(state: GameState): void;
   attachAsCanonical(state: GameState): void;
 }
 
@@ -25,6 +26,8 @@ const NO_DUPLICATE_OCCURRENCE_ZONE_IDS: readonly string[] = Object.freeze([]);
 const tokenStateIndexByZones = new WeakMap<GameState['zones'], ReadonlyMap<string, TokenStateIndexEntry>>();
 let buildTokenStateIndexCount = 0;
 let draftTokenStateIndexAttachCount = 0;
+let draftTokenStateIndexSnapshotCount = 0;
+let draftTokenStateIndexCowCopyCount = 0;
 let draftTokenStateIndexDeltaCount = 0;
 
 function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
@@ -77,11 +80,21 @@ function toIndexEntry(occurrences: readonly TokenOccurrence[]): TokenStateIndexE
 }
 
 function buildMutableTokenStateIndex(initialState: GameState): MutableTokenStateIndex {
-  const index = new Map<string, TokenStateIndexEntry>();
+  let index = new Map<string, TokenStateIndexEntry>();
   const occurrencesByToken = new Map<string, TokenOccurrence[]>();
   const zoneOrder = Object.keys(initialState.zones);
   const zoneRank = new Map<string, number>(zoneOrder.map((zoneId, rank) => [zoneId, rank]));
   let currentZones = initialState.zones;
+  let indexSharedWithPreviewState = false;
+
+  const ensureWritableIndex = (): void => {
+    if (!indexSharedWithPreviewState) {
+      return;
+    }
+    index = new Map(index);
+    draftTokenStateIndexCowCopyCount += 1;
+    indexSharedWithPreviewState = false;
+  };
 
   const ensureZoneRank = (zones: GameState['zones']): void => {
     for (const zoneId of Object.keys(zones)) {
@@ -184,6 +197,7 @@ function buildMutableTokenStateIndex(initialState: GameState): MutableTokenState
       if (currentZones === nextZones) {
         return;
       }
+      ensureWritableIndex();
       const baseZones = currentZones === prevZones ? prevZones : currentZones;
       draftTokenStateIndexDeltaCount += 1;
       ensureZoneRank(nextZones);
@@ -209,8 +223,14 @@ function buildMutableTokenStateIndex(initialState: GameState): MutableTokenState
       }
       currentZones = nextZones;
     },
+    attachPreviewState(state) {
+      draftTokenStateIndexAttachCount += 1;
+      tokenStateIndexByZones.set(state.zones, index);
+      indexSharedWithPreviewState = true;
+    },
     attachAsCanonical(state) {
       draftTokenStateIndexAttachCount += 1;
+      draftTokenStateIndexSnapshotCount += 1;
       tokenStateIndexByZones.set(state.zones, new Map(index));
     },
   };
@@ -333,10 +353,14 @@ export const __internal_for_tests = {
   buildTokenStateIndex,
   getBuildTokenStateIndexCount: () => buildTokenStateIndexCount,
   getDraftTokenStateIndexAttachCount: () => draftTokenStateIndexAttachCount,
+  getDraftTokenStateIndexSnapshotCount: () => draftTokenStateIndexSnapshotCount,
+  getDraftTokenStateIndexCowCopyCount: () => draftTokenStateIndexCowCopyCount,
   getDraftTokenStateIndexDeltaCount: () => draftTokenStateIndexDeltaCount,
   resetBuildTokenStateIndexCount: () => {
     buildTokenStateIndexCount = 0;
     draftTokenStateIndexAttachCount = 0;
+    draftTokenStateIndexSnapshotCount = 0;
+    draftTokenStateIndexCowCopyCount = 0;
     draftTokenStateIndexDeltaCount = 0;
   },
 };

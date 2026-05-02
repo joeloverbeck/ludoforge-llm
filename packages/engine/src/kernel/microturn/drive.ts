@@ -741,7 +741,7 @@ export const applyPreviewDriveGreedyChooseOne = (
         resolveRefCache,
       ).state;
       draftTokenStateIndex?.applyZoneDelta(prevState.zones, workingState.zones);
-      draftTokenStateIndex?.attachAsCanonical(workingState);
+      draftTokenStateIndex?.attachPreviewState(workingState);
       depth += 1;
     }
 

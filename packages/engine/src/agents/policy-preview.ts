@@ -795,7 +795,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           refCache,
         ).state;
         draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
-        draftTokenStateIndex.attachAsCanonical(state);
+        draftTokenStateIndex.attachPreviewState(state);
       } catch {
         const actionDecision: Decision = {
           kind: 'actionSelection',
@@ -804,13 +804,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         };
         state = applyPublishedDecisionFromCanonicalState(input.def, input.state, origin, actionDecision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
         draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
-        draftTokenStateIndex.attachAsCanonical(state);
+        draftTokenStateIndex.attachPreviewState(state);
       }
       let depth = 1;
       let stateIsCanonical = true;
 
       const canonicalizeForExit = (): GameState => {
         if (stateIsCanonical) {
+          draftTokenStateIndex.attachAsCanonical(state);
           return state;
         }
         const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
@@ -887,7 +888,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         state = applyPublishedDecisionFromPreviewStateNoFinalHash(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
         stateIsCanonical = false;
         draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
-        draftTokenStateIndex.attachAsCanonical(state);
+        draftTokenStateIndex.attachPreviewState(state);
         depth += 1;
       }
     } catch (error) {

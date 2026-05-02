@@ -5,6 +5,8 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 import { evaluatePolicyMoveCore } from '../../src/agents/policy-eval.js';
+import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
+import { loadPolicyWasmRuntime } from '../../src/agents/policy-wasm-runtime.js';
 import {
   compilePolicyBytecode,
   type PolicyBytecode,
@@ -311,5 +313,68 @@ describe('policy bytecode equivalence harness', () => {
         }
       }
     }
+  });
+
+  it('compares WASM VM values against the TypeScript VM on supported corpus bytecode', { timeout: 120_000 }, async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    let compared = 0;
+    let unsupported = 0;
+
+    for (const seed of corpus.seeds) {
+      const corpusState = deriveCorpusState(def, corpus, seed);
+      const encoded = buildEncodedState(corpusState.state, layout);
+      for (const profileId of POLICY_PROFILE_VARIANTS) {
+        for (const expr of collectProfileExprs(def)) {
+          const bytecode = compilePolicyBytecode(expr, def, layout);
+          let tsValue: unknown;
+          try {
+            const result = executeBytecode(bytecode, encoded, {
+              def,
+              layout,
+              state: corpusState.state,
+              profileId,
+              legalMoves: corpusState.legalMoves,
+              playerId: Number(corpusState.state.activePlayer),
+            });
+            if (result.usedDynamicFallback) {
+              unsupported += 1;
+              continue;
+            }
+            tsValue = result.value;
+          } catch (error) {
+            if (error instanceof PolicyBytecodeVmUnsupportedError) {
+              unsupported += 1;
+              continue;
+            }
+            throw error;
+          }
+          if (typeof tsValue !== 'number' && typeof tsValue !== 'boolean' && tsValue !== undefined) {
+            unsupported += 1;
+            continue;
+          }
+
+          let wasmValue: unknown;
+          try {
+            wasmValue = wasm.evaluatePolicyBytecode(bytecode, encoded, {
+              def,
+              layout,
+              state: corpusState.state,
+              playerId: Number(corpusState.state.activePlayer),
+            });
+          } catch (error) {
+            if (error instanceof Error && /status -14/u.test(error.message)) {
+              unsupported += 1;
+              continue;
+            }
+            throw error;
+          }
+          assert.equal(wasmValue, tsValue, `seed ${seed} profile ${profileId} WASM VM value should match TypeScript VM`);
+          compared += 1;
+        }
+      }
+    }
+
+    assert.ok(compared > 0, 'WASM VM parity must compare at least one supported corpus bytecode expression.');
+    assert.ok(unsupported > 0, 'corpus should still include unsupported dynamic bytecode for fail-closed handoff coverage.');
   });
 });

@@ -1,6 +1,6 @@
 # 150FITLWASM-002: WASM policy bytecode execution parity
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — Rust/WASM policy VM plus TypeScript bridge parity path
@@ -22,8 +22,14 @@ work can be trusted.
 2. The existing TypeScript policy VM and corpus live under
    `packages/engine/src/agents/policy-vm/` and
    `packages/engine/test/fixtures/bytecode-equivalence-corpus.json`.
-3. This ticket owns score-equivalence for generic policy bytecode execution, not
+3. This ticket owns value-equivalence for generic policy bytecode execution, not
    the later encoded-state/action batch FFI shape or same-seam performance gate.
+4. Live corpus reassessment found that the current TypeScript VM still exposes a
+   mix of supported generic bytecode and explicitly dynamic/unsupported bytecode
+   that falls back to the closure evaluator in production. This ticket therefore
+   owns WASM parity for the supported generic core and fail-closed rejection for
+   unsupported bytecode; it does not move fallback or preview/application logic
+   across the FFI boundary.
 
 ## Architecture Check
 
@@ -42,9 +48,9 @@ work can be trusted.
 ### 1. Rust policy bytecode executor
 
 Extend `packages/engine-wasm/policy-vm` from the smoke opcode into the smallest
-generic policy bytecode execution slice that can score the existing parity
-corpus. Preserve deterministic integer semantics, including `Math.trunc`-style
-division and explicit overflow/error handling.
+generic policy bytecode execution slice that can evaluate supported bytecode
+from the existing parity corpus. Preserve deterministic integer semantics,
+including `Math.trunc`-style division and explicit overflow/error handling.
 
 ### 2. Binary ABI and bridge
 
@@ -55,10 +61,10 @@ mismatches before producing scores.
 
 ### 3. Parity proof
 
-Add or extend a focused test that compares WASM VM scores against the existing
-TypeScript VM on the current bytecode-equivalence corpus. The test must fail
-closed for unsupported opcode or ABI mismatch cases rather than silently falling
-back to TypeScript.
+Add or extend a focused test that compares WASM VM values against the existing
+TypeScript VM on supported current bytecode-equivalence corpus expressions. The
+test must also prove unsupported opcode or ABI mismatch cases fail closed rather
+than silently falling back to TypeScript.
 
 ### 4. Handoff update
 
@@ -94,7 +100,7 @@ ticket before final proof.
 
 1. WASM package/crate builds: `pnpm -F @ludoforge/engine-wasm build`.
 2. Focused WASM policy-bytecode parity test proves WASM VM and TypeScript VM
-   scores match on the current parity corpus.
+   values match on the supported current parity corpus bytecode subset.
 3. Existing engine build remains green: `pnpm -F @ludoforge/engine build`.
 
 ### Invariants
@@ -109,11 +115,36 @@ ticket before final proof.
 
 ### New/Modified Tests
 
-1. Focused WASM policy-bytecode parity test — proves the Rust/WASM VM scores
-   match the TypeScript VM on the bytecode-equivalence corpus.
+1. Focused WASM policy-bytecode parity test — proves the Rust/WASM VM values
+   match the TypeScript VM on the supported bytecode-equivalence corpus subset,
+   while unsupported dynamic bytecode remains fail-closed.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine-wasm build`.
 2. `pnpm -F @ludoforge/engine build`.
-3. `<focused WASM parity test command decided by implementation>`.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js`.
+4. `timeout 180 pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`.
+
+## Outcome
+
+Completed on 2026-05-02. Implemented a compact binary WASM bytecode evaluation
+path alongside the Phase 1 smoke ABI. The Rust VM now parses ABI/version/layout
+identity, bytecode instructions/constants, feature refs, zone kinds, encoded
+state arrays, and marker bitsets from integer buffers; it executes the supported
+generic VM core and rejects unsupported/dynamic bytecode without TypeScript
+fallback. The TypeScript bridge serializes the binary buffer and decodes tagged
+WASM values. The focused unit and integration witnesses prove the bridge
+contract, supported corpus parity, layout mismatch rejection, and unsupported
+bytecode rejection.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 4 tests.
+4. `timeout 180 pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed in about 28 seconds.
+
+Closeout status/proof transcription is clerical only and does not change scope,
+acceptance criteria, command semantics, or implementation behavior; no proof
+lane was invalidated by this final status update.

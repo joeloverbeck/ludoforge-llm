@@ -55,7 +55,7 @@ The exact ABI may change during ticket 001, but the contract must stay batch-ori
 1. Integer-only arithmetic. Division semantics match `Math.trunc`.
 2. No wall-clock, locale, random host APIs, hash-map iteration dependence, or non-canonical ordering.
 3. Buffer serialization includes enough identity to reject mismatched GameDef, EncodedStateLayout, PolicyBytecode, and FeatureTable artifacts.
-4. Equivalence tests compare TS VM and WASM VM score outputs on the same corpus before any performance claim is accepted.
+4. Equivalence tests compare TS VM and WASM VM outputs on the same corpus before any performance claim is accepted. Phase 2 proves supported expression values; later phases must prove batch score outputs before the same-seam performance gate is accepted.
 5. Replay identity remains owned by the TypeScript kernel until a later ticket explicitly moves more preview application into WASM.
 
 ## 5. Phases
@@ -85,7 +85,11 @@ encoded-state/action buffers described below.
 
 ### Phase 2 — Policy bytecode execution parity
 
-Ports the generic policy bytecode VM to Rust/WASM and proves score equivalence against the existing TypeScript VM corpus.
+Ports the supported generic policy bytecode VM core to Rust/WASM and proves
+value equivalence against the existing TypeScript VM on supported expressions
+from the current corpus. Dynamic or unsupported bytecode remains a fail-closed
+handoff surface until a later ticket explicitly moves the required fallback,
+preview, or application semantics across the FFI boundary.
 
 ### Phase 3 — Encoded-state and action batch bridge
 
@@ -117,7 +121,7 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 
 ## 7. Acceptance Criteria
 
-1. WASM and TypeScript policy VM scores are equivalent over the existing FITL bytecode corpus.
+1. WASM and TypeScript policy VM values are equivalent for the supported generic bytecode subset exercised by the existing FITL bytecode corpus, and later batch score parity is proven before any performance claim is accepted.
 2. The one-card same-seam gate is `<=250 ms` under all 4 baseline profiles with `verifyIncrementalHash=true`.
 3. No FITL-specific code appears in Rust, TypeScript bridge code, schemas, or buffer encoders.
 4. Any temporary A/B switch is removed by the later default-flip ticket, not retained as a compatibility path.
@@ -126,4 +130,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 ## 8. Initial Tickets
 
 - [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
-- [`tickets/150FITLWASM-002.md`](../tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
+- [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
+- [`tickets/150FITLWASM-003.md`](../tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.

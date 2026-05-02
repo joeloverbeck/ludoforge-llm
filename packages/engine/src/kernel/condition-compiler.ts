@@ -1,6 +1,7 @@
 import { getLatticeMap, getZoneMap } from './def-lookup.js';
 import { divisionByZeroError, missingBindingError, missingVarError, typeMismatchError, zonePropNotFoundError } from './eval-error.js';
 import type { ReadContext } from './eval-context.js';
+import { isNonEmptyArray } from './boolean-arity-policy.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import { matchesMembership } from './query-predicate.js';
@@ -591,6 +592,9 @@ export const tryCompileCondition = (
     }
 
     case 'and': {
+      if (!isNonEmptyArray(cond.args)) {
+        return null;
+      }
       const compiledArgs: CompiledConditionPredicate[] = [];
       for (const arg of cond.args) {
         const compiledArg = tryCompileCondition(arg);
@@ -604,6 +608,9 @@ export const tryCompileCondition = (
     }
 
     case 'or': {
+      if (!isNonEmptyArray(cond.args)) {
+        return null;
+      }
       const compiledArgs: CompiledConditionPredicate[] = [];
       for (const arg of cond.args) {
         const compiledArg = tryCompileCondition(arg);

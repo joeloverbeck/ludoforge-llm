@@ -61,7 +61,7 @@ Foundation-aligned decision:
 - F14 still requires closure-tree deletion once VM defaulting is truthful.
 - F15/F16 forbid default-flipping while the original Phase 4 per-card gate remains red.
 - The remaining work is formalized as Phase 4B runtime closure:
-  - `tickets/149FITLEVNUMVM-019.md` — generic kernel expression/query AOT or bytecode.
+  - `archive/tickets/149FITLEVNUMVM-019.md` — generic kernel expression/query AOT or bytecode.
   - `tickets/149FITLEVNUMVM-020.md` — preview state and token-index lifetime redesign.
   - `tickets/149FITLEVNUMVM-021.md` — preview hashing and verification strategy.
   - `tickets/149FITLEVNUMVM-022.md` — final reprofile gate that unblocks this ticket only if `<=250 ms` is truthful.

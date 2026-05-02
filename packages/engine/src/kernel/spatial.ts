@@ -1,6 +1,6 @@
 import type { Diagnostic } from './diagnostics.js';
 import type { ZoneId } from './branded.js';
-import { evalCondition } from './eval-condition.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import type { ReadContext } from './eval-context.js';
 import type { ConditionAST, GameState, Token, ZoneDef } from './types.js';
 
@@ -218,7 +218,7 @@ function evaluateVia(
     return true;
   }
 
-  return evalCondition(via, {
+  return evaluateConditionWithCache(via, {
     ...evalCtx,
     state,
     bindings: {

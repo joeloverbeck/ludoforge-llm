@@ -11,7 +11,9 @@ import {
   asTokenId,
   asZoneId,
   evalQuery,
+  getCompiledCondition,
   isEvalErrorCode,
+  type ConditionAST,
   type ReadContext,
   type GameDef,
   type GameState,
@@ -699,6 +701,21 @@ describe('evalQuery', () => {
 
     assert.deepEqual(evalQuery({ query: 'zones' }, ctx), ['battlefield:none', 'bench:1', 'deck:none', 'hand:0', 'hand:1', 'tableau:2']);
     assert.deepEqual(evalQuery({ query: 'zones', filter: { owner: 'actor' } }, ctx), ['bench:1', 'hand:1']);
+  });
+
+  it('evaluates zones.filter.condition through a compilable query predicate', () => {
+    const ctx = makeCtx();
+    const condition = {
+      op: '!=',
+      left: { _t: 2, ref: 'binding', name: '$zone' },
+      right: 'deck:none',
+    } as const satisfies Exclude<ConditionAST, boolean>;
+
+    assert.notEqual(getCompiledCondition(condition), null);
+    assert.deepEqual(
+      evalQuery({ query: 'zones', filter: { condition } }, ctx),
+      ['battlefield:none', 'bench:1', 'hand:0', 'hand:1', 'tableau:2'],
+    );
   });
 
   it('evaluates assetRows using runtimeDataAssets and preserves table order', () => {
@@ -1989,6 +2006,38 @@ describe('evalQuery', () => {
     assert.deepEqual(evalQuery({ query: 'mapSpaces' }, ctx), ['battlefield:none']);
   });
 
+  it('evaluates tokensInMapSpaces.spaceFilter.condition through a compilable query predicate', () => {
+    const defWithBoardZones = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) =>
+        zone.id === asZoneId('battlefield:none') || zone.id === asZoneId('tableau:2')
+          ? { ...zone, zoneKind: 'board' as const }
+          : zone,
+      ),
+    };
+    const ctx = makeCtx({
+      def: defWithBoardZones,
+      adjacencyGraph: buildAdjacencyGraph(defWithBoardZones.zones),
+    });
+    const condition = {
+      op: '==',
+      left: { _t: 2, ref: 'binding', name: '$zone' },
+      right: 'battlefield:none',
+    } as const satisfies Exclude<ConditionAST, boolean>;
+
+    assert.notEqual(getCompiledCondition(condition), null);
+    assert.deepEqual(
+      evalQuery({ query: 'tokensInMapSpaces', spaceFilter: { condition } }, ctx).map((token) => (token as Token).id),
+      [
+        asTokenId('us-troop-1'),
+        asTokenId('us-troop-2'),
+        asTokenId('arvn-troop-1'),
+        asTokenId('nva-guerrilla-1'),
+        asTokenId('vc-guerrilla-1'),
+      ],
+    );
+  });
+
   it('mapSpaces excludes aux zones even when category is present', () => {
     const defWithCategorizedAuxZone = {
       ...makeDef(),
@@ -2128,6 +2177,11 @@ describe('evalQuery', () => {
 
   it('evaluates spatial query variants with deterministic ordering', () => {
     const ctx = makeCtx();
+    const via = {
+      op: 'in',
+      item: { _t: 2, ref: 'binding', name: '$zone' },
+      set: { _t: 2, ref: 'binding', name: '$allowed' },
+    } as const satisfies Exclude<ConditionAST, boolean>;
 
     assert.deepEqual(evalQuery({ query: 'adjacentZones', zone: 'deck:none' }, ctx), [
       asZoneId('hand:0'),
@@ -2142,11 +2196,7 @@ describe('evalQuery', () => {
         {
           query: 'connectedZones',
           zone: 'deck:none',
-          via: {
-            op: 'in',
-            item: { _t: 2 as const, ref: 'binding', name: '$zone' },
-            set: { _t: 2 as const, ref: 'binding', name: '$allowed' },
-          },
+          via,
         },
         {
           ...ctx,
@@ -2158,6 +2208,7 @@ describe('evalQuery', () => {
       ),
       [asZoneId('hand:0'), asZoneId('bench:1')],
     );
+    assert.notEqual(getCompiledCondition(via), null);
   });
 
   it('evaluates spatial query variants when zone is resolved from zoneExpr', () => {

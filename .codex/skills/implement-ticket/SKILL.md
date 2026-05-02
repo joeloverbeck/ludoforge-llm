@@ -202,6 +202,8 @@ Load `references/triage-and-resolution.md` (Stop Conditions and Boundary Resets 
 
 For boundary-reset decision paths that apply after a bounded slice lands but the acceptance story shifts (broad acceptance lane classification, moved live blocker, diagnostic narrowing loop, non-implementation boundary rewrite cleanup, same-ticket widened re-entry, successor ticket re-entry, post-closeout reopen), load `references/boundary-reset-recovery.md`.
 
+**STOP before coding**: emit the compact working-notes checkpoint now, using the checklist under `## Working Notes`. Do this after reassessment has identified the authoritative boundary and before the first file edit, even when the boundary is straightforward.
+
 ## Implementation Rules
 
 Load `references/implementation-general.md` by default for non-bounded tickets, and for bounded local refactors only when the ticket widens beyond a simple local change, exposes split ownership/follow-up handling, or otherwise needs the broader implementation guidance. Covers general principles, TDD for implementation-discovered defects, narrowest-witness preference, bounded campaign reductions, diagnostic instrumentation, follow-up ticket creation, exploratory-diff classification, named-witness regression loop, representative-corpus preflight, same-ticket widened continuation, synthetic fixture setup, regression placement triage, and direct fallout test triage.
@@ -223,6 +225,10 @@ For performance, profiling, or audit gates, a green TAP/process exit is not enou
       node -e "const fs=require('fs'); for (const file of process.argv.slice(1)) { const p=JSON.parse(fs.readFileSync(file,'utf8')); const idToNode=new Map(p.nodes.map(n=>[n.id,n])); const parent=new Map(); for (const n of p.nodes) for (const c of n.children||[]) parent.set(c,n.id); const self=new Map(); for (const id of p.samples||[]) { const n=idToNode.get(id); const name=n?.callFrame?.functionName||'(anonymous)'; self.set(name,(self.get(name)||0)+1); } console.log('\\nFILE '+file); console.log([...self].sort((a,b)=>b[1]-a[1]).slice(0,15).map(([k,v])=>k+':'+v).join('\\n')); }" <profile.cpuprofile>
       ```
       For parent-stack ownership, extend the same script by filtering samples for the hot function and counting `parent.get(sampleId)` function names. Avoid shell template literals in `node -e` snippets; use string concatenation so backticks are not eaten by the shell.
+    - For tickets whose acceptance is a named aggregate bucket rather than one top frame, also compute a grouped percentage. Use exact function/file matchers that mirror the ticket wording, report `selected / total = pct`, and record the parser method in the ticket outcome. Example shape:
+      ```bash
+      node -e "const fs=require('fs'); const groups=[['kernel-query',['resolve-ref.js','eval-condition.js','eval-value.js','eval-query.js','spatial.js','token-filter-compiler.js']]]; for (const file of process.argv.slice(1)) { const p=JSON.parse(fs.readFileSync(file,'utf8')); const idToNode=new Map(p.nodes.map(n=>[n.id,n])); const total=(p.samples||[]).length; console.log('FILE '+file); for (const [label,files] of groups) { let selected=0; for (const id of p.samples||[]) { const n=idToNode.get(id); const url=n?.callFrame?.url||''; if (files.some(f=>url.endsWith(f))) selected++; } console.log(label+'='+selected+'/'+total+' pct='+(selected/total*100).toFixed(2)); } }" <profile.cpuprofile>
+      ```
   - When a CPU-profile result changes ownership or justifies a follow-up split, record a compact ownership ledger in the active ticket before final proof:
     - `profile command`
     - `profile artifact path` or explicit ephemeral-path note

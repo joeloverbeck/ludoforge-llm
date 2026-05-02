@@ -1,7 +1,7 @@
 import { getMaxQueryResults, type ReadContext } from './eval-context.js';
 import { isRecoverableEvalResolutionError } from './eval-error-classification.js';
 import { missingVarError, queryBoundsExceededError, typeMismatchError } from './eval-error.js';
-import { evalCondition } from './eval-condition.js';
+import { evaluateConditionWithCache } from './compiled-condition-expr-cache.js';
 import { evalValue } from './eval-value.js';
 import { shouldDeferFreeOperationZoneFilterFailure } from './missing-binding-policy.js';
 import {
@@ -421,7 +421,7 @@ const evaluateFreeOperationZoneFilterForZone = (
     zoneId,
     baseBindings: ctx.bindings,
     rebindableAliases,
-    evaluateWithBindings: (bindings) => evalCondition(freeOperationZoneFilter, {
+    evaluateWithBindings: (bindings) => evaluateConditionWithCache(freeOperationZoneFilter, {
       ...ctx,
       bindings,
     }),
@@ -456,7 +456,7 @@ function applyZonesFilter(
 
   if (queryCondition !== undefined) {
     filteredZones = filteredZones.filter((zone) => {
-      return evalCondition(queryCondition, {
+      return evaluateConditionWithCache(queryCondition, {
         ...ctx,
         bindings: {
           ...ctx.bindings,
@@ -599,7 +599,7 @@ function evalNextInOrderByConditionQuery(
   const startOffset = query.includeFrom === true ? 0 : 1;
   for (let offset = 0; offset < sourceOrder.length; offset += 1) {
     const candidate = sourceOrder[normalizeOrderIndex(anchorIndex + startOffset + offset, sourceOrder.length)]!;
-    const matches = evalCondition(query.where, {
+    const matches = evaluateConditionWithCache(query.where, {
       ...ctx,
       bindings: {
         ...ctx.bindings,

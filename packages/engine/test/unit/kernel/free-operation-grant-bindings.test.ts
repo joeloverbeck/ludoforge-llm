@@ -123,7 +123,8 @@ const createExecutionContextBindingState = (): GameState =>
       runtime: {
         seatOrder: ['US', 'NVA'],
         eligibility: { US: true, NVA: true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: 'US',
           secondEligible: null,
           actedSeats: [],

@@ -19,6 +19,7 @@ import {
 } from '../../../src/kernel/index.js';
 import { asZoneId } from '../../../src/kernel/branded.js';
 import type { EventDeckDef } from '../../../src/kernel/types-events.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
 
@@ -57,7 +58,7 @@ function createMinimalCatalog(overrides?: {
     preview: { mode: overrides?.previewMode ?? 'exactWorld' },
     selection: { mode: 'argmax' as const },
   };
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'test-catalog',
     surfaceVisibility: {
@@ -87,7 +88,7 @@ function createMinimalCatalog(overrides?: {
     },
     profiles: { 'test-profile': profile },
     bindingsBySeat: { us: 'test-profile' },
-  };
+  });
 }
 
 function createDef(catalog: AgentPolicyCatalog, extras?: {

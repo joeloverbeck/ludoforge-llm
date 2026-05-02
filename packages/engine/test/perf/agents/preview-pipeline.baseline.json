@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-04-25T00:00:00Z",
+  "totalMs": 11486.28,
+  "perCandidateMs": 26.53,
+  "candidateBudget": 433,
+  "sampledActionSelectionCount": 50,
+  "corpus": {
+    "source": "live-production-fitl",
+    "game": "fire-in-the-lake",
+    "seed": 1000,
+    "maxTurns": 200,
+    "playerCount": 4,
+    "evolvedSeat": "arvn",
+    "sampleSize": 50,
+    "baselinePreviewMode": "disabled",
+    "seatProfiles": [
+      "us-baseline",
+      "arvn-evolved",
+      "nva-baseline",
+      "vc-baseline"
+    ]
+  }
+}

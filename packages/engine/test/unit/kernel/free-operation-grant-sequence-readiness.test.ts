@@ -142,7 +142,8 @@ const createSequenceState = (
     runtime: {
       seatOrder: ['us', 'arvn'],
       eligibility: { us: true, arvn: true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: 'us',
         secondEligible: 'arvn',
         actedSeats: [],

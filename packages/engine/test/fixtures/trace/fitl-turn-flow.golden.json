@@ -199,10 +199,11 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_2",
             "leaderCardId": null
           },
@@ -218,7 +219,8 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
             "playedCardId": "tok_card_2",
@@ -261,6 +263,13 @@
               "type": "card",
               "props": {
                 "isCoup": true
+              }
+            },
+            {
+              "id": "tok_card_3",
+              "type": "card",
+              "props": {
+                "isCoup": false
               }
             }
           ],
@@ -442,6 +451,13 @@
               "props": {
                 "isCoup": true
               }
+            },
+            {
+              "id": "tok_card_3",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
             }
           ],
           "lookahead:none": [
@@ -467,7 +483,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x57cbc25d15ac88f9",
+        "stateHash": "0xb209e887dcccbf01",
         "actionUsage": {
           "pass": {
             "turnCount": 0,
@@ -532,15 +548,16 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_1",
             "leaderCardId": null
           },
           "after": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_1",
             "leaderCardId": "tok_card_2"
           }
@@ -551,15 +568,16 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_1",
             "leaderCardId": "tok_card_2"
           },
           "after": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_1",
             "leaderCardId": "tok_card_2"
           }
@@ -570,10 +588,11 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
-            "playedCardId": null,
+            "playedCardId": "tok_card_3",
             "lookaheadCardId": "tok_card_1",
             "leaderCardId": "tok_card_2"
           },
@@ -589,7 +608,8 @@
           "slots": {
             "played": "played:none",
             "lookahead": "lookahead:none",
-            "leader": "leader:none"
+            "leader": "leader:none",
+            "discard": "played:none"
           },
           "before": {
             "playedCardId": "tok_card_1",
@@ -621,6 +641,13 @@
           "played:none": [
             {
               "id": "tok_card_1",
+              "type": "card",
+              "props": {
+                "isCoup": false
+              }
+            },
+            {
+              "id": "tok_card_3",
               "type": "card",
               "props": {
                 "isCoup": false
@@ -658,7 +685,7 @@
             "0xda3e39cb94b95b55"
           ]
         },
-        "stateHash": "0x57cbc25d15ac88f9",
+        "stateHash": "0xb209e887dcccbf01",
         "actionUsage": {
           "pass": {
             "turnCount": 0,

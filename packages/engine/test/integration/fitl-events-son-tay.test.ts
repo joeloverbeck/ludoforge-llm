@@ -71,7 +71,7 @@ const setupCardDrivenState = (
         ...runtime,
         seatOrder: ['nva', 'vc', 'us', 'arvn'],
         eligibility,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible,
           secondEligible,

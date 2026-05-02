@@ -5,7 +5,9 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null;
 
 // Use Sets for O(1) key validation without array allocation.
-const EVAL_RUNTIME_RESOURCE_KEYS_SET: ReadonlySet<string> = new Set(['collector']);
+// `resolveRefCache` is the optional drive-scoped memoisation cache wired by
+// POLPREVDRIVE-004; non-drive paths leave it unset.
+const EVAL_RUNTIME_RESOURCE_KEYS_SET: ReadonlySet<string> = new Set(['collector', 'resolveRefCache']);
 const EVAL_RUNTIME_COLLECTOR_KEYS_SET: ReadonlySet<string> = new Set([
   'warnings', 'trace', 'conditionTrace', 'decisionTrace', 'selectorTrace', 'nextSeq',
 ]);

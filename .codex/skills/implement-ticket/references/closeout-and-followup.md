@@ -29,6 +29,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
+- reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
@@ -38,7 +39,11 @@ Before declaring completion or updating the ticket status, run one final accepta
 
 ## Acceptance-Proof Invalidation
 
-Acceptance-proof runs are invalidated by later edits. If any code, tests, fixtures, schemas, goldens, generated artifacts, or active-ticket text changes after the last green acceptance-proof lane, rerun the full acceptance-proof set before marking the ticket complete. Do not rely on an earlier green run once the final diff has changed.
+Acceptance-proof runs are invalidated by later edits to the proved surface or acceptance story. If code, tests, fixtures, schemas, goldens, generated artifacts, status, scope, touched-file expectations, command ledgers, acceptance wording, or proof claims change after the last green acceptance-proof lane, rerun the narrowest affected proof lanes before marking the ticket complete. Do not rely on an earlier green run once the final diff has changed.
+
+Purely clerical ticket/spec edits, such as typo fixes or appending evidence that does not alter status, scope, command coverage, or proof claims, may preserve earlier proof only when you record an explicit no-invalidation decision in the ticket outcome or final closeout. If there is any doubt whether the edit changes the acceptance story, treat it as proof-affecting and rerun the affected lane.
+
+Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
@@ -58,9 +63,12 @@ When the active tracked ticket was truthfully narrowed or rewritten and the owne
 
 - `COMPLETED`: the rewritten active ticket's owned boundary is fully satisfied and no remaining blocker sits outside the ticket.
 - `BLOCKED by prerequisite`: the active ticket's owned work is done or partially done, but truthful closure still depends on another active ticket or unresolved external blocker. Record the landed slice and the blocker in the ticket outcome rather than leaving the state implicit.
+- `PHASE 1 COMPLETE / BLOCKED by Phase 2 approval`: the ticket itself is phase-gated, the investigation/report/harness phase landed, and the implementation phase remains explicitly gated by user or review approval. Record the completed phase artifact, approved boundary corrections, remaining gated phase, whether Phase 2 stays in the same ticket or moves to a successor, and the exact verification run for the completed phase.
 - `PENDING untouched`: reassessment showed the ticket should stay forward-looking because implementation did not yet land any owned deliverable.
 
 Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.
+
+If an explicit ticket-named broad acceptance lane is still red, `COMPLETED` is only truthful when the active ticket has first been rewritten to remove that lane from the owned boundary or the failures have been proven unrelated/pre-existing. A red changed-path, serialized-contract, or architectural-invariant failure should normally become `BLOCKED by prerequisite` or trigger 1-3-1 rather than a completed ticket plus an implicit follow-up.
 
 ## Optional State-Transition Ledger
 
@@ -123,6 +131,17 @@ If the session creates a new prerequisite/follow-up ticket or rewires deps acros
 2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
 3. fix any cycle or stale dependency before continuing to broader proof or final closeout
 
+## Follow-Up Ticket Creation During Implementation
+
+When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
+
+1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
+2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
+3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
+4. update the active ticket, sibling tickets, and deps/status fields so the series tells one ownership story
+5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
+6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep
+
 ## Sibling Absorbed Ownership
 
 When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:
@@ -135,6 +154,13 @@ Suggested compact sibling ledger:
 
 - `Historical Resolution`: `owned slice absorbed by <ticket> on <date> due to <boundary reason>; retained as historical draft-series record only.`
 
+When the sibling remains active but is narrowed rather than closed, use a compact handoff ledger instead of a historical-resolution note:
+
+- `absorbed by active ticket`: `<ticket id>` absorbed `<specific former sibling slice>` due to `<Foundation/live-proof reason>`
+- `remaining owned slice`: `<what this sibling still owns>`
+- `deps`: `unchanged | updated to <ticket id> | removed because <reason>`
+- `verification impact`: `<new proof lane or no change because <reason>>`
+
 ## Compact Final-Proof Ledger
 
 Suggested compact final-proof ledger:
@@ -144,6 +170,40 @@ Suggested compact final-proof ledger:
 - `subsumed proof`: `<ticket-named command> -> <broader lane>` when applicable
 - `proof gaps`: `none` or `<remaining blocker>`
 - `architectural follow-up`: `<new spec/ticket id or proposed artifact> for <cross-ticket contract discovered during implementation>` when the ticket uncovered a broader design gap that outlives the local fix
+
+For benchmark tickets with tried-and-reverted candidates, add a compact attempt ledger when it prevents future repetition:
+
+- `candidate`: `<optimization/probe tried>`
+- `correctness proof`: `<focused command or not reached>`
+- `measurement`: `<sample/result/profile summary>`
+- `decision`: `kept | reverted | abandoned | accepted by user exception`
+
+For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
+
+- `accepted implementation`: `<landed root-cause reduction and files/seam changed>`
+- `green proof`: `<focused build/test/correctness lanes>`
+- `measured improvement`: `<owned root-cause metric before -> after, plus command/artifact>`
+- `red acceptance lane`: `<ticket-named command and exact red result>`
+- `durable status`: `IN PROGRESS | BLOCKED | PARTIAL | repo-equivalent`
+- `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`
+- `next authorization`: `<already user-approved continuation, 1-3-1 needed, or intentionally deferred>`
+
+For a user-approved acceptance exception on a red measured gate, make the exception explicit:
+
+- `original gate`: `<metric and threshold>`
+- `measured result`: `<samples, mean, variance, pass=false>`
+- `authorization`: `<user-approved close-enough / waiver wording and date>`
+- `durable status`: `<COMPLETED by user-approved acceptance exception or repo-equivalent>`
+- `residual risk`: `<remaining hotspot/follow-up omitted or named owner>`
+
+When a ticket-named broad lane remains red, use a more explicit residual handoff ledger:
+
+- `red lane`: `<ticket-named command>`
+- `direct rerun`: `<first failing file/command rerun directly>`
+- `assertion`: `<short failing assertion or error class>`
+- `classification`: `owned failure | same-series residual / dependency blocker | repo-preexisting unrelated blocker`
+- `owner`: `<active ticket, sibling ticket, external blocker, or unknown>`
+- `durable status`: `<COMPLETED | BLOCKED by prerequisite | PENDING untouched | repo-equivalent>`
 
 Investigation-ticket example when the artifact landed but the hypothesis shifted:
 

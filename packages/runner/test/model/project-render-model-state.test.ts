@@ -333,6 +333,7 @@ function withStateMetadata(baseDef: GameDef, baseState: GameState): { readonly d
           us: true,
           nva: true,
         },
+        lifecycleStatus: { stalled: false },
         currentCard: {
           firstEligible: 'us',
           secondEligible: 'nva',
@@ -757,6 +758,7 @@ describe('projectRenderModel state metadata', () => {
             us: true,
             nva: true,
           },
+          lifecycleStatus: { stalled: false },
           currentCard: {
             firstEligible: 'nva',
             secondEligible: 'us',

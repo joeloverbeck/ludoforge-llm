@@ -12,6 +12,7 @@ import {
 } from './types.js';
 import { applyMove } from '../apply-move.js';
 import { createEvalRuntimeResources } from '../eval-context.js';
+import type { ResolveRefCache } from '../resolve-ref.js';
 import { createGameDefRuntime, type GameDefRuntime } from '../gamedef-runtime.js';
 import { deepEqual } from '../deep-equal.js';
 import {
@@ -332,9 +333,10 @@ const applyChosenMove = (
   decision: Decision,
   options?: ExecutionOptions,
   runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
 ): ApplyDecisionResult => {
   const baseState = clearMicroturnState(def, state, runtime);
-  const applied = applyMove(def, baseState, move, options, runtime);
+  const applied = applyMove(def, baseState, move, options, runtime, resolveRefCache);
   const triggerFirings = [...applied.triggerFirings];
   const nextState = updateHash(def, {
     ...applied.state,
@@ -415,13 +417,14 @@ const continueResolvedMove = (
   decision: Decision,
   options: ExecutionOptions | undefined,
   runtime: GameDefRuntime,
+  resolveRefCache: ResolveRefCache | undefined,
 ): ApplyDecisionResult => {
   const continuation = resolveDecisionContinuation(def, canonicalState, move, { choose: () => undefined }, runtime);
   if (continuation.illegal !== undefined) {
     throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
   }
   if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-    return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, runtime);
+    return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, runtime, resolveRefCache);
   }
   return spawnPendingFrame(def, canonicalState, microturn, decision, continuation, runtime);
 };
@@ -468,6 +471,41 @@ export const applyPublishedDecision = (
 ): ApplyDecisionResult => {
   const resolvedRuntime = runtime ?? createGameDefRuntime(def);
   const canonicalState = withResolvedHash(def, state, resolvedRuntime);
+  return applyPublishedDecisionInternal(def, canonicalState, microturn, decision, options, resolvedRuntime, undefined);
+};
+
+/**
+ * Fast variant of {@link applyPublishedDecision} that skips the entry
+ * `withResolvedHash` call. The caller MUST guarantee `state.stateHash` is
+ * already canonical — typically because `state` comes straight from another
+ * kernel call (applyPublishedDecision / publishMicroturn) with no spread
+ * mutations in between.
+ *
+ * Used by the synthetic-completion driver inside `policy-preview.ts` to
+ * eliminate the redundant Zobrist recomputation per inner-microturn iteration.
+ */
+export const applyPublishedDecisionFromCanonicalState = (
+  def: GameDef,
+  state: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
+): ApplyDecisionResult => {
+  const resolvedRuntime = runtime ?? createGameDefRuntime(def);
+  return applyPublishedDecisionInternal(def, state, microturn, decision, options, resolvedRuntime, resolveRefCache);
+};
+
+const applyPublishedDecisionInternal = (
+  def: GameDef,
+  canonicalState: GameState,
+  microturn: ReturnType<typeof publishMicroturn>,
+  decision: Decision,
+  options: ExecutionOptions | undefined,
+  resolvedRuntime: GameDefRuntime,
+  resolveRefCache: ResolveRefCache | undefined,
+): ApplyDecisionResult => {
 
   if (decision.kind === 'actionSelection') {
     const move = decision.move ?? { actionId: decision.actionId, params: {} };
@@ -482,7 +520,7 @@ export const applyPublishedDecision = (
       throw new Error(`MICROTURN_APPLY_DECISION_CONTINUATION_ILLEGAL:${decision.kind}`);
     }
     if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-      return applyChosenMove(def, grantReconciledState, continuation.move, microturn, decision, options, resolvedRuntime);
+      return applyChosenMove(def, grantReconciledState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
     }
 
     const rootFrameId = grantReconciledState.nextFrameId ?? asDecisionFrameId(0);
@@ -562,11 +600,11 @@ export const applyPublishedDecision = (
         resolvedRuntime,
       );
       if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       return spawnPendingFrame(def, canonicalState, microturn, decision, continuation, resolvedRuntime);
     }
-    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'chooseNStep') {
@@ -639,7 +677,7 @@ export const applyPublishedDecision = (
             [decision.decisionKey]: advanced.nextContext.selectedSoFar,
           },
         };
-        return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime);
+        return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       return {
         state: nextState,
@@ -663,7 +701,7 @@ export const applyPublishedDecision = (
         resolvedRuntime,
       );
       if (continuation.nextDecision === undefined && continuation.stochasticDecision === undefined) {
-        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime);
+        return applyChosenMove(def, canonicalState, continuation.move, microturn, decision, options, resolvedRuntime, resolveRefCache);
       }
       const nextState = {
         ...canonicalState,
@@ -675,7 +713,7 @@ export const applyPublishedDecision = (
       ...canonicalState,
       decisionStack: [tracedRoot, top],
     };
-    return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMove(def, nextState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'stochasticResolve') {
@@ -691,7 +729,7 @@ export const applyPublishedDecision = (
         [decision.decisionKey]: decision.value,
       },
     };
-    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime);
+    return continueResolvedMove(def, canonicalState, move, microturn, decision, options, resolvedRuntime, resolveRefCache);
   }
 
   if (decision.kind === 'outcomeGrantResolve') {

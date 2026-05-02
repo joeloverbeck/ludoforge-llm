@@ -16,6 +16,7 @@ import {
   ActionExecutorSelSchema,
   ConditionASTSchema,
   EffectASTSchema,
+  FreeOperationTokenInterpretationRuleSchema,
   IntegerSchema,
   MacroOriginSchema,
   NumberSchema,
@@ -43,8 +44,9 @@ import {
   VictoryTerminalMetadataSchema,
   EventDeckSchema,
   ActionPipelineSchema,
+  ActionPipelineStageSchema,
   ActionRestrictionDefSchema,
-  TurnOrderSchema
+  TurnOrderSchema,
 } from './schemas-extensions.js';
 import {
   AttributeValueSchema,
@@ -835,6 +837,99 @@ const AgentPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
   ]),
 );
 
+const CompiledPolicyExprSchema: z.ZodTypeAny = z.lazy(() =>
+  z.union([
+    z.object({
+      kind: z.literal('literal'),
+      value: AgentPolicyLiteralSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('param'),
+      id: StringSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('ref'),
+      ref: CompiledAgentPolicyRefSchema,
+    }).strict(),
+    z.object({
+      kind: z.literal('op'),
+      op: z.union([
+        z.literal('abs'),
+        z.literal('add'),
+        z.literal('and'),
+        z.literal('boolToNumber'),
+        z.literal('clamp'),
+        z.literal('coalesce'),
+        z.literal('div'),
+        z.literal('eq'),
+        z.literal('gt'),
+        z.literal('gte'),
+        z.literal('if'),
+        z.literal('in'),
+        z.literal('lt'),
+        z.literal('lte'),
+        z.literal('max'),
+        z.literal('min'),
+        z.literal('mul'),
+        z.literal('ne'),
+        z.literal('neg'),
+        z.literal('not'),
+        z.literal('or'),
+        z.literal('sub'),
+      ]),
+      args: z.array(CompiledPolicyExprSchema),
+    }).strict(),
+    z.object({
+      kind: z.literal('zoneTokenAgg'),
+      zone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      owner: z.union([
+        z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS),
+        z.string().regex(/^[0-9]+$/),
+      ]),
+      prop: StringSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalTokenAgg'),
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('globalZoneAgg'),
+      source: z.enum(AGENT_POLICY_ZONE_AGG_SOURCES),
+      field: StringSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      zoneFilter: AgentPolicyZoneFilterSchema.optional(),
+      zoneScope: z.enum(AGENT_POLICY_ZONE_SCOPES),
+    }).strict(),
+    z.object({
+      kind: z.literal('adjacentTokenAgg'),
+      anchorZone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      tokenFilter: AgentPolicyTokenFilterSchema.optional(),
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+      prop: StringSchema.optional(),
+    }).strict(),
+    z.object({
+      kind: z.literal('seatAgg'),
+      over: z.union([
+        z.literal('opponents'),
+        z.literal('all'),
+        z.array(StringSchema).readonly(),
+      ]),
+      expr: CompiledPolicyExprSchema,
+      aggOp: z.enum(AGENT_POLICY_ZONE_TOKEN_AGG_OPS),
+    }).strict(),
+    z.object({
+      kind: z.literal('zoneProp'),
+      zone: z.union([StringSchema, CompiledPolicyExprSchema]),
+      prop: StringSchema,
+    }).strict(),
+  ]),
+);
+
 const AgentPolicyValueTypeSchema = z.union([
   z.literal('number'),
   z.literal('boolean'),
@@ -862,7 +957,6 @@ const CompiledAgentStateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
-    expr: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -871,7 +965,6 @@ const CompiledAgentCandidateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
-    expr: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -881,8 +974,6 @@ const CompiledAgentAggregateSchema = z
     type: AgentPolicyValueTypeSchema,
     costClass: AgentPolicyCostClassSchema,
     op: StringSchema,
-    of: AgentPolicyExprSchema,
-    where: AgentPolicyExprSchema.optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
   })
   .strict();
@@ -890,7 +981,6 @@ const CompiledAgentAggregateSchema = z
 const CompiledAgentPruningRuleSchema = z
   .object({
     costClass: AgentPolicyCostClassSchema,
-    when: AgentPolicyExprSchema,
     dependencies: CompiledAgentDependencyRefsSchema,
     onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
   })
@@ -900,12 +990,95 @@ const CompiledAgentConsiderationSchema = z
   .object({
     scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
-    when: AgentPolicyExprSchema.optional(),
-    weight: AgentPolicyExprSchema,
-    value: AgentPolicyExprSchema,
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyConsiderationSchema = z
+  .object({
+    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
+    costClass: AgentPolicyCostClassSchema,
+    when: CompiledPolicyExprSchema.optional(),
+    weight: CompiledPolicyExprSchema,
+    value: CompiledPolicyExprSchema,
+    unknownAs: NumberSchema.optional(),
+    clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyStateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyCandidateFeatureSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    expr: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyAggregateSchema = z
+  .object({
+    type: AgentPolicyValueTypeSchema,
+    costClass: AgentPolicyCostClassSchema,
+    op: StringSchema,
+    of: CompiledPolicyExprSchema,
+    where: CompiledPolicyExprSchema.optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyPruningRuleSchema = z
+  .object({
+    costClass: AgentPolicyCostClassSchema,
+    when: CompiledPolicyExprSchema,
+    dependencies: CompiledAgentDependencyRefsSchema,
+    onEmpty: z.union([z.literal('skipRule'), z.literal('error')]),
+  })
+  .strict();
+
+const CompiledPolicyTieBreakerSchema = z
+  .object({
+    kind: StringSchema,
+    costClass: AgentPolicyCostClassSchema,
+    value: CompiledPolicyExprSchema.optional(),
+    order: z.array(StringSchema).optional(),
+    dependencies: CompiledAgentDependencyRefsSchema,
+  })
+  .strict();
+
+const CompiledPolicyStrategicConditionSchema = z
+  .object({
+    target: CompiledPolicyExprSchema,
+    proximity: z
+      .object({
+        current: CompiledPolicyExprSchema,
+        threshold: NumberSchema,
+      })
+      .strict()
+      .optional(),
+  })
+  .strict();
+
+const CompiledPolicyCatalogSchema = z
+  .object({
+    stateFeatures: z.record(StringSchema, CompiledPolicyStateFeatureSchema),
+    candidateFeatures: z.record(StringSchema, CompiledPolicyCandidateFeatureSchema),
+    candidateAggregates: z.record(StringSchema, CompiledPolicyAggregateSchema),
+    pruningRules: z.record(StringSchema, CompiledPolicyPruningRuleSchema),
+    considerations: z.record(StringSchema, CompiledPolicyConsiderationSchema),
+    tieBreakers: z.record(StringSchema, CompiledPolicyTieBreakerSchema),
+    strategicConditions: z.record(StringSchema, CompiledPolicyStrategicConditionSchema),
   })
   .strict();
 
@@ -913,7 +1086,6 @@ const CompiledAgentTieBreakerSchema = z
   .object({
     kind: StringSchema,
     costClass: AgentPolicyCostClassSchema,
-    value: AgentPolicyExprSchema.optional(),
     order: z.array(StringSchema).optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
   })
@@ -921,10 +1093,8 @@ const CompiledAgentTieBreakerSchema = z
 
 const CompiledStrategicConditionSchema = z
   .object({
-    target: AgentPolicyExprSchema,
     proximity: z
       .object({
-        current: AgentPolicyExprSchema,
         threshold: NumberSchema,
       })
       .strict()
@@ -959,6 +1129,9 @@ const CompiledAgentProfileSchema = z
     preview: z
       .object({
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
+        completion: z.enum(['greedy', 'agentGuided']).optional(),
+        completionDepthCap: z.number().int().positive().optional(),
+        topK: z.number().int().positive().optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })
@@ -988,6 +1161,7 @@ const AgentPolicyCatalogSchema = z
     parameterDefs: z.record(StringSchema, CompiledAgentParameterDefSchema),
     candidateParamDefs: z.record(StringSchema, CompiledAgentCandidateParamDefSchema),
     library: CompiledAgentLibraryIndexSchema,
+    compiled: CompiledPolicyCatalogSchema,
     profiles: z.record(StringSchema, CompiledAgentProfileSchema),
     bindingsBySeat: z.record(StringSchema, StringSchema),
   })
@@ -1173,14 +1347,144 @@ export const StochasticDistributionSchema = z
   })
   .strict();
 
-export const EffectExecutionFrameSnapshotSchema = z
+export const DecisionScopeSchema = z
+  .object({
+    iterationPath: StringSchema,
+    counters: z.record(StringSchema, NumberSchema),
+  })
+  .strict();
+
+export const SuspendedChoiceBindingOptionSchema = z
+  .object({
+    comparable: MoveParamScalarSchema,
+    binding: z.unknown(),
+  })
+  .strict();
+
+export const SuspendedChooseOneLeafSchema = z
+  .object({
+    kind: z.literal('chooseOne'),
+    decisionKey: StringSchema,
+    bind: StringSchema,
+    decisionScope: DecisionScopeSchema,
+    bindingOptions: z.array(SuspendedChoiceBindingOptionSchema),
+  })
+  .strict();
+
+export const SuspendedChooseNLeafSchema = z
+  .object({
+    kind: z.literal('chooseN'),
+    decisionKey: StringSchema,
+    bind: StringSchema,
+    decisionScope: DecisionScopeSchema,
+    bindingOptions: z.array(SuspendedChoiceBindingOptionSchema),
+  })
+  .strict();
+
+export const SuspendedDecisionLeafSchema = z.discriminatedUnion('kind', [
+  SuspendedChooseOneLeafSchema,
+  SuspendedChooseNLeafSchema,
+]);
+
+export const SuspendedSequenceResumeFrameSchema = z
+  .object({
+    kind: z.literal('sequence'),
+    effects: z.array(EffectASTSchema),
+  })
+  .strict();
+
+export const SuspendedForEachResumeFrameSchema = z
+  .object({
+    kind: z.literal('forEach'),
+    bind: StringSchema,
+    items: z.array(z.unknown()),
+    nextIndex: NumberSchema,
+    effects: z.array(EffectASTSchema),
+    parentBindings: z.record(StringSchema, z.unknown()),
+    parentIterationPath: StringSchema,
+  })
+  .strict();
+
+export const SuspendedLetResumeFrameSchema = z
+  .object({
+    kind: z.literal('let'),
+    bind: StringSchema,
+    parentBindings: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const SuspendedReduceResumeFrameSchema = z
+  .object({
+    kind: z.literal('reduce'),
+    bind: StringSchema,
+    parentBindings: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const SuspendedPipelineResumeFrameSchema = z
+  .object({
+    kind: z.literal('pipeline'),
+    actionId: StringSchema,
+    profileId: StringSchema,
+    atomicity: z.union([z.literal('atomic'), z.literal('partial')]),
+    remainingStages: z.array(ActionPipelineStageSchema),
+    eventEffects: z.array(EffectASTSchema),
+  })
+  .strict();
+
+export const SuspendedResumeFrameSchema = z.discriminatedUnion('kind', [
+  SuspendedSequenceResumeFrameSchema,
+  SuspendedForEachResumeFrameSchema,
+  SuspendedLetResumeFrameSchema,
+  SuspendedReduceResumeFrameSchema,
+  SuspendedPipelineResumeFrameSchema,
+]);
+
+export const FreeOperationZoneFilterDiagnosticsSchema = z
+  .object({
+    source: StringSchema,
+    actionId: StringSchema,
+    moveParams: z.record(StringSchema, z.unknown()),
+  })
+  .strict();
+
+export const FreeOperationExecutionOverlaySchema = z
+  .object({
+    zoneFilter: ConditionASTSchema.optional(),
+    bindingCountZoneFilter: ConditionASTSchema.optional(),
+    zoneFilterDiagnostics: FreeOperationZoneFilterDiagnosticsSchema.optional(),
+    grantContext: z.record(StringSchema, MoveParamValueSchema).optional(),
+    capturedSequenceZonesByKey: z.record(StringSchema, z.array(StringSchema)).optional(),
+    tokenInterpretations: z.array(FreeOperationTokenInterpretationRuleSchema).optional(),
+  })
+  .strict();
+
+export const SerializedRngSchema = z
+  .object({
+    state: z.lazy(() => SerializedRngStateSchema),
+  })
+  .strict();
+
+export const SerializedSuspendedEffectFrameSnapshotSchema: z.ZodTypeAny = z
+  .object({
+    state: z.lazy((): z.ZodTypeAny => SerializedGameStateSchema),
+    rng: SerializedRngSchema,
+    actorPlayer: IntegerSchema,
+    bindings: z.record(StringSchema, z.unknown()),
+    freeOperationOverlay: FreeOperationExecutionOverlaySchema.optional(),
+    leaf: SuspendedDecisionLeafSchema,
+    resumeStack: z.array(SuspendedResumeFrameSchema),
+  })
+  .strict();
+
+export const EffectExecutionFrameSnapshotSchema: z.ZodTypeAny = z
   .object({
     programCounter: NumberSchema,
     boundedIterationCursors: z.record(StringSchema, NumberSchema),
     localBindings: z.record(StringSchema, MoveParamValueSchema),
     pendingTriggerQueue: z.array(StringSchema),
     decisionHistory: z.array(z.lazy(() => CompoundTurnTraceEntrySchema)).optional(),
-    suspendedFrame: z.unknown().optional(),
+    suspendedFrame: z.lazy((): z.ZodTypeAny => SerializedSuspendedEffectFrameSnapshotSchema).optional(),
   })
   .strict();
 
@@ -1338,7 +1642,7 @@ export const DecisionContextSchema = z.union([
   TurnRetirementContextSchema,
 ]);
 
-export const DecisionStackFrameSchema = z
+export const DecisionStackFrameSchema: z.ZodTypeAny = z
   .object({
     frameId: NumberSchema,
     parentFrameId: NumberSchema.nullable(),
@@ -1665,6 +1969,9 @@ const PolicyPreviewUnknownRefTraceSchema = z
       z.literal('hidden'),
       z.literal('unresolved'),
       z.literal('failed'),
+      z.literal('depthCap'),
+      z.literal('noPreviewDecision'),
+      z.literal('gated'),
     ]),
   })
   .strict();
@@ -1685,7 +1992,12 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('hidden'),
       z.literal('unresolved'),
       z.literal('failed'),
+      z.literal('depthCap'),
+      z.literal('noPreviewDecision'),
+      z.literal('gated'),
     ]).optional(),
+    previewDriveDepth: IntegerSchema.nonnegative().optional(),
+    previewCompletionPolicy: z.enum(['greedy', 'agentGuided']).optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({
       actionId: StringSchema,
@@ -1719,6 +2031,9 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
     unknownRandom: NumberSchema,
     unknownHidden: NumberSchema,
     unknownUnresolved: NumberSchema,
+    unknownDepthCap: NumberSchema,
+    unknownNoPreviewDecision: NumberSchema,
+    unknownGated: NumberSchema,
     unknownFailed: NumberSchema,
   })
   .strict();
@@ -1757,6 +2072,8 @@ const AgentDecisionTraceSchema = z
     phase2Score: NumberSchema.nullable().optional(),
     phase1ActionRanking: z.array(StringSchema).optional(),
     finalScore: NumberSchema.nullable(),
+    previewGatedCount: IntegerSchema.nonnegative().optional(),
+    previewGatedTopFlipDetected: BooleanSchema.optional(),
     pruningSteps: z.array(PolicyPruningStepTraceSchema),
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,
@@ -1884,7 +2201,7 @@ export const GameTraceSchema = z
         end: NumberSchema,
       }).strict(),
       microturnCount: NumberSchema,
-      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns'), z.literal('noLegalMoves')]),
     }).strict()),
     finalState: GameStateSchema,
     result: TerminalResultSchema.nullable(),
@@ -1950,7 +2267,7 @@ export const SerializedRngStateSchema = z
   })
   .strict();
 
-export const SerializedGameStateSchema = z
+export const SerializedGameStateSchema: z.ZodTypeAny = z
   .object({
     globalVars: z.record(StringSchema, z.union([NumberSchema, BooleanSchema])),
     perPlayerVars: z.record(StringSchema, z.record(StringSchema, z.union([NumberSchema, BooleanSchema]))),
@@ -1970,7 +2287,7 @@ export const SerializedGameStateSchema = z
     globalMarkers: z.record(StringSchema, StringSchema).optional(),
     activeLastingEffects: z.array(ActiveLastingEffectSchema).optional(),
     interruptPhaseStack: z.array(InterruptPhaseFrameSchema).optional(),
-    decisionStack: z.array(z.lazy(() => DecisionStackFrameSchema)),
+    decisionStack: z.array(z.lazy((): z.ZodTypeAny => DecisionStackFrameSchema)),
     unavailableActionsPerTurn: z.record(StringSchema, z.array(StringSchema)).optional(),
     nextFrameId: NumberSchema,
     nextTurnId: NumberSchema,
@@ -2032,7 +2349,7 @@ export const SerializedGameTraceSchema = z
         end: NumberSchema,
       }).strict(),
       microturnCount: NumberSchema,
-      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns')]),
+      turnStopReason: z.union([z.literal('retired'), z.literal('terminal'), z.literal('maxTurns'), z.literal('noLegalMoves')]),
     }).strict()),
     finalState: SerializedGameStateSchema,
     result: TerminalResultSchema.nullable(),

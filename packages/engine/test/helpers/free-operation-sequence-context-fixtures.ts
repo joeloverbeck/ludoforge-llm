@@ -51,6 +51,7 @@ export const createSequenceContextMismatchTurnOrderState = (): Extract<GameState
   runtime: {
     seatOrder: ['0', '1'],
     eligibility: { '0': true, '1': true },
+    lifecycleStatus: { stalled: false },
     currentCard: {
       firstEligible: '0',
       secondEligible: '1',

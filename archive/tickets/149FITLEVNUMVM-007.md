@@ -1,0 +1,89 @@
+# 149FITLEVNUMVM-007: fitl-per-card-cost perf gate (5500 ms calibration)
+
+**Status**: NOT IMPLEMENTED
+**Priority**: MEDIUM
+**Effort**: Small
+**Engine Changes**: Yes — new test file
+**Deps**: `archive/tickets/149FITLEVNUMVM-006.md`, `archive/tickets/149FITLEVNUMVM-017.md`
+
+## Problem
+
+Spec 149 §6 mandates a new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` calibrated to 5500 ms after Phase 1 lands. The gate tightens at each phase boundary (3000 ms after Phase 2, 250 ms after Phase 4, 50 ms after Phase 5). This ticket adds the gate at its initial 5500 ms calibration after ticket 006's wiring lands and the follow-up measured-gate blocker is resolved.
+
+## Dependency Update (2026-04-29)
+
+Ticket 006 landed the encoded read-path implementation and score-equivalence proof, but its profiling smoke remained above the 5500 ms calibration (`elapsedMs=5986.48` / `agent:evaluatePolicyExpression=3455.01 ms` on the bucketed run; `elapsedMs=5999.65` after layout caching). This gate ticket now also depends on `149FITLEVNUMVM-017`, which owns the measured-gate investigation/optimization or re-spec decision. Do not author this perf gate while the calibrated budget is known-red.
+
+## Superseded Update (2026-04-30)
+
+Ticket `149FITLEVNUMVM-017` confirmed the Phase 1 stop condition and the user approved the corrected plan. The 5500 ms Phase 1 gate is not truthful, so this ticket must not add `fitl-per-card-cost.perf.test.ts` at that calibration. The per-card gate should be added or updated by the VM/default-flip path when `149FITLEVNUMVM-016` owns the Phase 4 `<=250 ms` budget.
+
+## Outcome (2026-04-30)
+
+Not implemented. The Phase 1 5500 ms gate was superseded by the user-approved
+Spec 149 stop-condition decision in `149FITLEVNUMVM-017`. Keep the per-card gate
+ownership with the VM/default-flip path at the truthful Phase 4 `<=250 ms`
+budget.
+
+## Assumption Reassessment (2026-04-28)
+
+1. The existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts` gates parity-drive cost on a different metric and continues to run unchanged. The new per-card gate is **additive**, not a replacement (per spec §6).
+2. `packages/engine/scripts/profile-fitl-preview-drive.mjs` exists and exposes the `--perCard --profilesAll` measurement command shape this gate will exercise programmatically.
+3. The 5500 ms target derives from the spec's Phase 1 acceptance budget (~15% gain from a baseline of ~6500 ms post-TURNPERF-002).
+
+## Architecture Check
+
+1. Gate is calibrated per spec; no arbitrary ad-hoc number. F8/F15 preserved.
+2. Gate runs in the existing `test:perf` lane (`packages/engine/package.json:53`) — no new CI mechanism needed.
+3. Gate exercises the wired encoded-state path from ticket 006; failure to meet 5500 ms means Phase 1's expected gain didn't materialize, triggering spec §12 stop conditions.
+
+## What to Change
+
+### 1. `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` (new)
+
+Test structure (`@test-class: architectural-invariant`):
+- Setup: load FITL GameDef + 4 baseline policy profiles (us-baseline, arvn-baseline, nva-baseline, vc-baseline).
+- For each profile, run a one-card simulation with `verifyIncrementalHash=true` and capture `elapsedMs`.
+- Assert: max `elapsedMs` across all 4 profiles ≤ 5500 ms.
+- Assertion failure should report all four per-profile elapsed values for diagnostic clarity.
+
+Use the existing `runOnce` helper pattern from `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts` to avoid duplication.
+
+### 2. Calibration documentation
+
+Add a top-of-file comment stating: this gate is calibrated to 5500 ms after Phase 1 (encoded-state wiring) lands. It tightens to 3000 ms after Phase 2 (apply/undo, ticket 009), 250 ms after Phase 4 (bytecode VM default-flip, ticket 016), and 50 ms after Phase 5 (Rust→WASM, separate spec).
+
+## Files to Touch
+
+- `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` (new)
+
+## Out of Scope
+
+- Recalibrating `fitl-parity-drive.perf.test.ts` (spec §6 says it remains unchanged through Phase 4).
+- Tightening this gate to 3000 ms / 250 ms — those are downstream tickets (009 / 016).
+
+## Acceptance Criteria
+
+### Tests That Must Pass
+
+1. New test: per-card cost ≤ 5500 ms across all 4 baseline profiles.
+2. Existing perf gate `fitl-parity-drive.perf.test.ts` continues to pass.
+3. Existing suite: `pnpm -F @ludoforge/engine test:perf`.
+
+### Invariants
+
+1. Gate uses `verifyIncrementalHash=true` (no shortcut to meet the budget).
+2. No game-specific FITL branches in the test scaffolding (other than loading the FITL GameDef as data).
+3. F8 preserved — no probabilistic acceptance.
+
+## Test Plan
+
+### New/Modified Tests
+
+1. `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` — the gate itself.
+
+### Commands
+
+1. `pnpm -F @ludoforge/engine build`.
+2. `pnpm -F @ludoforge/engine test:perf`.
+3. Targeted: `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/fitl-per-card-cost.perf.test.js`.

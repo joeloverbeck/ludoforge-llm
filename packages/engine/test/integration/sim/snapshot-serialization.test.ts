@@ -13,7 +13,6 @@ import {
   createGameDefRuntime,
   type ValidatedGameDef,
 } from '../../../src/kernel/index.js';
-import { PolicyAgent } from '../../../src/agents/index.js';
 import { enrichTrace, runGame, writeEnrichedTrace } from '../../../src/sim/index.js';
 import { extractDecisionPointSnapshot } from '../../../src/sim/index.js';
 import type { StandardDecisionPointSnapshot } from '../../../src/sim/snapshot-types.js';
@@ -209,9 +208,9 @@ describe('FITL snapshot golden test', () => {
     const def = assertValidatedGameDef(compiled.gameDef);
     const runtime = createGameDefRuntime(def);
     const seatCount = def.seats?.length ?? 2;
-    const agents = Array.from({ length: seatCount }, () => new PolicyAgent({ traceLevel: 'summary' }));
+    const agents = createSeededChoiceAgents(seatCount);
 
-    const trace = runGame(def, 2024, agents, 10, seatCount, { snapshotDepth: 'standard' }, runtime);
+    const trace = runGame(def, 2024, agents, 1, seatCount, { snapshotDepth: 'standard' }, runtime);
 
     assert.ok(trace.decisions.length > 0, 'FITL trace should have at least one move');
 

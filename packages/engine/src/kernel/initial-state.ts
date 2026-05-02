@@ -166,6 +166,7 @@ const resolveInitialTurnOrderState = (def: GameDef, playerCount: number): GameSt
     runtime: {
       seatOrder: [],
       eligibility: {},
+      lifecycleStatus: { stalled: false },
       currentCard: {
         firstEligible: null,
         secondEligible: null,

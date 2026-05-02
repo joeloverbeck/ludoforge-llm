@@ -81,7 +81,7 @@ const setupCardDrivenState = (
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible,
           secondEligible,
@@ -120,7 +120,7 @@ const withGrantReadyNva = (state: GameState): GameState => {
       type: 'cardDriven',
       runtime: {
         ...runtime,
-        currentCard: {
+    currentCard: {
           ...runtime.currentCard,
           firstEligible: 'nva',
           secondEligible: null,

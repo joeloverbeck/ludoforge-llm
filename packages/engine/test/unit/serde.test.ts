@@ -7,6 +7,7 @@ import { assertNoDiagnostics, assertNoErrors } from '../helpers/diagnostic-helpe
 import { readFixtureJson, readFixtureText } from '../helpers/fixture-reader.js';
 import {
   asActionId,
+  asDecisionFrameId,
   asSeatId,
   asTurnId,
   asPhaseId,
@@ -16,8 +17,9 @@ import {
   initialState,
   serializeGameState,
   serializeTrace,
+  SerializedGameStateSchema,
 } from '../../src/kernel/index.js';
-import type { GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
+import type { DecisionKey, DecisionStackFrame, GameState, GameTrace, SerializedGameState, SerializedGameTrace } from '../../src/kernel/index.js';
 
 const makeDecisionLog = (
   turn: number,
@@ -76,7 +78,7 @@ const traceFixture: GameTrace = {
         {
           kind: 'turnFlowLifecycle',
           step: 'promoteLookaheadToPlayed',
-          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none', discard: 'played:none' },
           before: { playedCardId: 'card-1', lookaheadCardId: 'card-2', leaderCardId: null },
           after: { playedCardId: 'card-2', lookaheadCardId: 'card-3', leaderCardId: null },
         },
@@ -95,6 +97,38 @@ const traceFixture: GameTrace = {
   traceProtocolVersion: 'spec-140',
 };
 
+const makeSuspendedFrame = (state: GameState): DecisionStackFrame => ({
+  frameId: asDecisionFrameId(0),
+  parentFrameId: null,
+  turnId: asTurnId(1),
+  context: {
+    kind: 'chooseOne',
+    seatId: asSeatId('0'),
+    decisionKey: '$choice' as DecisionKey,
+    options: [],
+  },
+  effectFrame: {
+    programCounter: 1,
+    boundedIterationCursors: {},
+    localBindings: {},
+    pendingTriggerQueue: [],
+    suspendedFrame: {
+      state,
+      rng: { state: { algorithm: 'pcg-dxsm-128', version: 1, state: [0x4n, 0x5n] } },
+      actorPlayer: asPlayerId(0),
+      bindings: {},
+      leaf: {
+        kind: 'chooseOne',
+        decisionKey: '$choice' as DecisionKey,
+        bind: '$choice',
+        decisionScope: { iterationPath: 'root', counters: {} },
+        bindingOptions: [{ comparable: 'alpha', binding: 'alpha' }],
+      },
+      resumeStack: [{ kind: 'sequence', effects: [] }],
+    },
+  },
+});
+
 describe('kernel bigint serialization codecs', () => {
   it('serializeGameState converts stateHash and RNG words to lowercase hex', () => {
     const serialized = serializeGameState(gameStateFixture);
@@ -109,7 +143,7 @@ describe('kernel bigint serialization codecs', () => {
 
   it('deserializeGameState reconstructs exact bigint values', () => {
     const serializedState: SerializedGameState = {
-      ...gameStateFixture,
+      ...serializeGameState(gameStateFixture),
       rng: { algorithm: 'pcg-dxsm-128', version: 1, state: ['0x0', '0x2aab'] },
       stateHash: '0xabcd',
     };
@@ -173,16 +207,62 @@ describe('kernel bigint serialization codecs', () => {
     );
   });
 
+  it('rejects old BigInt-bearing suspended-frame stateHash payloads at the schema boundary', () => {
+    const stateWithSuspendedFrame: GameState = {
+      ...gameStateFixture,
+      decisionStack: [makeSuspendedFrame(gameStateFixture)],
+      nextFrameId: asDecisionFrameId(1),
+      nextTurnId: asTurnId(2),
+      activeDeciderSeatId: asSeatId('0'),
+    };
+    const serialized = serializeGameState(stateWithSuspendedFrame);
+    const frame = serialized.decisionStack?.[0];
+    const suspendedFrame = frame?.effectFrame.suspendedFrame;
+    assert.ok(frame);
+    assert.ok(suspendedFrame);
+
+    const invalidPayload = {
+      ...serialized,
+      decisionStack: [
+        {
+          ...frame,
+          effectFrame: {
+            ...frame.effectFrame,
+            suspendedFrame: {
+              ...suspendedFrame,
+              state: {
+                ...suspendedFrame.state,
+                stateHash: 0xabcdn,
+              },
+            },
+          },
+        },
+      ],
+    };
+
+    assert.throws(
+      () => SerializedGameStateSchema.parse(invalidPayload),
+      (error: unknown) => {
+        const message = String(error);
+        assert.match(message, /decisionStack/);
+        assert.match(message, /suspendedFrame/);
+        assert.match(message, /stateHash/);
+        return true;
+      },
+    );
+  });
+
   it('rejects deserialized card-driven state with invalid deferred actorPlayer', () => {
     const serializedState: SerializedGameState = {
-      ...gameStateFixture,
+      ...serializeGameState(gameStateFixture),
       playerCount: 2,
       turnOrderState: {
         type: 'cardDriven',
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],

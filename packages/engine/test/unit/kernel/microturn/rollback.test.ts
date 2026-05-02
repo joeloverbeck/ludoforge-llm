@@ -225,6 +225,7 @@ describe('probe-hole rollback safety net', () => {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           pendingEligibilityOverrides: [],
+          lifecycleStatus: { stalled: false },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
@@ -301,6 +302,7 @@ describe('probe-hole rollback safety net', () => {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           pendingEligibilityOverrides: [],
+          lifecycleStatus: { stalled: false },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
@@ -348,6 +350,7 @@ describe('probe-hole rollback safety net', () => {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
           pendingEligibilityOverrides: [],
+          lifecycleStatus: { stalled: false },
           currentCard: {
             firstEligible: '0',
             secondEligible: '1',
@@ -398,7 +401,7 @@ describe('probe-hole rollback safety net', () => {
   });
 
   it('keeps recovery logs out of the decision log accumulator', () => {
-    const simulatorSource = readFileSync('src/sim/simulator.ts', 'utf8');
+    const simulatorSource = readFileSync('src/sim/run-game-steps.ts', 'utf8');
 
     assert.equal(/decisionLogs\.push\([^)]*probeHole/i.test(simulatorSource), false);
     assert.equal(/decisionLogs\.push\([^)]*rollback\.logEntry/i.test(simulatorSource), false);

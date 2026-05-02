@@ -22,13 +22,16 @@ When a change touches schemas or contracts, check updates across these layers:
 **Additive changes**:
 - New authored config key, surface family, or section field: update authored-shape doc types even if the ticket only names lowering or validator files.
 - Preparatory tickets may add optional schema/trace/contract fields ahead of logic tickets, so long as verification proves artifact surfaces remain in sync.
+- When adding a new schema file under an existing schema/artifact directory, classify it before implementation as `generator-owned` or `manual artifact`. Check the generator's file list or write targets, decide whether the new schema should be added to that list, and name the validation lane that proves the decision. If it is intentionally manual, record that in the ticket closeout so later schema-artifact runs are not misread as missing the new file.
 - For additive compiled-field migrations, requiring the new field in compiler-owned artifacts while leaving handwritten TypeScript fixtures temporarily optional is valid when explicit, Foundation-compliant, and verified.
 - If a new field mainly supports one feature path, consider keeping it optional on local test-helper contracts to avoid unnecessary fixture churn.
 
 **Required-field migrations**:
 - When an earlier ticket made a field required, add empty/default placeholders across constructors, defaults, fixtures, and goldens for atomicity.
 - When the current ticket makes a shared field required, repo-owned constructors, helpers, fixtures, runtime schemas, and generated artifacts are in-scope immediately.
+- For type-only serialized/exported contract tickets, do a source-producer preflight before coding: inspect the runtime serializers, deserializers, builders, fixtures, and public construction helpers that must actually create the narrowed type. If live typecheck would require runtime or fixture wiring for the new type to be true, treat the ticket as a Foundation 14/15 atomicity mismatch and stop for `1-3-1` before preserving a type-only split with casts or partial state.
 - Update shared helpers first, then use focused typecheck output for remaining inline fixtures.
+- For large hand-authored fixture fanout, use a guarded migration loop: update shared builders/default factories first; run the smallest build/typecheck lane that reveals remaining object literals; patch inline literals in small batches; avoid broad regex rewrites unless the pattern is structurally unambiguous; inspect `git diff --check` and targeted diffs for high-risk unrelated fixtures before broad verification. If a bulk rewrite goes wrong, restore only the affected files or hunks, rerun the focused typecheck/build, and continue from the shared-helper-first path.
 - Do not preserve a ticket's original slice when doing so would leave the repository in a broken mid-migration state. `FOUNDATIONS.md` SS14 and SS15 override slicing.
 - When a user-confirmed reassessment establishes a broader boundary, minimal repo-owned fallout may absorb sibling work if necessary for the confirmed boundary. Call out absorbed scope explicitly.
 - When tightening authored `chooseN` minimums: check whether runtime `max` can drop below the new `min`; if so, update legality/cost-validation in the same change.
@@ -79,6 +82,8 @@ When reassessing whether a ticket has underspecified constraints, inspect these 
 
 When a ticket changes an in-memory contract, object shape, or serialized surface, explicitly decide whether runtime and serialized representations are both supposed to change. Preserve or migrate serialized behavior intentionally, then record that decision in working notes before broader verification.
 
+For canonical serialized state or trace surfaces, preserve existing JSON property order unless the ticket explicitly owns a canonical-order migration. Golden snapshot failures that differ only by object key order are still real F8/F13 evidence: fix the producer order or truth the ticket before re-blessing.
+
 ## Post-Implementation Sweep for Broad Contract Migrations
 
 For broad contract migrations, representation changes, or identifier migrations, add an explicit post-implementation sweep before broad verification:
@@ -103,6 +108,11 @@ When the ticket introduces a shared contract surface but a downstream sibling st
 - decide whether the live boundary requires the new surface to be `required now`, `optional until sibling lands`, or `blocking until 1-3-1`
 - rewrite active draft acceptance text before completion if the original wording would misstate that interim contract
 - verify the interim shape with the narrowest build-safe proof lane instead of silently absorbing the downstream sibling's work
+
+When the staged surface is a partially populated compiled or serialized artifact:
+- record which descriptor families, fields, or producers are supported by the current ticket and which are deliberately deferred to siblings
+- include a compact compiled-versus-skipped coverage summary in the ticket outcome, proof helper output, or another durable closeout surface when the skipped portion is material to the handoff
+- verify that unsupported portions fail closed, remain absent, or are otherwise impossible to consume accidentally under the current ticket boundary
 
 ## Historical Benchmark Sweeps Across Worktrees
 

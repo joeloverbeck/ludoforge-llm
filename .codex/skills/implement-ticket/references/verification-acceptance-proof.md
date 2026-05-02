@@ -35,6 +35,21 @@ When the raw child command for a witness passes but the **wrapper script or pack
 3. classify whether the remaining failure lives in the child witness, the runner wrapper, or the package script contract
 4. if the wrapper alone is the failing seam and the ticket-owned metric depends on that wrapper's process boundary, treat the wrapper/package script as part of the active ticket's owned proof surface before more threshold tuning
 
+When a wrapper times out a focused witness that passes directly, calibrate the wrapper before reworking the witness:
+
+1. direct-run the first timed-out file or child command and record whether it passes plus its observed duration
+2. compare that duration to the wrapper's per-file or per-child timeout
+3. update the wrapper timeout only when the direct witness is healthy, the runtime is reasonable for the owned lane, and the wrapper is the authoritative ticket-named proof surface
+4. rerun the wrapper after the timeout change; do not claim the wrapper lane green from the direct child proof alone
+5. record the calibration rationale in the active ticket outcome/report when it changes a named acceptance command
+
+When a focused explicit-path invocation changes the wrapper semantics, treat that as command substitution rather than direct lane proof:
+
+1. inspect the wrapper plan or source to determine whether explicit paths preserve the lane timeout, execution mode, environment, reporter, and process boundary
+2. if the explicit-path mode drops a timeout or batches files differently, run the focused witness with an explicit bounded wrapper when budget matters
+3. record both facts in the active ticket: the original lane semantics and the focused substitute semantics
+4. do not claim the manifest-driven lane is green from an explicit-path run unless the semantics match or the active ticket has been corrected to accept the substitute proof
+
 ## Silent-But-Healthy Lanes
 
 When a focused proof lane is expected to be valid but runs silently for a long time in the current environment, do not immediately classify it as hung or non-final:
@@ -55,6 +70,26 @@ When a ticket-named **broad verification lane** (for example `pnpm turbo test`, 
 5. if it is `repo-preexisting unrelated blocker`, keep the lane in the ticket outcome, cite the concrete failing path/test, state that the owned slice did not touch that surface, and preserve the proof gap explicitly instead of claiming the broad lane passed
 6. only treat the ticket as closeable with that documented proof gap when the remaining acceptance evidence still truthfully proves the owned boundary and `AGENTS.md` does not require fixing the unrelated blocker or same-series residual as part of the ticket
 
+Status stop: if the broad lane was named by the active ticket and any direct-rerun failure exercises the changed execution path, changed serialized/shared contract, or an architectural invariant touched by the ticket, default the classification to `owned failure`. Do not set `**Status**: COMPLETED` until that failure is fixed, proven pre-existing outside the active boundary, or the user confirms a 1-3-1 boundary reset / sibling handoff that rewrites the active ticket's durable state.
+
+Same-environment baseline mini-protocol: when broad-lane timeout, benchmark, or wrapper behavior may be pre-existing and the classification matters to closeout, use a clean temporary worktree when proportionate:
+
+1. create a temp worktree at the comparison revision, usually current `HEAD` before your edits
+2. install/bootstrap/build only what that isolated worktree needs for the exact comparison command
+3. run the same bounded command with the same cwd and wrapper shape
+4. record both results and classify the current lane as introduced, pre-existing, or still unclassified
+5. remove the temp worktree and clean up the repo worktree registry; if cleanup is blocked by sandbox permissions, request approval rather than leaving stale worktree metadata
+
+Verification-fallout repair rule: when a ticket-named broad lane exposes a real repo bug that appears pre-existing but blocks the ticket's required acceptance lane, first decide whether it is small, low-risk, and in the same package or architectural contract family as the ticket-owned proof. If yes, fix it as verification fallout, keep the proof on a TDD-style red-green path when practical, and record the added touched file plus fallout rationale in the active ticket. If the fix would materially widen ownership, change an explicit deliverable, or has multiple plausible designs, stop for `1-3-1` or classify the blocker truthfully instead of absorbing it silently.
+
+When a ticket-named broad lane fails after otherwise successful focused proof, use this red-lane closeout choreography before any final status edit:
+
+1. rerun the first failing file/command directly when feasible
+2. classify each failure with its concrete path, assertion, and owner candidate
+3. update active and sibling tickets with that evidence before claiming final proof
+4. choose a truthful durable state (`COMPLETED`, `BLOCKED by prerequisite`, `PENDING untouched`, or repo-equivalent) from the rewritten active boundary
+5. if those edits change the acceptance story, rerun the narrowest affected proof lane or record a clerical-only invalidation decision
+
 For `packages/engine/test/unit/infrastructure/test-class-markers.test.ts`, treat the reported source file as the owner candidate before blaming the marker scan itself. Fix it when the named file is part of the active ticket or an immediately owned touched-file fallout surface. Otherwise, classify the failure as same-series metadata residue or unrelated marker drift, cite the named file in closeout, and keep the scan rule intact.
 
 ## Post-Proof-Edit Invalidation
@@ -66,6 +101,25 @@ After any acceptance or proof lane goes green, preserve that result only while t
 3. only treat the rerun set as the final proof record; earlier green runs become historical diagnostics, not closeout evidence
 
 Active ticket/spec/report metadata can be proof-affecting even when no runtime code changes. Edits to `Status`, `Outcome`, `Files to Touch`, `Acceptance Criteria`, command substitutions, or final proof ledgers after a proof lane passes require an explicit invalidation decision: either rerun the affected lane, or record why the edit is purely clerical and does not alter the acceptance story. Do not silently append metadata edits after broad proof and still cite the earlier lane as final.
+
+After green/classified final lanes, a terminal status update plus exact transcription of those just-run proof results can be a clerical closeout edit when it changes no scope, acceptance boundary, command semantics, touched-file ownership, proof claim, or follow-up/dependency classification. Record that no-invalidation decision in the ticket outcome or final closeout; otherwise rerun the narrowest affected proof lane.
+
+For expensive evidence or measurement tickets, distinguish **transcription edits** from **acceptance-story edits** before rerunning long lanes:
+
+1. if the post-proof edit only records already-run metrics, command outputs, durations, or a verdict already proven by the final lane, reread the edited artifact for consistency and run cheap hygiene checks such as `git diff --check`; a full empirical rerun is not required solely because the evidence was transcribed after the lane
+2. if the edit changes status, metric values, thresholds, acceptance boundaries, command semantics, touched-file ownership, or follow-up/dependency classification, rerun the narrowest affected proof lane before citing final acceptance
+3. if the distinction is unclear, treat the edit as acceptance-story affecting and rerun or stop for 1-3-1 when the rerun cost or boundary change is no longer clearly authorized
+
+## Post-Closeout Verification Correction
+
+If a follow-up investigation after a ticket was marked `COMPLETED` shows that a cited proof lane was misleading, stale, or misattributed, treat the ticket proof ledger as the owned artifact under repair:
+
+1. reopen the active ticket outcome/proof block and identify the exact prior claim that is now superseded
+2. classify whether the old result was `stale reporter label`, `harness-noisy / not final-confirmed`, `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`
+3. if the corrected evidence changes the ticket's acceptance story, status, command semantics, touched-file ownership, or proof boundary, update the ticket before rerunning final proof
+4. if the correction requires package-script, runner, lane-manifest, shard, or reporter changes, apply the Package Script / Runner Widening checklist below before final proof
+5. rerun the narrowest affected proof lane first, then any ticket-named broad lane whose final status was previously ambiguous
+6. preserve the historical observation as superseded evidence rather than deleting it when that context prevents future misdiagnosis
 
 ## Focused Recovery Loop
 
@@ -96,6 +150,8 @@ When a ticket begins as "test-only" or "single-file-only" but truthful proof req
 3. add or update the smallest guard test that pins the new script contract
 4. keep the widening surgical: prefer a dedicated package runner or narrow script change over broader lane-taxonomy edits unless the wider taxonomy is genuinely the owned boundary
 
+When noisy-harness triage shows the broad lane cannot identify the active child, or that a stale lane assignment is pulling an unrelated slow witness into a ticket-named acceptance command, evaluate package-script / runner widening before closing with a noisy-lane substitution. If you change the runner to improve attribution or move a witness between lanes, update the active ticket proof ledger and rerun the new final lane rather than treating the old lane result as final.
+
 ## Final-Proof Choreography
 
 For long tickets whose final proof requires multiple expensive lanes after ticket-artifact rewrites, choose the final-proof choreography explicitly instead of rerunning ad hoc:
@@ -107,3 +163,13 @@ For long tickets whose final proof requires multiple expensive lanes after ticke
 5. reconcile the final command ledger against the active ticket only after that exact rerun set completes
 
 If a late artifact rewrite or benchmark rebaseline lands between those steps, treat every affected downstream proof lane as stale and restart the choreography from the earliest impacted step rather than appending one more run to the end.
+
+## Acceptance Harness Rewrite Checkpoint
+
+When implementation work changes the acceptance harness shape itself — for example splitting a test file, changing shard membership, moving a witness between CI matrix entries, or replacing a trace-heavy assertion with a hook-based witness — insert a checkpoint before final proof:
+
+1. record the old acceptance lane and why it was redundant, stale, over-broad, or otherwise not the truthful final shape
+2. record the new lane(s), including CI/workflow ownership when applicable
+3. update the active ticket's acceptance wording before rerunning final proof
+4. rerun each new lane after the final build/artifact producer has completed
+5. keep the old lane out of the final proof ledger unless it still exists and was intentionally run

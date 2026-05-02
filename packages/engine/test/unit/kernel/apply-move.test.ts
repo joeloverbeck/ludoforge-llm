@@ -989,7 +989,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1082,7 +1083,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1217,7 +1219,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1300,7 +1303,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1398,7 +1402,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1480,7 +1485,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1558,7 +1564,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
     const baseRuntime = {
       seatOrder: ['0', '1'],
       eligibility: { '0': true, '1': true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: '0',
         secondEligible: '1',
         actedSeats: [],
@@ -1635,7 +1642,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
     const baseRuntime = {
       seatOrder: ['0', '1'],
       eligibility: { '0': true, '1': true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: '0',
         secondEligible: '1',
         actedSeats: [],
@@ -1715,7 +1723,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1800,7 +1809,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1895,7 +1905,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1985,7 +1996,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -2062,7 +2074,8 @@ describe('applyMove() required free-operation grant enforcement', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: null,
             actedSeats: [],
@@ -2150,7 +2163,8 @@ describe('applyMove() card seat-order boundary invariants', () => {
         runtime: {
           seatOrder: ['us', 'nva'],
           eligibility: { us: true, nva: true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: 'us',
             secondEligible: 'nva',
             actedSeats: [],
@@ -2242,7 +2256,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -2327,7 +2342,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -2426,7 +2442,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -2508,7 +2525,8 @@ describe('applyMove() compound special-activity free-operation pipeline overlay 
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],

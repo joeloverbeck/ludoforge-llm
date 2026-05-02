@@ -55,6 +55,7 @@ describe('engine test lane taxonomy policy', () => {
       readonly GAME_PACKAGE_SMOKE_TESTS: readonly string[];
       readonly GAME_PACKAGE_TEST_PREFIXES: readonly string[];
       readonly isGamePackageIntegrationTest: (sourcePath: string) => boolean;
+      readonly isSlowIntegrationTest: (sourcePath: string) => boolean;
       readonly listIntegrationTestsForLane: (lane: string) => readonly string[];
     };
 
@@ -91,7 +92,7 @@ describe('engine test lane taxonomy policy', () => {
 
     const expectedUnion = new Set([...coreLane.filter((sourcePath) => manifest.isGamePackageIntegrationTest(sourcePath)), ...gamePackagesLane]);
     const classifiedGamePackageTests = manifest.ALL_INTEGRATION_TESTS.filter((sourcePath) =>
-      manifest.isGamePackageIntegrationTest(sourcePath),
+      manifest.isGamePackageIntegrationTest(sourcePath) && !manifest.isSlowIntegrationTest(sourcePath),
     );
 
     assert.deepEqual(new Set(classifiedGamePackageTests), expectedUnion);
@@ -139,10 +140,10 @@ describe('engine test lane taxonomy policy', () => {
       };
     };
 
-    const slowSourcePaths = manifest.SLOW_INTEGRATION_TESTS.map((name) => `test/integration/${name}`);
+    const fullIntegrationLane = manifest.listIntegrationTestsForLane('integration');
+    const slowSourcePaths = fullIntegrationLane.filter((sourcePath) => manifest.isSlowIntegrationTest(sourcePath));
     const slowParityLane = manifest.listIntegrationTestsForLane('integration:slow-parity');
     const coreLane = manifest.listIntegrationTestsForLane('integration:core');
-    const fullIntegrationLane = manifest.listIntegrationTestsForLane('integration');
 
     assert.equal(manifest.SLOW_INTEGRATION_TESTS.length > 0, true, 'slow-parity manifest must not be empty');
     assert.deepEqual(new Set(slowParityLane), new Set(slowSourcePaths), 'slow-parity lane must equal SLOW_INTEGRATION_TESTS');
@@ -173,6 +174,8 @@ describe('engine test lane taxonomy policy', () => {
     };
 
     const slowZobristTests = [
+      'test/determinism/zobrist-incremental-parity-fitl-seed-42.test.ts',
+      'test/determinism/zobrist-incremental-parity-fitl-seed-123.test.ts',
       'test/determinism/zobrist-incremental-parity.test.ts',
       'test/determinism/zobrist-incremental-property-fitl-medium-diverse.test.ts',
       'test/determinism/zobrist-incremental-property-fitl-short-diverse.test.ts',

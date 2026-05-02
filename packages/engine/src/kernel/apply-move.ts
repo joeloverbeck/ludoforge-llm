@@ -20,6 +20,7 @@ import {
 import { resolveActionExecutor } from './action-executor.js';
 import { isDeclaredActionParamValueInDomain } from './declared-action-param-domain.js';
 import { createEvalContext, createEvalRuntimeResources, type ReadContext, type EvalRuntimeResources } from './eval-context.js';
+import type { ResolveRefCache } from './resolve-ref.js';
 import {
   buildMoveRuntimeBindings,
   deriveDecisionBindingsFromMoveParams,
@@ -115,6 +116,7 @@ import { deriveMoveViabilityVerdict, type MoveViabilityResult } from './viabilit
 import { computeFullHash, createZobristTable } from './zobrist.js';
 import { reconcileRunningHash } from './zobrist-phase-hash.js';
 import { resolveDecisionContinuation, type DecisionContinuationCache } from './microturn/continuation.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 
 const DEFAULT_MAX_TRIGGER_DEPTH = 8;
 
@@ -531,6 +533,11 @@ const validateDeclaredActionParams = (action: ActionDef, evalCtx: ReadContext, m
   }
 };
 
+const lifecycleStalledMoveError = (move: Move): KernelRuntimeError<'ILLEGAL_MOVE'> =>
+  illegalMoveError(move, ILLEGAL_MOVE_REASONS.MOVE_NOT_LEGAL_IN_CURRENT_STATE, {
+    detail: 'card-driven lifecycle is stalled',
+  });
+
 interface ValidatedMoveContext {
   readonly preflight: MovePreflightContext;
 }
@@ -791,6 +798,9 @@ const validateMove = (
   evalRuntimeResources: EvalRuntimeResources,
   cachedRuntime?: GameDefRuntime,
 ): ValidatedMoveContext => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw lifecycleStalledMoveError(move);
+  }
   const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
   if (classMismatch !== null) {
     throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {
@@ -864,6 +874,13 @@ interface ApplyMoveCoreOptions {
   readonly skipAdvanceToDecisionPoint?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
   readonly executionRuntime?: MoveExecutionRuntime;
+  /**
+   * Drive-scoped resolveRef memoisation cache (POLPREVDRIVE-004). When
+   * provided, the inner `EvalRuntimeResources` carries it so
+   * `eval-value.ts` dispatches through `resolveRefMemoised`. `undefined`
+   * on every non-drive path; behaviour is unchanged.
+   */
+  readonly resolveRefCache?: ResolveRefCache;
 }
 
 interface SharedMoveExecutionContext {
@@ -1378,6 +1395,9 @@ const applyMoveCore = (
   const tracker = createDraftTracker();
   const profiler: PerfProfiler | undefined = options?.profiler;
   validateTurnFlowRuntimeStateInvariants(state);
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    throw lifecycleStalledMoveError(move);
+  }
   const adjacencyGraph = cachedRuntime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = cachedRuntime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
   const runtime = coreOptions?.executionRuntime ?? createMoveExecutionRuntime(options, coreOptions?.phaseTransitionBudget);
@@ -1386,6 +1406,7 @@ const applyMoveCore = (
   }
   const evalRuntimeResources = createEvalRuntimeResources({
     collector: runtime.collector,
+    ...(coreOptions?.resolveRefCache === undefined ? {} : { resolveRefCache: coreOptions.resolveRefCache }),
   });
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
@@ -1797,11 +1818,25 @@ const reconcilePassFallbackMoveState = (
   };
 };
 
-export const applyMove = (def: GameDef, state: GameState, move: Move, options?: ExecutionOptions, runtime?: GameDefRuntime): ApplyMoveResult => {
+export const applyMove = (
+  def: GameDef,
+  state: GameState,
+  move: Move,
+  options?: ExecutionOptions,
+  runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
+): ApplyMoveResult => {
   if (def.turnOrder?.type === 'simultaneous') {
     return applySimultaneousSubmission(def, state, move, options, runtime);
   }
-  return applyMoveCore(def, reconcilePassFallbackMoveState(def, state, move), move, options, undefined, runtime);
+  return applyMoveCore(
+    def,
+    reconcilePassFallbackMoveState(def, state, move),
+    move,
+    options,
+    resolveRefCache === undefined ? undefined : { resolveRefCache },
+    runtime,
+  );
 };
 
 const assertTrustedExecutableMove = (
@@ -1825,6 +1860,7 @@ export const applyTrustedMove = (
   trustedMove: TrustedExecutableMove,
   options?: ExecutionOptions,
   runtime?: GameDefRuntime,
+  resolveRefCache?: ResolveRefCache,
 ): ApplyMoveResult => {
   assertTrustedExecutableMove(trustedMove, state);
   if (def.turnOrder?.type === 'simultaneous') {
@@ -1836,7 +1872,10 @@ export const applyTrustedMove = (
     reconciledState,
     trustedMove.move,
     options,
-    { skipValidation: true },
+    {
+      skipValidation: true,
+      ...(resolveRefCache === undefined ? {} : { resolveRefCache }),
+    },
     runtime,
   );
 };
@@ -1848,6 +1887,15 @@ export const probeMoveLegality = (
   runtime?: GameDefRuntime,
 ): MoveLegalityProbeResult => {
   const probedState = reconcilePassFallbackMoveState(def, state, move);
+  if (cardDrivenRuntime(probedState)?.lifecycleStatus.stalled === true) {
+    const error = lifecycleStalledMoveError(move);
+    return {
+      legal: false,
+      code: error.code,
+      context: error.context as IllegalMoveContext,
+      error,
+    };
+  }
   try {
     validateMove(
       def,
@@ -1888,6 +1936,21 @@ const probeMoveViabilityRaw = (
   runtime?: GameDefRuntime,
   discoveryCache?: DecisionContinuationCache,
 ): MoveViabilityProbeResult => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    const error = lifecycleStalledMoveError(move);
+    return {
+      viable: false,
+      complete: undefined,
+      move: undefined,
+      warnings: undefined,
+      code: error.code,
+      context: error.context as IllegalMoveContext,
+      error,
+      nextDecision: undefined,
+      nextDecisionSet: undefined,
+      stochasticDecision: undefined,
+    };
+  }
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
     const evalRuntimeResources = createEvalRuntimeResources();

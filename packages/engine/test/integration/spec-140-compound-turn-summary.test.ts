@@ -18,7 +18,14 @@ const assertCompoundTurnSummary = (trace: ReturnType<typeof runGame>): void => {
     const slice = trace.decisions.slice(summary.decisionIndexRange.start, summary.decisionIndexRange.end);
     assert.ok(slice.length > 0);
     assert.ok(slice.every((entry) => entry.turnId === summary.turnId));
-    assert.equal(slice.at(-1)?.turnRetired, true);
+    // A turn is fully retired only if it ended via the retirement decision.
+    // Stops that interrupt a turn (`terminal`, `maxTurns`, `noLegalMoves`) can
+    // leave the last summary's last decision without a retirement marker; the
+    // structural correctness assertion still holds for every summary that
+    // claims `retired`.
+    if (summary.turnStopReason === 'retired') {
+      assert.equal(slice.at(-1)?.turnRetired, true);
+    }
     assert.equal(slice.length, summary.microturnCount);
   }
 };

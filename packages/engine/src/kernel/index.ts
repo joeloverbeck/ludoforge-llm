@@ -67,6 +67,7 @@ export * from './turn-flow-invariant-contracts.js';
 export * from './turn-flow-action-class.js';
 export * from './turn-flow-seat-order-policy.js';
 export * from './data-assets.js';
+export * from './encoded-state/index.js';
 export * from './derived-values.js';
 export * from './map-model.js';
 export * from './piece-catalog.js';

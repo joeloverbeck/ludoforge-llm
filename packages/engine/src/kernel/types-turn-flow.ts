@@ -259,10 +259,15 @@ export interface SimultaneousCommitTraceEntry {
   readonly pendingCount: number;
 }
 
+export interface CardDrivenLifecycleStatus {
+  readonly stalled: boolean;
+}
+
 export interface TurnFlowRuntimeState {
   readonly seatOrder: readonly string[];
   readonly eligibility: Readonly<Record<string, boolean>>;
   readonly currentCard: TurnFlowRuntimeCardState;
+  readonly lifecycleStatus: CardDrivenLifecycleStatus;
   readonly pendingEligibilityOverrides?: readonly TurnFlowPendingEligibilityOverride[];
   readonly pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[];
   readonly freeOperationSequenceContexts?: Readonly<Record<string, TurnFlowFreeOperationSequenceBatchContext>>;
@@ -288,7 +293,8 @@ export type TurnFlowLifecycleStep =
   | 'promoteLookaheadToPlayed'
   | 'revealLookahead'
   | 'coupToLeader'
-  | 'coupHandoff';
+  | 'coupHandoff'
+  | 'discardPlayed';
 
 export interface TurnFlowLifecycleTraceEntry {
   readonly kind: 'turnFlowLifecycle';
@@ -297,6 +303,7 @@ export interface TurnFlowLifecycleTraceEntry {
     readonly played: string;
     readonly lookahead: string;
     readonly leader: string;
+    readonly discard: string;
   };
   readonly before: {
     readonly playedCardId: string | null;

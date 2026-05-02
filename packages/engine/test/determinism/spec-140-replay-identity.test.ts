@@ -5,10 +5,16 @@ import { describe, it } from 'node:test';
 import { PolicyAgent } from '../../src/agents/index.js';
 import {
   assertValidatedGameDef,
+  asDecisionFrameId,
+  asPhaseId,
+  asPlayerId,
+  asSeatId,
+  asTurnId,
   createGameDefRuntime,
   serializeGameState,
   serializeTrace,
 } from '../../src/kernel/index.js';
+import type { DecisionKey, DecisionStackFrame, GameState, GameTrace } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/index.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import {
@@ -36,6 +42,88 @@ const hasMicroturnOnlyDiagnostics = (decision: { readonly kind?: string } | unde
   decision?.kind === 'policy'
   && !('completionStatistics' in decision)
   && !('movePreparations' in decision);
+
+const makeNoLegalMovesStateWithSuspendedFrame = (): GameState => {
+  const suspendedState: GameState = {
+    globalVars: {},
+    perPlayerVars: {},
+    zoneVars: {},
+    playerCount: 2,
+    zones: {},
+    nextTokenOrdinal: 0,
+    currentPhase: asPhaseId('main'),
+    activePlayer: asPlayerId(0),
+    turnCount: 0,
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [0x1n, 0x2n] },
+    stateHash: 0x10n,
+    _runningHash: 0x10n,
+    actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
+    markers: {},
+    reveals: undefined,
+    globalMarkers: undefined,
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
+    decisionStack: [],
+    nextFrameId: asDecisionFrameId(0),
+    nextTurnId: asTurnId(0),
+    activeDeciderSeatId: asSeatId('0'),
+  };
+  const frame: DecisionStackFrame = {
+    frameId: asDecisionFrameId(0),
+    parentFrameId: null,
+    turnId: asTurnId(1),
+    context: {
+      kind: 'chooseOne',
+      seatId: asSeatId('0'),
+      decisionKey: '$choice' as DecisionKey,
+      options: [],
+    },
+    effectFrame: {
+      programCounter: 1,
+      boundedIterationCursors: {},
+      localBindings: {},
+      pendingTriggerQueue: [],
+      suspendedFrame: {
+        state: suspendedState,
+        rng: { state: { algorithm: 'pcg-dxsm-128', version: 1, state: [0xabcn, 0xdefn] } },
+        actorPlayer: asPlayerId(0),
+        bindings: { selected: 'alpha' },
+        leaf: {
+          kind: 'chooseOne',
+          decisionKey: '$choice' as DecisionKey,
+          bind: '$choice',
+          decisionScope: { iterationPath: 'root', counters: {} },
+          bindingOptions: [{ comparable: 'alpha', binding: 'alpha' }],
+        },
+        resumeStack: [{ kind: 'sequence', effects: [] }],
+      },
+    },
+  };
+
+  return {
+    ...suspendedState,
+    stateHash: 0x20n,
+    _runningHash: 0x20n,
+    decisionStack: [frame],
+    nextFrameId: asDecisionFrameId(1),
+    nextTurnId: asTurnId(2),
+  };
+};
+
+const makeNoLegalMovesTraceWithSuspendedFrame = (): GameTrace => ({
+  gameDefId: 'spec-151-no-legal-moves',
+  seed: 151,
+  decisions: [],
+  probeHoleRecoveries: [],
+  recoveredFromProbeHole: 0,
+  compoundTurns: [],
+  finalState: makeNoLegalMovesStateWithSuspendedFrame(),
+  result: null,
+  turnsCount: 0,
+  stopReason: 'noLegalMoves',
+  traceProtocolVersion: 'spec-140',
+});
 
 describe('Spec 140 replay identity', () => {
   const fitlCompiled = compileProductionSpec();
@@ -158,5 +246,15 @@ describe('Spec 140 replay identity', () => {
       'expected Texas representative run to remain byte-identical on rerun',
     );
     assert.equal(trace.decisions.some((entry) => hasMicroturnOnlyDiagnostics(entry.agentDecision)), true);
+  });
+
+  it('serializes a noLegalMoves stopped trace with a suspended final-state frame', () => {
+    const trace = makeNoLegalMovesTraceWithSuspendedFrame();
+
+    assert.equal(trace.stopReason, 'noLegalMoves');
+    assert.equal((trace.finalState.decisionStack?.length ?? 0) > 0, true);
+    const serialized = serializeTrace(trace);
+    const stringified = JSON.stringify(serialized);
+    assert.equal(stringified.length > 0, true);
   });
 });

@@ -65,6 +65,19 @@ describe('run-tests script', () => {
     assert.equal(plan.timeoutMs !== undefined && plan.timeoutMs > 0, true);
   });
 
+  it('uses sequential execution for heavyweight integration lanes', async () => {
+    const { buildExecutionPlan } = await loadRunTestsModule();
+
+    for (const lane of ['integration', 'integration:game-packages', 'integration:fitl-events', 'integration:slow-parity'] as const) {
+      const plan = buildExecutionPlan(['--lane', lane], {});
+
+      assert.equal(plan.lane, lane);
+      assert.equal(plan.execution, 'sequential');
+      assert.equal(plan.patterns.length > 0, true);
+      assert.equal(plan.timeoutMs !== undefined && plan.timeoutMs > 0, true);
+    }
+  });
+
   it('uses a dedicated batched lane for policy-profile-quality tests', async () => {
     const { buildExecutionPlan } = await loadRunTestsModule();
 

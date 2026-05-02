@@ -6,19 +6,14 @@ import { parseStrategicConditionRef } from '../../../src/agents/policy-surface.j
 import type { CompiledStrategicCondition } from '../../../src/kernel/index.js';
 
 function makeCondition(opts?: { proximity?: boolean }): CompiledStrategicCondition {
-  const base: CompiledStrategicCondition = {
-    target: { kind: 'literal', value: true },
-  };
   if (opts?.proximity) {
     return {
-      ...base,
       proximity: {
-        current: { kind: 'literal', value: 10 },
         threshold: 15,
       },
     };
   }
-  return base;
+  return {};
 }
 
 const conditions: Readonly<Record<string, CompiledStrategicCondition>> = {

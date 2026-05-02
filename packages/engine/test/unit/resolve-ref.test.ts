@@ -621,7 +621,8 @@ describe('resolveRef', () => {
           runtime: {
             seatOrder: ['NVA', 'VC', 'ARVN', 'US'],
             eligibility: { NVA: true, VC: true, ARVN: true, US: true },
-            currentCard: {
+            lifecycleStatus: { stalled: false },
+    currentCard: {
               firstEligible: 'NVA',
               secondEligible: 'VC',
               actedSeats: [],

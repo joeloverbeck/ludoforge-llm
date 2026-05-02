@@ -7,15 +7,7 @@ import { describe, it } from 'node:test';
 import { parse } from 'yaml';
 import { findRepoRootFile } from '../../helpers/lint-policy-helpers.js';
 
-// Workflows with the full shared path filter set (packages/engine/**, data/games/**, scripts/**, etc.).
-const WORKFLOW_FILES = [
-  '.github/workflows/engine-e2e-all.yml',
-  '.github/workflows/engine-fitl-events.yml',
-  '.github/workflows/engine-fitl-rules.yml',
-  '.github/workflows/engine-memory.yml',
-  '.github/workflows/engine-performance.yml',
-  '.github/workflows/engine-texas-cross-game.yml',
-] as const;
+const CONSOLIDATED_WORKFLOW_PATH = '.github/workflows/engine-tests.yml';
 
 const REQUIRED_SHARED_PATH_FILTERS = [
   'packages/engine/**',
@@ -40,10 +32,6 @@ type WorkflowDoc = {
   };
 };
 
-function removeSelfWorkflowPath(paths: readonly string[], selfWorkflowPath: string): readonly string[] {
-  return paths.filter((pathFilter) => pathFilter !== selfWorkflowPath);
-}
-
 function readWorkflowDoc(absolutePath: string): WorkflowDoc {
   return parse(readFileSync(absolutePath, 'utf8')) as WorkflowDoc;
 }
@@ -57,49 +45,37 @@ function assertUniquePaths(paths: readonly string[], workflowPath: string, trigg
   );
 }
 
-describe('engine special-suite workflow path policy', () => {
-  it('keeps push/pull_request path filters in parity across special suites and covers required shared triggers', () => {
+describe('engine consolidated test workflow path policy', () => {
+  it('keeps push/pull_request path filters in parity and covers required shared triggers', () => {
     const thisDir = dirname(fileURLToPath(import.meta.url));
     const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
 
-    let canonicalPaths: readonly string[] | undefined;
+    const absolutePath = resolve(repoRoot, CONSOLIDATED_WORKFLOW_PATH);
+    const doc = readWorkflowDoc(absolutePath);
+    const pushPaths = doc.on?.push?.paths ?? [];
+    const pullRequestPaths = doc.on?.pull_request?.paths ?? [];
 
-    for (const workflowPath of WORKFLOW_FILES) {
-      const absolutePath = resolve(repoRoot, workflowPath);
-      const doc = readWorkflowDoc(absolutePath);
-      const pushPaths = doc.on?.push?.paths ?? [];
-      const pullRequestPaths = doc.on?.pull_request?.paths ?? [];
+    assert.ok(pushPaths.length > 0, `${CONSOLIDATED_WORKFLOW_PATH} push.paths must be declared`);
+    assert.ok(
+      pullRequestPaths.length > 0,
+      `${CONSOLIDATED_WORKFLOW_PATH} pull_request.paths must be declared`,
+    );
+    assert.deepEqual(
+      pushPaths,
+      pullRequestPaths,
+      `${CONSOLIDATED_WORKFLOW_PATH} push/pull_request path filters must match exactly`,
+    );
+    assertUniquePaths(pushPaths, CONSOLIDATED_WORKFLOW_PATH, 'push');
 
-      assert.ok(pushPaths.length > 0, `${workflowPath} push.paths must be declared`);
-      assert.ok(pullRequestPaths.length > 0, `${workflowPath} pull_request.paths must be declared`);
-      assert.deepEqual(
-        pushPaths,
-        pullRequestPaths,
-        `${workflowPath} push/pull_request path filters must match exactly`,
-      );
-      assertUniquePaths(pushPaths, workflowPath, 'push');
-
-      for (const requiredPath of REQUIRED_SHARED_PATH_FILTERS) {
-        assert.ok(
-          pushPaths.includes(requiredPath),
-          `${workflowPath} must include shared path filter "${requiredPath}"`,
-        );
-      }
+    for (const requiredPath of REQUIRED_SHARED_PATH_FILTERS) {
       assert.ok(
-        pushPaths.includes(workflowPath),
-        `${workflowPath} must include its own workflow file path filter`,
-      );
-
-      if (!canonicalPaths) {
-        canonicalPaths = removeSelfWorkflowPath(pushPaths, workflowPath);
-        continue;
-      }
-
-      assert.deepEqual(
-        removeSelfWorkflowPath(pushPaths, workflowPath),
-        canonicalPaths,
-        `${workflowPath} shared path filters must remain in parity with other special-suite workflows`,
+        pushPaths.includes(requiredPath),
+        `${CONSOLIDATED_WORKFLOW_PATH} must include shared path filter "${requiredPath}"`,
       );
     }
+    assert.ok(
+      pushPaths.includes(CONSOLIDATED_WORKFLOW_PATH),
+      `${CONSOLIDATED_WORKFLOW_PATH} must include its own workflow file path filter`,
+    );
   });
 });

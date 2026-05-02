@@ -20,7 +20,9 @@ experiment_id	metric_value	lines_delta	category	status	description
 
 The `metric_value` column holds the primary metric from the harness (identified by `PRIMARY_METRIC_KEY`). For clarity, use the `PRIMARY_METRIC_KEY` name as the column header (e.g., `compositeScore`) instead of the generic `metric_value`.
 
-Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICIOUS_ACCEPT`, `BACKTRACK`
+Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICIOUS_ACCEPT`, `BACKTRACK`, `BASELINE`
+
+`BASELINE` is reserved for tier/phase-transition baseline re-measurement rows (e.g., `tier-2-baseline`, `phase-B-baseline`). These rows record the new-tier metric value but are not experiments — downstream tooling treats `BASELINE` rows as reference points, not as accept/reject decisions. Use `BASELINE` only for entries logged as part of the phase-transition checklist in `references/accept-reject-logic.md`. The original `baseline` row written by Phase 1 also uses status `BASELINE` (replacing the prior `ACCEPT` convention) for consistency.
 
 **Backward compatibility:** If resuming an old campaign whose results.tsv lacks the `category` column, treat all existing rows as having category `other` and continue with the new schema for new rows.
 

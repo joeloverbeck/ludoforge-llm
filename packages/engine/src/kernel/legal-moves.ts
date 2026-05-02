@@ -78,6 +78,7 @@ import { hasActiveSeatRequiredPendingFreeOperationGrant } from './required-free-
 import { requireCardDrivenActiveSeat, validateTurnFlowRuntimeStateInvariants } from './turn-flow-runtime-invariants.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { findPhaseDef } from './phase-lookup.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 import { getPhaseActionIndex } from './phase-action-index.js';
 import type {
   ActionDef,
@@ -1609,6 +1610,12 @@ export const enumerateLegalMoves = (
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
 ): LegalMoveEnumerationResult => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    return {
+      moves: [],
+      warnings: [],
+    };
+  }
   const rawEnumeration = enumerateRawLegalMoves(def, state, options, runtime);
   const { moves, warnings: rawWarnings, discoveryCache } = rawEnumeration;
   const warnings = [...rawWarnings];
@@ -1634,4 +1641,9 @@ export const legalMoves = (
   state: GameState,
   options?: LegalMoveEnumerationOptions,
   runtime?: GameDefRuntime,
-): readonly Move[] => enumerateRawLegalMoves(def, state, options, runtime).moves;
+): readonly Move[] => {
+  if (cardDrivenRuntime(state)?.lifecycleStatus.stalled === true) {
+    return [];
+  }
+  return enumerateRawLegalMoves(def, state, options, runtime).moves;
+};

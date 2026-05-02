@@ -13,6 +13,7 @@ import {
   type GameDef,
   type Move,
 } from '../../../src/kernel/index.js';
+import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 
 const phaseId = asPhaseId('main');
 
@@ -35,7 +36,7 @@ function createCatalog(): AgentPolicyCatalog {
     selection: { mode: 'argmax' },
   };
 
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'grouping-test-catalog',
     surfaceVisibility: {
@@ -71,7 +72,7 @@ function createCatalog(): AgentPolicyCatalog {
     },
     profiles: { baseline: profile },
     bindingsBySeat: { neutral: 'baseline' },
-  };
+  });
 }
 
 function createDef(): GameDef {

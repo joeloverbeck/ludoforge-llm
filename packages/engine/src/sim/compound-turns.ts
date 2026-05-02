@@ -23,7 +23,9 @@ export const synthesizeCompoundTurnSummaries = (
         ? 'terminal'
         : isLastSummary && stopReason === 'maxTurns'
           ? 'maxTurns'
-          : 'retired';
+          : isLastSummary && stopReason === 'noLegalMoves'
+            ? 'noLegalMoves'
+            : 'retired';
 
     summaries.push({
       turnId: first.turnId,

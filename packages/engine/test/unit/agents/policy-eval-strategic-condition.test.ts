@@ -13,9 +13,15 @@ import {
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type CompiledAgentPolicyRef,
-  type CompiledStrategicCondition,
+  type CompiledPolicyExpr,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import {
+  withCompiledPolicyCatalog,
+  type AgentPolicyCatalogFixtureLibrary,
+} from '../../helpers/policy-catalog-fixtures.js';
+
+type StrategicConditionFixture = AgentPolicyCatalogFixtureLibrary['strategicConditions'][string];
 
 const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
@@ -50,7 +56,7 @@ function createBaseDef(): GameDef {
     tokenTypes: [],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
-    agents: {
+    agents: withCompiledPolicyCatalog({
       schemaVersion: 2,
       catalogFingerprint: 'test',
       surfaceVisibility: {
@@ -94,7 +100,7 @@ function createBaseDef(): GameDef {
         },
       },
       bindingsBySeat: { alpha: 'baseline' },
-    },
+    }),
     actions: [
       {
         id: asActionId('pass'),
@@ -118,21 +124,21 @@ function createBaseDef(): GameDef {
 }
 
 function createCatalog(
-  strategicConditions: Record<string, CompiledStrategicCondition>,
+  strategicConditions: Record<string, StrategicConditionFixture>,
 ): AgentPolicyCatalog {
   const def = createBaseDef();
   const catalog = def.agents as AgentPolicyCatalog;
-  return {
+  return withCompiledPolicyCatalog({
     ...catalog,
     library: {
       ...catalog.library,
       strategicConditions,
     },
-  };
+  });
 }
 
 function createContext(
-  strategicConditions: Record<string, CompiledStrategicCondition>,
+  strategicConditions: Record<string, StrategicConditionFixture>,
   globalVarOverrides: Record<string, number> = {},
 ): PolicyEvaluationContext {
   const catalog = createCatalog(strategicConditions);
@@ -157,12 +163,12 @@ function createContext(
 }
 
 // Helper: build a ref expr for a strategic condition field
-function conditionRef(conditionId: string, field: 'satisfied' | 'proximity'): AgentPolicyExpr {
-  return refExpr({ kind: 'strategicCondition', conditionId, field });
+function conditionRef(conditionId: string, field: 'satisfied' | 'proximity'): CompiledPolicyExpr {
+  return { kind: 'ref', ref: { kind: 'strategicCondition', conditionId, field } };
 }
 
 // Strategic condition whose target is: progress >= threshold (uses globalVar surface refs)
-function progressGteCondition(thresholdValue: number): CompiledStrategicCondition {
+function progressGteCondition(thresholdValue: number): StrategicConditionFixture {
   return {
     target: opExpr(
       'gte',
@@ -183,7 +189,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 15 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'satisfied'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'satisfied'), undefined);
       assert.equal(result, true);
     });
 
@@ -192,7 +198,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 5 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'satisfied'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'satisfied'), undefined);
       assert.equal(result, false);
     });
   });
@@ -203,7 +209,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 0 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(result, 0);
     });
 
@@ -212,7 +218,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 5 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(result, 0.5);
     });
 
@@ -221,7 +227,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 10 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(result, 1.0);
     });
 
@@ -230,7 +236,7 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 20 },
       );
-      const result = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(result, 1.0);
     });
 
@@ -245,7 +251,7 @@ describe('strategic condition evaluation', () => {
           },
         },
       });
-      const result = ctx.evaluateExpr(conditionRef('negTest', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('negTest', 'proximity'), undefined);
       assert.equal(result, 0);
     });
 
@@ -255,7 +261,7 @@ describe('strategic condition evaluation', () => {
           target: literal(true),
         },
       });
-      const result = ctx.evaluateExpr(conditionRef('boolOnly', 'proximity'), undefined);
+      const result = ctx.evaluateCompiledExpr(conditionRef('boolOnly', 'proximity'), undefined);
       assert.equal(result, undefined);
     });
   });
@@ -266,8 +272,8 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 7 },
       );
-      const first = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
-      const second = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const first = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
+      const second = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(first, second);
       assert.equal(first, 0.7);
     });
@@ -277,8 +283,8 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 7 },
       );
-      const satisfied = ctx.evaluateExpr(conditionRef('readiness', 'satisfied'), undefined);
-      const proximity = ctx.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const satisfied = ctx.evaluateCompiledExpr(conditionRef('readiness', 'satisfied'), undefined);
+      const proximity = ctx.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.equal(satisfied, false);
       assert.equal(proximity, 0.7);
     });
@@ -294,8 +300,8 @@ describe('strategic condition evaluation', () => {
         { readiness: progressGteCondition(10) },
         { progress: 8 },
       );
-      const prox1 = ctx1.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
-      const prox2 = ctx2.evaluateExpr(conditionRef('readiness', 'proximity'), undefined);
+      const prox1 = ctx1.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
+      const prox2 = ctx2.evaluateCompiledExpr(conditionRef('readiness', 'proximity'), undefined);
       assert.notEqual(prox1, prox2);
       assert.ok(Math.abs((prox1 as number) - 0.3) < 0.001);
       assert.ok(Math.abs((prox2 as number) - 0.8) < 0.001);

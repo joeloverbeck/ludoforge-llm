@@ -8,6 +8,7 @@ Sanity-check ticket-named verification commands against live repo tooling before
 - Validate behavior, not just syntax: confirm default flag interactions, output paths, and artifact-write conditions when the ticket depends on a specific file or JSON field.
 - Determine whether each critical verification lane executes source files or compiled/generated outputs such as `dist`. If compiled/generated outputs are involved, identify the authoritative rebuild step before trusting runtime failures or green results.
 - Check whether any likely verification commands contend on generated output trees such as `dist`, schema artifacts, compiled JSON, or goldens. If they do, plan those lanes as sequential-only before you start running checks.
+- For lane wrappers that accept explicit file paths, inspect whether explicit-pattern mode preserves the normal lane semantics: per-file timeout, sequential execution, sharding, reporter, environment variables, and child-process boundaries. If explicit mode changes the budget or process boundary, classify the direct command as a focused substitute, wrap it with a bounded timeout when needed, and record the substitution before closeout.
 - When a command is stale but the intended verification surface is clear, treat it as nonblocking drift and note the repo-valid substitution in working notes.
 - For tracked tickets kept as historical records, prefer preserving the original command block and recording the repo-valid substitution in working notes and the ticket outcome unless the user explicitly asks for in-place cleanup.
 - For active tracked tickets that are not yet archival records, correct nonblocking stale wording or path drift in place before marking the ticket complete so the active ticket remains a reliable session contract for later turns.
@@ -43,8 +44,10 @@ If a verification lane fails immediately after overlapping output-contending com
    - Focused proof commands may run first for fast feedback but do not satisfy the ticket on their own.
 6. **Command substitution**: If a ticket's example command conflicts with live repo tooling (e.g., Jest flags in a Node test-runner package), use the repo-approved equivalent. State substitutions explicitly.
    - In this repo, engine tests use `node --test`; replace Jest-style name filtering with `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/<file>.test.js`.
+   - In this repo, `packages/engine/scripts/run-tests.mjs` may change execution mode when explicit patterns are provided. Confirm whether the requested lane still applies its timeout before treating a focused explicit-path command as equivalent to the manifest-driven lane; use an external `timeout` wrapper when the focused proof needs a hard wall-clock budget.
 7. **Long-running commands**: Some ticket-required commands may run for minutes with sparse output. Treat that as normal when consistent with repo history; keep running and provide periodic progress updates.
 8. **Post-clean reruns**: If a later authoritative command cleans shared build output (e.g., `dist`), rerun earlier test lanes after rebuilding. Treat the first post-clean module-resolution failure as an ordering issue.
+9. **Ticket-named Turbo rebuilds**: When a ticket-named broad Turbo lane internally rebuilds or cleans a shared output tree, the command may still be valid broad proof, but any earlier compiled-output tests that consumed that tree must be rerun afterward before closeout. If rerunning is disproportionate, substitute package-local serial lanes only when the ticket allows that substitution and the active ticket records it before final proof.
 
 ## Build Ordering & Output Contention
 
@@ -55,6 +58,8 @@ Before running broader commands, check whether they share generated output trees
 Do not launch contending commands in the same parallel tool batch.
 
 **In this repo**: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo build`, and `pnpm turbo typecheck` all contend on `packages/engine/dist` — run serially.
+
+Ticket-named Turbo lanes can also contain unavoidable internal rebuilds through the task graph. Do not overlap an external compiled-output proof with those lanes; after the broad lane finishes, rerun any earlier `dist`-consuming proof you still intend to cite as final acceptance evidence.
 
 ## Verification Safety
 
@@ -75,6 +80,8 @@ Do not launch contending commands in the same parallel tool batch.
 - If an initial bounded witness proves only part of the target invariant, keep searching for a stronger bounded witness before classifying the ticket as stale, contradictory, or blocked. Escalate only after bounded search aligned to the full invariant fails or reveals a true contract conflict.
 - Treat generated production fixtures and compiled JSON assets as first-class owned fallout when the ticket changes the live compiled surface. Check whether authoritative verification writes or validates them, prefer isolated regeneration when unrelated fixture drift exists elsewhere in the repo, and record any intentional scoped substitution. When the change is a shared contract or identifier migration, explicitly check for downstream committed fixture consumers in other packages as well, such as runner bootstrap `*-game-def.json`, compiled production snapshots, or other checked-in generated runtime artifacts that may need regeneration before runtime verification is trustworthy.
 - After any shared generator command, inspect every changed generated artifact and classify it as `owned` or `unrelated churn` before closeout. Keep owned fallout, rerun the affected checks, and revert unrelated churn so the final diff stays isolated to the ticket boundary.
+  - If the canonical generator updates additional committed targets outside the ticket's named artifact list, do not automatically revert them as churn. Classify each spillover target as `owned fallout` when it serializes the active change, `stale canonical drift` when the generator is bringing an already-stale repo-owned artifact back in sync, or `unrelated churn` when it is neither caused by nor required for the active boundary. Keep `stale canonical drift` only when the generator's check mode proves the artifact is canonical and update the ticket touched-file/proof ledger so the diff is not unexplained.
+  - When a recursive schema or other generated public-contract change causes broad `$ref`/definition reshuffling inside a single generated artifact, do not attempt line-by-line exhaustion as the primary proof. Summarize the semantic owner path in source, verify generator determinism with the repo's check mode, run the affected schema/build tests, and keep the artifact only if those checks prove the reshuffle is canonical owned fallout.
 - When a focused built-test rerun still hides the concrete assertion mismatch, inspect the compiled runtime object or generated artifact directly with the narrowest possible probe before patching tests or code.
 
 ## Escalation Ladder
@@ -101,6 +108,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
 
 **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level failure without nested assertion details, rerun the built module directly or with a repo-approved verbose reporter so the failing subtest becomes visible before patching.
+
+**Opaque Node test child failure**: If `node --test <compiled-test-file>` or a package wrapper reports only `test failed`, run the compiled module directly with `node <compiled-test-file>` from the package cwd when safe. This often exposes nested assertion, cwd, or child-process errors hidden by the test-runner child boundary. If repo-root and package-cwd behavior differ, classify the cwd/process-boundary difference before patching code or tests.
 
 **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 
@@ -138,3 +147,9 @@ pnpm turbo schema:artifacts
 ## Measured-Gate Outcome
 
 For profiling/audit tickets, capture: measured surface, command(s), decisive result, threshold comparison, downstream action (archived/amended/deferred/not-actionable).
+
+For benchmark tickets with a baseline or disabled/enabled comparison, include the concrete comparison fields in the same durable outcome: baseline value, current value, absolute delta, ratio or percent change, threshold, gate result, and command. A green benchmark lane is not enough if the ticket's useful decision depends on the magnitude of the difference.
+
+If a benchmark or perf lane passes at the process/test-runner level but does not assert or print the ticket-owned metric, classify it as `harness smoke only`. Do not cite it as final measured acceptance proof until a repo-owned lane reports the metric, variance/quality bound when required, threshold, and pass/fail verdict.
+
+If implementation is correct but the measured gate fails, the final durable state should make that split explicit: `owned migration landed`, `measured gate red`, `follow-up owner`, and `status` (`BLOCKED`, `PARTIAL`, or the repo's equivalent). Do not weaken the target or silently convert the failed gate into a completed ticket.

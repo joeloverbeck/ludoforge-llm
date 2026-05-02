@@ -101,7 +101,8 @@ type CardDrivenRuntime = CardDrivenTurnOrderState['runtime'];
 const makeCardDrivenRuntime = (overrides?: Partial<CardDrivenRuntime>): CardDrivenRuntime => ({
   seatOrder: ['0', '1'],
   eligibility: { '0': true, '1': true },
-  currentCard: {
+  lifecycleStatus: { stalled: false },
+    currentCard: {
     firstEligible: '0',
     secondEligible: '1',
     actedSeats: [],
@@ -354,7 +355,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1', '2'],
           eligibility: { '0': true, '1': true, '2': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '2',
             actedSeats: ['0'],
@@ -413,7 +415,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -699,7 +702,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1', '2'],
           eligibility: { '0': true, '1': true, '2': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '2',
             actedSeats: ['0'],
@@ -776,7 +780,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: null,
             actedSeats: ['0'],
@@ -1655,7 +1660,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1766,7 +1772,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1873,7 +1880,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -1978,7 +1986,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -2689,7 +2698,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '0',
             actedSeats: ['1'],
@@ -2840,7 +2850,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '0',
             actedSeats: ['1'],
@@ -2905,7 +2916,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '1',
             secondEligible: '0',
             actedSeats: ['1'],
@@ -2970,7 +2982,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -3078,7 +3091,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -3185,7 +3199,8 @@ phase: [asPhaseId('main')],
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: '1',
             actedSeats: [],
@@ -4623,7 +4638,8 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
     const baseRuntime = {
       seatOrder: ['0', '1'],
       eligibility: { '0': true, '1': true },
-      currentCard: {
+      lifecycleStatus: { stalled: false },
+    currentCard: {
         firstEligible: '1',
         secondEligible: '0',
         actedSeats: ['1'],
@@ -4805,7 +4821,8 @@ describe('legalMoves seat-resolution lifecycle architecture guard', () => {
         runtime: {
           seatOrder: ['0', '1'],
           eligibility: { '0': true, '1': true },
-          currentCard: {
+          lifecycleStatus: { stalled: false },
+    currentCard: {
             firstEligible: '0',
             secondEligible: null,
             actedSeats: ['1'],

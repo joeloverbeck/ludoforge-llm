@@ -10,7 +10,7 @@
 - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
 - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
 - `authoritative boundary`: the final owned implementation slice after reassessment
-- `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`
+- `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`; if editing `schemas-core.ts`, serialized trace/result unions, generated-schema-bearing types, or other compiled public schema surfaces, default to `schema artifacts likely` until `schema:artifacts:check` proves otherwise
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
 - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence

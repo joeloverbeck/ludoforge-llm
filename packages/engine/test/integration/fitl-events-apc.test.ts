@@ -111,7 +111,8 @@ const setupApcState = (
         ...runtime,
         seatOrder: ['vc', 'us', 'arvn', 'nva'],
         eligibility: { us: true, arvn: true, nva: true, vc: true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           ...runtime.currentCard,
           firstEligible,
           secondEligible,

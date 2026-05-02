@@ -1,11 +1,13 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
-import { buildSeatResolutionIndex } from '../kernel/identity.js';
+import { createSeatResolutionContext } from '../kernel/identity.js';
 import type { PlayerId } from '../kernel/branded.js';
+import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
+  CompiledAgentProfile,
   CompiledCurrentSurfaceRef,
   CompiledPreviewSurfaceRef,
   GameDef,
@@ -17,8 +19,10 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
+  K_PREVIEW_DEPTH,
   type Phase1ActionPreviewEntry,
   type PolicyPreviewDependencies,
+  type PolicyPreviewCompletionMetadata,
   type PolicyPreviewGrantedOperation,
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
@@ -64,6 +68,7 @@ export interface PolicyCurrentSurfaceProvider {
 }
 
 export interface PolicyPreviewSurfaceProvider {
+  markGated(candidate: PolicyRuntimeCandidate): void;
   resolveSurface(
     candidate: PolicyRuntimeCandidate,
     ref: CompiledPreviewSurfaceRef,
@@ -72,8 +77,10 @@ export interface PolicyPreviewSurfaceProvider {
   getPreviewState(candidate: PolicyRuntimeCandidate): GameState | undefined;
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
+  getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
+  hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
 }
 
 export interface PolicyCompletionProvider {
@@ -104,6 +111,8 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly catalog: AgentPolicyCatalog;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
+  readonly encodedStateLayout?: EncodedStateLayout;
+  readonly encodedState?: EncodedState;
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -111,10 +120,64 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
 }
 
+export const isPolicyVmEnabled = (): boolean => process.env.LUDOFORGE_POLICY_VM === 'on';
+
+const hasBit = (array: BigUint64Array, bitIndex: number): boolean => {
+  const word = Math.trunc(bitIndex / 64);
+  const offset = BigInt(bitIndex % 64);
+  return ((array[word] ?? 0n) & (1n << offset)) !== 0n;
+};
+
+function resolveEncodedCurrentSurface(
+  input: CreatePolicyRuntimeProvidersInput,
+  ref: CompiledCurrentSurfaceRef,
+  state: GameState,
+  targetPlayerIndex: number | undefined,
+): PolicyValue | undefined {
+  const layout = input.encodedStateLayout;
+  const encoded = input.encodedState;
+  if (state !== input.state || layout === undefined || encoded === undefined) {
+    return undefined;
+  }
+  if (ref.family === 'globalVar') {
+    const index = layout.varLayout.globalVariableIds.indexOf(ref.id);
+    return index < 0 ? undefined : encoded.globals[index];
+  }
+  if (ref.family === 'perPlayerVar') {
+    const varIndex = layout.varLayout.perPlayerVariableIds.indexOf(ref.id);
+    if (targetPlayerIndex === undefined || varIndex < 0) {
+      return undefined;
+    }
+    return encoded.playerInts[targetPlayerIndex * layout.varLayout.perPlayerVariableIds.length + varIndex];
+  }
+  if (ref.family === 'globalMarker') {
+    const markerStates = layout.markerLayout.markerStateIdsByMarkerId[ref.id];
+    if (markerStates === undefined) {
+      return undefined;
+    }
+    let bitOffset = 0;
+    for (const markerId of layout.markerLayout.globalMarkerIds) {
+      if (markerId === ref.id) {
+        for (const [stateOffset, stateId] of markerStates.entries()) {
+          if (hasBit(encoded.globalMarkers, bitOffset + stateOffset)) {
+            return stateId;
+          }
+        }
+        const lattice = input.def.globalMarkerLattices?.find((entry) => entry.id === ref.id);
+        return lattice?.defaultState;
+      }
+      bitOffset += layout.markerLayout.markerStateIdsByMarkerId[markerId]?.length ?? 0;
+    }
+  }
+  return undefined;
+}
+
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
-  const seatResolutionIndex = buildSeatResolutionIndex(input.def, input.state.playerCount);
+  const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
   const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
+  const profileHasCompletionConsiderations = activeProfile !== undefined
+    && hasCompletionScopedConsideration(input.catalog, activeProfile);
   const previewRuntime = createPolicyPreviewRuntime({
     def: input.def,
     state: input.state,
@@ -123,6 +186,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     trustedMoveIndex: input.trustedMoveIndex,
     ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
+    completionPolicy: activeProfile?.preview.completion ?? 'greedy',
+    completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
+    ...(profileHasCompletionConsiderations
+      ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
+      : {}),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
@@ -270,6 +338,10 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return undefined;
         }
         try {
+          const encodedValue = resolveEncodedCurrentSurface(input, ref, state, targetPlayerIndex);
+          if (encodedValue !== undefined) {
+            return encodedValue;
+          }
           return resolveSurfaceRefValue(state, ref, input.seatId, input.playerId, surfaceContext, seatContext);
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown runtime surface evaluation failure.';
@@ -284,6 +356,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
     },
     previewSurface: {
+      markGated(candidate) {
+        previewRuntime.markGated(candidate);
+      },
       resolveSurface(candidate, ref, seatContext) {
         return previewRuntime.resolveSurface(candidate, ref, seatContext);
       },
@@ -296,11 +371,17 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       getFailureReason(candidate) {
         return previewRuntime.getFailureReason(candidate);
       },
+      getCompletionMetadata(candidate) {
+        return previewRuntime.getCompletionMetadata(candidate);
+      },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);
       },
       hasPreviewData(candidate) {
         return previewRuntime.hasPreviewData(candidate);
+      },
+      hasMaterializedOutcome(candidate) {
+        return previewRuntime.hasMaterializedOutcome(candidate);
       },
     },
     ...(input.completion === undefined
@@ -324,6 +405,30 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       transientVictorySurface = null;
     },
   };
+}
+
+// Memoize: a profile's set of completion-scoped considerations is fixed across
+// a benchmark run. Per-call recomputation otherwise iterates `profile.use.considerations`
+// inside every `createPolicyRuntimeProviders` call (~50 outer microturns + several
+// per-pick scoring contexts). When the result is empty the agentGuided picker
+// becomes a no-op — callers can short-circuit allocation of pending-request
+// objects entirely.
+const profileHasCompletionCache = new WeakMap<CompiledAgentProfile, boolean>();
+
+function hasCompletionScopedConsideration(
+  catalog: AgentPolicyCatalog,
+  profile: CompiledAgentProfile,
+): boolean {
+  const cached = profileHasCompletionCache.get(profile);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const considerations = catalog.compiled.considerations;
+  const result = (profile.use.considerations ?? []).some(
+    (id) => considerations[id]?.scopes?.includes('completion') === true,
+  );
+  profileHasCompletionCache.set(profile, result);
+  return result;
 }
 
 export function createPolicyCompletionProvider(

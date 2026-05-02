@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent } from '../../src/agents/policy-agent.js';
 import {
   applyDecision,
   applyMove,
@@ -19,6 +18,7 @@ import {
 } from '../../src/kernel/index.js';
 import { runGame } from '../../src/sim/simulator.js';
 import { getFitlProductionFixture, getTexasProductionFixture } from '../helpers/production-spec-helpers.js';
+import { createFirstLegalAgents } from '../helpers/test-agents.js';
 
 interface ProductionParityCase {
   readonly label: string;
@@ -27,9 +27,6 @@ interface ProductionParityCase {
   readonly playerCount: number;
   readonly maxTurns: number;
 }
-
-const createPolicyAgents = (count: number): readonly PolicyAgent[] =>
-  Array.from({ length: count }, () => new PolicyAgent());
 
 const publicMoveIdentity = (move: Move): string =>
   JSON.stringify({
@@ -118,8 +115,8 @@ const assertProductionParity = (testCase: ProductionParityCase): void => {
   const { label, def, seed, playerCount, maxTurns } = testCase;
   const runtime = createGameDefRuntime(def);
 
-  const firstTrace = runGame(def, seed, createPolicyAgents(playerCount), maxTurns, playerCount, undefined, runtime);
-  const secondTrace = runGame(def, seed, createPolicyAgents(playerCount), maxTurns, playerCount, undefined, runtime);
+  const firstTrace = runGame(def, seed, createFirstLegalAgents(playerCount), maxTurns, playerCount, undefined, runtime);
+  const secondTrace = runGame(def, seed, createFirstLegalAgents(playerCount), maxTurns, playerCount, undefined, runtime);
 
   assert.deepEqual(secondTrace, firstTrace, `${label} should produce an identical trace for the same seed`);
   assert.equal(firstTrace.decisions.length > 0, true, `${label} should emit at least one move`);

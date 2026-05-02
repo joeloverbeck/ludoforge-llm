@@ -16,7 +16,7 @@
     "seatId": "us",
     "requestedProfileId": null,
     "resolvedProfileId": "us-baseline",
-    "profileFingerprint": "3e00cb8e49737f68940ad2e0c114f644d94460f14ee3441d24c78a3ba7ecbc30",
+    "profileFingerprint": "cb70458191639a96121de3d8ba59933773274cff9f24dcd703c3b7651f9a06d8",
     "initialCandidateCount": 7,
     "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\"}|false|event",
     "finalScore": -9.6,
@@ -27,7 +27,13 @@
         "skippedBecauseEmpty": false
       }
     ],
-    "tieBreakChain": [],
+    "tieBreakChain": [
+      {
+        "tieBreakerId": "stableMoveKey",
+        "candidateCountBefore": 2,
+        "candidateCountAfter": 1
+      }
+    ],
     "previewUsage": {
       "mode": "exactWorld",
       "evaluatedCandidateCount": 6,
@@ -37,21 +43,24 @@
       "unknownRefs": [
         {
           "refId": "victoryCurrentMargin.currentMargin.self",
-          "reason": "unresolved"
+          "reason": "gated"
         }
       ],
       "outcomeBreakdown": {
-        "ready": 0,
+        "ready": 3,
         "stochastic": 0,
         "unknownRandom": 0,
         "unknownHidden": 0,
-        "unknownUnresolved": 6,
+        "unknownUnresolved": 0,
+        "unknownDepthCap": 1,
+        "unknownNoPreviewDecision": 0,
+        "unknownGated": 2,
         "unknownFailed": 0
       }
     },
     "selection": {
       "mode": "argmax",
-      "candidateCount": 5,
+      "candidateCount": 6,
       "selectedIndex": 2
     },
     "emergencyFallback": false,

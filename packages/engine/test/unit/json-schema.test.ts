@@ -194,7 +194,7 @@ const validRuntimeTrace: GameTrace = {
         {
           kind: 'turnFlowLifecycle',
           step: 'initialRevealPlayed',
-          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none' },
+          slots: { played: 'played:none', lookahead: 'lookahead:none', leader: 'leader:none', discard: 'played:none' },
           before: { playedCardId: null, lookaheadCardId: null, leaderCardId: null },
           after: { playedCardId: 'card-1', lookaheadCardId: null, leaderCardId: null },
         },
@@ -288,7 +288,8 @@ const validRuntimeTrace: GameTrace = {
       runtime: {
         seatOrder: ['0', '1'],
         eligibility: { '0': true, '1': true },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           firstEligible: '0',
           secondEligible: '1',
           actedSeats: [],

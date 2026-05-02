@@ -89,7 +89,8 @@ const setupMacvState = (
           vc: true,
           nva: true,
         },
-        currentCard: {
+        lifecycleStatus: { stalled: false },
+    currentCard: {
           ...runtime.currentCard,
           firstEligible,
           secondEligible,

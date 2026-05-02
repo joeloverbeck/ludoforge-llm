@@ -36,6 +36,7 @@ import type { DecisionKey } from '../../src/kernel/decision-scope.js';
 import type { LegalChoicesPreparedContext } from '../../src/kernel/legal-choices.js';
 import type { PlayerId } from '../../src/kernel/branded.js';
 import type { ChoicePendingChooseNRequest } from '../../src/kernel/types.js';
+import { withCompiledPolicyCatalog } from '../helpers/policy-catalog-fixtures.js';
 import { eff } from '../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
 
@@ -68,7 +69,7 @@ function createMinimalCatalog(): AgentPolicyCatalog {
     selection: { mode: 'argmax' as const },
   };
 
-  return {
+  return withCompiledPolicyCatalog({
     schemaVersion: 2,
     catalogFingerprint: 'decision-local-scope-drop-catalog',
     surfaceVisibility: {
@@ -98,7 +99,7 @@ function createMinimalCatalog(): AgentPolicyCatalog {
     },
     profiles: { us: profile },
     bindingsBySeat: { us: 'us' },
-  };
+  });
 }
 
 function createPreviewDef(catalog: AgentPolicyCatalog): GameDef {

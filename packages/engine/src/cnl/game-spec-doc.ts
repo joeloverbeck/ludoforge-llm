@@ -661,6 +661,9 @@ export interface GameSpecAgentProfileDef {
   readonly use: GameSpecAgentProfileUse;
   readonly preview?: {
     readonly mode?: string;
+    readonly completion?: string;
+    readonly completionDepthCap?: number;
+    readonly topK?: number;
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;
   };

@@ -23,7 +23,7 @@ on:
 jobs:
   determinism:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -47,11 +47,22 @@ jobs:
             test_paths: |
               dist/test/determinism/draft-state-determinism-parity.test.js
           - shard_id: zobrist-core
-            shard_label: Zobrist determinism
+            shard_label: Zobrist determinism core
             test_paths: |
               dist/test/determinism/zobrist-incremental-parity.test.js
-              dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js
               dist/test/determinism/zobrist-incremental-property-texas.test.js
+          - shard_id: fitl-parity-zobrist-seed-42
+            shard_label: FITL parity Zobrist determinism seed 42
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js
+          - shard_id: fitl-parity-zobrist-seed-123
+            shard_label: FITL parity Zobrist determinism seed 123
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.js
+          - shard_id: fitl-short-zobrist
+            shard_label: FITL short Zobrist determinism
+            test_paths: |
+              dist/test/determinism/zobrist-incremental-property-fitl-short-diverse.test.js
           - shard_id: grant-canary
             shard_label: grant determinism canary
             test_paths: |

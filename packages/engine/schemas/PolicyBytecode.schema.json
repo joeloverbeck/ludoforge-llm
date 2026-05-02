@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "PolicyBytecode.schema.json",
+  "title": "PolicyBytecode",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["instructions", "featureTable", "constants", "metadata"],
+  "properties": {
+    "instructions": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -2147483648,
+        "maximum": 2147483647
+      }
+    },
+    "featureTable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["refs", "refToId"],
+      "properties": {
+        "refs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "layoutIndex", "aux"],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "layoutIndex": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 2147483647
+              },
+              "aux": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "minimum": -2147483648,
+                  "maximum": 2147483647
+                }
+              }
+            }
+          }
+        },
+        "refToId": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          }
+        }
+      }
+    },
+    "constants": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": -2147483648,
+        "maximum": 2147483647
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "sourceFingerprint", "targetVmVersion"],
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "sourceFingerprint": {
+          "type": "string",
+          "minLength": 1
+        },
+        "targetVmVersion": {
+          "const": 1
+        }
+      }
+    }
+  }
+}
+

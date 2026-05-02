@@ -115,6 +115,9 @@
         "NVA": true,
         "VC": true
       },
+      "lifecycleStatus": {
+        "stalled": false
+      },
       "pendingEligibilityOverrides": [
         {
           "seat": "US",

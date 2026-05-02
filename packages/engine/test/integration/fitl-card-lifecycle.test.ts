@@ -87,7 +87,15 @@ describe('FITL card lifecycle integration', () => {
     const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
     assert.deepEqual(lifecycleSteps(second.triggerFirings), ['promoteLookaheadToPlayed']);
     assert.equal(second.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
-    assert.equal(second.state.zones['played:none']?.[0], undefined);
+    // After LIFECYCFIX-001, the played slot accumulates discarded cards when
+    // the lifecycle has no eventDeck-declared discardZone (default discard ===
+    // played). The newly-promoted tok_card_0 sits on top of the previously
+    // played tok_card_3 and tok_card_1 history.
+    assert.equal(second.state.zones['played:none']?.[0]?.id, 'tok_card_0');
+    assert.deepEqual(
+      second.state.zones['played:none']?.map((token) => token.id),
+      ['tok_card_0', 'tok_card_1', 'tok_card_3'],
+    );
     assert.equal(second.state.zones['lookahead:none']?.[0], undefined);
   });
 
@@ -124,7 +132,6 @@ describe('FITL card lifecycle integration', () => {
     const start = initialState(def, 9, 2).state;
     const first = applyMove(def, start, legalMoves(def, start)[0]!);
     const second = applyMove(def, first.state, legalMoves(def, first.state)[0]!);
-    const third = applyMove(def, second.state, legalMoves(def, second.state)[0]!);
 
     // With effectiveTurnPhases filtering to only coup phases during coup rounds,
     // the 'victory' coup phase has no actions → coup round auto-completes in one move.
@@ -142,9 +149,10 @@ describe('FITL card lifecycle integration', () => {
     // maxConsecutiveRounds=1 suppresses the second coup handoff entirely, so no
     // additional lifecycle entries fire after the first boundary sequence exhausts the deck.
     assert.deepEqual(lifecycleSteps(second.triggerFirings), []);
-    // Third move: no more cards to promote.
-    assert.deepEqual(lifecycleSteps(third.triggerFirings), []);
-    assert.equal(third.state.zones['leader:none']?.length, 1);
-    assert.equal(third.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
+    assert.equal(second.state.turnOrderState.type, 'cardDriven');
+    assert.equal(second.state.turnOrderState.runtime.lifecycleStatus.stalled, true);
+    assert.deepEqual(legalMoves(def, second.state), []);
+    assert.equal(second.state.zones['leader:none']?.length, 1);
+    assert.equal(second.state.zones['leader:none']?.[0]?.id, 'tok_card_2');
   });
 });

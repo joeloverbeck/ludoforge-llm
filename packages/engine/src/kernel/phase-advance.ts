@@ -9,6 +9,7 @@ import { legalMoves } from './legal-moves.js';
 import { perfStart, perfDynEnd } from './perf-profiler.js';
 import { dispatchLifecycleEvent } from './phase-lifecycle.js';
 import { applyTurnFlowCardBoundary } from './turn-flow-lifecycle.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
 import { TURN_FLOW_ACTIVE_SEAT_INVARIANT_SURFACE_IDS } from './turn-flow-active-seat-invariant-surfaces.js';
 import { requireCardDrivenActiveSeat } from './turn-flow-runtime-invariants.js';
 import { kernelRuntimeError } from './runtime-error.js';
@@ -685,6 +686,10 @@ export const advanceToDecisionPoint = (
   const hasInterrupts = interrupts !== undefined && interrupts.length > 0;
   let advances = 0;
   while (terminalResult(def, nextState, cachedRuntime) === null) {
+    if (cardDrivenRuntime(nextState)?.lifecycleStatus.stalled === true) {
+      break;
+    }
+
     const isInterruptPhase = hasInterrupts && interrupts!.some((phase) => phase.id === nextState.currentPhase);
     const phaseValid = isInterruptPhase || effectiveTurnPhases(def, nextState).some((phase) => phase.id === nextState.currentPhase);
     // Pre-skip: remove skipIfNoLegalCompletion grants whose only effect is

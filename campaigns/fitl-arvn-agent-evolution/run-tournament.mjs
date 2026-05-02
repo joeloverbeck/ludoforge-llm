@@ -8,6 +8,8 @@
  * Usage:
  *   node run-tournament.mjs [--seeds N] [--players N] [--evolved-seat SEAT]
  *                           [--max-turns N] [--trace-seed N]
+ *                           [--evolved-profile PROFILE]
+ *                           [--profile-completion PROFILE=greedy|agentGuided]
  *
  * Output (stdout, last line): JSON with { compositeScore, avgMargin, winRate, ... }
  */
@@ -67,9 +69,57 @@ function getArg(name, defaultValue) {
 const SEED_COUNT = Number(getArg('seeds', '3'));
 const PLAYER_COUNT = Number(getArg('players', '4'));
 const EVOLVED_SEAT = getArg('evolved-seat', 'arvn');
+const EVOLVED_PROFILE = getArg('evolved-profile', `${EVOLVED_SEAT.toLowerCase()}-evolved`);
 const MAX_TURNS = Number(getArg('max-turns', '500'));
 const TRACE_ALL = getArg('trace-all', 'true') === 'true';
 const TRACE_SEED = getArg('trace-seed', null);
+const PROFILE_COMPLETION_OVERRIDE = getArg('profile-completion', '');
+
+function parseProfileCompletionOverride(raw) {
+  if (raw === '') {
+    return null;
+  }
+  const [profileId, completion, ...extra] = raw.split('=');
+  if (extra.length > 0 || !profileId || !completion) {
+    process.stderr.write(`ERROR: --profile-completion must use PROFILE=greedy|agentGuided, got "${raw}"\n`);
+    process.exit(1);
+  }
+  if (completion !== 'greedy' && completion !== 'agentGuided') {
+    process.stderr.write(`ERROR: preview completion override must be greedy or agentGuided, got "${completion}"\n`);
+    process.exit(1);
+  }
+  return { profileId, completion };
+}
+
+const profileCompletionOverride = parseProfileCompletionOverride(PROFILE_COMPLETION_OVERRIDE);
+
+function applyProfileCompletionOverride(gameDef, override) {
+  if (override === null) {
+    return gameDef;
+  }
+  const catalog = gameDef.agents;
+  const profile = catalog?.profiles?.[override.profileId];
+  if (catalog === undefined || profile === undefined) {
+    process.stderr.write(`ERROR: profile "${override.profileId}" not found for --profile-completion\n`);
+    process.exit(1);
+  }
+  return {
+    ...gameDef,
+    agents: {
+      ...catalog,
+      profiles: {
+        ...catalog.profiles,
+        [override.profileId]: {
+          ...profile,
+          preview: {
+            ...profile.preview,
+            completion: override.completion,
+          },
+        },
+      },
+    },
+  };
+}
 
 // ---------------------------------------------------------------------------
 // Seat-to-player-index mapping (resolved after compilation)
@@ -289,7 +339,7 @@ if (!compiled || !compiled.gameDef) {
   process.exit(1);
 }
 
-const def = assertValidatedGameDef(compiled.gameDef);
+const def = assertValidatedGameDef(applyProfileCompletionOverride(compiled.gameDef, profileCompletionOverride));
 const runtime = createGameDefRuntime(def);
 
 // Resolve evolved seat index
@@ -304,7 +354,7 @@ process.stderr.write(`Evolved seat: ${EVOLVED_SEAT} (player index ${evolvedPlaye
 // Build seat-to-profile mapping: evolved seat uses arvn-evolved, others use their baselines
 const seatProfiles = (def.seats ?? []).map((seat) => {
   if (seat.id.toLowerCase() === EVOLVED_SEAT.toLowerCase()) {
-    return `${EVOLVED_SEAT.toLowerCase()}-evolved`;
+    return EVOLVED_PROFILE;
   }
   // Use the faction's baseline profile
   const seatId = seat.id.toLowerCase();
@@ -312,6 +362,11 @@ const seatProfiles = (def.seats ?? []).map((seat) => {
 });
 
 process.stderr.write(`Seat profiles: ${seatProfiles.join(', ')}\n`);
+if (profileCompletionOverride !== null) {
+  process.stderr.write(
+    `Preview completion override: ${profileCompletionOverride.profileId}=${profileCompletionOverride.completion}\n`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Step 2: Run tournament simulations
@@ -488,7 +543,9 @@ const result = {
   seeds: SEED_COUNT,
   playerCount: PLAYER_COUNT,
   evolvedSeat: EVOLVED_SEAT,
+  evolvedProfile: EVOLVED_PROFILE,
   maxTurns: MAX_TURNS,
+  profileCompletionOverride: profileCompletionOverride ?? null,
   decisionBreakdown: buildDecisionBreakdown(averagedDecisionStats, round4),
 };
 

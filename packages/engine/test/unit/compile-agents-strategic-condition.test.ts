@@ -97,7 +97,7 @@ describe('strategic condition compilation', () => {
 
     assert.equal(hasErrors(result.diagnostics), false, `Unexpected errors: ${JSON.stringify(result.diagnostics)}`);
     assert.notEqual(result.gameDef, null);
-    const condition = result.gameDef!.agents!.library.strategicConditions['simpleGoal'];
+    const condition = result.gameDef!.agents!.compiled.strategicConditions['simpleGoal'];
     assert.ok(condition, 'simpleGoal should exist in compiled output');
     assert.strictEqual(condition.target.kind, 'op');
     assert.strictEqual(condition.proximity, undefined);

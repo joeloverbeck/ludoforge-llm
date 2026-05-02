@@ -14,6 +14,7 @@ Use this skill to evaluate a target skill against the work done in the current C
 ## Workflow
 
 1. Read the target skill. If the input is a directory, resolve `SKILL.md` inside it. If the target does not exist or is not a valid skill file, stop and report the error.
+   - If the user provides both a skill path and a pasted skill body, treat the on-disk path as authoritative. Use the pasted body only as a convenience or comparison aid, and call out any material mismatch before relying on either version.
 2. Read `docs/FOUNDATIONS.md` if it has not already been read earlier in the same audit turn, or if earlier reads came from a different task slice and may no longer be reliable context.
 3. Read `AGENTS.md` for repository conventions if it has not already been read earlier in the same audit turn, or if earlier reads came from a different task slice and may no longer be reliable context.
 4. Reflect on the current session and identify:
@@ -32,6 +33,7 @@ Use this skill to evaluate a target skill against the work done in the current C
    - `docs/FOUNDATIONS.md`
    - `AGENTS.md`
    - nearby sibling skills if the target participates in a multi-skill workflow and consistency matters
+   - For sibling skills, use this threshold: cross-check them when a finding changes handoff behavior, shared terminology, archival/review status, follow-up ownership, or another contract shared between skills. If the target merely sits near other skills but the finding is self-contained, state that no sibling cross-check was needed rather than broadening the audit.
 6. Classify each finding:
    - `Issue`: broken, misleading, contradictory, or missing guidance that caused a real problem
    - `Improvement`: a refinement that would make the skill more effective
@@ -42,6 +44,16 @@ Use this skill to evaluate a target skill against the work done in the current C
    - `MEDIUM`
    - `LOW`
 8. Present the report in the template below.
+
+Before the final response for every audit, do a compact structure check:
+
+- header block includes skill name, skill path, session date, session summary, and audit scope when useful
+- `## Alignment Check`, `## Issues`, `## Improvements`, `## Features`, and `## Summary` are present
+- self-audits include the five-item self-audit rubric
+- same-target re-audits include the delta mapping
+- each issue/improvement/feature has the requested classification fields when applicable
+- summary counts match the body
+- `Not Exercised` is included when relevant exercised-vs-unexercised boundaries matter
 
 ## Report Template
 
@@ -161,6 +173,7 @@ If the current audit targets a different skill than any earlier audit in this se
   - `handoff clarity`: were the resulting recommendations concrete enough for a follow-up implementation turn?
 - For `skill-audit` self-audits, report those five dimensions explicitly in the final audit under `Alignment Check` using the optional `Self-audit rubric` block. Do not leave the rubric implicit.
 - For self-audits, compare the immediately previous audit output against the report template before drafting findings. Explicitly check whether the required headings, summary fields, per-finding structure, and total-count summary were present.
+  - If context compaction or missing history prevents direct comparison to the immediately previous audit output, use the available conversation summary and tool history, state the evidence limitation in the audit scope or relevant finding, and only score/report structure details that can be verified. Do not infer missing headings, counts, or severity calibration from memory alone.
 - Use this optional self-audit rubric when deciding whether each evidence dimension passed:
   - `pass`: the audit satisfied the requirement cleanly
   - `minor drift`: the audit was usable but omitted structure or precision the skill asked for

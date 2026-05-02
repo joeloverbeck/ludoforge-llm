@@ -16,7 +16,7 @@ arguments:
 Confidence-driven collaborative brainstorming. Interviews you until it understands what you **actually want** — not what you think you should want — then proposes approaches, builds a design, and lets you choose what happens next.
 
 <HARD-GATE>
-Do NOT write any code, scaffold any project, invoke any implementation skill, or take any implementation action until you have presented a design and the user has explicitly approved it. This applies to EVERY topic regardless of perceived simplicity.
+Do NOT write any code, scaffold any project, invoke any implementation skill, or take any implementation action until you have presented a design (design mode) or a triage proposal listing the artifacts to be written and their scope (triage mode) and the user has explicitly approved it. This applies to EVERY topic regardless of perceived simplicity.
 </HARD-GATE>
 
 ## Process Flow
@@ -66,10 +66,12 @@ Classify: design | decision/triage | operational
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
-   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision. **Triage compound-move shape**: After Step 1.5 verification, the brief interview may take the form of one consolidated message — findings recap (including any framing corrections surfaced during verification) → proposed artifact set with per-item classifications and tradeoffs → batched multiple-choice gap-closers (scope, sequencing, phasing) with a recommendation. The user's single response then resolves all gaps and authorises Step 5 artifact writes. This mirrors the design-mode compound-move variant in Step 2.
    - **Operational**: The goal is to safely execute a concrete destructive or system-affecting action (rollback, cleanup, repair, migration, dependency upgrade, environment reset). Triggered when the user requests a specific action with side effects, not a design or evaluation of analysis. Follow the shortened flow: brief interview to confirm scope and risk tolerance → verify current system state (git, fs, build, tests) → write an executable plan with explicit numbered steps, expected outputs, and verification checks. Skip Steps 3-4 (approaches, section-by-section design); the action is the request, the design is the step list. The artifact is a plan-style doc, not a spec or ticket. See Step 5 for output format. Operational tasks frequently run under plan mode — see "Plan Mode Interaction" below.
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
+
+   Announce the chosen classification in one sentence before proceeding (e.g., "Topic classification: design — producing a campaign infrastructure artifact."). This forces conscious classification, especially when the topic could plausibly fit two modes (e.g., a campaign design that also launches a destructive worktree-modifying loop), and creates an audit trail for the rest of the conversation.
 
 3. **If implementation-related** (either mode): Read `docs/FOUNDATIONS.md`. You will need it to validate proposed approaches or artifact content against architectural principles. *"Implementation-related" means the design will result in changes to source code governed by FOUNDATIONS.md — skill design, process changes, and tooling configurations are not, even if they indirectly influence implementation.*
 
@@ -79,7 +81,9 @@ Classify: design | decision/triage | operational
 
 6. **Conversation context**: If the brainstorm follows extensive prior work in the same session (e.g., debugging, optimization campaigns, code exploration), treat the accumulated conversation context as equivalent to a rich reference file. Start confidence at 60-70% — you mainly need intent and scope clarification, not domain investigation.
 
-7. **Existing artifact investigation**: When the brainstorm topic concerns existing codebase artifacts (skills, modules, configurations, files), read them during this step — before the first interview question. The interview is more productive when grounded in the actual artifact content rather than the user's summary of it.
+7. **Existing artifact investigation**: When the brainstorm topic concerns existing codebase artifacts (skills, modules, configurations, files), read them during this step — before the first interview question. The interview is more productive when grounded in the actual artifact content rather than the user's summary of it. Heavy artifact investigation without a reference file (e.g., reading sibling code, workflow YAMLs, convention examples) typically yields a 70-80% starting confidence — comparable to a rich reference file under Step 1.4.
+
+8. **Stacked-trigger confidence**: When multiple high-confidence triggers fire together (rich reference file under Step 1.4 + heavy session context under Step 1.6 + heavy artifact investigation under Step 1.7), starting confidence may legitimately exceed any single trigger's bucket — 80-85% is reasonable when all three apply. The interview then shrinks to user-intent gap-closers rather than problem- or constraint-level questioning. Do not stack-pad above 85% from context alone; reaching 95% still requires an explicit user-intent confirmation or the 90-94% approach-closes-gaps exception.
 
 ## Step 1.5: Pre-Interview Verification (Optional)
 
@@ -135,7 +139,7 @@ Either way, name the percentage and the specific gaps. Vague phrasings like "I n
 
 ### Interview Rules
 
-1. **One question per message.** Never ask multiple questions at once. **Exception — triage mode**: Related independent decisions (e.g., disposition of item A + artifact format for item B) may be batched into a single AskUserQuestion call when the questions don't depend on each other's answers. **Exception — terminal design-mode rounds**: At ≥ 95% confidence (or under the 90–94% approach-closes-gaps exception in the Confidence Scoring Guide) where every remaining gap is a multiple-choice terminal decision that the Step 3 approach selection or a scoped scope/amendment choice will close, those gaps may be batched in the same message as the approach presentation. The inverse does not hold: open-ended "what problem are you solving?"–class questions must still be one per message.
+1. **One question per message.** Never ask multiple questions at once. **Exception — triage mode**: Related independent decisions (e.g., disposition of item A + artifact format for item B) may be batched into a single AskUserQuestion call when the questions don't depend on each other's answers. **Exception — terminal design-mode rounds**: At ≥ 95% confidence (or under the 90–94% approach-closes-gaps exception in the Confidence Scoring Guide) where every remaining gap is a multiple-choice terminal decision that the Step 3 approach selection or a scoped scope/amendment choice will close, those gaps may be batched in the same message as the approach presentation. **Exception — Step 2.5 trigger configuration**: A research-now-or-defer question (Step 2.5 Trigger A timing) may be batched alongside the approach selection when the same answer informs both — i.e., when the user's approach choice naturally implies whether prior-art research is needed for that approach. The inverse does not hold: open-ended "what problem are you solving?"–class questions must still be one per message.
 2. **Prefer multiple-choice questions** when the answer space is bounded. Open-ended is fine when it isn't.
 3. **Probe motivations before solutions.** Ask "What problem does this solve?" and "What happens if we don't do this?" before "What do you want built?" The user's first request often describes a solution, not the problem. Your job is to find the problem.
 4. **Challenge premature specificity.** If the user jumps to implementation details early, ask why that specific approach matters. Often the constraint is softer than stated.
@@ -179,7 +183,7 @@ When a confidence gap can only be resolved by codebase investigation — not by 
 
 Announce what you're investigating and why, present findings, then resume the interview with the new information incorporated into your confidence score. The user explicitly requesting investigation (e.g., "investigate the matter carefully") is a strong signal to use this path.
 
-In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the problem boundary shifts — an artifact read in Step 1 may surface a diagnostic worth running in Step 1.5, which in turn may surface a broader sweep worth running mid-Step 2. There is no cap on investigation stages as long as each is justified, announced, and proportionate to the decision at stake. Record the confidence delta each phase produces so the accumulated investigation is visible rather than implicit.
+In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the problem boundary shifts — an artifact read in Step 1 may surface a diagnostic worth running in Step 1.5, which in turn may surface a broader sweep worth running mid-Step 2. There is no cap on investigation stages as long as each is justified, announced, and proportionate to the decision at stake. Record the confidence delta each phase produces so the accumulated investigation is visible rather than implicit. Each investigation phase that materially changes confidence should announce the delta in one inline sentence (e.g., `Confidence: 80% after CI log review — gap narrows to user intent`); phases that don't move confidence don't need an announcement, but the final pre-Step-3 confidence figure must be stated in full so the user can verify the audit trail.
 
 ### Mid-Flow Investigation (Triage Mode)
 
@@ -189,7 +193,7 @@ If the user responds to a triage question with a request for additional investig
 
 Before proposing approaches, run a targeted external prior-art survey when either trigger applies:
 
-**Trigger A — User requested external research.** The user asked to "research online", "look up prior art", or similar. Proceed without re-asking.
+**Trigger A — User requested external research.** The user asked to "research online", "look up prior art", or similar **unconditionally**. Proceed without re-asking. If the request is conditional ("if needed", "as necessary", "after we verify X"), wait for the condition to resolve via Step 1.5 verification before triggering — surface the timing question in the Step 3 compound-move gap-closer (per Interview Rule 1's Step 2.5 trigger-configuration exception) rather than running searches preemptively.
 
 **Trigger B — Architectural topic without prior-art coverage in references.** The brainstorm designs cross-cutting architecture (kernel, protocol, state model, public API) and the reference files do not already survey how similar systems solved the same problem. External survey grounds Step 3's approaches in real systems rather than speculation, which serves FOUNDATIONS #15 (Architectural Completeness).
 
@@ -215,7 +219,9 @@ Present **2-3 distinct approaches** with:
 
 **If triage produced a set of approved changes** (decision/triage → design transition), the approach options shift from "which changes" to "how to apply them" — e.g., incremental patches vs. structured rewrite vs. phased rollout. Present these implementation strategies as the approaches.
 
-**If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`.
+**If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`. Omit the line for an approach that is FOUNDATIONS-neutral relative to its alternatives — only tag when it surfaces a real differentiator (alignment unique to this approach, or a tension absent in the others). When all approaches are FOUNDATIONS-equivalent, defer per-approach tagging entirely and address FOUNDATIONS in the Step 4 design section.
+
+**Tactical + strategic compound**: When the user's pain has both a short-term unblock and a strategic root-cause fix, present them on two orthogonal axes — strategic approaches A/B/C with their own tradeoffs, plus an orthogonal tactical option T whose effort and risk are independent of the strategic axis. The compound gap-closer in Step 2 then offers strategic × tactical combinations (e.g., `B + T`, `B only`, `C + T`) rather than mutually-exclusive choices. Use this pattern when the user's request explicitly references chronic pain plus a strategic horizon, or when CI/operational state is broken in a way that a tactical config change would unblock independently of the architectural fix. Tactical options MUST come paired with a restoration ticket that closes only when the strategic phases land — without the restoration ticket, the tactical option silently normalizes as "the answer" and violates F15 (Architectural Completeness).
 
 **Wait for user to choose or ask questions.** Do not proceed until the user picks an approach (or asks you to refine/combine).
 
@@ -249,7 +255,7 @@ The list above is a starting menu, not a fixed schema — domain-appropriate sub
 
 **Plan mode override**: If plan mode is active, the harness specifies the artifact path; write there instead of the per-mode default below. See "Plan Mode Interaction" earlier in this skill.
 
-**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. Follow established formatting conventions from existing specs.
+**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, `tickets/`, `archive/tickets/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. For tickets continuing an existing prefix series (e.g., `POLPREVDRIVE-001` is archived; new tickets are `POLPREVDRIVE-002+`), inspect `archive/tickets/<PREFIX>-*.md` for the highest existing number and continue from `+1`. Follow established formatting conventions from existing specs.
 
 ### Design mode (default)
 
@@ -257,6 +263,11 @@ Once all sections are approved, determine the output format:
 
 - **If the design needs further refinement** (sections had significant revision, open questions remain, approach is exploratory): write to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Include a "Brainstorm Context" header noting the original request, reference file (if any), key interview insights, and final confidence score with any assumptions.
 - **If all sections were approved without revision and the output is a well-scoped implementation spec** (ready for ticket decomposition): write directly to `specs/<number>-<name>.md`. The design doc is a staging area for designs that need further discussion — not a mandatory waypoint when the brainstorm produces a finished spec.
+- **If the brainstorm produces a new user-invocable skill**: write to `.claude/skills/<name>/SKILL.md`. Follow the convention visible in sibling skills under `.claude/skills/` — frontmatter (`name`, `description`, `user-invocable: true`, optional `arguments` with `name`/`description`/`required`), worktree-awareness section, numbered Process steps, Guardrails. Use the multi-file directory pattern (`SKILL.md` + `references/`) only when SKILL.md would exceed ~250 lines or when distinct instruction surfaces warrant extraction; defer to `skill-extract-references` for retroactive splitting rather than pre-splitting at creation time.
+
+**Auto-mode + compound-move "approved without revision"**: Under the Step 4 auto-mode adaptation combined with the compound-move section preview, sections are previewed as bullets but never individually approved. The section-bullet preview without user pushback counts as "approved without revision" for the routing rule above — route to `specs/` if the design is well-scoped, route to `docs/plans/` only if the user pushed back on a section in the preview message. Pushback that arrives AFTER the artifact has been written is post-design feedback (handled per "Post-Design Requests"), not a routing reclassification.
+
+**Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a phase-boundaries table where each phase row pairs a measurable acceptance criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this table — a single acceptance criteria section suffices.
 
 **Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
 
@@ -266,7 +277,7 @@ Do NOT commit the file. Leave it for user review.
 
 If the brainstorm's output is specs or tickets (not a design requiring further refinement), skip the design doc and write the artifacts directly:
 - **Specs** go to `specs/<number>-<name>.md` following existing spec conventions
-- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following the ticket template
+- **Tickets** go to `tickets/<PREFIX>-<NNN>-<name>.md` following `tickets/_TEMPLATE.md` for section structure
 
 ### Operational mode
 
@@ -282,6 +293,45 @@ Write an executable plan with the following sections (scale each to its complexi
 
 Output to `docs/plans/YYYY-MM-DD-<action>.md` (or harness-specified plan path under plan mode). Do NOT execute. The plan is the artifact; execution is a separate user-approved step.
 
+### Multi-file artifact directory
+
+When the brainstorm's output is a multi-file directory (e.g., an `improve-loop` campaign, a plugin scaffold, a harness scaffold) rather than a single prose document:
+
+- **Output path**: a new directory whose location follows existing repo convention (e.g., `campaigns/<name>/` for improve-loop campaigns; `<plugin-root>/<name>/` for plugin scaffolds). Confirm the convention by listing the parent directory before writing.
+- **Required artifacts** (campaign example): one human-readable instruction spec (e.g., `program.md`) that captures the approved design verbatim, plus the executable scaffolding the design prescribes (harness script, runner script, fixtures). Generate the spec and the scaffolding in the same brainstorm — do not defer scaffolding to a follow-up.
+- **Section-by-section approval applies to the spec only.** The executable scaffolding (harness, runner) is mechanical translation from the approved spec, not new design. Compound-move + auto-mode rules from Step 4 still apply to the spec; under auto mode, write the scaffolding immediately after the spec is approved without further per-file approval.
+- **Do NOT commit the directory.** Leave it for user review like any other Step 5 artifact.
+- **Smoke-validate** the executable scaffolding per Step 5.5 before handoff.
+
+## Step 5.5: Validate Executable Artifacts
+
+When Step 5 produces executable code (harness scripts, benchmark runners, plugins, generated config) — not just prose — run cheap structural checks before handing off to the user. Skill artifacts (`.claude/skills/<name>/SKILL.md`) get a parallel set of checks documented under "Skill artifact checks" below.
+
+**Mandatory checks** (every executable artifact):
+
+- **Syntax check**: `node --check <file.mjs|.js>`, `bash -n <file.sh>`, `python -m py_compile <file.py>`, or the language equivalent. These catch import errors, scoping bugs (e.g., referencing a class declaration before its definition), missing braces, and similar mechanical defects in <1 second.
+- **Permission/shebang check**: if the artifact is meant to be invoked directly (`./harness.sh`, executable via shebang), verify the executable bit (`ls -l`) and shebang line.
+
+**Optional checks** (when the runtime is bounded, typically <2 minutes per mode):
+
+- **Smoke run**: invoke the artifact once per declared operating mode (e.g., `--mode on`, `--mode off`) and confirm it produces structurally valid output (expected JSON keys, exit code 0, expected order of magnitude on declared metrics). Skip when a single invocation would exceed ~2 minutes unless the user explicitly opts in.
+- **Cross-mode comparison** (when applicable): if the artifact has a declared expected relationship between modes (e.g., a watchdog mode should be ~baseline-time, a primary mode should reproduce a known regression), confirm the relationship holds within reasonable noise.
+
+**Skill artifact checks** (every new SKILL.md produced by Step 5):
+
+- **Frontmatter validity**: the YAML frontmatter parses; contains `name`, `description`, and `user-invocable`; if `arguments` is present, each entry has `name`, `description`, and `required`.
+- **Directory layout**: matches sibling-skill convention under `.claude/skills/`. Single `SKILL.md` by default; `SKILL.md` + `references/` only when SKILL.md is a thin entry point.
+- **Harness registration**: the new skill name appears in the next system-injected available-skills list. The harness re-loads its index after a write; registration is observable in the next message's system-reminder block. If the skill does not appear, re-check frontmatter and file path before handoff.
+
+Skill artifacts are prose, not executable code, so syntax/permission/smoke checks do not apply. The disposition rules below cover frontmatter typos (mechanical → fix in-place) and missing-design-section gaps (structural → raise to user).
+
+**Defect disposition**:
+
+- **Mechanical defects** (syntax errors, missing imports, typos, executable-bit not set): fix in-place silently. This is artifact-correctness, not re-design — it does not require re-approval.
+- **Structural defects** (wrong scope, missed requirement, design assumption violated by the smoke run): raise back to the user with a one-line summary of what the smoke run revealed, propose a corrected design, and re-validate after the correction is approved. This IS a design correction — surface it, do not silently rewrite the artifact.
+
+The hard gate at the top of this skill is preserved: validation confirms structural correctness of the *approved* design, it does not introduce new behavior.
+
 ## Step 6: Next Steps Menu
 
 **Plan mode override**: If plan mode is active, replace the menu with `ExitPlanMode`. The plan-mode approval IS the next-step decision. See "Plan Mode Interaction" earlier in this skill.
@@ -291,7 +341,7 @@ Present the user with options for what to do next. Adapt the menu to the output 
 **If output was a design doc** (`docs/plans/`):
 ```
 What would you like to do next?
-1. Write an implementation plan (invoke writing-plans skill)
+1. Write an implementation plan (invoke superpowers:writing-plans skill)
 2. Create a spec from this design (write to specs/)
 3. Start implementing directly
 4. Done for now — I'll review the design doc later
@@ -310,6 +360,18 @@ Suggest a namespace for option 1 derived from the spec title at menu time. The e
 
 Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
 
+**Multi-phase spec adaptation**: If the spec has a phased structure where the earliest phase is a tactical/standalone deliverable (e.g., a CI unblock paired with a multi-week architectural change), append an option: "Start Phase 0 immediately while reviewing the rest." This is appropriate when Phase 0's risk profile is unrelated to later phases AND Phase 0 is genuinely separable (small effort, no architectural dependencies on later phases). Pair this option with the restoration ticket required by the Step 3 "Tactical + strategic compound" rule — Phase 0 closes only when the strategic phases land.
+
+**If triage produced tickets directly** (`tickets/<PREFIX>-<NNN>.md`):
+```
+What would you like to do next?
+1. Implement ticket <PREFIX>-<lowest-NNN> first (invoke implement-ticket skill)
+2. Run `pnpm run check:ticket-deps` to verify dependency integrity, then defer
+3. Done for now — I'll review the tickets later
+```
+
+Recommend option 1 only when the lowest-numbered ticket is genuinely independent (no `Deps` line listing other newly-written tickets); otherwise default to option 3.
+
 **If triage produced spec(s) and/or report updates**:
 ```
 What would you like to do next?
@@ -326,7 +388,27 @@ What would you like to do next?
 3. Revise the plan first (re-enter brainstorm with corrections)
 ```
 
-**Continual Learning prompt** (only when applicable): If the brainstorm surfaced a concrete gap in `CLAUDE.md`, `docs/FOUNDATIONS.md`, or an existing skill (conflicting instructions, missing guidance, outdated references), append an option: "Propose updates to <file>". Do not include this option speculatively — only when the brainstorm produced specific evidence of a gap. This implements CLAUDE.md's Continual Learning rule.
+**If output was a multi-file artifact directory** (`campaigns/<name>/`, plugin scaffold, etc.):
+```
+What would you like to do next?
+1. Launch the workflow now (e.g., `/improve-loop campaigns/<name>` for campaigns; equivalent invocation for other directory artifacts)
+2. Smoke-test the harness/runner first (run one mode end-to-end at baseline cost before launching the loop)
+3. Done for now — I'll launch later
+```
+
+Adapt option 1 to the directory's downstream consumer — `/improve-loop` for campaigns, the relevant plugin-loader command for plugin scaffolds, etc. Option 2 applies when Step 5.5's optional smoke run was deferred (e.g., per-mode runtime exceeds the ~2-minute bounded threshold and the user did not opt in earlier).
+
+**If output was a new skill** (`.claude/skills/<name>/SKILL.md`):
+```
+What would you like to do next?
+1. Validate via `/skill-audit .claude/skills/<name>` (catches frontmatter and cross-skill issues before first real use)
+2. Exercise the skill on a representative real-world case
+3. Done — I'll exercise it next time the trigger arises
+```
+
+Recommend option 1 when the new skill has more than ~150 lines or invokes other skills as chain neighbors. For short, self-contained skills, option 3 is reasonable.
+
+**Continual Learning prompt** (only when applicable): If the brainstorm surfaced a concrete gap in `CLAUDE.md`, `docs/FOUNDATIONS.md`, an existing skill, or a `reports/` file whose forward-looking guidance is now contradicted by landed code (conflicting instructions, missing guidance, outdated references, or a recommendation marked "the real fix" / "next step" / equivalent that has since been implemented), append an option: "Propose updates to <file>". Do not include this option speculatively — only when the brainstorm produced specific evidence of a gap (e.g., a commit SHA or diff that contradicts the file's claim). This implements CLAUDE.md's Continual Learning rule.
 
 If the user has already stated their next step (e.g., in the same message that approved the final design section, or immediately after artifact writing), skip the menu and proceed with their stated intent. If the brainstorm was invoked mid-task (e.g., during active troubleshooting or implementation) and the design is a targeted fix, present a brief confirmation ("Ready to implement — proceeding unless you'd prefer a different path") rather than the full menu. In triage mode, if all items have been triaged and artifacts written, the brainstorm is naturally complete — the menu may be skipped when continuation would add no value.
 

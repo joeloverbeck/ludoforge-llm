@@ -22,9 +22,15 @@ import {
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
   type CompiledAgentPolicyRef,
-  type CompiledStrategicCondition,
+  type CompiledPolicyExpr,
   type GameDef,
 } from '../../../src/kernel/index.js';
+import {
+  withCompiledPolicyCatalog,
+  type AgentPolicyCatalogFixtureLibrary,
+} from '../../helpers/policy-catalog-fixtures.js';
+
+type StrategicConditionFixture = AgentPolicyCatalogFixtureLibrary['strategicConditions'][string];
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -160,7 +166,7 @@ function createBaseDef(overrides?: {
     ],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
-    agents: {
+    agents: withCompiledPolicyCatalog({
       schemaVersion: 2,
       catalogFingerprint: 'test',
       surfaceVisibility: {
@@ -201,7 +207,7 @@ function createBaseDef(overrides?: {
         },
       },
       bindingsBySeat: { p1: 'baseline' },
-    },
+    }),
     actions: [
       {
         id: asActionId('pass'),
@@ -225,24 +231,24 @@ function createBaseDef(overrides?: {
 }
 
 function createCatalog(
-  strategicConditions: Record<string, CompiledStrategicCondition>,
+  strategicConditions: Record<string, StrategicConditionFixture>,
   overrides?: Partial<AgentPolicyCatalog['library']>,
 ): AgentPolicyCatalog {
   const def = createBaseDef();
   const catalog = def.agents as AgentPolicyCatalog;
-  return {
+  return withCompiledPolicyCatalog({
     ...catalog,
     library: {
       ...catalog.library,
       strategicConditions,
       ...overrides,
     },
-  };
+  });
 }
 
 function createContext(
   def: GameDef,
-  strategicConditions: Record<string, CompiledStrategicCondition>,
+  strategicConditions: Record<string, StrategicConditionFixture>,
   stateOverrides?: (state: ReturnType<typeof initialState>['state']) => ReturnType<typeof initialState>['state'],
   libraryOverrides?: Partial<AgentPolicyCatalog['library']>,
 ): PolicyEvaluationContext {
@@ -351,7 +357,7 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
 
     assert.equal(hasErrors(result.diagnostics), false, `Unexpected errors: ${JSON.stringify(result.diagnostics)}`);
     assert.notEqual(result.gameDef, null);
-    const condition = result.gameDef!.agents!.library.strategicConditions['vcPivotalReady'];
+    const condition = result.gameDef!.agents!.compiled.strategicConditions['vcPivotalReady'];
     assert.ok(condition, 'vcPivotalReady should exist in compiled output');
     assert.strictEqual(condition.target.kind, 'op');
     assert.ok(condition.proximity, 'vcPivotalReady should have proximity');
@@ -373,7 +379,7 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
       aggOp: 'count',
       zoneScope: 'board',
     };
-    const vcPivotalCondition: CompiledStrategicCondition = {
+    const vcPivotalCondition: StrategicConditionFixture = {
       target: opExpr('gte', opExpr('add', guerrillaAgg, baseAgg), literal(15)),
       proximity: {
         current: opExpr('add', guerrillaAgg, baseAgg),
@@ -393,10 +399,10 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
       },
     }));
 
-    const proximity = ctx.evaluateExpr(conditionRef('vcPivotalReady', 'proximity'), undefined) as number;
+    const proximity = ctx.evaluateCompiledExpr(conditionRef('vcPivotalReady', 'proximity') as CompiledPolicyExpr, undefined) as number;
     assert.ok(Math.abs(proximity - 10 / 15) < 0.001, `Expected ~0.667, got ${proximity}`);
 
-    const satisfied = ctx.evaluateExpr(conditionRef('vcPivotalReady', 'satisfied'), undefined);
+    const satisfied = ctx.evaluateCompiledExpr(conditionRef('vcPivotalReady', 'satisfied') as CompiledPolicyExpr, undefined);
     assert.equal(satisfied, false, 'Should not be satisfied at 10/15');
   });
 
@@ -414,7 +420,7 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
       aggOp: 'count',
       zoneScope: 'board',
     };
-    const vcPivotalCondition: CompiledStrategicCondition = {
+    const vcPivotalCondition: StrategicConditionFixture = {
       target: opExpr('gte', opExpr('add', guerrillaAgg, baseAgg), literal(15)),
       proximity: {
         current: opExpr('add', guerrillaAgg, baseAgg),
@@ -434,10 +440,10 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
       },
     }));
 
-    const proximity = ctx.evaluateExpr(conditionRef('vcPivotalReady', 'proximity'), undefined);
+    const proximity = ctx.evaluateCompiledExpr(conditionRef('vcPivotalReady', 'proximity') as CompiledPolicyExpr, undefined);
     assert.equal(proximity, 1.0, 'Proximity should be clamped to 1.0 when above threshold');
 
-    const satisfied = ctx.evaluateExpr(conditionRef('vcPivotalReady', 'satisfied'), undefined);
+    const satisfied = ctx.evaluateCompiledExpr(conditionRef('vcPivotalReady', 'satisfied') as CompiledPolicyExpr, undefined);
     assert.equal(satisfied, true, 'Should be satisfied at 16/15');
   });
 
@@ -470,7 +476,7 @@ describe('strategic condition E2E — FITL integration (VC pivotal)', () => {
     assert.equal(hasErrors(result.diagnostics), false, `Unexpected errors: ${JSON.stringify(result.diagnostics)}`);
     assert.notEqual(result.gameDef, null);
 
-    const consideration = result.gameDef!.agents!.library.considerations['rewardPivotalProgress'];
+    const consideration = result.gameDef!.agents!.compiled.considerations['rewardPivotalProgress'];
     assert.ok(consideration, 'rewardPivotalProgress should exist in compiled output');
     assert.deepStrictEqual(consideration.weight, { kind: 'literal', value: 2 }, 'Weight should be literal 2');
     assert.ok(
@@ -507,11 +513,11 @@ describe('strategic condition E2E — cross-condition references', () => {
 
   it('composite condition using min of two sub-condition proximities evaluates correctly', () => {
     // Two conditions with different proximity values, a state feature uses min of both
-    const condA: CompiledStrategicCondition = {
+    const condA: StrategicConditionFixture = {
       target: literal(false),
       proximity: { current: literal(6), threshold: 10 },
     };
-    const condB: CompiledStrategicCondition = {
+    const condB: StrategicConditionFixture = {
       target: literal(false),
       proximity: { current: literal(8), threshold: 10 },
     };
@@ -519,8 +525,8 @@ describe('strategic condition E2E — cross-condition references', () => {
     const def = createBaseDef();
     const ctx = createContext(def, { condA, condB });
 
-    const proxA = ctx.evaluateExpr(conditionRef('condA', 'proximity'), undefined) as number;
-    const proxB = ctx.evaluateExpr(conditionRef('condB', 'proximity'), undefined) as number;
+    const proxA = ctx.evaluateCompiledExpr(conditionRef('condA', 'proximity') as CompiledPolicyExpr, undefined) as number;
+    const proxB = ctx.evaluateCompiledExpr(conditionRef('condB', 'proximity') as CompiledPolicyExpr, undefined) as number;
 
     assert.ok(Math.abs(proxA - 0.6) < 0.001, `Expected condA proximity ~0.6, got ${proxA}`);
     assert.ok(Math.abs(proxB - 0.8) < 0.001, `Expected condB proximity ~0.8, got ${proxB}`);
@@ -531,7 +537,7 @@ describe('strategic condition E2E — cross-condition references', () => {
       conditionRef('condA', 'proximity'),
       conditionRef('condB', 'proximity'),
     );
-    const minResult = ctx.evaluateExpr(minExpr, undefined) as number;
+    const minResult = ctx.evaluateCompiledExpr(minExpr as CompiledPolicyExpr, undefined) as number;
     assert.ok(Math.abs(minResult - 0.6) < 0.001, `Expected min ~0.6, got ${minResult}`);
   });
 
@@ -669,21 +675,21 @@ describe('strategic condition E2E — score term integration', () => {
     const def = createBaseDef();
 
     // State A: low proximity (3/10 = 0.3) → high urgency score
-    const conditionLow: CompiledStrategicCondition = {
+    const conditionLow: StrategicConditionFixture = {
       target: opExpr('gte', literal(3), literal(10)),
       proximity: { current: literal(3), threshold: 10 },
     };
     const ctxLow = createContext(def, { goal: conditionLow });
-    const proxLow = ctxLow.evaluateExpr(conditionRef('goal', 'proximity'), undefined) as number;
+    const proxLow = ctxLow.evaluateCompiledExpr(conditionRef('goal', 'proximity') as CompiledPolicyExpr, undefined) as number;
     const urgencyScoreLow = 2 * (1 - proxLow);
 
     // State B: high proximity (8/10 = 0.8) → low urgency score
-    const conditionHigh: CompiledStrategicCondition = {
+    const conditionHigh: StrategicConditionFixture = {
       target: opExpr('gte', literal(8), literal(10)),
       proximity: { current: literal(8), threshold: 10 },
     };
     const ctxHigh = createContext(def, { goal: conditionHigh });
-    const proxHigh = ctxHigh.evaluateExpr(conditionRef('goal', 'proximity'), undefined) as number;
+    const proxHigh = ctxHigh.evaluateCompiledExpr(conditionRef('goal', 'proximity') as CompiledPolicyExpr, undefined) as number;
     const urgencyScoreHigh = 2 * (1 - proxHigh);
 
     assert.ok(urgencyScoreLow > urgencyScoreHigh,
@@ -700,7 +706,7 @@ describe('strategic condition E2E — score term integration', () => {
       aggOp: 'count',
       zoneScope: 'board',
     };
-    const condition: CompiledStrategicCondition = {
+    const condition: StrategicConditionFixture = {
       target: opExpr('gte', guerrillaAgg, literal(5)),
       proximity: { current: guerrillaAgg, threshold: 5 },
     };
@@ -713,8 +719,8 @@ describe('strategic condition E2E — score term integration', () => {
       },
     }));
 
-    const result1 = makeCtx().evaluateExpr(conditionRef('test', 'proximity'), undefined);
-    const result2 = makeCtx().evaluateExpr(conditionRef('test', 'proximity'), undefined);
+    const result1 = makeCtx().evaluateCompiledExpr(conditionRef('test', 'proximity') as CompiledPolicyExpr, undefined);
+    const result2 = makeCtx().evaluateCompiledExpr(conditionRef('test', 'proximity') as CompiledPolicyExpr, undefined);
     assert.strictEqual(result1, result2, 'Same state should produce same proximity');
     assert.ok(Math.abs((result1 as number) - 0.6) < 0.001, `Expected 0.6, got ${result1}`);
   });

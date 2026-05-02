@@ -70,6 +70,15 @@ describe('core-types validation property-style checks', () => {
             tieBreakers: {},
             strategicConditions: {},
           },
+          compiled: {
+            stateFeatures: {},
+            candidateFeatures: {},
+            candidateAggregates: {},
+            pruningRules: {},
+            considerations: {},
+            tieBreakers: {},
+            strategicConditions: {},
+          },
           profiles: {
             baseline: {
               fingerprint: 'abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789',

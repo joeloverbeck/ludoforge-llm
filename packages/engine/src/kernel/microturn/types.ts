@@ -20,6 +20,8 @@ import type {
   Rng,
   RuntimeWarning,
   SelectorTraceEntry,
+  SerializedGameState,
+  SerializedRng,
   StateDelta,
   TriggerLogEntry,
 } from '../types-core.js';
@@ -67,6 +69,15 @@ export interface EffectExecutionFrameSnapshot {
   readonly pendingTriggerQueue: readonly TriggerId[];
   readonly decisionHistory?: readonly CompoundTurnTraceEntry[];
   readonly suspendedFrame?: SuspendedEffectFrameSnapshot;
+}
+
+export interface SerializedEffectExecutionFrameSnapshot {
+  readonly programCounter: number;
+  readonly boundedIterationCursors: Readonly<Record<string, number>>;
+  readonly localBindings: Readonly<Record<string, MoveParamValue>>;
+  readonly pendingTriggerQueue: readonly TriggerId[];
+  readonly decisionHistory?: readonly CompoundTurnTraceEntry[];
+  readonly suspendedFrame?: SerializedSuspendedEffectFrameSnapshot;
 }
 
 export interface SuspendedChoiceBindingOption {
@@ -147,6 +158,16 @@ export interface SuspendedEffectFrameSnapshot {
   readonly resumeStack: readonly SuspendedResumeFrame[];
 }
 
+export interface SerializedSuspendedEffectFrameSnapshot {
+  readonly state: SerializedGameState;
+  readonly rng: SerializedRng;
+  readonly actorPlayer: GameState['activePlayer'];
+  readonly bindings: Readonly<Record<string, unknown>>;
+  readonly freeOperationOverlay?: FreeOperationExecutionOverlay;
+  readonly leaf: SuspendedDecisionLeaf;
+  readonly resumeStack: readonly SuspendedResumeFrame[];
+}
+
 export interface ActionSelectionContext {
   readonly kind: 'actionSelection';
   readonly seatId: SeatId;
@@ -218,6 +239,27 @@ export interface DecisionStackFrame {
    */
   readonly continuationBindings?: Readonly<Record<DecisionKey, MoveParamValue>>;
   readonly effectFrame: EffectExecutionFrameSnapshot;
+}
+
+export interface SerializedDecisionStackFrame {
+  readonly frameId: DecisionFrameId;
+  readonly parentFrameId: DecisionFrameId | null;
+  readonly turnId: TurnId;
+  readonly context: DecisionContext;
+  readonly continuationBindings?: Readonly<Record<DecisionKey, MoveParamValue>>;
+  readonly effectFrame: SerializedEffectExecutionFrameSnapshot;
+}
+
+export interface PreviewDriveResult {
+  readonly state: GameState;
+  readonly depth: number;
+  readonly kind: 'completed' | 'stochastic' | 'depthCap' | 'failed';
+  readonly failureReason?: string;
+}
+
+export interface PreviewDriveOrigin {
+  readonly seatId: SeatId | '__chance' | '__kernel';
+  readonly turnId: TurnId;
 }
 
 export interface ProjectedGameState {

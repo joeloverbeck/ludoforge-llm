@@ -19,6 +19,127 @@ import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import { resolveTokenViewFieldValue } from './token-view.js';
 import type { Reference, ScalarArrayValue, Token } from './types.js';
 
+export type ResolveRefCacheValue = number | boolean | string | ScalarArrayValue;
+
+/**
+ * Drive-scoped memoisation cache for `resolveRef`.
+ *
+ * Allocated fresh per `driveSyntheticCompletion` call (see
+ * `packages/engine/src/agents/policy-preview.ts`). Lives entirely inside the
+ * drive's synchronous call frame and is garbage-collected at drive exit.
+ *
+ * F11 (immutability) — scoped internal mutation: the cache never escapes the
+ * drive scope and is never visible to callers outside `driveSyntheticCompletion`.
+ *
+ * F8 (determinism): `resolveRef` is referentially transparent for fixed
+ * `(ref, ctx)`. The cache is keyed on every input that affects output:
+ * the ref shape, bindings reference identity, free-operation overlay identity,
+ * `state.stateHash`, and `activePlayer` / `actorPlayer`. Same input → same key
+ * → same cached output.
+ *
+ * Bindings-mutation hook: `eval-value.ts:evalAggregate` reuses one mutable
+ * `itemBindings` object across aggregate items. The cache must be told to
+ * forget entries keyed on that bindings reference whenever its content
+ * changes; see `invalidateBindings` and the call site inside `evalAggregate`.
+ */
+export interface ResolveRefCache {
+  get(ref: Reference, ctx: ReadContext): ResolveRefCacheValue | undefined;
+  set(ref: Reference, ctx: ReadContext, value: ResolveRefCacheValue): void;
+  invalidateBindings(bindings: object): void;
+  clear(): void;
+}
+
+/**
+ * Allocate a fresh resolveRef cache.
+ *
+ * Cache invariants:
+ * - Outer key: the bindings object reference. Each unique `ctx.bindings` gets
+ *   its own inner `Map`, so mutation of one bindings object cannot pollute
+ *   another (e.g., outer ctx vs aggregate's `itemBindings`).
+ * - Inner key: deterministic string composed of `state.stateHash`, free-operation
+ *   overlay reference identity, `activePlayer`, `actorPlayer`, and a
+ *   serialised ref shape. Bindings identity is implicit in the outer key.
+ * - Mutation safety: `invalidateBindings(obj)` drops the inner map for `obj`,
+ *   which is what `evalAggregate` calls after each `itemBindings[bind] = item`.
+ */
+export function createResolveRefCache(): ResolveRefCache {
+  const entriesByBindings = new WeakMap<object, Map<string, ResolveRefCacheValue>>();
+  let nextOverlayId = 1;
+  const overlayIdMap = new WeakMap<object, number>();
+
+  const overlayIdFor = (overlay: object | undefined): number => {
+    if (overlay === undefined) {
+      return 0;
+    }
+    let id = overlayIdMap.get(overlay);
+    if (id === undefined) {
+      id = nextOverlayId++;
+      overlayIdMap.set(overlay, id);
+    }
+    return id;
+  };
+
+  const buildInnerKey = (ref: Reference, ctx: ReadContext): string => {
+    const overlayId = overlayIdFor(ctx.freeOperationOverlay);
+    const stateHashHex = ctx.state.stateHash.toString(16);
+    return `${stateHashHex}|${overlayId}|${String(ctx.activePlayer)}|${String(ctx.actorPlayer)}|${JSON.stringify(ref)}`;
+  };
+
+  // The set of bindings objects the cache has populated entries for. WeakMap
+  // alone is not iterable; we track keys explicitly so `clear()` can drop all
+  // entries deterministically. Bindings references are short-lived (per
+  // drive iteration), so this set is bounded.
+  const knownBindings = new Set<object>();
+
+  return {
+    get(ref, ctx) {
+      const innerMap = entriesByBindings.get(ctx.bindings);
+      if (innerMap === undefined) {
+        return undefined;
+      }
+      return innerMap.get(buildInnerKey(ref, ctx));
+    },
+    set(ref, ctx, value) {
+      let innerMap = entriesByBindings.get(ctx.bindings);
+      if (innerMap === undefined) {
+        innerMap = new Map();
+        entriesByBindings.set(ctx.bindings, innerMap);
+        knownBindings.add(ctx.bindings);
+      }
+      innerMap.set(buildInnerKey(ref, ctx), value);
+    },
+    invalidateBindings(bindings) {
+      entriesByBindings.delete(bindings);
+      knownBindings.delete(bindings);
+    },
+    clear() {
+      for (const bindings of knownBindings) {
+        entriesByBindings.delete(bindings);
+      }
+      knownBindings.clear();
+    },
+  };
+}
+
+/**
+ * Memoised wrapper around `resolveRef`. Same return shape; same throw
+ * behaviour on miss (errors propagate from the underlying call). Cache
+ * stores only successful resolutions, so error paths run unchanged.
+ */
+export function resolveRefMemoised(
+  ref: Reference,
+  ctx: ReadContext,
+  cache: ResolveRefCache,
+): ResolveRefCacheValue {
+  const cached = cache.get(ref, ctx);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const value = resolveRef(ref, ctx);
+  cache.set(ref, ctx, value);
+  return value;
+}
+
 function isScalarValue(value: unknown): value is number | boolean | string {
   return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string';
 }
@@ -82,7 +203,7 @@ function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' 
       throw missingBindingError(`Scoped variable name binding not found: ${ref.var.name}`, {
         reference: ref,
         binding: ref.var.name,
-        availableBindings: Object.keys(ctx.bindings).sort(),
+        availableBindings: Object.keys(ctx.bindings),
       });
     }
     throw typeMismatchError(`Scoped variable name binding must resolve to string: ${ref.var.name}`, {
@@ -96,7 +217,7 @@ function resolveScopedVarNameForReference(ref: Extract<Reference, { ref: 'gvar' 
     throw missingVarError(`Scoped variable name grantContext not found: ${ref.var.key}`, {
       reference: ref,
       key: ref.var.key,
-      availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}).sort(),
+      availableGrantContextKeys: Object.keys(ctx.freeOperationOverlay?.grantContext ?? {}),
     });
   }
   throw typeMismatchError(`Scoped variable name grantContext must resolve to string: ${ref.var.key}`, {
@@ -398,7 +519,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
 
   if (ref.ref === 'markerState') {
     const spaceId = resolveMapSpaceId(ref.space, ctx);
-    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id)).sort();
+    const availableMapSpaceIds = ctx.def.zones.map((zone) => String(zone.id));
     if (!availableMapSpaceIds.includes(String(spaceId))) {
       throw missingVarError(`Unknown map-space id for markerState: ${String(spaceId)}`, {
         reference: ref,
@@ -421,7 +542,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     throw missingVarError(`Marker lattice not found: ${ref.marker}`, {
       reference: ref,
       markerId: ref.marker,
-      availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id).sort(),
+      availableMarkerLattices: (ctx.def.markerLattices ?? []).map((candidate) => candidate.id),
     });
   }
 
@@ -439,7 +560,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     throw missingVarError(`Global marker lattice not found: ${ref.marker}`, {
       reference: ref,
       markerId: ref.marker,
-      availableGlobalMarkerLattices: (ctx.def.globalMarkerLattices ?? []).map((candidate) => candidate.id).sort(),
+      availableGlobalMarkerLattices: (ctx.def.globalMarkerLattices ?? []).map((candidate) => candidate.id),
     });
   }
 
@@ -454,7 +575,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
       throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
         reference: ref,
         zoneId,
-        availableZoneIds: ctx.def.zones.map((zone) => zone.id).sort(),
+        availableZoneIds: ctx.def.zones.map((zone) => zone.id),
       });
     }
 
@@ -469,7 +590,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
           reference: ref,
           zoneId,
           prop: ref.prop,
-          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+          availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
         });
       }
       return zoneDef.category;
@@ -481,7 +602,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
         reference: ref,
         zoneId,
         prop: ref.prop,
-        availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})].sort(),
+        availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
       });
     }
 

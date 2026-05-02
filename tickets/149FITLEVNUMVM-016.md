@@ -1,24 +1,27 @@
-# 149FITLEVNUMVM-016: Phase 4 default-flip + closure-tree deletion (F14 atomic cut)
+# 149FITLEVNUMVM-016: Phase 4 VM perf closure + default-flip F14 cut
 
-**Status**: BLOCKED by live Phase 4 perf-gate reassessment
+**Status**: PENDING — owns one-card VM perf investigation before default-flip/deletion
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `tickets/149FITLEVNUMVM-018.md`
+**Engine Changes**: Yes — measured VM hot path, then `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`
 
 ## Problem
 
-Phase 4's terminal deliverable. After ticket 015 lands the VM and parity is proven for ≥3 consecutive CI runs on all FITL baseline profiles, this ticket:
-1. Flips the default policy evaluation path from closure-tree to bytecode VM.
-2. Deletes the closure-tree evaluation infrastructure (`buildPolicyExprClosure` and downstream callees) per F14.
-3. Adds or updates the per-card perf gate at ≤ 250 ms (the original spec target).
-4. Triggers ticket 003 (CI restoration unwind).
+Phase 4's terminal deliverable now owns both the remaining VM performance closure and the F14 cut. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired; creating another prerequisite ticket would keep passing the same unresolved one-card VM gate back to this ticket.
+
+This ticket therefore proceeds in two ordered stages:
+
+1. Profile and optimize the VM-enabled one-card preview drive until the Phase 4 per-card gate is truthful: ≤ 250 ms under all 4 baseline profiles with `verifyIncrementalHash=true`.
+2. Only after that gate is green, flip the default policy evaluation path from closure-tree to bytecode VM and delete the closure-tree evaluation infrastructure (`buildPolicyExprClosure` and downstream callees) per F14.
+
+When both stages are complete, this ticket adds or updates the per-card perf gate and triggers ticket 003 for the remaining CI restoration unwind.
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
 
 ## Reassessment Update (2026-05-02)
 
-Do not execute the default-flip or closure-tree deletion yet.
+Do not execute the default-flip or closure-tree deletion first. Execute the VM perf investigation/optimization stage inside this ticket, then perform the F14 cut only after the measured Phase 4 gate is green.
 
 User confirmation satisfied the "≥3 consecutive CI runs" correctness/parity precondition for the VM path, and local focused proof confirmed VM correctness:
 
@@ -30,14 +33,14 @@ The Phase 4 perf/restoration premise remains false in the live checkout:
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-preflight-vm` — RED: `elapsedMs=6785.54`, per-card `elapsedMs=6785.31`, threshold `<=250`.
 
-Live CI feedback also shows the most expensive remaining workflow surface is no longer truthfully represented by the one-card VM/default-flip story alone. The current slow restoration owners are the temporarily non-blocking `engine-tests.yml` lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules`.
+Live CI feedback initially suggested the expensive remaining workflow surface was no longer truthfully represented by the one-card VM/default-flip story alone, especially the `engine-tests.yml` lanes `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules`. Archived ticket `149FITLEVNUMVM-018` profiled those lanes and found no remaining red runtime hot path after stale golden fallout was repaired; the Phase 4 blocker is again the one-card VM perf gate above.
 
 Foundation-aligned decision:
 
-- F14 still forbids retaining closure-tree fallback once the VM path becomes the default runtime, but F15/F16 block this atomic cut until the root-cause performance story is true for the actual slow CI surface.
-- This ticket remains the eventual F14 default-flip/deletion owner.
-- New prerequisite ticket `149FITLEVNUMVM-018` owns profiling and optimizing the live slow FITL event-card/rules lanes before this ticket may resume.
-- Ticket `149FITLEVNUMVM-003` remains blocked; CI restoration cannot unwind while `fitl-events-shard-c` and `fitl-rules` are still temporarily non-blocking.
+- F14 still forbids retaining closure-tree fallback once the VM path becomes the default runtime, but F15/F16 require the measured VM performance story to be true before the atomic cut.
+- This ticket is both the remaining VM performance-investigation owner and the F14 default-flip/deletion owner. Do not create another prerequisite ticket for the one-card VM perf gap unless this ticket's measured evidence proves a genuinely separate architectural owner outside the VM/default-flip seam.
+- Archived prerequisite ticket `149FITLEVNUMVM-018` completed the live FITL event-card/rules lane reassessment and did not unblock this ticket's one-card VM perf gate.
+- The `engine-tests.yml` `fitl-events-shard-c` and `fitl-rules` lanes were restored to blocking semantics early on 2026-05-02 after non-blocking execution masked a stale golden failure. Ticket `149FITLEVNUMVM-003` remains open only for the remaining post-Phase-4 determinism-timeout unwind.
 
 ## Assumption Reassessment (2026-04-28)
 
@@ -49,47 +52,61 @@ Foundation-aligned decision:
 ## Architecture Check
 
 1. F14 atomic cut: removes the closure-tree path entirely. No `_legacy` shim retained. The mechanical uniformity is verified by listing the full deletion blast radius in this ticket's What to Change.
-2. F15 architectural completeness: this ticket closes the loop on the entire spec — Phases 1-4 are now structurally complete, replacing the 35× over-budget gap with a measured ≤250 ms per-card cost.
+2. F15 architectural completeness: this ticket closes the loop on the entire spec by first optimizing the measured VM-enabled one-card hot path, then performing the F14 deletion. It must not delete closure-tree or claim completion while the Phase 4 perf gate remains red.
 3. F8 determinism preserved — the bytecode VM is integer-only; replay-identity tests are the proof.
 4. F1 preserved — no game-specific code introduced anywhere in the chain.
 
 ## What to Change
 
-### 1. Pre-flight verification (read-only)
+### 1. VM perf investigation and optimization
 
-Before any deletion, verify:
+Before any deletion, verify the already-satisfied correctness preconditions and then profile the red VM-enabled one-card gate:
+
 - `RESOLVE_DYNAMIC` opcode count is zero across all 4 FITL baseline profile compilations.
 - Ticket 014's equivalence harness has been green for ≥3 consecutive CI runs with `LUDOFORGE_POLICY_VM=on`.
 - All 10 determinism shards stay green with VM enabled.
-- `fitl-per-card-cost.perf.test.ts` passes at ≤ 250 ms on all 4 profiles (preliminary measurement; final tightening happens in this ticket).
+- `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-preflight-vm` still reports the current red baseline or a newer same-seam baseline.
 
-If any precondition fails, do NOT execute. Re-open `RESOLVE_DYNAMIC` elimination work or revisit the VM's perf characteristics in a follow-up ticket.
+Use profiling sufficient to identify the dominant VM-enabled root cause before coding. Classify the measured cost as one or more of:
 
-### 2. `packages/engine/src/agents/policy-runtime.ts` (modify)
+- bytecode compilation repeated too often or cached at the wrong lifetime;
+- VM dispatch/stack representation overhead;
+- encoded-state feature reads or layout lookup overhead;
+- preview-drive apply, hashing, canonicalization, or state cloning still dominating after the VM;
+- policy-runtime integration overhead around the VM seam;
+- another generic engine/runtime path on the one-card VM preview drive.
 
-Default-flip:
+Apply one generic candidate at a time. Keep only candidates that reduce the ticket-owned per-card metric or remove a proven hot stack without violating F1/F8/F10/F11/F14. Add focused correctness proof before semantic changes. Remove rejected exploratory paths before final proof and record negative evidence in the Outcome.
+
+Do not create another prerequisite ticket merely because the gate is red. Split only if direct profiling proves the remaining root cause belongs to a separate architectural seam not legitimately owned by this ticket.
+
+### 2. Perf gate
+
+Create or update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` at the truthful Phase 4 budget: ≤ 250 ms. The earlier Phase 1 5500 ms and Phase 2 3000 ms gate calibrations were superseded by the `149FITLEVNUMVM-017` stop-condition decision. Update the calibration comment so future readers do not chase the false Phase 1 gate.
+
+The gate must exercise the VM path and report per-profile elapsed values. Do not weaken the gate to match the current red number unless the user explicitly approves a spec-level target change through 1-3-1.
+
+### 3. `packages/engine/src/agents/policy-runtime.ts` (modify)
+
+After the VM perf gate is green, default-flip:
 - Remove the `LUDOFORGE_POLICY_VM` env var read.
 - Default-route policy evaluation through `executeBytecode` (ticket 015's VM). The bytecode is compiled via ticket 013's `compilePolicyBytecode` once per `evaluatePolicyMove` call (or cached per profile-fingerprint, depending on measurement).
 - Delete the closure-tree code path entirely. No fallback retained.
 
-### 3. `packages/engine/src/agents/compiled-policy-runtime.ts` (modify or delete)
+### 4. `packages/engine/src/agents/compiled-policy-runtime.ts` (modify or delete)
 
 Per spec §Phase 4 acceptance: delete `buildPolicyExprClosure`. If the file has remaining exports unrelated to closure-tree evaluation (verify via blast-radius grep), keep only those; otherwise delete the entire file.
 
-### 4. `packages/engine/src/agents/policy-evaluation-core.ts` (modify)
+### 5. `packages/engine/src/agents/policy-evaluation-core.ts` (modify)
 
 Delete the closure-tree consumer code paths:
 - Remove `CompiledPolicyExprClosure` import and downstream usage.
 - Replace `evaluateCompiledZoneTokenAggregate` and similar closure-driven dispatch with bytecode VM calls (per ticket 015's `executeBytecode`).
 - Per F14, no `_legacy` fallback retained.
 
-### 5. Perf gate
-
-Create or update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` at the truthful Phase 4 budget: ≤ 250 ms. The earlier Phase 1 5500 ms and Phase 2 3000 ms gate calibrations were superseded by the `149FITLEVNUMVM-017` stop-condition decision. Update the calibration comment so future readers do not chase the false Phase 1 gate.
-
 ### 6. Restore CI workflows (delegated to ticket 003)
 
-This ticket does NOT touch the CI workflow files directly — that work lives in ticket 003 (CI restoration unwind). When this ticket closes, ticket 003 becomes unblocked.
+This ticket does NOT touch the CI workflow files directly. The engine-test blocking semantics were restored early; ticket 003 retains the remaining post-Phase-4 determinism-timeout unwind. When this ticket closes, ticket 003 becomes unblocked for that remaining workflow cleanup.
 
 ### 7. Profiling proof gate
 
@@ -105,6 +122,8 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 
 ## Files to Touch
 
+- `packages/engine/scripts/profile-fitl-preview-drive.mjs` or checked-in profiling/report helpers if needed to make the VM perf witness truthful (modify only if the current harness cannot expose the owned metric)
+- Measured generic VM/perf hot-path files identified by profiling (modify)
 - `packages/engine/src/agents/policy-runtime.ts` (modify — delete A/B switch, default to VM)
 - `packages/engine/src/agents/compiled-policy-runtime.ts` (modify or delete)
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify — delete closure-tree consumers)
@@ -112,9 +131,10 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 
 ## Out of Scope
 
-- CI workflow restoration (ticket 003 — triggered by this ticket's closure).
+- Remaining CI workflow restoration (ticket 003's determinism-timeout unwind — triggered by this ticket's closure).
 - Phase 5 WASM port (separate spec when justified per spec §Phase 5 stop conditions).
 - Recalibrating `fitl-parity-drive.perf.test.ts` (deferred to a follow-up if measurement shows it's needed).
+- Weakening the Phase 4 per-card target, deleting coverage, or adding game-specific FITL fast paths to make the gate pass.
 
 ## Acceptance Criteria
 
@@ -123,10 +143,11 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 1. Replay-identity tests stay green on ALL 10 determinism shards (no `LUDOFORGE_POLICY_VM` env var needed — bytecode is default).
 2. Score-equivalence: ticket 014's harness still passes (now exercising the VM as the default path; closure-tree no longer exists to compare against, so harness is repurposed as a VM correctness check).
 3. **Per-card cost: ≤ 250 ms under all 4 baseline profiles** (`verifyIncrementalHash=true`).
-4. `engine-tests.yml` ticket-002 lanes (`fitl-events-shard-c` and `fitl-rules`) complete within their pre-Phase-0 budgets.
-5. `engine-determinism.yml` job-level timeout (still 60 m at this ticket; ticket 003 reverts) accommodates the determinism shards comfortably.
-6. No surviving import sites for `buildPolicyExprClosure` or `CompiledPolicyExprClosure` (verify via grep).
-7. Existing suite: `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:perf`.
+4. The Outcome records exact baseline/current profile commands, hot-path classification, accepted/rejected optimization candidates, and why no additional prerequisite ticket was needed or what concrete separate owner was proven.
+5. `engine-tests.yml` ticket-002 lanes (`fitl-events-shard-c` and `fitl-rules`) complete within their pre-Phase-0 budgets.
+6. `engine-determinism.yml` job-level timeout (still 60 m at this ticket; ticket 003 reverts) accommodates the determinism shards comfortably.
+7. No surviving import sites for `buildPolicyExprClosure` or `CompiledPolicyExprClosure` (verify via grep).
+8. Existing suite: `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:perf`.
 
 ### Invariants
 
@@ -139,14 +160,17 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 
 ### New/Modified Tests
 
-1. None new — ticket 014's harness becomes the canonical correctness gate; ticket 010's property tests guard apply/undo.
+1. Focused correctness or invariant tests for any accepted VM/perf hot-path change.
+2. Ticket 014's harness becomes the canonical correctness gate after the closure-tree deletion; ticket 010's property tests guard apply/undo if profiling brings that seam back into scope.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`.
-2. `pnpm -F @ludoforge/engine test`.
-3. `cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/*.test.js` (full determinism corpus).
-4. `pnpm -F @ludoforge/engine test:perf` (with the tightened 250 ms gate).
-5. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-final` (record in Outcome).
-6. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
-7. `grep -rn 'buildPolicyExprClosure\|CompiledPolicyExprClosure' packages/engine/src` — must return zero hits.
+2. Baseline/profile: `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-baseline`.
+3. Focused correctness tests for accepted VM/perf changes.
+4. `pnpm -F @ludoforge/engine test`.
+5. `cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/*.test.js` (full determinism corpus).
+6. `pnpm -F @ludoforge/engine test:perf` (with the tightened 250 ms gate).
+7. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-final` (record in Outcome).
+8. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
+9. `grep -rn 'buildPolicyExprClosure\|CompiledPolicyExprClosure' packages/engine/src` — must return zero hits.

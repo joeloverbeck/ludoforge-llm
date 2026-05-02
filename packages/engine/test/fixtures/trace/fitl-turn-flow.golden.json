@@ -177,6 +177,9 @@
               "VC": true
             },
             "pendingEligibilityOverrides": [],
+            "lifecycleStatus": {
+              "stalled": false
+            },
             "currentCard": {
               "firstEligible": "ARVN",
               "secondEligible": "NVA",
@@ -326,6 +329,9 @@
               "VC": true
             },
             "pendingEligibilityOverrides": [],
+            "lifecycleStatus": {
+              "stalled": false
+            },
             "currentCard": {
               "firstEligible": "ARVN",
               "secondEligible": "NVA",
@@ -525,6 +531,9 @@
                 "duration": "nextTurn"
               }
             ],
+            "lifecycleStatus": {
+              "stalled": false
+            },
             "currentCard": {
               "firstEligible": "NVA",
               "secondEligible": "VC",
@@ -727,6 +736,9 @@
                 "duration": "nextTurn"
               }
             ],
+            "lifecycleStatus": {
+              "stalled": false
+            },
             "currentCard": {
               "firstEligible": "NVA",
               "secondEligible": "VC",

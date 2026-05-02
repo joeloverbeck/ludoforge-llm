@@ -252,11 +252,11 @@ The slow tests live in two different workflow files. Phase 0 touches both:
 
 **Workflow target B — `.github/workflows/engine-tests.yml`** (integration matrix, including the live lanes that run the slow integration tests):
 - First deliverable: confirm via `packages/engine/scripts/test-lane-manifest.mjs` which matrix lane contains `fitl-events-sihanouk.test.ts` and which contains `fitl-march-free-operation.test.ts`. Live reassessment on 2026-04-28 found `fitl-events-sihanouk.test.ts` in `fitl-events-shard-c` and `fitl-march-free-operation.test.ts` in `fitl-rules`. Cite the lane mapping in the ticket.
-- Either add matrix-driven step-level `continue-on-error: true` to the affected matrix entries, or bump per-lane `timeout: 30 → 60`. Default lean: `continue-on-error: true` plus a non-blocking summary so the signal is visible without gating PR #231.
+- Historical Phase 0 relief used matrix-driven step-level `continue-on-error: true` on the affected matrix entries. On 2026-05-02, that relief was reverted early after it masked a real stale golden failure in `fitl-rules`; the affected engine-test lanes are blocking again at `timeout: 30`.
 
 **Per-test budgets**: the spec's earlier draft proposed `// @timeout` annotations; that mechanism does not exist in `run-tests.mjs` (lane-level only). If per-test relief is still required after the workflow-level bumps, options are: (a) extend the lane-manifest to support per-test timeout overrides; (b) carve sihanouk and march-free-operation into a dedicated lane with a longer lane-level timeout; (c) override at runtime via env vars (`ENGINE_DETERMINISM_TEST_TIMEOUT_MS`, `ENGINE_FITL_RULES_TEST_TIMEOUT_MS`). Default lean: option (a) is the F15-aligned answer; option (c) is acceptable as a further temporary unblock.
 
-**Restoration tracking**: New ticket `149FITLEVNUMVM-CI-RESTORE` tracks the unwind — when phase 4 lands and per-card cost ≤ 250 ms, revert all CI bumps (job-level, matrix-level, and any per-test mechanism) in a single commit.
+**Restoration tracking**: Ticket `149FITLEVNUMVM-003` tracks the remaining unwind — when phase 4 lands and per-card cost ≤ 250 ms, revert the remaining determinism timeout bump in a single commit. The engine-test matrix entries were restored to blocking semantics early on 2026-05-02 after the non-blocking relief masked a stale golden failure.
 
 Out of scope for phase 0: any kernel code change. Phase 0 is configuration-only.
 
@@ -422,7 +422,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 | Phase | Approx tickets | Rough scope per ticket |
 |---|---:|---|
-| 0 | 3 | (a) `engine-determinism.yml` job-level timeout bump; (b) `engine-tests.yml` affected matrix-lane continue-on-error or per-lane timeout bump (after lane-mapping confirmation); (c) create `149FITLEVNUMVM-CI-RESTORE` tracking ticket. |
+| 0 | 3 | (a) `engine-determinism.yml` job-level timeout bump; (b) `engine-tests.yml` affected matrix-lane relief, now restored to blocking semantics after the 2026-05-02 stale-golden discovery; (c) `149FITLEVNUMVM-003` tracking ticket for the remaining determinism-timeout unwind. |
 | 1 | 3-4 | (a) layout builder; (b) view builder; (c) wire into read paths; (d) perf gate test. |
 | 2 | 3-4 | (a) PreviewDriveScope skeleton; (b) replace cloning path; (c) canonicalize-on-exit verification; (d) property tests. |
 | 3 | 4-5 | (a) opcode set + IR types; (b) AST→bytecode compiler; (c) feature-id table; (d) round-trip equivalence harness; (e) disassembler. |
@@ -475,7 +475,7 @@ is again the next generic bottleneck.
 
 ### 2026-05-02 Phase 4 perf-gate reassessment
 
-Ticket `149FITLEVNUMVM-016` is blocked, not executable as a default-flip/deletion ticket yet.
+Ticket `149FITLEVNUMVM-016` is not executable as a direct default-flip/deletion ticket yet; it must first close the measured VM perf gate it now owns.
 
 User confirmation satisfied the ticket's "≥3 consecutive CI runs" VM parity precondition, and local focused proof confirmed the VM path is correct:
 
@@ -487,7 +487,9 @@ The Phase 4 performance/restoration premise is still false:
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-preflight-vm` — RED: `elapsedMs=6785.54`, per-card `elapsedMs=6785.31`, threshold `<=250`.
 
-Live workflow evidence also moved the current restoration blocker from the old one-card VM/default-flip story to the actual slow engine-test lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules` (`test:integration:fitl-rules`). Per F15/F16, the next ticket profiles and optimizes that live CI surface directly before the F14 closure-tree deletion resumes. Per F14, the closure-tree path still must be deleted once the VM default-flip becomes truthful; the deletion is deferred, not abandoned.
+Live workflow evidence also moved the current restoration blocker from the old one-card VM/default-flip story to the actual slow engine-test lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules` (`test:integration:fitl-rules`). Ticket `149FITLEVNUMVM-018` profiled those lanes and found no remaining red runtime hot path after stale golden fallout was repaired: both engine-test lanes are now blocking again and inside their 30-minute workflow budgets. The remaining Phase 4 blocker is again the one-card VM perf gate above.
+
+User-approved revision on 2026-05-02: ticket `149FITLEVNUMVM-016` absorbs that remaining one-card VM perf investigation/optimization work instead of creating another prerequisite ticket. `016` now owns the measured VM hot-path closure first, then the default flip and F14 closure-tree deletion once the `<=250 ms` gate is truthful. Per F14, the closure-tree path still must be deleted once the VM default-flip becomes truthful; the deletion is deferred, not abandoned.
 
 ---
 
@@ -510,7 +512,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-013.md`](../archive/tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-014.md`](../archive/tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-015.md`](../archive/tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
-- [`tickets/149FITLEVNUMVM-018.md`](../tickets/149FITLEVNUMVM-018.md) — Profile and optimize live FITL event-card CI lanes before Phase 4 restoration can resume
-- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Blocked Phase 4 default-flip + closure-tree deletion, F14 atomic cut (covers Phase 4 after 018)
+- [`archive/tickets/149FITLEVNUMVM-018.md`](../archive/tickets/149FITLEVNUMVM-018.md) — Completed live FITL event-card CI lane reassessment; stale golden/workflow masking repaired, no runtime hot path accepted
+- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Phase 4 VM perf closure, then default-flip + closure-tree deletion F14 atomic cut
 
 **End of spec 149.**

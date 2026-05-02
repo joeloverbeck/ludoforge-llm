@@ -14,6 +14,14 @@ Sanity-check ticket-named verification commands against live repo tooling before
 - For active tracked tickets that are not yet archival records, correct nonblocking stale wording or path drift in place before marking the ticket complete so the active ticket remains a reliable session contract for later turns.
 - For active untracked drafts, prefer correcting stale command examples in the ticket once the repo-valid replacement is confirmed, so future turns do not inherit the drift.
 
+For tickets introducing a new non-JavaScript toolchain or target (for example Rust/WASM, native binaries, Python packages, or another compiler), run a compact prerequisite preflight before coding:
+
+1. verify the compiler/package manager version command works
+2. verify required target triples, SDKs, or plugins are installed
+3. verify the intended build artifact path and whether it is ignored/generated
+4. if an install/download is required, request approval through the normal sandbox/escalation path rather than deferring the missing prerequisite until final proof
+5. record any toolchain command substitution or install prerequisite in working notes and the active ticket outcome when it affects reproducibility
+
 ## Verification Preflight
 
 Before running any substantive verification, do a verification preflight for each planned lane:

@@ -451,7 +451,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 Total estimate: **14-18 tickets**, ~4-7 weeks of focused work for phases 0-4.
 
-Phase 5 now has its own spec, `specs/150-fitl-policy-vm-wasm-port.md`, with starter ticket `tickets/150FITLWASM-001.md`.
+Phase 5 now has its own spec, `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, and active ticket `tickets/150FITLWASM-002.md` owns policy-bytecode execution parity.
 
 ---
 
@@ -533,7 +533,7 @@ Ticket `149FITLEVNUMVM-022` ran the final same-seam profile after tickets 019-02
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`, `verifyIncrementalHash=true`.
 
-User-approved resolution: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. Ticket `149FITLEVNUMVM-016` remains the later F14 default-flip/deletion owner, but it must wait until Spec 150 makes the original `<=250 ms` gate truthful. The Phase 5 owner is `specs/150-fitl-policy-vm-wasm-port.md`, starting with `tickets/150FITLWASM-001.md`.
+User-approved resolution: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. Ticket `149FITLEVNUMVM-016` remains the later F14 default-flip/deletion owner, but it must wait until Spec 150 makes the original `<=250 ms` gate truthful. The Phase 5 owner is `specs/150-fitl-policy-vm-wasm-port.md`; starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton and active ticket `tickets/150FITLWASM-002.md` owns policy-bytecode execution parity.
 
 ---
 
@@ -562,7 +562,8 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-021.md`](../archive/tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
 - [`tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate; red, handed off to Spec 150
 - [`specs/150-fitl-policy-vm-wasm-port.md`](../specs/150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
-- [`tickets/150FITLWASM-001.md`](../tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
+- [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
+- [`tickets/150FITLWASM-002.md`](../tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity
 - [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final default-flip + closure-tree deletion F14 atomic cut after the successor runtime makes the budget truthful
 
 **End of spec 149.**

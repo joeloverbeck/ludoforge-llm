@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 4B final gate — successor owner `tickets/150FITLWASM-001.md`
+**Status**: BLOCKED by red Phase 4B final gate — successor owner `tickets/150FITLWASM-002.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
@@ -89,4 +89,4 @@ Required 1-3-1 decision point:
 - Option 3: request a user-approved target reset, record the acceptance exception explicitly, and then decide whether ticket 016 may proceed under the revised budget.
 - Recommendation: Option 2. The final Phase 4B profile is still about `26.8x` over budget after tickets 019-021, so more TypeScript-local tuning is unlikely to close the gap cleanly.
 
-User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md` plus starter ticket `tickets/150FITLWASM-001.md`.
+User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the Phase 5 skeleton; post-review created active successor ticket `tickets/150FITLWASM-002.md` for WASM policy-bytecode execution parity.

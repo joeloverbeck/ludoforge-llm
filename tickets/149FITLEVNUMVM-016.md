@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `tickets/150FITLWASM-001.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `tickets/150FITLWASM-002.md`
 
 ## Problem
 
-Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 / ticket `150FITLWASM-001` now own the Phase 5/WASM successor path required before this ticket can execute.
+Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 now owns the Phase 5/WASM successor path required before this ticket can execute. Ticket `150FITLWASM-001` landed the skeleton; ticket `150FITLWASM-002` is the next active parity owner.
 
 This ticket therefore has one ordered stage after the Phase 5/WASM successor gate is green:
 
@@ -23,7 +23,7 @@ Ticket `149FITLEVNUMVM-022` ran the final Phase 4B same-seam profile and the gat
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`.
 
-User-approved decision: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. This ticket remains the later F14 default-flip/deletion owner, but it must not execute until `specs/150-fitl-policy-vm-wasm-port.md` and its implementation tickets make the `<=250 ms` gate truthful.
+User-approved decision: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. This ticket remains the later F14 default-flip/deletion owner, but it must not execute until `specs/150-fitl-policy-vm-wasm-port.md` and its implementation tickets make the `<=250 ms` gate truthful. Post-review of ticket `150FITLWASM-001` created `150FITLWASM-002` as the next active owner for WASM policy-bytecode execution parity.
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
 

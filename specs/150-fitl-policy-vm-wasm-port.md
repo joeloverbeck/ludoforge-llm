@@ -64,6 +64,25 @@ The exact ABI may change during ticket 001, but the contract must stay batch-ori
 
 Owns the Rust crate/workspace shape, wasm-bindgen or equivalent build path, deterministic integer ABI, and a no-op or minimal opcode smoke through Node.
 
+Ticket `150FITLWASM-001` selected the initial repo layout:
+
+- Workspace package: `packages/engine-wasm`.
+- Rust crate: `packages/engine-wasm/policy-vm`.
+- TypeScript bridge: `packages/engine/src/agents/policy-wasm-runtime.ts`.
+- Build command: `pnpm -F @ludoforge/engine-wasm build`.
+
+The first smoke ABI uses raw `wasm32-unknown-unknown` exports rather than
+`wasm-bindgen`. The caller writes a little-endian `i32` buffer:
+
+```text
+[magic, version, layout_id, opcode, lhs, rhs]
+```
+
+The WASM module rejects mismatched magic, version, layout identity, opcode, and
+overflow before returning a deterministic integer score. This is a skeleton ABI
+only; later tickets still own the batch-oriented policy-bytecode and
+encoded-state/action buffers described below.
+
 ### Phase 2 — Policy bytecode execution parity
 
 Ports the generic policy bytecode VM to Rust/WASM and proves score equivalence against the existing TypeScript VM corpus.
@@ -106,4 +125,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 
 ## 8. Initial Tickets
 
-- [`tickets/150FITLWASM-001.md`](../tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
+- [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
+- [`tickets/150FITLWASM-002.md`](../tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.

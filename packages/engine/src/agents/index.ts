@@ -6,3 +6,4 @@ export * from './policy-eval.js';
 export * from './completion-guidance-eval.js';
 export * from './factory.js';
 export * from './policy-bytecode/index.js';
+export * from './policy-wasm-runtime.js';

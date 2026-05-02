@@ -77,6 +77,8 @@ When reassessing whether a ticket has underspecified constraints, inspect these 
 - When the ticket disputes game-specific legality, consult local rulebook extracts or rules reports
 - Acceptance criteria / test text that may be semantically stale even when the command or file path is still valid: wrong raw value shape, wrong contract expectation, wrong output type, wrong asserted invariant
 - Campaign/simulation repro reduction opportunity: whether a broad harness witness can be reduced to the earliest deterministic failing prefix and then replaced by a narrower direct proof surface without changing ticket ownership
+- New package/crate registration: when a ticket adds a package, crate, or equivalent workspace unit, verify workspace discovery, package filter invocation, build script path, build artifact/output location, ignore-rule coverage, and whether task-runner outputs such as `turbo.json` need adjustment before final proof.
+- Binary/WASM/FFI ABI surfaces: when a ticket introduces a compact binary boundary, explicitly decide and prove version/magic identity, layout or artifact identity, endian/order convention, length validation, mismatch rejection, overflow/error status behavior, ownership of allocation/freeing, and whether JSON is excluded from the hot path.
 
 ## In-Memory vs Serialized Decisions
 

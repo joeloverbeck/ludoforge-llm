@@ -550,7 +550,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-015.md`](../archive/tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
 - [`archive/tickets/149FITLEVNUMVM-018.md`](../archive/tickets/149FITLEVNUMVM-018.md) — Completed live FITL event-card CI lane reassessment; stale golden/workflow masking repaired, no runtime hot path accepted
 - [`archive/tickets/149FITLEVNUMVM-019.md`](../archive/tickets/149FITLEVNUMVM-019.md) — Phase 4B generic kernel expression/query AOT or bytecode
-- [`tickets/149FITLEVNUMVM-020.md`](../tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
+- [`archive/tickets/149FITLEVNUMVM-020.md`](../archive/tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
 - [`tickets/149FITLEVNUMVM-021.md`](../tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
 - [`tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate
 - [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final Phase 4 default-flip + closure-tree deletion F14 atomic cut after Phase 4B

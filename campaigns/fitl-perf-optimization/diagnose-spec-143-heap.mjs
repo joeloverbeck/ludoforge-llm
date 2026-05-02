@@ -84,44 +84,14 @@ mkdirSync(OUTPUT_DIR, { recursive: true });
 const { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/cnl/index.js'));
 const {
-  advanceAutoresolvable,
-  applyPublishedDecision,
   assertValidatedGameDef,
   createGameDefRuntime,
-  createRng,
   initialState,
-  publishMicroturn,
-  terminalResult,
 } = await import(join(REPO_ROOT, 'packages/engine/dist/src/kernel/index.js'));
 const { PolicyAgent } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/agents/index.js'));
-
-const CHANCE_RNG_MIX = 0x9e3779b97f4a7c15n;
-const AGENT_RNG_MIX = 0x9e3779b97f4a7c15n;
-
-function createAgentRngByPlayer(seed, playerCount) {
-  return Array.from(
-    { length: playerCount },
-    (_, playerIndex) => createRng(BigInt(seed) ^ (BigInt(playerIndex + 1) * AGENT_RNG_MIX)),
-  );
-}
-
-function resolvePlayerIndexForSeat(def, seatId) {
-  const explicitIndex = (def.seats ?? []).findIndex((seat) => seat.id === seatId);
-  if (explicitIndex >= 0) {
-    return explicitIndex;
-  }
-  const parsed = Number(seatId);
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : -1;
-}
-
-function isNoBridgeableMicroturnError(error) {
-  return error instanceof Error
-    && (
-      error.message.includes('no simple actionSelection moves are currently bridgeable')
-      || error.message.includes('has no bridgeable continuations')
-    );
-}
+const { runGameSteps } =
+  await import(join(REPO_ROOT, 'packages/engine/dist/src/sim/index.js'));
 
 function forceGcIfAvailable() {
   if (typeof global.gc === 'function') {
@@ -494,8 +464,6 @@ const environment = {
 };
 
 let state = initialState(def, SEED, PLAYER_COUNT, undefined, runtime).state;
-const agentRngByPlayer = createAgentRngByPlayer(SEED, state.playerCount);
-let currentChanceRng = createRng(BigInt(SEED) ^ CHANCE_RNG_MIX);
 let totalDecisionCount = 0;
 let playerDecisionCount = 0;
 let stopReason = 'unknown';
@@ -510,7 +478,7 @@ function maybeRecordSample(reason) {
   const now = performance.now();
   const sample = {
     reason,
-    ...heapSampleBase(totalDecisionCount, playerDecisionCount, state.turnCount, runtime, now - intervalStartMs),
+    ...heapSampleBase(totalDecisionCount, playerDecisionCount, state.turnCount, undefined, now - intervalStartMs),
     elapsedMs: roundMs(now - runStartMs),
     decisionStackDepth: state.decisionStack?.length ?? 0,
   };
@@ -532,60 +500,34 @@ function maybeRecordSample(reason) {
 maybeRecordSample('start');
 
 try {
-  while (true) {
-    const autoResult = advanceAutoresolvable(def, state, currentChanceRng, runtime);
-    state = autoResult.state;
-    currentChanceRng = autoResult.rng;
-    totalDecisionCount += autoResult.autoResolvedLogs.length;
-
-    terminal = terminalResult(def, state, runtime);
-    if (terminal !== null) {
-      stopReason = 'terminal';
+  for (const step of runGameSteps({
+    def,
+    seed: SEED,
+    agents,
+    maxTurns: MAX_TURNS,
+    playerCount: PLAYER_COUNT,
+    options: {
+      skipDeltas: true,
+      traceRetention: 'finalStateOnly',
+    },
+    runtime,
+  })) {
+    state = step.state;
+    let decisionCountUpdated = false;
+    if (step.kind === 'auto') {
+      totalDecisionCount += step.autoResolvedLogs.length;
+      decisionCountUpdated = step.autoResolvedLogs.length > 0;
+    } else if (step.kind === 'player') {
+      totalDecisionCount += 1;
+      playerDecisionCount += 1;
+      decisionCountUpdated = true;
+    } else if (step.kind === 'terminal' || step.kind === 'maxTurns' || step.kind === 'noLegalMoves') {
+      stopReason = step.stopReason;
+      terminal = step.kind === 'terminal' ? step.result : null;
       break;
     }
 
-    if (state.turnCount >= MAX_TURNS) {
-      stopReason = 'maxTurns';
-      break;
-    }
-
-    let microturn;
-    try {
-      microturn = publishMicroturn(def, state, runtime);
-    } catch (error) {
-      if (isNoBridgeableMicroturnError(error)) {
-        stopReason = 'noLegalMoves';
-        break;
-      }
-      throw error;
-    }
-
-    if (microturn.seatId === '__chance' || microturn.seatId === '__kernel') {
-      throw new Error(`Expected player microturn after auto-resolution, received ${microturn.seatId}`);
-    }
-
-    const playerIndex = resolvePlayerIndexForSeat(def, microturn.seatId);
-    const agent = playerIndex < 0 ? undefined : agents[playerIndex];
-    const agentRng = playerIndex < 0 ? undefined : agentRngByPlayer[playerIndex];
-    if (agent === undefined || agentRng === undefined || playerIndex < 0) {
-      throw new Error(`missing agent or RNG for seat ${String(microturn.seatId)}`);
-    }
-
-    const selected = agent.chooseDecision({
-      def,
-      state,
-      microturn,
-      rng: agentRng,
-      runtime,
-    });
-    agentRngByPlayer[playerIndex] = selected.rng;
-
-    const applied = applyPublishedDecision(def, state, microturn, selected.decision, undefined, runtime);
-    state = applied.state;
-    totalDecisionCount += 1;
-    playerDecisionCount += 1;
-
-    if (totalDecisionCount % SAMPLE_EVERY_DECISIONS === 0) {
+    if (decisionCountUpdated && totalDecisionCount % SAMPLE_EVERY_DECISIONS === 0) {
       maybeRecordSample('interval');
     }
   }

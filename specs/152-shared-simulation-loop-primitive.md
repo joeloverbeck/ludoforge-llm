@@ -205,7 +205,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-02:
 
 - [`archive/tickets/152SIMLOOPRIM-001.md`](../archive/tickets/152SIMLOOPRIM-001.md) — Extract `runGameSteps` generator and refactor `runGame` into thin wrapper (covers What to Change §1 + §2)
 - [`archive/tickets/152SIMLOOPRIM-002.md`](../archive/tickets/152SIMLOOPRIM-002.md) — Migrate `runVerifiedGameWithDiagnostics` to consume `runGameSteps` (covers What to Change §3, helper)
-- [`tickets/152SIMLOOPRIM-003.md`](../tickets/152SIMLOOPRIM-003.md) — Migrate `diagnose-spec-143-heap.mjs` to consume `runGameSteps` (covers What to Change §3, campaign script)
+- [`archive/tickets/152SIMLOOPRIM-003.md`](../archive/tickets/152SIMLOOPRIM-003.md) — Migrate `diagnose-spec-143-heap.mjs` to consume `runGameSteps` (covers What to Change §3, campaign script)
 - [`tickets/152SIMLOOPRIM-004.md`](../tickets/152SIMLOOPRIM-004.md) — Add `runGameSteps` protocol and replay-identity tests (covers What to Change §4)
 
 ## Notes

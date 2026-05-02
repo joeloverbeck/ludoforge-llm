@@ -1,6 +1,6 @@
 # 152SIMLOOPRIM-003: Migrate `diagnose-spec-143-heap.mjs` to consume `runGameSteps`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — campaign tooling only
@@ -105,3 +105,41 @@ None — campaign script has no automated test harness.
 4. `pnpm -F @ludoforge/engine test`
 5. `pnpm turbo lint typecheck`
 6. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-02
+Outcome amended: 2026-05-02
+
+Landed in this ticket:
+
+1. Migrated `campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` to consume `runGameSteps(...)` instead of maintaining its own `while (true)` simulation loop.
+2. Removed the script-local manual loop plumbing for auto-resolution, microturn publication, no-bridgeable rollback handling, player RNG threading, and decision application.
+3. Preserved the diagnostic's lightweight behavior by passing `skipDeltas: true` and `traceRetention: 'finalStateOnly'` to `runGameSteps`.
+4. Preserved summary and snapshot behavior: stable pre/post summary fields match on the bounded parity run, and periodic snapshots still emit `decision-N` filenames at the configured cadence.
+
+Ticket corrections applied:
+
+1. The manual pre-migration baseline was captured in the same worktree before editing rather than by checking out `main`; this preserved the ticket's parity intent without changing branches.
+2. The migrated loop treats `recovery` steps as generator-owned protocol events and does not count them as decisions or interval-sample triggers.
+
+Schema/artifact fallout: none. This ticket changes one campaign diagnostic script only; no serialized schema, generated schema artifact, compiled game data, fixture, or golden output changed.
+
+Verification ledger:
+
+1. `pnpm -F @ludoforge/engine build` — passed before baseline capture and again during final proof.
+2. Pre-migration baseline: `node campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs --seed 1002 --max-turns 0 --sample-every-decisions 999999 --top 1 --output-dir /tmp/ludoforge-152-003-baseline` — passed.
+3. Post-migration parity after final build: `node campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs --seed 1002 --max-turns 0 --sample-every-decisions 999999 --top 1 --output-dir /tmp/ludoforge-152-003-after-final-build` — passed; stable fields matched baseline (`stopReason=maxTurns`, `finalTurnCount=0`, `totalDecisionCount=0`, `playerDecisionCount=0`, no periodic snapshots).
+4. Snapshot cadence smoke: `timeout 120s node campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs --seed 1002 --max-turns 1 --sample-every-decisions 50 --snapshot-every-decisions 50 --top 1 --output-dir /tmp/ludoforge-152-003-snapshot-smoke` — passed; emitted `spec-143-seed-1002-decision-50.heapsnapshot` and `spec-143-seed-1002-decision-100.heapsnapshot`.
+5. `node --check campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` — passed.
+6. `rg -n "while \\(true\\)|advanceAutoresolvable|publishMicroturn|applyPublishedDecision|isNoBridgeableMicroturnError|createRng|currentChanceRng|agentRngByPlayer" campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs` — returned zero matches, as expected.
+7. `pnpm -F @ludoforge/engine test` — passed; default lane summary `59/59 files passed`.
+8. `pnpm turbo lint typecheck` — passed; 5/5 tasks successful.
+9. `pnpm run check:ticket-deps` — passed for 4 active tickets and 2182 archived tickets.
+
+No proof-affecting edits remain after this ledger update: this status/outcome edit records the completed implementation boundary, command substitution, and already-run proof results without changing the code surface or acceptance semantics.
+
+Post-review cleanup:
+
+1. After migration, `runGameSteps(...)` owns the per-run forked runtime. The diagnostic's `zobristKeyCacheSize` sample previously read the outer runtime, which no longer observes the run-local `zobristTable.keyCache`. The script now preserves the `zobristKeyCacheSize` field shape but reports it as `null` / `n/a` rather than a stale outer-runtime value.
+2. Post-review verification: `node --check campaigns/fitl-perf-optimization/diagnose-spec-143-heap.mjs`; bounded diagnostic parity on stable summary fields; snapshot cadence smoke; old-loop grep invariant.

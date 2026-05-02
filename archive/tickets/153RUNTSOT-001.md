@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel internals: `turn-flow-eligibility.ts`, `grant-lifecycle.ts`, `apply-move.ts`, `microturn/{apply,drive,rollback}.ts`
-**Deps**: `specs/153-turn-flow-runtime-state-source-of-truth.md`
+**Deps**: `archive/specs/153-turn-flow-runtime-state-source-of-truth.md`
 
 ## Problem
 
@@ -140,6 +140,8 @@ Pre-merge dry-run: pick at least one canary trajectory (e.g., a FITL deck-exhaus
 4. Replay-identity dry-run: capture trajectory output at `05bf74c2` and at HEAD; `diff` the canonical trace JSONs (record method in commit body)
 
 ## Outcome
+
+Outcome amended: 2026-05-02 — dependency path updated after Spec 153 was archived.
 
 Completed on 2026-05-02.
 

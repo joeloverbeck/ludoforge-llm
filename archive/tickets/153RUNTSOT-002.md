@@ -1,6 +1,6 @@
 # 153RUNTSOT-002: Architectural-invariant property test for runtime field propagation
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test file under `packages/engine/test/determinism/`
@@ -21,6 +21,7 @@ This ticket adds the architectural-invariant property test that would have caugh
 3. **Test corpus selection criterion** is per Spec 153 D4: at least one trajectory must trigger `lifecycleStatus.stalled = true` AND at least one must trigger `consecutiveCoupRounds` mutation. Candidate starting points cited in the spec: `FITL_CANARY_SEEDS = [1002, 1005, 1010, 1013]` × `FITL_PROFILE_VARIANTS` at `packages/engine/test/integration/spec-140-foundations-conformance.test.ts:17-20`; the post-126FREOPEBIN inline corpus `[1020, 1040, 1049, 1054, 2046]` at `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts:51`. Neither is guaranteed to satisfy the criterion — implementation extends or replaces.
 4. **Determinism lane** is `pnpm -F @ludoforge/engine test:determinism` (run via `node scripts/run-tests.mjs --lane determinism`). Confirmed against `packages/engine/package.json`.
 5. **Witness check** against commit `ddcf3ef9`: the test, applied to that commit (the PR #231 main commit before the `05bf74c2` hot-fix), MUST fail with a deterministic counterexample naming `lifecycleStatus.stalled` as the dropped field. This is one-time evidence captured during implementation, not a recurring CI gate.
+6. **Boundary reset approved (2026-05-02)**: the draft `runGameSteps`-only strategy depends on a public seam and fixture that do not exist at `ddcf3ef9`, so it cannot satisfy the same-test historical red/green witness required by Foundation 16. The corrected test uses a same-test-compatible inline FITL-style short-deck fixture, directly exercises the `finalizeSuspendedOrEndedCard` seam through `applyTurnFlowEligibilityAfterMove`, and also verifies simulator-observed `lifecycleStatus.stalled` / `consecutiveCoupRounds` through `runGame`.
 
 ## Architecture Check
 
@@ -44,19 +45,20 @@ File-top markers (per `.claude/rules/testing.md`):
 ```
 
 Property statement (in test prose):
-> For every reachable trajectory of the selected FITL `(seed, policy-profile-set)` corpus under `runGameSteps`, every kernel-mutated structural runtime field set by `applyTurnFlowCardBoundary` (`lifecycleStatus.stalled`, `consecutiveCoupRounds`, and any future addition) is observable to the next iteration of the simulator loop body. Specifically: if `applyTurnFlowCardBoundary` ever sets `lifecycleStatus.stalled = true` on its returned state, the simulator's next iteration MUST observe that field as `true` and terminate with `stopReason='noLegalMoves'` within K = 1 iteration. If `consecutiveCoupRounds` is mutated, the next iteration's read of `cardDrivenRuntime(state).consecutiveCoupRounds` MUST equal the post-boundary value.
+> Across the selected FITL-style short-deck corpus, every kernel-mutated structural runtime field set by `applyTurnFlowCardBoundary` (`lifecycleStatus.stalled`, `consecutiveCoupRounds`, and any future addition) is observable through the next owned downstream seam. Specifically: if `applyTurnFlowCardBoundary` sets `lifecycleStatus.stalled = true` during `finalizeSuspendedOrEndedCard`, the returned state MUST preserve that field, and the simulator MUST later observe the field and terminate with `stopReason='noLegalMoves'`. If `consecutiveCoupRounds` is mutated by a coup handoff, a bounded simulator run MUST observe the post-boundary value.
 
 Implementation strategy:
 
-- Wrap `applyTurnFlowCardBoundary` with an instrumentation tap that records every `(call, post-boundary-runtime-snapshot)` pair to a per-trajectory log.
-- After the trajectory completes, walk the log and assert that for each recorded mutation, the simulator's next-iteration state-runtime read reflects the mutation (matched by `stateHash` continuity).
+- Use an inline FITL-style short-deck `GameDef` so the same test file compiles both on current HEAD and on commit `ddcf3ef9`.
+- Directly call `applyTurnFlowEligibilityAfterMove` with a state that ends the card and causes `applyTurnFlowCardBoundary` to stall inside `finalizeSuspendedOrEndedCard`; assert the returned state preserves `lifecycleStatus.stalled = true`.
+- Run the same fixture through `runGame` with bounded `maxTurns` values to assert simulator-observed `stopReason='noLegalMoves'`, `lifecycleStatus.stalled = true`, and `consecutiveCoupRounds = 1` after a coup handoff.
 - Fail with a deterministic counterexample naming `seed`, `profile-set`, `turn count`, and the dropped field.
 
 ### 2. Select the seed corpus
 
 Choose a small `(seed, policy-profile-set)` corpus that satisfies the D4 criterion:
-- At least one trajectory must observe `applyTurnFlowCardBoundary` setting `lifecycleStatus.stalled = true` (typically a FITL deck-exhaustion + lookahead-exhaustion path).
-- At least one trajectory must observe a `consecutiveCoupRounds` mutation (typically a sequence of consecutive coup-phase rounds).
+- At least one same-test-compatible trajectory must observe `applyTurnFlowCardBoundary` setting `lifecycleStatus.stalled = true` through `finalizeSuspendedOrEndedCard`.
+- At least one same-test-compatible simulator trajectory must observe a `consecutiveCoupRounds` mutation.
 
 Implementer authors a brief justification in the test file's header comment listing each chosen seed and which mutation it provokes. Bounded `maxTurns=200`. The selection rationale is captured in the implementing commit body so reviewers can audit corpus adequacy.
 
@@ -88,7 +90,7 @@ Implementer authors a brief justification in the test file's header comment list
 
 ### Invariants
 
-1. **Field propagation observability**: for every recorded `applyTurnFlowCardBoundary` mutation across every `(seed, profile-set)` in the corpus, the next simulator-loop iteration's state-runtime read reflects the mutation by `stateHash` continuity.
+1. **Field propagation observability**: every owned downstream seam in the same-test-compatible corpus reflects the `applyTurnFlowCardBoundary` mutation: direct finalizer return for `lifecycleStatus.stalled`, simulator stop for `lifecycleStatus.stalled`, and bounded simulator state for `consecutiveCoupRounds`.
 2. **Stall-trajectory coverage**: at least one trajectory in the corpus triggers `lifecycleStatus.stalled = true` (otherwise the test cannot prove the stalled-field invariant).
 3. **CoupRound-trajectory coverage**: at least one trajectory in the corpus triggers `consecutiveCoupRounds` mutation (otherwise the test cannot prove the coupRound-field invariant).
 4. **Deterministic counterexample on failure**: failure output names seed, profile-set, turn count, and dropped field.
@@ -99,10 +101,29 @@ Implementer authors a brief justification in the test file's header comment list
 
 ### New/Modified Tests
 
-1. `packages/engine/test/determinism/turn-flow-runtime-field-propagation-property.test.ts` (new) — architectural-invariant property test for kernel-mutated runtime field propagation. Marker references F11 corollary. Corpus chosen per D4 selection criterion.
+1. `packages/engine/test/determinism/turn-flow-runtime-field-propagation-property.test.ts` (new) — architectural-invariant property test for kernel-mutated runtime field propagation. Marker references F11 corollary. Inline FITL-style short-deck corpus chosen per the corrected D4 selection criterion.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:determinism` — targeted determinism lane
 2. `pnpm turbo test` — full suite
-3. One-time witness-direction check: `git checkout ddcf3ef9 && cp <test-file> packages/engine/test/determinism/ && pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine test:determinism` — confirm failure with `lifecycleStatus.stalled` counterexample; record output in commit body; `git checkout -` to return.
+3. One-time witness-direction check: apply the exact test file to a temporary worktree at `ddcf3ef9`, run `pnpm -F @ludoforge/engine build`, then run `node packages/engine/dist/test/determinism/turn-flow-runtime-field-propagation-property.test.js` — confirm failure with `lifecycleStatus.stalled` counterexample; record output in the ticket outcome / commit body. The direct compiled test is the faithful historical witness because the full determinism lane at that commit does not know about this new file until it is copied and built.
+
+## Outcome
+
+Completed 2026-05-02.
+
+Implemented `packages/engine/test/determinism/turn-flow-runtime-field-propagation-property.test.ts` as a same-test-compatible architectural-invariant witness for runtime field propagation. The test uses an inline FITL-style short-deck fixture, directly exercises the historical `finalizeSuspendedOrEndedCard` rebuild seam through `applyTurnFlowEligibilityAfterMove`, and verifies simulator-observed `lifecycleStatus.stalled`, `stopReason='noLegalMoves'`, and `consecutiveCoupRounds` through `runGame`.
+
+Boundary reset note: the original draft strategy named a `runGameSteps`-only public seam, but commit `ddcf3ef9` lacks that export and the later fixture it assumed. Per `docs/FOUNDATIONS.md` F13/F16, the test had to be rewritten to a same-file historical red/green shape instead of relying on a non-existent historical seam. User approved that reset as recommended option 1 on 2026-05-02.
+
+Historical red-direction evidence was captured in temporary worktree `/tmp/ludoforge-153-ddcf3ef9` at commit `ddcf3ef9`: after applying the exact test file and building, `node packages/engine/dist/test/determinism/turn-flow-runtime-field-propagation-property.test.js` failed with `seed=153002 profiles=firstLegal turn=0 dropped field=lifecycleStatus.stalled at finalizeSuspendedOrEndedCard` and `false !== true`.
+
+Current proof:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node packages/engine/dist/test/determinism/turn-flow-runtime-field-propagation-property.test.js` — passed.
+- `pnpm -F @ludoforge/engine test:determinism` — passed; determinism summary `17/17 files passed`.
+- `pnpm turbo test` — passed; `4 successful, 4 total`, including engine integration summary `60/60 files passed`.
+
+Schema/artifact fallout: none beyond build output in `dist/`; no schema or generated `GameDef` artifacts changed.

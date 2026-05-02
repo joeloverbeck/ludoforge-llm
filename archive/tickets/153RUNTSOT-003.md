@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only (`docs/FOUNDATIONS.md`)
-**Deps**: `specs/153-turn-flow-runtime-state-source-of-truth.md`
+**Deps**: `archive/specs/153-turn-flow-runtime-state-source-of-truth.md`
 
 ## Problem
 
@@ -79,6 +79,8 @@ The paragraph stands as Markdown body text within Section 11; do not promote to 
 3. `grep -nF "Single source of truth for kernel-mutated structural state fields" docs/FOUNDATIONS.md` — verify the anchor phrase landed verbatim for ticket 002's reference.
 
 ## Outcome (2026-05-02)
+
+Outcome amended: 2026-05-02 — dependency path updated after Spec 153 was archived.
 
 - Added the F11 corollary to `docs/FOUNDATIONS.md` immediately after the existing "Exception — Scoped internal mutation" paragraph and before Section 12.
 - Preserved the anchor phrase `Single source of truth for kernel-mutated structural state fields` verbatim for the `153RUNTSOT-002` property-test marker.

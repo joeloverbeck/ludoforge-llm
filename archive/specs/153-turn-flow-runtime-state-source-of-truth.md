@@ -1,6 +1,6 @@
 # Spec 153: Turn-Flow Runtime State Source-Of-Truth Contract
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P2 (closes the architectural hot-fix gap shipped in commit `05bf74c2` on PR #231; lands before any further turn-flow work to prevent the same class of bug from recurring as new structural runtime fields are added — but is not P1 because the hot-fix has already unblocked CI)
 **Complexity**: M (kernel-internal helper-shape refactor across four `runtime -> runtime` exports + their three to five call sites in `turn-flow-eligibility.ts` and `apply-move.ts`; deletes the manual propagation lines added by `05bf74c2`; adds one architectural-invariant property test; one corollary added to the project's living architectural-completeness convention. No GameSpecDoc YAML change, no compiler IR change, no public-API change.)
 **Dependencies**:
@@ -198,25 +198,17 @@ Per F14, this delete is part of the same atomic cut as Section D1's helper conve
 New test file: `packages/engine/test/determinism/turn-flow-runtime-field-propagation-property.test.ts`. Marker: `@test-class: architectural-invariant`.
 
 Property statement (in test prose):
-> For every reachable trajectory of the FITL canary seed corpus × baseline policy-profile variants under `runGameSteps`, every kernel-mutated structural runtime field set by `applyTurnFlowCardBoundary` (`lifecycleStatus.stalled`, `consecutiveCoupRounds`, and any future addition) is observable to the next iteration of the simulator loop body. Specifically: if `applyTurnFlowCardBoundary` ever sets `lifecycleStatus.stalled = true` on its returned state, the simulator's next iteration MUST observe that field as `true` and terminate with `stopReason='noLegalMoves'` within K = 1 iteration. If `consecutiveCoupRounds` is mutated, the next iteration's read of `cardDrivenRuntime(state).consecutiveCoupRounds` MUST equal the post-boundary value.
+> Across the selected same-test-compatible FITL-style short-deck corpus, every kernel-mutated structural runtime field set by `applyTurnFlowCardBoundary` (`lifecycleStatus.stalled`, `consecutiveCoupRounds`, and any future addition) is observable through the next owned downstream seam. Specifically: if `applyTurnFlowCardBoundary` sets `lifecycleStatus.stalled = true` during `finalizeSuspendedOrEndedCard`, the returned state MUST preserve that field, and the simulator MUST later observe the field and terminate with `stopReason='noLegalMoves'`. If `consecutiveCoupRounds` is mutated by a coup handoff, a bounded simulator run MUST observe the post-boundary value.
 
-Implementation sketch:
+Implementation sketch: use an inline FITL-style short-deck `GameDef` so the exact same test file can be copied onto commit `ddcf3ef9` for the historical red-direction witness. The test directly calls `applyTurnFlowEligibilityAfterMove` with a state that ends a card and stalls inside `finalizeSuspendedOrEndedCard`, then runs the same fixture through `runGame` to prove simulator-observed `lifecycleStatus.stalled`, `stopReason='noLegalMoves'`, and `consecutiveCoupRounds`.
 
-```ts
-// Wrap applyTurnFlowCardBoundary with an instrumentation tap that records
-// every (call, post-boundary-runtime-snapshot) pair to a per-trajectory log.
-// After the trajectory completes, walk the log and assert that for each
-// recorded mutation, the simulator's next-iteration state-runtime read
-// reflects the mutation (matched by stateHash continuity).
-```
+Test corpus selection criterion: a deliberately-chosen same-test-compatible FITL-style corpus such that **at least one trajectory triggers `applyTurnFlowCardBoundary` setting `lifecycleStatus.stalled = true` through `finalizeSuspendedOrEndedCard`** AND **at least one bounded simulator trajectory observes a `consecutiveCoupRounds` mutation** (the two structural fields the boundary mutates today). A stall-blind corpus would pass even if the helpers regressed in a way that didn't happen to trigger stalls, defeating the test's purpose. Concrete seeds are selected at implementation time and the selection rationale is recorded in the implementing commit body.
 
-Test corpus selection criterion: a deliberately-chosen set of FITL `(seed, policy-profile-set)` pairs such that **at least one trajectory triggers `applyTurnFlowCardBoundary` setting `lifecycleStatus.stalled = true`** AND **at least one trajectory triggers a `consecutiveCoupRounds` mutation** (the two structural fields the boundary mutates today). A stall-blind corpus would pass even if the helpers regressed in a way that didn't happen to trigger stalls, defeating the test's purpose. Concrete seeds are selected at implementation time and the selection rationale is recorded in the implementing commit body.
-
-Candidate starting points (neither is guaranteed to satisfy the criterion; the implementing ticket extends or replaces as needed):
+Candidate starting points (neither is guaranteed to satisfy the same-test-compatible criterion; the implementing ticket extends or replaces as needed):
 - `FITL_CANARY_SEEDS = [1002, 1005, 1010, 1013]` × `FITL_PROFILE_VARIANTS` (2 profile sets) at `packages/engine/test/integration/spec-140-foundations-conformance.test.ts:17-20`.
 - The post-126FREOPEBIN grant-determinism inline corpus `[1020, 1040, 1049, 1054, 2046]` at `packages/engine/test/determinism/fitl-policy-agent-canary-determinism.test.ts:51`.
 
-Bounded `maxTurns=200`. Each `(seed, profile-set)` pair contributes one property-checked trajectory. The property holds when the assertion passes for every recorded mutation across every pair; failure produces a deterministic counterexample with seed, profile, turn count, and the dropped field.
+Bounded `maxTurns=200` or lower. Each selected fixture run contributes one property-checked trajectory. The property holds when the assertion passes for every recorded mutation across every run; failure produces a deterministic counterexample with seed, profile, turn count, and the dropped field.
 
 Witness check: the test, applied to commit `ddcf3ef9` (immediately before the bug), MUST fail with a deterministic counterexample. The test, applied to HEAD after Spec 153 lands, MUST pass. This dual-direction check is the proof that the test would have caught the regression at the time it was introduced.
 
@@ -285,6 +277,27 @@ Anticipated decomposition (finalized by `/spec-to-tickets`):
 
 Decomposed via `/spec-to-tickets` on 2026-05-02:
 
-- [`archive/tickets/153RUNTSOT-001.md`](../archive/tickets/153RUNTSOT-001.md) — Convert four runtime helpers to `state → state` and retire the `05bf74c2` hot-fix (atomic) (covers D1–D3, D6, D7; AC#1, AC#2, AC#6, AC#7, AC#8)
-- [`tickets/153RUNTSOT-002.md`](../tickets/153RUNTSOT-002.md) — Architectural-invariant property test for runtime field propagation (covers D4; AC#3, AC#4)
-- [`archive/tickets/153RUNTSOT-003.md`](../archive/tickets/153RUNTSOT-003.md) — Add F11 corollary for runtime-mutated structural state field source-of-truth (covers D5; AC#5)
+- [`archive/tickets/153RUNTSOT-001.md`](../tickets/153RUNTSOT-001.md) — Convert four runtime helpers to `state → state` and retire the `05bf74c2` hot-fix (atomic) (covers D1–D3, D6, D7; AC#1, AC#2, AC#6, AC#7, AC#8)
+- [`archive/tickets/153RUNTSOT-002.md`](../tickets/153RUNTSOT-002.md) — Architectural-invariant property test for runtime field propagation (covers D4; AC#3, AC#4)
+- [`archive/tickets/153RUNTSOT-003.md`](../tickets/153RUNTSOT-003.md) — Add F11 corollary for runtime-mutated structural state field source-of-truth (covers D5; AC#5)
+
+## Outcome
+
+Completed 2026-05-02.
+
+Spec 153 is fully implemented and all decomposed tickets are archived:
+
+- `153RUNTSOT-001` converted the runtime helper family to `state -> state`, removed stale runtime rebuild seams, and retired the `05bf74c2` manual propagation patch.
+- `153RUNTSOT-002` added the architectural-invariant determinism test for runtime field propagation, including the same-test-compatible historical red-direction witness against `ddcf3ef9`.
+- `153RUNTSOT-003` added the F11 corollary to `docs/FOUNDATIONS.md` and anchored the property test marker to that architectural rule.
+
+Deviation from original plan: ticket 002 replaced the drafted `runGameSteps`-only witness with a same-test-compatible inline FITL-style short-deck fixture plus a direct `applyTurnFlowEligibilityAfterMove` finalizer seam, because the original public seam and fixture did not exist at `ddcf3ef9`. The corrected boundary was approved during implementation and preserves the Foundation 16 historical red/green proof requirement.
+
+Verification summary across the completed series:
+
+- Ticket 001 proof: engine build, typecheck, stale-runtime structural grep, default engine test lane, affected FITL event shard, and determinism lane all passed.
+- Ticket 002 proof: engine build, focused compiled property test, historical red-direction witness at `ddcf3ef9`, determinism lane (`17/17` files), and `pnpm turbo test` all passed.
+- Ticket 003 proof: `docs/FOUNDATIONS.md` diff/anchor checks and `pnpm turbo test` passed.
+- Ticket/archive integrity: `pnpm run check:ticket-deps` passed after archiving `153RUNTSOT-002`.
+
+Schema/artifact fallout: none beyond normal build output in `dist/`; no schema, GameSpecDoc, GameDef, fixture, or golden artifact changed.

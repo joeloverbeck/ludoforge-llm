@@ -38,7 +38,7 @@
 **Assumptions made (please correct if wrong)**:
 - Evolution readiness target is ~250 ms per FITL card under all 4 baseline profiles (the `<= 250 ms` figure from `reports/turnperf-001-investigation-2026-04-28.md`).
 - Determinism workflow timeout is acceptable to bump 30→60 minutes temporarily.
-- Phase 5 (Rust→WASM) is genuinely deferred — its own spec lands when Phase 4 proves the bytecode shape.
+- Phase 5 (Rust→WASM) was originally deferred; it was promoted to `specs/150-fitl-policy-vm-wasm-port.md` on 2026-05-02 after Phase 4B remained red.
 
 ---
 
@@ -59,9 +59,9 @@ The work is decomposed into six phases:
 | **2** | Apply/undo for inner-preview drive | Deferred after Phase 1 stop condition | Not on the active path; revisit only if later profiling proves preview cloning/apply cost is the next generic bottleneck. |
 | **3** | Policy DSL → bytecode compiler | ~2-3 weeks | n/a (compiler-only; round-trip equivalence proven). |
 | **4** | TS bytecode VM | ~1-2 weeks | ≤ 250 ms (the original target — bytecode VMs over typed arrays are routinely 10-50× the speed of object-walking interpreters). |
-| **5** | Rust→WASM port (deferred; own spec) | ~6-10 weeks when justified | ≤ 50 ms (5× gain on top of phase 4) plus parallelism via worker pool + SAB. |
+| **5** | Rust→WASM port (Spec 150) | ~6-10 weeks when justified | First restore ≤ 250 ms; may later tighten to ≤ 50 ms plus parallelism via worker pool + SAB. |
 
-Phase 5 is **explicitly deferred** to a follow-up spec authored after Phase 4 lands and the bytecode shape is proven stable. Stop conditions are documented in §8.
+Phase 5 was originally deferred to a follow-up spec. The Phase 4B final gate fired that stop condition on 2026-05-02; the active follow-up is `specs/150-fitl-policy-vm-wasm-port.md`.
 
 ---
 
@@ -215,7 +215,7 @@ Compiler stage in `packages/engine/src/cnl/policy-bytecode/`. Round-trip propert
 
 A tight switch loop over `Int32Array` opcodes operating on `EncodedState` typed arrays. ~200 LOC. Drop-in replacement for `evaluatePolicyMove` (the function telemetered as `agent:evaluatePolicyExpression`) controlled by an A/B flag in `policy-runtime.ts`. After parity is proven on all FITL profiles for ≥3 consecutive CI runs, the bytecode path becomes default and the closure-tree evaluation path (`compiled-policy-runtime.ts:buildPolicyExprClosure` and downstream callees in `policy-evaluation-core.ts`) is deleted per F14 — no fallback retained.
 
-### 2.6 WASM port (phase 5, deferred to own spec)
+### 2.6 WASM port (phase 5, Spec 150)
 
 When phase 4 ships and the bytecode shape is stable, port the VM to Rust:
 - One Rust crate `ludoforge-policy-vm` with no FITL-specific code.
@@ -331,14 +331,14 @@ Acceptance:
 - **Closure-tree evaluation path deleted**: `compiled-policy-runtime.ts:buildPolicyExprClosure` and downstream closure callees in `policy-evaluation-core.ts` removed. Per F14, no fallback retained. Spec 147's AOT compile path now produces bytecode directly; the compiled-closure runtime is dead code post-flip.
 - The phase 0 CI restoration ticket closes.
 
-### Phase 5 — Rust→WASM port (deferred; own spec when justified)
+### Phase 5 — Rust→WASM port (promoted to Spec 150 on 2026-05-02)
 
 A separate spec is authored when phase 4 lands AND any of the following is true:
 1. Phase 4 doesn't reach the 250 ms target — phase 5 is the next-stage answer.
 2. Evolution campaigns demand 10× more throughput (e.g., MAP-Elites with a 10K-cell archive).
 3. The runner needs a worker-pool architecture for online play.
 
-The phase 5 spec covers: Rust crate boundary, `wasm-bindgen` API, `bincode` serialization across FFI, SAB worker pool, COOP/COEP headers in the runner, side-by-side TS-VM ↔ WASM-VM equivalence test.
+The phase 5 spec is now `specs/150-fitl-policy-vm-wasm-port.md`. It covers: Rust crate boundary, `wasm-bindgen` or equivalent API, compact binary serialization across FFI, SAB worker pool when justified, COOP/COEP headers in the runner when needed, and side-by-side TS-VM ↔ WASM-VM equivalence tests.
 
 ### Phase 4B — Preview-drive runtime closure (inserted after Phase 4 profiling)
 
@@ -356,8 +356,8 @@ Measured owner buckets from the 2026-05-02 CPU profile:
 Acceptance:
 
 - Tickets 019-021 either land measured generic runtime-closure work or record why their bucket is no longer active.
-- Ticket 022 reruns the same-seam one-card profile at `<=250 ms` under all 4 baseline profiles with `verifyIncrementalHash=true`.
-- Only after ticket 022 is green does ticket 016 default-flip the policy VM and delete closure-tree code per F14.
+- Ticket 022 reruns the same-seam one-card profile at `<=250 ms` under all 4 baseline profiles with `verifyIncrementalHash=true`, or records the red result and hands off to the next architectural owner.
+- Ticket 022 remained red on 2026-05-02; only after Spec 150 makes the original budget truthful does ticket 016 default-flip the successor runtime and delete closure-tree code per F14.
 
 Phase 4B is still generic engine work. No FITL-specific rule branches, opcodes, schemas, or hardcoded identifiers are allowed.
 
@@ -386,7 +386,7 @@ Phase 4B is still generic engine work. No FITL-specific rule branches, opcodes, 
 | 4 | architectural-invariant | Replay-identity on all determinism shards with VM enabled; per-card cost ≤ 250 ms; no convergence-witness regressions. |
 | 5 | architectural-invariant | TS-VM ↔ WASM-VM equivalence on golden corpus; replay-identity preserved across FFI. |
 
-A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is no longer added at the false Phase 1 5500 ms calibration. Ticket `149FITLEVNUMVM-007` is superseded by the 2026-04-30 stop-condition decision. The next truthful gate is added or updated when the VM path owns the target, calibrated to the Phase 4 `<= 250 ms` budget, and can tighten to `<= 50 ms` only if Phase 5 is later justified. This gate is **additive** to the existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts`, which gates parity-drive cost on a different metric and continues to run unchanged through Phase 4 unless VM-path measurements require recalibration.
+A new perf gate `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` is no longer added at the false Phase 1 5500 ms calibration. Ticket `149FITLEVNUMVM-007` is superseded by the 2026-04-30 stop-condition decision. The next truthful gate is added or updated when the successor runtime path owns the target, calibrated to the original Phase 4 `<= 250 ms` budget, and can tighten to `<= 50 ms` only if Spec 150 later proves that stricter target. This gate is **additive** to the existing `packages/engine/test/perf/agents/fitl-parity-drive.perf.test.ts`, which gates parity-drive cost on a different metric and continues to run unchanged unless successor-path measurements require recalibration.
 
 Convergence-witness tests are explicitly **out of scope** for this spec — score equivalence is proven by property tests, not trajectory-pinned witnesses (`.claude/rules/testing.md` Distillation guidance applies).
 
@@ -416,7 +416,7 @@ Convergence-witness tests are explicitly **out of scope** for this spec — scor
 
 ## 8. Out of scope
 
-- **Phase 5 (Rust→WASM)** detailed FFI shape, worker-pool architecture, and runner SAB integration. Owned by a separate spec.
+- **Phase 5 (Rust→WASM)** detailed FFI shape, worker-pool architecture, and runner SAB integration. Owned by `specs/150-fitl-policy-vm-wasm-port.md`.
 - **WebGPU compute** for batch playouts. Specialist weapon, not first move (per ChatGPT brainstorming/typescript-performance.md).
 - **AssemblyScript** as an alternative to Rust. Tempting but not "real TypeScript"; rejected as a speculative middle ground.
 - **Evolution-pipeline changes** (MAP-Elites archive size, cell granularity, mutation operators). Out of scope; this spec unblocks evolution but does not redesign it.
@@ -451,7 +451,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 Total estimate: **14-18 tickets**, ~4-7 weeks of focused work for phases 0-4.
 
-Phase 5 gets its own spec (~149 + 1 follow-up) with its own decomposition.
+Phase 5 now has its own spec, `specs/150-fitl-policy-vm-wasm-port.md`, with starter ticket `tickets/150FITLWASM-001.md`.
 
 ---
 
@@ -527,6 +527,14 @@ User-approved resolution: ticket 016 returns to being the final F14 default-flip
 - `149FITLEVNUMVM-021`: preview hashing and verification strategy.
 - `149FITLEVNUMVM-022`: final reprofile gate that unblocks ticket 016 only when the original `<=250 ms` gate is truthful.
 
+### 2026-05-02 Phase 4B final gate and Phase 5 handoff
+
+Ticket `149FITLEVNUMVM-022` ran the final same-seam profile after tickets 019-021 completed:
+
+- `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`, `verifyIncrementalHash=true`.
+
+User-approved resolution: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. Ticket `149FITLEVNUMVM-016` remains the later F14 default-flip/deletion owner, but it must wait until Spec 150 makes the original `<=250 ms` gate truthful. The Phase 5 owner is `specs/150-fitl-policy-vm-wasm-port.md`, starting with `tickets/150FITLWASM-001.md`.
+
 ---
 
 ## Tickets
@@ -552,7 +560,9 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-019.md`](../archive/tickets/149FITLEVNUMVM-019.md) — Phase 4B generic kernel expression/query AOT or bytecode
 - [`archive/tickets/149FITLEVNUMVM-020.md`](../archive/tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
 - [`archive/tickets/149FITLEVNUMVM-021.md`](../archive/tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
-- [`tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate
-- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final Phase 4 default-flip + closure-tree deletion F14 atomic cut after Phase 4B
+- [`tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate; red, handed off to Spec 150
+- [`specs/150-fitl-policy-vm-wasm-port.md`](../specs/150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
+- [`tickets/150FITLWASM-001.md`](../tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
+- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final default-flip + closure-tree deletion F14 atomic cut after the successor runtime makes the budget truthful
 
 **End of spec 149.**

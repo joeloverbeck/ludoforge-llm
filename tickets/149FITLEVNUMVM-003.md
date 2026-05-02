@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-003: CI restoration unwind (post-Phase-4)
 
-**Status**: PENDING — engine-tests blocking semantics restored early; determinism timeout unwind still post-Phase-4
+**Status**: PENDING — engine-tests blocking semantics restored early; determinism timeout unwind still post-Phase-5/016
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
-**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-016.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-016.md`, `tickets/150FITLWASM-001.md`
 
 ## Problem
 
@@ -14,7 +14,9 @@ Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes 
 
 **2026-05-02 gate update**: Ticket 016 is blocked by a live Phase 4 perf-gate reassessment. User-confirmed VM parity CI history and local VM correctness are green, but the VM-on one-card probe remains red at per-card `elapsedMs=6785.31` versus `<=250`. Archived ticket `149FITLEVNUMVM-018` profiled the suspected engine-test restoration blockers and found no remaining red runtime hot path after stale golden fallout was repaired. Follow-up profiling then split the remaining non-policy-VM preview-drive runtime closure into tickets 019-022; ticket 016 remains the final F14 default-flip/deletion owner after ticket 022 proves the `<=250 ms` gate.
 
-**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining post-Phase-4 restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the original Phase 4 gate is truthful.
+**2026-05-02 Phase 5 handoff update**: Ticket `149FITLEVNUMVM-022` ran the final Phase 4B gate and remained red at per-card `elapsedMs=6702.65` versus `<=250`. User approved promoting Phase 5/WASM as the next architectural owner. This ticket's remaining determinism-timeout unwind is still blocked until the Phase 5 path makes the original budget truthful and ticket 016 closes the F14 default-flip/deletion cut.
+
+**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the original Phase 4 gate is truthful through the successor runtime.
 
 ## Assumption Reassessment (2026-04-28)
 

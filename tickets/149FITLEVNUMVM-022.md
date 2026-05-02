@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: PENDING — unblocks ticket 016 only when Phase 4 budget is truthful
+**Status**: BLOCKED by red Phase 4B final gate — successor owner `tickets/150FITLWASM-001.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
@@ -56,3 +56,37 @@ timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 4
 1. `pnpm -F @ludoforge/engine build`.
 2. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final`.
 3. If the perf gate test is added or updated: `pnpm -F @ludoforge/engine test:perf`.
+
+## Outcome
+
+2026-05-02 final Phase 4B same-seam profile was run against fresh built engine output:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- Command substitution: the ticket command was run with `LUDOFORGE_POLICY_VM=on` because ticket 016 and the archived Phase 4B prerequisites define this as the VM-on Phase 4 gate:
+  `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final`.
+- Verdict: RED for the Phase 4 `<=250 ms` gate.
+- Overall elapsed: `6702.87 ms`.
+- Per-card row: `turnCount=0`, `elapsedMs=6702.65`, `decisions=159`, `msPerDecision=42.155`, `closeReason=turnCountAdvanced`.
+- Profile buckets:
+  - `simAgentChooseMove`: `count=159`, `totalMs=3984.24`.
+  - `agent:evaluatePolicyExpression`: `count=159`, `totalMs=3981.83`.
+  - `simApplyMove`: `count=159`, `totalMs=854.17`.
+  - `simTerminalResult`: `count=160`, `totalMs=4.77`.
+  - `simLegalMoves`: `count=160`, `totalMs=1.04`.
+  - `lifecycle:dispatchTriggers`: `count=2`, `totalMs=0.3`.
+  - `simComputeDeltas`: `count=159`, `totalMs=0.09`.
+  - `lifecycle:resolveEffects`: `count=2`, `totalMs=0.04`.
+- Token/index counters: `tokenStateIndexBuildCount=2377`, `draftTokenStateIndexDeltaCount=198`, `draftTokenStateIndexAttachCount=834`, `draftTokenStateIndexSnapshotCount=315`, `draftTokenStateIndexCowCopyCount=120`.
+- Drive exits: `driveExitTotal=211`; depth caps remained for `us-baseline` (`1`) and `vc-baseline` (`1`).
+
+No perf gate test was added because the measured result cannot truthfully assert `<=250 ms`. Ticket 016 remains blocked, and no F14 default flip or closure-tree deletion is authorized by this result.
+
+Required 1-3-1 decision point:
+
+- Problem: Phase 4B prerequisites are complete, but the final VM-on same-seam gate is still red at `6702.65 ms` per card versus the `<=250 ms` target.
+- Option 1: keep the `<=250 ms` target and create/execute another Phase 4B profiling/optimization slice focused on the remaining `agent:evaluatePolicyExpression` and preview-apply buckets.
+- Option 2: stop Phase 4B as failed and promote a Phase 5/WASM spec as the next architectural owner for the original budget.
+- Option 3: request a user-approved target reset, record the acceptance exception explicitly, and then decide whether ticket 016 may proceed under the revised budget.
+- Recommendation: Option 2. The final Phase 4B profile is still about `26.8x` over budget after tickets 019-021, so more TypeScript-local tuning is unlikely to close the gap cleanly.
+
+User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md` plus starter ticket `tickets/150FITLWASM-001.md`.

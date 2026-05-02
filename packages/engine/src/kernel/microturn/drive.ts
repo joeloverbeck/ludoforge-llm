@@ -172,16 +172,7 @@ const reconcilePassFallbackBlockingGrants = (
   if (expired.grants.length === pending.length) {
     return state;
   }
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(
-        state.turnOrderState.runtime,
-        expired.grants.length === 0 ? undefined : expired.grants,
-      ),
-    },
-  };
+  return withPendingFreeOperationGrants(state, expired.grants.length === 0 ? undefined : expired.grants);
 };
 
 const appendTraceEntry = (
@@ -613,10 +604,7 @@ const applyPublishedDecisionInternalNoFinalHash = (
     nextPending[grantIndex] = transitioned.grant;
     const nextState: GameState = {
       ...canonicalState,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: withPendingFreeOperationGrants(canonicalState.turnOrderState.runtime, nextPending),
-      },
+      turnOrderState: withPendingFreeOperationGrants(canonicalState, nextPending).turnOrderState,
       decisionStack: canonicalState.decisionStack?.slice(0, -1) ?? [],
       activeDeciderSeatId: '__kernel' as const,
     };

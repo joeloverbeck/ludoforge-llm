@@ -373,6 +373,7 @@ export const applyGrantFreeOperation = (
     state: withCardDrivenRuntime(cursor.state, {
       ...runtime,
       pendingFreeOperationGrants: nextPending,
+      lifecycleStatus: { stalled: false },
       ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
     }, cursor.tracker),
     rng: cursor.rng,

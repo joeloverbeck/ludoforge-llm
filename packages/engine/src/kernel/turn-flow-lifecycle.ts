@@ -119,12 +119,12 @@ const withLifecycleStatus = (
   if (state.turnOrderState.type !== 'cardDriven') {
     return state;
   }
-  const runtime = state.turnOrderState.runtime;
-  if (runtime.lifecycleStatus.stalled === stalled) {
+  const currentRuntime = state.turnOrderState.runtime;
+  if (currentRuntime.lifecycleStatus.stalled === stalled) {
     return state;
   }
   const nextRuntime = {
-    ...runtime,
+    ...currentRuntime,
     lifecycleStatus: { stalled },
   };
   if (tracker !== undefined) {
@@ -315,8 +315,8 @@ const applyPromotedCoupImmediateEffects = (
 };
 
 const withConsecutiveCoupRounds = (state: GameState, rounds: number, tracker?: DraftTracker): GameState => {
-  const runtime = cardDrivenRuntime(state);
-  if (runtime === null || runtime.consecutiveCoupRounds === rounds) {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null || currentRuntime.consecutiveCoupRounds === rounds) {
     return state;
   }
 
@@ -326,7 +326,7 @@ const withConsecutiveCoupRounds = (state: GameState, rounds: number, tracker?: D
     mutableState.turnOrderState = {
       type: 'cardDriven',
       runtime: {
-        ...runtime,
+        ...currentRuntime,
         consecutiveCoupRounds: rounds,
       },
     };
@@ -338,7 +338,7 @@ const withConsecutiveCoupRounds = (state: GameState, rounds: number, tracker?: D
     turnOrderState: {
       type: 'cardDriven',
       runtime: {
-        ...runtime,
+        ...currentRuntime,
         consecutiveCoupRounds: rounds,
       },
     },

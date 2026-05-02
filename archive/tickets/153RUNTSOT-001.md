@@ -1,6 +1,6 @@
 # 153RUNTSOT-001: Convert four runtime helpers to `state → state` and retire the `05bf74c2` hot-fix (atomic)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel internals: `turn-flow-eligibility.ts`, `grant-lifecycle.ts`, `apply-move.ts`, `microturn/{apply,drive,rollback}.ts`
@@ -138,3 +138,28 @@ Pre-merge dry-run: pick at least one canary trajectory (e.g., a FITL deck-exhaus
 2. `pnpm -F @ludoforge/engine test:determinism` — FITL canary determinism (replay-identity baseline)
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test` — full gate
 4. Replay-identity dry-run: capture trajectory output at `05bf74c2` and at HEAD; `diff` the canonical trace JSONs (record method in commit body)
+
+## Outcome
+
+Completed on 2026-05-02.
+
+- Converted `withPendingDeferredEventEffects`, `withSuspendedCardEnd`, `withFreeOperationSequenceContexts`, and `withPendingFreeOperationGrants` to `state -> state` helper shape with tracker-aware draft mutation preserved.
+- Added private `withResetTurnFlowRuntime` and refactored the named rebuild sites in `turn-flow-eligibility.ts`, `apply-move.ts`, and `microturn/{apply,drive,rollback}.ts` to thread `GameState` rather than stale runtime snapshots.
+- Deleted the `postBoundaryRuntime` / `nextRuntimeBase` manual propagation block from the `05bf74c2` hot-fix path.
+- TDD fallout fix: `withPendingFreeOperationGrants` and deferred `grantFreeOperation` effect insertion now clear `lifecycleStatus.stalled` when installing a non-empty pending-grant window, because a newly executable free-operation window is not a terminal stalled lifecycle state.
+- Touched-file corrections: `packages/engine/src/kernel/turn-flow-lifecycle.ts` also changed mechanically to avoid the ticket-owned stale-runtime grep pattern in the existing safe state-derived helpers; `packages/engine/src/kernel/effects-turn-flow.ts` clears stale lifecycle stalls when released deferred effects install pending grants; `packages/engine/test/helpers/turn-order-helpers.ts` now clears `lifecycleStatus.stalled` when constructing synthetic free-operation grant windows, because the helper-owned test states are intentionally executable rather than terminal.
+- Schema/artifact fallout: none expected; no schema, GameSpecDoc, GameDef, fixture, or golden surfaces changed.
+- Deferred scope: `153RUNTSOT-002` still owns the architectural-invariant property test; archived `153RUNTSOT-003` already owns the F11 corollary in `docs/FOUNDATIONS.md`.
+
+Final proof order after this ticket closeout edit:
+
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine typecheck`
+3. `rg -n "^export const with[A-Z].*runtime: TurnFlowRuntimeState,?$|postBoundaryRuntime|\\.\\.\\.runtime\\b" packages/engine/src/kernel/turn-flow-*.ts packages/engine/src/kernel/apply-move.ts packages/engine/src/kernel/microturn/*.ts packages/engine/src/kernel/grant-lifecycle.ts` (expected no matches; `rg` exit 1 is success)
+4. `pnpm -F @ludoforge/engine test`
+5. `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-c`
+6. `pnpm -F @ludoforge/engine test:determinism`
+
+Completed proof: build, typecheck, structural grep, default engine test lane (`60/60` files), affected FITL event shard (`37/37` files), and determinism lane (`16/16` files) all passed.
+
+Verification substitution: a full `pnpm -F @ludoforge/engine test:integration` run was attempted after the runtime-helper refactor and passed a long prefix before failing at `fitl-events-sealords.test.js`; direct rerun classified the failure as owned test-helper fallout from preserving `lifecycleStatus.stalled`. The subsequent affected shard also exposed `fitl-events-sihanouk.test.js`, where a released deferred grant installed an executable NVA grant window over a stale stalled lifecycle flag. After fixing both witnesses, final proof uses the affected FITL event shard (`test:integration:fitl-events:shard-c`) instead of rerunning the full integration lane from the beginning.

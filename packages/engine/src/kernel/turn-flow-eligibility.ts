@@ -414,45 +414,141 @@ export const toPendingDeferredEventEffects = (
   deferred.length === 0 ? undefined : deferred;
 
 export const withPendingDeferredEventEffects = (
-  runtime: TurnFlowRuntimeState,
+  state: GameState,
   deferred: readonly TurnFlowPendingDeferredEventEffect[] | undefined,
-): TurnFlowRuntimeState => {
+  tracker?: DraftTracker,
+): GameState => {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null || currentRuntime.pendingDeferredEventEffects === deferred) {
+    return state;
+  }
   const nextRuntime = {
-    ...runtime,
+    ...currentRuntime,
     ...(deferred === undefined ? {} : { pendingDeferredEventEffects: deferred }),
   };
   if (deferred === undefined) {
     delete (nextRuntime as { pendingDeferredEventEffects?: readonly TurnFlowPendingDeferredEventEffect[] }).pendingDeferredEventEffects;
   }
-  return nextRuntime;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
 };
 
 export const withSuspendedCardEnd = (
-  runtime: TurnFlowRuntimeState,
+  state: GameState,
   suspendedCardEnd: TurnFlowRuntimeState['suspendedCardEnd'] | undefined,
-): TurnFlowRuntimeState => {
+  tracker?: DraftTracker,
+): GameState => {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null || currentRuntime.suspendedCardEnd === suspendedCardEnd) {
+    return state;
+  }
   const nextRuntime = {
-    ...runtime,
+    ...currentRuntime,
     ...(suspendedCardEnd === undefined ? {} : { suspendedCardEnd }),
   };
   if (suspendedCardEnd === undefined) {
     delete (nextRuntime as { suspendedCardEnd?: TurnFlowRuntimeState['suspendedCardEnd'] }).suspendedCardEnd;
   }
-  return nextRuntime;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
 };
 
 export const withFreeOperationSequenceContexts = (
-  runtime: TurnFlowRuntimeState,
+  state: GameState,
   contexts: TurnFlowRuntimeState['freeOperationSequenceContexts'] | undefined,
-): TurnFlowRuntimeState => {
+  tracker?: DraftTracker,
+): GameState => {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null || currentRuntime.freeOperationSequenceContexts === contexts) {
+    return state;
+  }
   const nextRuntime = {
-    ...runtime,
+    ...currentRuntime,
     ...(contexts === undefined ? {} : { freeOperationSequenceContexts: contexts }),
   };
   if (contexts === undefined) {
     delete (nextRuntime as { freeOperationSequenceContexts?: TurnFlowRuntimeState['freeOperationSequenceContexts'] }).freeOperationSequenceContexts;
   }
-  return nextRuntime;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
+};
+
+const withResetTurnFlowRuntime = (
+  state: GameState,
+  overrides: {
+    readonly seatOrder: readonly string[];
+    readonly eligibility: Readonly<Record<string, boolean>>;
+    readonly currentCard: TurnFlowRuntimeCardState;
+    readonly pendingEligibilityOverrides: readonly TurnFlowPendingEligibilityOverride[];
+  },
+  tracker?: DraftTracker,
+): GameState => {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null) {
+    return state;
+  }
+  const nextRuntime = {
+    ...currentRuntime,
+    ...overrides,
+  };
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
 };
 
 export const trimFreeOperationSequenceContextsToPendingBatches = (
@@ -619,45 +715,23 @@ const finalizeSuspendedOrEndedCard = (
 
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(pendingDeferredEventEffects);
-  const postBoundaryRuntime =
-    baseState.turnOrderState.type === 'cardDriven'
-      ? baseState.turnOrderState.runtime
-      : runtime;
-  const nextRuntimeBase: TurnFlowRuntimeState = {
-    ...runtime,
+  let stateWithTurnFlow = withResetTurnFlowRuntime(baseState, {
     seatOrder: nextSeatOrder,
     eligibility: nextEligibility,
     currentCard: nextTurn,
     pendingEligibilityOverrides: [],
-    lifecycleStatus: postBoundaryRuntime.lifecycleStatus,
-    ...(postBoundaryRuntime.consecutiveCoupRounds === undefined
-      ? {}
-      : { consecutiveCoupRounds: postBoundaryRuntime.consecutiveCoupRounds }),
-  };
-  const nextRuntime = withPendingDeferredEventEffects(
-    withPendingFreeOperationGrants(
-      withSuspendedCardEnd(nextRuntimeBase, undefined),
-      normalizedPendingFreeOperationGrants,
-    ),
-    normalizedPendingDeferredEventEffects,
+  }, tracker);
+  stateWithTurnFlow = withSuspendedCardEnd(stateWithTurnFlow, undefined, tracker);
+  stateWithTurnFlow = withPendingFreeOperationGrants(
+    stateWithTurnFlow,
+    normalizedPendingFreeOperationGrants,
+    tracker,
   );
-  const stateWithTurnFlow: GameState = tracker === undefined
-    ? {
-      ...baseState,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: nextRuntime,
-      },
-    }
-    : (() => {
-      const mutableState = baseState as MutableGameState;
-      ensureTurnOrderStateCloned(mutableState, tracker);
-      mutableState.turnOrderState = {
-        type: 'cardDriven',
-        runtime: nextRuntime,
-      };
-      return mutableState as GameState;
-    })();
+  stateWithTurnFlow = withPendingDeferredEventEffects(
+    stateWithTurnFlow,
+    normalizedPendingDeferredEventEffects,
+    tracker,
+  );
 
   return {
     state: withActiveFromFirstEligible(stateWithTurnFlow, nextTurn.firstEligible, seatResolution, tracker),
@@ -932,43 +1006,32 @@ export const applyTurnFlowEligibilityAfterMove = (
       }
     }
 
-    const nextRuntime = withPendingDeferredEventEffects(
-      withFreeOperationSequenceContexts(
-        withPendingFreeOperationGrants({
-          ...runtime,
-          eligibility: effectiveEligibility,
-          pendingEligibilityOverrides: pendingOverrides,
-          currentCard: withReadyGrantCandidates(
-            pendingFreeOperationGrants,
-            runtime.seatOrder,
-            runtime.currentCard,
-          ),
-        }, toPendingFreeOperationGrants(pendingFreeOperationGrants)),
-        nextSequenceContexts,
+    let stateWithTurnFlow = withResetTurnFlowRuntime(state, {
+      seatOrder: runtime.seatOrder,
+      eligibility: effectiveEligibility,
+      pendingEligibilityOverrides: pendingOverrides,
+      currentCard: withReadyGrantCandidates(
+        pendingFreeOperationGrants,
+        runtime.seatOrder,
+        runtime.currentCard,
       ),
-      toPendingDeferredEventEffects(deferredEventEffects),
+    }, options?.tracker);
+    stateWithTurnFlow = withPendingFreeOperationGrants(
+      stateWithTurnFlow,
+      toPendingFreeOperationGrants(pendingFreeOperationGrants),
+      options?.tracker,
     );
-    const stateWithTurnFlow: GameState = options?.tracker === undefined
-      ? {
-        ...state,
-        turnOrderState: {
-          type: 'cardDriven',
-          runtime: nextRuntime,
-        },
-      }
-      : (() => {
-        const mutableState = state as MutableGameState;
-        ensureTurnOrderStateCloned(mutableState, options.tracker);
-        mutableState.turnOrderState = {
-          type: 'cardDriven',
-          runtime: nextRuntime,
-        };
-        return mutableState as GameState;
-      })();
+    stateWithTurnFlow = withFreeOperationSequenceContexts(stateWithTurnFlow, nextSequenceContexts, options?.tracker);
+    stateWithTurnFlow = withPendingDeferredEventEffects(
+      stateWithTurnFlow,
+      toPendingDeferredEventEffects(deferredEventEffects),
+      options?.tracker,
+    );
+    const nextRuntime = cardDrivenRuntime(stateWithTurnFlow);
     return {
       state: isInterruptPhaseId(def, stateWithTurnFlow.currentPhase)
         ? stateWithTurnFlow
-        : withActiveFromFirstEligible(stateWithTurnFlow, nextRuntime.currentCard.firstEligible, seatResolution, options?.tracker),
+        : withActiveFromFirstEligible(stateWithTurnFlow, nextRuntime?.currentCard.firstEligible ?? null, seatResolution, options?.tracker),
       traceEntries,
       ...(releasedDeferredEventEffects.length === 0 ? {} : { releasedDeferredEventEffects }),
     };
@@ -1132,14 +1195,16 @@ export const applyTurnFlowEligibilityAfterMove = (
     endedReason = 'twoNonPass';
   }
   if (endedReason !== undefined) {
+    const currentRuntime = runtime;
+    const runtimeForFinalization = {
+      ...currentRuntime,
+      eligibility: effectiveEligibility,
+      ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
+    };
     const finalized = finalizeSuspendedOrEndedCard(
       def,
       rewardState,
-      {
-        ...runtime,
-        eligibility: effectiveEligibility,
-        ...(nextSequenceContexts === undefined ? {} : { freeOperationSequenceContexts: nextSequenceContexts }),
-      },
+      runtimeForFinalization,
       seatResolution,
       currentCard,
       pendingOverrides,
@@ -1159,42 +1224,20 @@ export const applyTurnFlowEligibilityAfterMove = (
 
   const normalizedPendingFreeOperationGrants = toPendingFreeOperationGrants(pendingFreeOperationGrants);
   const normalizedPendingDeferredEventEffects = toPendingDeferredEventEffects(deferredEventEffects);
-  const nextRuntime = withPendingDeferredEventEffects(
-    withFreeOperationSequenceContexts(
-      withPendingFreeOperationGrants(
-        withSuspendedCardEnd({
-          ...runtime,
-          eligibility: effectiveEligibility,
-          pendingEligibilityOverrides: pendingOverrides,
-          currentCard,
-        }, hasRequiredGrantWindow
-          && (before.nonPassCount >= 1 || step === 'passChain')
-          && ((step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null) || currentCard.nonPassCount >= 2)
-          ? { reason: step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null ? 'rightmostPass' : 'twoNonPass' }
-          : runtime.suspendedCardEnd),
-        normalizedPendingFreeOperationGrants,
-      ),
-      nextSequenceContexts,
-    ),
-    normalizedPendingDeferredEventEffects,
-  );
-  const finalState: GameState = options?.tracker === undefined
-    ? {
-      ...rewardState,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: nextRuntime,
-      },
-    }
-    : (() => {
-      const mutableState = rewardState as MutableGameState;
-      ensureTurnOrderStateCloned(mutableState, options.tracker);
-      mutableState.turnOrderState = {
-        type: 'cardDriven',
-        runtime: nextRuntime,
-      };
-      return mutableState as GameState;
-    })();
+  let finalState = withResetTurnFlowRuntime(rewardState, {
+    seatOrder: runtime.seatOrder,
+    eligibility: effectiveEligibility,
+    pendingEligibilityOverrides: pendingOverrides,
+    currentCard,
+  }, options?.tracker);
+  finalState = withSuspendedCardEnd(finalState, hasRequiredGrantWindow
+    && (before.nonPassCount >= 1 || step === 'passChain')
+    && ((step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null) || currentCard.nonPassCount >= 2)
+    ? { reason: step === 'passChain' && activeCardCandidates.first === null && activeCardCandidates.second === null ? 'rightmostPass' : 'twoNonPass' }
+    : runtime.suspendedCardEnd, options?.tracker);
+  finalState = withPendingFreeOperationGrants(finalState, normalizedPendingFreeOperationGrants, options?.tracker);
+  finalState = withFreeOperationSequenceContexts(finalState, nextSequenceContexts, options?.tracker);
+  finalState = withPendingDeferredEventEffects(finalState, normalizedPendingDeferredEventEffects, options?.tracker);
 
   return {
     state: isInterruptPhaseId(def, finalState.currentPhase)

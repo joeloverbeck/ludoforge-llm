@@ -245,23 +245,13 @@ export const consumeAuthorizedFreeOperationGrant = (
       createDeferredLifecycleTraceEntry('released', released)),
   ];
 
+  let nextState = withSuspendedCardEnd(state, runtime.suspendedCardEnd);
+  nextState = withPendingFreeOperationGrants(nextState, toPendingFreeOperationGrants(sequenceAdvanced.grants));
+  nextState = withFreeOperationSequenceContexts(nextState, nextSequenceContexts);
+  nextState = withPendingDeferredEventEffects(nextState, toPendingDeferredEventEffects(splitDeferred.remaining));
+
   return {
-    state: {
-      ...state,
-      turnOrderState: {
-        type: 'cardDriven',
-        runtime: withPendingDeferredEventEffects(
-          withFreeOperationSequenceContexts(
-            withPendingFreeOperationGrants(
-              withSuspendedCardEnd({ ...runtime }, runtime.suspendedCardEnd),
-              toPendingFreeOperationGrants(sequenceAdvanced.grants),
-            ),
-            nextSequenceContexts,
-          ),
-          toPendingDeferredEventEffects(splitDeferred.remaining),
-        ),
-      },
-    },
+    state: nextState,
     traceEntries,
     releasedDeferredEventEffects: splitDeferred.ready,
     consumedGrant,
@@ -1806,16 +1796,7 @@ const reconcilePassFallbackMoveState = (
   if (expired.grants.length === pending.length) {
     return state;
   }
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(
-        state.turnOrderState.runtime,
-        expired.grants.length === 0 ? undefined : expired.grants,
-      ),
-    },
-  };
+  return withPendingFreeOperationGrants(state, expired.grants.length === 0 ? undefined : expired.grants);
 };
 
 export const applyMove = (

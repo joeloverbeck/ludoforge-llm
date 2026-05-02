@@ -74,16 +74,7 @@ const expireRollbackBlockingGrantsForSeat = (
   if (expired.grants.length === pending.length) {
     return state;
   }
-  return {
-    ...state,
-    turnOrderState: {
-      type: 'cardDriven',
-      runtime: withPendingFreeOperationGrants(
-        state.turnOrderState.runtime,
-        expired.grants.length === 0 ? undefined : expired.grants,
-      ),
-    },
-  };
+  return withPendingFreeOperationGrants(state, expired.grants.length === 0 ? undefined : expired.grants);
 };
 
 export const rollbackToActionSelection = (

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new test file under `packages/engine/test/determinism/`
-**Deps**: `tickets/153RUNTSOT-001.md`, `archive/tickets/153RUNTSOT-003.md`
+**Deps**: `archive/tickets/153RUNTSOT-001.md`, `archive/tickets/153RUNTSOT-003.md`
 
 ## Problem
 

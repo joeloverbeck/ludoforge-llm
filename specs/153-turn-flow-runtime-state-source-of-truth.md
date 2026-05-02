@@ -285,6 +285,6 @@ Anticipated decomposition (finalized by `/spec-to-tickets`):
 
 Decomposed via `/spec-to-tickets` on 2026-05-02:
 
-- [`tickets/153RUNTSOT-001.md`](../tickets/153RUNTSOT-001.md) — Convert four runtime helpers to `state → state` and retire the `05bf74c2` hot-fix (atomic) (covers D1–D3, D6, D7; AC#1, AC#2, AC#6, AC#7, AC#8)
+- [`archive/tickets/153RUNTSOT-001.md`](../archive/tickets/153RUNTSOT-001.md) — Convert four runtime helpers to `state → state` and retire the `05bf74c2` hot-fix (atomic) (covers D1–D3, D6, D7; AC#1, AC#2, AC#6, AC#7, AC#8)
 - [`tickets/153RUNTSOT-002.md`](../tickets/153RUNTSOT-002.md) — Architectural-invariant property test for runtime field propagation (covers D4; AC#3, AC#4)
 - [`archive/tickets/153RUNTSOT-003.md`](../archive/tickets/153RUNTSOT-003.md) — Add F11 corollary for runtime-mutated structural state field source-of-truth (covers D5; AC#5)

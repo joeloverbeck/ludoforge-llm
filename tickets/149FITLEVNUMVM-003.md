@@ -4,13 +4,15 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
-**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `tickets/149FITLEVNUMVM-016.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-016.md`
 
 ## Problem
 
 Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes non-blocking as a tactical unblock. Per spec 149 §Phase 0 and §Phase 4 acceptance criteria, those bumps must be reverted in a single commit once Phase 4 lands and per-card cost ≤ 250 ms is verified. This ticket tracks the unwind.
 
 **Gate condition**: Close this ticket only when ticket 016 has closed AND `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` passes at the 250 ms target on all 4 baseline profiles (`verifyIncrementalHash=true`) for ≥3 consecutive CI runs.
+
+**2026-05-02 gate update**: Ticket 016 is blocked by a live Phase 4 perf-gate reassessment. User-confirmed VM parity CI history and local VM correctness are green, but the VM-on one-card probe remains red at per-card `elapsedMs=6785.31` versus `<=250`, and the current expensive restoration blockers are the actual `engine-tests.yml` lanes `fitl-events-shard-c` and `fitl-rules`. Ticket `149FITLEVNUMVM-018` now owns profiling and optimizing those live slow lanes before 016 can resume and before this workflow unwind may execute.
 
 ## Assumption Reassessment (2026-04-28)
 

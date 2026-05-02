@@ -473,6 +473,22 @@ target. The old Phase 2 tickets (`008` through `010`) are deferred/superseded
 planning artifacts unless later VM-path profiling proves preview clone/apply cost
 is again the next generic bottleneck.
 
+### 2026-05-02 Phase 4 perf-gate reassessment
+
+Ticket `149FITLEVNUMVM-016` is blocked, not executable as a default-flip/deletion ticket yet.
+
+User confirmation satisfied the ticket's "≥3 consecutive CI runs" VM parity precondition, and local focused proof confirmed the VM path is correct:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-compile.test.js` — PASS, including zero `RESOLVE_DYNAMIC` for all FITL baseline profile expressions.
+- `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — PASS.
+
+The Phase 4 performance/restoration premise is still false:
+
+- `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-preflight-vm` — RED: `elapsedMs=6785.54`, per-card `elapsedMs=6785.31`, threshold `<=250`.
+
+Live workflow evidence also moved the current restoration blocker from the old one-card VM/default-flip story to the actual slow engine-test lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules` (`test:integration:fitl-rules`). Per F15/F16, the next ticket profiles and optimizes that live CI surface directly before the F14 closure-tree deletion resumes. Per F14, the closure-tree path still must be deleted once the VM default-flip becomes truthful; the deletion is deferred, not abandoned.
+
 ---
 
 ## Tickets
@@ -494,6 +510,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-013.md`](../archive/tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-014.md`](../archive/tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
 - [`archive/tickets/149FITLEVNUMVM-015.md`](../archive/tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
-- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Phase 4 default-flip + closure-tree deletion, F14 atomic cut (covers Phase 4)
+- [`tickets/149FITLEVNUMVM-018.md`](../tickets/149FITLEVNUMVM-018.md) — Profile and optimize live FITL event-card CI lanes before Phase 4 restoration can resume
+- [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Blocked Phase 4 default-flip + closure-tree deletion, F14 atomic cut (covers Phase 4 after 018)
 
 **End of spec 149.**

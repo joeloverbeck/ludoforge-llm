@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-016: Phase 4 default-flip + closure-tree deletion (F14 atomic cut)
 
-**Status**: PENDING
+**Status**: BLOCKED by live Phase 4 perf-gate reassessment
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `tickets/149FITLEVNUMVM-018.md`
 
 ## Problem
 
@@ -15,6 +15,29 @@ Phase 4's terminal deliverable. After ticket 015 lands the VM and parity is prov
 4. Triggers ticket 003 (CI restoration unwind).
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
+
+## Reassessment Update (2026-05-02)
+
+Do not execute the default-flip or closure-tree deletion yet.
+
+User confirmation satisfied the "≥3 consecutive CI runs" correctness/parity precondition for the VM path, and local focused proof confirmed VM correctness:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode-compile.test.js` — PASS, including zero `RESOLVE_DYNAMIC` for all FITL baseline profile expressions.
+- `LUDOFORGE_POLICY_VM=on pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — PASS.
+
+The Phase 4 perf/restoration premise remains false in the live checkout:
+
+- `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-preflight-vm` — RED: `elapsedMs=6785.54`, per-card `elapsedMs=6785.31`, threshold `<=250`.
+
+Live CI feedback also shows the most expensive remaining workflow surface is no longer truthfully represented by the one-card VM/default-flip story alone. The current slow restoration owners are the temporarily non-blocking `engine-tests.yml` lanes, especially `fitl-events-shard-c` (`test:integration:fitl-events:shard-c`) and `fitl-rules`.
+
+Foundation-aligned decision:
+
+- F14 still forbids retaining closure-tree fallback once the VM path becomes the default runtime, but F15/F16 block this atomic cut until the root-cause performance story is true for the actual slow CI surface.
+- This ticket remains the eventual F14 default-flip/deletion owner.
+- New prerequisite ticket `149FITLEVNUMVM-018` owns profiling and optimizing the live slow FITL event-card/rules lanes before this ticket may resume.
+- Ticket `149FITLEVNUMVM-003` remains blocked; CI restoration cannot unwind while `fitl-events-shard-c` and `fitl-rules` are still temporarily non-blocking.
 
 ## Assumption Reassessment (2026-04-28)
 

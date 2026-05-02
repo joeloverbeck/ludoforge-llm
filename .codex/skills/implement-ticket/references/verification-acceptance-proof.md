@@ -79,6 +79,7 @@ Same-environment baseline mini-protocol: when broad-lane timeout, benchmark, or 
 3. run the same bounded command with the same cwd and wrapper shape
 4. record both results and classify the current lane as introduced, pre-existing, or still unclassified
 5. remove the temp worktree and clean up the repo worktree registry; if cleanup is blocked by sandbox permissions, request approval rather than leaving stale worktree metadata
+   - Exception: when the temp worktree itself contains the only practical historical witness context or evidence logs, first copy or transcribe the relevant evidence into the durable ticket/report. If you intentionally retain the worktree, record its path and rationale in closeout, confirm it is outside the repo diff, and do not leave stale worktree metadata accidentally.
 
 Verification-fallout repair rule: when a ticket-named broad lane exposes a real repo bug that appears pre-existing but blocks the ticket's required acceptance lane, first decide whether it is small, low-risk, and in the same package or architectural contract family as the ticket-owned proof. If yes, fix it as verification fallout, keep the proof on a TDD-style red-green path when practical, and record the added touched file plus fallout rationale in the active ticket. If the fix would materially widen ownership, change an explicit deliverable, or has multiple plausible designs, stop for `1-3-1` or classify the blocker truthfully instead of absorbing it silently.
 

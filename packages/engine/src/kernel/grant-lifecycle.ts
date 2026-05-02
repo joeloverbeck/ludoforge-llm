@@ -6,6 +6,12 @@ import type { DecisionContinuationResult } from './microturn/continuation.js';
 import { kernelRuntimeError } from './runtime-error.js';
 import type { SeatResolutionContext } from './identity.js';
 import type { MoveEnumerationBudgets } from './move-enumeration-budgets.js';
+import { cardDrivenRuntime } from './card-driven-accessors.js';
+import {
+  ensureTurnOrderStateCloned,
+  type DraftTracker,
+  type MutableGameState,
+} from './state-draft.js';
 import type {
   GameDef,
   GameState,
@@ -14,7 +20,6 @@ import type {
   RuntimeWarning,
   TurnFlowPendingFreeOperationGrant,
   TurnFlowGrantLifecycleTraceEntry,
-  TurnFlowRuntimeState,
 } from './types.js';
 
 export interface GrantLifecycleTransitionResult {
@@ -371,17 +376,38 @@ export const stripZoneFilterFromProbeGrant = (
 });
 
 export const withPendingFreeOperationGrants = (
-  runtime: TurnFlowRuntimeState,
+  state: GameState,
   grants: readonly TurnFlowPendingFreeOperationGrant[] | undefined,
-): TurnFlowRuntimeState => {
+  tracker?: DraftTracker,
+): GameState => {
+  const currentRuntime = cardDrivenRuntime(state);
+  if (currentRuntime === null || currentRuntime.pendingFreeOperationGrants === grants) {
+    return state;
+  }
   const nextRuntime = {
-    ...runtime,
+    ...currentRuntime,
     ...(grants === undefined ? {} : { pendingFreeOperationGrants: grants }),
+    ...(grants === undefined ? {} : { lifecycleStatus: { stalled: false } }),
   };
   if (grants === undefined) {
     delete (nextRuntime as { pendingFreeOperationGrants?: readonly TurnFlowPendingFreeOperationGrant[] }).pendingFreeOperationGrants;
   }
-  return nextRuntime;
+  if (tracker !== undefined) {
+    const mutableState = state as MutableGameState;
+    ensureTurnOrderStateCloned(mutableState, tracker);
+    mutableState.turnOrderState = {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    };
+    return mutableState as GameState;
+  }
+  return {
+    ...state,
+    turnOrderState: {
+      type: 'cardDriven',
+      runtime: nextRuntime,
+    },
+  };
 };
 
 export const transitionReadyGrantForCandidateMove = (

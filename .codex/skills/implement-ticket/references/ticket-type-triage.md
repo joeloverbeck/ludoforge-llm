@@ -53,7 +53,8 @@ When a **proof, benchmark, investigation, or mixed ticket** requires an exact hi
    - close on an equivalent bounded live proof plus an explicit ticket rewrite
    - remain `BLOCKED` pending a reconstructable artifact or new instrumentation
    - require a 1-3-1 boundary reset because the literal historical deliverable is not currently attainable from repo-owned evidence
-3. Record that classification in working notes so later implementation and closeout do not silently downgrade an exact historical deliverable into a looser modern proof.
+3. For an exact same-test historical red/green witness, preflight the comparison commit's API and fixture surface before writing the full witness: check that the intended imports, exported helpers, fixture files, package script, and direct compiled-test path exist or can be built there. If the historical commit lacks the planned seam, treat that as a witness-deliverable correction and use `1-3-1` before replacing it with a direct seam, inline fixture, or smaller surrogate.
+4. Record that classification in working notes so later implementation and closeout do not silently downgrade an exact historical deliverable into a looser modern proof.
 
 ## Contradictory Live Evidence (Profiling/Investigation)
 

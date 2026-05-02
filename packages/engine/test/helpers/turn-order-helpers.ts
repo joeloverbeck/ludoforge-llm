@@ -90,6 +90,7 @@ export function withPendingFreeOperationGrant(
       type: 'cardDriven',
       runtime: {
         ...runtime,
+        lifecycleStatus: { stalled: false },
         pendingFreeOperationGrants: [...(runtime.pendingFreeOperationGrants ?? []), nextGrant],
       },
     },
@@ -118,6 +119,7 @@ export function withIsolatedFreeOperationGrant(
       type: 'cardDriven',
       runtime: {
         ...runtime,
+        lifecycleStatus: { stalled: false },
         pendingFreeOperationGrants: [isolatedGrant],
       },
     },

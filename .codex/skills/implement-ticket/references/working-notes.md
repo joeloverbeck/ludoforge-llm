@@ -13,6 +13,7 @@
 - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`; if editing `schemas-core.ts`, serialized trace/result unions, generated-schema-bearing types, or other compiled public schema surfaces, default to `schema artifacts likely` until `schema:artifacts:check` proves otherwise
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
 - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
+- `terminal status plan`: when the ticket status may become terminal; keep `COMPLETED` pending until final lanes are green, classified, or explicitly substituted
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 

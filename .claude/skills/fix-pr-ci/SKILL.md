@@ -47,7 +47,8 @@ Follow these steps in order. Do not skip any step.
    - For each failed/cancelled run, identify its specific failed jobs. Cancelled jobs whose log ends mid-step or whose duration is at the workflow's `timeout-minutes` budget are **timeouts**, not generic failures — classify accordingly in Step 3.
 
 5. **Download failed logs**.
-   - For each failed run/job: `gh run view <run-id> --log-failed > /tmp/ci-fix-<run-id>.log`.
+   - For each failed run/job: `gh run view <run-id> --log-failed > /tmp/ci-fix-<run-id>.log`. **For cancelled runs, `--log-failed` returns empty because no step failed before the runner was killed. Capture the full log via `gh run view <run-id> --log > /tmp/ci-fix-<run-id>-full.log` instead.** Cancelled runs are most often timeouts — see Step 3's timeout sub-classification.
+   - Note: GitHub Actions truncates very long step names to `UNKNOWN STEP` in `--log` output (a common case for matrix jobs whose step names embed multi-line `test_paths` blocks). To isolate per-step progress when this happens, grep on the truncated check-name (column 1 of `gh run view --log`) instead of the step name.
    - For determinism / policy-profile-quality lanes that upload artifacts: `gh run download <run-id> -n <artifact-name> -D /tmp/ci-fix-artifacts/` to inspect shard-specific output (e.g., `policy-profile-quality-shard-<id>` artifacts).
 
 6. **Verify clean working tree** (per CLAUDE.md Concurrent Session Awareness).
@@ -88,12 +89,14 @@ For determinism shards, the test paths for each shard are listed in `engine-dete
 
 Classify each failure and cluster lanes by suspected root cause. One root cause often fans out to multiple lanes — diagnose the cause once per cluster, not once per lane.
 
+**Read prior CI-failure reports first.** Check `reports/ci-failures-pr-<N>-*.md` (any date suffix) before clustering. Prior reports may identify the chronic-PR history, prior root causes (now fixed or still active), and what fix attempts did NOT work — saving rediscovery effort. If a prior report identifies a different cluster than the current failures, treat the prior cluster as "previously addressed; verify it's still fixed" and proceed to diagnose the new cluster. If a prior report identifies the SAME cluster, the chronic-PR record-writing rule from Step 9 already applies — extend the prior report rather than starting fresh.
+
 **Failure classes**:
 - `lint` — ESLint errors. Usually quick: unused imports, unsafe types, formatting.
 - `typecheck` — TypeScript errors. CLAUDE.md "Schema synchronization" (the coding convention) is a frequent culprit when types and schemas have drifted.
 - `build` — `tsc` or `vite` build failure. Usually downstream of typecheck or import-path drift.
 - `test-lane` — assertion failures within an integration / e2e / memory / performance lane.
-- `determinism-shard` — replay-identity, Zobrist parity, or runtime-parity break. **High stakes** — FOUNDATIONS F8 (Determinism Is Sacred). Treat as critical.
+- `determinism-shard` — replay-identity, Zobrist parity, or runtime-parity break. **High stakes** — Foundation 8 (Determinism Is Sacred). Treat as critical.
 - `policy-profile-quality` — quality regression on an evolved profile. Advisory (continue-on-error).
 - `node-compat` — Node 20 build failure. Advisory (continue-on-error).
 - `timeout` — job hit `timeout-minutes`. Sub-classify (see below).
@@ -155,7 +158,7 @@ Otherwise, present the diagnosis as a structured table:
 
 | Cluster | Lanes | Class | Status | Root Cause | Proposed Fix | Foundations | Priority |
 |---------|-------|-------|--------|------------|--------------|-------------|----------|
-| <name>  | <lanes> | <class> | <status> | <one-line> | <one-paragraph> | <F1, F2, ...> | HIGH/MED/LOW |
+| <name>  | <lanes> | <class> | <status> | <one-line> | <one-paragraph> | <Foundation 1, Foundation 2, ...> | HIGH/MED/LOW |
 
 Status values: `PR regression` (lane was green on main, broken by this PR) | `pre-existing on main` (lane was already failing on last-green main) | `structural` (lane is brand new or budget never validated; needs shard/timeout adjustment) | `flake-suspect` (verified by 3x local re-run).
 
@@ -166,6 +169,7 @@ Status values: `PR regression` (lane was green on main, broken by this PR) | `pr
 - Local repro: `<command>`
 - Cluster: <cluster-name>
 - Evidence (log excerpt, stack trace, or relevant artifact lines): ...
+- Profile evidence (if performance/timeout class — `--cpu-prof` flame, `--prof` bottom-up summary, or `console.time` localization): ...
 
 (repeat per lane)
 
@@ -269,8 +273,9 @@ Present:
 - FOUNDATIONS conflicts that halted the skill (if any) — these still need resolution.
 - New CI run URL (`gh pr checks <N>` or `gh run list --branch <head> --limit 1`).
 - Optional follow-up: if the affected lanes are heavy (>15 min CI duration), or verification was scoped per the environment-constrained rule in Step 6, end the reply with a one-line `/schedule` offer to recheck CI status in 30–60 min. Keep this soft — many fixes complete CI fast enough that a schedule isn't needed, and the offer should not delay closing the workflow.
+- Optional follow-up: if Step 10's architectural-gap scan flagged one or more patterns, end the reply with a one-line offer to draft the suggested spec (e.g., "Want me to draft `specs/<NNN>-<slug>.md` for the gap I flagged?"). The user often wants this immediately; the offer surfaces the path.
 
-Do not commit additional artifacts. The skill is conversational — diagnostic output stays in the transcript. Write a record to `reports/ci-failures-pr-<N>-YYYY-MM-DD.md` summarizing the diagnosis table for future reference when EITHER (a) cluster count is ≥ 4, OR (b) `git log --oneline <merge-base>..HEAD` shows ≥ 2 commits with subject prefix `fix(` whose subjects reference the same workflow / lane that's still failing now (chronic-PR case — prior fix attempts on this branch did not resolve the lane). For the chronic-PR case, the record should preserve the gate 1 cluster table verbatim plus a one-paragraph "what did NOT work" summary citing the prior fix commits, so the next session can pick up where this one left off without re-bisecting from scratch.
+Do not commit additional artifacts. The skill is conversational — diagnostic output stays in the transcript. Write a record to `reports/ci-failures-pr-<N>-YYYY-MM-DD.md` summarizing the diagnosis table for future reference when EITHER (a) cluster count is ≥ 4, OR (b) `git log --oneline <merge-base>..HEAD` shows ≥ 2 commits with subject prefix `fix(` whose subjects reference the same workflow / lane that's still failing now (chronic-PR case — prior fix attempts on this branch did not resolve the lane), OR (c) a prior `reports/ci-failures-pr-<N>-*.md` file already exists for this PR — append a new dated report rather than starting fresh, and explicitly note in its "what did NOT work" section whether the prior cluster's root cause is still active or has been since fixed by intervening commits. For the chronic-PR case, the record should preserve the gate 1 cluster table verbatim plus a one-paragraph "what did NOT work" summary citing the prior fix commits, so the next session can pick up where this one left off without re-bisecting from scratch.
 
 ### Step 10: Architectural-Gap Scan (post-push)
 
@@ -279,7 +284,8 @@ Hot-fixes for CI failures often paper over an architectural gap rather than clos
 - **Opt-in flags on `ExecutionOptions` or similar config bags** that gate alternative behavior between callers (e.g., simulator vs. test helpers). Often signals that the kernel needs a structural state field every caller observes uniformly, rather than a flag that splits the behavior tree.
 - **New typed errors caught at >1 call site and translated to a different signal**. Often signals that the condition should be a queryable, deterministic state-shape property rather than an exception thrown at one boundary and caught at another.
 - **Generic walkers or sanitizers added defensively to a serialization, validation, or normalization pass** (e.g., a recursive BigInt walker added to a serializer that previously handled BigInts only at named fields). Often signals that the schema's structural recursion is incomplete; a typed traversal is the architectural fix.
-- **Test helpers or downstream consumers that re-implement a kernel loop** to inject behavior the kernel doesn't expose as a hook (e.g., a verification helper with its own `while (true)` simulation loop). Often signals an F5 violation; the kernel should expose the loop body as a reusable primitive.
+- **Test helpers or downstream consumers that re-implement a kernel loop** to inject behavior the kernel doesn't expose as a hook (e.g., a verification helper with its own `while (true)` simulation loop). Often signals a Foundation 5 violation; the kernel should expose the loop body as a reusable primitive.
+- **Manual propagation of structural state fields after a state-rebuilding kernel call** (e.g., a hot-fix that explicitly copies field X from a post-effect state into a separately-rebuilt runtime, because the rebuild path otherwise drops it). Often signals that the helper that rebuilds the runtime is shaped `runtime → runtime` (forcing callers to thread a stale snapshot) rather than `state → state` (which derives runtime internally and cannot drop fields). The architectural fix is to convert the helper shape so the field cannot be silently dropped at any caller seam.
 
 For each pattern observed, name the gap (one short sentence), suggest a candidate spec number (the next free `specs/` index) and slug, and offer to write the spec. Use existing specs as the format template (e.g., `specs/148-runtime-interned-identifier-comparison.md` or `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`). Do NOT auto-write specs without user approval — produce hints; leave authorship to the user.
 
@@ -292,8 +298,8 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **lint**: Read the ESLint output directly; usually self-explanatory. Check whether the offending rule is project-wide or scoped (`packages/*/eslint.config.js` if present). Common: unused imports, `no-explicit-any`, missing return types, formatting drift.
 - **typecheck**: Read the `tsc` errors. CLAUDE.md "Schema synchronization" — keep schemas (`packages/engine/schemas/`), types (`packages/engine/src/kernel/`), and tests synchronized. A type error in one place often signals drift in the other two.
 - **build**: Usually downstream of typecheck. Also: missing import paths, `.js` vs `.ts` extension drift in ESM imports, missing files in compiled output.
-- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests). When the failing test points to a regression but the breaking commit isn't obvious, switch to `git bisect` (see Step 3 "Bisect when regression source is unclear"). When the failure trace points to stale state queries during effect dispatch, suspect a violation of FOUNDATIONS F11's scoped-internal-mutation contract — a private working state observed before finalization, or aliasing that leaked outside the effect scope. When a test-lane assertion compares only a status / kind field (`'failed' !== 'ready'`, `null !== <value>`, etc.), write a quick `.mjs` diagnostic that re-creates the call and prints all result fields — opaque outcome assertions usually have a richer adjacent error / reason / context field that names the actual defect.
-- **determinism-shard**: HIGH STAKES. FOUNDATIONS F8 (Determinism Is Sacred), often interacting with F11 (Immutability — scoped internal mutation must remain isolated from caller-visible state). Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, a state-hash key drift, or a private working state leaking across scopes. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`. When a single shard's test file contains multiple `describe` blocks (e.g., one per game's profile family), use `node --test --test-name-pattern=<...>` to isolate the slow / failing block before suspecting the kernel — a slowdown or break concentrated in one game's profile is a strong hint about the regression's locus (e.g., a policy-preview perf regression that surfaces only on FITL profiles' preview-using considerations, not on Texas default agents).
+- **test-lane (integration / e2e)**: Read the failing assertions. Check `git log --oneline <base>..HEAD -- <implicated-area>` to see what changed. Reproduce with the lane's repro command; reduce to a single test if possible (e.g., `node --test --test-name-pattern=<...>` for engine tests). When the failing test points to a regression but the breaking commit isn't obvious, switch to `git bisect` (see Step 3 "Bisect when regression source is unclear"). When the failure trace points to stale state queries during effect dispatch, suspect a violation of Foundation 11's (Immutability) scoped-internal-mutation contract — a private working state observed before finalization, or aliasing that leaked outside the effect scope. When a test-lane assertion compares only a status / kind field (`'failed' !== 'ready'`, `null !== <value>`, etc.), write a quick `.mjs` diagnostic that re-creates the call and prints all result fields — opaque outcome assertions usually have a richer adjacent error / reason / context field that names the actual defect.
+- **determinism-shard**: HIGH STAKES. Foundation 8 (Determinism Is Sacred), often interacting with Foundation 11 (Immutability — scoped internal mutation must remain isolated from caller-visible state). Replay-identity or Zobrist-parity breaks usually mean a kernel state mutation that isn't being captured/replayed correctly, a state-hash key drift, or a private working state leaking across scopes. Read recent kernel/sim/agents commits and the specific test that broke; reproduce with the shard's `test_paths`. When a single shard's test file contains multiple `describe` blocks (e.g., one per game's profile family), use `node --test --test-name-pattern=<...>` to isolate the slow / failing block before suspecting the kernel — a slowdown or break concentrated in one game's profile is a strong hint about the regression's locus (e.g., a policy-preview perf regression that surfaces only on FITL profiles' preview-using considerations, not on Texas default agents).
 - **memory**: Lane budget exceeded. Look for retained references in caches, accumulators, or RNG/state structures that should be transient. Compare allocation patterns in recent commits.
 - **performance**: Lane budget exceeded. Check for accidental quadratic loops, unbounded `forEach`, or new code in hot paths. The performance budget is enforced by the lane itself — read its source to know the budget.
 - **timeout (a) hang**: Add probe logs locally; isolate which `it()` or operation never returns. Often an unawaited promise or an infinite enumeration.
@@ -303,7 +309,7 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 
 ## Guardrails
 
-- **FOUNDATIONS hard halt**: if any proposed fix violates `docs/FOUNDATIONS.md`, halt at gate 1 with 1-3-1. Never silently accept a Foundations-violating fix. Before citing a FOUNDATIONS principle by number (e.g., "F8") in a diagnosis or commit message, verify the number against the current `docs/FOUNDATIONS.md` — section numbering can shift when principles are added or removed.
+- **FOUNDATIONS hard halt**: if any proposed fix violates `docs/FOUNDATIONS.md`, halt at gate 1 with 1-3-1. Never silently accept a Foundations-violating fix. Before citing a Foundations principle by number (e.g., "Foundation 8") in a diagnosis or commit message, verify the number against the current `docs/FOUNDATIONS.md` — section numbering can shift when principles are added or removed.
 - **Codebase truth**: every implicated file path and function name validated against the actual codebase before being put in the diagnosis table.
 - **Workflow YAML is authoritative**: lane→command mapping derives from `.github/workflows/*.yml`. The reference table in Step 2 is convenience — when in doubt, read the YAML.
 - **No workflow edits**: do NOT modify `.github/workflows/*.yml` to silence a lane. If a workflow change is the right answer, surface it at gate 1; let the user decide. The skill's scope is "fix the code that the lane caught", not "rewrite the lane".

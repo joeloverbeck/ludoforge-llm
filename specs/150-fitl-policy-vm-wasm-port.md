@@ -95,6 +95,14 @@ preview, or application semantics across the FFI boundary.
 
 Moves the profile-driving encoded state/action batch across the FFI boundary without JSON or object walking on the hot path.
 
+Ticket `150FITLWASM-003` delivered the deterministic batch ABI for supported
+encoded-state bytecode rows. The batch buffer validates ABI magic, version,
+layout identity, program length, and compact action identity words, and the
+corpus parity test proves supported rows over current action batches. Dynamic
+and candidate-dependent rows still fail closed; ticket `150FITLWASM-004` owns
+the candidate-dependent scoring integration needed before Phase 4 can make a
+truthful same-seam performance claim.
+
 ### Phase 4 — Same-seam performance gate
 
 Runs the Spec 149 one-card command on the WASM path and adds or updates `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` only when it can truthfully assert `<=250 ms`.
@@ -131,4 +139,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 
 - [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
 - [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
-- [`tickets/150FITLWASM-003.md`](../tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
+- [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
+- [`tickets/150FITLWASM-004.md`](../tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.

@@ -28,6 +28,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
+- when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
@@ -132,6 +133,17 @@ If the session creates a new prerequisite/follow-up ticket or rewires deps acros
 1. update the affected deps/status fields first
 2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
 3. fix any cycle or stale dependency before continuing to broader proof or final closeout
+
+## Successor-Before-Final-Proof Preflight
+
+When the owned slice appears landed but truthful closeout requires a new successor, updated successor, dependent-ticket rewrite, spec ticket-list update, or other ownership handoff, do that handoff before the first lane you intend to cite as final proof:
+
+1. classify the active ticket's durable state (`completed owned slice`, `blocked by prerequisite`, `partial`, or equivalent)
+2. create or update the successor/follow-up owner, including concrete live evidence and repo-valid verification commands
+3. update affected active specs, sibling tickets, and dependent tickets so the series names the new owner consistently
+4. run dependency integrity immediately after the ticket graph edit
+5. update the active ticket's touched-file/proof ledger to include the handoff artifacts
+6. only then run the final acceptance-proof set; earlier green lanes become diagnostics if the handoff changed follow-up/dependency classification, touched-file ownership, or acceptance wording
 
 ## Follow-Up Ticket Creation During Implementation
 

@@ -451,7 +451,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 Total estimate: **14-18 tickets**, ~4-7 weeks of focused work for phases 0-4.
 
-Phase 5 now has its own spec, `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, and active ticket `tickets/150FITLWASM-003.md` owns the encoded-state action batch bridge.
+Phase 5 now has its own spec, `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, `archive/tickets/150FITLWASM-003.md` landed the encoded-state action batch bridge, and active ticket `tickets/150FITLWASM-004.md` owns candidate-dependent WASM batch scoring integration.
 
 ---
 
@@ -533,7 +533,7 @@ Ticket `149FITLEVNUMVM-022` ran the final same-seam profile after tickets 019-02
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`, `verifyIncrementalHash=true`.
 
-User-approved resolution: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. Ticket `149FITLEVNUMVM-016` remains the later F14 default-flip/deletion owner, but it must wait until Spec 150 makes the original `<=250 ms` gate truthful. The Phase 5 owner is `specs/150-fitl-policy-vm-wasm-port.md`; starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, and active ticket `tickets/150FITLWASM-003.md` owns the encoded-state action batch bridge.
+User-approved resolution: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. Ticket `149FITLEVNUMVM-016` remains the later F14 default-flip/deletion owner, but it must wait until Spec 150 makes the original `<=250 ms` gate truthful. The Phase 5 owner is `specs/150-fitl-policy-vm-wasm-port.md`; starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, `archive/tickets/150FITLWASM-003.md` landed the encoded-state action batch bridge, and active ticket `tickets/150FITLWASM-004.md` owns candidate-dependent WASM batch scoring integration.
 
 ---
 
@@ -564,7 +564,8 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`specs/150-fitl-policy-vm-wasm-port.md`](../specs/150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
 - [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
 - [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity
-- [`tickets/150FITLWASM-003.md`](../tickets/150FITLWASM-003.md) — Encoded-state action batch bridge
+- [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge
+- [`tickets/150FITLWASM-004.md`](../tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration
 - [`tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final default-flip + closure-tree deletion F14 atomic cut after the successor runtime makes the budget truthful
 
 **End of spec 149.**

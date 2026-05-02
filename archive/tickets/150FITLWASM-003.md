@@ -1,6 +1,6 @@
 # 150FITLWASM-003: Encoded-state action batch bridge
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy bytecode integration tests
@@ -49,6 +49,8 @@ Update Spec 150 and dependent active tickets with any residual unsupported subse
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or a nearby batch parity test (modify or new)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` (modify)
 - `specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
+- `tickets/150FITLWASM-004.md` (new if residual candidate-dependent scoring remains)
+- `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` (modify if successor deps move)
 - `tickets/150FITLWASM-003.md` (modify Outcome before archival)
 
 ## Out of Scope
@@ -86,3 +88,42 @@ Update Spec 150 and dependent active tickets with any residual unsupported subse
 1. `pnpm -F @ludoforge/engine-wasm build`.
 2. `pnpm -F @ludoforge/engine build`.
 3. `pnpm -F @ludoforge/engine exec node --test <dist path for the focused batch parity test>`.
+
+## Outcome
+
+Completed on 2026-05-03. Implemented a deterministic encoded-state/action batch
+bridge alongside the existing per-expression bytecode ABI. The new Rust export
+`ludoforge_policy_vm_evaluate_bytecode_batch` validates ABI magic, ABI version,
+layout identity, candidate count, program length, compact action identity words,
+and output length before evaluating supported bytecode rows. The TypeScript
+bridge now serializes candidate `actionId` and `stableMoveKey` identity hashes
+into the compact batch buffer and decodes per-row tagged values without JSON or
+host object walking on the FFI path.
+
+The supported batch parity surface is intentionally limited to bytecode rows
+whose value domain is already supported by the Rust VM. Dynamic and
+candidate-dependent rows still fail closed instead of falling back to TypeScript
+inside the WASM result path. Because that residual surface still prevents the
+same-seam `<=250 ms` gate from being a truthful default-flip precondition, this
+ticket created successor `tickets/150FITLWASM-004.md` for candidate-dependent
+WASM batch scoring integration and rewired dependent active tickets
+`149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` to that active owner.
+
+Ticket corrections applied:
+
+- `Files to Touch`: added the required successor/dependent ticket updates caused by the live Phase 3 handoff.
+- `Phase 3 handoff`: supported encoded-state/action batch rows landed; candidate-dependent scoring remains a fail-closed successor surface.
+- `File-size note`: `packages/engine-wasm/policy-vm/src/lib.rs` was already above the repo's nominal 800-line guidance before this ticket. This ticket added the small batch export at the existing Rust VM ABI seam; splitting the Rust VM during Phase 3 would have widened the ABI slice beyond the ticket boundary.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 7 tests.
+4. `timeout 180 pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed in about 41 seconds.
+5. `pnpm run check:ticket-deps` — passed.
+
+The final ticket/spec/dependency edits after these commands transcribed the
+already-proven boundary, moved successor ownership, and did not change the code
+or acceptance command semantics. Dependency integrity was rerun after the ticket
+graph edit.

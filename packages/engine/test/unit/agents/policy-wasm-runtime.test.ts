@@ -143,6 +143,48 @@ describe('policy WASM runtime bridge', () => {
     }), 22);
   });
 
+  it('evaluates supported bytecode across a deterministic action batch', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const bytecode = makeBytecode([
+      Opcode.LOAD_FEATURE, 0,
+      Opcode.LOAD_CONST, 0,
+      Opcode.ADD_SCORE,
+      Opcode.HALT,
+    ], [5], {
+      refs: [
+        { kind: 'playerInt', layoutIndex: 0, aux: [0, 1, 1] },
+      ],
+      refToId: {},
+    });
+
+    assert.deepEqual(runtime.evaluatePolicyBytecodeBatch(bytecode, makeEncoded(), {
+      def: makeDef(),
+      layout: makeLayout(),
+      state: { activePlayer: 1 } as unknown as GameState,
+      playerId: 0,
+    }, [
+      { actionId: 'move', stableMoveKey: 'move:{"x":1}' },
+      { actionId: 'pass', stableMoveKey: 'pass:{}' },
+    ]), [18, 18]);
+  });
+
+  it('rejects batch layout mismatches before evaluating action rows', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const bytecode = makeBytecode([Opcode.LOAD_CONST, 0, Opcode.HALT], [7]);
+
+    assert.throws(
+      () => runtime.evaluatePolicyBytecodeBatch(bytecode, makeEncoded(), {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        expectedLayoutId: 42,
+      }, [
+        { actionId: 'move', stableMoveKey: 'move:{}' },
+      ]),
+      /status -4/u,
+    );
+  });
+
   it('fails closed for unsupported bytecode instead of falling back to TypeScript', async () => {
     const runtime = await loadPolicyWasmRuntime();
     const bytecode = makeBytecode([Opcode.RESOLVE_DYNAMIC, 1, Opcode.HALT]);
@@ -153,6 +195,22 @@ describe('policy WASM runtime bridge', () => {
         layout: makeLayout(),
         state: { activePlayer: 1 } as unknown as GameState,
       }),
+      /status -14/u,
+    );
+  });
+
+  it('fails closed for unsupported batch bytecode instead of falling back to TypeScript', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const bytecode = makeBytecode([Opcode.RESOLVE_DYNAMIC, 1, Opcode.HALT]);
+
+    assert.throws(
+      () => runtime.evaluatePolicyBytecodeBatch(bytecode, makeEncoded(), {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+      }, [
+        { actionId: 'move', stableMoveKey: 'move:{}' },
+      ]),
       /status -14/u,
     );
   });

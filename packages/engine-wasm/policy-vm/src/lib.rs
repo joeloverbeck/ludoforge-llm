@@ -184,6 +184,29 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_bytecode(
     }
 }
 
+#[no_mangle]
+pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_bytecode_batch(
+    input_ptr: *const u8,
+    input_len: usize,
+    out_tags_ptr: *mut i32,
+    out_values_ptr: *mut i32,
+    out_len: usize,
+) -> i32 {
+    if input_ptr.is_null() || out_tags_ptr.is_null() || out_values_ptr.is_null() {
+        return STATUS_NULL_POINTER;
+    }
+    if input_len % 4 != 0 || input_len < 24 {
+        return STATUS_BAD_LENGTH;
+    }
+
+    let input = core::slice::from_raw_parts(input_ptr, input_len);
+    let mut cursor = I32Cursor::new(input);
+    match evaluate_bytecode_batch(&mut cursor, out_tags_ptr, out_values_ptr, out_len) {
+        Ok(()) => STATUS_OK,
+        Err(status) => status,
+    }
+}
+
 fn read_i32(input: &[u8], offset: usize) -> i32 {
     i32::from_le_bytes([
         input[offset],
@@ -898,4 +921,48 @@ fn evaluate_bytecode(cursor: I32Cursor<'_>) -> Result<Value, i32> {
     }
 
     Ok(*stack.last().unwrap_or(&Value::Undefined))
+}
+
+fn evaluate_bytecode_batch(
+    cursor: &mut I32Cursor<'_>,
+    out_tags_ptr: *mut i32,
+    out_values_ptr: *mut i32,
+    out_len: usize,
+) -> Result<(), i32> {
+    if cursor.read()? != ABI_MAGIC {
+        return Err(STATUS_BAD_MAGIC);
+    }
+    if cursor.read()? != ABI_VERSION {
+        return Err(STATUS_BAD_VERSION);
+    }
+    let expected_layout_id = cursor.read()?;
+    let actual_layout_id = cursor.read()?;
+    if expected_layout_id != actual_layout_id {
+        return Err(STATUS_BAD_LAYOUT);
+    }
+    let candidate_count = as_usize(cursor.read()?)?;
+    let program_word_len = as_usize(cursor.read()?)?;
+    if out_len != candidate_count {
+        return Err(STATUS_BAD_LENGTH);
+    }
+
+    // Two deterministic identity words per candidate: action id and stable move key.
+    // Phase 3 validates and transports this action batch; later phases may consume
+    // these words for candidate-dependent opcodes.
+    let action_identity_words = candidate_count.checked_mul(2).ok_or(STATUS_BAD_LENGTH)?;
+    let _action_identity = cursor.read_many(action_identity_words)?;
+    let program_bytes = cursor.read_many(program_word_len)?;
+    if cursor.word * 4 != cursor.bytes.len() {
+        return Err(STATUS_BAD_LENGTH);
+    }
+
+    let out_tags = unsafe { core::slice::from_raw_parts_mut(out_tags_ptr, candidate_count) };
+    let out_values = unsafe { core::slice::from_raw_parts_mut(out_values_ptr, candidate_count) };
+    for index in 0..candidate_count {
+        let value = evaluate_bytecode(I32Cursor::new(program_bytes))?;
+        let (tag, raw) = value.encode();
+        out_tags[index] = tag;
+        out_values[index] = raw;
+    }
+    Ok(())
 }

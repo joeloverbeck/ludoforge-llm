@@ -29,6 +29,7 @@ import {
   type GameState,
   type Move,
 } from '../../src/kernel/index.js';
+import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 
 const POLICY_PROFILE_VARIANTS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
@@ -242,6 +243,11 @@ const captureVmScores = (
   }));
 };
 
+const batchCandidates = (def: GameDef, legalMoves: readonly Move[]) => legalMoves.map((move) => ({
+  actionId: String(move.actionId),
+  stableMoveKey: toMoveIdentityKey(def, move),
+}));
+
 const loadVmModule = async (): Promise<PolicyVmModule | null> => {
   if (!existsSync(POLICY_VM_MODULE_PATH)) {
     return null;
@@ -376,5 +382,74 @@ describe('policy bytecode equivalence harness', () => {
 
     assert.ok(compared > 0, 'WASM VM parity must compare at least one supported corpus bytecode expression.');
     assert.ok(unsupported > 0, 'corpus should still include unsupported dynamic bytecode for fail-closed handoff coverage.');
+  });
+
+  it('compares WASM batch values against the TypeScript VM over corpus action batches', { timeout: 120_000 }, async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    let comparedRows = 0;
+    let unsupportedRows = 0;
+
+    for (const seed of corpus.seeds) {
+      const corpusState = deriveCorpusState(def, corpus, seed);
+      const encoded = buildEncodedState(corpusState.state, layout);
+      const candidates = batchCandidates(def, corpusState.legalMoves);
+      assert.ok(candidates.length > 0, `seed ${seed} should expose action candidates`);
+      for (const profileId of POLICY_PROFILE_VARIANTS) {
+        for (const expr of collectProfileExprs(def)) {
+          const bytecode = compilePolicyBytecode(expr, def, layout);
+          let tsValue: unknown;
+          try {
+            const result = executeBytecode(bytecode, encoded, {
+              def,
+              layout,
+              state: corpusState.state,
+              profileId,
+              legalMoves: corpusState.legalMoves,
+              playerId: Number(corpusState.state.activePlayer),
+            });
+            if (result.usedDynamicFallback) {
+              unsupportedRows += candidates.length;
+              continue;
+            }
+            tsValue = result.value;
+          } catch (error) {
+            if (error instanceof PolicyBytecodeVmUnsupportedError) {
+              unsupportedRows += candidates.length;
+              continue;
+            }
+            throw error;
+          }
+          if (typeof tsValue !== 'number' && typeof tsValue !== 'boolean' && tsValue !== undefined) {
+            unsupportedRows += candidates.length;
+            continue;
+          }
+
+          let wasmValues: readonly unknown[];
+          try {
+            wasmValues = wasm.evaluatePolicyBytecodeBatch(bytecode, encoded, {
+              def,
+              layout,
+              state: corpusState.state,
+              playerId: Number(corpusState.state.activePlayer),
+            }, candidates);
+          } catch (error) {
+            if (error instanceof Error && /status -14/u.test(error.message)) {
+              unsupportedRows += candidates.length;
+              continue;
+            }
+            throw error;
+          }
+          assert.deepEqual(
+            wasmValues,
+            candidates.map(() => tsValue),
+            `seed ${seed} profile ${profileId} WASM batch values should match TypeScript VM`,
+          );
+          comparedRows += wasmValues.length;
+        }
+      }
+    }
+
+    assert.ok(comparedRows > 0, 'WASM VM batch parity must compare at least one supported corpus row.');
+    assert.ok(unsupportedRows > 0, 'corpus should still include unsupported batch rows for fail-closed handoff coverage.');
   });
 });

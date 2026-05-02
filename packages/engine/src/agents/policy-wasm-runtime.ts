@@ -50,6 +50,13 @@ interface PolicyWasmExports {
     outTagPtr: number,
     outValuePtr: number,
   ) => number;
+  readonly ludoforge_policy_vm_evaluate_bytecode_batch: (
+    inputPtr: number,
+    inputLen: number,
+    outTagsPtr: number,
+    outValuesPtr: number,
+    outLen: number,
+  ) => number;
 }
 
 export interface PolicyWasmRuntimeOptions {
@@ -65,6 +72,11 @@ export interface PolicyWasmBytecodeContext {
   readonly expectedLayoutId?: number;
 }
 
+export interface PolicyWasmBatchCandidate {
+  readonly actionId: string;
+  readonly stableMoveKey: string;
+}
+
 export interface PolicyWasmRuntime {
   readonly wasmPath?: string;
   evaluateSmokeAdd(left: number, right: number, layoutId?: number): number;
@@ -73,6 +85,12 @@ export interface PolicyWasmRuntime {
     encoded: EncodedState,
     context: PolicyWasmBytecodeContext,
   ): PolicyValue;
+  evaluatePolicyBytecodeBatch(
+    bytecode: PolicyBytecode,
+    encoded: EncodedState,
+    context: PolicyWasmBytecodeContext,
+    candidates: readonly PolicyWasmBatchCandidate[],
+  ): readonly PolicyValue[];
 }
 
 const findRepoRoot = (startUrl: string): string => {
@@ -122,6 +140,7 @@ const checkedExports = (instance: WebAssembly.Instance): PolicyWasmExports => {
     'ludoforge_policy_vm_smoke_layout_id',
     'ludoforge_policy_vm_evaluate_smoke',
     'ludoforge_policy_vm_evaluate_bytecode',
+    'ludoforge_policy_vm_evaluate_bytecode_batch',
   ] as const) {
     if (typeof exports[name] !== 'function') {
       throw new Error(`Policy WASM module is missing export ${name}.`);
@@ -163,6 +182,15 @@ const layoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
   for (const zoneId of layout.zoneIds) {
     const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
     mix((zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1);
+  }
+  return hash >>> 1;
+};
+
+const stableStringCode = (value: string): number => {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
   }
   return hash >>> 1;
 };
@@ -237,6 +265,38 @@ const encodePolicyBytecodeInput = (
     assertFiniteI32(`bytecode word ${index}`, word);
     view.setInt32(index * I32_BYTES, word, true);
   }
+  return bytes;
+};
+
+const encodeBatchInput = (
+  program: Uint8Array,
+  context: PolicyWasmBytecodeContext,
+  candidates: readonly PolicyWasmBatchCandidate[],
+): Uint8Array => {
+  if (program.byteLength % I32_BYTES !== 0) {
+    throw new Error('Policy WASM batch program must be i32-aligned.');
+  }
+  const layoutId = layoutIdentity(context.layout, context.def);
+  const expectedLayoutId = context.expectedLayoutId ?? layoutId;
+  const headerAndActionWords = 6 + (candidates.length * 2);
+  const bytes = new Uint8Array((headerAndActionWords * I32_BYTES) + program.byteLength);
+  const view = new DataView(bytes.buffer);
+  const words = [
+    POLICY_WASM_ABI_MAGIC,
+    POLICY_WASM_ABI_VERSION,
+    expectedLayoutId,
+    layoutId,
+    candidates.length,
+    program.byteLength / I32_BYTES,
+  ];
+  for (const candidate of candidates) {
+    words.push(stableStringCode(candidate.actionId), stableStringCode(candidate.stableMoveKey));
+  }
+  for (const [index, word] of words.entries()) {
+    assertFiniteI32(`batch word ${index}`, word);
+    view.setInt32(index * I32_BYTES, word, true);
+  }
+  bytes.set(program, headerAndActionWords * I32_BYTES);
   return bytes;
 };
 
@@ -328,6 +388,36 @@ export const loadPolicyWasmRuntime = async (
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
         wasm.ludoforge_policy_vm_dealloc(outTagPtr, I32_BYTES);
         wasm.ludoforge_policy_vm_dealloc(outValuePtr, I32_BYTES);
+      }
+    },
+    evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates): readonly PolicyValue[] => {
+      const program = encodePolicyBytecodeInput(bytecode, encoded, context);
+      const input = encodeBatchInput(program, context, candidates);
+      const outputBytes = candidates.length * I32_BYTES;
+      const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
+      const outTagsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      try {
+        new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
+        const status = wasm.ludoforge_policy_vm_evaluate_bytecode_batch(
+          inputPtr,
+          input.byteLength,
+          outTagsPtr,
+          outValuesPtr,
+          candidates.length,
+        );
+        if (status !== 0) {
+          throw new Error(`Policy WASM bytecode batch evaluation failed with status ${status}.`);
+        }
+        const view = new DataView(wasm.memory.buffer);
+        return candidates.map((_candidate, index) => decodePolicyValue(
+          view.getInt32(outTagsPtr + (index * I32_BYTES), true),
+          view.getInt32(outValuesPtr + (index * I32_BYTES), true),
+        ));
+      } finally {
+        wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
+        wasm.ludoforge_policy_vm_dealloc(outTagsPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
       }
     },
   };

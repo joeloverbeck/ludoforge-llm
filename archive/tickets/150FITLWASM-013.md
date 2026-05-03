@@ -46,9 +46,10 @@ generic substrate or records a narrower residual owner.
 3. `packages/engine/src/agents/policy-preview.ts` still owns production
    candidate move application, publication, bounded completion drive,
    canonicalization, preview-state materialization, and preview metadata.
-4. The corrected owner is a generic encoded preview-state substrate before
-   production routing. Closing `150FITLWASM-010` directly on counters or
-   synthetic replay would misstate the one-rules protocol handoff.
+4. The corrected owner at that time was an encoded preview-state slot
+   substrate before production routing. Later reassessment split the remaining
+   generic production application/publication substrate into
+   `tickets/150FITLWASM-014.md`.
 
 ## Architecture Check
 
@@ -158,8 +159,8 @@ only when this ticket has a truthful substrate that unblocks production routing.
 
 Completed on 2026-05-03.
 
-This ticket added the generic encoded preview-state substrate required before
-production preview-drive routing can resume:
+This ticket added the encoded preview-state slot substrate that the inventory
+witness required before the next production preview-drive routing reassessment:
 
 - ABI/layout identities advanced to ABI version `8` and preview-drive layout
   `0x1500_0013`.
@@ -200,6 +201,15 @@ This unblocks `tickets/150FITLWASM-010.md` for the later production routing,
 fail-closed diagnostics, and same-seam perf-gate work. This ticket did not
 route production scoring through the preview-drive ABI and did not weaken the
 Spec 149 `<=250 ms` gate.
+
+Post-completion reassessment on 2026-05-03 corrected the handoff boundary:
+this ticket completed an encoded preview-state slot inventory substrate, not
+the full generic production preview-drive application/publication/materialization
+substrate needed before production routing can truthfully resume. New active
+ticket `tickets/150FITLWASM-014.md` owns that production substrate
+prerequisite. `tickets/150FITLWASM-010.md` remains blocked until
+`150FITLWASM-014` completes, then resumes as the production routing,
+fail-closed diagnostics, and same-seam perf-gate owner.
 
 Final verification:
 

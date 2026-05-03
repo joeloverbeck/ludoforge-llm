@@ -159,7 +159,9 @@ FNV hashing and kept the active route clean, but the same-seam gate remained
 red at `2460.65 ms`. Ticket `150FITLWASM-020` delivered unchanged
 token-placement hash elision plus encoded bytecode input caching and kept the
 active route clean, but the same-seam gate remained red around `2.5 s`. Ticket
-`150FITLWASM-021` is the deeper active-route query/apply/hash residual
+`150FITLWASM-021` delivered a generic initial-state setup hash reduction and
+kept the active route clean, but the same-seam gate remained red around
+`2.5 s`. Ticket `150FITLWASM-022` is the full-hash and residual query/eval
 successor.
 
 ### Phase 4 — Same-seam performance gate
@@ -216,4 +218,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-018.md`](../archive/tickets/150FITLWASM-018.md) — Completed active-route token-index/digest cleanup with red measured gate successor.
 - [`archive/tickets/150FITLWASM-019.md`](../archive/tickets/150FITLWASM-019.md) — Completed exact shared FNV hashing with red measured gate successor.
 - [`archive/tickets/150FITLWASM-020.md`](../archive/tickets/150FITLWASM-020.md) — Completed residual active-route query/eval/encoding slice with red measured gate successor.
-- [`tickets/150FITLWASM-021.md`](../tickets/150FITLWASM-021.md) — Deeper active-route query/apply/hash residual closure.
+- [`archive/tickets/150FITLWASM-021.md`](../archive/tickets/150FITLWASM-021.md) — Completed deeper active-route query/apply/hash residual closure with red measured gate successor.
+- [`tickets/150FITLWASM-022.md`](../tickets/150FITLWASM-022.md) — Full-hash and residual query/eval closure.

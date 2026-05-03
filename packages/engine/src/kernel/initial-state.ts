@@ -96,6 +96,7 @@ export const initialState = (
     moveParams: {},
     resources: runtimeResources,
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+    skipRunningHashUpdates: true,
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
     ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),

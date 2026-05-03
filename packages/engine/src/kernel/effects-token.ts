@@ -590,7 +590,9 @@ export const applyCreateToken = (
 
   if (cursor.tracker) {
     const ms = cursor.state as MutableGameState;
-    updateZoneTokenHash(ms, env.cachedRuntime?.zobristTable, zoneId, zoneTokens, zoneAfterCreation);
+    if (env.skipRunningHashUpdates !== true) {
+      updateZoneTokenHash(ms, env.cachedRuntime?.zobristTable, zoneId, zoneTokens, zoneAfterCreation);
+    }
     ensureZoneCloned(ms, cursor.tracker, zoneId);
     (ms.zones as Record<string, Token[]>)[zoneId] = zoneAfterCreation;
     ms.nextTokenOrdinal = ordinal + 1;

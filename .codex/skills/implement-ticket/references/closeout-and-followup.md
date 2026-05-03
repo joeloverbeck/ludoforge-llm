@@ -148,6 +148,17 @@ When the owned slice appears landed but truthful closeout requires a new success
 
 Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
 
+For red measured-gate tickets, prefer this terminal-status order unless the active ticket already dictates a different accepted closeout choreography:
+
+1. Before the decisive metric, prewrite the active ticket outcome/status as pending or nonterminal.
+2. Run the decisive metric and capture exact red/green values plus route diagnostics.
+3. If red and successor completion is allowed, create or update the successor, dependent tickets, and spec ticket list.
+4. Run dependency integrity immediately after the ticket graph rewrite.
+5. Run the final acceptance-proof lanes affected by the code and handoff state.
+6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
+
+If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:

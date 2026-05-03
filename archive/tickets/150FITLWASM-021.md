@@ -1,6 +1,6 @@
 # 150FITLWASM-021: Deeper active-route query/apply/hash residual closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval, preview application, hashing, and token-index residuals
@@ -101,6 +101,8 @@ optimization, record exact metrics and create the next non-overlapping owner.
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` only if additional counters are needed
 - focused route/perf witnesses near the changed production seam
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
+- `tickets/150FITLWASM-022.md` if the gate remains red and needs the next
+  non-overlapping owner
 - this ticket (Outcome before closeout)
 
 If this ticket touches `packages/engine/src/agents/policy-wasm-runtime.ts`, keep
@@ -157,3 +159,85 @@ that same file is still the cleanest residual owner.
 3. Focused tests for the changed generic seam.
 4. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-deeper-query-apply-hash-residual-perf`.
+
+## Outcome
+
+2026-05-04 implementation landed a generic initial-state setup hash reduction
+while preserving the active WASM score-row and preview-state routes.
+
+- `packages/engine/src/kernel/effect-context.ts` now carries a
+  `skipRunningHashUpdates` execution-context flag for scopes that will
+  immediately replace `_runningHash` with an authoritative full hash.
+- `packages/engine/src/kernel/initial-state.ts` uses that flag for setup
+  effects. Setup token creation previously updated the draft `_runningHash`
+  through `updateZoneTokenHash`, but `initialState` then discarded that value
+  and assigned `computeFullHash(...)` after setup and startup lifecycle work.
+- `packages/engine/src/kernel/effects-token.ts` skips token-placement
+  incremental hash updates only when that internal setup flag is set. Normal
+  move/application scopes retain the existing update path.
+- `packages/engine/test/unit/initial-state.test.ts` proves setup token
+  creation no longer produces Zobrist cache hits from a discarded incremental
+  hash while the final `stateHash` remains equal to `computeFullHash(...)`.
+
+Measured result:
+
+- Baseline after fresh build:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm021-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-021-baseline-cpu`
+  — RED, `elapsedMs=2435.25`, per-card `elapsedMs=2435.07`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=8208`,
+  `zobristKeyCacheHitCount=193840`, `zobristKeyUncachedCount=1391`.
+- Post-change same-seam probe:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-021-initial-setup-hash-skip-probe`
+  — RED, `elapsedMs=2464.31`, per-card `elapsedMs=2464.14`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=3717`,
+  `zobristKeyCacheHitCount=188186`, `zobristKeyUncachedCount=1391`.
+- Post-change CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm021-post-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-021-post-cpu`
+  — RED, `elapsedMs=2651.29`, active route clean. Parser evidence still shows
+  residual owners in `fnv1a64`/`zobristKey` under full-hash and
+  decision-frame hashing, plus `resolveRef`, `evalCondition`, `evalValue`,
+  `evalQuery`, `encodePolicyBytecodeInput`, and token-index refresh.
+
+Retained candidate classification:
+
+- `root-cause counter improved`: setup token creation no longer fills the
+  run-local Zobrist cache with token-placement keys that are then immediately
+  consumed by the final full-hash recompute. The same-seam probe reduced
+  `zobristKeyCacheMissCount` from `8208` to `3717`.
+- `wall-clock gate still red`: the decisive same-seam probe remained around
+  `2.46 s` versus the `<=250 ms` target, so no perf gate test was added and
+  `149FITLEVNUMVM-016` remains blocked.
+
+Created successor `tickets/150FITLWASM-022.md` for the next non-overlapping
+owner: full-hash/decision-frame and residual query/eval/encoding closure.
+Tickets `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until that
+or a later successor makes the `<=250 ms` gate truthful.
+
+Schema/artifact fallout: none. The change is an internal execution-context flag
+and generic token-hash skip for setup scopes; no serialized schema, ABI, golden,
+or compiled GameDef artifact changed.
+
+Oversize file ledger:
+
+- `packages/engine/src/kernel/effects-token.ts` is preexisting oversize
+  (`1182` lines after this change). Active growth was a small guard around the
+  existing `createToken` hash update, not a new separable token-effect
+  subsystem. Extraction considered: not proportionate in this perf slice
+  because the change is a two-branch local condition tied to the existing
+  mutation path. Deferral rationale: splitting token effects would widen the
+  ticket and obscure the measured root-counter reduction. Successor:
+  `tickets/150FITLWASM-022.md` only needs to revisit this file if profiling
+  proves token-effect hashing remains the residual owner.
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/initial-state.test.js` — PASS.
+- `pnpm run check:ticket-deps` — PASS after creating `tickets/150FITLWASM-022.md` and repointing dependent tickets.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-021-final` — RED as expected under this ticket's red measured-gate successor contract: `elapsedMs=2468.28`, per-card `elapsedMs=2468.08`, `wasmScoreRowUnsupportedCount=0`, `wasmPreviewCandidateFeatureRowUnsupportedCount=0`, `zobristKeyCacheMissCount=3717`, `zobristKeyCacheHitCount=188186`, `zobristKeyUncachedCount=1391`.
+- Post-proof edits after this final run were transcription/dependency-closeout only: they recorded the just-run metrics and successor ownership without changing code, command semantics, thresholds, scope, or acceptance boundaries, so the final profile was not invalidated.

@@ -12,11 +12,13 @@ import {
   asPlayerId,
   asZoneId,
   computeFullHash,
+  createGameDefRuntime,
   createZobristTable,
   initialState,
   serializeGameState,
   type GameDef,
   type SerializedGameState,
+  zobristInternals,
 } from '../../src/kernel/index.js';
 import { requireCardDrivenRuntime } from '../helpers/turn-order-helpers.js';
 import { asTaggedGameDef } from '../helpers/gamedef-fixtures.js';
@@ -182,6 +184,28 @@ describe('initialState', () => {
 
     const table = createZobristTable(def);
     assert.equal(state.stateHash, computeFullHash(table, state));
+  });
+
+  it('does not spend setup token creation work on a discarded incremental hash', () => {
+    const baseDef = createDef();
+    const def: GameDef = {
+      ...baseDef,
+      setup: [
+        eff({ createToken: { type: 'card', zone: 'deck:none' } }),
+        eff({ createToken: { type: 'card', zone: 'deck:none' } }),
+        eff({ createToken: { type: 'card', zone: 'deck:none' } }),
+      ],
+      triggers: [],
+    };
+    const runtime = createGameDefRuntime(def);
+
+    zobristInternals.resetZobristKeyCounters();
+    const state = initialState(def, 7, 2, undefined, runtime).state;
+
+    assert.equal(state.zones['deck:none']?.length, 3);
+    assert.equal(zobristInternals.getZobristKeyCacheHitCount(), 0);
+    assert.ok(zobristInternals.getZobristKeyCacheMissCount() > 0);
+    assert.equal(state.stateHash, computeFullHash(createZobristTable(def), state));
   });
 
   it('dispatches startup trigger order as turnStart then phaseEnter', () => {

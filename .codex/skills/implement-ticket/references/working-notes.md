@@ -20,6 +20,8 @@
 
 Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 
+If you realize after editing that this checkpoint was missed, emit a recovery checkpoint immediately. Mark it as late, list which boundary decisions and proof lanes were already chosen or run, and do not present it as satisfying the pre-edit stop requirement in later audit or closeout language.
+
 Do not create scratch files solely to satisfy this requirement.
 
 ## 1-3-1 Boundary Reset Ledger

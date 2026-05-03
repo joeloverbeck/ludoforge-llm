@@ -1,4 +1,5 @@
 import type { PlayerId } from '../kernel/branded.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import type {
   AgentPolicyCatalog,
   CompiledAgentPolicyRef,
@@ -188,6 +189,7 @@ const groupPreviewCandidatesByAction = (
 const materializePreviewDynamicRowsWithWasm = (
   input: {
     readonly runtime: PolicyWasmRuntime;
+    readonly gameDefRuntime?: GameDefRuntime;
     readonly def: GameDef;
     readonly state: GameState;
     readonly evaluation: PolicyEvaluationContext;
@@ -232,6 +234,7 @@ const materializePreviewDynamicRowsWithWasm = (
   for (const group of groupPreviewCandidatesByAction(input.candidates)) {
     const result = evaluateProductionPreviewDriveBatchWithWasm({
       runtime: input.runtime,
+      ...(input.gameDefRuntime === undefined ? {} : { gameDefRuntime: input.gameDefRuntime }),
       def: input.def,
       state: input.state,
       profileId: input.profileId,
@@ -349,6 +352,7 @@ const previewValueFromWasmRow = (
 
 export function tryScoreMoveConsiderationsWithWasm(input: {
   readonly runtime: PolicyWasmRuntime;
+  readonly gameDefRuntime?: GameDefRuntime;
   readonly def: GameDef;
   readonly state: GameState;
   readonly encodedView: EncodedPolicyView | undefined;

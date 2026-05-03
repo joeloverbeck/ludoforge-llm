@@ -37,6 +37,8 @@ When the decisive measurement output is short and the command is cheap enough to
 
 For benchmark tickets that combine a production/code migration with an explicit measured acceptance gate, closeout depends on both halves. If the migration lands and focused correctness checks pass but the measured gate still misses, record the exact samples, mean, variance metric, threshold, and verdict; keep the active ticket `BLOCKED`, `PARTIAL`, or equivalent rather than `COMPLETED`; create or update the follow-up investigation/optimization owner named by the ticket or spec; update sibling/spec status so the series tells the same story; and run the repo's ticket-dependency integrity check after changing deps or adding the follow-up.
 
+Exception: when the active ticket explicitly defines `red measured result + active route proof + successor owner` as acceptance-complete, follow the main skill's red measured-gate exception. In that case, use the repo-local explicit completion wording, record exact red metrics and successor ownership, update dependent tickets/specs, and run dependency integrity before closeout.
+
 When a benchmark/perf test exits green but only emits advisory warnings or omits the ticket-owned metric, treat it as a harness smoke, not final acceptance proof. Inspect the test or harness output shape, then either use the existing repo-owned command that prints/asserts the required metric or add a durable measurement path before final closeout. Record the green-but-non-asserting lane separately from the decisive measured verdict.
 
 For exploratory optimization loops, make abandoned-candidate cleanup explicit before final proof:

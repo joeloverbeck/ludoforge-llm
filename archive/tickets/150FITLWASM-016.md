@@ -1,6 +1,6 @@
 # 150FITLWASM-016: Residual active-route kernel/hash cost closure
 
-**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-017.md`
+**Status**: COMPLETED with red measured gate successor `archive/tickets/150FITLWASM-017.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic residual kernel/query/hash/application cost on the active WASM preview route
@@ -77,6 +77,8 @@ helpers.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-residual-active-route-perf-final`.
 
 ## Outcome
+
+Outcome amended: 2026-05-03
 
 Completed on 2026-05-03 with one accepted generic hash-side optimization and
 the same-seam gate still red.
@@ -161,7 +163,7 @@ CPU-profile ownership triage after the accepted hash-cache change:
 Verdict: active WASM score-row and preview-state routes remain
 fail-closed-clean, and the accepted hash-cache slice reduced same-seam wall
 time, but the original `<=250 ms` gate is still red by an order of magnitude.
-Created successor `tickets/150FITLWASM-017.md` for the next non-overlapping
+Created successor `archive/tickets/150FITLWASM-017.md` for the next non-overlapping
 owner: moving the remaining TypeScript query/eval/preview-drive expression work
 and residual table/digest hashing out of the active route. Tickets
 `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked.

@@ -1,6 +1,6 @@
 # 150FITLWASM-017: Active-route query/eval and residual hash closure
 
-**Status**: PENDING
+**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-018.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval, hash/table, and preview-drive expression work on the active WASM preview route
@@ -149,3 +149,93 @@ optimization, record exact metrics and create the next non-overlapping owner.
 3. Focused tests for the changed generic seam.
 4. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-residual-perf`.
+
+## Outcome
+
+Completed on 2026-05-03 with one accepted generic active-route query
+materialization optimization and the same-seam gate still red.
+
+Pre-change same-checkout baseline after a fresh engine build:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-profile-150017-baseline packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-017-current-baseline` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=3974.68`; per-card `elapsedMs=3974.48`,
+  `decisions=158`, `msPerDecision=25.1549`.
+- Active route counters: `wasmScoreRowRouteCount=62`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmScoreRowBytecodeCompileCount=35`,
+  `wasmPreviewCandidateFeatureRowRouteCount=70`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`, and
+  `wasmProductionPreviewDriveBatchCount=232`.
+- Profile buckets: `simAgentChooseMove=1295.46 ms`,
+  `agent:evaluatePolicyExpression=1293.62 ms`, and
+  `simApplyMove=740.25 ms`.
+
+Accepted optimization:
+
+- Threaded the existing run-scoped `GameDefRuntime` into production WASM
+  preview-drive query materialization instead of creating a fresh runtime for
+  every materialized query.
+- This reuses the already-built generic adjacency graph, runtime table index,
+  lifecycle/first-decision compilations, and Zobrist structural table metadata
+  for the active route.
+- No Rust/WASM ABI or generated artifact changed.
+- The optional runtime field is omitted when unavailable so
+  `exactOptionalPropertyTypes` remains satisfied and non-production direct tests
+  can still exercise the standalone helper path.
+
+Focused proof:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
+
+Measured effect:
+
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-residual-perf` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=2898.06`; per-card `elapsedMs=2897.87`,
+  `decisions=158`, `msPerDecision=18.341`.
+- Improvement versus the same-checkout baseline: `1076.62 ms` wall-clock
+  reduction.
+- Active route counters: `wasmScoreRowRouteCount=62`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmScoreRowBytecodeCompileCount=35`,
+  `wasmPreviewCandidateFeatureRowRouteCount=70`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`, and
+  `wasmProductionPreviewDriveBatchCount=232`.
+- Hash counters: `zobristKeyCacheHitCount=194070`,
+  `zobristKeyCacheMissCount=8400`, and `zobristKeyUncachedCount=1199`.
+- Profile buckets: `simApplyMove=681.93 ms`,
+  `simAgentChooseMove=456.98 ms`, and
+  `agent:evaluatePolicyExpression=455.25 ms`.
+- The gate remains `2648.06 ms` over the `<=250 ms` target.
+
+CPU-profile ownership triage after the accepted runtime-reuse change:
+
+- Command:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-profile-150017-after packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-017-cpu-after-runtime-reuse`.
+- The structural-runtime rebuild owner was removed: `createZobristTable` dropped
+  to one self-time sample in the profile parser output.
+- Top remaining generic self-time frames were
+  `fnv1a64`, `resolveRef`, `evalCondition`, `copyCachedTokenStateIndex`,
+  `evalValue`, `evaluateVia`, `encodePolicyBytecodeInput`,
+  `canonicalizeHashValue`, `evalQuery`, and spatial/query helpers.
+- Parent-stack triage for `fnv1a64` showed the residual hash samples now
+  concentrated in `digestDecisionStackFrame`, `stableFingerprintHex`, and
+  `zobristKey`, with `createZobristTable` no longer a material residual.
+
+Verdict: active WASM score-row and preview-state routes remain
+fail-closed-clean, and the accepted runtime-reuse slice materially reduced
+same-seam wall time, but the original `<=250 ms` gate is still red by an order
+of magnitude. Created successor `tickets/150FITLWASM-018.md` for the next
+non-overlapping owner: preview-apply hash/digest, token-index lifetime, and
+remaining generic eval/encoding residuals. Tickets `149FITLEVNUMVM-016` and
+`149FITLEVNUMVM-022` remain blocked.
+
+Closeout graph proof:
+
+- `pnpm run check:ticket-deps` — PASS after creating successor
+  `tickets/150FITLWASM-018.md` and updating the active blockers/spec handoff.
+- No-invalidation note: the post-profile edits updated ticket/spec status,
+  dependency, and ownership prose only. They did not change code, command
+  semantics, thresholds, or acceptance boundaries, so the focused build/test and
+  measured same-seam profile above remain the final proof for this ticket.

@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { applyPreviewMove, createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
 import { evaluateProductionPreviewDriveBatchWithWasm } from '../../../src/agents/policy-wasm-production-preview-drive.js';
 import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime.js';
+import { createGameDefRuntime } from '../../../src/kernel/gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from '../../../src/kernel/zobrist.js';
 import {
   asActionId,
@@ -691,11 +692,13 @@ describe('policy preview synthetic-completion driver', () => {
   it('lowers deterministic scalar expressions, query publications, and forEach bindings through production preview-drive IR', async () => {
     const wasm = await loadPolicyWasmRuntime();
     const def = createExpressionDecisionDrivenDef();
+    const gameDefRuntime = createGameDefRuntime(def);
     const { state, trustedMove } = trustedCandidate(def, 'branch');
     const candidate = { move: trustedMove.move, stableMoveKey: 'candidate', actionId: 'branch' };
 
     const result = evaluateProductionPreviewDriveBatchWithWasm({
       runtime: wasm,
+      gameDefRuntime,
       def,
       state,
       profileId: 'synthetic-production-expressions',

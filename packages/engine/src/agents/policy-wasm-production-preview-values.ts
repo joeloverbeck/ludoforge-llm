@@ -7,6 +7,7 @@ import {
   evalQuery,
   resolvePipelineDecisionBindingsForMove,
 } from '../kernel/index.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { resolveBindingTemplate } from '../kernel/binding-template.js';
 import { applyZoneEntryResets } from '../kernel/effects-token.js';
 import type { ActionPipelineDef, ConditionAST, EffectAST, GameDef, GameState, Move, MoveParamValue, OptionsQuery, Token } from '../kernel/index.js';
@@ -108,11 +109,12 @@ export const materializePolicyWasmPreviewQueryValues = (
   input: {
     readonly def: GameDef;
     readonly state: GameState;
+    readonly runtime?: GameDefRuntime;
   },
   bindings: ReadonlyMap<string, PolicyWasmPreviewValue>,
 ): PolicyWasmPreviewScalarArrayValue | undefined => {
   try {
-    const runtime = createGameDefRuntime(input.def);
+    const runtime = input.runtime ?? createGameDefRuntime(input.def);
     const values = evalQuery(query, createEvalContext({
       def: input.def,
       adjacencyGraph: runtime.adjacencyGraph,

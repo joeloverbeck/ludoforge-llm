@@ -605,6 +605,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       const wasmRuntime = getInitializedPolicyWasmRuntime();
       const scoredWithWasm = wasmRuntime !== null && tryScoreMoveConsiderationsWithWasm({
         runtime: wasmRuntime,
+        ...(input.runtime === undefined ? {} : { gameDefRuntime: input.runtime }),
         def: input.def,
         state: input.state,
         encodedView,

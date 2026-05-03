@@ -553,6 +553,7 @@ const evalQueryPreviewValues = (
   materializePolicyWasmPreviewQueryValues(query, {
     def: input.def,
     state: materializePolicyWasmPreviewState(input.state, state.zoneValues, state.zoneVarValues),
+    ...(input.gameDefRuntime === undefined ? {} : { runtime: input.gameDefRuntime }),
   }, state.bindings);
 
 const resolveZoneLikeValue = (

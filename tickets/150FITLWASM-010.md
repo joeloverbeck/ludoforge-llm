@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: PENDING
+**Status**: BLOCKED by generic preview-drive substrate prerequisite `tickets/150FITLWASM-011.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `tickets/150FITLWASM-011.md`
 
 ## Problem
 
@@ -29,6 +29,23 @@ TypeScript kernel/runtime before WASM can consume scalar preview rows.
 Ticket `149FITLEVNUMVM-016` must remain blocked until this preview-drive
 handoff or a later non-overlapping owner makes the same-seam gate truthful.
 
+## Foundation-Aligned Boundary Reset
+
+Reassessment on 2026-05-03 confirmed that this ticket cannot truthfully close
+on counters, precomputed preview outcome buffers, or another wrapper around the
+current TypeScript preview drive. The live WASM crate evaluates policy
+bytecode/score-row buffers; it does not yet own generic encoded action/effect
+application, decision publication, bounded completion drive, rollback/recovery,
+or preview outcome buffer production.
+
+Per Foundations #1, #5, #8, #10, #11, #15, and #16, the preview-drive handoff
+must be generic, deterministic, bounded, externally immutable, and proven
+equivalent before production routing can claim that supported preview
+application/drive batches use WASM. Ticket `tickets/150FITLWASM-011.md` is now
+the prerequisite owner for that generic encoded preview-drive substrate. This
+ticket remains the later production routing, fail-closed diagnostics, and
+same-seam perf-gate owner after that prerequisite exists.
+
 ## Architecture Check
 
 1. Keep the engine generic. Any new ABI must consume generic compiled
@@ -49,11 +66,11 @@ handoff or a later non-overlapping owner makes the same-seam gate truthful.
 
 ### 1. Preview-drive ownership
 
-Design and implement the smallest generic handoff that removes the remaining
-TypeScript preview application/drive hot path for the supported live baseline
-surface. This may be a WASM preview-application ABI, a compiled generic effect
-program path, or another buffer-oriented runtime handoff, but it must preserve
-the current preview outcome semantics.
+After `tickets/150FITLWASM-011.md` lands, wire the smallest generic handoff that
+removes the remaining TypeScript preview application/drive hot path for the
+supported live baseline surface. This may be a WASM preview-application ABI, a
+compiled generic effect program path, or another buffer-oriented runtime
+handoff, but it must preserve the current preview outcome semantics.
 
 ### 2. Production routing and diagnostics
 
@@ -115,3 +132,31 @@ remains red, record exact metrics and create the next non-overlapping owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. Focused production preview-drive handoff test command.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-drive-application`.
+
+## Outcome
+
+Boundary reset on 2026-05-03 after live reassessment and user confirmation of
+the Foundation-aligned split. No runtime code was changed under this ticket.
+
+Current fresh same-seam baseline after rebuilding engine and engine-wasm:
+
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-010-current-baseline` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=6683.62`.
+- Per-card row: `turnCount=0`, `elapsedMs=6683.38`, `decisions=159`,
+  `msPerDecision=42.0339`, `closeReason=turnCountAdvanced`.
+- Active route counters: `wasmScoreRowRouteCount=65`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmScoreRowBytecodeCompileCount=47`,
+  `wasmPreviewCandidateFeatureRowRouteCount=77`, and
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Remaining buckets: `simAgentChooseMove=3980.74 ms`,
+  `agent:evaluatePolicyExpression=3978.47 ms`, and
+  `simApplyMove=854.89 ms`.
+
+Decision: this ticket is blocked until `tickets/150FITLWASM-011.md` provides a
+generic encoded preview-drive application/runtime substrate. Closing this ticket
+on precomputed preview rows, counters, or TypeScript-only optimization would
+misstate the handoff and violate the Foundations-aligned one-rules protocol and
+testing-as-proof requirements.

@@ -10,7 +10,7 @@ import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feat
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 3;
+export const POLICY_WASM_ABI_VERSION = 4;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -103,6 +103,14 @@ export interface PolicyWasmPrecomputedCandidateFeature {
   readonly values: readonly PolicyValue[];
 }
 
+export type PolicyWasmPreviewOutcome = 'ready' | 'stochastic' | 'gated' | 'failed' | 'unresolved';
+
+export interface PolicyWasmPrecomputedPreviewCandidateFeature {
+  readonly id: string;
+  readonly outcomes: readonly PolicyWasmPreviewOutcome[];
+  readonly values: readonly PolicyValue[];
+}
+
 export interface PolicyWasmPrecomputedAggregate {
   readonly id: string;
   readonly value: PolicyValue;
@@ -139,6 +147,7 @@ export interface PolicyWasmRuntime {
     precomputed?: {
       readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
       readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+      readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
       readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
     },
   ): readonly PolicyValue[];
@@ -147,6 +156,7 @@ export interface PolicyWasmRuntime {
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
   readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+  readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
   readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
 };
 
@@ -353,8 +363,9 @@ const encodeBatchInput = (
   }
   const stateFeatures = precomputed.stateFeatures ?? [];
   const candidateFeatures = precomputed.candidateFeatures ?? [];
+  const previewCandidateFeatures = precomputed.previewCandidateFeatures ?? [];
   const aggregates = precomputed.aggregates ?? [];
-  words.push(stateFeatures.length, candidateFeatures.length, aggregates.length);
+  words.push(stateFeatures.length, candidateFeatures.length, previewCandidateFeatures.length, aggregates.length);
   for (const feature of stateFeatures) {
     const [tag, raw] = encodePolicyValue(feature.value);
     words.push(stableStringCode(feature.id), tag, raw);
@@ -367,6 +378,19 @@ const encodeBatchInput = (
     for (const value of feature.values) {
       const [tag, raw] = encodePolicyValue(value);
       words.push(tag, raw);
+    }
+  }
+  for (const feature of previewCandidateFeatures) {
+    if (feature.values.length !== candidates.length) {
+      throw new Error(`Policy WASM preview candidate feature "${feature.id}" row count must match candidate count.`);
+    }
+    if (feature.outcomes.length !== candidates.length) {
+      throw new Error(`Policy WASM preview candidate feature "${feature.id}" outcome count must match candidate count.`);
+    }
+    words.push(stableStringCode(feature.id), feature.values.length);
+    for (const [index, value] of feature.values.entries()) {
+      const [tag, raw] = encodePolicyValue(value);
+      words.push(encodePreviewOutcome(feature.outcomes[index]), tag, raw);
     }
   }
   for (const aggregate of aggregates) {
@@ -395,6 +419,23 @@ const encodePolicyValue = (value: PolicyValue): readonly [number, number] => {
     return [value ? VALUE_TRUE : VALUE_FALSE, value ? 1 : 0];
   }
   throw new Error('Policy WASM precomputed values must be undefined, boolean, or safe integer numbers.');
+};
+
+const encodePreviewOutcome = (outcome: PolicyWasmPreviewOutcome | undefined): number => {
+  switch (outcome) {
+    case 'ready':
+      return 1;
+    case 'stochastic':
+      return 2;
+    case 'gated':
+      return 3;
+    case 'failed':
+      return 4;
+    case 'unresolved':
+      return 5;
+    default:
+      throw new Error(`Policy WASM preview outcome "${String(outcome)}" is not encodable.`);
+  }
 };
 
 const encodeCandidateParam = (id: string, value: unknown): readonly [number, number, number] => {
@@ -489,6 +530,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     readonly candidates: readonly PolicyWasmBatchCandidate[];
     readonly precomputedStateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
     readonly precomputedCandidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+    readonly precomputedPreviewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
     readonly precomputedAggregates?: readonly PolicyWasmPrecomputedAggregate[];
   },
 ): PolicyWasmScoreRowsResult => {
@@ -496,15 +538,21 @@ export const evaluateWasmMoveConsiderationScoreRows = (
   const precomputed: PolicyWasmBatchPrecomputedInput = {
     ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
     ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
+    ...(input.precomputedPreviewCandidateFeatures === undefined ? {} : { previewCandidateFeatures: input.precomputedPreviewCandidateFeatures }),
     ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
   };
+  const previewCandidateFeatureIds = new Set((input.precomputedPreviewCandidateFeatures ?? []).map((feature) => feature.id));
   for (const entry of input.considerations) {
     const consideration = entry.consideration;
     if (consideration.scopes?.includes('move') !== true) {
       continue;
     }
     if (consideration.costClass === 'preview') {
-      return { kind: 'unsupported', reason: `preview-backed consideration ${entry.id} requires preview row handoff` };
+      for (const featureId of consideration.dependencies.candidateFeatures) {
+        if (!previewCandidateFeatureIds.has(featureId)) {
+          return { kind: 'unsupported', reason: `preview-backed consideration ${entry.id} requires preview candidate feature row ${featureId}` };
+        }
+      }
     }
 
     const whenValues = consideration.when === undefined

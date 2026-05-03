@@ -317,6 +317,83 @@ describe('policy WASM runtime bridge', () => {
     });
   });
 
+  it('uses preview-materialized candidate rows for preview-backed score batches', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const consideration = {
+      id: 'projectedMargin',
+      scopes: ['move'] as const,
+      costClass: 'preview' as const,
+      weight: { kind: 'literal' as const, value: 4 },
+      value: {
+        kind: 'ref' as const,
+        ref: { kind: 'library' as const, refKind: 'candidateFeature' as const, id: 'projected-margin' },
+      },
+      dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projected-margin'], aggregates: [], strategicConditions: [] },
+    };
+
+    const result = evaluateWasmMoveConsiderationScoreRows(runtime, {
+      def: makeDef(),
+      encoded: makeEncoded(),
+      context: {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      },
+      considerations: [{ id: 'projectedMargin', consideration }],
+      candidates: [
+        { actionId: 'move', stableMoveKey: 'move:{"x":1}' },
+        { actionId: 'pass', stableMoveKey: 'pass:{}' },
+      ],
+      precomputedPreviewCandidateFeatures: [{
+        id: 'projected-margin',
+        outcomes: ['ready', 'gated'],
+        values: [6, 2],
+      }],
+    });
+
+    assert.deepEqual(result, {
+      kind: 'supported',
+      rows: [
+        { stableMoveKey: 'move:{"x":1}', score: 24 },
+        { stableMoveKey: 'pass:{}', score: 8 },
+      ],
+    });
+  });
+
+  it('fails closed when preview-backed rows are not materialized', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const consideration = {
+      id: 'projectedMargin',
+      scopes: ['move'] as const,
+      costClass: 'preview' as const,
+      weight: { kind: 'literal' as const, value: 4 },
+      value: {
+        kind: 'ref' as const,
+        ref: { kind: 'library' as const, refKind: 'candidateFeature' as const, id: 'projected-margin' },
+      },
+      dependencies: { parameters: [], stateFeatures: [], candidateFeatures: ['projected-margin'], aggregates: [], strategicConditions: [] },
+    };
+
+    const result = evaluateWasmMoveConsiderationScoreRows(runtime, {
+      def: makeDef(),
+      encoded: makeEncoded(),
+      context: {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      },
+      considerations: [{ id: 'projectedMargin', consideration }],
+      candidates: [{ actionId: 'move', stableMoveKey: 'move:{}' }],
+    });
+
+    assert.deepEqual(result, {
+      kind: 'unsupported',
+      reason: 'preview-backed consideration projectedMargin requires preview candidate feature row projected-margin',
+    });
+  });
+
   it('rejects batch layout mismatches before evaluating action rows', async () => {
     const runtime = await loadPolicyWasmRuntime();
     const bytecode = makeBytecode([Opcode.LOAD_CONST, 0, Opcode.HALT], [7]);

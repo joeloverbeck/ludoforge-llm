@@ -1,6 +1,6 @@
 # 150FITLWASM-006: Preview-backed WASM score-row handoff and perf gate preflight
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, preview score-row integration
@@ -102,3 +102,43 @@ owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. `pnpm -F @ludoforge/engine exec node --test <dist path for the focused full-profile score parity test>`.
 4. If full-profile parity is green: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-score-preflight`.
+
+## Outcome
+
+Completed on 2026-05-03. Implemented the generic preview-materialized
+candidate-feature row handoff for the WASM score-row ABI. The WASM batch ABI is
+now version 4 and carries a separate preview candidate-feature table with
+validated row counts, candidate counts, preview outcome domains, and scalar
+value domains. The Rust VM resolves generic `candidateFeature` refs from normal
+precomputed rows first and preview-materialized rows second; missing preview
+rows fail closed instead of merging TypeScript fallback scores into the WASM
+result path.
+
+The focused score-row parity witness now covers all FITL baseline profile move
+considerations, including preview-backed considerations. The implementation also
+fixed the closure-tree policy expression `div` path to use `Math.trunc`, matching
+the TypeScript bytecode VM, Rust/WASM VM, and Foundation 8 integer-only numeric
+semantics. Without that correction, preview normalized-margin rows produced
+fractional TypeScript reference scores that the bytecode/WASM path correctly
+could not reproduce.
+
+The Spec 150 Phase 4 same-seam perf preflight remains red and does not unblock
+ticket `149FITLEVNUMVM-016`:
+
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-score-preflight` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=6539.47`.
+- Per-card row: `turnCount=0`, `elapsedMs=6539.22`, `decisions=159`, `msPerDecision=41.1271`, `closeReason=turnCountAdvanced`.
+- Profile buckets: `simAgentChooseMove=3775.8 ms`, `agent:evaluatePolicyExpression=3773.5 ms`, `simApplyMove=877.63 ms`.
+- Token/index counters: `tokenStateIndexBuildCount=2377`, `draftTokenStateIndexDeltaCount=198`, `draftTokenStateIndexAttachCount=834`, `draftTokenStateIndexSnapshotCount=315`, `draftTokenStateIndexCowCopyCount=120`.
+
+Created successor `tickets/150FITLWASM-007.md` for the non-overlapping remaining
+owner: production score-row WASM integration and same-seam perf closure. Ticket
+`149FITLEVNUMVM-016` remains blocked until that owner makes the `<=250 ms` gate
+truthful.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 13 tests.
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed, 5 passing tests and 1 existing skipped Phase 4 VM-default test.

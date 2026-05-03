@@ -7,7 +7,11 @@ import { fileURLToPath } from 'node:url';
 import { evaluatePolicyMoveCore } from '../../src/agents/policy-eval.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../src/agents/policy-evaluation-core.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
-import { evaluateWasmMoveConsiderationScoreRows, loadPolicyWasmRuntime } from '../../src/agents/policy-wasm-runtime.js';
+import {
+  evaluateWasmMoveConsiderationScoreRows,
+  loadPolicyWasmRuntime,
+  type PolicyWasmPreviewOutcome,
+} from '../../src/agents/policy-wasm-runtime.js';
 import {
   compilePolicyBytecode,
   type PolicyBytecode,
@@ -127,6 +131,9 @@ const byteIdentical = (left: PolicyBytecode, right: PolicyBytecode): void => {
   assert.deepEqual(left.featureTable, right.featureTable);
   assert.deepEqual(left.metadata, right.metadata);
 };
+
+const sortScoreRows = (rows: readonly ClosureScoreRow[]): readonly ClosureScoreRow[] =>
+  [...rows].sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey));
 
 const actionSelectionMoves = (microturn: ReturnType<typeof publishMicroturn>): readonly Move[] => {
   if (microturn.kind !== 'actionSelection') {
@@ -294,6 +301,20 @@ const encodeWasmPrecomputedPolicyValue = (value: unknown): number | boolean | un
   throw new Error(`WASM precomputed policy value is not encodable: ${String(value)}`);
 };
 
+const encodeWasmPreviewOutcome = (
+  candidate: PolicyEvaluationCandidate,
+): PolicyWasmPreviewOutcome => {
+  switch (candidate.previewOutcome) {
+    case 'ready':
+    case 'stochastic':
+    case 'gated':
+    case 'failed':
+      return candidate.previewOutcome;
+    default:
+      return 'unresolved';
+  }
+};
+
 const isWasmScoreConsiderationSupported = (consideration: CompiledPolicyConsideration): boolean =>
   consideration.costClass !== 'preview'
     && isWasmScoreExprSupported(consideration.when)
@@ -352,6 +373,11 @@ const captureWasmPrecomputedRows = (
   profileId: string,
 ): {
   readonly candidateFeatures: readonly { readonly id: string; readonly values: readonly (number | boolean | undefined)[] }[];
+  readonly previewCandidateFeatures: readonly {
+    readonly id: string;
+    readonly outcomes: readonly PolicyWasmPreviewOutcome[];
+    readonly values: readonly (number | boolean | undefined)[];
+  }[];
   readonly stateFeatures: readonly { readonly id: string; readonly value: number | boolean | undefined }[];
   readonly aggregates: readonly { readonly id: string; readonly value: number | boolean | undefined }[];
 } => {
@@ -373,17 +399,33 @@ const captureWasmPrecomputedRows = (
     policyVmMode: 'disabled',
   }, candidates);
   try {
+    const candidateFeatureRows = profile.plan.candidateFeatures.map((id) => {
+      const feature = def.agents?.compiled.candidateFeatures[id];
+      assert.ok(feature, `expected candidate feature ${id}`);
+      const values = candidates.map((candidate) => {
+        const value = encodeWasmPrecomputedPolicyValue(evaluation.evaluateCandidateFeature(candidate, id));
+        if (feature.costClass === 'preview') {
+          evaluation.finalizePreviewOutcome(candidate);
+        }
+        return value;
+      });
+      return { id, costClass: feature.costClass, values };
+    });
     return {
       stateFeatures: profile.plan.stateFeatures.map((id) => ({
         id,
         value: encodeWasmPrecomputedPolicyValue(evaluation.evaluateStateFeature(id)),
       })),
-      candidateFeatures: profile.plan.candidateFeatures.map((id) => ({
-        id,
-        values: candidates.map((candidate) => encodeWasmPrecomputedPolicyValue(
-          evaluation.evaluateCandidateFeature(candidate, id),
-        )),
-      })),
+      candidateFeatures: candidateFeatureRows
+        .filter((row) => row.costClass !== 'preview')
+        .map(({ id, values }) => ({ id, values })),
+      previewCandidateFeatures: candidateFeatureRows
+        .filter((row) => row.costClass === 'preview')
+        .map(({ id, values }) => ({
+          id,
+          outcomes: candidates.map(encodeWasmPreviewOutcome),
+          values,
+        })),
       aggregates: profile.plan.candidateAggregates.map((id) => ({
         id,
         value: encodeWasmPrecomputedPolicyValue(evaluation.evaluateAggregate(id)),
@@ -602,7 +644,6 @@ describe('policy bytecode equivalence harness', () => {
   it('compares candidate-dependent WASM score rows against the TypeScript reference for supported move considerations', { timeout: 120_000 }, async () => {
     const wasm = await loadPolicyWasmRuntime();
     let supportedProfiles = 0;
-    let unsupportedFullProfiles = 0;
 
     for (const seed of corpus.seeds) {
       const corpusState = deriveCorpusState(def, corpus, seed);
@@ -627,12 +668,17 @@ describe('policy bytecode equivalence harness', () => {
           candidates,
           precomputedStateFeatures: precomputed.stateFeatures,
           precomputedCandidateFeatures: precomputed.candidateFeatures,
+          precomputedPreviewCandidateFeatures: precomputed.previewCandidateFeatures,
           precomputedAggregates: precomputed.aggregates,
         });
-        if (allRows.kind === 'unsupported') {
-          assert.match(allRows.reason, /preview-backed consideration/u);
-          unsupportedFullProfiles += 1;
+        if (allRows.kind !== 'supported') {
+          throw new Error(`full-profile WASM score rows unexpectedly failed closed: ${allRows.reason}`);
         }
+        assert.deepEqual(
+          sortScoreRows(allRows.rows),
+          sortScoreRows(captureSupportedConsiderationScores(def, corpusState, profileId, allMoveConsiderations)),
+          `seed ${seed} profile ${profileId} full-profile WASM scores should match TypeScript reference`,
+        );
         const considerations = compiledConsiderationEntries(def, profile.use.considerations)
           .filter((entry) => entry.consideration.costClass !== 'preview')
           .filter((entry) => isWasmScoreConsiderationSupported(entry.consideration));
@@ -651,6 +697,7 @@ describe('policy bytecode equivalence harness', () => {
           candidates,
           precomputedStateFeatures: precomputed.stateFeatures,
           precomputedCandidateFeatures: precomputed.candidateFeatures,
+          precomputedPreviewCandidateFeatures: precomputed.previewCandidateFeatures,
           precomputedAggregates: precomputed.aggregates,
         });
         if (wasmRows.kind !== 'supported') {
@@ -667,6 +714,5 @@ describe('policy bytecode equivalence harness', () => {
     }
 
     assert.ok(supportedProfiles > 0, 'WASM score parity must support at least one candidate-dependent profile batch.');
-    assert.ok(unsupportedFullProfiles > 0, 'full corpus score batches should still expose unsupported preview-backed rows for fail-closed handoff coverage.');
   });
 });

@@ -102,7 +102,7 @@ function buildOpClosure(
             'Policy expression division evaluated with a zero denominator.',
           );
         }
-        return left / right;
+        return Math.trunc(left / right);
       });
     case 'min':
       return (candidate) => reduceNumeric(values(candidate), (left, right) => Math.min(left, right));

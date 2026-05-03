@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 3;
+const ABI_VERSION: i32 = 4;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;
@@ -92,6 +92,12 @@ const OWNER_ACTIVE: i32 = 2;
 const CANDIDATE_INTRINSIC_ACTION_ID: i32 = 0;
 const CANDIDATE_INTRINSIC_STABLE_MOVE_KEY: i32 = 1;
 const CANDIDATE_INTRINSIC_PARAM_COUNT: i32 = 2;
+
+const PREVIEW_OUTCOME_READY: i32 = 1;
+const PREVIEW_OUTCOME_STOCHASTIC: i32 = 2;
+const PREVIEW_OUTCOME_GATED: i32 = 3;
+const PREVIEW_OUTCOME_FAILED: i32 = 4;
+const PREVIEW_OUTCOME_UNRESOLVED: i32 = 5;
 
 #[no_mangle]
 pub extern "C" fn ludoforge_policy_vm_abi_magic() -> i32 {
@@ -341,9 +347,16 @@ struct PrecomputedCandidateFeature {
     values: Vec<Value>,
 }
 
+struct PrecomputedPreviewCandidateFeature {
+    code: i32,
+    outcomes: Vec<i32>,
+    values: Vec<Value>,
+}
+
 struct BatchPrecomputed {
     state_features: Vec<CandidateParam>,
     candidate_features: Vec<PrecomputedCandidateFeature>,
+    preview_candidate_features: Vec<PrecomputedPreviewCandidateFeature>,
     aggregates: Vec<CandidateParam>,
 }
 
@@ -827,11 +840,29 @@ fn resolve_feature(
             let Some(precomputed) = precomputed else {
                 return Err(STATUS_UNSUPPORTED);
             };
-            Ok(precomputed
+            if let Some(value) = precomputed
                 .candidate_features
                 .iter()
                 .find(|row| row.code == feature.aux[0])
                 .and_then(|row| row.values.get(candidate_index).copied())
+            {
+                return Ok(value);
+            }
+            Ok(precomputed
+                .preview_candidate_features
+                .iter()
+                .find(|row| row.code == feature.aux[0])
+                .and_then(|row| {
+                    let outcome = *row.outcomes.get(candidate_index)?;
+                    match outcome {
+                        PREVIEW_OUTCOME_READY
+                        | PREVIEW_OUTCOME_STOCHASTIC
+                        | PREVIEW_OUTCOME_GATED
+                        | PREVIEW_OUTCOME_FAILED
+                        | PREVIEW_OUTCOME_UNRESOLVED => row.values.get(candidate_index).copied(),
+                        _ => None,
+                    }
+                })
                 .unwrap_or(Value::Undefined))
         }
         FEATURE_CANDIDATE_AGGREGATE => {
@@ -886,7 +917,8 @@ fn evaluate_program(
                     .feature_refs
                     .get(feature_id)
                     .ok_or(STATUS_BAD_FEATURE)?;
-                let value = resolve_feature(program, candidate, candidate_index, precomputed, feature)?;
+                let value =
+                    resolve_feature(program, candidate, candidate_index, precomputed, feature)?;
                 push(&mut stack, value)?;
             }
             OP_LOAD_CONST => {
@@ -1092,6 +1124,7 @@ fn evaluate_bytecode_batch(
     }
     let state_feature_count = as_usize(cursor.read()?)?;
     let candidate_feature_count = as_usize(cursor.read()?)?;
+    let preview_candidate_feature_count = as_usize(cursor.read()?)?;
     let aggregate_count = as_usize(cursor.read()?)?;
     let mut state_features = Vec::with_capacity(state_feature_count);
     for _ in 0..state_feature_count {
@@ -1129,6 +1162,42 @@ fn evaluate_bytecode_batch(
         }
         candidate_features.push(PrecomputedCandidateFeature { code, values });
     }
+    let mut preview_candidate_features = Vec::with_capacity(preview_candidate_feature_count);
+    for _ in 0..preview_candidate_feature_count {
+        let code = cursor.read()?;
+        let row_count = as_usize(cursor.read()?)?;
+        if row_count != candidate_count {
+            return Err(STATUS_BAD_LENGTH);
+        }
+        let mut outcomes = Vec::with_capacity(row_count);
+        let mut values = Vec::with_capacity(row_count);
+        for _ in 0..row_count {
+            let outcome = cursor.read()?;
+            match outcome {
+                PREVIEW_OUTCOME_READY
+                | PREVIEW_OUTCOME_STOCHASTIC
+                | PREVIEW_OUTCOME_GATED
+                | PREVIEW_OUTCOME_FAILED
+                | PREVIEW_OUTCOME_UNRESOLVED => outcomes.push(outcome),
+                _ => return Err(STATUS_BAD_FEATURE),
+            }
+            let tag = cursor.read()?;
+            let raw = cursor.read()?;
+            let value = match tag {
+                VALUE_NUMBER => Value::Number(raw),
+                VALUE_FALSE => Value::Bool(false),
+                VALUE_TRUE => Value::Bool(true),
+                VALUE_UNDEFINED => Value::Undefined,
+                _ => return Err(STATUS_BAD_FEATURE),
+            };
+            values.push(value);
+        }
+        preview_candidate_features.push(PrecomputedPreviewCandidateFeature {
+            code,
+            outcomes,
+            values,
+        });
+    }
     let mut aggregates = Vec::with_capacity(aggregate_count);
     for _ in 0..aggregate_count {
         let code = cursor.read()?;
@@ -1151,13 +1220,19 @@ fn evaluate_bytecode_batch(
     let precomputed = BatchPrecomputed {
         state_features,
         candidate_features,
+        preview_candidate_features,
         aggregates,
     };
 
     let out_tags = unsafe { core::slice::from_raw_parts_mut(out_tags_ptr, candidate_count) };
     let out_values = unsafe { core::slice::from_raw_parts_mut(out_values_ptr, candidate_count) };
     for index in 0..candidate_count {
-        let value = evaluate_program(&program, candidates.get(index), Some(index), Some(&precomputed))?;
+        let value = evaluate_program(
+            &program,
+            candidates.get(index),
+            Some(index),
+            Some(&precomputed),
+        )?;
         let (tag, raw) = value.encode();
         out_tags[index] = tag;
         out_values[index] = raw;

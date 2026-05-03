@@ -7,8 +7,8 @@ import {
   __internal_for_tests as policyWasmRuntimeInternals,
   evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
-  loadPolicyWasmRuntime,
 } from '../../../src/agents/policy-wasm-runtime.js';
+import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import { stablePayloadCode } from '../../../src/cnl/policy-bytecode/feature-table.js';
 import {
   Opcode,

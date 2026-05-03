@@ -279,7 +279,7 @@ describe('encoded policy runtime reads', () => {
         seatId: 'alpha',
         candidateCount: 2,
         considerationCount: 3,
-        unsupportedRowClass: 'unsupported weight expression for consideration boardStrength',
+        unsupportedRowClass: 'unsupported value expression for consideration boardStrength',
       });
     } finally {
       policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);

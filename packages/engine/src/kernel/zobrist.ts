@@ -243,10 +243,10 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
     case 'interruptPhaseFrame':
     case 'revealGrant':
     case 'zoneVar':
-    case 'decisionStackFrame':
     case 'unavailableAction':
     case 'activeDeciderSeatId':
       return true;
+    case 'decisionStackFrame':
     case 'turnCount':
     case 'lastingEffect':
     case 'nextFrameId':

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test';
 
 import { applyPreviewMove, createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
 import { evaluateProductionPreviewDriveBatchWithWasm } from '../../../src/agents/policy-wasm-production-preview-drive.js';
-import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime.js';
+import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import { createGameDefRuntime } from '../../../src/kernel/gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from '../../../src/kernel/zobrist.js';
 import {

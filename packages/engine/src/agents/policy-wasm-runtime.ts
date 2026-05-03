@@ -1,8 +1,3 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
@@ -197,34 +192,6 @@ type PolicyWasmBatchPrecomputedInput = {
   readonly dynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
   readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
 };
-
-const findRepoRoot = (startUrl: string): string => {
-  let cursor = dirname(fileURLToPath(startUrl));
-  for (;;) {
-    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
-      return cursor;
-    }
-    const parent = dirname(cursor);
-    if (parent === cursor) {
-      throw new Error(`Unable to locate repository root from ${startUrl}.`);
-    }
-    cursor = parent;
-  }
-};
-
-export const defaultPolicyWasmPath = (): string => join(
-  findRepoRoot(import.meta.url),
-  'packages',
-  'engine-wasm',
-  'policy-vm',
-  'target',
-  'wasm32-unknown-unknown',
-  'release',
-  'ludoforge_policy_vm.wasm',
-);
-
-const asBytes = (bytes: Uint8Array | ArrayBuffer): Uint8Array =>
-  bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
 
 const assertFiniteI32 = (label: string, value: number): void => {
   if (!Number.isInteger(value) || value < -0x8000_0000 || value > 0x7fff_ffff) {
@@ -691,7 +658,7 @@ export const evaluateWasmCandidateFeatureRow = (
       },
     );
 
-const createPolicyWasmRuntime = (
+export const createPolicyWasmRuntime = (
   instance: WebAssembly.Instance,
   wasmPath: string | undefined,
 ): PolicyWasmRuntime => {
@@ -852,31 +819,8 @@ const createPolicyWasmRuntime = (
   };
 };
 
-export const initializePolicyWasmRuntimeSync = (
-  options: PolicyWasmRuntimeOptions = {},
-): PolicyWasmRuntime => {
-  const wasmPath = options.wasmPath ?? defaultPolicyWasmPath();
-  const wasmBytes = options.wasmBytes === undefined
-    ? readFileSync(wasmPath)
-    : asBytes(options.wasmBytes);
-  const moduleBytes = new ArrayBuffer(wasmBytes.byteLength);
-  new Uint8Array(moduleBytes).set(wasmBytes);
-  const module = new WebAssembly.Module(moduleBytes);
-  const instance = new WebAssembly.Instance(module, {});
-  const runtime = createPolicyWasmRuntime(instance, wasmPath);
-  productionPolicyWasmRuntime = runtime;
-  return runtime;
-};
-
-export const getInitializedPolicyWasmRuntime = (): PolicyWasmRuntime | null => {
-  if (productionPolicyWasmRuntime !== null) {
-    return productionPolicyWasmRuntime;
-  }
-  if (process.env.LUDOFORGE_POLICY_WASM !== 'on') {
-    return null;
-  }
-  return initializePolicyWasmRuntimeSync();
-};
+export const getInitializedPolicyWasmRuntime = (): PolicyWasmRuntime | null =>
+  productionPolicyWasmRuntime;
 
 export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsupported'): void => {
   if (kind === 'supported') {
@@ -922,17 +866,3 @@ export const __internal_for_tests = {
   },
 };
 
-export const loadPolicyWasmRuntime = async (
-  options: PolicyWasmRuntimeOptions = {},
-): Promise<PolicyWasmRuntime> => {
-  const wasmPath = options.wasmPath ?? defaultPolicyWasmPath();
-  const wasmBytes = options.wasmBytes === undefined
-    ? await readFile(wasmPath)
-    : asBytes(options.wasmBytes);
-  const instantiateResult: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource =
-    await WebAssembly.instantiate(wasmBytes, {}) as WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource;
-  const instance = instantiateResult instanceof WebAssembly.Instance
-    ? instantiateResult
-    : instantiateResult.instance;
-  return createPolicyWasmRuntime(instance, wasmPath);
-};

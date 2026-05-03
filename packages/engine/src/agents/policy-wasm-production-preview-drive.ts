@@ -37,9 +37,8 @@ import {
   classifyPolicyWasmPreviewStateSlots,
   evalPolicyWasmPreviewStateFeature,
 } from './policy-wasm-production-preview-feature-slots.js';
-import type { ConditionAST, EffectAST, GameDef, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
+import type { ConditionAST, EffectAST, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
 import type {
-  PolicyWasmProductionPreviewDriveCandidate,
   PolicyWasmProductionPreviewDriveInput,
   PolicyWasmProductionPreviewDriveIrOp,
   PolicyWasmProductionPreviewDriveIrProgram,
@@ -111,7 +110,7 @@ export const lowerProductionPreviewDriveIr = (
     originTurnId: input.originTurnId,
     depthCap: input.depthCap,
     previewStateSlots: input.previewStateSlots,
-    candidates: input.candidates.map((candidate, index) => ({
+    candidates: input.candidates.map((candidate) => ({
       actionId: candidate.actionId ?? String(candidate.move.actionId),
       stableMoveKey: candidate.stableMoveKey,
       initialValue: program.rootValues[0] ?? 0,
@@ -472,7 +471,7 @@ const compileEffects = (
         return unsupported('unsupported-effect', 'production-preview-drive.effect.forEach', 'only deterministic non-negative forEach limits are supported');
       }
       const boundedItems = items.slice(0, limit);
-      for (const [index, item] of boundedItems.entries()) {
+      for (const item of boundedItems) {
         const bindings = new Map(state.bindings);
         bindings.set(resolveBindingName(effect.forEach.bind, state), item);
         const innerState: CompileState = {

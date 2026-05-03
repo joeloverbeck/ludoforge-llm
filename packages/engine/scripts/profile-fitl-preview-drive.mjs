@@ -71,13 +71,14 @@ const config = {
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const [
-  { PolicyAgent, initializePolicyWasmRuntimeSync, evaluateProductionPreviewDriveBatchWithWasm },
+  { PolicyAgent, evaluateProductionPreviewDriveBatchWithWasm },
   { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState, zobristInternals },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
   { __internal_for_tests: policyWasmRuntimeInternals },
+  { initializePolicyWasmRuntimeSync },
   { policyWasmProductionPreviewDriveInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
@@ -87,6 +88,7 @@ const [
   import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-preview.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime-node-loader.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-production-preview-drive.js')),
 ]);
 

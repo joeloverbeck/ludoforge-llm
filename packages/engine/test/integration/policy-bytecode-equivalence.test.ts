@@ -9,9 +9,9 @@ import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../s
 import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
 import {
   evaluateWasmMoveConsiderationScoreRows,
-  loadPolicyWasmRuntime,
   type PolicyWasmPreviewOutcome,
 } from '../../src/agents/policy-wasm-runtime.js';
+import { loadPolicyWasmRuntime } from '../../src/agents/policy-wasm-runtime-node-loader.js';
 import {
   compilePolicyBytecode,
   type PolicyBytecode,

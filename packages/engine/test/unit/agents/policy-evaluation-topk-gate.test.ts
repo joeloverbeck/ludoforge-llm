@@ -4,10 +4,8 @@ import { describe, it } from 'node:test';
 
 import { evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import type { PolicyPreviewDependencies } from '../../../src/agents/policy-preview.js';
-import {
-  initializePolicyWasmRuntimeSync,
-  __internal_for_tests as policyWasmRuntimeInternals,
-} from '../../../src/agents/policy-wasm-runtime.js';
+import { __internal_for_tests as policyWasmRuntimeInternals } from '../../../src/agents/policy-wasm-runtime.js';
+import { initializePolicyWasmRuntimeSync } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import {
   asActionId,
   asPhaseId,

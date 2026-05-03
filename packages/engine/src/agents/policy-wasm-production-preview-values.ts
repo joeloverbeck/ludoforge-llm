@@ -84,10 +84,16 @@ export const asPolicyWasmPreviewI32Literal = (value: unknown): number | undefine
 export const policyWasmPreviewEffectKind = (effect: EffectAST): string =>
   Object.keys(effect).find((key) => key !== '_k') ?? 'unknown';
 
-export const findPolicyWasmPreviewActionPipeline = (def: GameDef, actionId: string) =>
+export const findPolicyWasmPreviewActionPipeline = (
+  def: GameDef,
+  actionId: string,
+): NonNullable<GameDef['actionPipelines']>[number] | undefined =>
   def.actionPipelines?.find((pipeline) => String(pipeline.actionId) === actionId);
 
-export const findPolicyWasmPreviewAction = (def: GameDef, actionId: string) =>
+export const findPolicyWasmPreviewAction = (
+  def: GameDef,
+  actionId: string,
+): GameDef['actions'][number] | undefined =>
   def.actions.find((action) => String(action.id) === actionId);
 
 export const parsePolicyWasmPreviewGlobalSlot = (slot: string): string | null =>
@@ -129,7 +135,7 @@ export const materializePolicyWasmPreviewQueryValues = (
     }));
     const materialized = values.map(materializePolicyWasmPreviewQueryValue);
     return materialized.every(isPolicyWasmPreviewScalarValue) ? materialized : undefined;
-  } catch (_error) {
+  } catch {
     return undefined;
   }
 };
@@ -317,7 +323,10 @@ export const buildPolicyWasmPreviewMarkerValues = (state: GameState): Map<string
 
 export const policyWasmPreviewMarkerKey = (spaceId: string, marker: string): string => `${spaceId}\u0000${marker}`;
 
-const findMarkerLattice = (def: GameDef, marker: string) =>
+const findMarkerLattice = (
+  def: GameDef,
+  marker: string,
+): NonNullable<GameDef['markerLattices']>[number] | undefined =>
   def.markerLattices?.find((lattice) => lattice.id === marker);
 
 export const findPolicyWasmPreviewMarkerDefault = (def: GameDef, marker: string): string | undefined =>

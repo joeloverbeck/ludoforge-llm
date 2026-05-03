@@ -2,7 +2,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0013;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0014;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
@@ -17,6 +17,20 @@ export type PolicyWasmPreviewDriveStep =
   | {
       readonly kind: 'addGlobal';
       readonly delta: number;
+    }
+  | {
+      readonly kind: 'setGlobal';
+      readonly value: number;
+    }
+  | {
+      readonly kind: 'addPreviewSlot';
+      readonly slotIndex: number;
+      readonly delta: number;
+    }
+  | {
+      readonly kind: 'setPreviewSlot';
+      readonly slotIndex: number;
+      readonly value: number;
     }
   | {
       readonly kind: 'applyCandidateDeltas';
@@ -184,6 +198,15 @@ const encodeStep = (
   switch (step.kind) {
     case 'addGlobal':
       words.push(1, step.delta);
+      return;
+    case 'setGlobal':
+      words.push(7, step.value);
+      return;
+    case 'addPreviewSlot':
+      words.push(8, step.slotIndex, step.delta);
+      return;
+    case 'setPreviewSlot':
+      words.push(9, step.slotIndex, step.value);
       return;
     case 'applyCandidateDeltas':
       if (step.candidateDeltas.length !== input.candidates.length) {

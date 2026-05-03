@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 8;
+const ABI_VERSION: i32 = 9;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -15,6 +15,7 @@ const STATUS_UNSUPPORTED: i32 = -14;
 const OUTCOME_COMPLETED: i32 = 1;
 const OUTCOME_STOCHASTIC: i32 = 2;
 const OUTCOME_DEPTH_CAP: i32 = 3;
+const OUTCOME_FAILED: i32 = 4;
 
 const OP_ADD_GLOBAL: i32 = 1;
 const OP_CHOOSE_ONE_GREEDY: i32 = 2;
@@ -22,6 +23,9 @@ const OP_CHOOSE_N_GREEDY: i32 = 3;
 const OP_STOCHASTIC: i32 = 4;
 const OP_UNSUPPORTED: i32 = 5;
 const OP_APPLY_CANDIDATE_DELTAS: i32 = 6;
+const OP_SET_GLOBAL: i32 = 7;
+const OP_ADD_PREVIEW_SLOT: i32 = 8;
+const OP_SET_PREVIEW_SLOT: i32 = 9;
 
 #[no_mangle]
 pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -135,6 +139,60 @@ fn evaluate_preview_drive_batch(
                     }
                 }
             }
+            OP_SET_GLOBAL => {
+                let value = cursor.read()?;
+                for state in states.iter_mut() {
+                    if state.outcome != OUTCOME_COMPLETED {
+                        continue;
+                    }
+                    state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
+                    state.value = value;
+                    state.set_primary_preview_state_value(value);
+                    if state.depth >= depth_cap {
+                        state.outcome = OUTCOME_DEPTH_CAP;
+                    }
+                }
+            }
+            OP_ADD_PREVIEW_SLOT => {
+                let slot_index = as_usize(cursor.read()?)?;
+                let delta = cursor.read()?;
+                if slot_index >= preview_state_slot_count {
+                    return Err(STATUS_BAD_OPERAND);
+                }
+                for state in states.iter_mut() {
+                    if state.outcome != OUTCOME_COMPLETED {
+                        continue;
+                    }
+                    state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
+                    state.add_to_preview_state_value(slot_index, delta)?;
+                    if slot_index == 0 {
+                        state.value = state.value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
+                    }
+                    if state.depth >= depth_cap {
+                        state.outcome = OUTCOME_DEPTH_CAP;
+                    }
+                }
+            }
+            OP_SET_PREVIEW_SLOT => {
+                let slot_index = as_usize(cursor.read()?)?;
+                let value = cursor.read()?;
+                if slot_index >= preview_state_slot_count {
+                    return Err(STATUS_BAD_OPERAND);
+                }
+                for state in states.iter_mut() {
+                    if state.outcome != OUTCOME_COMPLETED {
+                        continue;
+                    }
+                    state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
+                    state.set_preview_state_value(slot_index, value);
+                    if slot_index == 0 {
+                        state.value = value;
+                    }
+                    if state.depth >= depth_cap {
+                        state.outcome = OUTCOME_DEPTH_CAP;
+                    }
+                }
+            }
             OP_CHOOSE_ONE_GREEDY => {
                 let seat_code = cursor.read()?;
                 let turn_id = cursor.read()?;
@@ -168,7 +226,7 @@ fn evaluate_preview_drive_batch(
                 let min = cursor.read()?;
                 let max = cursor.read()?;
                 let option_count = as_usize(cursor.read()?)?;
-                if min < 0 || max < min || max as usize > option_count {
+                if min < 0 || max < 0 || max as usize > option_count {
                     return Err(STATUS_BAD_OPERAND);
                 }
                 let mut selected_sum = 0i32;
@@ -179,7 +237,15 @@ fn evaluate_preview_drive_batch(
                     }
                 }
                 let same_microturn = seat_code == origin_seat_code && turn_id == origin_turn_id;
-                let step_depth = min.checked_add(1).ok_or(STATUS_OVERFLOW)?;
+                let cannot_confirm = max < min;
+                let step_depth = if cannot_confirm {
+                    i32::try_from(option_count)
+                        .map_err(|_| STATUS_OVERFLOW)?
+                        .checked_add(1)
+                        .ok_or(STATUS_OVERFLOW)?
+                } else {
+                    min.checked_add(1).ok_or(STATUS_OVERFLOW)?
+                };
                 for state in states.iter_mut() {
                     if state.outcome != OUTCOME_COMPLETED || !same_microturn {
                         continue;
@@ -190,7 +256,9 @@ fn evaluate_preview_drive_batch(
                         .checked_add(selected_sum)
                         .ok_or(STATUS_OVERFLOW)?;
                     state.add_to_primary_preview_state_value(selected_sum)?;
-                    if state.depth >= depth_cap {
+                    if cannot_confirm {
+                        state.outcome = OUTCOME_FAILED;
+                    } else if state.depth >= depth_cap {
                         state.outcome = OUTCOME_DEPTH_CAP;
                     }
                 }
@@ -269,10 +337,24 @@ struct PreviewDriveState {
 
 impl PreviewDriveState {
     fn add_to_primary_preview_state_value(&mut self, delta: i32) -> Result<(), i32> {
-        if let Some(value) = self.preview_state_values.get_mut(0) {
+        self.add_to_preview_state_value(0, delta)
+    }
+
+    fn add_to_preview_state_value(&mut self, slot_index: usize, delta: i32) -> Result<(), i32> {
+        if let Some(value) = self.preview_state_values.get_mut(slot_index) {
             *value = value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
         }
         Ok(())
+    }
+
+    fn set_primary_preview_state_value(&mut self, next_value: i32) {
+        self.set_preview_state_value(0, next_value);
+    }
+
+    fn set_preview_state_value(&mut self, slot_index: usize, next_value: i32) {
+        if let Some(value) = self.preview_state_values.get_mut(slot_index) {
+            *value = next_value;
+        }
     }
 }
 

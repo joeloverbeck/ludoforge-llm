@@ -22,7 +22,7 @@ import {
 } from './policy-wasm-preview-drive.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 8;
+export const POLICY_WASM_ABI_VERSION = 9;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 

@@ -100,8 +100,9 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 ### Phase 3: Act
 
 7. If there is a `must-fix-now` item:
-   - when the cleanup corrects a behavior bug, write or identify the smallest failing test/probe first, then patch; if the seam is corpus- or domain-sensitive, run a cheap corpus/domain preflight before broadening rejection semantics
+   - when the cleanup corrects a behavior bug, write or identify the smallest failing test/probe first, then patch; strengthening an existing focused witness is acceptable when it would have failed before the cleanup and stays on the same seam; if the seam is corpus- or domain-sensitive, run a cheap corpus/domain preflight before broadening rejection semantics
    - implement the small cleanup immediately
+   - if the cleanup edits source or test files, run `wc -l` or equivalent for touched files near repo size guidance; extract, shrink, or record a justified deferral before closeout when the cleanup pushes or leaves a file over the repo limit
    - run targeted verification for that cleanup
    - if the cleanup changes production runtime, compiler, schema, or shared test behavior, also rerun the affected original acceptance lanes before archival; a focused regression alone is not enough for closeout when shared behavior changed
    - continue reviewing for larger follow-up work after the fix
@@ -136,7 +137,8 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 13. Before archival, do a final contract check:
    - if this review reopened the original ticket, stop before archival and hand off to implementation continuation
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
-   - if review cleanup changed production runtime, compiler, schema, or shared tests, update the implemented ticket Outcome with a short post-review correction bullet and refreshed proof ledger before archival
+   - normalize the implemented ticket to archival-ready terminal status accepted by `docs/archival-workflow.md`, add or refresh `## Outcome`, and ensure it records what landed, deviations, verification, and any post-review cleanup
+   - if review cleanup changed production runtime, compiler, schema, or shared tests, include a short post-review correction bullet and refreshed proof ledger inside that Outcome before archival
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 14. If no unresolved `must-fix-now` cleanup remains and the original ticket was not reopened, archive the implemented ticket per `docs/archival-workflow.md`.
@@ -188,7 +190,7 @@ For any ticket you create or extend:
 - Do not reopen the finished ticket's scope merely to do review cleanup. Reopen only when concrete evidence proves a named deliverable is still undelivered and the original ticket remains the correct owner.
 - Do not create overlapping tickets.
 - Read active tickets before editing or creating follow-up work.
-- Do not archive a finished ticket until its written outcome matches what actually landed, especially when a missed original deliverable was split into follow-up work during review.
+- Do not archive a finished ticket until its status and outcome satisfy `docs/archival-workflow.md` and its written outcome matches what actually landed, especially when a missed original deliverable was split into follow-up work during review.
 - If uncertain whether a change is small enough to fix now or important enough to ticket, do nothing.
 
 ## Codex Adaptation Notes

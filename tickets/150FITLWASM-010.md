@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: BLOCKED by generic production preview-drive substrate prerequisite `tickets/150FITLWASM-014.md`
+**Status**: PENDING — unblocked by generic production preview-drive substrate prerequisite `archive/tickets/150FITLWASM-014.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `archive/tickets/150FITLWASM-013.md`, `tickets/150FITLWASM-014.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`
 
 ## Problem
 
@@ -40,7 +40,8 @@ drive, rollback/recovery, or preview outcome buffer production. Ticket
 `150FITLWASM-013` has since landed an encoded preview-state slot inventory
 substrate. Live reassessment on 2026-05-03 found that this is still not the
 generic production preview-drive substrate needed for this routing ticket, so
-prerequisite `tickets/150FITLWASM-014.md` now owns that missing substrate.
+prerequisite `archive/tickets/150FITLWASM-014.md` owned that missing substrate. That
+prerequisite is now implemented.
 
 Per Foundations #1, #5, #8, #10, #11, #15, and #16, the preview-drive handoff
 must be generic, deterministic, bounded, externally immutable, and proven
@@ -53,10 +54,9 @@ reassessment on 2026-05-03 proved that this was still inventory-level replay
 support rather than a production replacement for TypeScript preview-state
 materialization. Ticket `archive/tickets/150FITLWASM-013.md` completed an
 encoded preview-state slot inventory substrate, but not the production
-application/publication substrate. Ticket `tickets/150FITLWASM-014.md` now owns
-that prerequisite. This ticket remains the later production routing,
-fail-closed diagnostics, and same-seam perf-gate owner once `150FITLWASM-014`
-is complete.
+application/publication substrate. Ticket `archive/tickets/150FITLWASM-014.md` has now
+implemented that prerequisite. This ticket is again the production routing,
+fail-closed diagnostics, and same-seam perf-gate owner.
 
 ## Assumption Reassessment (2026-05-03)
 
@@ -70,10 +70,11 @@ is complete.
    rows validate encoded batch shape after TypeScript captures exist; they do
    not by themselves produce preview states or remove TypeScript object-graph
    traversal from the production hot path.
-4. User-confirmed boundary reset on 2026-05-03 selected a new prerequisite
-   owner, `tickets/150FITLWASM-014.md`, because the completed
-   `archive/tickets/150FITLWASM-013.md` slot substrate still does not replace
-   TypeScript production application/publication/materialization.
+4. User-confirmed boundary reset on 2026-05-03 selected prerequisite owner
+   `archive/tickets/150FITLWASM-014.md`, because the completed
+   `archive/tickets/150FITLWASM-013.md` slot substrate still did not replace
+   TypeScript production application/publication/materialization. That
+   prerequisite is now implemented.
 
 ## Architecture Check
 
@@ -95,7 +96,7 @@ is complete.
 
 ### 1. Preview-drive ownership
 
-After `tickets/150FITLWASM-014.md` lands, wire the smallest generic handoff
+With `archive/tickets/150FITLWASM-014.md` landed, wire the smallest generic handoff
 that removes the remaining TypeScript preview application/drive hot path for
 the supported live baseline surface. The handoff must preserve the current
 preview outcome semantics and must not count a TypeScript-materialized preview
@@ -228,10 +229,10 @@ production routing:
   preview-state slot inventory support.
 - Later Foundation-aligned reassessment split the remaining generic production
   preview-drive application/publication substrate into
-  `tickets/150FITLWASM-014.md`.
-- This ticket remains blocked until `150FITLWASM-014` completes; it remains the
-  later production routing, fail-closed diagnostics, and same-seam perf-gate
-  owner. No runtime code changed under this boundary reset.
+  `archive/tickets/150FITLWASM-014.md`.
+- This ticket was blocked until `150FITLWASM-014` completed; it is now the
+  production routing, fail-closed diagnostics, and same-seam perf-gate owner.
+  No runtime code changed under this boundary reset.
 
 Outcome amended: 2026-05-03.
 
@@ -247,8 +248,25 @@ this ticket can truthfully route supported preview-drive batches through WASM.
 The current production route in `packages/engine/src/agents/policy-preview.ts`
 still applies candidate moves, publishes microturns, drives bounded
 completion, canonicalizes `GameState`, and materializes preview state in
-TypeScript. New prerequisite `tickets/150FITLWASM-014.md` now owns that generic
-production preview-drive substrate. This ticket remains blocked until
-`150FITLWASM-014` completes, then resumes as the production routing,
-fail-closed diagnostics, and same-seam perf-gate owner. The Spec 149
-`<=250 ms` gate is unchanged.
+TypeScript. New prerequisite `archive/tickets/150FITLWASM-014.md` owned that generic
+production preview-drive substrate and is now implemented. This ticket resumes
+as the production routing, fail-closed diagnostics, and same-seam perf-gate
+owner. The Spec 149 `<=250 ms` gate is unchanged.
+
+Outcome amended: 2026-05-03.
+
+Prerequisite `150FITLWASM-014` completed the generic production
+preview-drive substrate. Its final same-seam FITL inventory command:
+
+`timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-014-choose-n-underfilled`
+
+reported `productionApplicationPublication supportedByEncodedPreviewDriveAbi=true`,
+`previewStateSubstrateSupported=true`,
+`productionPreviewDriveSubstrateSupported=true`, `wasmScoreRowUnsupportedCount=0`,
+and `wasmPreviewCandidateFeatureRowUnsupportedCount=0`. All 40 production
+application/publication profile/action buckets were supported.
+
+This ticket is no longer blocked on the substrate prerequisite. Next work here
+is to wire production policy evaluation so supported preview-drive batches use
+the new generic route before preview-state row materialization and score-row
+evaluation, then rerun the same-seam perf gate.

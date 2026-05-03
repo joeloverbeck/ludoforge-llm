@@ -139,10 +139,10 @@ preview-drive ABI and proved current FITL inventory rows with
 `150FITLWASM-010` later on 2026-05-03 found that this slot substrate still does
 not make WASM the owner of generic production preview application,
 publication, bounded completion, or full preview-state materialization. Ticket
-`150FITLWASM-014` owns that missing generic production preview-drive
-substrate. Ticket `150FITLWASM-010` remains the later production routing,
-fail-closed diagnostics, and same-seam perf-gate owner after
-`150FITLWASM-014`.
+`150FITLWASM-014` delivered that generic production preview-drive substrate,
+including current FITL production application/publication inventory support.
+Ticket `150FITLWASM-010` is again the production routing, fail-closed
+diagnostics, and same-seam perf-gate owner.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -158,7 +158,7 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 |---|---|
 | F1 Engine Agnosticism | The WASM backend executes generic bytecode and generic encoded buffers only. |
 | F2 Evolution-First Design | Evolution still mutates GameSpecDoc YAML; WASM consumes compiled artifacts. |
-| F5 One Rules Protocol | Legal action publication and application remain kernel-owned until a later ticket proves an equivalent generic WASM seam. |
+| F5 One Rules Protocol | Legal action publication and application semantics remain kernel-owned; WASM routing may only claim support where an equivalent generic seam is proven. |
 | F6 Schema Ownership | No per-game schemas; any buffer schemas are generic and versioned. |
 | F7 Specs Are Data | No executable scripts or callbacks in GameSpecDoc. |
 | F8 Determinism | Integer-only arithmetic and canonical buffer ordering are mandatory. |
@@ -190,5 +190,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-011.md`](../archive/tickets/150FITLWASM-011.md) — Generic encoded preview-drive substrate prerequisite.
 - [`archive/tickets/150FITLWASM-012.md`](../archive/tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
 - [`archive/tickets/150FITLWASM-013.md`](../archive/tickets/150FITLWASM-013.md) — Completed encoded preview-state slot inventory substrate prerequisite.
-- [`tickets/150FITLWASM-014.md`](../tickets/150FITLWASM-014.md) — Generic production preview-drive substrate prerequisite.
-- [`tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Preview-drive production routing and same-seam gate after the production substrate prerequisite.
+- [`archive/tickets/150FITLWASM-014.md`](../archive/tickets/150FITLWASM-014.md) — Implemented generic production preview-drive substrate prerequisite.
+- [`tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Active preview-drive production routing and same-seam gate after the production substrate prerequisite.

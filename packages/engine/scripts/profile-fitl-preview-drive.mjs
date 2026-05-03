@@ -71,8 +71,8 @@ const config = {
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const [
-  { PolicyAgent, initializePolicyWasmRuntimeSync },
-  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler },
+  { PolicyAgent, initializePolicyWasmRuntimeSync, evaluateProductionPreviewDriveBatchWithWasm },
+  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
@@ -380,7 +380,20 @@ function snapshotPreviewDriveInventory(captures) {
     || left.resultKind.localeCompare(right.resultKind),
   );
   const abiSupport = evaluatePreviewDriveInventoryAbiSupport(captures);
+  const productionSupport = evaluateProductionPreviewDriveSubstrateSupport(captures);
   return [
+    {
+      surface: 'productionApplicationPublication',
+      runtimeClass: 'live action-pipeline encoded production preview-drive substrate',
+      supportedByEncodedPreviewDriveAbi: productionSupport.supported,
+      previewStateSubstrateSupported: productionSupport.supported,
+      productionPreviewDriveSubstrateSupported: productionSupport.supported,
+      ...(productionSupport.failClosedClass === undefined ? {} : {
+        failClosedClass: productionSupport.failClosedClass,
+      }),
+      successorOwner: productionSupport.successorOwner,
+      rows: productionSupport.rows,
+    },
     {
       surface: 'initialMoveApplication',
       runtimeClass: 'live encoded per-candidate initial application deltas',
@@ -415,6 +428,71 @@ function snapshotPreviewDriveInventory(captures) {
       rows: summaryRows,
     },
   ];
+}
+
+function evaluateProductionPreviewDriveSubstrateSupport(captures) {
+  const supportedOwner = 'tickets/150FITLWASM-010.md';
+  const residualOwner = 'tickets/150FITLWASM-014.md';
+  if (captures.length === 0) {
+    return { supported: true, successorOwner: supportedOwner, rows: [] };
+  }
+
+  const rootState = initialState(def, config.seed, config.playerCount).state;
+  const previewStateSlots = productionPreviewStateSlots();
+  const rowsByKey = new Map();
+  for (const capture of captures) {
+    const profileId = seatToProfileId.get(capture.seatId) ?? `seat:${capture.seatId}`;
+    const params = JSON.parse(capture.paramsJSON);
+    const result = evaluateProductionPreviewDriveBatchWithWasm({
+      runtime: policyWasmRuntime,
+      def,
+      state: rootState,
+      profileId,
+      originSeatId: capture.seatId,
+      originTurnId: 0,
+      depthCap: Math.max(1, capture.resultDepth ?? 1),
+      previewStateSlots,
+      candidates: [{
+        move: { actionId: capture.actionId, params },
+        stableMoveKey: capture.stableMoveKey,
+        actionId: capture.actionId,
+      }],
+    });
+    const rowKey = result.kind === 'supported'
+      ? `${profileId}|${capture.actionId}|supported|none`
+      : `${profileId}|${capture.actionId}|${result.unsupportedDriveClass}|${result.unsupportedOwner ?? 'unknown'}`;
+    const row = rowsByKey.get(rowKey) ?? {
+      profileId,
+      actionId: capture.actionId,
+      supported: result.kind === 'supported',
+      unsupportedDriveClass: result.kind === 'supported' ? null : result.unsupportedDriveClass,
+      unsupportedOwner: result.kind === 'supported' ? null : result.unsupportedOwner ?? null,
+      reason: result.kind === 'supported' ? null : result.reason,
+      count: 0,
+    };
+    row.count += 1;
+    rowsByKey.set(rowKey, row);
+  }
+  const rows = [...rowsByKey.values()].sort((left, right) =>
+    Number(left.supported) - Number(right.supported)
+    || right.count - left.count
+    || left.profileId.localeCompare(right.profileId)
+    || left.actionId.localeCompare(right.actionId),
+  );
+  const firstUnsupported = rows.find((row) => !row.supported);
+  return firstUnsupported === undefined
+    ? { supported: true, successorOwner: supportedOwner, rows }
+    : {
+        supported: false,
+        failClosedClass: firstUnsupported.unsupportedDriveClass ?? 'unknown',
+        successorOwner: residualOwner,
+        rows,
+      };
+}
+
+function productionPreviewStateSlots() {
+  const slots = def.globalVars.map((variable) => `global.${variable.name}`);
+  return slots.length === 0 ? ['global.__none'] : slots;
 }
 
 function evaluatePreviewDriveInventoryAbiSupport(captures) {

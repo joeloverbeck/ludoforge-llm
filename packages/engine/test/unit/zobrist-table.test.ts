@@ -342,6 +342,24 @@ describe('zobrist table canonicalization and feature keying', () => {
     assert.equal(zobristInternals.getZobristKeyCacheHitCount(), 1);
   });
 
+  it('memoises repeated dynamic feature keys without adding them to the table cache', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const before = table.keyCache.size;
+    const feature = {
+      kind: 'turnCount',
+      value: 7,
+    } as const;
+    zobristInternals.resetZobristKeyCounters();
+
+    const first = zobristKey(table, feature);
+    const second = zobristKey(table, feature);
+
+    assert.equal(first, second);
+    assert.equal(table.keyCache.size, before);
+    assert.equal(zobristInternals.getZobristKeyUncachedCount(), 1);
+    assert.equal(zobristInternals.getZobristKeyCacheHitCount(), 1);
+  });
+
   it('kind-labeled feature encoding separates similarly-shaped values', () => {
     const table = createZobristTable(createBaseGameDef());
 

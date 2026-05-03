@@ -161,8 +161,10 @@ const canonicalizeHashValue = (value: unknown): string => {
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
 const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
+const DYNAMIC_FEATURE_KEY_CACHE_LIMIT = 4096;
 const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
 const decisionStackFrameDigestByEncoded = new Map<string, string>();
+const dynamicFeatureKeyCaches = new WeakMap<ZobristTable, Map<string, bigint>>();
 let zobristKeyCacheHitCount = 0;
 let zobristKeyCacheMissCount = 0;
 let zobristKeyUncachedCount = 0;
@@ -258,8 +260,23 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
 export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
   const encoded = encodeFeature(feature);
   if (!shouldCacheFeatureKey(feature)) {
+    let dynamicCache = dynamicFeatureKeyCaches.get(table);
+    if (dynamicCache === undefined) {
+      dynamicCache = new Map();
+      dynamicFeatureKeyCaches.set(table, dynamicCache);
+    }
+    const cached = dynamicCache.get(encoded);
+    if (cached !== undefined) {
+      zobristKeyCacheHitCount += 1;
+      return cached;
+    }
     zobristKeyUncachedCount += 1;
-    return fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+    const key = fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+    if (dynamicCache.size >= DYNAMIC_FEATURE_KEY_CACHE_LIMIT) {
+      dynamicCache.clear();
+    }
+    dynamicCache.set(encoded, key);
+    return key;
   }
   const cached = table.keyCache.get(encoded);
   if (cached !== undefined) {

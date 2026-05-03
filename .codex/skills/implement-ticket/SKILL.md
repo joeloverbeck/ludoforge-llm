@@ -115,6 +115,8 @@ When a proof ticket requires a **new calibrated threshold or ceiling**, prefer t
 
 When a profiling ticket needs a **new counter or diagnostic field** to expose the owned metric, add the counter before changing the measured behavior when practical, then capture a same-seam baseline and current result with the same output shape. If the baseline predates the counter, record the old proxy metric explicitly, explain why it is comparable, and keep the final verdict on the ticket-owned metric rather than raw wall-clock noise alone.
 
+For **profiling or benchmark red-gate tickets**, prefer the profiling fast path from Implementation Rules unless live reassessment triggers heavier guidance: load `references/working-notes.md`, `references/ticket-type-triage.md`, `references/specialized-ticket-types.md`, and `references/verification.md`; defer broader references until split ownership, nontrivial discrepancy, shared-contract/schema fallout, noisy harness behavior, command-wrapper ambiguity, or post-proof invalidation requires them.
+
 When a code migration lands but an **explicit benchmark/performance gate remains red**, do not mark the ticket with the repo-local terminal implementation status merely because the implementation and ordinary tests are green. Record the measured samples, threshold comparison, and variance. If satisfying or relaxing the gate would change an explicit ticket deliverable, stop for `1-3-1` before creating follow-up tickets, rewriting spec/ticket ownership, or narrowing the acceptance claim. After user confirmation, create or update the follow-up owner required by the ticket/spec, update the active ticket/spec to a truthful blocked or partial state, and run `pnpm run check:ticket-deps` after the ticket graph changes.
 
 Exception: if the active ticket itself explicitly defines "red measured result + active route proof + successor/follow-up owner" as the acceptance-complete outcome, that ticket-specific contract can close with the repo-local terminal wording only after the ticket records the exact red metrics, active route or implementation proof, successor owner, dependency/status rewrites, and `pnpm run check:ticket-deps` result or non-applicability. Prefer explicit status wording such as `COMPLETED with red measured gate successor <ticket>` only when that matches the ticket family, or the repo's closest equivalent, so later review/archive passes can distinguish this from an ordinary green-gate completion or a user-approved acceptance exception. Do not infer this exception from ordinary red-gate language. If the ticket merely asks to "close the gate", "make it green", or otherwise lacks an explicit red-plus-successor completion contract, use `BLOCKED`, `PARTIAL`, or the repo-equivalent landed-but-red state instead.
@@ -131,6 +133,15 @@ Red measured-gate closeout checklist after correctness lands:
 5. After confirmation, set a truthful durable state (`PARTIAL`, `BLOCKED`, etc.), create/update the follow-up owner, and update dependent tickets/spec ticket lists.
 6. Run `pnpm run check:ticket-deps` when ticket graph changes, unless the active ticket explicitly records why that check does not exist or does not apply.
 7. Rerun the narrowest affected proof or record why the edit is metric transcription only, then continue final proof choreography.
+
+Compact choreography for a red-gate slice that lands a retained improvement:
+
+1. Capture or cite a same-seam baseline with the route/activation counters needed to prove the owned path is exercised.
+2. Land one candidate at a time; keep it only if focused correctness passes and it improves the ticket-owned metric or root-cause counter.
+3. Run the decisive same-seam measurement after code and knowable ticket/spec edits are settled.
+4. If the gate remains red but the ticket allows red-result completion, immediately record the exact red metric, threshold, active-route proof, retained-candidate classification, and rejected-candidate ledger.
+5. Create or update the non-overlapping successor, rewrite dependent tickets/specs, and run `pnpm run check:ticket-deps`.
+6. Rerun only proof lanes invalidated by the graph edits; if edits merely transcribe metrics and ownership, record a no-invalidation note before final closeout.
 
 If a profiling, benchmark, or measured-gate ticket proves **not to be a runtime optimization problem**, do not invent a hot-path fix just to satisfy the draft shape. Record the lane command, metric or budget, verdict, slowest relevant files/tests when applicable, and root-cause classification (`stale fixture`, `workflow gating`, `harness noise`, `repo-preexisting`, etc.). State whether CPU profiling was unnecessary because no red runtime gate remains, record the non-runtime repair that was accepted, and update ticket/spec/sibling wording so future work does not keep chasing a disproven performance cause.
 

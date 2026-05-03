@@ -185,6 +185,30 @@ export function collectFeatureRefsFromCompiledPolicyExpr(
 }
 
 function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: EncodedStateLayout): FeatureRef {
+  if (ref.kind === 'library' && ref.refKind === 'candidateFeature') {
+    return {
+      kind: 'candidateFeature',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'library' && ref.refKind === 'stateFeature') {
+    return {
+      kind: 'stateFeature',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'library' && ref.refKind === 'aggregate') {
+    return {
+      kind: 'candidateAggregate',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
   if (ref.kind === 'candidateIntrinsic') {
     const intrinsicCode = ref.intrinsic === 'actionId'
       ? 0

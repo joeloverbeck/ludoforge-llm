@@ -103,10 +103,15 @@ corpus parity test proves supported rows over current action batches.
 Ticket `150FITLWASM-004` delivered candidate-dependent batch score rows for the
 supported scalar subset: action/stable-key intrinsics, scalar candidate params,
 action tag membership, profile-parameter materialization, and supported
-move-consideration scores. Full baseline profile batches still fail closed on
-library candidate-feature refs, candidate aggregates, preview-backed features,
-and related dynamic rows. Ticket `150FITLWASM-005` owns that full score-row
-handoff before Phase 4 can make a truthful same-seam performance claim.
+move-consideration scores.
+
+Ticket `150FITLWASM-005` delivered generic precomputed state-feature,
+candidate-feature, and candidate-aggregate score rows and proved full
+non-preview score-row parity against the TypeScript reference. Preview-backed
+score rows remain fail-closed because a full-profile attempt proved that static
+root/precomputed values do not preserve preview materialization semantics.
+Ticket `150FITLWASM-006` owns preview-backed score-row handoff before Phase 4 can
+make a truthful same-seam performance claim.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -146,4 +151,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
 - [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
 - [`archive/tickets/150FITLWASM-004.md`](../archive/tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
-- [`tickets/150FITLWASM-005.md`](../tickets/150FITLWASM-005.md) — Full policy score-row WASM handoff and perf gate preflight.
+- [`archive/tickets/150FITLWASM-005.md`](../archive/tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split.
+- [`tickets/150FITLWASM-006.md`](../tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight.

@@ -1,6 +1,6 @@
 # 150FITLWASM-005: Full policy score-row WASM handoff and perf gate preflight
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy evaluator handoff, perf gate wiring
@@ -107,3 +107,30 @@ non-overlapping owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. `pnpm -F @ludoforge/engine exec node --test <dist path for the focused full-profile score parity test>`.
 4. If full-profile parity is green: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-score-preflight`.
+
+## Outcome
+
+Completed on 2026-05-03. Implemented the generic precomputed score-row handoff
+for the remaining non-preview corpus rows. The WASM batch ABI is now version 3
+and carries generic precomputed state-feature, candidate-feature, and
+candidate-aggregate value tables alongside the candidate action rows. The
+bytecode feature table now compiles library `stateFeature`, `candidateFeature`,
+and `aggregate` refs to generic WASM feature refs, and the Rust VM resolves
+those refs from validated precomputed rows rather than walking host objects or
+falling back to TypeScript scores inside the WASM result path.
+
+Preview-backed considerations remain fail-closed. During full-profile parity,
+allowing preview-cost rows to consume static precomputed rows produced wrong
+scores for a live `vc-baseline` corpus state, proving that preview row handoff
+must preserve preview materialization semantics rather than substituting root or
+static values. Created successor `tickets/150FITLWASM-006.md` for preview-backed
+score-row handoff and kept the Spec 150 Phase 4 `<=250 ms` perf preflight
+blocked until that owner lands. No perf gate was run as final acceptance because
+the full preview-backed score path is not yet a truthful gate precondition.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 11 tests.
+4. `timeout 180 pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed in about 63 seconds.

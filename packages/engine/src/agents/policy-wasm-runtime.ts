@@ -10,7 +10,7 @@ import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feat
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 2;
+export const POLICY_WASM_ABI_VERSION = 3;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -36,6 +36,9 @@ const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   candidateParam: 9,
   candidateTag: 10,
   candidateTags: 11,
+  candidateFeature: 12,
+  candidateAggregate: 13,
+  stateFeature: 14,
 };
 
 interface PolicyWasmExports {
@@ -95,6 +98,21 @@ export interface PolicyWasmMoveConsideration {
   readonly consideration: CompiledPolicyConsideration;
 }
 
+export interface PolicyWasmPrecomputedCandidateFeature {
+  readonly id: string;
+  readonly values: readonly PolicyValue[];
+}
+
+export interface PolicyWasmPrecomputedAggregate {
+  readonly id: string;
+  readonly value: PolicyValue;
+}
+
+export interface PolicyWasmPrecomputedStateFeature {
+  readonly id: string;
+  readonly value: PolicyValue;
+}
+
 export type PolicyWasmScoreRowsResult =
   | {
       readonly kind: 'supported';
@@ -118,8 +136,19 @@ export interface PolicyWasmRuntime {
     encoded: EncodedState,
     context: PolicyWasmBytecodeContext,
     candidates: readonly PolicyWasmBatchCandidate[],
+    precomputed?: {
+      readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
+      readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+      readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
+    },
   ): readonly PolicyValue[];
 }
+
+type PolicyWasmBatchPrecomputedInput = {
+  readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
+  readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+  readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
+};
 
 const findRepoRoot = (startUrl: string): string => {
   let cursor = dirname(fileURLToPath(startUrl));
@@ -291,6 +320,7 @@ const encodeBatchInput = (
   program: Uint8Array,
   context: PolicyWasmBytecodeContext,
   candidates: readonly PolicyWasmBatchCandidate[],
+  precomputed: PolicyWasmBatchPrecomputedInput = {},
 ): Uint8Array => {
   if (program.byteLength % I32_BYTES !== 0) {
     throw new Error('Policy WASM batch program must be i32-aligned.');
@@ -321,6 +351,28 @@ const encodeBatchInput = (
     }
     writeI32Array(words, tags);
   }
+  const stateFeatures = precomputed.stateFeatures ?? [];
+  const candidateFeatures = precomputed.candidateFeatures ?? [];
+  const aggregates = precomputed.aggregates ?? [];
+  words.push(stateFeatures.length, candidateFeatures.length, aggregates.length);
+  for (const feature of stateFeatures) {
+    const [tag, raw] = encodePolicyValue(feature.value);
+    words.push(stableStringCode(feature.id), tag, raw);
+  }
+  for (const feature of candidateFeatures) {
+    if (feature.values.length !== candidates.length) {
+      throw new Error(`Policy WASM candidate feature "${feature.id}" row count must match candidate count.`);
+    }
+    words.push(stableStringCode(feature.id), feature.values.length);
+    for (const value of feature.values) {
+      const [tag, raw] = encodePolicyValue(value);
+      words.push(tag, raw);
+    }
+  }
+  for (const aggregate of aggregates) {
+    const [tag, raw] = encodePolicyValue(aggregate.value);
+    words.push(stableStringCode(aggregate.id), tag, raw);
+  }
   const headerAndCandidateWords = words.length;
   const bytes = new Uint8Array((headerAndCandidateWords * I32_BYTES) + program.byteLength);
   const view = new DataView(bytes.buffer);
@@ -330,6 +382,19 @@ const encodeBatchInput = (
   }
   bytes.set(program, headerAndCandidateWords * I32_BYTES);
   return bytes;
+};
+
+const encodePolicyValue = (value: PolicyValue): readonly [number, number] => {
+  if (value === undefined) {
+    return [VALUE_UNDEFINED, 0];
+  }
+  if (typeof value === 'number' && Number.isSafeInteger(value)) {
+    return [VALUE_NUMBER, value];
+  }
+  if (typeof value === 'boolean') {
+    return [value ? VALUE_TRUE : VALUE_FALSE, value ? 1 : 0];
+  }
+  throw new Error('Policy WASM precomputed values must be undefined, boolean, or safe integer numbers.');
 };
 
 const encodeCandidateParam = (id: string, value: unknown): readonly [number, number, number] => {
@@ -370,9 +435,10 @@ const supportedBatchValues = (
   encoded: EncodedState,
   context: PolicyWasmBytecodeContext,
   candidates: readonly PolicyWasmBatchCandidate[],
+  precomputed: PolicyWasmBatchPrecomputedInput,
 ): readonly PolicyValue[] | null => {
   try {
-    return runtime.evaluatePolicyBytecodeBatch(bytecode, encoded, context, candidates);
+    return runtime.evaluatePolicyBytecodeBatch(bytecode, encoded, context, candidates, precomputed);
   } catch (error) {
     if (isUnsupportedWasmError(error)) {
       return null;
@@ -421,13 +487,24 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     readonly parameterValues?: Readonly<Record<string, AgentParameterValue>>;
     readonly considerations: readonly PolicyWasmMoveConsideration[];
     readonly candidates: readonly PolicyWasmBatchCandidate[];
+    readonly precomputedStateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
+    readonly precomputedCandidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+    readonly precomputedAggregates?: readonly PolicyWasmPrecomputedAggregate[];
   },
 ): PolicyWasmScoreRowsResult => {
   const scores = input.candidates.map(() => 0);
+  const precomputed: PolicyWasmBatchPrecomputedInput = {
+    ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
+    ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
+    ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
+  };
   for (const entry of input.considerations) {
     const consideration = entry.consideration;
     if (consideration.scopes?.includes('move') !== true) {
       continue;
+    }
+    if (consideration.costClass === 'preview') {
+      return { kind: 'unsupported', reason: `preview-backed consideration ${entry.id} requires preview row handoff` };
     }
 
     const whenValues = consideration.when === undefined
@@ -438,6 +515,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
         input.encoded,
         input.context,
         input.candidates,
+        precomputed,
     );
     if (whenValues === null) {
       return { kind: 'unsupported', reason: `unsupported when expression for consideration ${entry.id}` };
@@ -449,6 +527,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       input.encoded,
       input.context,
       input.candidates,
+      precomputed,
     );
     if (weightValues === null) {
       return { kind: 'unsupported', reason: `unsupported weight expression for consideration ${entry.id}` };
@@ -460,6 +539,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       input.encoded,
       input.context,
       input.candidates,
+      precomputed,
     );
     if (valueValues === null) {
       return { kind: 'unsupported', reason: `unsupported value expression for consideration ${entry.id}` };
@@ -569,9 +649,9 @@ export const loadPolicyWasmRuntime = async (
         wasm.ludoforge_policy_vm_dealloc(outValuePtr, I32_BYTES);
       }
     },
-    evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates): readonly PolicyValue[] => {
+    evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates, precomputed): readonly PolicyValue[] => {
       const program = encodePolicyBytecodeInput(bytecode, encoded, context);
-      const input = encodeBatchInput(program, context, candidates);
+      const input = encodeBatchInput(program, context, candidates, precomputed);
       const outputBytes = candidates.length * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);

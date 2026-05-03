@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 4B final gate — successor owner `tickets/150FITLWASM-005.md`
+**Status**: BLOCKED by red Phase 4B final gate — successor owner `tickets/150FITLWASM-006.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `tickets/150FITLWASM-005.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `tickets/150FITLWASM-006.md`
 
 ## Problem
 
@@ -89,4 +89,4 @@ Required 1-3-1 decision point:
 - Option 3: request a user-approved target reset, record the acceptance exception explicitly, and then decide whether ticket 016 may proceed under the revised budget.
 - Recommendation: Option 2. The final Phase 4B profile is still about `26.8x` over budget after tickets 019-021, so more TypeScript-local tuning is unlikely to close the gap cleanly.
 
-User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the Phase 5 skeleton; post-review created successor ticket `archive/tickets/150FITLWASM-002.md` for WASM policy-bytecode execution parity. Post-review of `150FITLWASM-002` created successor ticket `archive/tickets/150FITLWASM-003.md` for the encoded-state/action batch bridge. Ticket `150FITLWASM-003` delivered the supported batch ABI and created successor ticket `archive/tickets/150FITLWASM-004.md` for candidate-dependent batch scoring integration. Ticket `150FITLWASM-004` delivered supported scalar candidate score rows and created active successor ticket `tickets/150FITLWASM-005.md` for the remaining full-profile score-row handoff and perf gate preflight.
+User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the Phase 5 skeleton; post-review created successor ticket `archive/tickets/150FITLWASM-002.md` for WASM policy-bytecode execution parity. Post-review of `150FITLWASM-002` created successor ticket `archive/tickets/150FITLWASM-003.md` for the encoded-state/action batch bridge. Ticket `150FITLWASM-003` delivered the supported batch ABI and created successor ticket `archive/tickets/150FITLWASM-004.md` for candidate-dependent batch scoring integration. Ticket `150FITLWASM-004` delivered supported scalar candidate score rows, ticket `150FITLWASM-005` delivered non-preview score-row handoff, and active successor ticket `tickets/150FITLWASM-006.md` owns preview-backed score-row handoff and perf gate preflight.

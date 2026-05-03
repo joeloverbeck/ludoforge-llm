@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 2;
+const ABI_VERSION: i32 = 3;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;
@@ -69,6 +69,9 @@ const FEATURE_CANDIDATE_INTRINSIC: i32 = 8;
 const FEATURE_CANDIDATE_PARAM: i32 = 9;
 const FEATURE_CANDIDATE_TAG: i32 = 10;
 const FEATURE_CANDIDATE_TAGS: i32 = 11;
+const FEATURE_CANDIDATE_FEATURE: i32 = 12;
+const FEATURE_CANDIDATE_AGGREGATE: i32 = 13;
+const FEATURE_STATE_FEATURE: i32 = 14;
 
 const SURFACE_SCOPE_CURRENT: i32 = 0;
 const SELECTOR_NONE: i32 = 0;
@@ -331,6 +334,17 @@ struct BatchCandidate {
     stable_move_key_code: i32,
     params: Vec<CandidateParam>,
     tags: Vec<i32>,
+}
+
+struct PrecomputedCandidateFeature {
+    code: i32,
+    values: Vec<Value>,
+}
+
+struct BatchPrecomputed {
+    state_features: Vec<CandidateParam>,
+    candidate_features: Vec<PrecomputedCandidateFeature>,
+    aggregates: Vec<CandidateParam>,
 }
 
 fn as_usize(value: i32) -> Result<usize, i32> {
@@ -614,6 +628,8 @@ fn resolve_player_index(
 fn resolve_feature(
     program: &Program<'_>,
     candidate: Option<&BatchCandidate>,
+    candidate_index: Option<usize>,
+    precomputed: Option<&BatchPrecomputed>,
     feature: FeatureRef,
 ) -> Result<Value, i32> {
     match feature.kind {
@@ -804,6 +820,42 @@ fn resolve_feature(
             };
             Ok(Value::Bool(candidate.tags.contains(&feature.aux[0])))
         }
+        FEATURE_CANDIDATE_FEATURE => {
+            let Some(candidate_index) = candidate_index else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            let Some(precomputed) = precomputed else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(precomputed
+                .candidate_features
+                .iter()
+                .find(|row| row.code == feature.aux[0])
+                .and_then(|row| row.values.get(candidate_index).copied())
+                .unwrap_or(Value::Undefined))
+        }
+        FEATURE_CANDIDATE_AGGREGATE => {
+            let Some(precomputed) = precomputed else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(precomputed
+                .aggregates
+                .iter()
+                .find(|row| row.code == feature.aux[0])
+                .map(|row| row.value)
+                .unwrap_or(Value::Undefined))
+        }
+        FEATURE_STATE_FEATURE => {
+            let Some(precomputed) = precomputed else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(precomputed
+                .state_features
+                .iter()
+                .find(|row| row.code == feature.aux[0])
+                .map(|row| row.value)
+                .unwrap_or(Value::Undefined))
+        }
         FEATURE_CANDIDATE_TAGS => Err(STATUS_UNSUPPORTED),
         _ => Err(STATUS_UNSUPPORTED),
     }
@@ -811,12 +863,14 @@ fn resolve_feature(
 
 fn evaluate_bytecode(cursor: I32Cursor<'_>) -> Result<Value, i32> {
     let program = parse_program(cursor)?;
-    evaluate_program(&program, None)
+    evaluate_program(&program, None, None, None)
 }
 
 fn evaluate_program(
     program: &Program<'_>,
     candidate: Option<&BatchCandidate>,
+    candidate_index: Option<usize>,
+    precomputed: Option<&BatchPrecomputed>,
 ) -> Result<Value, i32> {
     let mut stack: Vec<Value> = Vec::with_capacity(STACK_SIZE);
     let mut pc = 0usize;
@@ -832,7 +886,7 @@ fn evaluate_program(
                     .feature_refs
                     .get(feature_id)
                     .ok_or(STATUS_BAD_FEATURE)?;
-                let value = resolve_feature(program, candidate, feature)?;
+                let value = resolve_feature(program, candidate, candidate_index, precomputed, feature)?;
                 push(&mut stack, value)?;
             }
             OP_LOAD_CONST => {
@@ -1036,16 +1090,74 @@ fn evaluate_bytecode_batch(
             tags,
         });
     }
+    let state_feature_count = as_usize(cursor.read()?)?;
+    let candidate_feature_count = as_usize(cursor.read()?)?;
+    let aggregate_count = as_usize(cursor.read()?)?;
+    let mut state_features = Vec::with_capacity(state_feature_count);
+    for _ in 0..state_feature_count {
+        let code = cursor.read()?;
+        let tag = cursor.read()?;
+        let raw = cursor.read()?;
+        let value = match tag {
+            VALUE_NUMBER => Value::Number(raw),
+            VALUE_FALSE => Value::Bool(false),
+            VALUE_TRUE => Value::Bool(true),
+            VALUE_UNDEFINED => Value::Undefined,
+            _ => return Err(STATUS_BAD_FEATURE),
+        };
+        state_features.push(CandidateParam { code, value });
+    }
+    let mut candidate_features = Vec::with_capacity(candidate_feature_count);
+    for _ in 0..candidate_feature_count {
+        let code = cursor.read()?;
+        let row_count = as_usize(cursor.read()?)?;
+        if row_count != candidate_count {
+            return Err(STATUS_BAD_LENGTH);
+        }
+        let mut values = Vec::with_capacity(row_count);
+        for _ in 0..row_count {
+            let tag = cursor.read()?;
+            let raw = cursor.read()?;
+            let value = match tag {
+                VALUE_NUMBER => Value::Number(raw),
+                VALUE_FALSE => Value::Bool(false),
+                VALUE_TRUE => Value::Bool(true),
+                VALUE_UNDEFINED => Value::Undefined,
+                _ => return Err(STATUS_BAD_FEATURE),
+            };
+            values.push(value);
+        }
+        candidate_features.push(PrecomputedCandidateFeature { code, values });
+    }
+    let mut aggregates = Vec::with_capacity(aggregate_count);
+    for _ in 0..aggregate_count {
+        let code = cursor.read()?;
+        let tag = cursor.read()?;
+        let raw = cursor.read()?;
+        let value = match tag {
+            VALUE_NUMBER => Value::Number(raw),
+            VALUE_FALSE => Value::Bool(false),
+            VALUE_TRUE => Value::Bool(true),
+            VALUE_UNDEFINED => Value::Undefined,
+            _ => return Err(STATUS_BAD_FEATURE),
+        };
+        aggregates.push(CandidateParam { code, value });
+    }
     let program_bytes = cursor.read_many(program_word_len)?;
     if cursor.word * 4 != cursor.bytes.len() {
         return Err(STATUS_BAD_LENGTH);
     }
     let program = parse_program(I32Cursor::new(program_bytes))?;
+    let precomputed = BatchPrecomputed {
+        state_features,
+        candidate_features,
+        aggregates,
+    };
 
     let out_tags = unsafe { core::slice::from_raw_parts_mut(out_tags_ptr, candidate_count) };
     let out_values = unsafe { core::slice::from_raw_parts_mut(out_values_ptr, candidate_count) };
     for index in 0..candidate_count {
-        let value = evaluate_program(&program, candidates.get(index))?;
+        let value = evaluate_program(&program, candidates.get(index), Some(index), Some(&precomputed))?;
         let (tag, raw) = value.encode();
         out_tags[index] = tag;
         out_values[index] = raw;

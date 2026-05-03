@@ -261,6 +261,62 @@ describe('policy WASM runtime bridge', () => {
     });
   });
 
+  it('uses precomputed state-feature, candidate-feature, and aggregate rows in WASM score batches', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const consideration = {
+      id: 'featurePlusAggregate',
+      scopes: ['move'] as const,
+      costClass: 'candidate' as const,
+      weight: { kind: 'literal' as const, value: 2 },
+      value: {
+        kind: 'op' as const,
+        op: 'add' as const,
+        args: [
+          {
+            kind: 'ref' as const,
+            ref: { kind: 'library' as const, refKind: 'candidateFeature' as const, id: 'feature-a' },
+          },
+          {
+            kind: 'ref' as const,
+            ref: { kind: 'library' as const, refKind: 'aggregate' as const, id: 'agg-a' },
+          },
+          {
+            kind: 'ref' as const,
+            ref: { kind: 'library' as const, refKind: 'stateFeature' as const, id: 'state-a' },
+          },
+        ],
+      },
+      dependencies: { parameters: [], stateFeatures: ['state-a'], candidateFeatures: ['feature-a'], aggregates: ['agg-a'], strategicConditions: [] },
+    };
+
+    const result = evaluateWasmMoveConsiderationScoreRows(runtime, {
+      def: makeDef(),
+      encoded: makeEncoded(),
+      context: {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      },
+      considerations: [{ id: 'featurePlusAggregate', consideration }],
+      candidates: [
+        { actionId: 'move', stableMoveKey: 'move:{"x":1}' },
+        { actionId: 'pass', stableMoveKey: 'pass:{}' },
+      ],
+      precomputedStateFeatures: [{ id: 'state-a', value: 11 }],
+      precomputedCandidateFeatures: [{ id: 'feature-a', values: [3, 5] }],
+      precomputedAggregates: [{ id: 'agg-a', value: 7 }],
+    });
+
+    assert.deepEqual(result, {
+      kind: 'supported',
+      rows: [
+        { stableMoveKey: 'move:{"x":1}', score: 42 },
+        { stableMoveKey: 'pass:{}', score: 46 },
+      ],
+    });
+  });
+
   it('rejects batch layout mismatches before evaluating action rows', async () => {
     const runtime = await loadPolicyWasmRuntime();
     const bytecode = makeBytecode([Opcode.LOAD_CONST, 0, Opcode.HALT], [7]);

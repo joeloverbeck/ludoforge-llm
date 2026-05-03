@@ -101,6 +101,8 @@ After any acceptance or proof lane goes green, preserve that result only while t
 2. rerun the narrowest affected focused lane first, then any broader package/workspace lanes that depended on the stale state
 3. only treat the rerun set as the final proof record; earlier green runs become historical diagnostics, not closeout evidence
 
+If a lane consumes built artifacts such as `dist/` and then any source, build config, generated artifact, or ticket/spec edit changes what that built output should contain, label the earlier lane explicitly as `non-final stale-build evidence`. Rebuild or regenerate the producer output, then rerun the dist-consuming proof before citing it. Do not cite a green run that finished after a source change but before the rebuild that incorporated that change; at most, use it as historical evidence that the previous artifact state was healthy.
+
 Active ticket/spec/report metadata can be proof-affecting even when no runtime code changes. Edits to `Status`, `Outcome`, `Files to Touch`, `Acceptance Criteria`, command substitutions, or final proof ledgers after a proof lane passes require an explicit invalidation decision: either rerun the affected lane, or record why the edit is purely clerical and does not alter the acceptance story. Do not silently append metadata edits after broad proof and still cite the earlier lane as final.
 
 After green/classified final lanes, a terminal status update plus exact transcription of those just-run proof results can be a clerical closeout edit when it changes no scope, acceptance boundary, command semantics, touched-file ownership, proof claim, or follow-up/dependency classification. Record that no-invalidation decision in the ticket outcome or final closeout; otherwise rerun the narrowest affected proof lane.
@@ -110,6 +112,12 @@ For expensive evidence or measurement tickets, distinguish **transcription edits
 1. if the post-proof edit only records already-run metrics, command outputs, durations, or a verdict already proven by the final lane, reread the edited artifact for consistency and run cheap hygiene checks such as `git diff --check`; a full empirical rerun is not required solely because the evidence was transcribed after the lane
 2. if the edit changes status, metric values, thresholds, acceptance boundaries, command semantics, touched-file ownership, or follow-up/dependency classification, rerun the narrowest affected proof lane before citing final acceptance
 3. if the distinction is unclear, treat the edit as acceptance-story affecting and rerun or stop for 1-3-1 when the rerun cost or boundary change is no longer clearly authorized
+
+After any late code/test/spec/ticket edit that follows an intended final proof lane, write a compact lane-validity table in working notes or the ticket outcome before final closeout when more than one lane is involved:
+
+`lane | consumes changed artifact? | rerun needed? | final citation status`
+
+Use `final citation status` values such as `rerun green`, `not affected`, `stale diagnostic only`, or `blocked/unclassified`. If an expensive inventory/profile lane is not rerun, the table must explain why the late edit did not affect the produced evidence or else mark that lane non-final.
 
 ## Post-Closeout Verification Correction
 

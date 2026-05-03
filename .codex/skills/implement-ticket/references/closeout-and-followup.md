@@ -17,6 +17,7 @@
    - Whether schema/artifact surfaces were checked and whether they changed
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
+   - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
@@ -28,12 +29,15 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
+- when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
+- for new packages, crates, or other workspace units, confirm they are discoverable by the workspace/package filter, their build artifacts are intentionally ignored or checked in, and any package/task-runner output declarations remain truthful
+- for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 - for completed active tickets, use the explicit status spelling `**Status**: COMPLETED` unless the repo artifact already documents a different final status class such as `BLOCKED`, `DEFERRED`, or `REJECTED`
 
@@ -131,6 +135,19 @@ If the session creates a new prerequisite/follow-up ticket or rewires deps acros
 2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one
 3. fix any cycle or stale dependency before continuing to broader proof or final closeout
 
+## Successor-Before-Final-Proof Preflight
+
+When the owned slice appears landed but truthful closeout requires a new successor, updated successor, dependent-ticket rewrite, spec ticket-list update, or other ownership handoff, do that handoff before the first lane you intend to cite as final proof:
+
+1. classify the active ticket's durable state (`completed owned slice`, `blocked by prerequisite`, `partial`, or equivalent)
+2. create or update the successor/follow-up owner, including concrete live evidence and repo-valid verification commands
+3. update affected active specs, sibling tickets, and dependent tickets so the series names the new owner consistently
+4. run dependency integrity immediately after the ticket graph edit
+5. update the active ticket's touched-file/proof ledger to include the handoff artifacts
+6. only then run the final acceptance-proof set; earlier green lanes become diagnostics if the handoff changed follow-up/dependency classification, touched-file ownership, or acceptance wording
+
+Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
@@ -141,6 +158,12 @@ When implementation reassessment proves that remaining work belongs in a new or 
 4. update the active ticket, sibling tickets, and deps/status fields so the series tells one ownership story
 5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
 6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep
+
+When applying ticket/spec graph rewrites, prefer `apply_patch` or a checked-in
+repo helper over ad hoc shell one-liners. Markdown tickets commonly contain
+backticks, command snippets, pipes, and paths; embedding that content in
+`node -e`, `perl -e`, `sed`, or similar shell strings can trigger shell command
+substitution or quoting drift before the edit reaches the intended tool.
 
 ## Sibling Absorbed Ownership
 

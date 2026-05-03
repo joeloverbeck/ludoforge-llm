@@ -1,0 +1,10 @@
+{
+  "name": "@ludoforge/engine-wasm",
+  "version": "0.0.0",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "cargo build --manifest-path policy-vm/Cargo.toml --target wasm32-unknown-unknown --release",
+    "clean": "cargo clean --manifest-path policy-vm/Cargo.toml"
+  }
+}

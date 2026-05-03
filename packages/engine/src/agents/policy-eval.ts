@@ -30,6 +30,8 @@ import type {
 import { type PolicyValue } from './policy-surface.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
+import { getInitializedPolicyWasmRuntime } from './policy-wasm-runtime.js';
+import { tryScoreMoveConsiderationsWithWasm } from './policy-wasm-score-routing.js';
 
 const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
 const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
@@ -600,18 +602,36 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           }
         }
       }
-      for (const candidate of activeCandidates) {
-        candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
-          total + evaluation.evaluateConsideration(
-            considerations,
-            considerationId,
-            candidate,
-            (contribution) => {
-              candidate.scoreContributions.push({ termId: considerationId, contribution });
-            },
-          )
-        ), 0);
-        evaluation.finalizePreviewOutcome(candidate);
+      const wasmRuntime = getInitializedPolicyWasmRuntime();
+      const scoredWithWasm = wasmRuntime !== null && tryScoreMoveConsiderationsWithWasm({
+        runtime: wasmRuntime,
+        ...(input.runtime === undefined ? {} : { gameDefRuntime: input.runtime }),
+        def: input.def,
+        state: input.state,
+        encodedView,
+        evaluation,
+        catalog,
+        profileId,
+        profile,
+        seatId,
+        playerId: input.playerId,
+        candidates: activeCandidates,
+        considerationIds: moveConsiderationIds,
+      });
+      if (!scoredWithWasm) {
+        for (const candidate of activeCandidates) {
+          candidate.score = moveConsiderationIds.reduce((total, considerationId) => (
+            total + evaluation.evaluateConsideration(
+              considerations,
+              considerationId,
+              candidate,
+              (contribution) => {
+                candidate.scoreContributions.push({ termId: considerationId, contribution });
+              },
+            )
+          ), 0);
+          evaluation.finalizePreviewOutcome(candidate);
+        }
       }
       let rng = input.rng;
       let selectionCandidates: readonly CandidateEntry[] = [...activeCandidates];

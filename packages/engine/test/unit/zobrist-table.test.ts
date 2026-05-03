@@ -8,10 +8,26 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  computeFullHash,
   createZobristTable,
   type GameDef,
+  type GameState,
   zobristKey,
+  zobristInternals,
 } from '../../src/kernel/index.js';
+
+const FNV_MASK_64 = (1n << 64n) - 1n;
+const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
+const FNV_PRIME_64 = 0x100000001b3n;
+
+const fnv1a64Oracle = (input: string): bigint => {
+  let hash = FNV_OFFSET_BASIS_64;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= BigInt(input.charCodeAt(index));
+    hash = (hash * FNV_PRIME_64) & FNV_MASK_64;
+  }
+  return hash;
+};
 
 const createBaseGameDef = (): GameDef =>
   ({
@@ -155,6 +171,39 @@ phase: ['main'],
     terminal: { conditions: [{ when: { op: '==', left: 1, right: 0 }, result: { type: 'draw' } }] },
   }) as unknown as GameDef;
 
+const createHashState = (): GameState =>
+  ({
+    globalVars: { energy: 0, rounds: 1 },
+    perPlayerVars: {
+      0: { health: 5, score: 0 },
+      1: { health: 5, score: 0 },
+      2: { health: 5, score: 0 },
+      3: { health: 5, score: 0 },
+    },
+    zoneVars: {},
+    playerCount: 4,
+    zones: {
+      'deck:none': [],
+      'table:none': [],
+      'discard:none': [],
+    },
+    nextTokenOrdinal: 0,
+    currentPhase: asPhaseId('main'),
+    activePlayer: asPlayerId(0),
+    activeDeciderSeatId: '0',
+    turnCount: 0,
+    rng: { algorithm: 'pcg-dxsm-128', version: 1, state: [1n, 2n] },
+    stateHash: 0n,
+    _runningHash: 0n,
+    actionUsage: {},
+    turnOrderState: { type: 'roundRobin' },
+    markers: {},
+    reveals: undefined,
+    globalMarkers: undefined,
+    activeLastingEffects: undefined,
+    interruptPhaseStack: undefined,
+  }) as unknown as GameState;
+
 describe('zobrist table canonicalization and feature keying', () => {
   it('same GameDef produces identical fingerprint and seed across calls', () => {
     const def = createBaseGameDef();
@@ -163,6 +212,17 @@ describe('zobrist table canonicalization and feature keying', () => {
 
     assert.equal(first.fingerprint, second.fingerprint);
     assert.equal(first.seed, second.seed);
+  });
+
+  it('matches the canonical BigInt FNV-1a oracle for table seeds and feature keys', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const feature = { kind: 'globalVar', varName: 'energy', value: 7 } as const;
+
+    assert.equal(table.seed, fnv1a64Oracle(`table-seed|fingerprint=${table.fingerprint}`));
+    assert.equal(
+      zobristKey(table, feature),
+      fnv1a64Oracle(`zobrist-key-v1|seed=${table.seedHex}|kind=globalVar|varName=energy|value=7`),
+    );
   });
 
   it('equivalent declaration reordering produces identical table output', () => {
@@ -223,6 +283,63 @@ describe('zobrist table canonicalization and feature keying', () => {
     const second = zobristKey(table, feature);
 
     assert.equal(first, second);
+  });
+
+  it('hashes structurally identical decision-stack frames deterministically', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const baseState = createHashState();
+    const first = {
+      ...baseState,
+      decisionStack: [
+        {
+          id: 'frame-1',
+          turnId: 'turn-1',
+          context: {
+            kind: 'chooseOne',
+            seatId: '0',
+            bind: '$choice',
+            options: ['a', 'b'],
+          },
+        },
+      ],
+    } as unknown as GameState;
+    const second = {
+      ...baseState,
+      decisionStack: [
+        {
+          id: 'frame-1',
+          turnId: 'turn-1',
+          context: {
+            kind: 'chooseOne',
+            seatId: '0',
+            bind: '$choice',
+            options: ['a', 'b'],
+          },
+        },
+      ],
+    } as unknown as GameState;
+
+    assert.notEqual(first.decisionStack?.[0], second.decisionStack?.[0]);
+    assert.equal(computeFullHash(table, first), computeFullHash(table, second));
+  });
+
+  it('memoises repeated bounded runtime feature keys on the table cache', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const feature = {
+      kind: 'globalVar',
+      varName: 'energy',
+      value: 3,
+    } as const;
+    zobristInternals.resetZobristKeyCounters();
+
+    const first = zobristKey(table, feature);
+    const sizeAfterFirst = table.keyCache.size;
+    const second = zobristKey(table, feature);
+
+    assert.equal(first, second);
+    assert.equal(table.keyCache.size, sizeAfterFirst);
+    assert.equal(zobristInternals.getZobristKeyCacheMissCount(), 1);
+    assert.equal(zobristInternals.getZobristKeyCacheHitCount(), 1);
   });
 
   it('kind-labeled feature encoding separates similarly-shaped values', () => {

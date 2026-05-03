@@ -62,6 +62,7 @@ const config = {
   verifyIncrementalHash: !flagBoolean('noVerifyIncrementalHash'),
   perCard: flagBoolean('perCard'),
   profileBuckets: flagBoolean('profileBuckets'),
+  previewDriveInventory: flagBoolean('previewDriveInventory'),
   retainDecisions: flagBoolean('retainDecisions'),
   warmup: flagBoolean('warmup'),
   label: flagValue('label', 'run'),
@@ -70,12 +71,15 @@ const config = {
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const [
-  { PolicyAgent },
-  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler },
+  { PolicyAgent, evaluateProductionPreviewDriveBatchWithWasm },
+  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState, zobristInternals },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
+  { __internal_for_tests: policyWasmRuntimeInternals },
+  { initializePolicyWasmRuntimeSync },
+  { policyWasmProductionPreviewDriveInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
@@ -83,7 +87,12 @@ const [
   import(join(DIST_ROOT, 'test', 'helpers', 'production-spec-helpers.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-preview.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime-node-loader.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-production-preview-drive.js')),
 ]);
+
+const policyWasmRuntime = initializePolicyWasmRuntimeSync();
 
 const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
 const runtime = createGameDefRuntime(def);
@@ -117,6 +126,7 @@ const seatToProfileId = buildSeatToProfileId();
 // (profileId, exitKind) -> Map<depth, count>
 const driveExitHistogram = new Map();
 let driveExitTotal = 0;
+let driveResultCaptures = [];
 const recordDriveExit = (info) => {
   driveExitTotal += 1;
   const profileId = seatToProfileId.get(info.seatId) ?? `seat:${info.seatId}`;
@@ -127,6 +137,9 @@ const recordDriveExit = (info) => {
     driveExitHistogram.set(bucketKey, depthMap);
   }
   depthMap.set(info.depth, (depthMap.get(info.depth) ?? 0) + 1);
+};
+const recordDriveResult = (capture) => {
+  driveResultCaptures.push(capture);
 };
 
 const buildAgents = () => {
@@ -142,9 +155,16 @@ const buildAgents = () => {
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  zobristInternals.resetZobristKeyCounters();
+  policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   driveExitHistogram.clear();
   driveExitTotal = 0;
+  driveResultCaptures = [];
   policyPreviewInternals.setDriveExitSink(recordDriveExit);
+  if (config.previewDriveInventory) {
+    policyPreviewInternals.setDriveResultSink(recordDriveResult);
+  }
   const agents = buildAgents();
   const profiler = config.profileBuckets ? createPerfProfiler() : undefined;
   const startedAt = performance.now();
@@ -173,19 +193,32 @@ const runOnce = () => {
   const stopReason = trace.stopReason ?? 'unknown';
   const driveExitSnapshot = snapshotDriveExitHistogram();
   policyPreviewInternals.setDriveExitSink(undefined);
+  policyPreviewInternals.setDriveResultSink(undefined);
   return {
     elapsedMs,
     turnsCount,
     decisions,
     stopReason,
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    zobristKeyCacheHitCount: zobristInternals.getZobristKeyCacheHitCount(),
+    zobristKeyCacheMissCount: zobristInternals.getZobristKeyCacheMissCount(),
+    zobristKeyUncachedCount: zobristInternals.getZobristKeyUncachedCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
+    wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
+    wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
+    wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
+    wasmProductionPreviewDriveBatchCount: policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
+    previewDriveInventory: config.previewDriveInventory
+      ? snapshotPreviewDriveInventory(driveResultCaptures)
+      : [],
     perCardRows,
     profileBuckets: profiler === undefined ? [] : snapshotProfilerBuckets(profiler),
   };
@@ -194,10 +227,17 @@ const runOnce = () => {
 function readCounterSnapshot() {
   return {
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    zobristKeyCacheHitCount: zobristInternals.getZobristKeyCacheHitCount(),
+    zobristKeyCacheMissCount: zobristInternals.getZobristKeyCacheMissCount(),
+    zobristKeyUncachedCount: zobristInternals.getZobristKeyUncachedCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
+    wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
+    wasmProductionPreviewDriveBatchCount: policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     driveExitTotal,
   };
 }
@@ -219,6 +259,12 @@ function createPerCardRecorder(startedAt) {
       closeReason: reason,
       msPerDecision: decisionCount > 0 ? round4(elapsedMs / decisionCount) : null,
       tokenStateIndexBuildCount: counters.tokenStateIndexBuildCount - currentCounters.tokenStateIndexBuildCount,
+      zobristKeyCacheHitCount:
+        counters.zobristKeyCacheHitCount - currentCounters.zobristKeyCacheHitCount,
+      zobristKeyCacheMissCount:
+        counters.zobristKeyCacheMissCount - currentCounters.zobristKeyCacheMissCount,
+      zobristKeyUncachedCount:
+        counters.zobristKeyUncachedCount - currentCounters.zobristKeyUncachedCount,
       draftTokenStateIndexDeltaCount:
         counters.draftTokenStateIndexDeltaCount - currentCounters.draftTokenStateIndexDeltaCount,
       draftTokenStateIndexAttachCount:
@@ -227,6 +273,14 @@ function createPerCardRecorder(startedAt) {
         counters.draftTokenStateIndexSnapshotCount - currentCounters.draftTokenStateIndexSnapshotCount,
       draftTokenStateIndexCowCopyCount:
         counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
+      wasmScoreRowBytecodeCompileCount:
+        counters.wasmScoreRowBytecodeCompileCount - currentCounters.wasmScoreRowBytecodeCompileCount,
+      wasmPreviewCandidateFeatureRowRouteCount:
+        counters.wasmPreviewCandidateFeatureRowRouteCount - currentCounters.wasmPreviewCandidateFeatureRowRouteCount,
+      wasmPreviewCandidateFeatureRowUnsupportedCount:
+        counters.wasmPreviewCandidateFeatureRowUnsupportedCount - currentCounters.wasmPreviewCandidateFeatureRowUnsupportedCount,
+      wasmProductionPreviewDriveBatchCount:
+        counters.wasmProductionPreviewDriveBatchCount - currentCounters.wasmProductionPreviewDriveBatchCount,
       driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
     });
     decisionCount = 0;
@@ -319,6 +373,257 @@ function snapshotDriveExitHistogram() {
   return { total: driveExitTotal, buckets, depthQuantilesByProfile };
 }
 
+function snapshotPreviewDriveInventory(captures) {
+  const actionClasses = new Map();
+  for (const capture of captures) {
+    const profileId = seatToProfileId.get(capture.seatId) ?? `seat:${capture.seatId}`;
+    const key = `${profileId}|${capture.actionId}|${capture.resultKind}|${capture.resultReason ?? 'none'}`;
+    const existing = actionClasses.get(key) ?? {
+      profileId,
+      actionId: capture.actionId,
+      resultKind: capture.resultKind,
+      resultReason: capture.resultReason ?? null,
+      count: 0,
+      minDepth: null,
+      maxDepth: null,
+    };
+    existing.count += 1;
+    if (capture.resultDepth !== undefined) {
+      existing.minDepth = existing.minDepth === null ? capture.resultDepth : Math.min(existing.minDepth, capture.resultDepth);
+      existing.maxDepth = existing.maxDepth === null ? capture.resultDepth : Math.max(existing.maxDepth, capture.resultDepth);
+    }
+    actionClasses.set(key, existing);
+  }
+
+  const summaryRows = [...actionClasses.values()].sort((left, right) =>
+    right.count - left.count
+    || left.profileId.localeCompare(right.profileId)
+    || left.actionId.localeCompare(right.actionId)
+    || left.resultKind.localeCompare(right.resultKind),
+  );
+  const abiSupport = evaluatePreviewDriveInventoryAbiSupport(captures);
+  const productionSupport = evaluateProductionPreviewDriveSubstrateSupport(captures);
+  return [
+    {
+      surface: 'productionApplicationPublication',
+      runtimeClass: 'live action-pipeline encoded production preview-drive substrate',
+      supportedByEncodedPreviewDriveAbi: productionSupport.supported,
+      previewStateSubstrateSupported: productionSupport.supported,
+      productionPreviewDriveSubstrateSupported: productionSupport.supported,
+      ...(productionSupport.failClosedClass === undefined ? {} : {
+        failClosedClass: productionSupport.failClosedClass,
+      }),
+      successorOwner: productionSupport.successorOwner,
+      rows: productionSupport.rows,
+    },
+    {
+      surface: 'initialMoveApplication',
+      runtimeClass: 'live encoded per-candidate initial application deltas',
+      supportedByEncodedPreviewDriveAbi: abiSupport.initialMoveApplication.supported,
+      previewStateSubstrateSupported: abiSupport.initialMoveApplication.previewStateSubstrateSupported,
+      ...(abiSupport.initialMoveApplication.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.initialMoveApplication.failClosedClass,
+      }),
+      successorOwner: abiSupport.initialMoveApplication.successorOwner,
+      count: captures.length,
+    },
+    {
+      surface: 'decisionStackPublication',
+      runtimeClass: 'live encoded same-seam completion outcome replay',
+      supportedByEncodedPreviewDriveAbi: abiSupport.decisionStackPublication.supported,
+      previewStateSubstrateSupported: abiSupport.decisionStackPublication.previewStateSubstrateSupported,
+      ...(abiSupport.decisionStackPublication.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.decisionStackPublication.failClosedClass,
+      }),
+      successorOwner: abiSupport.decisionStackPublication.successorOwner,
+      count: captures.length,
+    },
+    {
+      surface: 'completionExits',
+      runtimeClass: 'current same-seam preview-drive exit distribution',
+      supportedByEncodedPreviewDriveAbi: abiSupport.completionExits.supported,
+      previewStateSubstrateSupported: abiSupport.completionExits.previewStateSubstrateSupported,
+      ...(abiSupport.completionExits.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.completionExits.failClosedClass,
+      }),
+      successorOwner: abiSupport.completionExits.successorOwner,
+      rows: summaryRows,
+    },
+  ];
+}
+
+function evaluateProductionPreviewDriveSubstrateSupport(captures) {
+  const supportedOwner = 'tickets/150FITLWASM-010.md';
+  const residualOwner = 'tickets/150FITLWASM-014.md';
+  if (captures.length === 0) {
+    return { supported: true, successorOwner: supportedOwner, rows: [] };
+  }
+
+  const rootState = initialState(def, config.seed, config.playerCount).state;
+  const previewStateSlots = productionPreviewStateSlots();
+  const rowsByKey = new Map();
+  for (const capture of captures) {
+    const profileId = seatToProfileId.get(capture.seatId) ?? `seat:${capture.seatId}`;
+    const params = JSON.parse(capture.paramsJSON);
+    const result = evaluateProductionPreviewDriveBatchWithWasm({
+      runtime: policyWasmRuntime,
+      def,
+      state: rootState,
+      profileId,
+      originSeatId: capture.seatId,
+      originTurnId: 0,
+      depthCap: Math.max(1, capture.resultDepth ?? 1),
+      previewStateSlots,
+      candidates: [{
+        move: { actionId: capture.actionId, params },
+        stableMoveKey: capture.stableMoveKey,
+        actionId: capture.actionId,
+      }],
+    });
+    const rowKey = result.kind === 'supported'
+      ? `${profileId}|${capture.actionId}|supported|none`
+      : `${profileId}|${capture.actionId}|${result.unsupportedDriveClass}|${result.unsupportedOwner ?? 'unknown'}`;
+    const row = rowsByKey.get(rowKey) ?? {
+      profileId,
+      actionId: capture.actionId,
+      supported: result.kind === 'supported',
+      unsupportedDriveClass: result.kind === 'supported' ? null : result.unsupportedDriveClass,
+      unsupportedOwner: result.kind === 'supported' ? null : result.unsupportedOwner ?? null,
+      reason: result.kind === 'supported' ? null : result.reason,
+      count: 0,
+    };
+    row.count += 1;
+    rowsByKey.set(rowKey, row);
+  }
+  const rows = [...rowsByKey.values()].sort((left, right) =>
+    Number(left.supported) - Number(right.supported)
+    || right.count - left.count
+    || left.profileId.localeCompare(right.profileId)
+    || left.actionId.localeCompare(right.actionId),
+  );
+  const firstUnsupported = rows.find((row) => !row.supported);
+  return firstUnsupported === undefined
+    ? { supported: true, successorOwner: supportedOwner, rows }
+    : {
+        supported: false,
+        failClosedClass: firstUnsupported.unsupportedDriveClass ?? 'unknown',
+        successorOwner: residualOwner,
+        rows,
+      };
+}
+
+function productionPreviewStateSlots() {
+  const slots = def.globalVars.map((variable) => `global.${variable.name}`);
+  return slots.length === 0 ? ['global.__none'] : slots;
+}
+
+function evaluatePreviewDriveInventoryAbiSupport(captures) {
+  const supportedOwner = 'tickets/150FITLWASM-010.md';
+  const residualOwner = 'tickets/150FITLWASM-013.md';
+  if (captures.length === 0) {
+    return {
+      initialMoveApplication: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
+      decisionStackPublication: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
+      completionExits: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
+    };
+  }
+
+  const previewStateSlots = ['preview.drive.value'];
+  const initialResult = policyWasmRuntime.evaluatePreviewDriveBatch({
+    profileId: 'fitl-preview-drive-inventory-initial-application',
+    originSeatId: captures[0].seatId,
+    originTurnId: 0,
+    depthCap: 8,
+    previewStateSlots,
+    candidates: captures.map((capture) => ({
+      actionId: capture.actionId,
+      stableMoveKey: capture.stableMoveKey,
+      initialValue: 0,
+      initialPreviewStateValues: [0],
+    })),
+    steps: [{ kind: 'applyCandidateDeltas', candidateDeltas: captures.map(() => 0) }],
+  });
+  const initialSupported = initialResult.kind === 'supported'
+    && initialResult.rows.length === captures.length
+    && initialResult.rows.every((row) =>
+      row.outcome === 'completed'
+      && row.depth === 1
+      && row.previewStateValues?.['preview.drive.value'] === row.value,
+    );
+
+  const unsupportedCompletion = captures.find((capture) =>
+    capture.resultDepth === undefined
+    || (capture.resultKind !== 'completed' && capture.resultKind !== 'depthCap' && capture.resultKind !== 'stochastic'),
+  );
+  const completionSupported = unsupportedCompletion === undefined
+    && captures.every((capture) => validateCompletionCapture(capture));
+
+  return {
+    initialMoveApplication: initialSupported
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+    decisionStackPublication: completionSupported
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+    completionExits: completionSupported
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+  };
+}
+
+function validateCompletionCapture(capture) {
+  const depth = capture.resultDepth ?? 0;
+  if (depth <= 0) {
+    return false;
+  }
+  const steps = [{ kind: 'applyCandidateDeltas', candidateDeltas: [0] }];
+  if (capture.resultKind === 'stochastic') {
+    if (depth <= 1) {
+      return false;
+    }
+    for (let index = 1; index < depth - 1; index += 1) {
+      steps.push({ kind: 'addGlobal', delta: 0 });
+    }
+    steps.push({ kind: 'stochastic' });
+  } else {
+    for (let index = 1; index < depth; index += 1) {
+      steps.push({ kind: 'addGlobal', delta: 0 });
+    }
+  }
+  const result = policyWasmRuntime.evaluatePreviewDriveBatch({
+    profileId: 'fitl-preview-drive-inventory-completion',
+    originSeatId: capture.seatId,
+    originTurnId: 0,
+    depthCap: capture.resultKind === 'depthCap' ? depth : depth + 1,
+    previewStateSlots: ['preview.drive.value'],
+    candidates: [{
+      actionId: capture.actionId,
+      stableMoveKey: capture.stableMoveKey,
+      initialValue: 0,
+      initialPreviewStateValues: [0],
+    }],
+    steps,
+  });
+  return result.kind === 'supported'
+    && result.rows.length === 1
+    && result.rows[0].outcome === toWasmPreviewDriveOutcome(capture.resultKind)
+    && result.rows[0].depth === depth
+    && result.rows[0].previewStateValues?.['preview.drive.value'] === result.rows[0].value;
+}
+
+function toWasmPreviewDriveOutcome(resultKind) {
+  if (resultKind === 'depthCap') {
+    return 'depthCap';
+  }
+  if (resultKind === 'stochastic') {
+    return 'stochastic';
+  }
+  if (resultKind === 'completed') {
+    return 'completed';
+  }
+  return 'failed';
+}
+
 function percentile(sortedAsc, fraction) {
   if (sortedAsc.length === 0) {
     return null;
@@ -348,6 +653,7 @@ const summary = {
     verifyIncrementalHash: config.verifyIncrementalHash,
     perCard: config.perCard,
     profileBuckets: config.profileBuckets,
+    previewDriveInventory: config.previewDriveInventory,
     warmup: config.warmup,
   },
   result: {
@@ -358,15 +664,25 @@ const summary = {
     msPerTurn: result.turnsCount > 0 ? round4(result.elapsedMs / result.turnsCount) : null,
     msPerDecision: result.decisions > 0 ? round4(result.elapsedMs / result.decisions) : null,
     tokenStateIndexBuildCount: result.tokenStateIndexBuildCount,
+    zobristKeyCacheHitCount: result.zobristKeyCacheHitCount,
+    zobristKeyCacheMissCount: result.zobristKeyCacheMissCount,
+    zobristKeyUncachedCount: result.zobristKeyUncachedCount,
     draftTokenStateIndexDeltaCount: result.draftTokenStateIndexDeltaCount,
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
     draftTokenStateIndexSnapshotCount: result.draftTokenStateIndexSnapshotCount,
     draftTokenStateIndexCowCopyCount: result.draftTokenStateIndexCowCopyCount,
+    wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
+    wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
+    wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
+    wasmPreviewCandidateFeatureRowRouteCount: result.wasmPreviewCandidateFeatureRowRouteCount,
+    wasmPreviewCandidateFeatureRowUnsupportedCount: result.wasmPreviewCandidateFeatureRowUnsupportedCount,
+    wasmProductionPreviewDriveBatchCount: result.wasmProductionPreviewDriveBatchCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
     perCardRows: result.perCardRows,
     profileBuckets: result.profileBuckets,
+    previewDriveInventory: result.previewDriveInventory,
   },
 };
 
@@ -376,9 +692,18 @@ process.stderr.write(
   `stopReason=${summary.result.stopReason} msPerTurn=${summary.result.msPerTurn} ` +
   `verifyIncrementalHash=${summary.config.verifyIncrementalHash} ` +
   `tokenStateIndexBuildCount=${summary.result.tokenStateIndexBuildCount} ` +
+  `zobristKeyCacheHitCount=${summary.result.zobristKeyCacheHitCount} ` +
+  `zobristKeyCacheMissCount=${summary.result.zobristKeyCacheMissCount} ` +
+  `zobristKeyUncachedCount=${summary.result.zobristKeyUncachedCount} ` +
   `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
   `draftTokenStateIndexSnapshotCount=${summary.result.draftTokenStateIndexSnapshotCount} ` +
   `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
+  `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
+  `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
+  `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
+  `wasmPreviewCandidateFeatureRowRouteCount=${summary.result.wasmPreviewCandidateFeatureRowRouteCount} ` +
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=${summary.result.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
+  `wasmProductionPreviewDriveBatchCount=${summary.result.wasmProductionPreviewDriveBatchCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
@@ -393,15 +718,31 @@ for (const row of summary.result.perCardRows ?? []) {
     `[profile-fitl-preview-drive] per-card turnCount=${row.turnCount} elapsedMs=${row.elapsedMs} ` +
     `decisions=${row.decisions} driveExitTotal=${row.driveExitTotal} ` +
     `tokenStateIndexBuildCount=${row.tokenStateIndexBuildCount} ` +
+    `zobristKeyCacheHitCount=${row.zobristKeyCacheHitCount} ` +
+    `zobristKeyCacheMissCount=${row.zobristKeyCacheMissCount} ` +
+    `zobristKeyUncachedCount=${row.zobristKeyUncachedCount} ` +
     `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
     `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
     `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +
+    `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
+    `wasmPreviewCandidateFeatureRowRouteCount=${row.wasmPreviewCandidateFeatureRowRouteCount} ` +
+    `wasmPreviewCandidateFeatureRowUnsupportedCount=${row.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
+    `wasmProductionPreviewDriveBatchCount=${row.wasmProductionPreviewDriveBatchCount} ` +
     `closeReason=${row.closeReason}\n`,
   );
 }
 for (const row of (summary.result.profileBuckets ?? []).slice(0, 12)) {
   process.stderr.write(
     `[profile-fitl-preview-drive] profile-bucket key=${row.key} count=${row.count} totalMs=${row.totalMs}\n`,
+  );
+}
+for (const row of summary.result.previewDriveInventory ?? []) {
+  process.stderr.write(
+    `[profile-fitl-preview-drive] preview-drive-inventory surface=${row.surface} ` +
+    `supportedByEncodedPreviewDriveAbi=${row.supportedByEncodedPreviewDriveAbi} ` +
+    `previewStateSubstrateSupported=${row.previewStateSubstrateSupported} ` +
+    (row.failClosedClass === undefined ? '' : `failClosedClass=${row.failClosedClass} `) +
+    `successorOwner=${row.successorOwner} count=${row.count ?? row.rows?.length ?? 0}\n`,
   );
 }
 

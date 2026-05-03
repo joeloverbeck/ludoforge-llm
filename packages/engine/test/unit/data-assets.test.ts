@@ -5,7 +5,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 
-import { loadDataAssetEnvelopeFromFile, validateDataAssetEnvelope } from '../../src/kernel/index.js';
+import { validateDataAssetEnvelope } from '../../src/kernel/index.js';
+import { loadDataAssetEnvelopeFromFile } from '../../src/kernel/data-assets-node-loader.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
 
 describe('data asset loader scaffold', () => {

@@ -4,6 +4,8 @@ import { describe, it } from 'node:test';
 
 import { evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import type { PolicyPreviewDependencies } from '../../../src/agents/policy-preview.js';
+import { __internal_for_tests as policyWasmRuntimeInternals } from '../../../src/agents/policy-wasm-runtime.js';
+import { initializePolicyWasmRuntimeSync } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import {
   asActionId,
   asPhaseId,
@@ -37,7 +39,10 @@ const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref'])
 
 function createDef(
   topK: number,
-  options: { readonly materializePreviewInPruning?: boolean } = {},
+  options: {
+    readonly materializePreviewInPruning?: boolean;
+    readonly usePreviewStateFeatureRows?: boolean;
+  } = {},
 ): GameDef {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
     schemaVersion: 2,
@@ -71,7 +76,28 @@ function createDef(
           dependencies: emptyDeps,
         },
       },
-      candidateFeatures: {},
+      candidateFeatures: {
+        ...(options.usePreviewStateFeatureRows === true
+          ? {
+              projectedFromStateFeature: {
+                type: 'number',
+                costClass: 'preview',
+                expr: refExpr({
+                  kind: 'library',
+                  refKind: 'previewStateFeature',
+                  id: 'projected',
+                } as never),
+                dependencies: {
+                  parameters: [],
+                  stateFeatures: ['projected'],
+                  candidateFeatures: [],
+                  aggregates: [],
+                  strategicConditions: [],
+                },
+              },
+            }
+          : {}),
+      },
       candidateAggregates: {},
       pruningRules: {
         ...(options.materializePreviewInPruning === true
@@ -104,15 +130,25 @@ function createDef(
           scopes: ['move'],
           costClass: 'preview',
           weight: literal(1),
-          value: {
-            kind: 'op',
-            op: 'coalesce',
-            args: [
-              refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'projected' }),
-              literal(0),
-            ],
-          },
-          dependencies: emptyDeps,
+          value: options.usePreviewStateFeatureRows === true
+            ? refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'projectedFromStateFeature' })
+            : {
+                kind: 'op',
+                op: 'coalesce',
+                args: [
+                  refExpr({ kind: 'previewSurface', family: 'globalVar', id: 'projected' }),
+                  literal(0),
+                ],
+              },
+          dependencies: options.usePreviewStateFeatureRows === true
+            ? {
+                parameters: [],
+                stateFeatures: ['projected'],
+                candidateFeatures: ['projectedFromStateFeature'],
+                aggregates: [],
+                strategicConditions: [],
+              }
+            : emptyDeps,
         },
       },
       tieBreakers: {
@@ -133,7 +169,7 @@ function createDef(
         },
         plan: {
           stateFeatures: [],
-          candidateFeatures: [],
+          candidateFeatures: options.usePreviewStateFeatureRows === true ? ['projectedFromStateFeature'] : [],
           candidateAggregates: [],
           considerations: ['moveRank', 'projectedScore'],
         },
@@ -181,7 +217,10 @@ function createMoves(ranks: readonly number[]): readonly Move[] {
 function runTopK(
   topK: number,
   moves: readonly Move[],
-  options: { readonly materializePreviewInPruning?: boolean } = {},
+  options: {
+    readonly materializePreviewInPruning?: boolean;
+    readonly usePreviewStateFeatureRows?: boolean;
+  } = {},
 ): {
   readonly result: ReturnType<typeof evaluatePolicyMoveCore>;
   readonly previewedKeys: ReadonlySet<string>;
@@ -305,5 +344,27 @@ describe('policy evaluation top-K preview gate', () => {
     assert.equal(result.metadata.previewGatedCount, 1);
     assert.equal(result.metadata.previewGatedTopFlipDetected, true);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 1);
+  });
+
+  it('materializes preview-state feature rows through the production WASM route', () => {
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(initializePolicyWasmRuntimeSync());
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    try {
+      const moves = createMoves([3]);
+      const { result, previewedKeys } = runTopK(3, moves, { usePreviewStateFeatureRows: true });
+
+      assert.equal(result.kind, 'success');
+      assert.equal(result.move?.params.rank, 3);
+      assert.equal(previewedKeys.size, 0);
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowRouteCount(), 1);
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(), 0);
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 3);
+      assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(), 1);
+      assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
+      assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 1);
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+      policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    }
   });
 });

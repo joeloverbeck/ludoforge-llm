@@ -1,6 +1,7 @@
 # Build output
 dist/
 packages/engine/.dist-lock*/
+target/
 
 # Dependencies
 node_modules/

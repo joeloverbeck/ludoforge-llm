@@ -1,22 +1,11 @@
 import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTable } from './types.js';
 import type { MutableGameState } from './state-draft.js';
+import { fnv1a64 } from './fnv1a64.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
-const MASK_64 = (1n << 64n) - 1n;
-const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
-const FNV_PRIME_64 = 0x100000001b3n;
 type TokenPlacementFeature = Extract<ZobristFeature, { readonly kind: 'tokenPlacement' }>;
 type PerPlayerVarFeature = Extract<ZobristFeature, { readonly kind: 'perPlayerVar' }>;
 type ActionUsageFeature = Extract<ZobristFeature, { readonly kind: 'actionUsage' }>;
-
-const fnv1a64 = (input: string): bigint => {
-  let hash = FNV_OFFSET_BASIS_64;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= BigInt(input.charCodeAt(i));
-    hash = (hash * FNV_PRIME_64) & MASK_64;
-  }
-  return hash;
-};
 
 const encodeVariableDef = (def: GameDef['globalVars'][number]): string =>
   def.type === 'int'
@@ -171,7 +160,12 @@ const canonicalizeHashValue = (value: unknown): string => {
 
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
 const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
+const decisionStackFrameDigestByEncoded = new Map<string, string>();
+let zobristKeyCacheHitCount = 0;
+let zobristKeyCacheMissCount = 0;
+let zobristKeyUncachedCount = 0;
 
 const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
   const cached = decisionStackFrameDigestCache.get(frame);
@@ -179,10 +173,19 @@ const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>
     return cached;
   }
   const encoded = canonicalizeHashValue(frame);
+  const structurallyCached = decisionStackFrameDigestByEncoded.get(encoded);
+  if (structurallyCached !== undefined) {
+    decisionStackFrameDigestCache.set(frame, structurallyCached);
+    return structurallyCached;
+  }
   const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
   const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
   const digest = `${digestA}:${digestB}`;
   decisionStackFrameDigestCache.set(frame, digest);
+  if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
+    decisionStackFrameDigestByEncoded.clear();
+  }
+  decisionStackFrameDigestByEncoded.set(encoded, digest);
   return digest;
 };
 
@@ -232,20 +235,20 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
     case 'tokenPlacement':
     case 'activePlayer':
     case 'currentPhase':
+    case 'globalVar':
+    case 'perPlayerVar':
+    case 'actionUsage':
     case 'markerState':
     case 'globalMarkerState':
     case 'interruptPhaseFrame':
     case 'revealGrant':
+    case 'zoneVar':
+    case 'unavailableAction':
     case 'activeDeciderSeatId':
       return true;
-    case 'globalVar':
-    case 'perPlayerVar':
-    case 'turnCount':
-    case 'actionUsage':
-    case 'lastingEffect':
-    case 'zoneVar':
     case 'decisionStackFrame':
-    case 'unavailableAction':
+    case 'turnCount':
+    case 'lastingEffect':
     case 'nextFrameId':
     case 'nextTurnId':
       return false;
@@ -255,15 +258,35 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
 export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
   const encoded = encodeFeature(feature);
   if (!shouldCacheFeatureKey(feature)) {
+    zobristKeyUncachedCount += 1;
     return fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
   }
   const cached = table.keyCache.get(encoded);
   if (cached !== undefined) {
+    zobristKeyCacheHitCount += 1;
     return cached;
   }
+  zobristKeyCacheMissCount += 1;
   const key = fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
   table.keyCache.set(encoded, key);
   return key;
+};
+
+export const zobristInternals = {
+  getZobristKeyCacheHitCount(): number {
+    return zobristKeyCacheHitCount;
+  },
+  getZobristKeyCacheMissCount(): number {
+    return zobristKeyCacheMissCount;
+  },
+  getZobristKeyUncachedCount(): number {
+    return zobristKeyUncachedCount;
+  },
+  resetZobristKeyCounters(): void {
+    zobristKeyCacheHitCount = 0;
+    zobristKeyCacheMissCount = 0;
+    zobristKeyUncachedCount = 0;
+  },
 };
 
 export const updateHashFeatureChange = (

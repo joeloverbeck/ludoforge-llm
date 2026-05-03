@@ -185,6 +185,67 @@ export function collectFeatureRefsFromCompiledPolicyExpr(
 }
 
 function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: EncodedStateLayout): FeatureRef {
+  if (ref.kind === 'library' && ref.refKind === 'candidateFeature') {
+    return {
+      kind: 'candidateFeature',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'library' && ref.refKind === 'stateFeature') {
+    return {
+      kind: 'stateFeature',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'library' && ref.refKind === 'aggregate') {
+    return {
+      kind: 'candidateAggregate',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'candidateIntrinsic') {
+    const intrinsicCode = ref.intrinsic === 'actionId'
+      ? 0
+      : ref.intrinsic === 'stableMoveKey'
+        ? 1
+        : 2;
+    return {
+      kind: 'candidateIntrinsic',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [intrinsicCode],
+    };
+  }
+
+  if (ref.kind === 'candidateParam') {
+    return {
+      kind: 'candidateParam',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.id)],
+    };
+  }
+
+  if (ref.kind === 'candidateTag') {
+    return {
+      kind: 'candidateTag',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [stableStringCode(ref.tagName)],
+    };
+  }
+
+  if (ref.kind === 'candidateTags') {
+    return {
+      kind: 'candidateTags',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [],
+    };
+  }
+
   if (ref.kind !== 'currentSurface' && ref.kind !== 'previewSurface') {
     return {
       kind: 'dynamicRef',

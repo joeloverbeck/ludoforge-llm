@@ -1,6 +1,6 @@
 # 150FITLWASM-001: Phase 5 WASM architecture and ABI skeleton
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new WASM package/build path plus engine bridge skeleton
@@ -78,6 +78,43 @@ If the skeleton proves a different crate/package layout is required, update `spe
 
 ### Commands
 
-1. `<repo-approved WASM build command decided by this ticket>`.
-2. `<targeted WASM smoke test command decided by this ticket>`.
+1. `pnpm -F @ludoforge/engine-wasm build`.
+2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js`.
 3. `pnpm -F @ludoforge/engine build`.
+
+## Outcome
+
+Implemented the Phase 5 WASM architecture and ABI skeleton.
+
+- Added workspace package `@ludoforge/engine-wasm` at `packages/engine-wasm/`.
+- Added Rust crate `packages/engine-wasm/policy-vm` built with `cargo build --target wasm32-unknown-unknown --release`.
+- Added the Node bridge `packages/engine/src/agents/policy-wasm-runtime.ts` and exported it from the engine agents surface.
+- Added `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts`.
+- Documented the concrete package layout and smoke ABI in `specs/150-fitl-policy-vm-wasm-port.md`.
+
+The initial ABI is a raw little-endian `i32` buffer:
+
+```text
+[magic, version, layout_id, opcode, lhs, rhs]
+```
+
+The smoke opcode performs deterministic signed 32-bit integer addition. The
+WASM side rejects bad magic, bad ABI version, bad layout identity, bad opcode,
+bad input length, null pointers, and signed integer overflow before returning a
+score. The bridge test proves both successful execution and fail-closed layout
+identity rejection.
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine-wasm build` — PASS.
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — PASS.
+
+No FITL-specific Rust, bridge, schema, or rule branch was introduced. The
+policy-bytecode parity port, encoded-state/action batch ABI, same-seam
+performance gate, default flip, and closure-tree deletion remain out of scope
+for later Spec 150 tickets and `149FITLEVNUMVM-016`.
+
+Post-ticket review created `tickets/150FITLWASM-002.md` as the next active
+Spec 150 owner for WASM policy-bytecode execution parity. This ticket remains
+limited to the architecture/package/ABI skeleton.

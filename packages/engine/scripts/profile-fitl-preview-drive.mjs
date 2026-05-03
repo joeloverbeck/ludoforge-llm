@@ -72,7 +72,7 @@ const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 
 
 const [
   { PolicyAgent, initializePolicyWasmRuntimeSync, evaluateProductionPreviewDriveBatchWithWasm },
-  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState },
+  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState, zobristInternals },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
@@ -153,6 +153,7 @@ const buildAgents = () => {
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  zobristInternals.resetZobristKeyCounters();
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   driveExitHistogram.clear();
@@ -197,6 +198,9 @@ const runOnce = () => {
     decisions,
     stopReason,
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    zobristKeyCacheHitCount: zobristInternals.getZobristKeyCacheHitCount(),
+    zobristKeyCacheMissCount: zobristInternals.getZobristKeyCacheMissCount(),
+    zobristKeyUncachedCount: zobristInternals.getZobristKeyUncachedCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
@@ -221,6 +225,9 @@ const runOnce = () => {
 function readCounterSnapshot() {
   return {
     tokenStateIndexBuildCount: tokenStateIndexInternals.getBuildTokenStateIndexCount(),
+    zobristKeyCacheHitCount: zobristInternals.getZobristKeyCacheHitCount(),
+    zobristKeyCacheMissCount: zobristInternals.getZobristKeyCacheMissCount(),
+    zobristKeyUncachedCount: zobristInternals.getZobristKeyUncachedCount(),
     draftTokenStateIndexDeltaCount: tokenStateIndexInternals.getDraftTokenStateIndexDeltaCount(),
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
@@ -250,6 +257,12 @@ function createPerCardRecorder(startedAt) {
       closeReason: reason,
       msPerDecision: decisionCount > 0 ? round4(elapsedMs / decisionCount) : null,
       tokenStateIndexBuildCount: counters.tokenStateIndexBuildCount - currentCounters.tokenStateIndexBuildCount,
+      zobristKeyCacheHitCount:
+        counters.zobristKeyCacheHitCount - currentCounters.zobristKeyCacheHitCount,
+      zobristKeyCacheMissCount:
+        counters.zobristKeyCacheMissCount - currentCounters.zobristKeyCacheMissCount,
+      zobristKeyUncachedCount:
+        counters.zobristKeyUncachedCount - currentCounters.zobristKeyUncachedCount,
       draftTokenStateIndexDeltaCount:
         counters.draftTokenStateIndexDeltaCount - currentCounters.draftTokenStateIndexDeltaCount,
       draftTokenStateIndexAttachCount:
@@ -649,6 +662,9 @@ const summary = {
     msPerTurn: result.turnsCount > 0 ? round4(result.elapsedMs / result.turnsCount) : null,
     msPerDecision: result.decisions > 0 ? round4(result.elapsedMs / result.decisions) : null,
     tokenStateIndexBuildCount: result.tokenStateIndexBuildCount,
+    zobristKeyCacheHitCount: result.zobristKeyCacheHitCount,
+    zobristKeyCacheMissCount: result.zobristKeyCacheMissCount,
+    zobristKeyUncachedCount: result.zobristKeyUncachedCount,
     draftTokenStateIndexDeltaCount: result.draftTokenStateIndexDeltaCount,
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
     draftTokenStateIndexSnapshotCount: result.draftTokenStateIndexSnapshotCount,
@@ -674,6 +690,9 @@ process.stderr.write(
   `stopReason=${summary.result.stopReason} msPerTurn=${summary.result.msPerTurn} ` +
   `verifyIncrementalHash=${summary.config.verifyIncrementalHash} ` +
   `tokenStateIndexBuildCount=${summary.result.tokenStateIndexBuildCount} ` +
+  `zobristKeyCacheHitCount=${summary.result.zobristKeyCacheHitCount} ` +
+  `zobristKeyCacheMissCount=${summary.result.zobristKeyCacheMissCount} ` +
+  `zobristKeyUncachedCount=${summary.result.zobristKeyUncachedCount} ` +
   `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
   `draftTokenStateIndexSnapshotCount=${summary.result.draftTokenStateIndexSnapshotCount} ` +
   `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
@@ -697,6 +716,9 @@ for (const row of summary.result.perCardRows ?? []) {
     `[profile-fitl-preview-drive] per-card turnCount=${row.turnCount} elapsedMs=${row.elapsedMs} ` +
     `decisions=${row.decisions} driveExitTotal=${row.driveExitTotal} ` +
     `tokenStateIndexBuildCount=${row.tokenStateIndexBuildCount} ` +
+    `zobristKeyCacheHitCount=${row.zobristKeyCacheHitCount} ` +
+    `zobristKeyCacheMissCount=${row.zobristKeyCacheMissCount} ` +
+    `zobristKeyUncachedCount=${row.zobristKeyUncachedCount} ` +
     `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
     `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
     `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +

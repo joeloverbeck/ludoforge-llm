@@ -148,8 +148,10 @@ preview-drive row activation, but the same-seam gate remained red at
 `150FITLWASM-015` delivered a route-local literal fast path and active
 preview-drive batch counter, reducing score-row bytecode compiles from `47` to
 `35`, but the same-seam gate remained red at `3958.91 ms`. Ticket
-`150FITLWASM-016` is the residual active-route kernel/hash/query/application
-cost successor.
+`150FITLWASM-016` delivered a generic bounded-feature Zobrist key cache and
+hash-counter profiling surface, but the same-seam gate remained red at
+`4018.94 ms`. Ticket `150FITLWASM-017` is the residual active-route
+query/eval/preview-drive expression and hash/table successor.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -200,4 +202,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-014.md`](../archive/tickets/150FITLWASM-014.md) — Implemented generic production preview-drive substrate prerequisite.
 - [`archive/tickets/150FITLWASM-010.md`](../archive/tickets/150FITLWASM-010.md) — Completed preview-drive production routing and fail-closed-clean active route.
 - [`archive/tickets/150FITLWASM-015.md`](../archive/tickets/150FITLWASM-015.md) — Completed route-local literal fast path with red measured gate successor.
-- [`tickets/150FITLWASM-016.md`](../tickets/150FITLWASM-016.md) — Residual active-route kernel/hash/query/application cost closure.
+- [`archive/tickets/150FITLWASM-016.md`](../archive/tickets/150FITLWASM-016.md) — Completed residual active-route hash-cache slice with red measured gate successor.
+- [`tickets/150FITLWASM-017.md`](../tickets/150FITLWASM-017.md) — Residual active-route query/eval and hash/table closure.

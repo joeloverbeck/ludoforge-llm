@@ -11,6 +11,7 @@ import {
   createZobristTable,
   type GameDef,
   zobristKey,
+  zobristInternals,
 } from '../../src/kernel/index.js';
 
 const createBaseGameDef = (): GameDef =>
@@ -223,6 +224,25 @@ describe('zobrist table canonicalization and feature keying', () => {
     const second = zobristKey(table, feature);
 
     assert.equal(first, second);
+  });
+
+  it('memoises repeated bounded runtime feature keys on the table cache', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const feature = {
+      kind: 'globalVar',
+      varName: 'energy',
+      value: 3,
+    } as const;
+    zobristInternals.resetZobristKeyCounters();
+
+    const first = zobristKey(table, feature);
+    const sizeAfterFirst = table.keyCache.size;
+    const second = zobristKey(table, feature);
+
+    assert.equal(first, second);
+    assert.equal(table.keyCache.size, sizeAfterFirst);
+    assert.equal(zobristInternals.getZobristKeyCacheMissCount(), 1);
+    assert.equal(zobristInternals.getZobristKeyCacheHitCount(), 1);
   });
 
   it('kind-labeled feature encoding separates similarly-shaped values', () => {

@@ -116,11 +116,14 @@ same-seam preflight remained red at `6539.22 ms` per card because the production
 policy-driving path still does not route supported score batches through WASM.
 Ticket `150FITLWASM-007` delivered production score-row WASM integration and
 proved the score-row route active in the same-seam performance gate, but the gate
-remained red because TypeScript preview row materialization still dominates the
+remained red because TypeScript preview row materialization still dominated the
 production path. Ticket `150FITLWASM-008` removed repeated score-row bytecode
 materialization/compilation from the production WASM handoff and proved the gate
-still red at `6593.68 ms` per card. Ticket `150FITLWASM-009` now owns the next
-non-overlapping preview-state surface row materialization ABI.
+still red at `6593.68 ms` per card. Ticket `150FITLWASM-009` delivered generic
+preview-state/surface candidate-feature row materialization through the
+production WASM route and proved the gate still red at `6632.26 ms` per card.
+Ticket `150FITLWASM-010` now owns the next non-overlapping preview-drive
+application/runtime handoff.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -164,4 +167,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-006.md`](../archive/tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight.
 - [`archive/tickets/150FITLWASM-007.md`](../archive/tickets/150FITLWASM-007.md) — Production WASM score-row integration and perf gate closure.
 - [`archive/tickets/150FITLWASM-008.md`](../archive/tickets/150FITLWASM-008.md) — Production preview row materialization WASM handoff.
-- [`tickets/150FITLWASM-009.md`](../tickets/150FITLWASM-009.md) — Preview-state surface row materialization WASM ABI.
+- [`archive/tickets/150FITLWASM-009.md`](../archive/tickets/150FITLWASM-009.md) — Preview-state surface row materialization WASM ABI.
+- [`tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Preview-drive application WASM/runtime handoff.

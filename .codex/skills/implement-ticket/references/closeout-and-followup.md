@@ -145,6 +145,8 @@ When the owned slice appears landed but truthful closeout requires a new success
 5. update the active ticket's touched-file/proof ledger to include the handoff artifacts
 6. only then run the final acceptance-proof set; earlier green lanes become diagnostics if the handoff changed follow-up/dependency classification, touched-file ownership, or acceptance wording
 
+Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:

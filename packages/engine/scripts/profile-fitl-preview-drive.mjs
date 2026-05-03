@@ -191,6 +191,8 @@ const runOnce = () => {
     wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
     wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
+    wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
@@ -207,6 +209,8 @@ function readCounterSnapshot() {
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
+    wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
+    wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
     driveExitTotal,
   };
 }
@@ -238,6 +242,10 @@ function createPerCardRecorder(startedAt) {
         counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
       wasmScoreRowBytecodeCompileCount:
         counters.wasmScoreRowBytecodeCompileCount - currentCounters.wasmScoreRowBytecodeCompileCount,
+      wasmPreviewCandidateFeatureRowRouteCount:
+        counters.wasmPreviewCandidateFeatureRowRouteCount - currentCounters.wasmPreviewCandidateFeatureRowRouteCount,
+      wasmPreviewCandidateFeatureRowUnsupportedCount:
+        counters.wasmPreviewCandidateFeatureRowUnsupportedCount - currentCounters.wasmPreviewCandidateFeatureRowUnsupportedCount,
       driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
     });
     decisionCount = 0;
@@ -376,6 +384,8 @@ const summary = {
     wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
     wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
     wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
+    wasmPreviewCandidateFeatureRowRouteCount: result.wasmPreviewCandidateFeatureRowRouteCount,
+    wasmPreviewCandidateFeatureRowUnsupportedCount: result.wasmPreviewCandidateFeatureRowUnsupportedCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
@@ -396,6 +406,8 @@ process.stderr.write(
   `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
   `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
   `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
+  `wasmPreviewCandidateFeatureRowRouteCount=${summary.result.wasmPreviewCandidateFeatureRowRouteCount} ` +
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=${summary.result.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
@@ -414,6 +426,8 @@ for (const row of summary.result.perCardRows ?? []) {
     `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
     `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +
     `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
+    `wasmPreviewCandidateFeatureRowRouteCount=${row.wasmPreviewCandidateFeatureRowRouteCount} ` +
+    `wasmPreviewCandidateFeatureRowUnsupportedCount=${row.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
     `closeReason=${row.closeReason}\n`,
   );
 }

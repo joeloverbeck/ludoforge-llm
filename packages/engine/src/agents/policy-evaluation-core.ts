@@ -326,6 +326,24 @@ export class PolicyEvaluationContext {
     return value;
   }
 
+  setCandidateFeatureValue(candidate: PolicyEvaluationCandidate, featureId: string, value: PolicyValue): void {
+    let candidateCache = this.candidateFeatureCache.get(candidate.stableMoveKey);
+    if (candidateCache === undefined) {
+      candidateCache = new Map<string, PolicyValue>();
+      this.candidateFeatureCache.set(candidate.stableMoveKey, candidateCache);
+    }
+    candidateCache.set(featureId, value);
+    this.aggregateCache.clear();
+  }
+
+  evaluatePreviewSurfaceRef(candidate: PolicyEvaluationCandidate, ref: CompiledSurfaceRef): PolicyValue {
+    return this.resolveSurfaceRef(ref, candidate);
+  }
+
+  evaluatePreviewStateFeatureRef(candidate: PolicyEvaluationCandidate, featureId: string): PolicyValue {
+    return this.resolvePreviewStateFeatureRef(featureId, candidate);
+  }
+
   hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
     return this.runtimeProviders.previewSurface.hasPreviewData(candidate);
   }

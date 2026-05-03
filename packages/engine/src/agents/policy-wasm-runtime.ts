@@ -14,7 +14,7 @@ import {
 } from './policy-wasm-score-bytecode-cache.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 4;
+export const POLICY_WASM_ABI_VERSION = 5;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -43,6 +43,8 @@ const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   candidateFeature: 12,
   candidateAggregate: 13,
   stateFeature: 14,
+  dynamicSurface: 15,
+  dynamicRef: 16,
 };
 
 interface PolicyWasmExports {
@@ -115,6 +117,11 @@ export interface PolicyWasmPrecomputedPreviewCandidateFeature {
   readonly values: readonly PolicyValue[];
 }
 
+export interface PolicyWasmPrecomputedDynamicCandidateFeature {
+  readonly code: number;
+  readonly values: readonly PolicyValue[];
+}
+
 export interface PolicyWasmPrecomputedAggregate {
   readonly id: string;
   readonly value: PolicyValue;
@@ -152,6 +159,7 @@ export interface PolicyWasmRuntime {
       readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
       readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
       readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
+      readonly dynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
       readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
     },
   ): readonly PolicyValue[];
@@ -160,11 +168,14 @@ export interface PolicyWasmRuntime {
 let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
 let productionScoreRowRouteCount = 0;
 let productionScoreRowUnsupportedCount = 0;
+let productionPreviewCandidateFeatureRowRouteCount = 0;
+let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
 
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
   readonly candidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
   readonly previewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
+  readonly dynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
   readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
 };
 
@@ -372,8 +383,9 @@ const encodeBatchInput = (
   const stateFeatures = precomputed.stateFeatures ?? [];
   const candidateFeatures = precomputed.candidateFeatures ?? [];
   const previewCandidateFeatures = precomputed.previewCandidateFeatures ?? [];
+  const dynamicCandidateFeatures = precomputed.dynamicCandidateFeatures ?? [];
   const aggregates = precomputed.aggregates ?? [];
-  words.push(stateFeatures.length, candidateFeatures.length, previewCandidateFeatures.length, aggregates.length);
+  words.push(stateFeatures.length, candidateFeatures.length, previewCandidateFeatures.length, dynamicCandidateFeatures.length, aggregates.length);
   for (const feature of stateFeatures) {
     const [tag, raw] = encodePolicyValue(feature.value);
     words.push(stableStringCode(feature.id), tag, raw);
@@ -399,6 +411,16 @@ const encodeBatchInput = (
     for (const [index, value] of feature.values.entries()) {
       const [tag, raw] = encodePolicyValue(value);
       words.push(encodePreviewOutcome(feature.outcomes[index]), tag, raw);
+    }
+  }
+  for (const feature of dynamicCandidateFeatures) {
+    if (feature.values.length !== candidates.length) {
+      throw new Error(`Policy WASM dynamic candidate feature ${feature.code} row count must match candidate count.`);
+    }
+    words.push(feature.code, feature.values.length);
+    for (const value of feature.values) {
+      const [tag, raw] = encodePolicyValue(value);
+      words.push(tag, raw);
     }
   }
   for (const aggregate of aggregates) {
@@ -508,6 +530,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     readonly precomputedStateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
     readonly precomputedCandidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
     readonly precomputedPreviewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
+    readonly precomputedDynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
     readonly precomputedAggregates?: readonly PolicyWasmPrecomputedAggregate[];
   },
 ): PolicyWasmScoreRowsResult => {
@@ -516,6 +539,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
     ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
     ...(input.precomputedPreviewCandidateFeatures === undefined ? {} : { previewCandidateFeatures: input.precomputedPreviewCandidateFeatures }),
+    ...(input.precomputedDynamicCandidateFeatures === undefined ? {} : { dynamicCandidateFeatures: input.precomputedDynamicCandidateFeatures }),
     ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
   };
   const previewCandidateFeatureIds = new Set((input.precomputedPreviewCandidateFeatures ?? []).map((feature) => feature.id));
@@ -598,6 +622,36 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     })),
   };
 };
+
+export const evaluateWasmCandidateFeatureRow = (
+  runtime: PolicyWasmRuntime,
+  input: {
+    readonly def: GameDef;
+    readonly encoded: EncodedState;
+    readonly context: PolicyWasmBytecodeContext;
+    readonly expr: CompiledPolicyExpr;
+    readonly parameterValues?: Readonly<Record<string, AgentParameterValue>>;
+    readonly candidates: readonly PolicyWasmBatchCandidate[];
+    readonly precomputedStateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
+    readonly precomputedCandidateFeatures?: readonly PolicyWasmPrecomputedCandidateFeature[];
+    readonly precomputedPreviewCandidateFeatures?: readonly PolicyWasmPrecomputedPreviewCandidateFeature[];
+    readonly precomputedDynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
+    readonly precomputedAggregates?: readonly PolicyWasmPrecomputedAggregate[];
+  },
+): readonly PolicyValue[] | null => supportedBatchValues(
+  runtime,
+  getCachedScoreRowBytecode(input.expr, input.parameterValues, input.def, input.context.layout),
+  input.encoded,
+  input.context,
+  input.candidates,
+  {
+    ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
+    ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
+    ...(input.precomputedPreviewCandidateFeatures === undefined ? {} : { previewCandidateFeatures: input.precomputedPreviewCandidateFeatures }),
+    ...(input.precomputedDynamicCandidateFeatures === undefined ? {} : { dynamicCandidateFeatures: input.precomputedDynamicCandidateFeatures }),
+    ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
+  },
+);
 
 const createPolicyWasmRuntime = (
   instance: WebAssembly.Instance,
@@ -733,6 +787,14 @@ export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsuppo
   }
 };
 
+export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'supported' | 'unsupported'): void => {
+  if (kind === 'supported') {
+    productionPreviewCandidateFeatureRowRouteCount += 1;
+  } else {
+    productionPreviewCandidateFeatureRowUnsupportedCount += 1;
+  }
+};
+
 export const __internal_for_tests = {
   setInitializedPolicyWasmRuntime(runtime: PolicyWasmRuntime | null): void {
     productionPolicyWasmRuntime = runtime;
@@ -746,9 +808,17 @@ export const __internal_for_tests = {
   getProductionScoreRowBytecodeCompileCount(): number {
     return getScoreRowBytecodeCompileCount();
   },
+  getProductionPreviewCandidateFeatureRowRouteCount(): number {
+    return productionPreviewCandidateFeatureRowRouteCount;
+  },
+  getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
+    return productionPreviewCandidateFeatureRowUnsupportedCount;
+  },
   resetProductionScoreRowCounters(): void {
     productionScoreRowRouteCount = 0;
     productionScoreRowUnsupportedCount = 0;
+    productionPreviewCandidateFeatureRowRouteCount = 0;
+    productionPreviewCandidateFeatureRowUnsupportedCount = 0;
     resetScoreRowBytecodeCompileCount();
   },
 };

@@ -5,9 +5,11 @@ import { describe, it } from 'node:test';
 import {
   POLICY_WASM_SMOKE_LAYOUT_ID,
   __internal_for_tests as policyWasmRuntimeInternals,
+  evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
   loadPolicyWasmRuntime,
 } from '../../../src/agents/policy-wasm-runtime.js';
+import { stablePayloadCode } from '../../../src/cnl/policy-bytecode/feature-table.js';
 import {
   Opcode,
   type FeatureTable,
@@ -407,6 +409,39 @@ describe('policy WASM runtime bridge', () => {
         { stableMoveKey: 'pass:{}', score: 8 },
       ],
     });
+  });
+
+  it('uses dynamic preview-state rows when evaluating candidate features in WASM', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const ref = { kind: 'library' as const, refKind: 'previewStateFeature' as const, id: 'projected' };
+    const values = evaluateWasmCandidateFeatureRow(runtime, {
+      def: makeDef(),
+      encoded: makeEncoded(),
+      context: {
+        def: makeDef(),
+        layout: makeLayout(),
+        state: { activePlayer: 1 } as unknown as GameState,
+        playerId: 0,
+      },
+      expr: {
+        kind: 'op',
+        op: 'coalesce',
+        args: [
+          { kind: 'ref', ref },
+          { kind: 'literal', value: 0 },
+        ],
+      },
+      candidates: [
+        { actionId: 'move', stableMoveKey: 'move:{"x":1}' },
+        { actionId: 'pass', stableMoveKey: 'pass:{}' },
+      ],
+      precomputedDynamicCandidateFeatures: [{
+        code: stablePayloadCode(ref),
+        values: [9, undefined],
+      }],
+    });
+
+    assert.deepEqual(values, [9, 0]);
   });
 
   it('fails closed when preview-backed rows are not materialized', async () => {

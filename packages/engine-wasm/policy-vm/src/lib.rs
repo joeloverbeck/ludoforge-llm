@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 4;
+const ABI_VERSION: i32 = 5;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;
@@ -72,6 +72,8 @@ const FEATURE_CANDIDATE_TAGS: i32 = 11;
 const FEATURE_CANDIDATE_FEATURE: i32 = 12;
 const FEATURE_CANDIDATE_AGGREGATE: i32 = 13;
 const FEATURE_STATE_FEATURE: i32 = 14;
+const FEATURE_DYNAMIC_SURFACE: i32 = 15;
+const FEATURE_DYNAMIC_REF: i32 = 16;
 
 const SURFACE_SCOPE_CURRENT: i32 = 0;
 const SELECTOR_NONE: i32 = 0;
@@ -357,6 +359,7 @@ struct BatchPrecomputed {
     state_features: Vec<CandidateParam>,
     candidate_features: Vec<PrecomputedCandidateFeature>,
     preview_candidate_features: Vec<PrecomputedPreviewCandidateFeature>,
+    dynamic_candidate_features: Vec<PrecomputedCandidateFeature>,
     aggregates: Vec<CandidateParam>,
 }
 
@@ -887,6 +890,34 @@ fn resolve_feature(
                 .map(|row| row.value)
                 .unwrap_or(Value::Undefined))
         }
+        FEATURE_DYNAMIC_SURFACE => {
+            let Some(candidate_index) = candidate_index else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            let Some(precomputed) = precomputed else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(precomputed
+                .dynamic_candidate_features
+                .iter()
+                .find(|row| row.code == feature.aux[1])
+                .and_then(|row| row.values.get(candidate_index).copied())
+                .unwrap_or(Value::Undefined))
+        }
+        FEATURE_DYNAMIC_REF => {
+            let Some(candidate_index) = candidate_index else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            let Some(precomputed) = precomputed else {
+                return Err(STATUS_UNSUPPORTED);
+            };
+            Ok(precomputed
+                .dynamic_candidate_features
+                .iter()
+                .find(|row| row.code == feature.aux[0])
+                .and_then(|row| row.values.get(candidate_index).copied())
+                .unwrap_or(Value::Undefined))
+        }
         FEATURE_CANDIDATE_TAGS => Err(STATUS_UNSUPPORTED),
         _ => Err(STATUS_UNSUPPORTED),
     }
@@ -1125,6 +1156,7 @@ fn evaluate_bytecode_batch(
     let state_feature_count = as_usize(cursor.read()?)?;
     let candidate_feature_count = as_usize(cursor.read()?)?;
     let preview_candidate_feature_count = as_usize(cursor.read()?)?;
+    let dynamic_candidate_feature_count = as_usize(cursor.read()?)?;
     let aggregate_count = as_usize(cursor.read()?)?;
     let mut state_features = Vec::with_capacity(state_feature_count);
     for _ in 0..state_feature_count {
@@ -1198,6 +1230,28 @@ fn evaluate_bytecode_batch(
             values,
         });
     }
+    let mut dynamic_candidate_features = Vec::with_capacity(dynamic_candidate_feature_count);
+    for _ in 0..dynamic_candidate_feature_count {
+        let code = cursor.read()?;
+        let row_count = as_usize(cursor.read()?)?;
+        if row_count != candidate_count {
+            return Err(STATUS_BAD_LENGTH);
+        }
+        let mut values = Vec::with_capacity(row_count);
+        for _ in 0..row_count {
+            let tag = cursor.read()?;
+            let raw = cursor.read()?;
+            let value = match tag {
+                VALUE_NUMBER => Value::Number(raw),
+                VALUE_FALSE => Value::Bool(false),
+                VALUE_TRUE => Value::Bool(true),
+                VALUE_UNDEFINED => Value::Undefined,
+                _ => return Err(STATUS_BAD_FEATURE),
+            };
+            values.push(value);
+        }
+        dynamic_candidate_features.push(PrecomputedCandidateFeature { code, values });
+    }
     let mut aggregates = Vec::with_capacity(aggregate_count);
     for _ in 0..aggregate_count {
         let code = cursor.read()?;
@@ -1221,6 +1275,7 @@ fn evaluate_bytecode_batch(
         state_features,
         candidate_features,
         preview_candidate_features,
+        dynamic_candidate_features,
         aggregates,
     };
 

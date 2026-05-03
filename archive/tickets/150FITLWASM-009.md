@@ -1,6 +1,6 @@
 # 150FITLWASM-009: Preview-state surface row materialization WASM ABI
 
-**Status**: PENDING
+**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-010.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-state row materialization, WASM/buffer ABI, perf gate
@@ -128,3 +128,67 @@ red, record exact metrics and create the next non-overlapping owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. Focused production preview-state materialization handoff test command.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-state-surface-materialization`.
+
+## Outcome
+
+Completed on 2026-05-03 with the same-seam perf gate still red and successor
+owner `tickets/150FITLWASM-010.md` created for the remaining preview-drive
+application/runtime handoff.
+
+Implemented a generic dynamic preview row handoff in the WASM batch ABI. The
+TypeScript production route now materializes supported preview-state and
+preview-surface scalar rows as deterministic dynamic candidate-feature buffers,
+then evaluates the preview candidate-feature expressions through WASM before
+passing the resulting preview rows into the existing WASM score-row route.
+Unsupported preview candidate-feature expressions fail closed before scoring.
+
+The route remains generic: the ABI carries layout/version identity,
+candidate-ordered scalar row buffers, preview outcome tags, and dynamic ref
+codes derived from compiled policy refs. It does not introduce FITL-specific ids,
+schemas, or score shortcuts, and legal action publication / preview application
+remain TypeScript-owned as this ticket allowed.
+
+The profile harness now reports preview candidate-feature row counters. The
+final same-seam profile proved the active route is supported:
+
+- `wasmScoreRowRouteCount=65`
+- `wasmScoreRowUnsupportedCount=0`
+- `wasmScoreRowBytecodeCompileCount=47`
+- `wasmPreviewCandidateFeatureRowRouteCount=77`
+- `wasmPreviewCandidateFeatureRowUnsupportedCount=0`
+
+The measured gate remains red:
+
+- Command: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-state-surface-materialization`
+- Verdict: RED for the `<=250 ms` gate.
+- Overall `elapsedMs=6632.48`.
+- Per-card row: `turnCount=0`, `elapsedMs=6632.26`, `decisions=159`,
+  `msPerDecision=41.7123`, `closeReason=turnCountAdvanced`.
+- Profile buckets: `simAgentChooseMove=3937.38 ms`,
+  `agent:evaluatePolicyExpression=3935.23 ms`, `simApplyMove=866.3 ms`.
+- Token/index counters: `tokenStateIndexBuildCount=2377`,
+  `draftTokenStateIndexDeltaCount=198`,
+  `draftTokenStateIndexAttachCount=834`,
+  `draftTokenStateIndexSnapshotCount=315`,
+  `draftTokenStateIndexCowCopyCount=120`.
+
+Residual ownership classification: this ticket proved preview-state/surface row
+materialization is active and fail-closed, but it is not enough to close the
+gate. The remaining non-overlapping owner is generic preview-drive application
+runtime work before row materialization: production still applies preview moves
+and drives bounded completions through the TypeScript kernel/runtime.
+
+File-size note: several touched authority files are already broad shared
+surfaces (`policy-evaluation-core.ts`, `policy-wasm-runtime.ts`, and Rust
+`lib.rs`). Further extraction of ABI encoder/parser helpers would be a
+nontrivial shared-structure refactor, so this ticket keeps the implementation
+local and leaves additional decomposition to the next ABI/runtime owner if it
+continues expanding these files.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 15 tests.
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-evaluation-topk-gate.test.js` — passed, 6 tests.
+5. `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` — passed.

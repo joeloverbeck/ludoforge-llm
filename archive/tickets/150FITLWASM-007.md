@@ -1,6 +1,6 @@
 # 150FITLWASM-007: Production WASM score-row integration and perf gate closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — production policy evaluation WASM score-row routing, runtime initialization/lifetime, perf gate closure
@@ -80,10 +80,12 @@ non-overlapping owner.
 
 - `packages/engine/src/agents/policy-eval.ts` or nearby production evaluation orchestration (modify)
 - `packages/engine/src/agents/policy-evaluation-core.ts` or nearby row materialization helpers (modify)
+- `packages/engine/src/agents/policy-wasm-score-routing.ts` (new production score-row routing helper)
 - `packages/engine/src/agents/policy-wasm-runtime.ts` (modify if production routing needs a narrow API)
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or nearby production-routing witness (modify)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` or nearby unit witness (modify if API changes)
-- `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` (modify if the gate unblocks or moves)
+- `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` (modify because the gate moved)
+- `tickets/150FITLWASM-008.md` (new residual owner after the active route stayed red)
 - this ticket (modify Outcome before archival)
 
 ## Out of Scope
@@ -121,3 +123,46 @@ non-overlapping owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. Focused production routing test command.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-production-score-routing`.
+
+## Outcome
+
+Completed on 2026-05-03. Implemented explicit production WASM score-row routing
+for preloaded policy WASM runtimes. The bridge now has a synchronous
+initialization path for the policy evaluation hot path, and the profile harness
+preloads the WASM runtime before running the FITL preview drive. Production
+policy evaluation now batches full move-consideration score rows through the
+preloaded WASM runtime when encoded state is available.
+
+The route fails closed when the preloaded WASM runtime rejects a batch. The
+diagnostic records route, profile, seat, candidate count, consideration count,
+and unsupported row class, and it does not merge TypeScript fallback scores into
+the WASM score result. Focused unit coverage proves both active routing and the
+fail-closed diagnostic path.
+
+Touched-file correction: production routing logic lives in new helper
+`packages/engine/src/agents/policy-wasm-score-routing.ts` so the already
+oversized `policy-eval.ts` only owns orchestration wiring.
+
+The same-seam perf gate remains red even with production score-row routing
+verified active, so `149FITLEVNUMVM-016` remains blocked. Created successor
+`tickets/150FITLWASM-008.md` for the next non-overlapping owner: production
+preview row materialization and preview-drive runtime handoff before score-row
+WASM evaluation.
+
+Final measured gate:
+
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-production-score-routing` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=7131.57`.
+- Per-card row: `turnCount=0`, `elapsedMs=7131.37`, `decisions=159`, `msPerDecision=44.8514`, `closeReason=turnCountAdvanced`.
+- WASM route counters: `wasmScoreRowRouteCount=65`, `wasmScoreRowUnsupportedCount=0`.
+- Profile buckets: `simAgentChooseMove=4292.1 ms`, `agent:evaluatePolicyExpression=4289.64 ms`, `simApplyMove=899.29 ms`.
+- Token/index counters: `tokenStateIndexBuildCount=2377`, `draftTokenStateIndexDeltaCount=198`, `draftTokenStateIndexAttachCount=834`, `draftTokenStateIndexSnapshotCount=315`, `draftTokenStateIndexCowCopyCount=120`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-runtime-encoded.test.js` — passed, 3 tests.
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed, 5 passing tests and 1 existing skipped Phase 4 VM-default test.
+5. `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` — passed.
+6. `pnpm run check:ticket-deps` — passed for the 150FITLWASM-008 handoff and dependent-ticket rewrites.

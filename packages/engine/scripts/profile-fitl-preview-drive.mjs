@@ -70,12 +70,13 @@ const config = {
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const [
-  { PolicyAgent },
+  { PolicyAgent, initializePolicyWasmRuntimeSync },
   { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler },
   { runGame },
   { getFitlProductionFixture },
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
+  { __internal_for_tests: policyWasmRuntimeInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
@@ -83,7 +84,10 @@ const [
   import(join(DIST_ROOT, 'test', 'helpers', 'production-spec-helpers.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-preview.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
 ]);
+
+initializePolicyWasmRuntimeSync();
 
 const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
 const runtime = createGameDefRuntime(def);
@@ -142,6 +146,7 @@ const buildAgents = () => {
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   driveExitHistogram.clear();
   driveExitTotal = 0;
   policyPreviewInternals.setDriveExitSink(recordDriveExit);
@@ -183,6 +188,8 @@ const runOnce = () => {
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
+    wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
@@ -362,6 +369,8 @@ const summary = {
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
     draftTokenStateIndexSnapshotCount: result.draftTokenStateIndexSnapshotCount,
     draftTokenStateIndexCowCopyCount: result.draftTokenStateIndexCowCopyCount,
+    wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
+    wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
@@ -379,6 +388,8 @@ process.stderr.write(
   `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
   `draftTokenStateIndexSnapshotCount=${summary.result.draftTokenStateIndexSnapshotCount} ` +
   `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
+  `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
+  `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {

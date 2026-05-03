@@ -114,8 +114,11 @@ Ticket `150FITLWASM-006` delivered preview-materialized candidate-feature rows
 and full-profile score-row parity, including preview-backed considerations. The
 same-seam preflight remained red at `6539.22 ms` per card because the production
 policy-driving path still does not route supported score batches through WASM.
-Ticket `150FITLWASM-007` owns production score-row WASM integration and the next
-same-seam performance gate closure.
+Ticket `150FITLWASM-007` delivered production score-row WASM integration and
+proved the score-row route active in the same-seam performance gate, but the gate
+remained red because TypeScript preview row materialization still dominates the
+production path. Ticket `150FITLWASM-008` owns that next non-overlapping preview
+row materialization handoff.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -157,4 +160,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-004.md`](../archive/tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
 - [`archive/tickets/150FITLWASM-005.md`](../archive/tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split.
 - [`archive/tickets/150FITLWASM-006.md`](../archive/tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight.
-- [`tickets/150FITLWASM-007.md`](../tickets/150FITLWASM-007.md) — Production WASM score-row integration and perf gate closure.
+- [`archive/tickets/150FITLWASM-007.md`](../archive/tickets/150FITLWASM-007.md) — Production WASM score-row integration and perf gate closure.
+- [`tickets/150FITLWASM-008.md`](../tickets/150FITLWASM-008.md) — Production preview row materialization WASM handoff.

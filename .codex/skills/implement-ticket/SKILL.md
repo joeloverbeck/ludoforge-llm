@@ -75,10 +75,11 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
    - If a final proof consumes `dist/` or another generated tree, schedule build-producing broad lanes before that final consumer proof when practical. If a later accepted lane rebuilds or cleans that tree, rerun the narrowest affected generated-output consumer proof before citing it as final.
 7. any previously failed ticket-named broad lane has already been classified in the active ticket as `owned failure`, `same-series residual / dependency blocker`, or `repo-preexisting unrelated blocker`; do not use `COMPLETED` while a changed-path or architectural-invariant failure is still unclassified or still active-ticket-owned
 8. if the active ticket already has a terminal status and any later code/test/spec edit or ticket-named red/stalled/unclassified lane occurs, the status has been reconciled first: downgrade to pending/partial/blocked, or record the already-approved acceptance exception before continuing final proof
-9. the final touched-file sweep uses `git status --short` or an equivalent untracked-aware check, not only `git diff` / `git diff --stat`, so newly added ticket deliverables cannot disappear from the closeout view
+9. substantial logic added to an existing source file has a cheap file-size check before final proof (`wc -l` or equivalent), especially when the file may already be near or over repo guidance. If the touched file is preexisting oversize plus active growth, extract the new helper when clearly in scope, stop for `1-3-1` if extraction would be nontrivial or widen the ticket, or record a justified deferral before closeout.
+10. the final touched-file sweep uses `git status --short` or an equivalent untracked-aware check, not only `git diff` / `git diff --stat`, so newly added ticket deliverables cannot disappear from the closeout view
    - When the ticket adds files, do not summarize the touched-file surface from `git diff --stat` alone; pair it with `git status --short` or explicitly list the untracked paths so new tests, fixtures, reports, or generated artifacts are visible in the closeout.
-10. if any ticket dependency, successor ticket, sibling ticket, archived-reference path, or other ticket-graph edge changed, the repo's dependency-integrity check has already run and been recorded, or the active ticket explicitly records why no such check exists or applies
-11. if final proof requires a new or updated successor/follow-up ticket, dependent-ticket rewrite, spec ticket-list update, or similar ownership handoff, those artifacts already exist and dependency integrity has run before the first proof lane you intend to cite as final
+11. if any ticket dependency, successor ticket, sibling ticket, archived-reference path, or other ticket-graph edge changed, the repo's dependency-integrity check has already run and been recorded, or the active ticket explicitly records why no such check exists or applies
+12. if final proof requires a new or updated successor/follow-up ticket, dependent-ticket rewrite, spec ticket-list update, or similar ownership handoff, those artifacts already exist and dependency integrity has run before the first proof lane you intend to cite as final
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 
@@ -100,14 +101,17 @@ When a profiling ticket needs a **new counter or diagnostic field** to expose th
 
 When a code migration lands but an **explicit benchmark/performance gate remains red**, do not mark the ticket `COMPLETED` merely because the implementation and ordinary tests are green. Record the measured samples, threshold comparison, and variance. If satisfying or relaxing the gate would change an explicit ticket deliverable, stop for `1-3-1` before creating follow-up tickets, rewriting spec/ticket ownership, or narrowing the acceptance claim. After user confirmation, create or update the follow-up owner required by the ticket/spec, update the active ticket/spec to a truthful blocked or partial state, and run dependency integrity after the ticket graph changes.
 
+Exception: if the active ticket itself explicitly defines "red measured result + active route proof + successor/follow-up owner" as the acceptance-complete outcome, that ticket-specific contract can close as `COMPLETED` only after the ticket records the exact red metrics, active route or implementation proof, successor owner, dependency/status rewrites, and dependency-integrity result. Do not infer this exception from ordinary red-gate language. If the ticket merely asks to "close the gate", "make it green", or otherwise lacks an explicit red-plus-successor completion contract, use `BLOCKED`, `PARTIAL`, or the repo-equivalent landed-but-red state instead.
+
 Red measured-gate closeout checklist after correctness lands:
 
 1. Record exact command, metric(s), threshold, and verdict in the active ticket/report.
-2. Compare the result to any spec stop conditions, phase gates, or re-spec triggers before proposing more optimization.
-3. If satisfying or relaxing the gate changes status, scope, dependency story, or phase plan, stop for `1-3-1` unless already authorized.
-4. After confirmation, set a truthful durable state (`PARTIAL`, `BLOCKED`, etc.), create/update the follow-up owner, and update dependent tickets/spec ticket lists.
-5. Run dependency integrity when ticket graph changes.
-6. Rerun the narrowest affected proof or record why the edit is metric transcription only, then continue final proof choreography.
+2. If the final result is materially worse than historical evidence or an earlier same-seam sample, run the cheapest same-checkout A/B comparison that preserves the owned seam before writing causal language. Examples: route enabled vs disabled, old helper vs new helper, current branch vs temp baseline, or another direct comparison. If that comparison is disproportionate or deferred, classify the residual as `current active-route red evidence` or `owned/unclassified residual`, not as proven causality.
+3. Compare the result to any spec stop conditions, phase gates, or re-spec triggers before proposing more optimization.
+4. If satisfying or relaxing the gate changes status, scope, dependency story, or phase plan, stop for `1-3-1` unless already authorized.
+5. After confirmation, set a truthful durable state (`PARTIAL`, `BLOCKED`, etc.), create/update the follow-up owner, and update dependent tickets/spec ticket lists.
+6. Run dependency integrity when ticket graph changes.
+7. Rerun the narrowest affected proof or record why the edit is metric transcription only, then continue final proof choreography.
 
 If a profiling, benchmark, or measured-gate ticket proves **not to be a runtime optimization problem**, do not invent a hot-path fix just to satisfy the draft shape. Record the lane command, metric or budget, verdict, slowest relevant files/tests when applicable, and root-cause classification (`stale fixture`, `workflow gating`, `harness noise`, `repo-preexisting`, etc.). State whether CPU profiling was unnecessary because no red runtime gate remains, record the non-runtime repair that was accepted, and update ticket/spec/sibling wording so future work does not keep chasing a disproven performance cause.
 

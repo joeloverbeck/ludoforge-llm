@@ -1,4 +1,4 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -152,6 +152,10 @@ export interface PolicyWasmRuntime {
     },
   ): readonly PolicyValue[];
 }
+
+let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
+let productionScoreRowRouteCount = 0;
+let productionScoreRowUnsupportedCount = 0;
 
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
@@ -622,18 +626,10 @@ export const evaluateWasmMoveConsiderationScoreRows = (
   };
 };
 
-export const loadPolicyWasmRuntime = async (
-  options: PolicyWasmRuntimeOptions = {},
-): Promise<PolicyWasmRuntime> => {
-  const wasmPath = options.wasmPath ?? defaultPolicyWasmPath();
-  const wasmBytes = options.wasmBytes === undefined
-    ? await readFile(wasmPath)
-    : asBytes(options.wasmBytes);
-  const instantiateResult: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource =
-    await WebAssembly.instantiate(wasmBytes, {}) as WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource;
-  const instance = instantiateResult instanceof WebAssembly.Instance
-    ? instantiateResult
-    : instantiateResult.instance;
+const createPolicyWasmRuntime = (
+  instance: WebAssembly.Instance,
+  wasmPath: string | undefined,
+): PolicyWasmRuntime => {
   const wasm = checkedExports(instance);
 
   if (wasm.ludoforge_policy_vm_abi_magic() !== POLICY_WASM_ABI_MAGIC) {
@@ -647,7 +643,7 @@ export const loadPolicyWasmRuntime = async (
   }
 
   return {
-    wasmPath,
+    ...(wasmPath === undefined ? {} : { wasmPath }),
     evaluateSmokeAdd: (left: number, right: number, layoutId = POLICY_WASM_SMOKE_LAYOUT_ID): number => {
       assertFiniteI32('left operand', left);
       assertFiniteI32('right operand', right);
@@ -728,4 +724,69 @@ export const loadPolicyWasmRuntime = async (
       }
     },
   };
+};
+
+export const initializePolicyWasmRuntimeSync = (
+  options: PolicyWasmRuntimeOptions = {},
+): PolicyWasmRuntime => {
+  const wasmPath = options.wasmPath ?? defaultPolicyWasmPath();
+  const wasmBytes = options.wasmBytes === undefined
+    ? readFileSync(wasmPath)
+    : asBytes(options.wasmBytes);
+  const moduleBytes = new ArrayBuffer(wasmBytes.byteLength);
+  new Uint8Array(moduleBytes).set(wasmBytes);
+  const module = new WebAssembly.Module(moduleBytes);
+  const instance = new WebAssembly.Instance(module, {});
+  const runtime = createPolicyWasmRuntime(instance, wasmPath);
+  productionPolicyWasmRuntime = runtime;
+  return runtime;
+};
+
+export const getInitializedPolicyWasmRuntime = (): PolicyWasmRuntime | null => {
+  if (productionPolicyWasmRuntime !== null) {
+    return productionPolicyWasmRuntime;
+  }
+  if (process.env.LUDOFORGE_POLICY_WASM !== 'on') {
+    return null;
+  }
+  return initializePolicyWasmRuntimeSync();
+};
+
+export const recordProductionPolicyWasmScoreRows = (kind: 'supported' | 'unsupported'): void => {
+  if (kind === 'supported') {
+    productionScoreRowRouteCount += 1;
+  } else {
+    productionScoreRowUnsupportedCount += 1;
+  }
+};
+
+export const __internal_for_tests = {
+  setInitializedPolicyWasmRuntime(runtime: PolicyWasmRuntime | null): void {
+    productionPolicyWasmRuntime = runtime;
+  },
+  getProductionScoreRowRouteCount(): number {
+    return productionScoreRowRouteCount;
+  },
+  getProductionScoreRowUnsupportedCount(): number {
+    return productionScoreRowUnsupportedCount;
+  },
+  resetProductionScoreRowCounters(): void {
+    productionScoreRowRouteCount = 0;
+    productionScoreRowUnsupportedCount = 0;
+  },
+};
+
+export const loadPolicyWasmRuntime = async (
+  options: PolicyWasmRuntimeOptions = {},
+): Promise<PolicyWasmRuntime> => {
+  const wasmPath = options.wasmPath ?? defaultPolicyWasmPath();
+  const wasmBytes = options.wasmBytes === undefined
+    ? await readFile(wasmPath)
+    : asBytes(options.wasmBytes);
+  const instantiateResult: WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource =
+    await WebAssembly.instantiate(wasmBytes, {}) as WebAssembly.Instance | WebAssembly.WebAssemblyInstantiatedSource;
+  const instance = instantiateResult instanceof WebAssembly.Instance
+    ? instantiateResult
+    : instantiateResult.instance;
+  return createPolicyWasmRuntime(instance, wasmPath);
 };

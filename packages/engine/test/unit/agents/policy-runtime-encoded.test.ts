@@ -4,6 +4,10 @@ import { describe, it } from 'node:test';
 
 import { evaluatePolicyMoveCore } from '../../../src/agents/policy-eval.js';
 import {
+  __internal_for_tests as policyWasmRuntimeInternals,
+  type PolicyWasmRuntime,
+} from '../../../src/agents/policy-wasm-runtime.js';
+import {
   asActionId,
   asPhaseId,
   asPlayerId,
@@ -228,5 +232,55 @@ describe('encoded policy runtime reads', () => {
       objectWalk.metadata.candidates.map((candidate) => candidate.scoreContributions),
     );
     assert.equal(encoded.metadata.finalScore, 12);
+  });
+
+  it('routes preloaded production score rows through WASM for supported batches', () => {
+    let batchCalls = 0;
+    const fakeRuntime: PolicyWasmRuntime = {
+      evaluateSmokeAdd: () => 0,
+      evaluatePolicyBytecode: () => undefined,
+      evaluatePolicyBytecodeBatch: (_bytecode, _encoded, _context, candidates) => {
+        batchCalls += 1;
+        return candidates.map(() => 1);
+      },
+    };
+
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(fakeRuntime);
+    try {
+      const result = evaluate('enabled');
+      assert.equal(result.kind, 'success');
+      assert.ok(batchCalls > 0, 'production policy evaluation should call the preloaded WASM score-row runtime');
+      assert.equal(result.metadata.finalScore, 3);
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+    }
+  });
+
+  it('fails closed with production diagnostics when preloaded WASM cannot score the batch', () => {
+    const fakeRuntime: PolicyWasmRuntime = {
+      evaluateSmokeAdd: () => 0,
+      evaluatePolicyBytecode: () => undefined,
+      evaluatePolicyBytecodeBatch: () => {
+        throw new Error('Policy WASM bytecode batch evaluation failed with status -14.');
+      },
+    };
+
+    policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(fakeRuntime);
+    try {
+      const result = evaluate('enabled');
+      assert.equal(result.kind, 'failure');
+      assert.equal(result.failure.code, 'RUNTIME_EVALUATION_ERROR');
+      assert.match(result.failure.message, /Policy WASM score-row route failed closed/u);
+      assert.deepEqual(result.failure.detail, {
+        route: 'wasmScoreRows',
+        profileId: 'baseline',
+        seatId: 'alpha',
+        candidateCount: 2,
+        considerationCount: 3,
+        unsupportedRowClass: 'unsupported weight expression for consideration boardStrength',
+      });
+    } finally {
+      policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
+    }
   });
 });

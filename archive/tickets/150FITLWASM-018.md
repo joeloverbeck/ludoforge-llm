@@ -1,6 +1,6 @@
 # 150FITLWASM-018: Active-route preview-apply hash/digest and token-index closure
 
-**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-019.md`
+**Status**: COMPLETED with red measured gate successor `archive/tickets/150FITLWASM-019.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic preview-apply hashing, decision-stack digest, token-index lifetime, and residual eval/encoding work on the active WASM preview route
@@ -156,6 +156,9 @@ optimization, record exact metrics and create the next non-overlapping owner.
 
 ## Outcome
 
+Outcome amended: 2026-05-03 — successor path updated after `150FITLWASM-019`
+was archived.
+
 Completed on 2026-05-03 with two generic active-route cleanup slices and the
 same-seam gate still red:
 
@@ -185,7 +188,7 @@ Diagnostic proof before final ticket graph closeout:
   `resolveRef`, `evalCondition`, `evalValue`, `evalQuery`,
   `encodePolicyBytecodeInput`, and spatial/query helpers.
 
-Created successor `tickets/150FITLWASM-019.md` for the next non-overlapping
+Created successor `archive/tickets/150FITLWASM-019.md` for the next non-overlapping
 owner: residual active-route hash/eval/encoding closure. Tickets
 `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until this or a
 later successor makes the `<=250 ms` gate truthful.
@@ -193,7 +196,7 @@ later successor makes the `<=250 ms` gate truthful.
 Final proof:
 
 - `pnpm run check:ticket-deps` — PASS after creating successor
-  `tickets/150FITLWASM-019.md` and updating active blockers/spec handoff.
+  `archive/tickets/150FITLWASM-019.md` and updating active blockers/spec handoff.
 - `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
 - `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-apply-hash-token-index-perf` — RED for the `<=250 ms` gate.
 - Overall `elapsedMs=2762.09`; per-card `elapsedMs=2761.91`,

@@ -16,6 +16,19 @@ import {
   zobristInternals,
 } from '../../src/kernel/index.js';
 
+const FNV_MASK_64 = (1n << 64n) - 1n;
+const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
+const FNV_PRIME_64 = 0x100000001b3n;
+
+const fnv1a64Oracle = (input: string): bigint => {
+  let hash = FNV_OFFSET_BASIS_64;
+  for (let index = 0; index < input.length; index += 1) {
+    hash ^= BigInt(input.charCodeAt(index));
+    hash = (hash * FNV_PRIME_64) & FNV_MASK_64;
+  }
+  return hash;
+};
+
 const createBaseGameDef = (): GameDef =>
   ({
     metadata: { id: 'zobrist-test', players: { min: 2, max: 4 } },
@@ -199,6 +212,17 @@ describe('zobrist table canonicalization and feature keying', () => {
 
     assert.equal(first.fingerprint, second.fingerprint);
     assert.equal(first.seed, second.seed);
+  });
+
+  it('matches the canonical BigInt FNV-1a oracle for table seeds and feature keys', () => {
+    const table = createZobristTable(createBaseGameDef());
+    const feature = { kind: 'globalVar', varName: 'energy', value: 7 } as const;
+
+    assert.equal(table.seed, fnv1a64Oracle(`table-seed|fingerprint=${table.fingerprint}`));
+    assert.equal(
+      zobristKey(table, feature),
+      fnv1a64Oracle(`zobrist-key-v1|seed=${table.seedHex}|kind=globalVar|varName=energy|value=7`),
+    );
   });
 
   it('equivalent declaration reordering produces identical table output', () => {

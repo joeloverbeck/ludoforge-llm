@@ -1,36 +1,36 @@
-# 150FITLWASM-019: Active-route residual hash/eval/encoding closure
+# 150FITLWASM-020: Active-route query/eval/encoding residual closure
 
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — generic residual hash/digest, query/eval, bytecode-input encoding, and remaining active WASM preview-route work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-018.md`
+**Engine Changes**: Yes — generic residual query/eval, bytecode-input encoding, token-index refresh, and remaining active WASM preview-route work
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-019.md`
 
 ## Problem
 
-Ticket `150FITLWASM-018` kept the production WASM score-row and preview-state
-routes fail-closed-clean and removed a measured token-index copy residual from
-private mutable effect scopes. It also added a bounded pure digest cache for
-structurally identical decision-stack frames. The same-seam gate is still red:
+Ticket `150FITLWASM-019` moved the active-route Zobrist/stable-fingerprint
+hashing residual to a shared exact 32-bit-limb FNV implementation while keeping
+production WASM score-row and preview-state routes fail-closed-clean. The
+same-seam gate is still red:
 
 - Command:
-  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-apply-hash-token-index-perf`.
-- Verdict: RED, per-card `elapsedMs=2761.91` versus `<=250 ms` in the final
-  post-018 same-seam profile.
-- Active route remains clean:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-residual-hash-eval-encoding-perf`.
+- Final post-019 result: RED, per-card `elapsedMs=2460.65` versus
+  `<=250 ms`.
+- Active route remained clean:
   `wasmScoreRowUnsupportedCount=0` and
   `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
-- Remaining profile owners include `fnv1a64` under decision-stack digest and
-  Zobrist keying, `resolveRef`, `evalCondition`, `evalValue`, `evalQuery`,
-  spatial/query helpers, and `encodePolicyBytecodeInput`.
+- Remaining profile owners include `resolveRef`, `evalCondition`, `evalValue`,
+  `evalQuery`, `encodePolicyBytecodeInput`, token-index refresh, spatial/query
+  helpers, and residual Zobrist misses.
 
 ## Assumption Reassessment
 
 1. Production WASM score-row and preview-state routes are active and
    fail-closed-clean; this ticket must preserve that diagnostic surface.
-2. Ticket `150FITLWASM-018` moved the token-index copy owner out of the material
-   top-frame set, but the red gate remains dominated by generic hashing,
-   interpreted query/eval, and score-row encoding work.
+2. Ticket `150FITLWASM-019` reduced the generic FNV hash implementation cost
+   without changing canonical hash values, but the gate remains dominated by
+   query/eval/encoding and residual state-materialization work.
 3. The `<=250 ms` target is unchanged. Ticket `149FITLEVNUMVM-016` remains
    blocked until this or a later successor makes the gate truthful.
 
@@ -38,8 +38,9 @@ structurally identical decision-stack frames. The same-seam gate is still red:
 
 1. Keep the implementation generic: no FITL-specific ids, card names, action
    names, schemas, or score shortcuts.
-2. Preserve Foundation 8 determinism. Any cache or encoding shortcut must be
-   keyed by every semantic input and must not depend on ambient process state.
+2. Preserve Foundation 8 determinism. Any query/eval cache, encoding shortcut,
+   or hash optimization must be keyed by every semantic input and must not
+   depend on ambient process state.
 3. Preserve Foundation 11 immutability. Mutable preview/eval state must remain
    private and must not alias caller-visible state.
 4. Preserve Foundation 14. Unsupported future classes fail closed; do not add
@@ -47,27 +48,29 @@ structurally identical decision-stack frames. The same-seam gate is still red:
 
 ## What to Change
 
-### 1. Profile the post-018 residual
+### 1. Profile the post-019 residual
 
 Use the same-seam harness and CPU-profile parser to separate:
 
-- decision-stack digest, Zobrist, and stable-fingerprint hashing;
 - remaining query/eval/reference resolution;
 - score-row bytecode input encoding;
 - spatial/query helper work;
-- any residual token-index refresh/build work not removed by ticket 018.
+- token-index refresh/build work;
+- residual Zobrist/fingerprint hashing.
 
 ### 2. Reduce the largest same-seam residual
 
 Move the largest proven generic residual out of the active route. Plausible
 directions include:
 
-- caching or hoisting deterministic decision-stack/state digest fragments where
-  immutable structural identity or bounded canonical input makes that safe;
 - pre-lowering or bytecoding generic query/eval fragments still interpreted by
   the active production preview-drive route;
 - reducing repeated score-row bytecode input encoding when identical
-  program/layout/state prefixes repeat across batches.
+  program/layout/state prefixes repeat across batches;
+- caching bounded deterministic query/materialization results where immutable
+  structural identity makes that safe;
+- reducing token-index refresh work without weakening copy-on-write lifetime
+  guarantees.
 
 Keep rejected candidates visible in the ticket outcome if they are measured and
 removed.
@@ -80,8 +83,7 @@ optimization, record exact metrics and create the next non-overlapping owner.
 
 ## Files to Touch
 
-- generic kernel/hash/query/eval helpers if profiling proves they are the
-  residual owner
+- generic kernel/query/eval helpers if profiling proves they are the residual owner
 - `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` or
   adjacent generic preview-drive helpers
 - `packages/engine/src/agents/policy-wasm-runtime.ts` or adjacent score/encoding
@@ -102,6 +104,8 @@ optimization, record exact metrics and create the next non-overlapping owner.
   shortcuts.
 - Reintroducing TypeScript preview-driver fallback for supported preview-state
   feature rows.
+- Changing canonical hash values solely for speed without a broader
+  reproducibility migration plan.
 
 ## Acceptance Criteria
 
@@ -110,7 +114,7 @@ optimization, record exact metrics and create the next non-overlapping owner.
 1. Active route remains fail-closed-clean:
    `wasmScoreRowUnsupportedCount=0` and
    `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
-2. Focused tests prove any cache, hash, query/eval lowering, encoding, or
+2. Focused tests prove any query/eval lowering, encoding, token-index, cache, or
    preview-state lifetime change preserves deterministic semantics and does not
    call the TypeScript preview driver for supported preview-state feature rows.
 3. Same-seam perf gate records `<=250 ms`, or records exact red metrics after
@@ -138,4 +142,4 @@ optimization, record exact metrics and create the next non-overlapping owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. Focused tests for the changed generic seam.
 4. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
-5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-residual-hash-eval-encoding-perf`.
+5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-encoding-residual-perf`.

@@ -1,22 +1,11 @@
 import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTable } from './types.js';
 import type { MutableGameState } from './state-draft.js';
+import { fnv1a64 } from './fnv1a64.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
-const MASK_64 = (1n << 64n) - 1n;
-const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
-const FNV_PRIME_64 = 0x100000001b3n;
 type TokenPlacementFeature = Extract<ZobristFeature, { readonly kind: 'tokenPlacement' }>;
 type PerPlayerVarFeature = Extract<ZobristFeature, { readonly kind: 'perPlayerVar' }>;
 type ActionUsageFeature = Extract<ZobristFeature, { readonly kind: 'actionUsage' }>;
-
-const fnv1a64 = (input: string): bigint => {
-  let hash = FNV_OFFSET_BASIS_64;
-  for (let i = 0; i < input.length; i++) {
-    hash ^= BigInt(input.charCodeAt(i));
-    hash = (hash * FNV_PRIME_64) & MASK_64;
-  }
-  return hash;
-};
 
 const encodeVariableDef = (def: GameDef['globalVars'][number]): string =>
   def.type === 'int'

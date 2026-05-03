@@ -24,6 +24,7 @@ interface TokenOccurrence {
 const NO_DUPLICATE_OCCURRENCE_ZONE_IDS: readonly string[] = Object.freeze([]);
 
 const tokenStateIndexByZones = new WeakMap<GameState['zones'], ReadonlyMap<string, TokenStateIndexEntry>>();
+const sharedTokenStateIndexMaps = new WeakSet<ReadonlyMap<string, TokenStateIndexEntry>>();
 let buildTokenStateIndexCount = 0;
 let draftTokenStateIndexAttachCount = 0;
 let draftTokenStateIndexSnapshotCount = 0;
@@ -243,7 +244,8 @@ export function createDraftTokenStateIndex(initialState: GameState): MutableToke
 export function copyCachedTokenStateIndex(fromState: GameState, toState: GameState): void {
   const cached = tokenStateIndexByZones.get(fromState.zones);
   if (cached !== undefined) {
-    tokenStateIndexByZones.set(toState.zones, new Map(cached));
+    tokenStateIndexByZones.set(toState.zones, cached);
+    sharedTokenStateIndexMaps.add(cached);
   }
 }
 
@@ -256,7 +258,9 @@ export function refreshCachedTokenStateIndexEntries(
   if (cached === undefined) {
     return false;
   }
-  const updated = cached instanceof Map ? cached : new Map(cached);
+  const updated = cached instanceof Map && !sharedTokenStateIndexMaps.has(cached)
+    ? cached
+    : new Map(cached);
 
   // Zone rank reproduces buildTokenStateIndex's iteration-order primacy
   // (the first zone encountered in `Object.keys(state.zones)` becomes the
@@ -320,7 +324,7 @@ export function refreshCachedTokenStateIndexEntries(
       updated.set(tokenId, entry);
     }
   }
-  if (!(cached instanceof Map)) {
+  if (updated !== cached) {
     tokenStateIndexByZones.set(state.zones, updated);
   }
   return true;

@@ -152,8 +152,10 @@ preview-drive batch counter, reducing score-row bytecode compiles from `47` to
 hash-counter profiling surface, but the same-seam gate remained red at
 `4018.94 ms`. Ticket `150FITLWASM-017` delivered active-route
 query-materialization runtime reuse, but the same-seam gate remained red at
-`2898.06 ms`. Ticket `150FITLWASM-018` is the residual active-route
-preview-apply hash/digest, token-index lifetime, eval, and encoding successor.
+`2898.06 ms`. Ticket `150FITLWASM-018` delivered active-route token-index COW
+sharing and bounded decision-frame digest caching, but the same-seam gate
+remained red at `2761.91 ms`. Ticket `150FITLWASM-019` is the residual active-route
+hash/eval/encoding successor.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -206,4 +208,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-015.md`](../archive/tickets/150FITLWASM-015.md) — Completed route-local literal fast path with red measured gate successor.
 - [`archive/tickets/150FITLWASM-016.md`](../archive/tickets/150FITLWASM-016.md) — Completed residual active-route hash-cache slice with red measured gate successor.
 - [`archive/tickets/150FITLWASM-017.md`](../archive/tickets/150FITLWASM-017.md) — Completed active-route query-materialization runtime reuse with red measured gate successor.
-- [`tickets/150FITLWASM-018.md`](../tickets/150FITLWASM-018.md) — Residual active-route preview-apply hash/digest and token-index closure.
+- [`archive/tickets/150FITLWASM-018.md`](../archive/tickets/150FITLWASM-018.md) — Completed active-route token-index/digest cleanup with red measured gate successor.
+- [`tickets/150FITLWASM-019.md`](../tickets/150FITLWASM-019.md) — Residual active-route hash/eval/encoding closure.

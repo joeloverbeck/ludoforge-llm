@@ -171,7 +171,9 @@ const canonicalizeHashValue = (value: unknown): string => {
 
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
 const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
+const decisionStackFrameDigestByEncoded = new Map<string, string>();
 let zobristKeyCacheHitCount = 0;
 let zobristKeyCacheMissCount = 0;
 let zobristKeyUncachedCount = 0;
@@ -182,10 +184,19 @@ const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>
     return cached;
   }
   const encoded = canonicalizeHashValue(frame);
+  const structurallyCached = decisionStackFrameDigestByEncoded.get(encoded);
+  if (structurallyCached !== undefined) {
+    decisionStackFrameDigestCache.set(frame, structurallyCached);
+    return structurallyCached;
+  }
   const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
   const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
   const digest = `${digestA}:${digestB}`;
   decisionStackFrameDigestCache.set(frame, digest);
+  if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
+    decisionStackFrameDigestByEncoded.clear();
+  }
+  decisionStackFrameDigestByEncoded.set(encoded, digest);
   return digest;
 };
 

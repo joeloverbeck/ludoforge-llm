@@ -159,6 +159,12 @@ When implementation reassessment proves that remaining work belongs in a new or 
 5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
 6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep
 
+When applying ticket/spec graph rewrites, prefer `apply_patch` or a checked-in
+repo helper over ad hoc shell one-liners. Markdown tickets commonly contain
+backticks, command snippets, pipes, and paths; embedding that content in
+`node -e`, `perl -e`, `sed`, or similar shell strings can trigger shell command
+substitution or quoting drift before the edit reaches the intended tool.
+
 ## Sibling Absorbed Ownership
 
 When the active ticket absorbed ownership from sibling draft tickets in the same series, extend that closeout order:

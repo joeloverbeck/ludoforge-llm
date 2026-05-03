@@ -1,6 +1,6 @@
 # 150FITLWASM-018: Active-route preview-apply hash/digest and token-index closure
 
-**Status**: PENDING
+**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-019.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic preview-apply hashing, decision-stack digest, token-index lifetime, and residual eval/encoding work on the active WASM preview route
@@ -153,3 +153,73 @@ optimization, record exact metrics and create the next non-overlapping owner.
 3. Focused tests for the changed generic seam.
 4. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-apply-hash-token-index-perf`.
+
+## Outcome
+
+Completed on 2026-05-03 with two generic active-route cleanup slices and the
+same-seam gate still red:
+
+- Token-state index cache copying now uses copy-on-write sharing when an outer
+  mutable effect scope inherits a cached canonical index. The cache detaches on
+  mutable zone refresh, so caller-visible canonical caches are not mutated by
+  private preview/effect state.
+- Decision-stack frame digesting now has a bounded pure cache keyed by the
+  canonical frame encoding, so structurally identical cloned frames can reuse a
+  deterministic digest without changing the hash contract.
+
+Diagnostic proof before final ticket graph closeout:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/zobrist-table.test.js dist/test/kernel/token-state-index-incremental.test.js` — PASS.
+- `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-profile-150018-after-digest-token-index packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-018-after-digest-token-index` — RED for the `<=250 ms` gate.
+- Diagnostic per-card `elapsedMs=2806.97`, `decisions=158`,
+  `msPerDecision=17.7656`.
+- Active route counters remained clean:
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `wasmScoreRowRouteCount=62`,
+  `wasmPreviewCandidateFeatureRowRouteCount=70`, and
+  `wasmProductionPreviewDriveBatchCount=232`.
+- The diagnostic CPU profile showed `copyCachedTokenStateIndex` no longer in the
+  material top-frame set. Remaining generic owners include `fnv1a64`,
+  `resolveRef`, `evalCondition`, `evalValue`, `evalQuery`,
+  `encodePolicyBytecodeInput`, and spatial/query helpers.
+
+Created successor `tickets/150FITLWASM-019.md` for the next non-overlapping
+owner: residual active-route hash/eval/encoding closure. Tickets
+`149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until this or a
+later successor makes the `<=250 ms` gate truthful.
+
+Final proof:
+
+- `pnpm run check:ticket-deps` — PASS after creating successor
+  `tickets/150FITLWASM-019.md` and updating active blockers/spec handoff.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-apply-hash-token-index-perf` — RED for the `<=250 ms` gate.
+- Overall `elapsedMs=2762.09`; per-card `elapsedMs=2761.91`,
+  `decisions=158`, `msPerDecision=17.4804`.
+- Active route counters:
+  `wasmScoreRowRouteCount=62`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmScoreRowBytecodeCompileCount=35`,
+  `wasmPreviewCandidateFeatureRowRouteCount=70`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`, and
+  `wasmProductionPreviewDriveBatchCount=232`.
+- Hash/index counters:
+  `tokenStateIndexBuildCount=1320`,
+  `zobristKeyCacheHitCount=194070`,
+  `zobristKeyCacheMissCount=8400`, and
+  `zobristKeyUncachedCount=1199`.
+- Profile buckets:
+  `simApplyMove=686.79 ms`,
+  `simAgentChooseMove=463.79 ms`,
+  `agent:evaluatePolicyExpression=462.11 ms`.
+
+The gate remains `2511.91 ms` over the `<=250 ms` target. No perf gate test was
+added because the measured result cannot truthfully assert the budget. Tickets
+`149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked.
+
+No-invalidation note: the post-profile edits transcribed the exact final metrics
+and terminal red-gate successor status only. They did not change code, command
+semantics, thresholds, or acceptance boundaries, so the final focused test and
+same-seam profile above remain the final proof for this ticket.

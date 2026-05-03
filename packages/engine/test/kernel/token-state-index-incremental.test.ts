@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 
 import {
   createDraftTokenStateIndex,
+  copyCachedTokenStateIndex,
   getTokenStateIndex,
   refreshCachedTokenStateIndexEntries,
   type TokenStateIndexEntry,
@@ -299,6 +300,33 @@ describe('POLPREVDRIVE-007 residual token-state index cache', () => {
       'outer mutable effect scopes should inherit and preserve the cached token-state index',
     );
     assertIndexMatchesFreshRebuild('effect-scoped final state', result.state, getTokenStateIndex(result.state));
+  });
+
+  it('shares copied indexes until mutable-zone refresh detaches them', () => {
+    const canonical = makeTokenState({
+      source: [{ id: asTokenId('unit'), type: 'pawn', props: {} }],
+      target: [],
+    } as unknown as GameState['zones']);
+    const canonicalIndex = getTokenStateIndex(canonical);
+    const preview = {
+      ...canonical,
+      zones: { ...canonical.zones },
+    } as GameState;
+
+    copyCachedTokenStateIndex(canonical, preview);
+    assert.equal(getTokenStateIndex(preview), canonicalIndex);
+
+    (preview.zones as Record<string, Token[]>)['source'] = [];
+    (preview.zones as Record<string, Token[]>)['target'] = [
+      { id: asTokenId('unit'), type: 'pawn', props: {} },
+    ];
+    const ok = refreshCachedTokenStateIndexEntries(preview, new Set(['unit']), new Set(['source', 'target']));
+    assert.equal(ok, true);
+
+    assertIndexMatchesFreshRebuild('canonical cache remains unchanged after preview refresh', canonical, getTokenStateIndex(canonical));
+    assertIndexMatchesFreshRebuild('preview cache detaches after zone refresh', preview, getTokenStateIndex(preview));
+    assert.equal(getTokenStateIndex(canonical), canonicalIndex);
+    assert.notEqual(getTokenStateIndex(preview), canonicalIndex);
   });
 });
 

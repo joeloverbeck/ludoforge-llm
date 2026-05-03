@@ -190,6 +190,7 @@ const runOnce = () => {
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
     wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
     wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
+    wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
@@ -205,6 +206,7 @@ function readCounterSnapshot() {
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     driveExitTotal,
   };
 }
@@ -234,6 +236,8 @@ function createPerCardRecorder(startedAt) {
         counters.draftTokenStateIndexSnapshotCount - currentCounters.draftTokenStateIndexSnapshotCount,
       draftTokenStateIndexCowCopyCount:
         counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
+      wasmScoreRowBytecodeCompileCount:
+        counters.wasmScoreRowBytecodeCompileCount - currentCounters.wasmScoreRowBytecodeCompileCount,
       driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
     });
     decisionCount = 0;
@@ -371,6 +375,7 @@ const summary = {
     draftTokenStateIndexCowCopyCount: result.draftTokenStateIndexCowCopyCount,
     wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
     wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
+    wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
@@ -390,6 +395,7 @@ process.stderr.write(
   `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
   `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
   `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
+  `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
@@ -407,6 +413,7 @@ for (const row of summary.result.perCardRows ?? []) {
     `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
     `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
     `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +
+    `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
     `closeReason=${row.closeReason}\n`,
   );
 }

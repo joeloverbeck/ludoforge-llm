@@ -5,9 +5,13 @@ import { fileURLToPath } from 'node:url';
 
 import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
-import { compilePolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
+import {
+  getCachedScoreRowBytecode,
+  getScoreRowBytecodeCompileCount,
+  resetScoreRowBytecodeCompileCount,
+} from './policy-wasm-score-bytecode-cache.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
 export const POLICY_WASM_ABI_VERSION = 4;
@@ -492,37 +496,6 @@ const supportedBatchValues = (
   }
 };
 
-const materializePolicyParams = (
-  expr: CompiledPolicyExpr,
-  parameterValues: Readonly<Record<string, AgentParameterValue>> | undefined,
-): CompiledPolicyExpr => {
-  if (expr.kind === 'param') {
-    const value = parameterValues?.[expr.id];
-    return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string'
-      ? { kind: 'literal', value }
-      : expr;
-  }
-  if (expr.kind === 'op') {
-    return {
-      ...expr,
-      args: expr.args.map((arg) => materializePolicyParams(arg, parameterValues)),
-    };
-  }
-  if (expr.kind === 'zoneTokenAgg' && typeof expr.zone !== 'string') {
-    return { ...expr, zone: materializePolicyParams(expr.zone, parameterValues) };
-  }
-  if (expr.kind === 'adjacentTokenAgg' && typeof expr.anchorZone !== 'string') {
-    return { ...expr, anchorZone: materializePolicyParams(expr.anchorZone, parameterValues) };
-  }
-  if (expr.kind === 'seatAgg') {
-    return { ...expr, expr: materializePolicyParams(expr.expr, parameterValues) };
-  }
-  if (expr.kind === 'zoneProp' && typeof expr.zone !== 'string') {
-    return { ...expr, zone: materializePolicyParams(expr.zone, parameterValues) };
-  }
-  return expr;
-};
-
 export const evaluateWasmMoveConsiderationScoreRows = (
   runtime: PolicyWasmRuntime,
   input: {
@@ -563,7 +536,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       ? input.candidates.map(() => true as PolicyValue)
       : supportedBatchValues(
         runtime,
-        compilePolicyBytecode(materializePolicyParams(consideration.when, input.parameterValues), input.def, input.context.layout),
+        getCachedScoreRowBytecode(consideration.when, input.parameterValues, input.def, input.context.layout),
         input.encoded,
         input.context,
         input.candidates,
@@ -575,7 +548,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
 
     const weightValues = supportedBatchValues(
       runtime,
-      compilePolicyBytecode(materializePolicyParams(consideration.weight, input.parameterValues), input.def, input.context.layout),
+      getCachedScoreRowBytecode(consideration.weight, input.parameterValues, input.def, input.context.layout),
       input.encoded,
       input.context,
       input.candidates,
@@ -587,7 +560,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
 
     const valueValues = supportedBatchValues(
       runtime,
-      compilePolicyBytecode(materializePolicyParams(consideration.value, input.parameterValues), input.def, input.context.layout),
+      getCachedScoreRowBytecode(consideration.value, input.parameterValues, input.def, input.context.layout),
       input.encoded,
       input.context,
       input.candidates,
@@ -770,9 +743,13 @@ export const __internal_for_tests = {
   getProductionScoreRowUnsupportedCount(): number {
     return productionScoreRowUnsupportedCount;
   },
+  getProductionScoreRowBytecodeCompileCount(): number {
+    return getScoreRowBytecodeCompileCount();
+  },
   resetProductionScoreRowCounters(): void {
     productionScoreRowRouteCount = 0;
     productionScoreRowUnsupportedCount = 0;
+    resetScoreRowBytecodeCompileCount();
   },
 };
 

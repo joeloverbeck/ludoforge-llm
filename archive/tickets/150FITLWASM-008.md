@@ -1,6 +1,6 @@
 # 150FITLWASM-008: Production preview row materialization WASM handoff
 
-**Status**: PENDING
+**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-009.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — policy preview row materialization, WASM/buffer handoff, profiling gate
@@ -129,3 +129,51 @@ owner.
 2. `pnpm -F @ludoforge/engine build`.
 3. Focused production materialization handoff test command.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-row-materialization`.
+
+## Outcome
+
+Completed on 2026-05-03 with the same-seam perf gate still red and successor
+owner `tickets/150FITLWASM-009.md` created for the remaining preview-state
+surface ABI work.
+
+Implemented a generic production score-row setup reduction in
+`packages/engine/src/agents/policy-wasm-runtime.ts`: score-row consideration
+bytecode is now materialized and compiled once per compiled expression,
+parameter object, and encoded-state layout, then reused by subsequent WASM
+score-row batches. This removes repeated TypeScript policy-parameter
+materialization and bytecode compilation from the production WASM row handoff
+without changing the Rust ABI, fallback behavior, or scoring semantics. Focused
+coverage proves repeated production score-row batches reuse the cached bytecode.
+
+The profile harness now reports `wasmScoreRowBytecodeCompileCount` so the setup
+handoff is visible beside the existing route counters. The final same-seam
+profile proved the active route is still fully supported:
+
+- `wasmScoreRowRouteCount=65`
+- `wasmScoreRowUnsupportedCount=0`
+- `wasmScoreRowBytecodeCompileCount=42`
+
+The measured gate remains red:
+
+- Command: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-row-materialization`
+- Verdict: RED for the `<=250 ms` gate.
+- Overall `elapsedMs=6593.92`.
+- Per-card row: `turnCount=0`, `elapsedMs=6593.68`, `decisions=159`, `msPerDecision=41.4697`, `closeReason=turnCountAdvanced`.
+- Profile buckets: `simAgentChooseMove=3924.43 ms`, `agent:evaluatePolicyExpression=3922.19 ms`, `simApplyMove=855.05 ms`.
+- Token/index counters: `tokenStateIndexBuildCount=2377`, `draftTokenStateIndexDeltaCount=198`, `draftTokenStateIndexAttachCount=834`, `draftTokenStateIndexSnapshotCount=315`, `draftTokenStateIndexCowCopyCount=120`.
+
+Residual ownership classification: this ticket proved score-row setup caching is
+not enough to close the gate. The remaining non-overlapping owner is a larger
+generic preview-state/surface materialization ABI: preview-backed features such
+as projected victory margin still require TypeScript preview application,
+terminal-margin/surface evaluation, and encoded preview-state row production
+before the current WASM score-row route can consume scalar rows.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine-wasm build` — passed.
+2. `pnpm -F @ludoforge/engine build` — passed.
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 14 tests.
+4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-runtime-encoded.test.js` — passed, 3 tests.
+5. `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` — passed.
+6. `pnpm run check:ticket-deps` — passed.

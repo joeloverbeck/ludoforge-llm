@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import {
   POLICY_WASM_SMOKE_LAYOUT_ID,
+  __internal_for_tests as policyWasmRuntimeInternals,
   evaluateWasmMoveConsiderationScoreRows,
   loadPolicyWasmRuntime,
 } from '../../../src/agents/policy-wasm-runtime.js';
@@ -259,6 +260,53 @@ describe('policy WASM runtime bridge', () => {
         { stableMoveKey: 'pass:{}', score: 6 },
       ],
     });
+  });
+
+  it('caches materialized score-row bytecode for repeated production batches', async () => {
+    const runtime = await loadPolicyWasmRuntime();
+    const def = makeDef();
+    const layout = makeLayout();
+    const context = {
+      def,
+      layout,
+      state: { activePlayer: 1 } as unknown as GameState,
+      playerId: 0,
+    };
+    const parameterValues = { urgencyWeight: 3 };
+    const consideration = {
+      id: 'preferPass',
+      scopes: ['move'] as const,
+      costClass: 'candidate' as const,
+      when: {
+        kind: 'ref' as const,
+        ref: { kind: 'candidateTag' as const, tagName: 'pass' },
+      },
+      weight: { kind: 'param' as const, id: 'urgencyWeight' },
+      value: {
+        kind: 'ref' as const,
+        ref: { kind: 'candidateParam' as const, id: 'urgency' },
+      },
+      dependencies: { parameters: ['urgencyWeight'], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+    };
+    const input = {
+      def,
+      encoded: makeEncoded(),
+      context,
+      parameterValues,
+      considerations: [{ id: 'preferPass', consideration }],
+      candidates: [
+        { actionId: 'move', stableMoveKey: 'move:{"x":1}', params: { urgency: 4 }, tags: [] },
+        { actionId: 'pass', stableMoveKey: 'pass:{}', params: { urgency: 2 }, tags: ['pass'] },
+      ],
+    };
+
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 0);
+    assert.equal(evaluateWasmMoveConsiderationScoreRows(runtime, input).kind, 'supported');
+    const firstCompileCount = policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount();
+    assert.equal(firstCompileCount, 3);
+    assert.equal(evaluateWasmMoveConsiderationScoreRows(runtime, input).kind, 'supported');
+    assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), firstCompileCount);
   });
 
   it('uses precomputed state-feature, candidate-feature, and aggregate rows in WASM score batches', async () => {

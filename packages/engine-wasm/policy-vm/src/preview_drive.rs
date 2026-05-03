@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 6;
+const ABI_VERSION: i32 = 7;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -21,6 +21,7 @@ const OP_CHOOSE_ONE_GREEDY: i32 = 2;
 const OP_CHOOSE_N_GREEDY: i32 = 3;
 const OP_STOCHASTIC: i32 = 4;
 const OP_UNSUPPORTED: i32 = 5;
+const OP_APPLY_CANDIDATE_DELTAS: i32 = 6;
 
 #[no_mangle]
 pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -182,6 +183,19 @@ fn evaluate_preview_drive_batch(
             OP_UNSUPPORTED => {
                 let _unsupported_class = cursor.read()?;
                 return Err(STATUS_UNSUPPORTED);
+            }
+            OP_APPLY_CANDIDATE_DELTAS => {
+                for state in states.iter_mut() {
+                    let delta = cursor.read()?;
+                    if state.outcome != OUTCOME_COMPLETED {
+                        continue;
+                    }
+                    state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
+                    state.value = state.value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
+                    if state.depth >= depth_cap {
+                        state.outcome = OUTCOME_DEPTH_CAP;
+                    }
+                }
             }
             _ => return Err(STATUS_BAD_OPCODE),
         }

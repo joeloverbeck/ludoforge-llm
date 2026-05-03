@@ -16,12 +16,13 @@ import {
   decodePolicyWasmPreviewDriveRows,
   encodePolicyWasmPreviewDriveInput,
   firstUnsupportedPreviewDriveClass,
+  firstUnsupportedPreviewDriveOwner,
   type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
 } from './policy-wasm-preview-drive.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 6;
+export const POLICY_WASM_ABI_VERSION = 7;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -790,11 +791,13 @@ const createPolicyWasmRuntime = (
         );
         if (status === -14) {
           const unsupportedDriveClass = firstUnsupportedPreviewDriveClass(previewInput) ?? 'unknown';
+          const unsupportedOwner = firstUnsupportedPreviewDriveOwner(previewInput);
           return {
             kind: 'unsupported',
             profileId: previewInput.profileId,
             candidateCount: previewInput.candidates.length,
             unsupportedDriveClass,
+            ...(unsupportedOwner === undefined ? {} : { unsupportedOwner }),
             reason: `unsupported preview-drive class ${unsupportedDriveClass}`,
           };
         }

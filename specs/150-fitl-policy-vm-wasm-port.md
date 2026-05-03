@@ -126,12 +126,13 @@ Live reassessment of ticket `150FITLWASM-010` proved that production routing
 cannot truthfully claim a WASM preview-drive handoff until a generic encoded
 preview-drive substrate exists. Ticket `150FITLWASM-011` now owns that
 prerequisite substrate. Ticket `150FITLWASM-011` delivered the first generic
-encoded preview-drive ABI and supported synthetic greedy-subset parity, but its
-FITL same-seam inventory still classifies current initial move application and
-decision-stack publication as fail-closed `unsupported-effect` classes. Ticket
-`150FITLWASM-012` now owns the FITL-current generic class expansion; ticket
-`150FITLWASM-010` remains the later production routing, fail-closed diagnostics,
-and same-seam perf-gate owner.
+encoded preview-drive ABI and supported synthetic greedy-subset parity. Ticket
+`150FITLWASM-012` expanded that ABI to the current FITL same-seam inventory
+classes: `initialMoveApplication`, `decisionStackPublication`, and
+`completionExits` now report `supportedByEncodedPreviewDriveAbi=true` with
+successor owner `tickets/150FITLWASM-010.md`. Ticket `150FITLWASM-010` remains
+the later production routing, fail-closed diagnostics, and same-seam perf-gate
+owner.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -177,5 +178,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-008.md`](../archive/tickets/150FITLWASM-008.md) — Production preview row materialization WASM handoff.
 - [`archive/tickets/150FITLWASM-009.md`](../archive/tickets/150FITLWASM-009.md) — Preview-state surface row materialization WASM ABI.
 - [`archive/tickets/150FITLWASM-011.md`](../archive/tickets/150FITLWASM-011.md) — Generic encoded preview-drive substrate prerequisite.
-- [`tickets/150FITLWASM-012.md`](../tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
+- [`archive/tickets/150FITLWASM-012.md`](../archive/tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
 - [`tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Preview-drive production routing and same-seam gate after the substrate prerequisite.

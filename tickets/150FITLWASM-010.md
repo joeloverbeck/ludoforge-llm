@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: BLOCKED by FITL-current encoded preview-drive class expansion prerequisite `tickets/150FITLWASM-012.md`
+**Status**: PENDING after FITL-current encoded preview-drive class expansion prerequisite `archive/tickets/150FITLWASM-012.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `tickets/150FITLWASM-012.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`
 
 ## Problem
 
@@ -43,12 +43,10 @@ must be generic, deterministic, bounded, externally immutable, and proven
 equivalent before production routing can claim that supported preview
 application/drive batches use WASM. Ticket `archive/tickets/150FITLWASM-011.md`
 delivered the first generic encoded preview-drive substrate and synthetic
-greedy-subset parity, but its FITL same-seam inventory still classifies current
-initial move application and decision-stack publication as fail-closed
-`unsupported-effect` classes. Ticket `tickets/150FITLWASM-012.md` is now the
-prerequisite owner for that FITL-current generic class expansion. This ticket
-remains the later production routing, fail-closed diagnostics, and same-seam
-perf-gate owner after that prerequisite exists.
+greedy-subset parity. Ticket `archive/tickets/150FITLWASM-012.md` expanded that encoded
+preview-drive ABI to the current FITL same-seam inventory classes and now hands
+the remaining work back to this ticket. This ticket remains the later
+production routing, fail-closed diagnostics, and same-seam perf-gate owner.
 
 ## Architecture Check
 
@@ -70,11 +68,11 @@ perf-gate owner after that prerequisite exists.
 
 ### 1. Preview-drive ownership
 
-After `tickets/150FITLWASM-012.md` lands, wire the smallest generic handoff that
-removes the remaining TypeScript preview application/drive hot path for the
-supported live baseline surface. This may be a WASM preview-application ABI, a
-compiled generic effect program path, or another buffer-oriented runtime
-handoff, but it must preserve the current preview outcome semantics.
+Wire the smallest generic handoff that removes the remaining TypeScript preview
+application/drive hot path for the supported live baseline surface. This may be
+the `150FITLWASM-012` encoded preview-drive ABI, a compiled generic effect
+program path, or another buffer-oriented runtime handoff, but it must preserve
+the current preview outcome semantics.
 
 ### 2. Production routing and diagnostics
 
@@ -167,10 +165,20 @@ inventory still reports `driveExitTotal=211`, with `initialMoveApplication` and
 `decisionStackPublication` both `supportedByEncodedPreviewDriveAbi=false`,
 `failClosedClass=unsupported-effect`, `count=211`.
 
-Decision: this ticket is now blocked until `tickets/150FITLWASM-012.md` expands
-the generic encoded preview-drive substrate to the current FITL same-seam
-classes or records a narrower residual owner. Closing this ticket on
-precomputed preview rows, counters, TypeScript-only optimization, or the
-synthetic subset from `150FITLWASM-011` would misstate the production handoff
-and violate the Foundations-aligned one-rules protocol and testing-as-proof
-requirements.
+Decision at that time: this ticket was blocked until
+`archive/tickets/150FITLWASM-012.md` expanded the generic encoded preview-drive
+substrate to the current FITL same-seam classes or recorded a narrower residual
+owner. Closing this ticket on precomputed preview rows, counters,
+TypeScript-only optimization, or the synthetic subset from `150FITLWASM-011`
+would have misstated the production handoff and violated the
+Foundations-aligned one-rules protocol and testing-as-proof requirements.
+
+Outcome amended: 2026-05-03.
+
+Ticket `150FITLWASM-012` completed the FITL-current generic class expansion.
+Its final live encoded inventory reports `driveExitTotal=211`, with
+`initialMoveApplication`, `decisionStackPublication`, and `completionExits` all
+`supportedByEncodedPreviewDriveAbi=true`; successor owner
+`tickets/150FITLWASM-010.md`. This ticket is no longer blocked by the 012
+prerequisite and now owns production routing through the encoded preview-drive
+route, fail-closed diagnostics, and the same-seam perf-gate verdict.

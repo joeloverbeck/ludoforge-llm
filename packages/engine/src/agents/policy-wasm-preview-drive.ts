@@ -2,7 +2,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0011;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0012;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
@@ -17,6 +17,10 @@ export type PolicyWasmPreviewDriveStep =
   | {
       readonly kind: 'addGlobal';
       readonly delta: number;
+    }
+  | {
+      readonly kind: 'applyCandidateDeltas';
+      readonly candidateDeltas: readonly number[];
     }
   | {
       readonly kind: 'chooseOneGreedy';
@@ -38,6 +42,7 @@ export type PolicyWasmPreviewDriveStep =
   | {
       readonly kind: 'unsupported';
       readonly unsupportedClass: PolicyWasmPreviewDriveUnsupportedClass;
+      readonly owner?: string;
     };
 
 export interface PolicyWasmPreviewDriveCandidate {
@@ -75,6 +80,7 @@ export type PolicyWasmPreviewDriveResult =
       readonly profileId: string;
       readonly candidateCount: number;
       readonly unsupportedDriveClass: PolicyWasmPreviewDriveUnsupportedClass;
+      readonly unsupportedOwner?: string;
       readonly reason: string;
     };
 
@@ -140,6 +146,13 @@ export const firstUnsupportedPreviewDriveClass = (
     step.kind === 'unsupported',
   )?.unsupportedClass;
 
+export const firstUnsupportedPreviewDriveOwner = (
+  input: PolicyWasmPreviewDriveBatchInput,
+): string | undefined =>
+  input.steps.find((step): step is Extract<PolicyWasmPreviewDriveStep, { readonly kind: 'unsupported' }> =>
+    step.kind === 'unsupported',
+  )?.owner;
+
 const encodeStep = (
   words: number[],
   input: PolicyWasmPreviewDriveBatchInput,
@@ -148,6 +161,12 @@ const encodeStep = (
   switch (step.kind) {
     case 'addGlobal':
       words.push(1, step.delta);
+      return;
+    case 'applyCandidateDeltas':
+      if (step.candidateDeltas.length !== input.candidates.length) {
+        throw new Error('Policy WASM preview-drive candidate delta count must match candidate count.');
+      }
+      words.push(6, ...step.candidateDeltas);
       return;
     case 'chooseOneGreedy':
       words.push(

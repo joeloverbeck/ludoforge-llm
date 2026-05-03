@@ -1,7 +1,7 @@
 mod preview_drive;
 
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 6;
+const ABI_VERSION: i32 = 7;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;

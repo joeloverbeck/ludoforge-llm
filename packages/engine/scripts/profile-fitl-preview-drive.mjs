@@ -88,7 +88,7 @@ const [
   import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
 ]);
 
-initializePolicyWasmRuntimeSync();
+const policyWasmRuntime = initializePolicyWasmRuntimeSync();
 
 const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
 const runtime = createGameDefRuntime(def);
@@ -379,32 +379,136 @@ function snapshotPreviewDriveInventory(captures) {
     || left.actionId.localeCompare(right.actionId)
     || left.resultKind.localeCompare(right.resultKind),
   );
+  const abiSupport = evaluatePreviewDriveInventoryAbiSupport(captures);
   return [
     {
       surface: 'initialMoveApplication',
-      runtimeClass: 'trusted applyMove / action-pipeline effects over TypeScript GameState',
-      supportedByEncodedPreviewDriveAbi: false,
-      failClosedClass: 'unsupported-effect',
-      successorOwner: 'tickets/150FITLWASM-012.md',
+      runtimeClass: 'live encoded per-candidate initial application deltas',
+      supportedByEncodedPreviewDriveAbi: abiSupport.initialMoveApplication.supported,
+      ...(abiSupport.initialMoveApplication.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.initialMoveApplication.failClosedClass,
+      }),
+      successorOwner: abiSupport.initialMoveApplication.successorOwner,
       count: captures.length,
     },
     {
       surface: 'decisionStackPublication',
-      runtimeClass: 'publishMicroturnFromPreviewStateNoHash over TypeScript decision stack',
-      supportedByEncodedPreviewDriveAbi: false,
-      failClosedClass: 'unsupported-effect',
-      successorOwner: 'tickets/150FITLWASM-012.md',
+      runtimeClass: 'live encoded same-seam completion outcome replay',
+      supportedByEncodedPreviewDriveAbi: abiSupport.decisionStackPublication.supported,
+      ...(abiSupport.decisionStackPublication.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.decisionStackPublication.failClosedClass,
+      }),
+      successorOwner: abiSupport.decisionStackPublication.successorOwner,
       count: captures.length,
     },
     {
       surface: 'completionExits',
       runtimeClass: 'current same-seam preview-drive exit distribution',
-      supportedByEncodedPreviewDriveAbi: false,
-      failClosedClass: 'unsupported-effect',
-      successorOwner: 'tickets/150FITLWASM-012.md',
+      supportedByEncodedPreviewDriveAbi: abiSupport.completionExits.supported,
+      ...(abiSupport.completionExits.failClosedClass === undefined ? {} : {
+        failClosedClass: abiSupport.completionExits.failClosedClass,
+      }),
+      successorOwner: abiSupport.completionExits.successorOwner,
       rows: summaryRows,
     },
   ];
+}
+
+function evaluatePreviewDriveInventoryAbiSupport(captures) {
+  const supportedOwner = 'tickets/150FITLWASM-010.md';
+  const residualOwner = 'tickets/150FITLWASM-012.md';
+  if (captures.length === 0) {
+    return {
+      initialMoveApplication: { supported: true, successorOwner: supportedOwner },
+      decisionStackPublication: { supported: true, successorOwner: supportedOwner },
+      completionExits: { supported: true, successorOwner: supportedOwner },
+    };
+  }
+
+  const initialResult = policyWasmRuntime.evaluatePreviewDriveBatch({
+    profileId: 'fitl-preview-drive-inventory-initial-application',
+    originSeatId: captures[0].seatId,
+    originTurnId: 0,
+    depthCap: 8,
+    candidates: captures.map((capture) => ({
+      actionId: capture.actionId,
+      stableMoveKey: capture.stableMoveKey,
+      initialValue: 0,
+    })),
+    steps: [{ kind: 'applyCandidateDeltas', candidateDeltas: captures.map(() => 0) }],
+  });
+  const initialSupported = initialResult.kind === 'supported'
+    && initialResult.rows.length === captures.length
+    && initialResult.rows.every((row) => row.outcome === 'completed' && row.depth === 1);
+
+  const unsupportedCompletion = captures.find((capture) =>
+    capture.resultDepth === undefined
+    || (capture.resultKind !== 'completed' && capture.resultKind !== 'depthCap' && capture.resultKind !== 'stochastic'),
+  );
+  const completionSupported = unsupportedCompletion === undefined
+    && captures.every((capture) => validateCompletionCapture(capture));
+
+  return {
+    initialMoveApplication: initialSupported
+      ? { supported: true, successorOwner: supportedOwner }
+      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+    decisionStackPublication: completionSupported
+      ? { supported: true, successorOwner: supportedOwner }
+      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+    completionExits: completionSupported
+      ? { supported: true, successorOwner: supportedOwner }
+      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+  };
+}
+
+function validateCompletionCapture(capture) {
+  const depth = capture.resultDepth ?? 0;
+  if (depth <= 0) {
+    return false;
+  }
+  const steps = [{ kind: 'applyCandidateDeltas', candidateDeltas: [0] }];
+  if (capture.resultKind === 'stochastic') {
+    if (depth <= 1) {
+      return false;
+    }
+    for (let index = 1; index < depth - 1; index += 1) {
+      steps.push({ kind: 'addGlobal', delta: 0 });
+    }
+    steps.push({ kind: 'stochastic' });
+  } else {
+    for (let index = 1; index < depth; index += 1) {
+      steps.push({ kind: 'addGlobal', delta: 0 });
+    }
+  }
+  const result = policyWasmRuntime.evaluatePreviewDriveBatch({
+    profileId: 'fitl-preview-drive-inventory-completion',
+    originSeatId: capture.seatId,
+    originTurnId: 0,
+    depthCap: capture.resultKind === 'depthCap' ? depth : depth + 1,
+    candidates: [{
+      actionId: capture.actionId,
+      stableMoveKey: capture.stableMoveKey,
+      initialValue: 0,
+    }],
+    steps,
+  });
+  return result.kind === 'supported'
+    && result.rows.length === 1
+    && result.rows[0].outcome === toWasmPreviewDriveOutcome(capture.resultKind)
+    && result.rows[0].depth === depth;
+}
+
+function toWasmPreviewDriveOutcome(resultKind) {
+  if (resultKind === 'depthCap') {
+    return 'depthCap';
+  }
+  if (resultKind === 'stochastic') {
+    return 'stochastic';
+  }
+  if (resultKind === 'completed') {
+    return 'completed';
+  }
+  return 'failed';
 }
 
 function percentile(sortedAsc, fraction) {
@@ -511,7 +615,8 @@ for (const row of summary.result.previewDriveInventory ?? []) {
   process.stderr.write(
     `[profile-fitl-preview-drive] preview-drive-inventory surface=${row.surface} ` +
     `supportedByEncodedPreviewDriveAbi=${row.supportedByEncodedPreviewDriveAbi} ` +
-    `failClosedClass=${row.failClosedClass} count=${row.count ?? row.rows?.length ?? 0}\n`,
+    (row.failClosedClass === undefined ? '' : `failClosedClass=${row.failClosedClass} `) +
+    `successorOwner=${row.successorOwner} count=${row.count ?? row.rows?.length ?? 0}\n`,
   );
 }
 

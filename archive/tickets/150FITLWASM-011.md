@@ -184,13 +184,15 @@ Current FITL same-seam inventory:
   `initialMoveApplication` and `decisionStackPublication` both report
   `supportedByEncodedPreviewDriveAbi=false`,
   `failClosedClass=unsupported-effect`, `count=211`, and successor owner
-  `tickets/150FITLWASM-012.md`.
+  `archive/tickets/150FITLWASM-012.md`.
 - Completion exits include completed rows across all four baseline profiles and
   two depth-cap exits (`us-baseline event`, `vc-baseline event`).
 
 Follow-up ownership:
 
-- Created `tickets/150FITLWASM-012.md` for the FITL-current generic
+- Outcome amended: 2026-05-03. Ticket `150FITLWASM-012` is now complete and
+  archived at `archive/tickets/150FITLWASM-012.md`.
+- Created `archive/tickets/150FITLWASM-012.md` for the FITL-current generic
   preview-drive class expansion required before production routing can resume.
 - Updated `tickets/150FITLWASM-010.md` so it remains blocked by
   `150FITLWASM-012`, not by this now-completed substrate slice.

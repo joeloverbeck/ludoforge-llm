@@ -69,6 +69,54 @@ const createDecisionDrivenDef = (): GameDef => assertValidatedGameDef({
   terminal: { conditions: [] },
 });
 
+const createInitialApplyDecisionDrivenDef = (): GameDef => assertValidatedGameDef({
+  metadata: { id: 'policy-preview-driver-initial-apply', players: { min: 2, max: 2 } },
+  constants: {},
+  globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
+  perPlayerVars: [],
+  zones: [],
+  tokenTypes: [],
+  setup: [],
+  turnStructure: { phases: [{ id: phaseId }] },
+  actions: [
+    {
+      id: asActionId('branch'),
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    },
+  ] satisfies ActionDef[],
+  actionPipelines: [{
+    id: 'branch-profile',
+    actionId: asActionId('branch'),
+    legality: null,
+    costValidation: null,
+    costEffects: [],
+    targeting: {},
+    stages: [{
+      effects: [
+        eff({ addVar: { scope: 'global', var: 'score', delta: 2 } }),
+        eff({
+          chooseOne: {
+            internalDecisionId: 'decision:$pick',
+            bind: '$pick',
+            options: { query: 'enums', values: ['left', 'right'] },
+          },
+        }) as ActionPipelineDef['stages'][number]['effects'][number],
+        eff({ addVar: { scope: 'global', var: 'score', delta: 3 } }),
+      ],
+    }],
+    atomicity: 'partial',
+  }],
+  triggers: [],
+  terminal: { conditions: [] },
+});
+
 const createChooseNDef = (): GameDef => assertValidatedGameDef({
   metadata: { id: 'policy-preview-driver-choose-n', players: { min: 2, max: 2 } },
   constants: {},
@@ -318,6 +366,31 @@ describe('policy preview synthetic-completion driver', () => {
   it('matches the TypeScript preview driver for the supported encoded preview-drive subset', async () => {
     const wasm = await loadPolicyWasmRuntime();
 
+    const initialApplyDef = createInitialApplyDecisionDrivenDef();
+    const initialApply = trustedCandidate(initialApplyDef, 'branch');
+    const initialApplyRuntime = createRuntime(initialApplyDef, initialApply.state, initialApply.trustedMove, { completionDepthCap: 8 });
+    const initialApplyCandidate = { move: initialApply.trustedMove.move, stableMoveKey: 'candidate', actionId: 'branch' };
+    const initialApplyPreview = initialApplyRuntime.getPreviewState(initialApplyCandidate);
+    assertCanonicalPreviewState(initialApplyDef, initialApplyPreview, 'initial-application parity reference');
+    const initialApplyResult = wasm.evaluatePreviewDriveBatch({
+      profileId: 'synthetic-initial-application',
+      originSeatId: '0',
+      originTurnId: 0,
+      depthCap: 8,
+      candidates: [{ actionId: 'branch', stableMoveKey: 'candidate', initialValue: 0 }],
+      steps: [
+        { kind: 'applyCandidateDeltas', candidateDeltas: [2] },
+        { kind: 'chooseOneGreedy', optionDeltas: [0, 0] },
+        { kind: 'addGlobal', delta: 3 },
+      ],
+    });
+    if (initialApplyResult.kind !== 'supported') {
+      assert.fail(`initial-application preview-drive parity unexpectedly unsupported: ${initialApplyResult.reason}`);
+    }
+    assert.deepEqual(initialApplyResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
+      { outcome: 'completed', value: initialApplyPreview.globalVars.score },
+    ]);
+
     const branchDef = createDecisionDrivenDef();
     const branch = trustedCandidate(branchDef, 'branch');
     const branchRuntime = createRuntime(branchDef, branch.state, branch.trustedMove, { completionDepthCap: 8 });
@@ -375,12 +448,13 @@ describe('policy preview synthetic-completion driver', () => {
       originTurnId: 0,
       depthCap: 8,
       candidates: [{ actionId: 'blocked', stableMoveKey: 'blocked:{}', initialValue: 0 }],
-      steps: [{ kind: 'unsupported', unsupportedClass: 'gated' }],
+      steps: [{ kind: 'unsupported', unsupportedClass: 'gated', owner: 'blocked' }],
     }), {
       kind: 'unsupported',
       profileId: 'synthetic-gated',
       candidateCount: 1,
       unsupportedDriveClass: 'gated',
+      unsupportedOwner: 'blocked',
       reason: 'unsupported preview-drive class gated',
     });
   });

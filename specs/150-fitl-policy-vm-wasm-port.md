@@ -141,8 +141,11 @@ not make WASM the owner of generic production preview application,
 publication, bounded completion, or full preview-state materialization. Ticket
 `150FITLWASM-014` delivered that generic production preview-drive substrate,
 including current FITL production application/publication inventory support.
-Ticket `150FITLWASM-010` is again the production routing, fail-closed
-diagnostics, and same-seam perf-gate owner.
+Ticket `150FITLWASM-010` delivered production routing and fail-closed-clean
+preview-drive row activation, but the same-seam gate remained red at
+`4124.29 ms` with `wasmScoreRowUnsupportedCount=0` and
+`wasmPreviewCandidateFeatureRowUnsupportedCount=0`. Ticket
+`150FITLWASM-015` is the active-route perf-closure successor.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -191,4 +194,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-012.md`](../archive/tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
 - [`archive/tickets/150FITLWASM-013.md`](../archive/tickets/150FITLWASM-013.md) — Completed encoded preview-state slot inventory substrate prerequisite.
 - [`archive/tickets/150FITLWASM-014.md`](../archive/tickets/150FITLWASM-014.md) — Implemented generic production preview-drive substrate prerequisite.
-- [`tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Active preview-drive production routing and same-seam gate after the production substrate prerequisite.
+- [`archive/tickets/150FITLWASM-010.md`](../archive/tickets/150FITLWASM-010.md) — Completed preview-drive production routing and fail-closed-clean active route.
+- [`tickets/150FITLWASM-015.md`](../tickets/150FITLWASM-015.md) — Active-route perf closure after `150FITLWASM-010` left the same-seam gate red.

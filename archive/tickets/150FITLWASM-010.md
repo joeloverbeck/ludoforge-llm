@@ -1,6 +1,6 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: PENDING — unblocked by generic production preview-drive substrate prerequisite `archive/tickets/150FITLWASM-014.md`
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
@@ -119,6 +119,8 @@ remains red, record exact metrics and create the next non-overlapping owner.
 
 - `packages/engine/src/agents/policy-preview.ts` or nearby preview-drive helpers
 - `packages/engine/src/agents/policy-eval.ts` or nearby production evaluation orchestration
+- `packages/engine/src/agents/policy-wasm-production-preview-feature-slots.ts` or adjacent route helpers
+- `packages/engine/src/agents/policy-wasm-production-preview-drive-types.ts` or adjacent route helpers
 - `packages/engine/src/agents/policy-wasm-runtime.ts` if the ABI/API needs new buffers
 - `packages/engine-wasm/policy-vm/src/lib.rs` if Rust/WASM owns the new route
 - focused unit/integration witnesses near the changed production and WASM seams
@@ -270,3 +272,64 @@ This ticket is no longer blocked on the substrate prerequisite. Next work here
 is to wire production policy evaluation so supported preview-drive batches use
 the new generic route before preview-state row materialization and score-row
 evaluation, then rerun the same-seam perf gate.
+
+Outcome amended: 2026-05-03.
+
+Implemented the production routing handoff:
+
+- Production WASM score routing now materializes supported preview dynamic rows
+  through `evaluateProductionPreviewDriveBatchWithWasm` before TypeScript
+  preview-state materialization.
+- Gated candidates remain gated, and unsupported preview-drive row classes fail
+  closed instead of merging TypeScript fallback rows into a WASM-supported path.
+- Added generic slot-backed handling for victory margin/rank preview surfaces
+  and supported compiled preview-state feature slots needed by the live FITL
+  baseline (`vcFriendlyCapCount`).
+- Focused witness tightened
+  `packages/engine/test/unit/agents/policy-evaluation-topk-gate.test.ts` so a
+  WASM preview-state feature row proves the TypeScript preview `applyMove`
+  dependency is not called.
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-evaluation-topk-gate.test.js` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — passed.
+- Direct same-seam route probe with `fallbackOnError=false` over all four
+  baseline agents for one turn — passed; no hidden fallback was needed.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-preview-drive-application` — RED for the `<=250 ms` gate after active routing.
+
+Final same-seam metrics:
+
+- Overall `elapsedMs=4124.29`, `turnsCount=1`, `stopReason=maxTurns`.
+- Per-card row: `turnCount=0`, `elapsedMs=4124.12`, `decisions=158`,
+  `msPerDecision=26.102`, `closeReason=turnCountAdvanced`.
+- Active route counters: `wasmScoreRowRouteCount=62`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmScoreRowBytecodeCompileCount=47`,
+  `wasmPreviewCandidateFeatureRowRouteCount=70`, and
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Remaining buckets: `simAgentChooseMove=1353.09 ms`,
+  `agent:evaluatePolicyExpression=1351.04 ms`, and
+  `simApplyMove=867.35 ms`.
+
+This completes the routing/fail-closed slice but does not unblock the Spec 149
+F14 cut. Created successor `tickets/150FITLWASM-015.md` for the remaining
+active-route perf closure. `tickets/149FITLEVNUMVM-016.md` and
+`tickets/149FITLEVNUMVM-022.md` remain blocked on that successor.
+
+Post-review cleanup on 2026-05-03 extracted the new preview-state feature-slot
+expression evaluator and production preview-drive type declarations into
+adjacent helpers so
+`packages/engine/src/agents/policy-wasm-production-preview-drive.ts` remains
+under the repo file-size cap at 795 lines. No behavior or proof boundary
+changed.
+
+Post-review verification:
+
+- `wc -l packages/engine/src/agents/policy-wasm-production-preview-drive.ts packages/engine/src/agents/policy-wasm-production-preview-feature-slots.ts packages/engine/src/agents/policy-wasm-production-preview-drive-types.ts` — main file 795 lines.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-evaluation-topk-gate.test.js` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — passed.

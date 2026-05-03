@@ -308,6 +308,7 @@ After implementation proof and terminal ticket status are truthful, hand off to 
 - Replaces Claude-specific invocation arguments with normal Codex conversation context.
 - Do not rely on Claude-only skills or slash-command behavior.
 - Execute implementation directly once the ticket is verified and no blocking discrepancy remains.
+- When resuming after context compaction, interruption, or a long handoff summary, do a compact revalidation before continuing: reopen the active ticket, referenced spec, and any successor/sibling artifacts touched since the last proof; run `git status --short`; confirm whether any post-proof edits changed code, status, scope, command semantics, dependency ownership, or acceptance claims; rerun `pnpm run check:ticket-deps` if the ticket graph changed; and classify expensive measured lanes as still-valid transcription evidence or invalidated proof before citing them.
 - When inspecting markdown from the shell, avoid unescaped backticks in search patterns; prefer plain-string anchors or direct file reads.
 - For profiling or benchmark gate tickets, treat the ticket-owned harness/log/report surface as authoritative over exploratory single-run probes when the two differ.
 

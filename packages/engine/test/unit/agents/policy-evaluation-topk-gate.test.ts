@@ -352,16 +352,17 @@ describe('policy evaluation top-K preview gate', () => {
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(initializePolicyWasmRuntimeSync());
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
     try {
-      const moves = createMoves([1, 2, 3]);
-      const { result } = runTopK(3, moves, { usePreviewStateFeatureRows: true });
+      const moves = createMoves([3]);
+      const { result, previewedKeys } = runTopK(3, moves, { usePreviewStateFeatureRows: true });
 
       assert.equal(result.kind, 'success');
       assert.equal(result.move?.params.rank, 3);
+      assert.equal(previewedKeys.size, 0);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(), 0);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
-      assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 3);
+      assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 1);
     } finally {
       policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
       policyWasmRuntimeInternals.resetProductionScoreRowCounters();

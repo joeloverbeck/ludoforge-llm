@@ -33,8 +33,17 @@ import {
   type PolicyWasmPreviewZoneValues,
   type PolicyWasmPreviewZoneVarValues,
 } from './policy-wasm-production-preview-values.js';
-import type { ConditionAST, EffectAST, GameDef, GameState, Move, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
-import type { PolicyWasmRuntime } from './policy-wasm-runtime.js';
+import {
+  classifyPolicyWasmPreviewStateSlots,
+  evalPolicyWasmPreviewStateFeature,
+} from './policy-wasm-production-preview-feature-slots.js';
+import type { ConditionAST, EffectAST, GameDef, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
+import type {
+  PolicyWasmProductionPreviewDriveCandidate,
+  PolicyWasmProductionPreviewDriveInput,
+  PolicyWasmProductionPreviewDriveIrOp,
+  PolicyWasmProductionPreviewDriveIrProgram,
+} from './policy-wasm-production-preview-drive-types.js';
 import type {
   PolicyWasmPreviewDriveBatchInput,
   PolicyWasmPreviewDriveResult,
@@ -42,23 +51,14 @@ import type {
   PolicyWasmPreviewDriveUnsupportedClass,
 } from './policy-wasm-preview-drive.js';
 
-export interface PolicyWasmProductionPreviewDriveCandidate { readonly move: Move; readonly stableMoveKey: string; readonly actionId?: string; }
-
-export interface PolicyWasmProductionPreviewDriveInput { readonly runtime: Pick<PolicyWasmRuntime, 'evaluatePreviewDriveBatch'>; readonly def: GameDef; readonly state: GameState; readonly profileId: string; readonly originSeatId: string; readonly originTurnId: number; readonly depthCap: number; readonly previewStateSlots: readonly string[]; readonly candidates: readonly PolicyWasmProductionPreviewDriveCandidate[]; }
+export type {
+  PolicyWasmProductionPreviewDriveCandidate,
+  PolicyWasmProductionPreviewDriveInput,
+  PolicyWasmProductionPreviewDriveIrOp,
+  PolicyWasmProductionPreviewDriveIrProgram,
+} from './policy-wasm-production-preview-drive-types.js';
 
 interface UnsupportedProductionPreviewDrive { readonly unsupportedClass: PolicyWasmPreviewDriveUnsupportedClass; readonly owner: string; readonly reason: string; }
-
-export type PolicyWasmProductionPreviewDriveIrOp =
-  | { readonly kind: 'applyCandidateDeltas'; readonly candidateDeltas: readonly number[] }
-  | { readonly kind: 'addGlobal'; readonly delta: number }
-  | { readonly kind: 'setGlobal'; readonly value: number }
-  | { readonly kind: 'addPreviewSlot'; readonly slotIndex: number; readonly delta: number }
-  | { readonly kind: 'setPreviewSlot'; readonly slotIndex: number; readonly value: number }
-  | { readonly kind: 'chooseOneGreedy'; readonly optionDeltas: readonly number[] }
-  | { readonly kind: 'chooseNGreedy'; readonly min: number; readonly max: number; readonly optionDeltas: readonly number[] }
-  | { readonly kind: 'stochastic' };
-
-export interface PolicyWasmProductionPreviewDriveIrProgram { readonly rootValues: readonly number[]; readonly ops: readonly PolicyWasmProductionPreviewDriveIrOp[]; }
 
 type CompileResult =
   | { readonly kind: 'supported'; readonly program: PolicyWasmProductionPreviewDriveIrProgram }
@@ -68,12 +68,7 @@ const unsupported = (
   unsupportedClass: PolicyWasmPreviewDriveUnsupportedClass,
   owner: string,
   reason: string,
-): CompileResult => ({
-  kind: 'unsupported',
-  unsupportedClass,
-  owner,
-  reason,
-});
+): CompileResult => ({ kind: 'unsupported', unsupportedClass, owner, reason });
 
 export const evaluateProductionPreviewDriveBatchWithWasm = (
   input: PolicyWasmProductionPreviewDriveInput,
@@ -124,13 +119,9 @@ const compileProductionPreviewDrive = (
   if (input.previewStateSlots.length === 0) {
     return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', 'production preview-drive requires at least one scalar preview-state slot');
   }
-  const slotIndexByGlobalVar = new Map<string, number>();
-  for (const [index, slot] of input.previewStateSlots.entries()) {
-    const globalVar = parsePolicyWasmPreviewGlobalSlot(slot);
-    if (globalVar === null) {
-      return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview-state slot "${slot}"`);
-    }
-    slotIndexByGlobalVar.set(globalVar, index);
+  const { slotIndexByGlobalVar, featureSlots, unsupportedSlot } = classifyPolicyWasmPreviewStateSlots(input.previewStateSlots, parsePolicyWasmPreviewGlobalSlot);
+  if (unsupportedSlot !== undefined) {
+    return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview-state slot "${unsupportedSlot}"`);
   }
 
   const actionIds = input.candidates.map((candidate) => candidate.actionId ?? String(candidate.move.actionId));
@@ -143,7 +134,16 @@ const compileProductionPreviewDrive = (
   if (pipeline === undefined && action === undefined) {
     return unsupported('unsupported-effect', `action:${actionId}`, `action "${actionId}" has no generic production definition`);
   }
-  const rootValues = input.previewStateSlots.map((slot) => readPolicyWasmPreviewRootSlot(input.state, slot));
+  const rootValues = input.previewStateSlots.map((slot) => {
+    const featureId = slot.startsWith('feature.') ? slot.slice('feature.'.length) : undefined;
+    if (featureId !== undefined) {
+      return evalPolicyWasmPreviewStateFeature(featureId, input.def, input.state, slotIndexByGlobalVar, {
+        slotValues: [],
+        markerValues: buildPolicyWasmPreviewMarkerValues(input.state),
+      }) ?? 0;
+    }
+    return readPolicyWasmPreviewRootSlot(input.state, slot);
+  });
   const rootBindings = buildPolicyWasmPreviewRootBindings(input.candidates, pipeline);
   if (rootBindings === undefined) {
     return unsupported('unsupported-effect', 'production-preview-drive.actionBatch', 'production preview-drive requires deterministic shared scalar runtime bindings');
@@ -171,6 +171,14 @@ const compileProductionPreviewDrive = (
       return result;
     }
   }
+  for (const featureSlot of featureSlots) {
+    const value = evalPolicyWasmPreviewStateFeature(featureSlot.featureId, input.def, input.state, slotIndexByGlobalVar, state);
+    if (value === undefined) {
+      return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview-state feature "${featureSlot.featureId}"`);
+    }
+    state.ops.push({ kind: 'setPreviewSlot', slotIndex: featureSlot.slotIndex, value });
+    state.slotValues[featureSlot.slotIndex] = value;
+  }
   return {
     kind: 'supported',
     program: {
@@ -180,15 +188,7 @@ const compileProductionPreviewDrive = (
   };
 };
 
-interface CompileState {
-  beforeFirstDecision: boolean;
-  bindings: Map<string, PolicyWasmPreviewValue>;
-  ops: PolicyWasmProductionPreviewDriveIrOp[];
-  slotValues: number[];
-  markerValues: Map<string, string>;
-  zoneVarValues: PolicyWasmPreviewZoneVarValues;
-  zoneValues: PolicyWasmPreviewZoneValues;
-}
+interface CompileState { beforeFirstDecision: boolean; bindings: Map<string, PolicyWasmPreviewValue>; ops: PolicyWasmProductionPreviewDriveIrOp[]; slotValues: number[]; markerValues: Map<string, string>; zoneVarValues: PolicyWasmPreviewZoneVarValues; zoneValues: PolicyWasmPreviewZoneValues; }
 
 const compileEffects = (
   effects: readonly EffectAST[],

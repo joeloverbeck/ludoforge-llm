@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: PENDING after FITL-current encoded preview-drive class expansion prerequisite `archive/tickets/150FITLWASM-012.md`
+**Status**: BLOCKED by generic encoded preview-state substrate prerequisite `tickets/150FITLWASM-013.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `tickets/150FITLWASM-013.md`
 
 ## Problem
 
@@ -44,9 +44,30 @@ equivalent before production routing can claim that supported preview
 application/drive batches use WASM. Ticket `archive/tickets/150FITLWASM-011.md`
 delivered the first generic encoded preview-drive substrate and synthetic
 greedy-subset parity. Ticket `archive/tickets/150FITLWASM-012.md` expanded that encoded
-preview-drive ABI to the current FITL same-seam inventory classes and now hands
-the remaining work back to this ticket. This ticket remains the later
-production routing, fail-closed diagnostics, and same-seam perf-gate owner.
+preview-drive ABI to the current FITL same-seam inventory classes, but live
+reassessment on 2026-05-03 proved that this is still inventory-level replay
+support rather than a production replacement for TypeScript preview-state
+materialization. Ticket `tickets/150FITLWASM-013.md` now owns the missing
+generic encoded preview-state/effect/publication substrate. This ticket remains
+the later production routing, fail-closed diagnostics, and same-seam perf-gate
+owner after that prerequisite is complete.
+
+## Assumption Reassessment (2026-05-03)
+
+1. The live `150FITLWASM-012` ABI supports scalar `applyCandidateDeltas`,
+   greedy completion steps, stochastic exits, depth caps, and unsupported
+   diagnostics.
+2. The production policy preview route still applies candidate moves, publishes
+   decision-stack microturns, drives bounded completion, canonicalizes
+   `GameState`, and materializes preview surfaces through TypeScript.
+3. The profiling inventory's current `supportedByEncodedPreviewDriveAbi=true`
+   rows validate encoded batch shape after TypeScript captures exist; they do
+   not by themselves produce preview states or remove TypeScript object-graph
+   traversal from the production hot path.
+4. User-confirmed boundary reset on 2026-05-03 selected a new prerequisite
+   owner: `tickets/150FITLWASM-013.md`. This ticket is blocked until that
+   substrate is proven, then resumes as the production routing and perf-gate
+   owner.
 
 ## Architecture Check
 
@@ -68,11 +89,11 @@ production routing, fail-closed diagnostics, and same-seam perf-gate owner.
 
 ### 1. Preview-drive ownership
 
-Wire the smallest generic handoff that removes the remaining TypeScript preview
-application/drive hot path for the supported live baseline surface. This may be
-the `150FITLWASM-012` encoded preview-drive ABI, a compiled generic effect
-program path, or another buffer-oriented runtime handoff, but it must preserve
-the current preview outcome semantics.
+After ticket `150FITLWASM-013` lands, wire the smallest generic handoff that
+removes the remaining TypeScript preview application/drive hot path for the
+supported live baseline surface. The handoff must preserve the current preview
+outcome semantics and must not count a TypeScript-materialized preview result
+as WASM-supported production routing.
 
 ### 2. Production routing and diagnostics
 
@@ -94,6 +115,7 @@ remains red, record exact metrics and create the next non-overlapping owner.
 - `packages/engine/src/agents/policy-wasm-runtime.ts` if the ABI/API needs new buffers
 - `packages/engine-wasm/policy-vm/src/lib.rs` if Rust/WASM owns the new route
 - focused unit/integration witnesses near the changed production and WASM seams
+- `tickets/150FITLWASM-013.md` if production routing proves a residual substrate gap
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
 - this ticket (modify Outcome before closeout)
 
@@ -178,7 +200,26 @@ Outcome amended: 2026-05-03.
 Ticket `150FITLWASM-012` completed the FITL-current generic class expansion.
 Its final live encoded inventory reports `driveExitTotal=211`, with
 `initialMoveApplication`, `decisionStackPublication`, and `completionExits` all
-`supportedByEncodedPreviewDriveAbi=true`; successor owner
+`supportedByEncodedPreviewDriveAbi=true`; then-successor owner
 `tickets/150FITLWASM-010.md`. This ticket is no longer blocked by the 012
-prerequisite and now owns production routing through the encoded preview-drive
-route, fail-closed diagnostics, and the same-seam perf-gate verdict.
+inventory prerequisite, but the 2026-05-03 reassessment below split out a new
+generic preview-state substrate prerequisite before production routing can
+truthfully resume here.
+
+Outcome amended: 2026-05-03.
+
+User-confirmed boundary reset selected a new prerequisite split before
+production routing:
+
+- Live reassessment found that `150FITLWASM-012` proves encoded
+  preview-drive inventory replay, not production replacement of TypeScript
+  preview-state materialization.
+- The live production path in `packages/engine/src/agents/policy-preview.ts`
+  still applies candidate moves, publishes decision-stack microturns, drives
+  bounded completion, canonicalizes `GameState`, and materializes preview
+  surfaces before WASM score rows consume scalar values.
+- New active prerequisite `tickets/150FITLWASM-013.md` owns the missing generic
+  encoded preview-state/effect/publication substrate.
+- This ticket is `BLOCKED` until `150FITLWASM-013` completes; it remains the
+  later production routing, fail-closed diagnostics, and same-seam perf-gate
+  owner. No runtime code changed under this boundary reset.

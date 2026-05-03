@@ -12,9 +12,16 @@ import {
   getScoreRowBytecodeCompileCount,
   resetScoreRowBytecodeCompileCount,
 } from './policy-wasm-score-bytecode-cache.js';
+import {
+  decodePolicyWasmPreviewDriveRows,
+  encodePolicyWasmPreviewDriveInput,
+  firstUnsupportedPreviewDriveClass,
+  type PolicyWasmPreviewDriveBatchInput,
+  type PolicyWasmPreviewDriveResult,
+} from './policy-wasm-preview-drive.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 5;
+export const POLICY_WASM_ABI_VERSION = 6;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -69,6 +76,14 @@ interface PolicyWasmExports {
     inputPtr: number,
     inputLen: number,
     outTagsPtr: number,
+    outValuesPtr: number,
+    outLen: number,
+  ) => number;
+  readonly ludoforge_policy_vm_evaluate_preview_drive_batch: (
+    inputPtr: number,
+    inputLen: number,
+    outOutcomesPtr: number,
+    outDepthsPtr: number,
     outValuesPtr: number,
     outLen: number,
   ) => number;
@@ -163,6 +178,7 @@ export interface PolicyWasmRuntime {
       readonly aggregates?: readonly PolicyWasmPrecomputedAggregate[];
     },
   ): readonly PolicyValue[];
+  evaluatePreviewDriveBatch(input: PolicyWasmPreviewDriveBatchInput): PolicyWasmPreviewDriveResult;
 }
 
 let productionPolicyWasmRuntime: PolicyWasmRuntime | null = null;
@@ -227,6 +243,7 @@ const checkedExports = (instance: WebAssembly.Instance): PolicyWasmExports => {
     'ludoforge_policy_vm_evaluate_smoke',
     'ludoforge_policy_vm_evaluate_bytecode',
     'ludoforge_policy_vm_evaluate_bytecode_batch',
+    'ludoforge_policy_vm_evaluate_preview_drive_batch',
   ] as const) {
     if (typeof exports[name] !== 'function') {
       throw new Error(`Policy WASM module is missing export ${name}.`);
@@ -747,6 +764,58 @@ const createPolicyWasmRuntime = (
       } finally {
         wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
         wasm.ludoforge_policy_vm_dealloc(outTagsPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
+      }
+    },
+    evaluatePreviewDriveBatch: (previewInput): PolicyWasmPreviewDriveResult => {
+      const input = encodePolicyWasmPreviewDriveInput(
+        previewInput,
+        POLICY_WASM_ABI_MAGIC,
+        POLICY_WASM_ABI_VERSION,
+      );
+      const outputBytes = previewInput.candidates.length * I32_BYTES;
+      const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
+      const outOutcomesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outDepthsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      try {
+        new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
+        const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
+          inputPtr,
+          input.byteLength,
+          outOutcomesPtr,
+          outDepthsPtr,
+          outValuesPtr,
+          previewInput.candidates.length,
+        );
+        if (status === -14) {
+          const unsupportedDriveClass = firstUnsupportedPreviewDriveClass(previewInput) ?? 'unknown';
+          return {
+            kind: 'unsupported',
+            profileId: previewInput.profileId,
+            candidateCount: previewInput.candidates.length,
+            unsupportedDriveClass,
+            reason: `unsupported preview-drive class ${unsupportedDriveClass}`,
+          };
+        }
+        if (status !== 0) {
+          throw new Error(`Policy WASM preview-drive batch failed with status ${status}.`);
+        }
+        return {
+          kind: 'supported',
+          profileId: previewInput.profileId,
+          rows: decodePolicyWasmPreviewDriveRows(
+            previewInput,
+            wasm.memory.buffer,
+            outOutcomesPtr,
+            outDepthsPtr,
+            outValuesPtr,
+          ),
+        };
+      } finally {
+        wasm.ludoforge_policy_vm_dealloc(inputPtr, input.byteLength);
+        wasm.ludoforge_policy_vm_dealloc(outOutcomesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outDepthsPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
       }
     },

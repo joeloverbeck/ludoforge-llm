@@ -62,6 +62,7 @@ const config = {
   verifyIncrementalHash: !flagBoolean('noVerifyIncrementalHash'),
   perCard: flagBoolean('perCard'),
   profileBuckets: flagBoolean('profileBuckets'),
+  previewDriveInventory: flagBoolean('previewDriveInventory'),
   retainDecisions: flagBoolean('retainDecisions'),
   warmup: flagBoolean('warmup'),
   label: flagValue('label', 'run'),
@@ -121,6 +122,7 @@ const seatToProfileId = buildSeatToProfileId();
 // (profileId, exitKind) -> Map<depth, count>
 const driveExitHistogram = new Map();
 let driveExitTotal = 0;
+let driveResultCaptures = [];
 const recordDriveExit = (info) => {
   driveExitTotal += 1;
   const profileId = seatToProfileId.get(info.seatId) ?? `seat:${info.seatId}`;
@@ -131,6 +133,9 @@ const recordDriveExit = (info) => {
     driveExitHistogram.set(bucketKey, depthMap);
   }
   depthMap.set(info.depth, (depthMap.get(info.depth) ?? 0) + 1);
+};
+const recordDriveResult = (capture) => {
+  driveResultCaptures.push(capture);
 };
 
 const buildAgents = () => {
@@ -149,7 +154,11 @@ const runOnce = () => {
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   driveExitHistogram.clear();
   driveExitTotal = 0;
+  driveResultCaptures = [];
   policyPreviewInternals.setDriveExitSink(recordDriveExit);
+  if (config.previewDriveInventory) {
+    policyPreviewInternals.setDriveResultSink(recordDriveResult);
+  }
   const agents = buildAgents();
   const profiler = config.profileBuckets ? createPerfProfiler() : undefined;
   const startedAt = performance.now();
@@ -178,6 +187,7 @@ const runOnce = () => {
   const stopReason = trace.stopReason ?? 'unknown';
   const driveExitSnapshot = snapshotDriveExitHistogram();
   policyPreviewInternals.setDriveExitSink(undefined);
+  policyPreviewInternals.setDriveResultSink(undefined);
   return {
     elapsedMs,
     turnsCount,
@@ -196,6 +206,9 @@ const runOnce = () => {
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
+    previewDriveInventory: config.previewDriveInventory
+      ? snapshotPreviewDriveInventory(driveResultCaptures)
+      : [],
     perCardRows,
     profileBuckets: profiler === undefined ? [] : snapshotProfilerBuckets(profiler),
   };
@@ -338,6 +351,62 @@ function snapshotDriveExitHistogram() {
   return { total: driveExitTotal, buckets, depthQuantilesByProfile };
 }
 
+function snapshotPreviewDriveInventory(captures) {
+  const actionClasses = new Map();
+  for (const capture of captures) {
+    const profileId = seatToProfileId.get(capture.seatId) ?? `seat:${capture.seatId}`;
+    const key = `${profileId}|${capture.actionId}|${capture.resultKind}|${capture.resultReason ?? 'none'}`;
+    const existing = actionClasses.get(key) ?? {
+      profileId,
+      actionId: capture.actionId,
+      resultKind: capture.resultKind,
+      resultReason: capture.resultReason ?? null,
+      count: 0,
+      minDepth: null,
+      maxDepth: null,
+    };
+    existing.count += 1;
+    if (capture.resultDepth !== undefined) {
+      existing.minDepth = existing.minDepth === null ? capture.resultDepth : Math.min(existing.minDepth, capture.resultDepth);
+      existing.maxDepth = existing.maxDepth === null ? capture.resultDepth : Math.max(existing.maxDepth, capture.resultDepth);
+    }
+    actionClasses.set(key, existing);
+  }
+
+  const summaryRows = [...actionClasses.values()].sort((left, right) =>
+    right.count - left.count
+    || left.profileId.localeCompare(right.profileId)
+    || left.actionId.localeCompare(right.actionId)
+    || left.resultKind.localeCompare(right.resultKind),
+  );
+  return [
+    {
+      surface: 'initialMoveApplication',
+      runtimeClass: 'trusted applyMove / action-pipeline effects over TypeScript GameState',
+      supportedByEncodedPreviewDriveAbi: false,
+      failClosedClass: 'unsupported-effect',
+      successorOwner: 'tickets/150FITLWASM-012.md',
+      count: captures.length,
+    },
+    {
+      surface: 'decisionStackPublication',
+      runtimeClass: 'publishMicroturnFromPreviewStateNoHash over TypeScript decision stack',
+      supportedByEncodedPreviewDriveAbi: false,
+      failClosedClass: 'unsupported-effect',
+      successorOwner: 'tickets/150FITLWASM-012.md',
+      count: captures.length,
+    },
+    {
+      surface: 'completionExits',
+      runtimeClass: 'current same-seam preview-drive exit distribution',
+      supportedByEncodedPreviewDriveAbi: false,
+      failClosedClass: 'unsupported-effect',
+      successorOwner: 'tickets/150FITLWASM-012.md',
+      rows: summaryRows,
+    },
+  ];
+}
+
 function percentile(sortedAsc, fraction) {
   if (sortedAsc.length === 0) {
     return null;
@@ -367,6 +436,7 @@ const summary = {
     verifyIncrementalHash: config.verifyIncrementalHash,
     perCard: config.perCard,
     profileBuckets: config.profileBuckets,
+    previewDriveInventory: config.previewDriveInventory,
     warmup: config.warmup,
   },
   result: {
@@ -391,6 +461,7 @@ const summary = {
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
     perCardRows: result.perCardRows,
     profileBuckets: result.profileBuckets,
+    previewDriveInventory: result.previewDriveInventory,
   },
 };
 
@@ -434,6 +505,13 @@ for (const row of summary.result.perCardRows ?? []) {
 for (const row of (summary.result.profileBuckets ?? []).slice(0, 12)) {
   process.stderr.write(
     `[profile-fitl-preview-drive] profile-bucket key=${row.key} count=${row.count} totalMs=${row.totalMs}\n`,
+  );
+}
+for (const row of summary.result.previewDriveInventory ?? []) {
+  process.stderr.write(
+    `[profile-fitl-preview-drive] preview-drive-inventory surface=${row.surface} ` +
+    `supportedByEncodedPreviewDriveAbi=${row.supportedByEncodedPreviewDriveAbi} ` +
+    `failClosedClass=${row.failClosedClass} count=${row.count ?? row.rows?.length ?? 0}\n`,
   );
 }
 

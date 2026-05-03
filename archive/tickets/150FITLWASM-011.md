@@ -1,6 +1,6 @@
 # 150FITLWASM-011: Generic encoded preview-drive substrate prerequisite
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: XL
 **Engine Changes**: Yes — generic encoded preview-drive application/runtime substrate, WASM/buffer ABI, parity proof
@@ -130,3 +130,92 @@ substrate or bridge.
 3. Focused encoded preview-drive substrate parity test command.
 4. Focused unsupported-class fail-closed test command.
 5. Focused immutability regression command.
+
+## Outcome
+
+Completed on 2026-05-03.
+
+This ticket added the first generic encoded preview-drive ABI substrate:
+
+- `policy-wasm-preview-drive.ts` encodes a deterministic i32 buffer with
+  magic/version/layout identity, origin seat/turn identity, candidate count,
+  preview depth cap, candidate rows, and generic preview-drive steps.
+- `policy-wasm-runtime.ts` exposes `evaluatePreviewDriveBatch`, validates the
+  new WASM export, allocates bounded output buffers, and returns deterministic
+  supported rows or fail-closed unsupported diagnostics naming profile id,
+  candidate count, and unsupported drive class.
+- `policy-vm/src/preview_drive.rs` implements the buffer-oriented WASM batch
+  evaluator for the supported synthetic greedy subset: initial scalar
+  application, greedy `chooseOne`, greedy `chooseN`, stochastic exit,
+  depth-cap exit, layout/version rejection, and unsupported-class rejection.
+- `profile-fitl-preview-drive.mjs --previewDriveInventory` is the repeatable
+  current-corpus inventory probe for FITL same-seam preview-drive classes.
+
+Supported subset and parity:
+
+- Supported generic fixtures cover deterministic add/application,
+  same-seat/same-turn greedy `chooseOne`, same-seat/same-turn greedy `chooseN`,
+  stochastic exit, and depth-cap exit.
+- `policy-preview-driver.test.ts` compares the encoded WASM preview-drive rows
+  against the TypeScript preview driver for supported generic fixtures.
+- Unsupported classes fail closed before score production. The focused
+  unsupported witness returns `unsupportedDriveClass=gated` with
+  `candidateCount=1` and no TypeScript fallback preview rows.
+- Caller-visible `GameState` immutability is proven by the focused bridge test:
+  the source state hash and source `globalVars.score` remain unchanged after
+  the encoded WASM batch evaluation.
+
+Current FITL same-seam inventory:
+
+- Command: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-011-preview-drive-inventory`
+- Result: completed as inventory evidence, not as production routing.
+- Initial result: `elapsedMs=7064.51`, `turnsCount=1`,
+  `driveExitTotal=211`.
+- Post-review rerun after extracting the Rust implementation into
+  `policy-vm/src/preview_drive.rs` and correcting residual owner output:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-011-post-review-inventory`
+  passed as inventory evidence with `elapsedMs=6656.97`, `turnsCount=1`,
+  `driveExitTotal=211`, and per-card `elapsedMs=6656.71`.
+- Active existing routes remain healthy: `wasmScoreRowRouteCount=65`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowRouteCount=77`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- FITL classes still fail closed for this ticket's encoded subset:
+  `initialMoveApplication` and `decisionStackPublication` both report
+  `supportedByEncodedPreviewDriveAbi=false`,
+  `failClosedClass=unsupported-effect`, `count=211`, and successor owner
+  `tickets/150FITLWASM-012.md`.
+- Completion exits include completed rows across all four baseline profiles and
+  two depth-cap exits (`us-baseline event`, `vc-baseline event`).
+
+Follow-up ownership:
+
+- Created `tickets/150FITLWASM-012.md` for the FITL-current generic
+  preview-drive class expansion required before production routing can resume.
+- Updated `tickets/150FITLWASM-010.md` so it remains blocked by
+  `150FITLWASM-012`, not by this now-completed substrate slice.
+
+Final verification:
+
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` — passed, 15 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — passed, 8 tests.
+- `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` — passed.
+- `pnpm run check:ticket-deps` — passed for 6 active tickets and 2200 archived tickets.
+
+Post-review proof validity:
+
+| Lane | Consumes late Rust extraction / inventory owner correction | Status |
+| --- | --- | --- |
+| `pnpm -F @ludoforge/engine-wasm build` | `policy-vm/src/lib.rs`, `policy-vm/src/preview_drive.rs`, ABI version 6 | Rerun after extraction; passed |
+| `pnpm -F @ludoforge/engine build` | TypeScript runtime, preview-drive bridge, tests compiled to `dist` | Rerun after extraction; passed |
+| `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` | Runtime export validation and ABI version 6 | Rerun after extraction; passed |
+| `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` | Supported parity, unsupported fail-closed diagnostics, immutability proof | Rerun after extraction; passed |
+| `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` | Inventory script syntax and `--previewDriveInventory` option | Post-review rerun; passed |
+| `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-011-post-review-inventory` | Built engine output, WASM runtime, inventory script, residual owner classification | Post-review rerun; passed as inventory evidence |
+
+No remaining final-proof invalidation: after the post-review inventory rerun,
+the only further edits before archival were ticket/spec wording and dependency
+path maintenance. They do not change production code, ABI command semantics, or
+the supported/fail-closed acceptance boundary proven above.

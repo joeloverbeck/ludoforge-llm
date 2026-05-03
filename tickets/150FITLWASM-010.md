@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: BLOCKED by generic preview-drive substrate prerequisite `tickets/150FITLWASM-011.md`
+**Status**: BLOCKED by FITL-current encoded preview-drive class expansion prerequisite `tickets/150FITLWASM-012.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `tickets/150FITLWASM-011.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `tickets/150FITLWASM-012.md`
 
 ## Problem
 
@@ -41,10 +41,14 @@ or preview outcome buffer production.
 Per Foundations #1, #5, #8, #10, #11, #15, and #16, the preview-drive handoff
 must be generic, deterministic, bounded, externally immutable, and proven
 equivalent before production routing can claim that supported preview
-application/drive batches use WASM. Ticket `tickets/150FITLWASM-011.md` is now
-the prerequisite owner for that generic encoded preview-drive substrate. This
-ticket remains the later production routing, fail-closed diagnostics, and
-same-seam perf-gate owner after that prerequisite exists.
+application/drive batches use WASM. Ticket `archive/tickets/150FITLWASM-011.md`
+delivered the first generic encoded preview-drive substrate and synthetic
+greedy-subset parity, but its FITL same-seam inventory still classifies current
+initial move application and decision-stack publication as fail-closed
+`unsupported-effect` classes. Ticket `tickets/150FITLWASM-012.md` is now the
+prerequisite owner for that FITL-current generic class expansion. This ticket
+remains the later production routing, fail-closed diagnostics, and same-seam
+perf-gate owner after that prerequisite exists.
 
 ## Architecture Check
 
@@ -66,7 +70,7 @@ same-seam perf-gate owner after that prerequisite exists.
 
 ### 1. Preview-drive ownership
 
-After `tickets/150FITLWASM-011.md` lands, wire the smallest generic handoff that
+After `tickets/150FITLWASM-012.md` lands, wire the smallest generic handoff that
 removes the remaining TypeScript preview application/drive hot path for the
 supported live baseline surface. This may be a WASM preview-application ABI, a
 compiled generic effect program path, or another buffer-oriented runtime
@@ -155,8 +159,18 @@ Current fresh same-seam baseline after rebuilding engine and engine-wasm:
   `agent:evaluatePolicyExpression=3978.47 ms`, and
   `simApplyMove=854.89 ms`.
 
-Decision: this ticket is blocked until `tickets/150FITLWASM-011.md` provides a
-generic encoded preview-drive application/runtime substrate. Closing this ticket
-on precomputed preview rows, counters, or TypeScript-only optimization would
-misstate the handoff and violate the Foundations-aligned one-rules protocol and
-testing-as-proof requirements.
+Outcome amended: 2026-05-03.
+
+Ticket `150FITLWASM-011` delivered the first generic encoded preview-drive ABI
+substrate and supported synthetic greedy-subset parity. Its FITL same-seam
+inventory still reports `driveExitTotal=211`, with `initialMoveApplication` and
+`decisionStackPublication` both `supportedByEncodedPreviewDriveAbi=false`,
+`failClosedClass=unsupported-effect`, `count=211`.
+
+Decision: this ticket is now blocked until `tickets/150FITLWASM-012.md` expands
+the generic encoded preview-drive substrate to the current FITL same-seam
+classes or records a narrower residual owner. Closing this ticket on
+precomputed preview rows, counters, TypeScript-only optimization, or the
+synthetic subset from `150FITLWASM-011` would misstate the production handoff
+and violate the Foundations-aligned one-rules protocol and testing-as-proof
+requirements.

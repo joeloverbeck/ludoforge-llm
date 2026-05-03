@@ -113,6 +113,12 @@ For expensive evidence or measurement tickets, distinguish **transcription edits
 2. if the edit changes status, metric values, thresholds, acceptance boundaries, command semantics, touched-file ownership, or follow-up/dependency classification, rerun the narrowest affected proof lane before citing final acceptance
 3. if the distinction is unclear, treat the edit as acceptance-story affecting and rerun or stop for 1-3-1 when the rerun cost or boundary change is no longer clearly authorized
 
+After any late code/test/spec/ticket edit that follows an intended final proof lane, write a compact lane-validity table in working notes or the ticket outcome before final closeout when more than one lane is involved:
+
+`lane | consumes changed artifact? | rerun needed? | final citation status`
+
+Use `final citation status` values such as `rerun green`, `not affected`, `stale diagnostic only`, or `blocked/unclassified`. If an expensive inventory/profile lane is not rerun, the table must explain why the late edit did not affect the produced evidence or else mark that lane non-final.
+
 ## Post-Closeout Verification Correction
 
 If a follow-up investigation after a ticket was marked `COMPLETED` shows that a cited proof lane was misleading, stale, or misattributed, treat the ticket proof ledger as the owned artifact under repair:

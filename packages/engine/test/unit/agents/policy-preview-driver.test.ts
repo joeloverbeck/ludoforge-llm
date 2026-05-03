@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyPreviewMove, createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
+import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime.js';
 import { computeFullHash, createZobristTable } from '../../../src/kernel/zobrist.js';
 import {
   asActionId,
@@ -312,5 +313,102 @@ describe('policy preview synthetic-completion driver', () => {
     assert.equal(runtime.getOutcome(candidate), 'ready');
     assert.equal(applyCount, 1);
     assert.equal(state.stateHash, preDriveStateHash);
+  });
+
+  it('matches the TypeScript preview driver for the supported encoded preview-drive subset', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+
+    const branchDef = createDecisionDrivenDef();
+    const branch = trustedCandidate(branchDef, 'branch');
+    const branchRuntime = createRuntime(branchDef, branch.state, branch.trustedMove, { completionDepthCap: 8 });
+    const branchCandidate = { move: branch.trustedMove.move, stableMoveKey: 'candidate', actionId: 'branch' };
+    const branchPreview = branchRuntime.getPreviewState(branchCandidate);
+    assertCanonicalPreviewState(branchDef, branchPreview, 'branch parity reference');
+    const branchResult = wasm.evaluatePreviewDriveBatch({
+      profileId: 'synthetic-greedy',
+      originSeatId: '0',
+      originTurnId: 0,
+      depthCap: 8,
+      candidates: [{ actionId: 'branch', stableMoveKey: 'candidate', initialValue: 0 }],
+      steps: [
+        { kind: 'chooseOneGreedy', optionDeltas: [0, 0] },
+        { kind: 'addGlobal', delta: 3 },
+      ],
+    });
+    if (branchResult.kind !== 'supported') {
+      assert.fail(`branch preview-drive parity unexpectedly unsupported: ${branchResult.reason}`);
+    }
+    assert.deepEqual(branchResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
+      { outcome: 'completed', value: branchPreview.globalVars.score },
+    ]);
+
+    const chooseNDef = createChooseNDef();
+    const chooseN = trustedCandidate(chooseNDef, 'select');
+    const chooseNRuntime = createRuntime(chooseNDef, chooseN.state, chooseN.trustedMove, { completionDepthCap: 8 });
+    const chooseNPreview = chooseNRuntime.getPreviewState({ move: chooseN.trustedMove.move, stableMoveKey: 'candidate', actionId: 'select' });
+    assertCanonicalPreviewState(chooseNDef, chooseNPreview, 'chooseN parity reference');
+    const chooseNResult = wasm.evaluatePreviewDriveBatch({
+      profileId: 'synthetic-greedy',
+      originSeatId: '0',
+      originTurnId: 0,
+      depthCap: 8,
+      candidates: [{ actionId: 'select', stableMoveKey: 'candidate', initialValue: 0 }],
+      steps: [
+        { kind: 'chooseNGreedy', min: 2, max: 2, optionDeltas: [0, 0] },
+        { kind: 'addGlobal', delta: 5 },
+      ],
+    });
+    if (chooseNResult.kind !== 'supported') {
+      assert.fail(`chooseN preview-drive parity unexpectedly unsupported: ${chooseNResult.reason}`);
+    }
+    assert.deepEqual(chooseNResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
+      { outcome: 'completed', value: chooseNPreview.globalVars.score },
+    ]);
+  });
+
+  it('fails closed for unsupported encoded preview-drive classes before scoring', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+
+    assert.deepEqual(wasm.evaluatePreviewDriveBatch({
+      profileId: 'synthetic-gated',
+      originSeatId: '0',
+      originTurnId: 0,
+      depthCap: 8,
+      candidates: [{ actionId: 'blocked', stableMoveKey: 'blocked:{}', initialValue: 0 }],
+      steps: [{ kind: 'unsupported', unsupportedClass: 'gated' }],
+    }), {
+      kind: 'unsupported',
+      profileId: 'synthetic-gated',
+      candidateCount: 1,
+      unsupportedDriveClass: 'gated',
+      reason: 'unsupported preview-drive class gated',
+    });
+  });
+
+  it('preserves caller-visible state while evaluating encoded preview-drive batches', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    const def = createDecisionDrivenDef();
+    const { state } = trustedCandidate(def, 'branch');
+    const beforeHash = state.stateHash;
+    const beforeScore = state.globalVars.score;
+    if (typeof beforeScore !== 'number') {
+      assert.fail('expected numeric score in immutability fixture');
+    }
+
+    const result = wasm.evaluatePreviewDriveBatch({
+      profileId: 'synthetic-immutability',
+      originSeatId: '0',
+      originTurnId: 0,
+      depthCap: 8,
+      candidates: [{ actionId: 'branch', stableMoveKey: 'candidate', initialValue: beforeScore }],
+      steps: [
+        { kind: 'chooseOneGreedy', optionDeltas: [0, 0] },
+        { kind: 'addGlobal', delta: 3 },
+      ],
+    });
+
+    assert.equal(result.kind, 'supported');
+    assert.equal(state.stateHash, beforeHash);
+    assert.equal(state.globalVars.score, beforeScore);
   });
 });

@@ -243,6 +243,7 @@ describe('encoded policy runtime reads', () => {
         batchCalls += 1;
         return candidates.map(() => 1);
       },
+      evaluatePreviewDriveBatch: () => ({ kind: 'supported', profileId: 'baseline', rows: [] }),
     };
 
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(fakeRuntime);
@@ -263,6 +264,7 @@ describe('encoded policy runtime reads', () => {
       evaluatePolicyBytecodeBatch: () => {
         throw new Error('Policy WASM bytecode batch evaluation failed with status -14.');
       },
+      evaluatePreviewDriveBatch: () => ({ kind: 'supported', profileId: 'baseline', rows: [] }),
     };
 
     policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(fakeRuntime);

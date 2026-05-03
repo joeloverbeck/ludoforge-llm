@@ -30,6 +30,7 @@ const VALUE_UNDEFINED = 0;
 const VALUE_NUMBER = 1;
 const VALUE_FALSE = 2;
 const VALUE_TRUE = 3;
+const NO_EXPECTED_LAYOUT_ID = -1;
 
 const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   globalVar: 1,
@@ -259,6 +260,23 @@ const layoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
   return hash >>> 1;
 };
 
+const layoutIdentityCache = new WeakMap<EncodedStateLayout, WeakMap<GameDef, number>>();
+
+const cachedLayoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
+  const cachedByDef = layoutIdentityCache.get(layout);
+  const cached = cachedByDef?.get(def);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const identity = layoutIdentity(layout, def);
+  if (cachedByDef !== undefined) {
+    cachedByDef.set(def, identity);
+  } else {
+    layoutIdentityCache.set(layout, new WeakMap([[def, identity]]));
+  }
+  return identity;
+};
+
 const zoneKindCode = (def: GameDef, zoneId: string): number => {
   const zone = def.zones.find((entry) => String(entry.id) === zoneId);
   return (zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1;
@@ -269,7 +287,7 @@ const encodePolicyBytecodeInput = (
   encoded: EncodedState,
   context: PolicyWasmBytecodeContext,
 ): Uint8Array => {
-  const layoutId = layoutIdentity(context.layout, context.def);
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
   const expectedLayoutId = context.expectedLayoutId ?? layoutId;
   const words: number[] = [
     POLICY_WASM_ABI_MAGIC,
@@ -332,6 +350,44 @@ const encodePolicyBytecodeInput = (
   return bytes;
 };
 
+const encodedPolicyBytecodeInputCache = new WeakMap<EncodedState, WeakMap<PolicyBytecode, Map<string, Uint8Array>>>();
+
+const encodedPolicyBytecodeInputCacheKey = (
+  context: PolicyWasmBytecodeContext,
+): string => {
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
+  const expectedLayoutId = context.expectedLayoutId ?? NO_EXPECTED_LAYOUT_ID;
+  return [
+    layoutId,
+    expectedLayoutId,
+    Number(context.state.activePlayer),
+    context.playerId ?? Number(context.state.activePlayer),
+  ].join('|');
+};
+
+const getEncodedPolicyBytecodeInput = (
+  bytecode: PolicyBytecode,
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): Uint8Array => {
+  const key = encodedPolicyBytecodeInputCacheKey(context);
+  const cachedByBytecode = encodedPolicyBytecodeInputCache.get(encoded);
+  const cachedByContext = cachedByBytecode?.get(bytecode);
+  const cached = cachedByContext?.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const input = encodePolicyBytecodeInput(bytecode, encoded, context);
+  if (cachedByContext !== undefined) {
+    cachedByContext.set(key, input);
+  } else if (cachedByBytecode !== undefined) {
+    cachedByBytecode.set(bytecode, new Map([[key, input]]));
+  } else {
+    encodedPolicyBytecodeInputCache.set(encoded, new WeakMap([[bytecode, new Map([[key, input]])]]));
+  }
+  return input;
+};
+
 const encodeBatchInput = (
   program: Uint8Array,
   context: PolicyWasmBytecodeContext,
@@ -341,7 +397,7 @@ const encodeBatchInput = (
   if (program.byteLength % I32_BYTES !== 0) {
     throw new Error('Policy WASM batch program must be i32-aligned.');
   }
-  const layoutId = layoutIdentity(context.layout, context.def);
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
   const expectedLayoutId = context.expectedLayoutId ?? layoutId;
   const words = [
     POLICY_WASM_ABI_MAGIC,
@@ -702,7 +758,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecode: (bytecode, encoded, context): PolicyValue => {
-      const input = encodePolicyBytecodeInput(bytecode, encoded, context);
+      const input = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagPtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
       const outValuePtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
@@ -726,7 +782,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates, precomputed): readonly PolicyValue[] => {
-      const program = encodePolicyBytecodeInput(bytecode, encoded, context);
+      const program = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const input = encodeBatchInput(program, context, candidates, precomputed);
       const outputBytes = candidates.length * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
@@ -865,4 +921,3 @@ export const __internal_for_tests = {
     resetScoreRowBytecodeCompileCount();
   },
 };
-

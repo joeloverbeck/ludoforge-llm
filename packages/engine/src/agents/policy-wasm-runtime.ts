@@ -538,6 +538,19 @@ const supportedBatchValues = (
   }
 };
 
+const literalBatchValues = (
+  expr: CompiledPolicyExpr | undefined,
+  count: number,
+): readonly PolicyValue[] | undefined => {
+  if (expr?.kind !== 'literal') {
+    return undefined;
+  }
+  const value = expr.value;
+  return typeof value === 'number' || typeof value === 'boolean' || typeof value === 'string'
+    ? Array.from({ length: count }, () => value)
+    : undefined;
+};
+
 export const evaluateWasmMoveConsiderationScoreRows = (
   runtime: PolicyWasmRuntime,
   input: {
@@ -578,38 +591,41 @@ export const evaluateWasmMoveConsiderationScoreRows = (
 
     const whenValues = consideration.when === undefined
       ? input.candidates.map(() => true as PolicyValue)
-      : supportedBatchValues(
-        runtime,
-        getCachedScoreRowBytecode(consideration.when, input.parameterValues, input.def, input.context.layout),
-        input.encoded,
-        input.context,
-        input.candidates,
-        precomputed,
-    );
+      : literalBatchValues(consideration.when, input.candidates.length)
+        ?? supportedBatchValues(
+          runtime,
+          getCachedScoreRowBytecode(consideration.when, input.parameterValues, input.def, input.context.layout),
+          input.encoded,
+          input.context,
+          input.candidates,
+          precomputed,
+        );
     if (whenValues === null) {
       return { kind: 'unsupported', reason: `unsupported when expression for consideration ${entry.id}` };
     }
 
-    const weightValues = supportedBatchValues(
-      runtime,
-      getCachedScoreRowBytecode(consideration.weight, input.parameterValues, input.def, input.context.layout),
-      input.encoded,
-      input.context,
-      input.candidates,
-      precomputed,
-    );
+    const weightValues = literalBatchValues(consideration.weight, input.candidates.length)
+      ?? supportedBatchValues(
+        runtime,
+        getCachedScoreRowBytecode(consideration.weight, input.parameterValues, input.def, input.context.layout),
+        input.encoded,
+        input.context,
+        input.candidates,
+        precomputed,
+      );
     if (weightValues === null) {
       return { kind: 'unsupported', reason: `unsupported weight expression for consideration ${entry.id}` };
     }
 
-    const valueValues = supportedBatchValues(
-      runtime,
-      getCachedScoreRowBytecode(consideration.value, input.parameterValues, input.def, input.context.layout),
-      input.encoded,
-      input.context,
-      input.candidates,
-      precomputed,
-    );
+    const valueValues = literalBatchValues(consideration.value, input.candidates.length)
+      ?? supportedBatchValues(
+        runtime,
+        getCachedScoreRowBytecode(consideration.value, input.parameterValues, input.def, input.context.layout),
+        input.encoded,
+        input.context,
+        input.candidates,
+        precomputed,
+      );
     if (valueValues === null) {
       return { kind: 'unsupported', reason: `unsupported value expression for consideration ${entry.id}` };
     }
@@ -658,20 +674,22 @@ export const evaluateWasmCandidateFeatureRow = (
     readonly precomputedDynamicCandidateFeatures?: readonly PolicyWasmPrecomputedDynamicCandidateFeature[];
     readonly precomputedAggregates?: readonly PolicyWasmPrecomputedAggregate[];
   },
-): readonly PolicyValue[] | null => supportedBatchValues(
-  runtime,
-  getCachedScoreRowBytecode(input.expr, input.parameterValues, input.def, input.context.layout),
-  input.encoded,
-  input.context,
-  input.candidates,
-  {
-    ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
-    ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
-    ...(input.precomputedPreviewCandidateFeatures === undefined ? {} : { previewCandidateFeatures: input.precomputedPreviewCandidateFeatures }),
-    ...(input.precomputedDynamicCandidateFeatures === undefined ? {} : { dynamicCandidateFeatures: input.precomputedDynamicCandidateFeatures }),
-    ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
-  },
-);
+): readonly PolicyValue[] | null =>
+  literalBatchValues(input.expr, input.candidates.length)
+    ?? supportedBatchValues(
+      runtime,
+      getCachedScoreRowBytecode(input.expr, input.parameterValues, input.def, input.context.layout),
+      input.encoded,
+      input.context,
+      input.candidates,
+      {
+        ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
+        ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
+        ...(input.precomputedPreviewCandidateFeatures === undefined ? {} : { previewCandidateFeatures: input.precomputedPreviewCandidateFeatures }),
+        ...(input.precomputedDynamicCandidateFeatures === undefined ? {} : { dynamicCandidateFeatures: input.precomputedDynamicCandidateFeatures }),
+        ...(input.precomputedAggregates === undefined ? {} : { aggregates: input.precomputedAggregates }),
+      },
+    );
 
 const createPolicyWasmRuntime = (
   instance: WebAssembly.Instance,

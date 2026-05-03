@@ -73,6 +73,7 @@ const unsupported = (
 export const evaluateProductionPreviewDriveBatchWithWasm = (
   input: PolicyWasmProductionPreviewDriveInput,
 ): PolicyWasmPreviewDriveResult => {
+  productionPreviewDriveBatchCount += 1;
   const compiled = compileProductionPreviewDrive(input);
   if (compiled.kind === 'unsupported') {
     return {
@@ -87,6 +88,17 @@ export const evaluateProductionPreviewDriveBatchWithWasm = (
 
   const batch = lowerProductionPreviewDriveIr(input, compiled.program);
   return input.runtime.evaluatePreviewDriveBatch(batch);
+};
+
+let productionPreviewDriveBatchCount = 0;
+
+export const policyWasmProductionPreviewDriveInternals = {
+  getProductionPreviewDriveBatchCount(): number {
+    return productionPreviewDriveBatchCount;
+  },
+  resetProductionPreviewDriveBatchCount(): void {
+    productionPreviewDriveBatchCount = 0;
+  },
 };
 
 export const lowerProductionPreviewDriveIr = (

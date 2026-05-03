@@ -360,6 +360,7 @@ describe('policy evaluation top-K preview gate', () => {
       assert.equal(previewedKeys.size, 0);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(), 0);
+      assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 3);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(), 1);
       assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
       assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 1);

@@ -78,6 +78,7 @@ const [
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
   { __internal_for_tests: policyWasmRuntimeInternals },
+  { policyWasmProductionPreviewDriveInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
@@ -86,6 +87,7 @@ const [
   import(join(DIST_ROOT, 'src', 'kernel', 'token-state-index.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-preview.js')),
   import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
+  import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-production-preview-drive.js')),
 ]);
 
 const policyWasmRuntime = initializePolicyWasmRuntimeSync();
@@ -152,6 +154,7 @@ const buildAgents = () => {
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
   driveExitHistogram.clear();
   driveExitTotal = 0;
   driveResultCaptures = [];
@@ -203,6 +206,7 @@ const runOnce = () => {
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
+    wasmProductionPreviewDriveBatchCount: policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     driveExitTotal: driveExitSnapshot.total,
     driveExitBuckets: driveExitSnapshot.buckets,
     driveExitDepthQuantiles: driveExitSnapshot.depthQuantilesByProfile,
@@ -224,6 +228,7 @@ function readCounterSnapshot() {
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
+    wasmProductionPreviewDriveBatchCount: policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     driveExitTotal,
   };
 }
@@ -259,6 +264,8 @@ function createPerCardRecorder(startedAt) {
         counters.wasmPreviewCandidateFeatureRowRouteCount - currentCounters.wasmPreviewCandidateFeatureRowRouteCount,
       wasmPreviewCandidateFeatureRowUnsupportedCount:
         counters.wasmPreviewCandidateFeatureRowUnsupportedCount - currentCounters.wasmPreviewCandidateFeatureRowUnsupportedCount,
+      wasmProductionPreviewDriveBatchCount:
+        counters.wasmProductionPreviewDriveBatchCount - currentCounters.wasmProductionPreviewDriveBatchCount,
       driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
     });
     decisionCount = 0;
@@ -651,6 +658,7 @@ const summary = {
     wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
     wasmPreviewCandidateFeatureRowRouteCount: result.wasmPreviewCandidateFeatureRowRouteCount,
     wasmPreviewCandidateFeatureRowUnsupportedCount: result.wasmPreviewCandidateFeatureRowUnsupportedCount,
+    wasmProductionPreviewDriveBatchCount: result.wasmProductionPreviewDriveBatchCount,
     driveExitTotal: result.driveExitTotal,
     driveExitBuckets: result.driveExitBuckets,
     driveExitDepthQuantiles: result.driveExitDepthQuantiles,
@@ -674,6 +682,7 @@ process.stderr.write(
   `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
   `wasmPreviewCandidateFeatureRowRouteCount=${summary.result.wasmPreviewCandidateFeatureRowRouteCount} ` +
   `wasmPreviewCandidateFeatureRowUnsupportedCount=${summary.result.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
+  `wasmProductionPreviewDriveBatchCount=${summary.result.wasmProductionPreviewDriveBatchCount} ` +
   `driveExitTotal=${summary.result.driveExitTotal}\n`,
 );
 for (const [profileId, quantiles] of Object.entries(summary.result.driveExitDepthQuantiles ?? {})) {
@@ -694,6 +703,7 @@ for (const row of summary.result.perCardRows ?? []) {
     `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
     `wasmPreviewCandidateFeatureRowRouteCount=${row.wasmPreviewCandidateFeatureRowRouteCount} ` +
     `wasmPreviewCandidateFeatureRowUnsupportedCount=${row.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +
+    `wasmProductionPreviewDriveBatchCount=${row.wasmProductionPreviewDriveBatchCount} ` +
     `closeReason=${row.closeReason}\n`,
   );
 }

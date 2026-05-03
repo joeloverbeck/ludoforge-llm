@@ -83,6 +83,14 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 
+When the decisive proof lane itself determines the final classification, do not pretend the outcome can be fully written beforehand. Instead:
+
+1. Prewrite the intended outcome/handoff as `pending` or equivalent before the decisive lane, including the exact command and expected decision branches.
+2. Run the decisive lane only after code, sibling, spec, and command-shape edits that are knowable beforehand are complete.
+3. Immediately transcribe the exact metric/classification/status into the active ticket and any directly affected sibling/spec artifacts.
+4. Run dependency integrity when ticket graph edges, successor ownership, or statuses changed.
+5. Classify whether the post-lane edits were transcription-only or proof-affecting; rerun only the proof lanes invalidated by changed code, command semantics, thresholds, scope, or acceptance boundaries.
+
 ## Workflow
 
 ### Ticket-Type Triage

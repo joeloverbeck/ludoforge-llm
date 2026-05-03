@@ -1,6 +1,6 @@
 # 150FITLWASM-013: Generic encoded preview-state substrate for WASM drive routing
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: XL
 **Engine Changes**: Yes — generic preview-drive state/effect/publication substrate, WASM/buffer ABI, parity witnesses
@@ -153,3 +153,65 @@ only when this ticket has a truthful substrate that unblocks production routing.
 3. Focused encoded preview-state substrate parity test command.
 4. Focused unsupported-class fail-closed test command.
 5. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-013-preview-state-substrate`.
+
+## Outcome
+
+Completed on 2026-05-03.
+
+This ticket added the generic encoded preview-state substrate required before
+production preview-drive routing can resume:
+
+- ABI/layout identities advanced to ABI version `8` and preview-drive layout
+  `0x1500_0013`.
+- `policy-wasm-preview-drive.ts` now lets callers declare generic
+  `previewStateSlots` and per-candidate `initialPreviewStateValues`, and
+  `evaluatePreviewDriveBatch` returns candidate-local `previewStateValues`
+  alongside outcome/depth/value rows.
+- `policy-vm/src/preview_drive.rs` writes the requested preview-state slot
+  matrix into a dedicated WASM output buffer. The current generic supported
+  subset updates the primary slot through encoded initial-application deltas,
+  greedy `chooseOne`, greedy `chooseN`, and scalar completion steps.
+- Unsupported preview-drive classes still fail closed before scoring with the
+  existing deterministic unsupported diagnostics.
+- The focused preview-driver parity witness now compares the encoded
+  preview-state slot output against the TypeScript preview driver for the
+  supported generic fixtures.
+- The FITL same-seam inventory probe now requires
+  `previewStateSubstrateSupported=true`; support is no longer classified from
+  scalar outcome/depth/value replay alone.
+
+Final FITL same-seam inventory:
+
+- Command: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-013-preview-state-substrate`
+- Result: completed as substrate inventory evidence, not production routing.
+- `elapsedMs=6823.4`, `turnsCount=1`, `driveExitTotal=211`.
+- Active existing routes remain healthy: `wasmScoreRowRouteCount=65`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowRouteCount=77`, and
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Inventory rows: `initialMoveApplication`, `decisionStackPublication`, and
+  `completionExits` all report `supportedByEncodedPreviewDriveAbi=true` and
+  `previewStateSubstrateSupported=true`, with successor owner
+  `tickets/150FITLWASM-010.md`.
+- Completion exits remain completed rows across all four baseline profiles plus
+  two depth-cap exits (`us-baseline event`, `vc-baseline event`).
+
+This unblocks `tickets/150FITLWASM-010.md` for the later production routing,
+fail-closed diagnostics, and same-seam perf-gate work. This ticket did not
+route production scoring through the preview-drive ABI and did not weaken the
+Spec 149 `<=250 ms` gate.
+
+Final verification:
+
+- `node --check packages/engine/scripts/profile-fitl-preview-drive.mjs` —
+  passed.
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` —
+  passed, 8 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-wasm-runtime.test.js` —
+  passed, 15 tests.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --previewDriveInventory --label spec150-013-preview-state-substrate` —
+  passed as final substrate inventory evidence.
+- `pnpm run check:ticket-deps` — passed for 5 active tickets and 2202
+  archived tickets.

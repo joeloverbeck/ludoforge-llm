@@ -22,7 +22,7 @@ import {
 } from './policy-wasm-preview-drive.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 7;
+export const POLICY_WASM_ABI_VERSION = 8;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -86,6 +86,8 @@ interface PolicyWasmExports {
     outOutcomesPtr: number,
     outDepthsPtr: number,
     outValuesPtr: number,
+    outPreviewStatePtr: number,
+    outPreviewStateLen: number,
     outLen: number,
   ) => number;
 }
@@ -775,10 +777,13 @@ const createPolicyWasmRuntime = (
         POLICY_WASM_ABI_VERSION,
       );
       const outputBytes = previewInput.candidates.length * I32_BYTES;
+      const previewStateSlotCount = previewInput.previewStateSlots?.length ?? 0;
+      const previewStateOutputBytes = previewInput.candidates.length * previewStateSlotCount * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outOutcomesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outDepthsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outValuesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outPreviewStatePtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateOutputBytes));
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -787,6 +792,8 @@ const createPolicyWasmRuntime = (
           outOutcomesPtr,
           outDepthsPtr,
           outValuesPtr,
+          outPreviewStatePtr,
+          previewStateSlotCount,
           previewInput.candidates.length,
         );
         if (status === -14) {
@@ -813,6 +820,7 @@ const createPolicyWasmRuntime = (
             outOutcomesPtr,
             outDepthsPtr,
             outValuesPtr,
+            outPreviewStatePtr,
           ),
         };
       } finally {
@@ -820,6 +828,7 @@ const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outOutcomesPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outDepthsPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outValuesPtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outPreviewStatePtr, Math.max(I32_BYTES, previewStateOutputBytes));
       }
     },
   };

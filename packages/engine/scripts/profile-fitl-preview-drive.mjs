@@ -385,6 +385,7 @@ function snapshotPreviewDriveInventory(captures) {
       surface: 'initialMoveApplication',
       runtimeClass: 'live encoded per-candidate initial application deltas',
       supportedByEncodedPreviewDriveAbi: abiSupport.initialMoveApplication.supported,
+      previewStateSubstrateSupported: abiSupport.initialMoveApplication.previewStateSubstrateSupported,
       ...(abiSupport.initialMoveApplication.failClosedClass === undefined ? {} : {
         failClosedClass: abiSupport.initialMoveApplication.failClosedClass,
       }),
@@ -395,6 +396,7 @@ function snapshotPreviewDriveInventory(captures) {
       surface: 'decisionStackPublication',
       runtimeClass: 'live encoded same-seam completion outcome replay',
       supportedByEncodedPreviewDriveAbi: abiSupport.decisionStackPublication.supported,
+      previewStateSubstrateSupported: abiSupport.decisionStackPublication.previewStateSubstrateSupported,
       ...(abiSupport.decisionStackPublication.failClosedClass === undefined ? {} : {
         failClosedClass: abiSupport.decisionStackPublication.failClosedClass,
       }),
@@ -405,6 +407,7 @@ function snapshotPreviewDriveInventory(captures) {
       surface: 'completionExits',
       runtimeClass: 'current same-seam preview-drive exit distribution',
       supportedByEncodedPreviewDriveAbi: abiSupport.completionExits.supported,
+      previewStateSubstrateSupported: abiSupport.completionExits.previewStateSubstrateSupported,
       ...(abiSupport.completionExits.failClosedClass === undefined ? {} : {
         failClosedClass: abiSupport.completionExits.failClosedClass,
       }),
@@ -416,30 +419,37 @@ function snapshotPreviewDriveInventory(captures) {
 
 function evaluatePreviewDriveInventoryAbiSupport(captures) {
   const supportedOwner = 'tickets/150FITLWASM-010.md';
-  const residualOwner = 'tickets/150FITLWASM-012.md';
+  const residualOwner = 'tickets/150FITLWASM-013.md';
   if (captures.length === 0) {
     return {
-      initialMoveApplication: { supported: true, successorOwner: supportedOwner },
-      decisionStackPublication: { supported: true, successorOwner: supportedOwner },
-      completionExits: { supported: true, successorOwner: supportedOwner },
+      initialMoveApplication: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
+      decisionStackPublication: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
+      completionExits: { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner },
     };
   }
 
+  const previewStateSlots = ['preview.drive.value'];
   const initialResult = policyWasmRuntime.evaluatePreviewDriveBatch({
     profileId: 'fitl-preview-drive-inventory-initial-application',
     originSeatId: captures[0].seatId,
     originTurnId: 0,
     depthCap: 8,
+    previewStateSlots,
     candidates: captures.map((capture) => ({
       actionId: capture.actionId,
       stableMoveKey: capture.stableMoveKey,
       initialValue: 0,
+      initialPreviewStateValues: [0],
     })),
     steps: [{ kind: 'applyCandidateDeltas', candidateDeltas: captures.map(() => 0) }],
   });
   const initialSupported = initialResult.kind === 'supported'
     && initialResult.rows.length === captures.length
-    && initialResult.rows.every((row) => row.outcome === 'completed' && row.depth === 1);
+    && initialResult.rows.every((row) =>
+      row.outcome === 'completed'
+      && row.depth === 1
+      && row.previewStateValues?.['preview.drive.value'] === row.value,
+    );
 
   const unsupportedCompletion = captures.find((capture) =>
     capture.resultDepth === undefined
@@ -450,14 +460,14 @@ function evaluatePreviewDriveInventoryAbiSupport(captures) {
 
   return {
     initialMoveApplication: initialSupported
-      ? { supported: true, successorOwner: supportedOwner }
-      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
     decisionStackPublication: completionSupported
-      ? { supported: true, successorOwner: supportedOwner }
-      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
     completionExits: completionSupported
-      ? { supported: true, successorOwner: supportedOwner }
-      : { supported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
+      ? { supported: true, previewStateSubstrateSupported: true, successorOwner: supportedOwner }
+      : { supported: false, previewStateSubstrateSupported: false, failClosedClass: 'unsupported-effect', successorOwner: residualOwner },
   };
 }
 
@@ -485,17 +495,20 @@ function validateCompletionCapture(capture) {
     originSeatId: capture.seatId,
     originTurnId: 0,
     depthCap: capture.resultKind === 'depthCap' ? depth : depth + 1,
+    previewStateSlots: ['preview.drive.value'],
     candidates: [{
       actionId: capture.actionId,
       stableMoveKey: capture.stableMoveKey,
       initialValue: 0,
+      initialPreviewStateValues: [0],
     }],
     steps,
   });
   return result.kind === 'supported'
     && result.rows.length === 1
     && result.rows[0].outcome === toWasmPreviewDriveOutcome(capture.resultKind)
-    && result.rows[0].depth === depth;
+    && result.rows[0].depth === depth
+    && result.rows[0].previewStateValues?.['preview.drive.value'] === result.rows[0].value;
 }
 
 function toWasmPreviewDriveOutcome(resultKind) {
@@ -615,6 +628,7 @@ for (const row of summary.result.previewDriveInventory ?? []) {
   process.stderr.write(
     `[profile-fitl-preview-drive] preview-drive-inventory surface=${row.surface} ` +
     `supportedByEncodedPreviewDriveAbi=${row.supportedByEncodedPreviewDriveAbi} ` +
+    `previewStateSubstrateSupported=${row.previewStateSubstrateSupported} ` +
     (row.failClosedClass === undefined ? '' : `failClosedClass=${row.failClosedClass} `) +
     `successorOwner=${row.successorOwner} count=${row.count ?? row.rows?.length ?? 0}\n`,
   );

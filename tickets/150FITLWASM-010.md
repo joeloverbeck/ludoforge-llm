@@ -1,10 +1,10 @@
 # 150FITLWASM-010: Preview-drive application WASM/runtime handoff
 
-**Status**: BLOCKED by generic encoded preview-state substrate prerequisite `tickets/150FITLWASM-013.md`
+**Status**: PENDING after completed generic encoded preview-state substrate prerequisite `archive/tickets/150FITLWASM-013.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — preview-drive runtime/application hot path, WASM/buffer ABI, perf gate
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `tickets/150FITLWASM-013.md`
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-009.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `archive/tickets/150FITLWASM-013.md`
 
 ## Problem
 
@@ -33,10 +33,12 @@ handoff or a later non-overlapping owner makes the same-seam gate truthful.
 
 Reassessment on 2026-05-03 confirmed that this ticket cannot truthfully close
 on counters, precomputed preview outcome buffers, or another wrapper around the
-current TypeScript preview drive. The live WASM crate evaluates policy
-bytecode/score-row buffers; it does not yet own generic encoded action/effect
-application, decision publication, bounded completion drive, rollback/recovery,
-or preview outcome buffer production.
+current TypeScript preview drive. At the time of that reset, the live WASM
+crate evaluated policy bytecode/score-row buffers but did not yet own generic
+encoded action/effect application, decision publication, bounded completion
+drive, rollback/recovery, or preview outcome buffer production. Ticket
+`150FITLWASM-013` has since landed the generic encoded preview-state substrate;
+this ticket still owns production routing through that substrate.
 
 Per Foundations #1, #5, #8, #10, #11, #15, and #16, the preview-drive handoff
 must be generic, deterministic, bounded, externally immutable, and proven
@@ -45,12 +47,12 @@ application/drive batches use WASM. Ticket `archive/tickets/150FITLWASM-011.md`
 delivered the first generic encoded preview-drive substrate and synthetic
 greedy-subset parity. Ticket `archive/tickets/150FITLWASM-012.md` expanded that encoded
 preview-drive ABI to the current FITL same-seam inventory classes, but live
-reassessment on 2026-05-03 proved that this is still inventory-level replay
+reassessment on 2026-05-03 proved that this was still inventory-level replay
 support rather than a production replacement for TypeScript preview-state
-materialization. Ticket `tickets/150FITLWASM-013.md` now owns the missing
+materialization. Ticket `archive/tickets/150FITLWASM-013.md` completed the missing
 generic encoded preview-state/effect/publication substrate. This ticket remains
 the later production routing, fail-closed diagnostics, and same-seam perf-gate
-owner after that prerequisite is complete.
+owner now that the prerequisite is complete.
 
 ## Assumption Reassessment (2026-05-03)
 
@@ -64,10 +66,9 @@ owner after that prerequisite is complete.
    rows validate encoded batch shape after TypeScript captures exist; they do
    not by themselves produce preview states or remove TypeScript object-graph
    traversal from the production hot path.
-4. User-confirmed boundary reset on 2026-05-03 selected a new prerequisite
-   owner: `tickets/150FITLWASM-013.md`. This ticket is blocked until that
-   substrate is proven, then resumes as the production routing and perf-gate
-   owner.
+4. User-confirmed boundary reset on 2026-05-03 selected prerequisite owner
+   `archive/tickets/150FITLWASM-013.md`; that prerequisite is now complete, so this
+   ticket resumes as the production routing and perf-gate owner.
 
 ## Architecture Check
 
@@ -89,7 +90,7 @@ owner after that prerequisite is complete.
 
 ### 1. Preview-drive ownership
 
-After ticket `150FITLWASM-013` lands, wire the smallest generic handoff that
+Now that archived ticket `150FITLWASM-013` has landed, wire the smallest generic handoff that
 removes the remaining TypeScript preview application/drive hot path for the
 supported live baseline surface. The handoff must preserve the current preview
 outcome semantics and must not count a TypeScript-materialized preview result
@@ -115,7 +116,7 @@ remains red, record exact metrics and create the next non-overlapping owner.
 - `packages/engine/src/agents/policy-wasm-runtime.ts` if the ABI/API needs new buffers
 - `packages/engine-wasm/policy-vm/src/lib.rs` if Rust/WASM owns the new route
 - focused unit/integration witnesses near the changed production and WASM seams
-- `tickets/150FITLWASM-013.md` if production routing proves a residual substrate gap
+- a follow-up ticket or spec amendment if production routing proves a residual substrate gap
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
 - this ticket (modify Outcome before closeout)
 
@@ -203,7 +204,7 @@ Its final live encoded inventory reports `driveExitTotal=211`, with
 `supportedByEncodedPreviewDriveAbi=true`; then-successor owner
 `tickets/150FITLWASM-010.md`. This ticket is no longer blocked by the 012
 inventory prerequisite, but the 2026-05-03 reassessment below split out a new
-generic preview-state substrate prerequisite before production routing can
+generic preview-state substrate prerequisite before production routing could
 truthfully resume here.
 
 Outcome amended: 2026-05-03.
@@ -218,8 +219,23 @@ production routing:
   still applies candidate moves, publishes decision-stack microturns, drives
   bounded completion, canonicalizes `GameState`, and materializes preview
   surfaces before WASM score rows consume scalar values.
-- New active prerequisite `tickets/150FITLWASM-013.md` owns the missing generic
+- New prerequisite `archive/tickets/150FITLWASM-013.md` owned the missing generic
   encoded preview-state/effect/publication substrate.
-- This ticket is `BLOCKED` until `150FITLWASM-013` completes; it remains the
+- This ticket was `BLOCKED` until `150FITLWASM-013` completed; it remained the
   later production routing, fail-closed diagnostics, and same-seam perf-gate
   owner. No runtime code changed under this boundary reset.
+
+Outcome amended: 2026-05-03.
+
+Ticket `150FITLWASM-013` completed the generic encoded preview-state substrate.
+Its final FITL same-seam inventory reports `driveExitTotal=211`, with
+`initialMoveApplication`, `decisionStackPublication`, and `completionExits` all
+`supportedByEncodedPreviewDriveAbi=true` and
+`previewStateSubstrateSupported=true`; successor owner
+`tickets/150FITLWASM-010.md`.
+
+This ticket is no longer blocked by the encoded preview-state substrate
+prerequisite. It is now pending production routing, fail-closed diagnostics, and
+the same-seam perf-gate work. The `150FITLWASM-013` substrate did not route
+production scoring through the preview-drive ABI and did not weaken the Spec
+149 `<=250 ms` gate.

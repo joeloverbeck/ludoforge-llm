@@ -377,7 +377,13 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      candidates: [{ actionId: 'branch', stableMoveKey: 'candidate', initialValue: 0 }],
+      previewStateSlots: ['global.score'],
+      candidates: [{
+        actionId: 'branch',
+        stableMoveKey: 'candidate',
+        initialValue: 0,
+        initialPreviewStateValues: [0],
+      }],
       steps: [
         { kind: 'applyCandidateDeltas', candidateDeltas: [2] },
         { kind: 'chooseOneGreedy', optionDeltas: [0, 0] },
@@ -389,6 +395,9 @@ describe('policy preview synthetic-completion driver', () => {
     }
     assert.deepEqual(initialApplyResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
       { outcome: 'completed', value: initialApplyPreview.globalVars.score },
+    ]);
+    assert.deepEqual(initialApplyResult.rows.map((row) => row.previewStateValues), [
+      { 'global.score': initialApplyPreview.globalVars.score },
     ]);
 
     const branchDef = createDecisionDrivenDef();
@@ -402,7 +411,13 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      candidates: [{ actionId: 'branch', stableMoveKey: 'candidate', initialValue: 0 }],
+      previewStateSlots: ['global.score'],
+      candidates: [{
+        actionId: 'branch',
+        stableMoveKey: 'candidate',
+        initialValue: 0,
+        initialPreviewStateValues: [0],
+      }],
       steps: [
         { kind: 'chooseOneGreedy', optionDeltas: [0, 0] },
         { kind: 'addGlobal', delta: 3 },
@@ -413,6 +428,9 @@ describe('policy preview synthetic-completion driver', () => {
     }
     assert.deepEqual(branchResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
       { outcome: 'completed', value: branchPreview.globalVars.score },
+    ]);
+    assert.deepEqual(branchResult.rows.map((row) => row.previewStateValues), [
+      { 'global.score': branchPreview.globalVars.score },
     ]);
 
     const chooseNDef = createChooseNDef();
@@ -425,7 +443,13 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      candidates: [{ actionId: 'select', stableMoveKey: 'candidate', initialValue: 0 }],
+      previewStateSlots: ['global.score'],
+      candidates: [{
+        actionId: 'select',
+        stableMoveKey: 'candidate',
+        initialValue: 0,
+        initialPreviewStateValues: [0],
+      }],
       steps: [
         { kind: 'chooseNGreedy', min: 2, max: 2, optionDeltas: [0, 0] },
         { kind: 'addGlobal', delta: 5 },
@@ -436,6 +460,9 @@ describe('policy preview synthetic-completion driver', () => {
     }
     assert.deepEqual(chooseNResult.rows.map((row) => ({ outcome: row.outcome, value: row.value })), [
       { outcome: 'completed', value: chooseNPreview.globalVars.score },
+    ]);
+    assert.deepEqual(chooseNResult.rows.map((row) => row.previewStateValues), [
+      { 'global.score': chooseNPreview.globalVars.score },
     ]);
   });
 

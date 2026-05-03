@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 7;
+const ABI_VERSION: i32 = 8;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -30,16 +30,19 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
     out_outcomes_ptr: *mut i32,
     out_depths_ptr: *mut i32,
     out_values_ptr: *mut i32,
+    out_preview_state_ptr: *mut i32,
+    out_preview_state_len: usize,
     out_len: usize,
 ) -> i32 {
     if input_ptr.is_null()
         || out_outcomes_ptr.is_null()
         || out_depths_ptr.is_null()
         || out_values_ptr.is_null()
+        || out_preview_state_ptr.is_null()
     {
         return STATUS_NULL_POINTER;
     }
-    if input_len % 4 != 0 || input_len < 36 {
+    if input_len % 4 != 0 || input_len < 40 {
         return STATUS_BAD_LENGTH;
     }
 
@@ -50,6 +53,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         out_outcomes_ptr,
         out_depths_ptr,
         out_values_ptr,
+        out_preview_state_ptr,
+        out_preview_state_len,
         out_len,
     ) {
         Ok(()) => STATUS_OK,
@@ -62,6 +67,8 @@ fn evaluate_preview_drive_batch(
     out_outcomes_ptr: *mut i32,
     out_depths_ptr: *mut i32,
     out_values_ptr: *mut i32,
+    out_preview_state_ptr: *mut i32,
+    out_preview_state_len: usize,
     out_len: usize,
 ) -> Result<(), i32> {
     if cursor.read()? != ABI_MAGIC {
@@ -86,15 +93,28 @@ fn evaluate_preview_drive_batch(
     let origin_seat_code = cursor.read()?;
     let origin_turn_id = cursor.read()?;
     let step_count = as_usize(cursor.read()?)?;
+    let preview_state_slot_count = as_usize(cursor.read()?)?;
+    if preview_state_slot_count != out_preview_state_len {
+        return Err(STATUS_BAD_LENGTH);
+    }
+    for _ in 0..preview_state_slot_count {
+        let _slot_code = cursor.read()?;
+    }
 
     let mut states = Vec::with_capacity(candidate_count);
     for _ in 0..candidate_count {
         let _action_id_code = cursor.read()?;
         let _stable_move_key_code = cursor.read()?;
+        let initial_value = cursor.read()?;
+        let mut preview_state_values = Vec::with_capacity(preview_state_slot_count);
+        for _ in 0..preview_state_slot_count {
+            preview_state_values.push(cursor.read()?);
+        }
         states.push(PreviewDriveState {
             outcome: OUTCOME_COMPLETED,
             depth: 0,
-            value: cursor.read()?,
+            value: initial_value,
+            preview_state_values,
         });
     }
 
@@ -109,6 +129,7 @@ fn evaluate_preview_drive_batch(
                     }
                     state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
                     state.value = state.value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
+                    state.add_to_primary_preview_state_value(delta)?;
                     if state.depth >= depth_cap {
                         state.outcome = OUTCOME_DEPTH_CAP;
                     }
@@ -135,6 +156,7 @@ fn evaluate_preview_drive_batch(
                         .value
                         .checked_add(selected_delta)
                         .ok_or(STATUS_OVERFLOW)?;
+                    state.add_to_primary_preview_state_value(selected_delta)?;
                     if state.depth >= depth_cap {
                         state.outcome = OUTCOME_DEPTH_CAP;
                     }
@@ -167,6 +189,7 @@ fn evaluate_preview_drive_batch(
                         .value
                         .checked_add(selected_sum)
                         .ok_or(STATUS_OVERFLOW)?;
+                    state.add_to_primary_preview_state_value(selected_sum)?;
                     if state.depth >= depth_cap {
                         state.outcome = OUTCOME_DEPTH_CAP;
                     }
@@ -192,6 +215,7 @@ fn evaluate_preview_drive_batch(
                     }
                     state.depth = state.depth.checked_add(1).ok_or(STATUS_OVERFLOW)?;
                     state.value = state.value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
+                    state.add_to_primary_preview_state_value(delta)?;
                     if state.depth >= depth_cap {
                         state.outcome = OUTCOME_DEPTH_CAP;
                     }
@@ -210,6 +234,10 @@ fn evaluate_preview_drive_batch(
             *out_outcomes_ptr.add(index) = state.outcome;
             *out_depths_ptr.add(index) = state.depth;
             *out_values_ptr.add(index) = state.value;
+            for (slot_index, value) in state.preview_state_values.iter().enumerate() {
+                *out_preview_state_ptr.add((index * preview_state_slot_count) + slot_index) =
+                    *value;
+            }
         }
     }
     Ok(())
@@ -231,11 +259,21 @@ fn as_usize(value: i32) -> Result<usize, i32> {
     Ok(value as usize)
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 struct PreviewDriveState {
     outcome: i32,
     depth: i32,
     value: i32,
+    preview_state_values: Vec<i32>,
+}
+
+impl PreviewDriveState {
+    fn add_to_primary_preview_state_value(&mut self, delta: i32) -> Result<(), i32> {
+        if let Some(value) = self.preview_state_values.get_mut(0) {
+            *value = value.checked_add(delta).ok_or(STATUS_OVERFLOW)?;
+        }
+        Ok(())
+    }
 }
 
 struct I32Cursor<'a> {

@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-027.md`
+**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-028.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-027.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-028.md`
 
 ## Problem
 
@@ -130,6 +130,14 @@ spatial-filter, and remaining-hash closure.
 pending-request fingerprint cache in generic decision-sequence analysis and
 kept the active route clean, but the same-seam gate remained red at per-card
 `elapsedMs=2408.84` versus `<=250`. The current active successor owner moved
-to `tickets/150FITLWASM-027.md` for residual stable-fingerprint,
+to `archive/tickets/150FITLWASM-027.md` for residual stable-fingerprint,
 query/eval/reference-resolution, spatial-filter, encoding, token-index, and
 remaining-hash closure.
+
+2026-05-04 successor update: ticket `150FITLWASM-027` landed a generic
+namespace-prefix stable-fingerprint hasher for decision-sequence pending
+requests and kept the active route clean, but the same-seam gate remained red
+at per-card `elapsedMs=2477.81` versus `<=250`. The current active successor
+owner moved to `tickets/150FITLWASM-028.md` for query/eval/reference-resolution,
+spatial-filter, encoding, token-index, decision-stack digest, and remaining-hash
+closure.

@@ -9,7 +9,7 @@ import {
 } from './choose-n-set-variable-propagation.js';
 import {
   canonicalizeFingerprintValue,
-  stableFingerprintHex,
+  createStableFingerprintHasher,
 } from './stable-fingerprint.js';
 import type {
   ChoicePendingChooseNRequest,
@@ -58,8 +58,7 @@ const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly 
   return selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
 };
 
-const hashCanonical = (value: unknown): string =>
-  stableFingerprintHex('decision-sequence-analysis-v1', value);
+const hashCanonical = createStableFingerprintHasher('decision-sequence-analysis-v1');
 
 const normalizeMoveBinding = (move: Move): string => canonicalizeFingerprintValue({
   params: Object.fromEntries(

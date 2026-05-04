@@ -1,4 +1,4 @@
-import { fnv1a64 } from './fnv1a64.js';
+import { fnv1a64, fnv1a64FromState, updateFnv1a64State } from './fnv1a64.js';
 
 export const canonicalizeFingerprintValue = (value: unknown): string => {
   if (value === null) {
@@ -25,3 +25,9 @@ export const canonicalizeFingerprintValue = (value: unknown): string => {
 
 export const stableFingerprintHex = (namespace: string, value: unknown): string =>
   fnv1a64(`${namespace}\0${canonicalizeFingerprintValue(value)}`).toString(16).padStart(16, '0');
+
+export const createStableFingerprintHasher = (namespace: string): (value: unknown) => string => {
+  const namespaceState = updateFnv1a64State(`${namespace}\0`);
+  return (value: unknown): string =>
+    fnv1a64FromState(canonicalizeFingerprintValue(value), namespaceState).toString(16).padStart(16, '0');
+};

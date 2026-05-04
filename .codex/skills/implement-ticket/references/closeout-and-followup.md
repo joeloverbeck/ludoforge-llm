@@ -159,6 +159,8 @@ For red measured-gate tickets, prefer this terminal-status order unless the acti
 
 Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
 
+Pre-`apply_patch` stop-check: if a patch both sets terminal status and creates or rewrites a successor, stop unless all non-metric final lanes already ran against the current code and ticket graph. Otherwise leave status pending in that patch, run the remaining affected lanes, and apply terminal status as a final narrow patch.
+
 If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
 
 ## Follow-Up Ticket Creation During Implementation
@@ -178,6 +180,11 @@ repo helper over ad hoc shell one-liners. Markdown tickets commonly contain
 backticks, command snippets, pipes, and paths; embedding that content in
 `node -e`, `perl -e`, `sed`, or similar shell strings can trigger shell command
 substitution or quoting drift before the edit reaches the intended tool.
+For closeout sweeps, prefer plain-string anchors and single-quoted `rg`
+patterns, for example `rg -n '150FITLWASM-027.md' tickets specs`. If the
+target text appears inside markdown backticks, search for the path or id without
+the backticks instead of using a double-quoted pattern that contains a code
+span.
 
 ## Sibling Absorbed Ownership
 

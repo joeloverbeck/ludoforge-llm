@@ -191,7 +191,21 @@ same-seam gate red at `1910.21 ms`. Ticket `150FITLWASM-031` landed generic
 microturn continuation-binding allocation cleanup, a `tokenZones`
 token-state-index allocation cleanup, and a compiled `zoneVar` dynamic-selector
 parity fix, kept the active route clean, and left the confirmed same-seam gate
-red at `1773.64 ms` with a retained repeat at `1754.11 ms`.
+red at `1773.64 ms` with a retained repeat at `1754.11 ms`. Ticket
+`150FITLWASM-032` delivered a larger active-route residual slice: score-row
+precompile, diagnostics suppression, hash feature coverage, partial boolean
+condition compilation, and generic zone/token count-query materialization
+removal. The same-seam gate remained red at per-card `1561.81 ms`, with
+active-route unsupported counters still `0`. Ticket `150FITLWASM-033`
+landed opt-in hot-path residual buckets, context-independent token-filter count
+caching, deterministic schema-order decision-stack frame digest input,
+token-index build-loop allocation cleanup, little-endian WASM input word
+writes, and selected-move identity lookup. The same-seam gate remains red, but
+the final retained solo samples improved from `1561.81 ms` to `1355.26 ms` and
+`1383.35 ms`, with active-route unsupported counters still `0`.
+Ticket `150FITLWASM-034` owns the next non-overlapping residual pass across
+policy evaluation/apply, decision-stack digest, token-index, token-count, and
+WASM input work.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -258,4 +272,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-029.md`](../archive/tickets/150FITLWASM-029.md) — Completed allocation, encoding, query/eval, token-index, digest/hash, and process allocation residual closure after retained reduction slices.
 - [`archive/tickets/150FITLWASM-030.md`](../archive/tickets/150FITLWASM-030.md) — Completed connected-zone allocation and connected-condition traversal residual closure with red measured gate successor.
 - [`archive/tickets/150FITLWASM-032.md`](../archive/tickets/150FITLWASM-032.md) — Completed larger active-route residual slice: score-row precompile, diagnostics suppression, hash feature coverage, partial boolean compiler, and generic zone/token count-query materialization removal; final gate remains red at per-card `1561.81 ms`.
-- [`tickets/150FITLWASM-033.md`](../tickets/150FITLWASM-033.md) — Active post-count hash/canonicalization, token-index, WASM input, token-filter/count-loop, and allocation/GC residual closure.
+- [`archive/tickets/150FITLWASM-033.md`](../archive/tickets/150FITLWASM-033.md) — Implemented material post-count residual slice: retained hot-path residual buckets, context-independent token-count cache, schema-order decision-stack frame digest input, token-index build-loop cleanup, little-endian WASM input word writes, and selected-move identity lookup; final gate remains red at best retained solo `1355.26 ms`.
+- [`tickets/150FITLWASM-034.md`](../tickets/150FITLWASM-034.md) — Active post-033 residual owner for the remaining policy evaluation/apply, decision-stack digest, token-index, token-count, WASM input, allocation, and GC red-gate closure.

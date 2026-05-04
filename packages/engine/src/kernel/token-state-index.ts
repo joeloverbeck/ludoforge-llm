@@ -1,4 +1,5 @@
 import type { GameState, Token } from './types.js';
+import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
 
 export interface TokenStateIndexEntry {
   readonly zoneId: string;
@@ -32,36 +33,45 @@ let draftTokenStateIndexCowCopyCount = 0;
 let draftTokenStateIndexDeltaCount = 0;
 
 function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
   buildTokenStateIndexCount += 1;
-  const index = new Map<string, TokenStateIndexEntry>();
-  for (const [zoneId, tokens] of Object.entries(state.zones)) {
-    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
-      const token = tokens[tokenIndex];
-      if (token === undefined) {
-        continue;
-      }
-      const tokenId = String(token.id);
-      const existing = index.get(tokenId);
-      if (existing === undefined) {
+  try {
+    const index = new Map<string, TokenStateIndexEntry>();
+    for (const zoneId of Object.keys(state.zones)) {
+      const tokens = state.zones[zoneId] ?? [];
+      for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+        const token = tokens[tokenIndex];
+        if (token === undefined) {
+          continue;
+        }
+        const tokenId = String(token.id);
+        const existing = index.get(tokenId);
+        if (existing === undefined) {
+          index.set(tokenId, {
+            zoneId,
+            index: tokenIndex,
+            token,
+            occurrenceCount: 1,
+            occurrenceZoneIds: NO_DUPLICATE_OCCURRENCE_ZONE_IDS,
+          });
+          continue;
+        }
         index.set(tokenId, {
-          zoneId,
-          index: tokenIndex,
-          token,
-          occurrenceCount: 1,
-          occurrenceZoneIds: NO_DUPLICATE_OCCURRENCE_ZONE_IDS,
+          ...existing,
+          occurrenceCount: existing.occurrenceCount + 1,
+          occurrenceZoneIds: existing.occurrenceCount === 1
+            ? [existing.zoneId, zoneId]
+            : [...existing.occurrenceZoneIds, zoneId],
         });
-        continue;
       }
-      index.set(tokenId, {
-        ...existing,
-        occurrenceCount: existing.occurrenceCount + 1,
-        occurrenceZoneIds: existing.occurrenceCount === 1
-          ? [existing.zoneId, zoneId]
-          : [...existing.occurrenceZoneIds, zoneId],
-      });
+    }
+    return index;
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('tokenStateIndex:build', t0);
     }
   }
-  return index;
 }
 
 function toIndexEntry(occurrences: readonly TokenOccurrence[]): TokenStateIndexEntry | undefined {
@@ -183,8 +193,8 @@ function buildMutableTokenStateIndex(initialState: GameState): MutableTokenState
     }
   };
 
-  for (const [zoneId, tokens] of Object.entries(initialState.zones)) {
-    addZoneOccurrences(zoneId, tokens);
+  for (const zoneId of Object.keys(initialState.zones)) {
+    addZoneOccurrences(zoneId, initialState.zones[zoneId]);
   }
   for (const tokenId of occurrencesByToken.keys()) {
     refreshIndexEntry(tokenId);
@@ -256,95 +266,112 @@ export function refreshCachedTokenStateIndexEntries(
 ): boolean {
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached === undefined) {
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('tokenStateIndex:refreshCacheMiss');
+    }
     return false;
   }
-  const updated = cached instanceof Map && !sharedTokenStateIndexMaps.has(cached)
-    ? cached
-    : new Map(cached);
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
+    const updated = cached instanceof Map && !sharedTokenStateIndexMaps.has(cached)
+      ? cached
+      : new Map(cached);
 
-  // Zone rank reproduces buildTokenStateIndex's iteration-order primacy
-  // (the first zone encountered in `Object.keys(state.zones)` becomes the
-  // primary occurrence). Computed lazily — only allocated when we have a
-  // multi-occurrence token whose occurrences need a deterministic order.
-  let zoneRank: Map<string, number> | null = null;
-  const ensureZoneRank = (): Map<string, number> => {
-    if (zoneRank !== null) {
-      return zoneRank;
-    }
-    const ranks = new Map<string, number>();
-    let rank = 0;
-    for (const zoneId in state.zones) {
-      ranks.set(zoneId, rank);
-      rank += 1;
-    }
-    zoneRank = ranks;
-    return ranks;
-  };
-  const scanZoneOccurrences = (
-    occurrences: TokenOccurrence[],
-    scannedZoneIds: string[],
-    zoneId: string,
-    tokenId: string,
-  ): void => {
-    if (scannedZoneIds.includes(zoneId)) {
-      return;
-    }
-    scannedZoneIds.push(zoneId);
-    const tokens = state.zones[zoneId];
-    if (tokens === undefined) {
-      return;
-    }
-    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
-      const token = tokens[tokenIndex];
-      if (token !== undefined && String(token.id) === tokenId) {
-        occurrences.push({ zoneId, index: tokenIndex, token });
+    // Zone rank reproduces buildTokenStateIndex's iteration-order primacy
+    // (the first zone encountered in `Object.keys(state.zones)` becomes the
+    // primary occurrence). Computed lazily — only allocated when we have a
+    // multi-occurrence token whose occurrences need a deterministic order.
+    let zoneRank: Map<string, number> | null = null;
+    const ensureZoneRank = (): Map<string, number> => {
+      if (zoneRank !== null) {
+        return zoneRank;
       }
-    }
-  };
-
-  for (const tokenId of affectedTokenIds) {
-    const prior = updated.get(tokenId);
-    const scannedZoneIds: string[] = [];
-    const occurrences: TokenOccurrence[] = [];
-    for (const zoneId of mutatedZoneIds) {
-      scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
-    }
-    if (prior !== undefined) {
-      if (prior.occurrenceCount <= 1) {
-        scanZoneOccurrences(occurrences, scannedZoneIds, prior.zoneId, tokenId);
-      } else {
-        for (const zoneId of prior.occurrenceZoneIds) {
-          scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
+      const ranks = new Map<string, number>();
+      let rank = 0;
+      for (const zoneId in state.zones) {
+        ranks.set(zoneId, rank);
+        rank += 1;
+      }
+      zoneRank = ranks;
+      return ranks;
+    };
+    const scanZoneOccurrences = (
+      occurrences: TokenOccurrence[],
+      scannedZoneIds: string[],
+      zoneId: string,
+      tokenId: string,
+    ): void => {
+      if (scannedZoneIds.includes(zoneId)) {
+        return;
+      }
+      scannedZoneIds.push(zoneId);
+      const tokens = state.zones[zoneId];
+      if (tokens === undefined) {
+        return;
+      }
+      for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+        const token = tokens[tokenIndex];
+        if (token !== undefined && String(token.id) === tokenId) {
+          occurrences.push({ zoneId, index: tokenIndex, token });
         }
       }
-    }
+    };
 
-    if (occurrences.length > 1) {
-      const ranks = ensureZoneRank();
-      occurrences.sort((left, right) => {
-        const leftRank = ranks.get(left.zoneId) ?? Number.MAX_SAFE_INTEGER;
-        const rightRank = ranks.get(right.zoneId) ?? Number.MAX_SAFE_INTEGER;
-        return leftRank - rightRank || left.index - right.index;
-      });
-    }
+    for (const tokenId of affectedTokenIds) {
+      const prior = updated.get(tokenId);
+      const scannedZoneIds: string[] = [];
+      const occurrences: TokenOccurrence[] = [];
+      for (const zoneId of mutatedZoneIds) {
+        scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
+      }
+      if (prior !== undefined) {
+        if (prior.occurrenceCount <= 1) {
+          scanZoneOccurrences(occurrences, scannedZoneIds, prior.zoneId, tokenId);
+        } else {
+          for (const zoneId of prior.occurrenceZoneIds) {
+            scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
+          }
+        }
+      }
 
-    const entry = toIndexEntry(occurrences);
-    if (entry === undefined) {
-      updated.delete(tokenId);
-    } else {
-      updated.set(tokenId, entry);
+      if (occurrences.length > 1) {
+        const ranks = ensureZoneRank();
+        occurrences.sort((left, right) => {
+          const leftRank = ranks.get(left.zoneId) ?? Number.MAX_SAFE_INTEGER;
+          const rightRank = ranks.get(right.zoneId) ?? Number.MAX_SAFE_INTEGER;
+          return leftRank - rightRank || left.index - right.index;
+        });
+      }
+
+      const entry = toIndexEntry(occurrences);
+      if (entry === undefined) {
+        updated.delete(tokenId);
+      } else {
+        updated.set(tokenId, entry);
+      }
+    }
+    if (updated !== cached) {
+      tokenStateIndexByZones.set(state.zones, updated);
+    }
+    return true;
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('tokenStateIndex:refreshCachedEntries', t0);
     }
   }
-  if (updated !== cached) {
-    tokenStateIndexByZones.set(state.zones, updated);
-  }
-  return true;
 }
 
 export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached !== undefined) {
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('tokenStateIndex:getCacheHit');
+    }
     return cached;
+  }
+  if (hotPathProfilingEnabled) {
+    perfHotPathCount('tokenStateIndex:getCacheMiss');
   }
   const built = buildTokenStateIndex(state);
   tokenStateIndexByZones.set(state.zones, built);

@@ -72,7 +72,16 @@ const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 
 
 const [
   { PolicyAgent, evaluateProductionPreviewDriveBatchWithWasm, getPolicyEncodedStateLayout, precompilePolicyWasmScoreRows },
-  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState, zobristInternals },
+  {
+    assertValidatedGameDef,
+    createGameDefRuntime,
+    createPerfProfiler,
+    initialState,
+    resetHotPathProfilerCounters,
+    setHotPathProfilingEnabled,
+    snapshotHotPathProfilerCounters,
+    zobristInternals,
+  },
   { runGame },
   { getFitlBootstrapGameDefFixture },
   { __internal_for_tests: tokenStateIndexInternals },
@@ -93,6 +102,7 @@ const [
 ]);
 
 const policyWasmRuntime = initializePolicyWasmRuntimeSync();
+setHotPathProfilingEnabled(config.profileBuckets);
 
 const def = assertValidatedGameDef(getFitlBootstrapGameDefFixture().gameDef);
 const runtime = createGameDefRuntime(def);
@@ -159,6 +169,7 @@ const buildAgents = () => {
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  resetHotPathProfilerCounters();
   zobristInternals.resetZobristKeyCounters();
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
@@ -326,6 +337,11 @@ function snapshotProfilerBuckets(profiler) {
   for (const [key, bucket] of profiler.dynamic) {
     if (bucket.count > 0 || bucket.totalMs > 0) {
       rows.push({ key, count: bucket.count, totalMs: round2(bucket.totalMs) });
+    }
+  }
+  for (const bucket of snapshotHotPathProfilerCounters()) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ key: bucket.key, count: bucket.count, totalMs: round2(bucket.totalMs) });
     }
   }
   rows.sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));

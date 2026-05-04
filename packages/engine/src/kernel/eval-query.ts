@@ -31,12 +31,15 @@ import { isDynamicScopedVarNameExpr, resolveScopedVarNameExprValue } from './sco
 import {
   filterTokensByExprInContext,
   matchesTokenFilterExprInContext,
+  tokenFilterExprRequiresContext,
   type TokenFilterFieldResolver,
 } from './token-filter.js';
+import { getCompiledTokenFilter } from './compiled-token-filter-cache.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
 import { getZoneMap } from './def-lookup.js';
+import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, ZoneDef } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -44,6 +47,18 @@ type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | Zon
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 const sortedZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
 const sortedMapSpaceZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
+const contextIndependentTokenFilterCountCache = new WeakMap<readonly Token[], WeakMap<TokenFilterExpr, number>>();
+const tokenFilterContextIndependenceCache = new WeakMap<TokenFilterExpr, boolean>();
+
+function tokenFilterIsContextIndependent(filter: TokenFilterExpr): boolean {
+  const cached = tokenFilterContextIndependenceCache.get(filter);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const isContextIndependent = !tokenFilterExprRequiresContext(filter);
+  tokenFilterContextIndependenceCache.set(filter, isContextIndependent);
+  return isContextIndependent;
+}
 
 function compareZoneId(left: ZoneDef, right: ZoneDef): number {
   return left.id.localeCompare(right.id);
@@ -417,12 +432,29 @@ function resolveTokenQueryFieldValue(
 }
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
-  return filterTokensByExprInContext(
-    tokens,
-    filter,
-    ctx,
-    (token, predicate) => resolveTokenQueryFieldValue(token, predicate, ctx),
-  );
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
+    if (ctx.freeOperationOverlay === undefined) {
+      const compiled = getCompiledTokenFilter(filter);
+      if (compiled !== null) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:applyTokenFilterCompiled');
+        }
+        return tokens.filter((token) => compiled(token, ctx));
+      }
+    }
+    return filterTokensByExprInContext(
+      tokens,
+      filter,
+      ctx,
+      (token, predicate) => resolveTokenQueryFieldValue(token, predicate, ctx),
+    );
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('evalQuery:applyTokenFilter', t0);
+    }
+  }
 }
 
 function tokenMatchesFilter(token: Token, filter: TokenFilterExpr | undefined, ctx: ReadContext): boolean {
@@ -436,17 +468,65 @@ function tokenMatchesFilter(token: Token, filter: TokenFilterExpr | undefined, c
 }
 
 function countMatchingTokens(tokens: readonly Token[], filter: TokenFilterExpr | undefined, ctx: ReadContext): number {
+  const profileHotPath = hotPathProfilingEnabled;
   if (filter === undefined) {
+    if (profileHotPath) {
+      perfHotPathCount('evalQuery:countMatchingTokensNoFilter');
+      perfHotPathCount('evalQuery:countMatchingTokensNoFilterItems', tokens.length);
+    }
     return tokens.length;
   }
 
-  let count = 0;
-  for (const token of tokens) {
-    if (tokenMatchesFilter(token, filter, ctx)) {
-      count += 1;
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
+    if (profileHotPath) {
+      perfHotPathCount('evalQuery:countMatchingTokensFilteredItems', tokens.length);
+    }
+    if (ctx.freeOperationOverlay === undefined) {
+      const canCache = tokenFilterIsContextIndependent(filter);
+      const cached = canCache
+        ? contextIndependentTokenFilterCountCache.get(tokens)?.get(filter)
+        : undefined;
+      if (cached !== undefined) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:countMatchingTokensCacheHit');
+        }
+        return cached;
+      }
+      const compiled = getCompiledTokenFilter(filter);
+      if (compiled !== null) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:countMatchingTokensCompiled');
+        }
+        let count = 0;
+        for (const token of tokens) {
+          if (compiled(token, ctx)) {
+            count += 1;
+          }
+        }
+        if (canCache) {
+          const cachedByFilter = contextIndependentTokenFilterCountCache.get(tokens);
+          if (cachedByFilter !== undefined) {
+            cachedByFilter.set(filter, count);
+          } else {
+            contextIndependentTokenFilterCountCache.set(tokens, new WeakMap([[filter, count]]));
+          }
+        }
+        return count;
+      }
+    }
+    let count = 0;
+    for (const token of tokens) {
+      if (tokenMatchesFilter(token, filter, ctx)) {
+        count += 1;
+      }
+    }
+    return count;
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('evalQuery:countMatchingTokens', t0);
     }
   }
-  return count;
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: ReadContext): readonly ResolvedRowPredicate[] {

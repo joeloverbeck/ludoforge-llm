@@ -228,10 +228,11 @@ export class PolicyAgent implements Agent {
       input,
       ` actionMoves=${actionDecisions.length} heapDeltaMb=${traceHeapDelta ? heapUsedMb() - evalHeapBefore : 'n/a'} finalScore=${evaluation.metadata.finalScore ?? 'null'}`,
     );
-    const selectedMoveKey = toMoveIdentityKey(input.def, evaluation.move);
-    const selectedDecision = actionDecisions.find(
-      (decision) => decision.move !== undefined && toMoveIdentityKey(input.def, decision.move) === selectedMoveKey,
-    );
+    const selectedDecision = actionDecisions.find((decision) => decision.move === evaluation.move)
+      ?? actionDecisions.find(
+        (decision) => decision.move !== undefined
+          && toMoveIdentityKey(input.def, decision.move) === evaluation.metadata.selectedStableMoveKey,
+      );
     if (selectedDecision === undefined) {
       throw new Error('PolicyAgent selected a move that was not present in the published action frontier.');
     }

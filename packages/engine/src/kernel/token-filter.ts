@@ -21,7 +21,7 @@ function isTokenFilterScalar(value: unknown): value is TokenFilterScalar {
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean';
 }
 
-const tokenFilterExprRequiresContext = (expr: TokenFilterExpr): boolean => {
+export const tokenFilterExprRequiresContext = (expr: TokenFilterExpr): boolean => {
   if ('value' in expr) {
     return !Array.isArray(expr.value)
       && (typeof expr.value !== 'string' && typeof expr.value !== 'number' && typeof expr.value !== 'boolean');

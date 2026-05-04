@@ -151,13 +151,13 @@ Exception for red measured gates: if the active ticket explicitly allows complet
 For red measured-gate tickets, prefer this terminal-status order unless the active ticket already dictates a different accepted closeout choreography:
 
 1. Before the decisive metric, prewrite the active ticket outcome/status as pending or nonterminal.
-2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record the final delta as `material`, `minor`, or `not demonstrated`.
+2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record a compact ledger with `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`.
 3. If red and successor completion is allowed, create or update the successor, dependent tickets, and spec ticket list.
 4. Run dependency integrity immediately after the ticket graph rewrite.
 5. Run the final acceptance-proof lanes affected by the code and handoff state.
 6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
 
-If the materiality classification is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state.
+If the materiality verdict is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state. Treat broad phrases such as "next owner", "follow up", or "handoff" as authorization to draft successor ownership, not as authorization to mark the active red gate complete.
 
 Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
 
@@ -165,11 +165,17 @@ Pre-`apply_patch` stop-check: if a patch both sets terminal status and creates o
 
 If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
 
+For red-gate successor closeout, include a compact post-metric proof-validity ledger in the active ticket outcome or final closeout:
+
+- `post-metric graph edits`: `<successor/spec/dependency/status files changed after the decisive metric>`
+- `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "metric-only ownership transcription; no code, command, threshold, scope, or acceptance-boundary change">`
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
 
 1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
+   - For numbered series or repeated residual tickets, use a concrete overlap preflight before authoring, for example `rg -n '<series-prefix>|<residual keyword>|<candidate owner>' tickets specs` plus targeted reads of plausible hits. Record a one-line `overlap checked` note in working notes, the active ticket outcome, or the successor when the handoff is nontrivial.
 2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
 3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
    - For profiling or benchmark successors backed by CPU-profile evidence, include a compact profiling evidence block in the successor: `profile command`, `profile artifact path` or explicit ephemeral-artifact note, `parser command` or parser method, baseline/current metric, top owners or residual stack samples, sample-surface classification (`inside timed acceptance surface`, `setup/process lifetime`, or `post-processing/observer overhead`), and why this successor is non-overlapping with the completed active slice.
@@ -229,6 +235,7 @@ For benchmark/performance tickets where a code slice is worth keeping but the ti
 - `accepted implementation`: `<landed root-cause reduction and files/seam changed>`
 - `green proof`: `<focused build/test/correctness lanes>`
 - `measured improvement`: `<owned root-cause metric before -> after, plus command/artifact>`
+- `materiality`: `<baseline, decisive final, target, delta, percent change, verdict, terminal status allowed?>`
 - `red acceptance lane`: `<ticket-named command and exact red result>`
 - `durable status`: `IN PROGRESS | BLOCKED | PARTIAL | repo-equivalent`
 - `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`

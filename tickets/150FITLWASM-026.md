@@ -1,6 +1,6 @@
 # 150FITLWASM-026: Query/eval and encoding residual closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference resolution, spatial filter evaluation, score-row encoding, token-index, and remaining hash residual work
@@ -101,6 +101,7 @@ optimization, record exact metrics and create the next non-overlapping owner.
 ## Files to Touch
 
 - generic kernel/query/eval/reference-resolution/spatial helpers if profiling proves they are the residual owner
+- generic decision-sequence or stable-fingerprint helpers if profiling proves they are the residual owner
 - generic token-index helpers if profiling proves they are the residual owner
 - `packages/engine/src/agents/policy-wasm-runtime.ts` or adjacent score/encoding helpers if encoding remains the residual owner
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` only if additional counters are needed
@@ -161,3 +162,80 @@ that same file is still the cleanest residual owner.
 2. Focused tests for the changed generic seam.
 3. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-encoding-residual-perf`.
+
+## Outcome
+
+2026-05-04 implementation landed a run-local pending-request fingerprint cache
+inside generic decision-sequence analysis while preserving the active WASM
+score-row and preview-state routes.
+
+- `packages/engine/src/kernel/decision-sequence-analysis.ts` now caches the
+  deterministic fingerprint for each pending request object inside one
+  `analyzeDecisionSequence` call. The memo key still includes the action id,
+  normalized move binding, and the same stable request fingerprint; the cache
+  only avoids recomputing that fingerprint when the same immutable request
+  object is reused by the existing request cache.
+- The cache is scoped to a single analysis invocation and cannot alias
+  caller-visible state. It stores deterministic strings derived from existing
+  request shape, not mutable runtime objects.
+- The implementation added profiler hit/miss counters for this internal cache,
+  but no serialized schema, generated artifact, WASM ABI, or score-row buffer
+  changed.
+
+Measured result:
+
+- Diagnostic pre-change same-seam CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm026-baseline-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-encoding-residual-baseline-profile`
+  — RED, per-card `elapsedMs=2512.87`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=2319`, `zobristKeyCacheHitCount=188266`,
+  `zobristKeyUncachedCount=333`.
+- Final non-CPU same-seam profile:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-encoding-residual-fingerprint-cache-final-probe`
+  — RED, per-card `elapsedMs=2408.84`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `wasmProductionPreviewDriveBatchCount=232`,
+  `zobristKeyCacheMissCount=2319`, `zobristKeyCacheHitCount=188266`,
+  `zobristKeyUncachedCount=333`.
+- Post-change CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm026-final-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-encoding-residual-fingerprint-cache-final-profile`
+  — RED, per-card `elapsedMs=2464.35` with CPU profiling enabled,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Parser command:
+  `node .codex/skills/implement-ticket/scripts/parse-cpuprofile.mjs /tmp/ludoforge-150fitlwasm026-final-profile/CPU.20260504.031109.3.0.001.cpuprofile --targets fnv1a64,fnv1a64FromState,updateFnv1a64State,resolveRef,evalCondition,evalValue,evalQuery,encodePolicyBytecodeInput,buildTokenStateIndex,refreshCachedTokenStateIndexEntries,queryConnectedZones,applyTokenFilter`.
+- Post-change CPU evidence shows the ticket-owned stable-fingerprint FNV bucket
+  moved from diagnostic `fnv1a64=287` to `fnv1a64=263` self samples, while
+  remaining residual owners include `resolveRef=147`, `evalCondition=138`,
+  `evalValue=101`, `evalQuery=64`, `encodePolicyBytecodeInput=62`,
+  `queryConnectedZones=39`, `refreshCachedTokenStateIndexEntries=46`,
+  `buildTokenStateIndex=14`, and `updateFnv1a64State=53`.
+
+Retained candidate classification:
+
+- `owned metric improved`: same-checkout same-seam per-card wall time moved
+  from diagnostic `2512.87 ms` to final non-CPU `2408.84 ms` while preserving
+  clean active-route counters. The result remains red against `<=250 ms`, so no
+  perf gate test was added.
+- `root-cause bucket improved`: post-change CPU parsing shows the
+  decision-sequence `fnv1a64` bucket reduced from `287` to `263` self samples.
+  The retained helper is generic and scoped to one analysis call.
+- `wall-clock gate still red`: `149FITLEVNUMVM-016` and
+  `149FITLEVNUMVM-022` remain blocked.
+
+Created successor `tickets/150FITLWASM-027.md` for the next non-overlapping
+owner: residual stable-fingerprint / decision-sequence hashing,
+query/eval/reference-resolution, spatial filter evaluation, score-row
+encoding, token-index refresh/build, and remaining hash residuals. Tickets
+`149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until that or a
+later successor makes the `<=250 ms` gate truthful.
+
+Proof invalidation note: the post-measurement ticket/spec/dependency edits only
+transcribed the red metric and moved successor ownership; they did not change
+code, command semantics, thresholds, scope, or acceptance boundaries for the
+measured command. The focused final lanes were rerun after graph edits. The
+final `COMPLETED` status edit was status-only after those lanes passed and did
+not change scope, command semantics, thresholds, dependency ownership, or
+acceptance boundaries.

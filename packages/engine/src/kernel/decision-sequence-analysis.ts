@@ -90,8 +90,8 @@ const createPendingRequestFingerprint = (request: ChoicePendingRequest): string 
 
 const createMemoKey = (
   move: Move,
-  request: ChoicePendingRequest,
-): string => `${String(move.actionId)}:${normalizeMoveBinding(move)}:${createPendingRequestFingerprint(request)}`;
+  requestFingerprint: string,
+): string => `${String(move.actionId)}:${normalizeMoveBinding(move)}:${requestFingerprint}`;
 
 const assignDecisionSelection = (
   move: Move,
@@ -285,6 +285,7 @@ export const analyzeDecisionSequence = (
   const memo = new Map<string, SearchOutcome>();
   const nogoods = new Map<string, Set<string>>();
   const requestCache = new Map<string, ChoiceRequest>();
+  const requestFingerprintCache = new WeakMap<ChoicePendingRequest, string>();
   let decisionProbeSteps = 0;
   let deferredPredicatesEvaluated = 0;
   let paramExpansions = 0;
@@ -368,6 +369,18 @@ export const analyzeDecisionSequence = (
     return request;
   };
 
+  const getPendingRequestFingerprint = (request: ChoicePendingRequest): string => {
+    const cached = requestFingerprintCache.get(request);
+    if (cached !== undefined) {
+      perfCount(profiler, 'decisionSequenceSatisfiability:requestFingerprintCacheHit');
+      return cached;
+    }
+    perfCount(profiler, 'decisionSequenceSatisfiability:requestFingerprintCacheMiss');
+    const fingerprint = createPendingRequestFingerprint(request);
+    requestFingerprintCache.set(request, fingerprint);
+    return fingerprint;
+  };
+
   const search = (move: Move): SearchOutcome => {
     const discovered = discoverRequest(move);
     if ('classification' in discovered) {
@@ -387,7 +400,7 @@ export const analyzeDecisionSequence = (
       return { classification: 'explicitStochastic' };
     }
 
-    const memoKey = createMemoKey(move, request);
+    const memoKey = createMemoKey(move, getPendingRequestFingerprint(request));
     const cached = memo.get(memoKey);
     if (cached !== undefined) {
       return cached;

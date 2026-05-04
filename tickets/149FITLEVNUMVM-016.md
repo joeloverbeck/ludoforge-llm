@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-016: Phase 4 VM perf closure + default-flip F14 cut
 
-**Status**: BLOCKED by Phase 5/WASM successor gate `tickets/150FITLWASM-026.md` — final F14 default-flip/deletion owner
+**Status**: BLOCKED by Phase 5/WASM successor gate `tickets/150FITLWASM-027.md` — final F14 default-flip/deletion owner
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-026.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-027.md`
 
 ## Problem
 
@@ -29,7 +29,7 @@ query/apply/hash residual moved to `archive/tickets/150FITLWASM-021.md`; that
 ticket landed a setup-hash root-counter reduction but left the same-seam gate
 red around `2.5 s`. Ticket `150FITLWASM-022` landed bounded dynamic Zobrist
 feature-key memoization, reduced `zobristKeyUncachedCount` from `1391` to
-`334`, and left the same-seam gate red at per-card `elapsedMs=2539.8`. Ticket `150FITLWASM-023` landed apply-move token-placement hash deferral, reduced `zobristKeyCacheMissCount` from `3717` to `2837`, and left the same-seam gate red at per-card `elapsedMs=2557.17`. Ticket `150FITLWASM-024` landed initial full-hash runtime-table cache reuse, reduced `zobristKeyCacheMissCount` from `2837` to `2319`, and left the same-seam gate red at per-card `elapsedMs=2467.29`. Ticket `150FITLWASM-025` landed generic FNV prefix-state reuse and left the same-seam gate red at per-card `elapsedMs=2375.99`. The active successor owner is now `tickets/150FITLWASM-026.md`; this ticket remains blocked until that or a later successor makes the budget truthful.
+`334`, and left the same-seam gate red at per-card `elapsedMs=2539.8`. Ticket `150FITLWASM-023` landed apply-move token-placement hash deferral, reduced `zobristKeyCacheMissCount` from `3717` to `2837`, and left the same-seam gate red at per-card `elapsedMs=2557.17`. Ticket `150FITLWASM-024` landed initial full-hash runtime-table cache reuse, reduced `zobristKeyCacheMissCount` from `2837` to `2319`, and left the same-seam gate red at per-card `elapsedMs=2467.29`. Ticket `150FITLWASM-025` landed generic FNV prefix-state reuse and left the same-seam gate red at per-card `elapsedMs=2375.99`. Ticket `150FITLWASM-026` landed a run-local pending-request fingerprint cache and left the same-seam gate red at per-card `elapsedMs=2408.84`. The active successor owner is now `tickets/150FITLWASM-027.md`; this ticket remains blocked until that or a later successor makes the budget truthful.
 
 ## Reassessment Update (2026-05-02, Phase 5 handoff)
 

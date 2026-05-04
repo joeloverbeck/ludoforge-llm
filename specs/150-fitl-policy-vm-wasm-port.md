@@ -236,5 +236,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-023.md`](../archive/tickets/150FITLWASM-023.md) — Completed residual apply-move token-hash deferral with red measured gate successor.
 - [`archive/tickets/150FITLWASM-024.md`](../archive/tickets/150FITLWASM-024.md) — Completed initial full-hash runtime-table cache reuse with red measured gate successor.
 - [`archive/tickets/150FITLWASM-025.md`](../archive/tickets/150FITLWASM-025.md) — Completed generic FNV prefix-state residual closure with red measured gate successor.
-- [`tickets/150FITLWASM-026.md`](../tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
+- [`archive/tickets/150FITLWASM-026.md`](../archive/tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
 - [`tickets/150FITLWASM-027.md`](../tickets/150FITLWASM-027.md) — Residual stable-fingerprint, query/eval, and encoding closure.

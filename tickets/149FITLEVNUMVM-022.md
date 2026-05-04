@@ -123,7 +123,7 @@ initial-hash, encoding, and token-index residual closure.
 prefix-state reuse for Zobrist feature keys and decision-stack digest salts and
 kept the active route clean, but the same-seam gate remained red at per-card
 `elapsedMs=2375.99` versus `<=250`. The current active successor owner moved
-to `tickets/150FITLWASM-026.md` for residual query/eval, encoding, token-index,
+to `archive/tickets/150FITLWASM-026.md` for residual query/eval, encoding, token-index,
 spatial-filter, and remaining-hash closure.
 
 2026-05-04 successor update: ticket `150FITLWASM-026` landed a run-local

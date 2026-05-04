@@ -9,7 +9,7 @@ import {
 } from './choose-n-set-variable-propagation.js';
 import {
   canonicalizeFingerprintValue,
-  stableFingerprintHex,
+  createStableFingerprintHasher,
 } from './stable-fingerprint.js';
 import type {
   ChoicePendingChooseNRequest,
@@ -58,8 +58,7 @@ const collectSelectableOptionValues = (request: ChoicePendingRequest): readonly 
   return selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
 };
 
-const hashCanonical = (value: unknown): string =>
-  stableFingerprintHex('decision-sequence-analysis-v1', value);
+const hashCanonical = createStableFingerprintHasher('decision-sequence-analysis-v1');
 
 const normalizeMoveBinding = (move: Move): string => canonicalizeFingerprintValue({
   params: Object.fromEntries(
@@ -89,9 +88,10 @@ const createPendingRequestFingerprint = (request: ChoicePendingRequest): string 
   });
 
 const createMemoKey = (
-  move: Move,
-  request: ChoicePendingRequest,
-): string => `${String(move.actionId)}:${normalizeMoveBinding(move)}:${createPendingRequestFingerprint(request)}`;
+  actionId: Move['actionId'],
+  moveBindingKey: string,
+  requestFingerprint: string,
+): string => `${String(actionId)}:${moveBindingKey}:${requestFingerprint}`;
 
 const assignDecisionSelection = (
   move: Move,
@@ -285,6 +285,7 @@ export const analyzeDecisionSequence = (
   const memo = new Map<string, SearchOutcome>();
   const nogoods = new Map<string, Set<string>>();
   const requestCache = new Map<string, ChoiceRequest>();
+  const requestFingerprintCache = new WeakMap<ChoicePendingRequest, string>();
   let decisionProbeSteps = 0;
   let deferredPredicatesEvaluated = 0;
   let paramExpansions = 0;
@@ -344,8 +345,7 @@ export const analyzeDecisionSequence = (
     return { classification: 'unknown' };
   };
 
-  const discoverRequest = (move: Move): ChoiceRequest | SearchOutcome => {
-    const bindingKey = normalizeMoveBinding(move);
+  const discoverRequest = (move: Move, bindingKey: string): ChoiceRequest | SearchOutcome => {
     const cached = requestCache.get(bindingKey);
     if (cached !== undefined) {
       return cached;
@@ -368,8 +368,21 @@ export const analyzeDecisionSequence = (
     return request;
   };
 
+  const getPendingRequestFingerprint = (request: ChoicePendingRequest): string => {
+    const cached = requestFingerprintCache.get(request);
+    if (cached !== undefined) {
+      perfCount(profiler, 'decisionSequenceSatisfiability:requestFingerprintCacheHit');
+      return cached;
+    }
+    perfCount(profiler, 'decisionSequenceSatisfiability:requestFingerprintCacheMiss');
+    const fingerprint = createPendingRequestFingerprint(request);
+    requestFingerprintCache.set(request, fingerprint);
+    return fingerprint;
+  };
+
   const search = (move: Move): SearchOutcome => {
-    const discovered = discoverRequest(move);
+    const bindingKey = normalizeMoveBinding(move);
+    const discovered = discoverRequest(move, bindingKey);
     if ('classification' in discovered) {
       return discovered;
     }
@@ -387,7 +400,7 @@ export const analyzeDecisionSequence = (
       return { classification: 'explicitStochastic' };
     }
 
-    const memoKey = createMemoKey(move, request);
+    const memoKey = createMemoKey(move.actionId, bindingKey, getPendingRequestFingerprint(request));
     const cached = memo.get(memoKey);
     if (cached !== undefined) {
       return cached;

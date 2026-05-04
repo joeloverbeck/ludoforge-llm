@@ -156,8 +156,42 @@ query-materialization runtime reuse, but the same-seam gate remained red at
 sharing and bounded decision-frame digest caching, but the same-seam gate
 remained red at `2761.91 ms`. Ticket `150FITLWASM-019` delivered exact shared
 FNV hashing and kept the active route clean, but the same-seam gate remained
-red at `2460.65 ms`. Ticket `150FITLWASM-020` is the residual active-route
-query/eval/encoding successor.
+red at `2460.65 ms`. Ticket `150FITLWASM-020` delivered unchanged
+token-placement hash elision plus encoded bytecode input caching and kept the
+active route clean, but the same-seam gate remained red around `2.5 s`. Ticket
+`150FITLWASM-021` delivered a generic initial-state setup hash reduction and
+kept the active route clean, but the same-seam gate remained red around
+`2.5 s`. Ticket `150FITLWASM-022` delivered bounded dynamic Zobrist
+feature-key memoization and kept the active route clean, but the same-seam gate
+remained red at `2539.8 ms`. Ticket `150FITLWASM-023` delivered reconciled
+apply-move token-placement hash deferral and kept the active route clean, but
+the same-seam gate remained red at `2557.17 ms`. Ticket `150FITLWASM-024`
+delivered run-local initial full-hash Zobrist table cache reuse and kept the
+active route clean, but the same-seam gate remained red at `2467.29 ms`.
+Ticket `150FITLWASM-025` delivered generic FNV prefix-state reuse for Zobrist
+feature keys and decision-stack digest salts, kept the active route clean, and
+left the same-seam gate red at `2375.99 ms`. Ticket `150FITLWASM-026`
+delivered a run-local pending-request fingerprint cache in generic
+decision-sequence analysis, kept the active route clean, and left the same-seam
+gate red at `2408.84 ms`. Ticket `150FITLWASM-027` delivered a generic
+namespace-prefix stable-fingerprint hasher for decision-sequence pending
+requests, removed the direct `stableFingerprintHex` / `fnv1a64` CPU bucket,
+kept the active route clean, and left the same-seam gate red at `2477.81 ms`.
+Ticket `150FITLWASM-028` delivered generic query/spatial allocation reductions
+and cached WASM layout encoding, kept the active route clean, and reduced the
+same-seam gate into the low `~2.1 s` range while leaving it red. Ticket
+`150FITLWASM-029` landed generic encoding, reference-cache, token-index
+refresh, decision-sequence fingerprint, query/map-space allocation reductions,
+static binding-name shortcuts, token-index scan allocation reduction, and a
+versioned per-context `resolveRef` cache, kept the active route clean, and left
+the decisive same-seam gate red at `2046.48 ms`. Ticket `150FITLWASM-030`
+landed generic connected-zone allocation reductions and boolean connected
+condition traversal, kept the active route clean, and left the decisive
+same-seam gate red at `1910.21 ms`. Ticket `150FITLWASM-031` landed generic
+microturn continuation-binding allocation cleanup, a `tokenZones`
+token-state-index allocation cleanup, and a compiled `zoneVar` dynamic-selector
+parity fix, kept the active route clean, and left the confirmed same-seam gate
+red at `1773.64 ms` with a retained repeat at `1754.11 ms`.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -212,4 +246,15 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-017.md`](../archive/tickets/150FITLWASM-017.md) — Completed active-route query-materialization runtime reuse with red measured gate successor.
 - [`archive/tickets/150FITLWASM-018.md`](../archive/tickets/150FITLWASM-018.md) — Completed active-route token-index/digest cleanup with red measured gate successor.
 - [`archive/tickets/150FITLWASM-019.md`](../archive/tickets/150FITLWASM-019.md) — Completed exact shared FNV hashing with red measured gate successor.
-- [`tickets/150FITLWASM-020.md`](../tickets/150FITLWASM-020.md) — Residual active-route query/eval/encoding closure.
+- [`archive/tickets/150FITLWASM-020.md`](../archive/tickets/150FITLWASM-020.md) — Completed residual active-route query/eval/encoding slice with red measured gate successor.
+- [`archive/tickets/150FITLWASM-021.md`](../archive/tickets/150FITLWASM-021.md) — Completed deeper active-route query/apply/hash residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-022.md`](../archive/tickets/150FITLWASM-022.md) — Completed bounded dynamic Zobrist feature-key cache with red measured gate successor.
+- [`archive/tickets/150FITLWASM-023.md`](../archive/tickets/150FITLWASM-023.md) — Completed residual apply-move token-hash deferral with red measured gate successor.
+- [`archive/tickets/150FITLWASM-024.md`](../archive/tickets/150FITLWASM-024.md) — Completed initial full-hash runtime-table cache reuse with red measured gate successor.
+- [`archive/tickets/150FITLWASM-025.md`](../archive/tickets/150FITLWASM-025.md) — Completed generic FNV prefix-state residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-026.md`](../archive/tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
+- [`archive/tickets/150FITLWASM-027.md`](../archive/tickets/150FITLWASM-027.md) — Completed stable-fingerprint prefix-hasher closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-028.md`](../archive/tickets/150FITLWASM-028.md) — Completed query/spatial allocation and layout-encoding residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-029.md`](../archive/tickets/150FITLWASM-029.md) — Completed allocation, encoding, query/eval, token-index, digest/hash, and process allocation residual closure after retained reduction slices.
+- [`archive/tickets/150FITLWASM-030.md`](../archive/tickets/150FITLWASM-030.md) — Completed connected-zone allocation and connected-condition traversal residual closure with red measured gate successor.
+- [`tickets/150FITLWASM-032.md`](../tickets/150FITLWASM-032.md) — Active remaining reference/eval, token-index, hash/canonicalization, and allocation/GC residual closure after continuation-binding and `tokenZones` cleanup.

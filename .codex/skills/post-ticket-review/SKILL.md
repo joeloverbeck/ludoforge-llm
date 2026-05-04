@@ -90,6 +90,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 
 4. Compare the finished work against the review dimensions using direct evidence from code, tests, and ticket intent.
    - For microturn publication, recovery, rollback, fallback, or pass-fallback tickets, explicitly sweep the one-rules-protocol surfaces before calling the review complete: `publishMicroturn`, `applyPublishedDecision`, `applyMove`, `applyTrustedMove`, `legalMoves`, `enumerateLegalMoves`, `probeMoveLegality`, and `probeMoveViability`. Publication, raw/classified enumeration, direct apply, trusted apply, and probe/admissibility paths must preserve the same invariant.
+   - For benchmark, profiling, or red measured-gate tickets, explicitly compare the final measured result against ticket/spec/reviewer materiality language such as "significant", "meaningful", or "not tiny". Classify the final same-command delta as `material`, `minor`, or `not demonstrated`; if the classification fails the stated bar, treat archival as blocked and classify whether the original ticket or a non-overlapping follow-up is the truthful owner.
 5. Classify each finding into one of these action buckets:
    - `must-fix-now`: small enough to fix immediately and verify now
    - `reopen-original-ticket`: the original ticket remains the correct owner, but the missing deliverable is too large or too architectural for post-review cleanup
@@ -101,6 +102,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 
 7. If there is a `must-fix-now` item:
    - when the cleanup corrects a behavior bug, write or identify the smallest failing test/probe first, then patch; strengthening an existing focused witness is acceptable when it would have failed before the cleanup and stays on the same seam; if the seam is corpus- or domain-sensitive, run a cheap corpus/domain preflight before broadening rejection semantics
+   - when adding or editing TypeScript engine tests that are executed from `dist/test/...`, rebuild the engine package before interpreting the focused Node test result; otherwise stale compiled output can produce a false red/green signal
    - implement the small cleanup immediately
    - if the cleanup edits source or test files, run `wc -l` or equivalent for touched files near repo size guidance; extract, shrink, or record a justified deferral before closeout when the cleanup pushes or leaves a file over the repo limit
    - run targeted verification for that cleanup
@@ -109,9 +111,11 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 8. If there is a `reopen-original-ticket` item:
    - amend the original ticket so its status, outcome, acceptance state, and proof ledger no longer imply completion
    - state exactly what landed, what remains, and why the original ticket remains the cleanest owner
+   - identify any follow-up or successor artifacts created by the reviewed implementation; if they overlap the reopened original ticket, delete untracked ones, or retarget/mark tracked ones truthfully before final handoff
    - update sibling tickets, dependencies, and specs when the reopened boundary changes their ownership story
    - do not archive the ticket in this review turn
    - final handoff must explicitly recommend the next workflow, normally continuing the same ticket with `implement-ticket`, and must include the active ticket path
+   - final handoff should include: active ticket path, archive status, what landed, what remains, removed or retargeted follow-ups, verification run, and unrelated dirty paths when needed to keep ownership clear
 9. For follow-up work:
    - prefer extending an existing active ticket when that produces a cleaner boundary and avoids overlap
    - otherwise create a new ticket in `tickets/` from `tickets/_TEMPLATE.md`
@@ -175,10 +179,11 @@ For any ticket you create or extend:
 - If actions were taken, summarize only:
   - small cleanup fixed
   - targeted verification run
-  - original ticket reopened for continued implementation
+  - original ticket reopened and not archived, including active ticket path and next workflow
   - active ticket extended
   - new ticket created
   - original ticket archived
+  - removed or retargeted overlapping successor/follow-up artifacts
   - archive move status when it is unusual or affects commit/staging readiness
   - unrelated dirty paths only when needed to keep the ticket-review output distinct from other same-session or pre-existing work
 

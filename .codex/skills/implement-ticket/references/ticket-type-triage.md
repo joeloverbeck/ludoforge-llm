@@ -27,6 +27,8 @@ When the ticket is a **proof, benchmark, audit, or investigation ticket**, do th
 3. Classify the comparison baseline as live-to-be-rerun versus already-recorded historical evidence.
 4. Restate the downstream threshold action before running commands (`close sibling`, `keep sibling active`, `create follow-up`, `mark blocked`, etc.).
 
+For a **profiling or benchmark red-gate ticket**, use the profiling fast path from the main skill's Implementation Rules unless reassessment triggers heavier guidance. The usual early reference set is `working-notes`, this triage file, `specialized-ticket-types`, and `verification`; add broader references only for split ownership, nontrivial discrepancy, shared-contract/schema fallout, noisy harness behavior, command-wrapper ambiguity, or post-proof invalidation.
+
 ## Event-Driven, Card-Driven, or Action-Identity-Sensitive Repro
 
 When a ticket depends on an **event-driven, card-driven, or action-identity-sensitive repro**, do this identity check before tracing deeper into a plausible candidate:

@@ -58,6 +58,7 @@ interface EffectContextBase extends WriteContext {
   readonly verifyCompiledEffects?: boolean;
   readonly freeOperation?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly skipRunningHashUpdates?: boolean;
   readonly cachedRuntime?: import('./gamedef-runtime.js').GameDefRuntime;
   readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly decisionScope: DecisionScope;
@@ -228,6 +229,7 @@ export interface EffectEnv {
   readonly verifyCompiledEffects?: boolean;
   readonly freeOperation?: boolean;
   readonly phaseTransitionBudget?: PhaseTransitionBudget;
+  readonly skipRunningHashUpdates?: boolean;
   readonly cachedRuntime?: import('./gamedef-runtime.js').GameDefRuntime;
   readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly freeOperationProbeScope?: FreeOperationProbeScope;

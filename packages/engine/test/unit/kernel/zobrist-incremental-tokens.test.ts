@@ -13,6 +13,7 @@ import {
   createGameDefRuntime,
   createRng,
   createZobristTable,
+  initialState,
   type EffectAST,
   type GameDef,
   type GameState,
@@ -97,7 +98,7 @@ const makeState = (def: GameDef, table: ReturnType<typeof createZobristTable>, z
 const makeCtx = (
   def: GameDef,
   state: GameState,
-  opts?: { noCachedRuntime?: boolean; bindings?: Record<string, unknown> },
+  opts?: { noCachedRuntime?: boolean; bindings?: Record<string, unknown>; skipRunningHashUpdates?: boolean },
 ) => {
   const runtime = opts?.noCachedRuntime ? undefined : createGameDefRuntime(def);
   const baseCtx = makeExecutionEffectContext({
@@ -111,7 +112,11 @@ const makeCtx = (
     moveParams: {},
     collector: createCollector(),
   });
-  return runtime ? { ...baseCtx, cachedRuntime: runtime } : baseCtx;
+  const ctx = {
+    ...baseCtx,
+    ...(opts?.skipRunningHashUpdates === true ? { skipRunningHashUpdates: true } : {}),
+  };
+  return runtime ? { ...ctx, cachedRuntime: runtime } : ctx;
 };
 
 // ---------------------------------------------------------------------------
@@ -121,6 +126,26 @@ const makeCtx = (
 describe('zobrist incremental hash — token effect handlers', () => {
   const def = makeDef();
   const table = createZobristTable(def);
+
+  it('seeds the supplied runtime Zobrist table from initial full-hash computation', () => {
+    const setupDef = {
+      ...def,
+      setup: [
+        eff({ createToken: { type: 'card', zone: 'hand:none', props: { suit: 'hearts' } } }),
+        eff({ createToken: { type: 'card', zone: 'discard:none', props: { suit: 'spades' } } }),
+      ],
+    } as unknown as GameDef;
+    const runtime = createGameDefRuntime(setupDef);
+
+    const state = initialState(setupDef, 17, 2, undefined, runtime).state;
+
+    assert.equal(state.stateHash, computeFullHash(runtime.zobristTable, state));
+    assert.equal(state._runningHash, state.stateHash);
+    assert.ok(
+      runtime.zobristTable.keyCache.size > 0,
+      'initial full-hash computation should populate the supplied run-local table cache',
+    );
+  });
 
   describe('moveToken', () => {
     it('updates _runningHash to match full recompute', () => {
@@ -233,6 +258,27 @@ describe('zobrist incremental hash — token effect handlers', () => {
 
       const expected = computeFullHash(table, result.state);
       assert.equal(result.state._runningHash, expected, 'incremental hash must match full recompute after multi draw');
+    });
+
+    it('can defer token-placement hash updates to a reconciled move boundary', () => {
+      const state = makeState(def, table);
+      const ctx = makeCtx(def, state, { skipRunningHashUpdates: true });
+
+      const effect: EffectAST = eff({
+        draw: { from: 'hand:none', to: 'board:none', count: 2 },
+      });
+      const result = applyEffects([effect], ctx);
+
+      assert.equal(
+        result.state._runningHash,
+        state._runningHash,
+        'token handlers must leave the running hash unchanged when boundary reconciliation owns final hashing',
+      );
+      assert.notEqual(
+        computeFullHash(table, result.state),
+        state._runningHash,
+        'the moved token placements still change the canonical full hash',
+      );
     });
   });
 

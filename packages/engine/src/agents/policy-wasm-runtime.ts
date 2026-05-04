@@ -8,6 +8,10 @@ import {
   resetScoreRowBytecodeCompileCount,
 } from './policy-wasm-score-bytecode-cache.js';
 import {
+  cachedLayoutIdentity,
+  cachedZoneKindCodes,
+} from './policy-wasm-layout-encoding-cache.js';
+import {
   decodePolicyWasmPreviewDriveRows,
   encodePolicyWasmPreviewDriveInput,
   firstUnsupportedPreviewDriveClass,
@@ -30,6 +34,7 @@ const VALUE_UNDEFINED = 0;
 const VALUE_NUMBER = 1;
 const VALUE_FALSE = 2;
 const VALUE_TRUE = 3;
+const NO_EXPECTED_LAYOUT_ID = -1;
 
 const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   globalVar: 1,
@@ -235,122 +240,164 @@ const writeBigUint64Array = (words: number[], values: BigUint64Array): void => {
   }
 };
 
-const layoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
-  let hash = 0x811c9dc5;
-  const mix = (value: number): void => {
-    hash ^= value | 0;
-    hash = Math.imul(hash, 0x01000193);
-  };
-  for (const value of [
-    layout.zoneIds.length,
-    layout.playerIds.length,
-    layout.tokenLayout.scalarPropIds.length,
-    layout.varLayout.globalVariableIds.length,
-    layout.varLayout.perPlayerVariableIds.length,
-    layout.varLayout.zoneVariableIds.length,
-    layout.bitsetLayout.globalMarkerWordCount,
-  ]) {
-    mix(value);
-  }
-  for (const zoneId of layout.zoneIds) {
-    const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
-    mix((zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1);
-  }
-  return hash >>> 1;
-};
-
-const zoneKindCode = (def: GameDef, zoneId: string): number => {
-  const zone = def.zones.find((entry) => String(entry.id) === zoneId);
-  return (zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1;
-};
+const encodedPolicyBytecodeInputWordCount = (
+  bytecode: PolicyBytecode,
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): number =>
+  POLICY_BYTECODE_HEADER_WORDS
+    + bytecode.instructions.length
+    + bytecode.constants.length
+    + (bytecode.featureTable.refs.length * FEATURE_REF_WORDS)
+    + context.layout.zoneIds.length
+    + encoded.tokenZone.length
+    + encoded.tokenOccurrenceOffset.length
+    + encoded.tokenOccurrenceCount.length
+    + 1
+    + encoded.tokenOccurrenceZones.length
+    + encoded.tokenScalarPropValues.length
+    + encoded.tokenScalarPropPresent.length
+    + encoded.playerInts.length
+    + encoded.zoneInts.length
+    + encoded.globals.length
+    + 1
+    + (encoded.globalMarkers.length * 2);
 
 const encodePolicyBytecodeInput = (
   bytecode: PolicyBytecode,
   encoded: EncodedState,
   context: PolicyWasmBytecodeContext,
 ): Uint8Array => {
-  const layoutId = layoutIdentity(context.layout, context.def);
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
   const expectedLayoutId = context.expectedLayoutId ?? layoutId;
-  const words: number[] = [
-    POLICY_WASM_ABI_MAGIC,
-    POLICY_WASM_ABI_VERSION,
-    expectedLayoutId,
-    layoutId,
-    bytecode.metadata.version,
-    bytecode.metadata.targetVmVersion,
-    bytecode.instructions.length,
-    bytecode.constants.length,
-    bytecode.featureTable.refs.length,
-    Number(context.state.activePlayer),
-    context.playerId ?? Number(context.state.activePlayer),
-    context.layout.zoneIds.length,
-    encoded.tokenIds.length,
-    context.layout.playerIds.length,
-    context.layout.tokenLayout.scalarPropIds.length,
-    context.layout.varLayout.globalVariableIds.length,
-    context.layout.varLayout.perPlayerVariableIds.length,
-    context.layout.varLayout.zoneVariableIds.length,
-  ];
-  if (words.length !== POLICY_BYTECODE_HEADER_WORDS) {
+  const bytes = new Uint8Array(encodedPolicyBytecodeInputWordCount(bytecode, encoded, context) * I32_BYTES);
+  const view = new DataView(bytes.buffer);
+  let wordIndex = 0;
+  const writeWord = (word: number): void => {
+    assertFiniteI32(`bytecode word ${wordIndex}`, word);
+    view.setInt32(wordIndex * I32_BYTES, word, true);
+    wordIndex += 1;
+  };
+  const writeWords = (values: ArrayLike<number>): void => {
+    for (let index = 0; index < values.length; index += 1) {
+      writeWord(values[index] ?? 0);
+    }
+  };
+  const writeBigUint64Words = (values: BigUint64Array): void => {
+    for (const value of values) {
+      writeWord(Number(BigInt.asIntN(32, value)));
+      writeWord(Number(BigInt.asIntN(32, value >> 32n)));
+    }
+  };
+
+  writeWord(POLICY_WASM_ABI_MAGIC);
+  writeWord(POLICY_WASM_ABI_VERSION);
+  writeWord(expectedLayoutId);
+  writeWord(layoutId);
+  writeWord(bytecode.metadata.version);
+  writeWord(bytecode.metadata.targetVmVersion);
+  writeWord(bytecode.instructions.length);
+  writeWord(bytecode.constants.length);
+  writeWord(bytecode.featureTable.refs.length);
+  writeWord(Number(context.state.activePlayer));
+  writeWord(context.playerId ?? Number(context.state.activePlayer));
+  writeWord(context.layout.zoneIds.length);
+  writeWord(encoded.tokenIds.length);
+  writeWord(context.layout.playerIds.length);
+  writeWord(context.layout.tokenLayout.scalarPropIds.length);
+  writeWord(context.layout.varLayout.globalVariableIds.length);
+  writeWord(context.layout.varLayout.perPlayerVariableIds.length);
+  writeWord(context.layout.varLayout.zoneVariableIds.length);
+  if (wordIndex !== POLICY_BYTECODE_HEADER_WORDS) {
     throw new Error('Policy WASM bytecode header size drifted.');
   }
 
-  writeI32Array(words, bytecode.instructions);
-  writeI32Array(words, bytecode.constants);
+  writeWords(bytecode.instructions);
+  writeWords(bytecode.constants);
   for (const ref of bytecode.featureTable.refs) {
     const kindCode = FEATURE_KIND_CODE[ref.kind];
     if (kindCode === undefined) {
-      words.push(-1, ref.layoutIndex, ...Array.from({ length: FEATURE_REF_WORDS - 2 }, () => 0));
+      writeWord(-1);
+      writeWord(ref.layoutIndex);
+      for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
+        writeWord(0);
+      }
       continue;
     }
-    words.push(kindCode, ref.layoutIndex);
+    writeWord(kindCode);
+    writeWord(ref.layoutIndex);
     for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
-      words.push(ref.aux[index] ?? 0);
+      writeWord(ref.aux[index] ?? 0);
     }
   }
 
-  writeI32Array(words, context.layout.zoneIds.map((zoneId) => zoneKindCode(context.def, String(zoneId))));
-  writeI32Array(words, encoded.tokenZone);
-  writeI32Array(words, encoded.tokenOccurrenceOffset);
-  writeI32Array(words, encoded.tokenOccurrenceCount);
-  words.push(encoded.tokenOccurrenceZones.length);
-  writeI32Array(words, encoded.tokenOccurrenceZones);
-  writeI32Array(words, encoded.tokenScalarPropValues);
-  writeI32Array(words, encoded.tokenScalarPropPresent);
-  writeI32Array(words, encoded.playerInts);
-  writeI32Array(words, encoded.zoneInts);
-  writeI32Array(words, encoded.globals);
-  words.push(encoded.globalMarkers.length);
-  writeBigUint64Array(words, encoded.globalMarkers);
-
-  const bytes = new Uint8Array(words.length * I32_BYTES);
-  const view = new DataView(bytes.buffer);
-  for (const [index, word] of words.entries()) {
-    assertFiniteI32(`bytecode word ${index}`, word);
-    view.setInt32(index * I32_BYTES, word, true);
+  writeWords(cachedZoneKindCodes(context.layout, context.def));
+  writeWords(encoded.tokenZone);
+  writeWords(encoded.tokenOccurrenceOffset);
+  writeWords(encoded.tokenOccurrenceCount);
+  writeWord(encoded.tokenOccurrenceZones.length);
+  writeWords(encoded.tokenOccurrenceZones);
+  writeWords(encoded.tokenScalarPropValues);
+  writeWords(encoded.tokenScalarPropPresent);
+  writeWords(encoded.playerInts);
+  writeWords(encoded.zoneInts);
+  writeWords(encoded.globals);
+  writeWord(encoded.globalMarkers.length);
+  writeBigUint64Words(encoded.globalMarkers);
+  if (wordIndex !== bytes.byteLength / I32_BYTES) {
+    throw new Error('Policy WASM bytecode input size drifted.');
   }
   return bytes;
 };
 
-const encodeBatchInput = (
-  program: Uint8Array,
+const encodedPolicyBytecodeInputCache = new WeakMap<EncodedState, WeakMap<PolicyBytecode, Map<string, Uint8Array>>>();
+
+const encodedPolicyBytecodeInputCacheKey = (
   context: PolicyWasmBytecodeContext,
-  candidates: readonly PolicyWasmBatchCandidate[],
-  precomputed: PolicyWasmBatchPrecomputedInput = {},
-): Uint8Array => {
-  if (program.byteLength % I32_BYTES !== 0) {
-    throw new Error('Policy WASM batch program must be i32-aligned.');
-  }
-  const layoutId = layoutIdentity(context.layout, context.def);
-  const expectedLayoutId = context.expectedLayoutId ?? layoutId;
-  const words = [
-    POLICY_WASM_ABI_MAGIC,
-    POLICY_WASM_ABI_VERSION,
-    expectedLayoutId,
+): string => {
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
+  const expectedLayoutId = context.expectedLayoutId ?? NO_EXPECTED_LAYOUT_ID;
+  return [
     layoutId,
-    candidates.length,
-    program.byteLength / I32_BYTES,
-  ];
+    expectedLayoutId,
+    Number(context.state.activePlayer),
+    context.playerId ?? Number(context.state.activePlayer),
+  ].join('|');
+};
+
+const getEncodedPolicyBytecodeInput = (
+  bytecode: PolicyBytecode,
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): Uint8Array => {
+  const key = encodedPolicyBytecodeInputCacheKey(context);
+  const cachedByBytecode = encodedPolicyBytecodeInputCache.get(encoded);
+  const cachedByContext = cachedByBytecode?.get(bytecode);
+  const cached = cachedByContext?.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const input = encodePolicyBytecodeInput(bytecode, encoded, context);
+  if (cachedByContext !== undefined) {
+    cachedByContext.set(key, input);
+  } else if (cachedByBytecode !== undefined) {
+    cachedByBytecode.set(bytecode, new Map([[key, input]]));
+  } else {
+    encodedPolicyBytecodeInputCache.set(encoded, new WeakMap([[bytecode, new Map([[key, input]])]]));
+  }
+  return input;
+};
+
+const encodedBatchCandidateWordsCache = new WeakMap<readonly PolicyWasmBatchCandidate[], Int32Array>();
+
+const getEncodedBatchCandidateWords = (
+  candidates: readonly PolicyWasmBatchCandidate[],
+): Int32Array => {
+  const cached = encodedBatchCandidateWordsCache.get(candidates);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const words: number[] = [];
   for (const candidate of candidates) {
     const params = Object.entries(candidate.params ?? {})
       .map(([id, value]) => encodeCandidateParam(id, value))
@@ -367,6 +414,32 @@ const encodeBatchInput = (
     }
     writeI32Array(words, tags);
   }
+  const encoded = Int32Array.from(words);
+  encodedBatchCandidateWordsCache.set(candidates, encoded);
+  return encoded;
+};
+
+const encodeBatchInput = (
+  program: Uint8Array,
+  context: PolicyWasmBytecodeContext,
+  candidates: readonly PolicyWasmBatchCandidate[],
+  precomputed: PolicyWasmBatchPrecomputedInput = {},
+): Uint8Array => {
+  if (program.byteLength % I32_BYTES !== 0) {
+    throw new Error('Policy WASM batch program must be i32-aligned.');
+  }
+  const layoutId = cachedLayoutIdentity(context.layout, context.def);
+  const expectedLayoutId = context.expectedLayoutId ?? layoutId;
+  const words = [
+    POLICY_WASM_ABI_MAGIC,
+    POLICY_WASM_ABI_VERSION,
+    expectedLayoutId,
+    layoutId,
+    candidates.length,
+    program.byteLength / I32_BYTES,
+  ];
+  const candidateWords = getEncodedBatchCandidateWords(candidates);
+  writeI32Array(words, candidateWords);
   const stateFeatures = precomputed.stateFeatures ?? [];
   const candidateFeatures = precomputed.candidateFeatures ?? [];
   const previewCandidateFeatures = precomputed.previewCandidateFeatures ?? [];
@@ -702,7 +775,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecode: (bytecode, encoded, context): PolicyValue => {
-      const input = encodePolicyBytecodeInput(bytecode, encoded, context);
+      const input = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outTagPtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
       const outValuePtr = wasm.ludoforge_policy_vm_alloc(I32_BYTES);
@@ -726,7 +799,7 @@ export const createPolicyWasmRuntime = (
       }
     },
     evaluatePolicyBytecodeBatch: (bytecode, encoded, context, candidates, precomputed): readonly PolicyValue[] => {
-      const program = encodePolicyBytecodeInput(bytecode, encoded, context);
+      const program = getEncodedPolicyBytecodeInput(bytecode, encoded, context);
       const input = encodeBatchInput(program, context, candidates, precomputed);
       const outputBytes = candidates.length * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
@@ -865,4 +938,3 @@ export const __internal_for_tests = {
     resetScoreRowBytecodeCompileCount();
   },
 };
-

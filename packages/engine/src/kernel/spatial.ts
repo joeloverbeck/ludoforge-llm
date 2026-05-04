@@ -208,26 +208,6 @@ function normalizeMaxDepth(maxDepth: number | undefined, graph: AdjacencyGraph):
   return Math.max(0, Math.floor(maxDepth));
 }
 
-function evaluateVia(
-  via: ConditionAST | undefined,
-  candidateZone: ZoneId,
-  state: GameState,
-  evalCtx: ReadContext,
-): boolean {
-  if (via === undefined) {
-    return true;
-  }
-
-  return evaluateConditionWithCache(via, {
-    ...evalCtx,
-    state,
-    bindings: {
-      ...evalCtx.bindings,
-      $zone: candidateZone,
-    },
-  });
-}
-
 export function queryAdjacentZones(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {
   return [...getNeighbors(graph, zone)];
 }
@@ -245,6 +225,29 @@ export function queryTokensInAdjacentZones(
   return tokens;
 }
 
+const createViaEvaluator = (
+  state: GameState,
+  evalCtx: ReadContext,
+  via: ConditionAST | undefined,
+): ((candidateZone: ZoneId) => boolean) => {
+  if (via === undefined) {
+    return () => true;
+  }
+
+  const viaBindings = { ...evalCtx.bindings };
+  const viaCtx = {
+    ...evalCtx,
+    state,
+    bindings: viaBindings,
+  };
+
+  return (candidateZone: ZoneId): boolean => {
+    viaBindings.$zone = candidateZone;
+    evalCtx.resources.resolveRefCache?.invalidateBindings(viaBindings);
+    return evaluateConditionWithCache(via, viaCtx);
+  };
+};
+
 export function queryConnectedZones(
   graph: AdjacencyGraph,
   state: GameState,
@@ -259,27 +262,30 @@ export function queryConnectedZones(
 
   const discovered: ZoneId[] = [];
   const visited = new Set<ZoneId>([zone]);
-  const queue: Array<{ readonly zone: ZoneId; readonly depth: number }> = [{ zone, depth: 0 }];
+  const queueZones: ZoneId[] = [zone];
+  const queueDepths: number[] = [0];
   let cursor = 0;
+  const evaluateVia = createViaEvaluator(state, evalCtx, via);
 
   if (includeStart) {
     discovered.push(zone);
   }
 
-  while (cursor < queue.length) {
-    const entry = queue[cursor];
+  while (cursor < queueZones.length) {
+    const entryZone = queueZones[cursor];
+    const entryDepth = queueDepths[cursor]!;
     cursor += 1;
 
-    if (entry === undefined || entry.depth >= maxDepth) {
+    if (entryZone === undefined || entryDepth >= maxDepth) {
       continue;
     }
 
-    for (const neighborZone of getNeighbors(graph, entry.zone)) {
+    for (const neighborZone of getNeighbors(graph, entryZone)) {
       if (visited.has(neighborZone)) {
         continue;
       }
 
-      const passesVia = evaluateVia(via, neighborZone, state, evalCtx);
+      const passesVia = evaluateVia(neighborZone);
       if (!passesVia && !allowTargetOutsideVia) {
         continue;
       }
@@ -287,10 +293,62 @@ export function queryConnectedZones(
       visited.add(neighborZone);
       discovered.push(neighborZone);
       if (passesVia) {
-        queue.push({ zone: neighborZone, depth: entry.depth + 1 });
+        queueZones.push(neighborZone);
+        queueDepths.push(entryDepth + 1);
       }
     }
   }
 
   return discovered;
+}
+
+export function isZoneConnected(
+  graph: AdjacencyGraph,
+  state: GameState,
+  fromZone: ZoneId,
+  toZone: ZoneId,
+  evalCtx: ReadContext,
+  via?: ConditionAST,
+  options?: ConnectedQueryOptions,
+): boolean {
+  const allowTargetOutsideVia = options?.allowTargetOutsideVia ?? false;
+  const maxDepth = normalizeMaxDepth(options?.maxDepth, graph);
+  const visited = new Set<ZoneId>([fromZone]);
+  const queueZones: ZoneId[] = [fromZone];
+  const queueDepths: number[] = [0];
+  let cursor = 0;
+  const evaluateVia = createViaEvaluator(state, evalCtx, via);
+
+  while (cursor < queueZones.length) {
+    const entryZone = queueZones[cursor];
+    const entryDepth = queueDepths[cursor]!;
+    cursor += 1;
+
+    if (entryZone === undefined || entryDepth >= maxDepth) {
+      continue;
+    }
+
+    for (const neighborZone of getNeighbors(graph, entryZone)) {
+      if (visited.has(neighborZone)) {
+        continue;
+      }
+
+      const passesVia = evaluateVia(neighborZone);
+      if (!passesVia && !allowTargetOutsideVia) {
+        continue;
+      }
+
+      if (neighborZone === toZone) {
+        return true;
+      }
+
+      visited.add(neighborZone);
+      if (passesVia) {
+        queueZones.push(neighborZone);
+        queueDepths.push(entryDepth + 1);
+      }
+    }
+  }
+
+  return false;
 }

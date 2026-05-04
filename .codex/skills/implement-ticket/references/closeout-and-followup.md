@@ -146,7 +146,24 @@ When the owned slice appears landed but truthful closeout requires a new success
 5. update the active ticket's touched-file/proof ledger to include the handoff artifacts
 6. only then run the final acceptance-proof set; earlier green lanes become diagnostics if the handoff changed follow-up/dependency classification, touched-file ownership, or acceptance wording
 
-Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
+Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, no stricter materiality note blocks that closeout, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
+
+For red measured-gate tickets, prefer this terminal-status order unless the active ticket already dictates a different accepted closeout choreography:
+
+1. Before the decisive metric, prewrite the active ticket outcome/status as pending or nonterminal.
+2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record the final delta as `material`, `minor`, or `not demonstrated`.
+3. If red and successor completion is allowed, create or update the successor, dependent tickets, and spec ticket list.
+4. Run dependency integrity immediately after the ticket graph rewrite.
+5. Run the final acceptance-proof lanes affected by the code and handoff state.
+6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
+
+If the materiality classification is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state.
+
+Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
+
+Pre-`apply_patch` stop-check: if a patch both sets terminal status and creates or rewrites a successor, stop unless all non-metric final lanes already ran against the current code and ticket graph. Otherwise leave status pending in that patch, run the remaining affected lanes, and apply terminal status as a final narrow patch.
+
+If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
 
 ## Follow-Up Ticket Creation During Implementation
 
@@ -155,6 +172,7 @@ When implementation reassessment proves that remaining work belongs in a new or 
 1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
 2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
 3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
+   - For profiling or benchmark successors backed by CPU-profile evidence, include a compact profiling evidence block in the successor: `profile command`, `profile artifact path` or explicit ephemeral-artifact note, `parser command` or parser method, baseline/current metric, top owners or residual stack samples, sample-surface classification (`inside timed acceptance surface`, `setup/process lifetime`, or `post-processing/observer overhead`), and why this successor is non-overlapping with the completed active slice.
 4. update the active ticket, sibling tickets, and deps/status fields so the series tells one ownership story
 5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
 6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep
@@ -164,6 +182,11 @@ repo helper over ad hoc shell one-liners. Markdown tickets commonly contain
 backticks, command snippets, pipes, and paths; embedding that content in
 `node -e`, `perl -e`, `sed`, or similar shell strings can trigger shell command
 substitution or quoting drift before the edit reaches the intended tool.
+For closeout sweeps, prefer plain-string anchors and single-quoted `rg`
+patterns, for example `rg -n '150FITLWASM-027.md' tickets specs`. If the
+target text appears inside markdown backticks, search for the path or id without
+the backticks instead of using a double-quoted pattern that contains a code
+span.
 
 ## Sibling Absorbed Ownership
 

@@ -1,6 +1,6 @@
 # 150FITLWASM-019: Active-route residual hash/eval/encoding closure
 
-**Status**: COMPLETED with red measured gate successor `tickets/150FITLWASM-020.md`
+**Status**: COMPLETED with red measured gate successor `archive/tickets/150FITLWASM-020.md`
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic residual hash/digest, query/eval, bytecode-input encoding, and remaining active WASM preview-route work
@@ -142,6 +142,9 @@ optimization, record exact metrics and create the next non-overlapping owner.
 
 ## Outcome
 
+Outcome amended: 2026-05-04 — successor path updated after
+`150FITLWASM-020` archival.
+
 Completed on 2026-05-03 with the active route still red and successor owner
 created:
 
@@ -178,7 +181,7 @@ Diagnostic proof before final ticket graph closeout:
   `evalQuery`, `encodePolicyBytecodeInput`, token-index refresh, and
   spatial/query helpers.
 
-Created successor `tickets/150FITLWASM-020.md` for the next non-overlapping
+Created successor `archive/tickets/150FITLWASM-020.md` for the next non-overlapping
 owner: active-route query/eval/encoding residual closure. Tickets
 `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until this or a
 later successor makes the `<=250 ms` gate truthful.
@@ -186,7 +189,7 @@ later successor makes the `<=250 ms` gate truthful.
 Final proof:
 
 - `pnpm run check:ticket-deps` — PASS after creating successor
-  `tickets/150FITLWASM-020.md` and updating active blockers/spec handoff.
+  `archive/tickets/150FITLWASM-020.md` and updating active blockers/spec handoff.
 - `pnpm -F @ludoforge/engine build` — PASS.
 - `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/zobrist-table.test.js dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
 - `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-residual-hash-eval-encoding-perf` — RED for the `<=250 ms` gate.

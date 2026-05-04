@@ -16,7 +16,7 @@
 - `terminal status plan`: when the ticket status may become terminal; keep `COMPLETED` pending until final lanes are green, classified, or explicitly substituted
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
-- `source file size risk`: optional; include when a named source file is already near/over repo guidance and active work will add logic there, with `extract now`, `defer with rationale`, or `1-3-1 needed`
+- `source file size risk`: optional; include when a named source file is already near/over repo guidance and active work will add logic there, with `extract now`, `defer with rationale`, or `1-3-1 needed`. For profiling/investigation tickets, update this field when profiling selects an unlisted implementation file that may be near/over guidance.
 
 Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 

@@ -38,10 +38,18 @@ export const updateZoneTokenHash = (
   newTokens: readonly Token[],
 ): void => {
   if (table === undefined) return;
-  for (let i = 0; i < oldTokens.length; i++) {
-    state._runningHash ^= zobristKey(table, placementFeature(oldTokens[i]!.id, zoneId, i));
-  }
-  for (let i = 0; i < newTokens.length; i++) {
-    state._runningHash ^= zobristKey(table, placementFeature(newTokens[i]!.id, zoneId, i));
+  const maxLength = Math.max(oldTokens.length, newTokens.length);
+  for (let i = 0; i < maxLength; i++) {
+    const oldToken = oldTokens[i];
+    const newToken = newTokens[i];
+    if (oldToken !== undefined && newToken !== undefined && oldToken.id === newToken.id) {
+      continue;
+    }
+    if (oldToken !== undefined) {
+      state._runningHash ^= zobristKey(table, placementFeature(oldToken.id, zoneId, i));
+    }
+    if (newToken !== undefined) {
+      state._runningHash ^= zobristKey(table, placementFeature(newToken.id, zoneId, i));
+    }
   }
 };

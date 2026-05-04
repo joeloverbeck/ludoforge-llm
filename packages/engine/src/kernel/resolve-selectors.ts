@@ -1,4 +1,5 @@
 import { asPlayerId, asZoneId, isPlayerId, type PlayerId, type ZoneId } from './branded.js';
+import { getZoneMap } from './def-lookup.js';
 import type { ReadContext } from './eval-context.js';
 import { EVAL_ERROR_DEFER_CLASS } from './eval-error-defer-class.js';
 import {
@@ -242,13 +243,13 @@ function resolveZoneSelCore(sel: ZoneSel, ctx: ReadContext): readonly ZoneId[] {
   if (sel.startsWith('$')) {
     const boundValue = resolveBoundZoneBinding(sel, ctx);
 
-    const allZoneIds = listZoneIds(ctx);
+    const zoneDefById = getZoneMap(ctx.def);
     const validateKnownZone = (zoneId: ZoneId): void => {
-      if (!allZoneIds.includes(zoneId)) {
+      if (!zoneDefById.has(zoneId)) {
         throw missingVarError(`Unknown zone in bound selector ${sel}: ${zoneId}`, {
           selector: sel,
           zoneId,
-          availableZoneIds: allZoneIds,
+          availableZoneIds: listZoneIds(ctx),
         });
       }
     };

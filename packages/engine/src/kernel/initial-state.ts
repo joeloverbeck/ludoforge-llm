@@ -96,6 +96,7 @@ export const initialState = (
     moveParams: {},
     resources: runtimeResources,
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+    skipRunningHashUpdates: true,
     traceContext: { eventContext: 'lifecycleEffect', effectPathRoot: 'initialState.setup' },
     effectPath: '',
     ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
@@ -118,7 +119,7 @@ export const initialState = (
     options?.profiler,
   );
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
-  const table = createZobristTable(validatedDef);
+  const table = cachedRuntime?.zobristTable ?? createZobristTable(validatedDef);
 
   const fullHash = computeFullHash(table, withTurnFlow);
   return {

@@ -8,6 +8,8 @@ import {
   asTokenId,
   asZoneId,
   buildAdjacencyGraph,
+  createEvalRuntimeResources,
+  createResolveRefCache,
   queryAdjacentZones,
   queryConnectedZones,
   queryTokensInAdjacentZones,
@@ -153,6 +155,28 @@ describe('spatial query helpers', () => {
     );
 
     assert.deepEqual(connected, [asZoneId('b:none'), asZoneId('d:none')]);
+  });
+
+  it('connectedZones invalidates resolveRef cache when reusing via bindings', () => {
+    const ctx = makeCtx({
+      resources: createEvalRuntimeResources({
+        resolveRefCache: createResolveRefCache(),
+      }),
+    });
+
+    const connected = queryConnectedZones(
+      ctx.adjacencyGraph,
+      ctx.state,
+      asZoneId('a:none'),
+      ctx,
+      {
+        op: '==',
+        left: { _t: 2 as const, ref: 'binding', name: '$zone' },
+        right: asZoneId('b:none'),
+      },
+    );
+
+    assert.deepEqual(connected, [asZoneId('b:none')]);
   });
 
   it('connectedZones can include endpoints outside via without traversing past them', () => {

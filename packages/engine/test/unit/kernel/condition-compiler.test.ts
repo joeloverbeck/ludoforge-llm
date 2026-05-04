@@ -181,6 +181,33 @@ describe('condition compiler', () => {
     assert.equal(compiledPvar(ctx, snapshot), true);
   });
 
+  it('resolves dynamic zone selectors for compiled zoneVar accessors', () => {
+    const def: GameDef = ({
+      ...makeDef(),
+      zones: [
+        { id: asZoneId('saigon:none'), owner: 'none', visibility: 'public', ordering: 'set' },
+      ],
+    }) as unknown as GameDef;
+    const state: GameState = {
+      ...makeState(),
+      zoneVars: {
+        'saigon:none': { terrorCount: 2 },
+      },
+    };
+    const ctx = makeCtx({
+      def,
+      state,
+      bindings: { '$zone': 'saigon:none' },
+    });
+    const condition: ConditionAST = {
+      op: '==',
+      left: { _t: 2, ref: 'zoneVar', zone: '$zone', var: 'terrorCount' },
+      right: 2,
+    };
+
+    assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+  });
+
   it('supports all six comparison operators for Tier 1 value accessors', () => {
     const ctx = makeCtx({ bindings: { '$value': 4 } });
     const cases: readonly [ConditionAST, boolean][] = [

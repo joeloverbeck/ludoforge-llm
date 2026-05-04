@@ -187,7 +187,11 @@ versioned per-context `resolveRef` cache, kept the active route clean, and left
 the decisive same-seam gate red at `2046.48 ms`. Ticket `150FITLWASM-030`
 landed generic connected-zone allocation reductions and boolean connected
 condition traversal, kept the active route clean, and left the decisive
-same-seam gate red at `1910.21 ms`.
+same-seam gate red at `1910.21 ms`. Ticket `150FITLWASM-031` landed generic
+microturn continuation-binding allocation cleanup, a `tokenZones`
+token-state-index allocation cleanup, and a compiled `zoneVar` dynamic-selector
+parity fix, kept the active route clean, and left the confirmed same-seam gate
+red at `1773.64 ms` with a retained repeat at `1754.11 ms`.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -253,4 +257,4 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-028.md`](../archive/tickets/150FITLWASM-028.md) — Completed query/spatial allocation and layout-encoding residual closure with red measured gate successor.
 - [`archive/tickets/150FITLWASM-029.md`](../archive/tickets/150FITLWASM-029.md) — Completed allocation, encoding, query/eval, token-index, digest/hash, and process allocation residual closure after retained reduction slices.
 - [`archive/tickets/150FITLWASM-030.md`](../archive/tickets/150FITLWASM-030.md) — Completed connected-zone allocation and connected-condition traversal residual closure with red measured gate successor.
-- [`tickets/150FITLWASM-031.md`](../tickets/150FITLWASM-031.md) — Active remaining reference/eval, hash/canonicalization, token-index, and allocation/GC residual closure.
+- [`tickets/150FITLWASM-032.md`](../tickets/150FITLWASM-032.md) — Active remaining reference/eval, token-index, hash/canonicalization, and allocation/GC residual closure after continuation-binding and `tokenZones` cleanup.

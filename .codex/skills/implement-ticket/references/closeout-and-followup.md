@@ -146,16 +146,18 @@ When the owned slice appears landed but truthful closeout requires a new success
 5. update the active ticket's touched-file/proof ledger to include the handoff artifacts
 6. only then run the final acceptance-proof set; earlier green lanes become diagnostics if the handoff changed follow-up/dependency classification, touched-file ownership, or acceptance wording
 
-Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
+Exception for red measured gates: if the active ticket explicitly allows completion on `red measured result + active route proof + successor owner`, no stricter materiality note blocks that closeout, and the successor's exact scope depends on the decisive measurement output, run the decisive measurement after active-route proof and required counters exist. Then create/update the successor, rewrite dependent tickets/specs, run dependency integrity, and rerun only proof lanes affected by the post-measurement edits. If the edits only transcribe metrics and ownership, record why the measurement remains valid instead of rerunning an expensive profile by reflex.
 
 For red measured-gate tickets, prefer this terminal-status order unless the active ticket already dictates a different accepted closeout choreography:
 
 1. Before the decisive metric, prewrite the active ticket outcome/status as pending or nonterminal.
-2. Run the decisive metric and capture exact red/green values plus route diagnostics.
+2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record the final delta as `material`, `minor`, or `not demonstrated`.
 3. If red and successor completion is allowed, create or update the successor, dependent tickets, and spec ticket list.
 4. Run dependency integrity immediately after the ticket graph rewrite.
 5. Run the final acceptance-proof lanes affected by the code and handoff state.
 6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
+
+If the materiality classification is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state.
 
 Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
 

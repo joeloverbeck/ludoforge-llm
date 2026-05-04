@@ -37,6 +37,7 @@ import {
 } from './publish.js';
 import { resolveDecisionContinuation, type DecisionContinuationResult } from './continuation.js';
 import { resumeSuspendedEffectFrame } from './resume.js';
+import { continuationBindingsFromMove, mergeContinuationBindingsFromMove } from './continuation-bindings.js';
 
 const rootHistory = (frame: DecisionStackFrame): readonly CompoundTurnTraceEntry[] =>
   frame.effectFrame.decisionHistory ?? [];
@@ -297,12 +298,7 @@ const withAccumulatedBindingsFromMove = (
   move: Move,
 ): DecisionStackFrame => ({
   ...frame,
-  continuationBindings: {
-    ...(frame.continuationBindings ?? {}),
-    ...Object.fromEntries(
-      Object.entries(move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
-    ),
-  },
+  continuationBindings: mergeContinuationBindingsFromMove(frame.continuationBindings, move),
 });
 
 const entryForDecision = (
@@ -523,9 +519,7 @@ const applyPublishedDecisionInternal = (
       parentFrameId: null,
       turnId,
       context: microturn.decisionContext,
-      continuationBindings: Object.fromEntries(
-        Object.entries(continuation.move.params).filter(([key]) => key.startsWith('$') || key.startsWith('decision:')),
-      ),
+      continuationBindings: continuationBindingsFromMove(continuation.move),
       effectFrame: {
         ...emptyEffectFrame(),
         decisionHistory: [rootEntry],

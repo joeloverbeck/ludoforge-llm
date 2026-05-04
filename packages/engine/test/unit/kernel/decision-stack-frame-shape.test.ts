@@ -16,6 +16,7 @@ import {
   type GameDef,
   type GameState,
 } from '../../../src/kernel/index.js';
+import { continuationBindingsFromMove } from '../../../src/kernel/microturn/continuation-bindings.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import { asTaggedGameDef } from '../../helpers/gamedef-fixtures.js';
 
@@ -90,6 +91,17 @@ const createState = (def: GameDef): GameState => ({
 });
 
 describe('decision stack frame shape', () => {
+  it('extracts continuation bindings from own move params only', () => {
+    const params = Object.create({ '$inherited': 'stale' }) as Record<string, string>;
+    params['$owned'] = 'current';
+    params.plain = 'ignored';
+
+    assert.deepEqual(
+      continuationBindingsFromMove({ actionId: asActionId('nested'), params }),
+      { '$owned': 'current' },
+    );
+  });
+
   it('retains continuation bindings only on the root frame', () => {
     const def = createDef();
     const runtime = createGameDefRuntime(def);

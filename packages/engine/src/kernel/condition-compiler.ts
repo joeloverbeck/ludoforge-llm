@@ -5,7 +5,7 @@ import { isNonEmptyArray } from './boolean-arity-policy.js';
 import { resolveBindingTemplate } from './binding-template.js';
 import type { EnumerationStateSnapshot } from './enumeration-snapshot.js';
 import { matchesMembership } from './query-predicate.js';
-import { resolveMapSpaceId } from './resolve-selectors.js';
+import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
 import { tryStaticScopedVarNameExpr } from './scoped-var-name-resolution.js';
 import { isSpaceMarkerStateAllowed, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { getTokenStateIndexEntry } from './token-state-index.js';
@@ -133,25 +133,26 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         return null;
       }
       return (ctx, snapshot) => {
-        const snapshotValue = snapshot?.zoneVars.get(expr.zone, variableName);
+        const zoneId = String(resolveSingleZoneSel(expr.zone, ctx));
+        const snapshotValue = snapshot?.zoneVars.get(zoneId, variableName);
         if (snapshotValue !== undefined) {
           return snapshotValue;
         }
 
-        const zoneVarMap = ctx.state.zoneVars[expr.zone];
+        const zoneVarMap = ctx.state.zoneVars[zoneId];
         if (zoneVarMap === undefined) {
-          throw missingVarError(`Zone variable state not found for zone: ${expr.zone}`, {
+          throw missingVarError(`Zone variable state not found for zone: ${zoneId}`, {
             reference: expr,
-            zoneId: expr.zone,
+            zoneId,
             availableZones: Object.keys(ctx.state.zoneVars).sort(),
           });
         }
 
         const value = zoneVarMap[variableName];
         if (value === undefined) {
-          throw missingVarError(`Zone variable not found: ${variableName} in zone ${expr.zone}`, {
+          throw missingVarError(`Zone variable not found: ${variableName} in zone ${zoneId}`, {
             reference: expr,
-            zoneId: expr.zone,
+            zoneId,
             var: variableName,
             availableZoneVars: Object.keys(zoneVarMap).sort(),
           });

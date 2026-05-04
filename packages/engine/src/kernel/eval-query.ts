@@ -827,7 +827,6 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
     case 'tokenZones': {
       const sourceItems = evalQuery(query.source, ctx);
       const tokenStateIndex = getTokenStateIndex(ctx.state);
-      const knownTokenIds = new Set(tokenStateIndex.keys());
 
       const zones = sourceItems.map((item) => {
         let tokenId: string | null = null;
@@ -837,7 +836,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
           if (typeof candidateId === 'string' && typeof candidateType === 'string') {
             tokenId = candidateId;
           }
-        } else if (typeof item === 'string' && knownTokenIds.has(item)) {
+        } else if (typeof item === 'string' && tokenStateIndex.has(item)) {
           tokenId = item;
         }
         if (tokenId === null) {

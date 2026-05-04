@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy bytecode integration tests
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-002.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-002.md`
 
 ## Problem
 
@@ -48,7 +48,7 @@ Update Spec 150 and dependent active tickets with any residual unsupported subse
 - `packages/engine/src/agents/policy-wasm-runtime.ts` (modify)
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or a nearby batch parity test (modify or new)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` (modify)
-- `specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
 - `archive/tickets/150FITLWASM-004.md` (successor for residual candidate-dependent scoring)
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` (modify if successor deps move)
 - `tickets/150FITLWASM-003.md` (modify Outcome before archival)

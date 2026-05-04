@@ -2,7 +2,6 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { isPolicyVmEnabled } from '../../../src/agents/policy-runtime.js';
 import { executeBytecode } from '../../../src/agents/policy-vm/index.js';
 import {
   Opcode,
@@ -120,19 +119,6 @@ const singleFeatureTable = (ref: FeatureRef): FeatureTable => ({
 });
 
 describe('policy bytecode VM core', () => {
-  it('keeps the rollout flag off unless LUDOFORGE_POLICY_VM=on', () => {
-    const previous = process.env.LUDOFORGE_POLICY_VM;
-    delete process.env.LUDOFORGE_POLICY_VM;
-    assert.equal(isPolicyVmEnabled(), false);
-    process.env.LUDOFORGE_POLICY_VM = 'on';
-    assert.equal(isPolicyVmEnabled(), true);
-    if (previous === undefined) {
-      delete process.env.LUDOFORGE_POLICY_VM;
-    } else {
-      process.env.LUDOFORGE_POLICY_VM = previous;
-    }
-  });
-
   it('executes numeric, comparison, boolean, coalesce, ref, dynamic, and halt opcodes', () => {
     assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.ADD_SCORE, Opcode.HALT], [3, 4]).value, 7);
     assert.equal(execute([Opcode.LOAD_CONST, 0, Opcode.LOAD_CONST, 1, Opcode.SUB_SCORE, Opcode.HALT], [9, 4]).value, 5);

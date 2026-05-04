@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic reference-resolution, condition/value/query evaluation, token-index, hash/canonicalization, and allocation/GC residual work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-031.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-031.md`
 
 ## Problem
 
@@ -289,7 +289,7 @@ Successor handoff:
   has mostly been removed.
 - `tickets/149FITLEVNUMVM-016.md`,
   `tickets/149FITLEVNUMVM-022.md`, and
-  `specs/150-fitl-policy-vm-wasm-port.md` were updated to point at
+  `archive/specs/150-fitl-policy-vm-wasm-port.md` were updated to point at
   `150FITLWASM-033`.
 
 Proof invalidation note:

@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-034.md`
+**Status**: COMPLETED — terminal red-gate decision superseded by 2026-05-04 budget reset
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-034.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `archive/tickets/150FITLWASM-034.md`
 
 ## Problem
 
@@ -15,6 +15,13 @@ Tickets 019-021 split the remaining non-policy-VM preview-drive runtime closure 
 - preview hashing and verification strategy.
 
 This ticket owns the final measured decision: whether those Phase 4B changes make the original Phase 4 `<=250 ms` one-card gate truthful and therefore unblock ticket 016 for the F14 default-flip/deletion cut.
+
+2026-05-04 update: the successor Spec 150 chain also proved that the original
+`<=250 ms` gate is not a feasible blocker for the current same-seam
+architecture. The user approved replacing the active blocker with a measured
+`<=1800 ms` successor-runtime gate. This ticket is therefore terminal: its
+original red decision remains true, but it no longer blocks ticket
+`149FITLEVNUMVM-016`.
 
 ## What to Change
 
@@ -34,7 +41,7 @@ timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 4
 
 - `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` if and only if the gate is green enough to assert truthfully
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` only if the harness cannot expose the required metric
-- `tickets/149FITLEVNUMVM-022.md`
+- `archive/tickets/149FITLEVNUMVM-022.md`
 - `tickets/149FITLEVNUMVM-016.md` if unblocking status is recorded
 
 ## Out of Scope
@@ -89,7 +96,7 @@ Required 1-3-1 decision point:
 - Option 3: request a user-approved target reset, record the acceptance exception explicitly, and then decide whether ticket 016 may proceed under the revised budget.
 - Recommendation: Option 2. The final Phase 4B profile is still about `26.8x` over budget after tickets 019-021, so more TypeScript-local tuning is unlikely to close the gap cleanly.
 
-User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the Phase 5 skeleton; post-review created successor ticket `archive/tickets/150FITLWASM-002.md` for WASM policy-bytecode execution parity. Post-review of `150FITLWASM-002` created successor ticket `archive/tickets/150FITLWASM-003.md` for the encoded-state/action batch bridge. Ticket `150FITLWASM-003` delivered the supported batch ABI and created successor ticket `archive/tickets/150FITLWASM-004.md` for candidate-dependent batch scoring integration. Ticket `150FITLWASM-004` delivered supported scalar candidate score rows, ticket `150FITLWASM-005` delivered non-preview score-row handoff, ticket `150FITLWASM-006` delivered preview-backed score-row parity and recorded a red `6539.22 ms` same-seam preflight, ticket `150FITLWASM-007` delivered active production WASM score-row routing and recorded a red `7131.37 ms` same-seam gate with `wasmScoreRowRouteCount=65`, ticket `150FITLWASM-008` delivered score-row setup caching and recorded a red `6593.68 ms` same-seam gate with `wasmScoreRowRouteCount=65`, `wasmScoreRowUnsupportedCount=0`, and `wasmScoreRowBytecodeCompileCount=42`, ticket `150FITLWASM-009` delivered preview-state/surface row materialization and recorded a red `6632.26 ms` same-seam gate with `wasmPreviewCandidateFeatureRowRouteCount=77`, and successor ticket `archive/tickets/150FITLWASM-010.md` was created for preview-drive application/runtime handoff and perf gate closure. Reassessment of `150FITLWASM-010` on 2026-05-03 split out `archive/tickets/150FITLWASM-013.md` for the encoded preview-state slot substrate; later Foundation-aligned reassessment split `archive/tickets/150FITLWASM-014.md` for the generic production preview-drive substrate. Ticket `150FITLWASM-014` implemented that prerequisite, ticket `150FITLWASM-010` completed production routing and fail-closed-clean route activation but left the gate red at `4124.29 ms`, ticket `150FITLWASM-015` landed route-local literal cleanup but left the gate red at `3958.91 ms`, ticket `150FITLWASM-016` landed a generic hash-cache slice but left the gate red at `4018.94 ms`, ticket `150FITLWASM-017` landed active-route query-materialization runtime reuse but left the gate red at `2898.06 ms`, ticket `150FITLWASM-018` landed active-route token-index/digest cleanup but left the gate red at `2761.91 ms`, and ticket `150FITLWASM-019` landed exact shared FNV hashing but left the gate red at `2460.65 ms`; archived ticket `150FITLWASM-020` later landed residual active-route query/eval/encoding work and handed the successor to `archive/tickets/150FITLWASM-021.md`, which then landed a setup-hash root-counter reduction and handed the active successor to `archive/tickets/150FITLWASM-022.md`; ticket `150FITLWASM-022` landed bounded dynamic Zobrist feature-key memoization and handed the successor to `archive/tickets/150FITLWASM-023.md`; ticket `150FITLWASM-023` landed apply-move token-placement hash deferral and handed the current active successor to `archive/tickets/150FITLWASM-024.md`.
+User decision on 2026-05-02: proceed with Option 2. Phase 4B remains blocked at the original budget, ticket 016 remains blocked, and the successor owner is `archive/specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the Phase 5 skeleton; post-review created successor ticket `archive/tickets/150FITLWASM-002.md` for WASM policy-bytecode execution parity. Post-review of `150FITLWASM-002` created successor ticket `archive/tickets/150FITLWASM-003.md` for the encoded-state/action batch bridge. Ticket `150FITLWASM-003` delivered the supported batch ABI and created successor ticket `archive/tickets/150FITLWASM-004.md` for candidate-dependent batch scoring integration. Ticket `150FITLWASM-004` delivered supported scalar candidate score rows, ticket `150FITLWASM-005` delivered non-preview score-row handoff, ticket `150FITLWASM-006` delivered preview-backed score-row parity and recorded a red `6539.22 ms` same-seam preflight, ticket `150FITLWASM-007` delivered active production WASM score-row routing and recorded a red `7131.37 ms` same-seam gate with `wasmScoreRowRouteCount=65`, ticket `150FITLWASM-008` delivered score-row setup caching and recorded a red `6593.68 ms` same-seam gate with `wasmScoreRowRouteCount=65`, `wasmScoreRowUnsupportedCount=0`, and `wasmScoreRowBytecodeCompileCount=42`, ticket `150FITLWASM-009` delivered preview-state/surface row materialization and recorded a red `6632.26 ms` same-seam gate with `wasmPreviewCandidateFeatureRowRouteCount=77`, and successor ticket `archive/tickets/150FITLWASM-010.md` was created for preview-drive application/runtime handoff and perf gate closure. Reassessment of `150FITLWASM-010` on 2026-05-03 split out `archive/tickets/150FITLWASM-013.md` for the encoded preview-state slot substrate; later Foundation-aligned reassessment split `archive/tickets/150FITLWASM-014.md` for the generic production preview-drive substrate. Ticket `150FITLWASM-014` implemented that prerequisite, ticket `150FITLWASM-010` completed production routing and fail-closed-clean route activation but left the gate red at `4124.29 ms`, ticket `150FITLWASM-015` landed route-local literal cleanup but left the gate red at `3958.91 ms`, ticket `150FITLWASM-016` landed a generic hash-cache slice but left the gate red at `4018.94 ms`, ticket `150FITLWASM-017` landed active-route query-materialization runtime reuse but left the gate red at `2898.06 ms`, ticket `150FITLWASM-018` landed active-route token-index/digest cleanup but left the gate red at `2761.91 ms`, and ticket `150FITLWASM-019` landed exact shared FNV hashing but left the gate red at `2460.65 ms`; archived ticket `150FITLWASM-020` later landed residual active-route query/eval/encoding work and handed the successor to `archive/tickets/150FITLWASM-021.md`, which then landed a setup-hash root-counter reduction and handed the active successor to `archive/tickets/150FITLWASM-022.md`; ticket `150FITLWASM-022` landed bounded dynamic Zobrist feature-key memoization and handed the successor to `archive/tickets/150FITLWASM-023.md`; ticket `150FITLWASM-023` landed apply-move token-placement hash deferral and handed the current active successor to `archive/tickets/150FITLWASM-024.md`.
 
 2026-05-04 successor update: ticket `150FITLWASM-020` landed generic
 token-placement hash elision plus WeakMap-scoped encoded bytecode input caching,
@@ -170,6 +177,19 @@ post-031 residual slice and left the final gate red at per-card
 `elapsedMs=1561.81`. Ticket `150FITLWASM-033` landed a material post-count
 residual slice and kept the route clean, but the best final retained solo gate
 remained red at `1355.26 ms` versus `<=250`. The active successor owner moved
-to `tickets/150FITLWASM-034.md` for post-033 policy/apply, decision-stack
+to `archive/tickets/150FITLWASM-034.md` for post-033 policy/apply, decision-stack
 digest, token-index, token-count, WASM input, allocation, and GC residual
 closure.
+
+Outcome amended: 2026-05-04.
+
+Ticket `150FITLWASM-034` executed the post-033 residual pass and retained no
+code changes. Its fresh same-seam bucketed profile recorded `elapsedMs=1512.38`
+with clean active-route diagnostics, while rejected architecture probes failed
+to produce a plausible path to the original `<=250 ms` blocker.
+
+User decision: proceed with option 2, a measured target reset. The active
+blocking budget is now `<=1800 ms`, and ticket `149FITLEVNUMVM-016` is
+unblocked to perform the F14 default-flip / closure-tree deletion cut after it
+confirms that reset gate. This ticket should be archived as the completed
+Phase 4B red-gate decision and no longer treated as an active blocker.

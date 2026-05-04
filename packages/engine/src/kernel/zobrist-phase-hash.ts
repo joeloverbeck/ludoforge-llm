@@ -17,7 +17,7 @@ import type { ActionId } from './branded.js';
 import type { GameState, ZobristFeature, Token, VariableValue } from './types-core.js';
 import type { ZobristTable } from './types-core.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
-import { computeFullHash, digestDecisionStackFrame, zobristKey } from './zobrist.js';
+import { digestDecisionStackFrame, zobristKey } from './zobrist.js';
 
 /** Update hash for a currentPhase change. */
 export const updatePhaseHash = (

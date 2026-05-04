@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: XL
 **Engine Changes**: Yes — generic preview-drive state/effect/publication substrate, WASM/buffer ABI, parity witnesses
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`
 
 ## Problem
 
@@ -94,7 +94,7 @@ and must not silently fall back into a route counted as WASM-supported.
 
 ### 4. Handoff back to production routing
 
-Update `tickets/150FITLWASM-010.md` and `specs/150-fitl-policy-vm-wasm-port.md`
+Update `tickets/150FITLWASM-010.md` and `archive/specs/150-fitl-policy-vm-wasm-port.md`
 only when this ticket has a truthful substrate that unblocks production routing.
 
 ## Files to Touch
@@ -105,7 +105,7 @@ only when this ticket has a truthful substrate that unblocks production routing.
 - `packages/engine-wasm/policy-vm/src/preview_drive.rs`
 - focused unit/integration witnesses near the preview-drive and WASM seams
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` if the inventory/proof harness needs a new substrate diagnostic
-- `tickets/150FITLWASM-010.md` and `specs/150-fitl-policy-vm-wasm-port.md` when the prerequisite unblocks
+- `tickets/150FITLWASM-010.md` and `archive/specs/150-fitl-policy-vm-wasm-port.md` when the prerequisite unblocks
 
 ## Out of Scope
 

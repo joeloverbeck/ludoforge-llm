@@ -18,6 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
+   - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
@@ -30,6 +31,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
+- for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
@@ -51,6 +53,12 @@ Examples: changing scope, touched-file/header classification, acceptance wording
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
+Suggested late-edit proof-validity ledger:
+
+- `late edits`: `<paths changed after first final-proof lane>`
+- `edit class`: `runtime | test | fixture | schema/artifact | ticket/spec closeout | dependency graph | clerical`
+- `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "unused-code removal only; reran lint/typecheck/build; no runtime/test/acceptance-story change">`
+
 ## Durable Outcome Block
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
@@ -60,6 +68,8 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - any boundary correction or semantic correction confirmed during reassessment
 - verification commands that actually ran
 - whether schema/artifact fallout was checked and whether it changed
+- any retained `preexisting oversize + active growth` ledger when a touched source file stayed over repo guidance and grew during the ticket
+- any late-edit proof-validity ledger needed to explain why final proof remained valid after post-proof edits
 
 ## Durable State Classification
 

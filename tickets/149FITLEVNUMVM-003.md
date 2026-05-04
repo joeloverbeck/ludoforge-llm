@@ -1,27 +1,34 @@
 # 149FITLEVNUMVM-003: CI restoration unwind (post-Phase-4)
 
-**Status**: PENDING — engine-tests blocking semantics restored early; determinism timeout unwind still post-Phase-5/016
+**Status**: PENDING — engine-tests blocking semantics restored early; determinism timeout unwind awaits post-016 CI confirmation
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
-**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-016.md`, `archive/tickets/150FITLWASM-001.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `archive/tickets/149FITLEVNUMVM-016.md`, `archive/tickets/150FITLWASM-001.md`
 
 ## Problem
 
-Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes non-blocking as a tactical unblock. Per spec 149 §Phase 0 and §Phase 4 acceptance criteria, those bumps must be reverted in a single commit once Phase 4 lands and per-card cost ≤ 250 ms is verified. This ticket tracks the unwind.
+Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes non-blocking as a tactical unblock. Per spec 149 §Phase 0 and §Phase 4 acceptance criteria, those bumps must be reverted in a single commit once Phase 4 lands and the reset per-card budget is verified. This ticket tracks the unwind.
 
-**Gate condition**: Close this ticket only when ticket 016 has closed AND `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` passes at the 250 ms target on all 4 baseline profiles (`verifyIncrementalHash=true`) for ≥3 consecutive CI runs.
+**Gate condition**: Close this ticket only when ticket 016 has closed AND `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` passes at the reset `<=1800 ms` target on all 4 baseline profiles (`verifyIncrementalHash=true`) for ≥3 consecutive CI runs.
 
-**2026-05-02 gate update**: Ticket 016 is blocked by a live Phase 4 perf-gate reassessment. User-confirmed VM parity CI history and local VM correctness are green, but the VM-on one-card probe remains red at per-card `elapsedMs=6785.31` versus `<=250`. Archived ticket `149FITLEVNUMVM-018` profiled the suspected engine-test restoration blockers and found no remaining red runtime hot path after stale golden fallout was repaired. Follow-up profiling then split the remaining non-policy-VM preview-drive runtime closure into tickets 019-022; ticket 016 remains the final F14 default-flip/deletion owner after ticket 022 proves the `<=250 ms` gate.
+**2026-05-02 gate update**: Ticket 016 was blocked by a live Phase 4 perf-gate reassessment. User-confirmed VM parity CI history and local VM correctness were green, but the VM-on one-card probe remained red at per-card `elapsedMs=6785.31` versus `<=250`. Archived ticket `149FITLEVNUMVM-018` profiled the suspected engine-test restoration blockers and found no remaining red runtime hot path after stale golden fallout was repaired. Follow-up profiling then split the remaining non-policy-VM preview-drive runtime closure into tickets 019-022.
 
-**2026-05-02 Phase 5 handoff update**: Ticket `149FITLEVNUMVM-022` ran the final Phase 4B gate and remained red at per-card `elapsedMs=6702.65` versus `<=250`. User approved promoting Phase 5/WASM as the next architectural owner. This ticket's remaining determinism-timeout unwind is still blocked until the Phase 5 path makes the original budget truthful and ticket 016 closes the F14 default-flip/deletion cut.
+**2026-05-02 Phase 5 handoff update**: Ticket `149FITLEVNUMVM-022` ran the final Phase 4B gate and remained red at per-card `elapsedMs=6702.65` versus `<=250`. User approved promoting Phase 5/WASM as the next architectural owner. This historical blocker was superseded by the 2026-05-04 budget reset below.
 
-**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the original Phase 4 gate is truthful through the successor runtime.
+**2026-05-04 budget reset update**: Ticket `150FITLWASM-034` proved the
+original `<=250 ms` blocker is not feasible for the current same-seam
+architecture. User approved option 2: replace the active blocker with a
+measured `<=1800 ms` successor-runtime gate. This ticket remains blocked on
+ticket 016 closure and then the required 3+ consecutive CI confirmations, but
+no longer waits for the retired `<=250 ms` budget.
+
+**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the reset Phase 4 gate is confirmed by the required 3+ consecutive CI runs.
 
 ## Assumption Reassessment (2026-04-28)
 
 1. Tickets 001 and 002 land Phase 0 CI bumps; the exact deltas are recorded in their Outcome sections at completion time. Ticket 002 corrected its draft slow-parity assumption: the affected live lanes are `fitl-events-shard-c` and `fitl-rules`. This ticket's scope is to revert whatever those tickets changed.
-2. Ticket 016 is the Phase 4 default-flip + closure-tree deletion ticket; its acceptance includes the ≤250 ms perf gate.
+2. Ticket 016 is the Phase 4 default-flip + closure-tree deletion ticket; its acceptance includes the reset `<=1800 ms` perf gate.
 3. The "single commit" requirement comes from spec §Phase 0 and is preserved here — split commits would leave intermediate states with mismatched expectations.
 
 ## Architecture Check
@@ -36,7 +43,7 @@ Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes 
 
 Before any edits, verify:
 - Ticket 016 Status is CLOSED.
-- Latest 3+ consecutive CI runs on PR #231 (or main, if merged) show `fitl-per-card-cost.perf.test.ts` passing at ≤ 250 ms on all 4 baseline profiles.
+- Latest 3+ consecutive CI runs on PR #231 (or main, if merged) show `fitl-per-card-cost.perf.test.ts` passing at `<=1800 ms` on all 4 baseline profiles.
 - Sihanouk and March-Free-Operation integration tests complete within their pre-bump budgets.
 
 If gate condition is not met, do NOT execute. Close this ticket as "Declined — gate condition not met" with a follow-up ticket if the perf target is revisited.
@@ -74,7 +81,7 @@ All four reverts (job-level timeout, matrix-level changes, any per-test mechanis
 ### Tests That Must Pass
 
 1. After revert, full CI runs green on PR #231 (or main): determinism shards complete within 30 m, ticket-002 engine-test lanes complete within 30 m and are blocking again.
-2. `fitl-per-card-cost.perf.test.ts` continues to pass at ≤ 250 ms (recalibrated by ticket 016).
+2. `fitl-per-card-cost.perf.test.ts` continues to pass at `<=1800 ms` (recalibrated by ticket 016).
 3. Existing suite: `pnpm turbo build && pnpm turbo lint`.
 
 ### Invariants

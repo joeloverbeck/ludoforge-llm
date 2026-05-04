@@ -235,13 +235,6 @@ const writeI32Array = (words: number[], values: ArrayLike<number>): void => {
   }
 };
 
-const writeBigUint64Array = (words: number[], values: BigUint64Array): void => {
-  for (const value of values) {
-    words.push(Number(BigInt.asIntN(32, value)));
-    words.push(Number(BigInt.asIntN(32, value >> 32n)));
-  }
-};
-
 const encodedPolicyBytecodeInputWordCount = (
   bytecode: PolicyBytecode,
   encoded: EncodedState,

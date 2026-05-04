@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic hash/canonicalization, token-index, WASM input encoding, token-filter/count-loop, and allocation/GC residual work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-032.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-032.md`
 
 ## Problem
 
@@ -342,12 +342,12 @@ Final materiality correction:
   active-route counters. The gate remains red; post-ticket review accepted
   successor `tickets/150FITLWASM-034.md` as the non-overlapping residual owner.
 - Post-review active overlap check:
-  `rg -n '150FITLWASM-033|150FITLWASM-034|tickets/150FITLWASM-033|tickets/150FITLWASM-034|archive/tickets/150FITLWASM-033|active successor|successor owner|blocked|BLOCKED' tickets/149FITLEVNUMVM-016.md tickets/149FITLEVNUMVM-022.md specs/150-fitl-policy-vm-wasm-port.md tickets/150FITLWASM-034.md`.
+  `rg -n '150FITLWASM-033|150FITLWASM-034|tickets/150FITLWASM-033|tickets/150FITLWASM-034|archive/tickets/150FITLWASM-033|active successor|successor owner|blocked|BLOCKED' tickets/149FITLEVNUMVM-016.md tickets/149FITLEVNUMVM-022.md archive/specs/150-fitl-policy-vm-wasm-port.md tickets/150FITLWASM-034.md`.
   Result: the only actionable overlap was stale blocker/dependency wording in
   `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022`, now retargeted to
   `tickets/150FITLWASM-034.md`.
 - Post-metric graph edits: `tickets/150FITLWASM-034.md`,
-  `specs/150-fitl-policy-vm-wasm-port.md`, `tickets/149FITLEVNUMVM-016.md`,
+  `archive/specs/150-fitl-policy-vm-wasm-port.md`, `tickets/149FITLEVNUMVM-016.md`,
   `tickets/149FITLEVNUMVM-022.md`, and this ticket's terminal status/proof
   ledger.
 - Proof invalidation: the post-metric graph edits transcribe ownership and

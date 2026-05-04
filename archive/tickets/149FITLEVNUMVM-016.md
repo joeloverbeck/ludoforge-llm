@@ -1,23 +1,41 @@
 # 149FITLEVNUMVM-016: Phase 4 VM perf closure + default-flip F14 cut
 
-**Status**: BLOCKED by Phase 5/WASM successor gate `tickets/150FITLWASM-034.md` — final F14 default-flip/deletion owner
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/compiled-policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts`
-**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `tickets/149FITLEVNUMVM-022.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-034.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-014.md`, `archive/tickets/149FITLEVNUMVM-015.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `archive/tickets/149FITLEVNUMVM-022.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `archive/tickets/150FITLWASM-034.md`
 
 ## Problem
 
-Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 now owns the Phase 5/WASM successor path required before this ticket can execute. The Spec 150 chain has reduced the active same-seam route from the original multi-second red gate down to ticket `150FITLWASM-033`'s final retained solo `1355.26 ms`, but the gate is still red and ticket `150FITLWASM-034` remains the active owner.
+Phase 4's terminal deliverable owns the F14 cut: default the policy evaluation path to bytecode VM and delete the closure-tree runtime. Ticket 018 ruled out the engine-test workflow lanes as the remaining runtime blocker after stale golden fallout was repaired, but later profiling proved the remaining one-card wall time is dominated by generic preview-drive runtime work outside the current policy bytecode VM. Ticket 022 then proved Phase 4B still misses the original budget after its runtime-closure slices; Spec 150 owned the Phase 5/WASM successor path. The Spec 150 chain reduced the active same-seam route from the original multi-second red gate down to ticket `150FITLWASM-033`'s final retained solo `1355.26 ms`, but ticket `150FITLWASM-034` proved the original `<=250 ms` budget is not a feasible blocker for the current same-seam architecture.
 
-This ticket therefore has one ordered stage after the Phase 5/WASM successor gate is green:
+User-approved budget reset on 2026-05-04: the active successor-runtime gate for this F14 cut is now `<=1800 ms`, justified by retained clean `033` samples (`1355.26 ms`, `1383.35 ms`) and the fresh `034` bucketed confirmation (`1512.38 ms`). The original `<=250 ms` target is retired as a blocker for this ticket.
 
-1. Wait for the Phase 5/WASM successor path to make the original `<=250 ms` one-card gate truthful.
+This ticket therefore has one ordered stage:
+
+1. Confirm the successor-runtime same-seam profile remains `<=1800 ms` with clean active-route diagnostics.
 2. Flip the default policy evaluation path from closure-tree to the proven successor runtime and delete the closure-tree evaluation infrastructure (`buildPolicyExprClosure` and downstream callees) per F14.
 
 When complete, this ticket adds or updates the per-card perf gate and triggers ticket 003 for the remaining CI restoration unwind.
 
-Ticket `150FITLWASM-004` through `150FITLWASM-033` progressively landed the supported WASM score-row, preview-state, preview-drive, hash, token-index, query, encoding, spatial, microturn, and allocation slices while preserving clean active-route diagnostics. Ticket `150FITLWASM-034` currently owns the final active-route perf gate for this F14 cut until the `<=250 ms` budget is truthful or a later successor is explicitly authorized.
+Ticket `150FITLWASM-004` through `150FITLWASM-033` progressively landed the supported WASM score-row, preview-state, preview-drive, hash, token-index, query, encoding, spatial, microturn, and allocation slices while preserving clean active-route diagnostics. Ticket `150FITLWASM-034` rejected the original `<=250 ms` blocker after live probes showed the current architecture could not truthfully close the remaining gap, and it authorized this ticket to proceed under the measured `<=1800 ms` gate.
+
+## Reassessment Update (2026-05-04, budget reset)
+
+Ticket `150FITLWASM-034` executed the post-033 residual pass and retained no
+code changes. Its fresh same-seam bucketed profile recorded `elapsedMs=1512.38`
+with clean active-route diagnostics:
+
+- `wasmScoreRowUnsupportedCount=0`
+- `wasmPreviewCandidateFeatureRowUnsupportedCount=0`
+- `wasmScoreRowBytecodeCompileCount=0`
+- `wasmProductionPreviewDriveBatchCount=232`
+
+The final conclusion is that the original `<=250 ms` budget is not a feasible
+blocker for the current same-seam architecture. The user approved replacing it
+with a measured `<=1800 ms` successor-runtime gate. This ticket is now unblocked
+for the F14 default-flip/deletion cut after confirming that reset gate.
 
 ## Reassessment Update (2026-05-04, Spec 150 successor handoff)
 
@@ -29,15 +47,20 @@ query/apply/hash residual moved to `archive/tickets/150FITLWASM-021.md`; that
 ticket landed a setup-hash root-counter reduction but left the same-seam gate
 red around `2.5 s`. Ticket `150FITLWASM-022` landed bounded dynamic Zobrist
 feature-key memoization, reduced `zobristKeyUncachedCount` from `1391` to
-`334`, and left the same-seam gate red at per-card `elapsedMs=2539.8`. Ticket `150FITLWASM-023` landed apply-move token-placement hash deferral, reduced `zobristKeyCacheMissCount` from `3717` to `2837`, and left the same-seam gate red at per-card `elapsedMs=2557.17`. Ticket `150FITLWASM-024` landed initial full-hash runtime-table cache reuse, reduced `zobristKeyCacheMissCount` from `2837` to `2319`, and left the same-seam gate red at per-card `elapsedMs=2467.29`. Ticket `150FITLWASM-025` landed generic FNV prefix-state reuse and left the same-seam gate red at per-card `elapsedMs=2375.99`. Ticket `150FITLWASM-026` landed a run-local pending-request fingerprint cache and left the same-seam gate red at per-card `elapsedMs=2408.84`. Ticket `150FITLWASM-027` landed a generic namespace-prefix stable-fingerprint hasher and left the same-seam gate red at per-card `elapsedMs=2477.81`. Ticket `150FITLWASM-028` landed generic query/spatial allocation reductions and cached WASM layout encoding, reducing the same-seam gate to the low `~2.1 s` range while leaving it red. Ticket `150FITLWASM-029` landed generic encoding, reference-cache, token-index refresh, decision-sequence fingerprint, query/map-space allocation reductions, static binding-name shortcuts, token-index scan allocation reduction, and a versioned per-context `resolveRef` cache while leaving the gate red at decisive final per-card `elapsedMs=2046.48`. Ticket `150FITLWASM-030` landed connected-zone allocation and boolean connected-condition traversal reductions while leaving the decisive final gate red at per-card `elapsedMs=1910.21`. Ticket `150FITLWASM-031` landed generic microturn continuation-binding allocation cleanup, a `tokenZones` allocation cleanup, and a compiled `zoneVar` dynamic-selector parity fix while leaving the confirmed final gate red at per-card `elapsedMs=1773.64`. Ticket `150FITLWASM-032` landed score-row precompile, diagnostics suppression, hash feature coverage, partial boolean compilation, and zone/token count-query materialization removal while leaving the final gate red at per-card `elapsedMs=1561.81`. Ticket `150FITLWASM-033` landed a material post-count residual slice and left the final retained solo gate red at `1355.26 ms`. This ticket remains blocked until `150FITLWASM-034` or a later explicitly authorized successor makes the budget truthful.
+`334`, and left the same-seam gate red at per-card `elapsedMs=2539.8`. Ticket
+`150FITLWASM-023` through `150FITLWASM-033` then landed further generic hash,
+query/eval, encoding, token-index, connected-zone, compiler, and post-count
+residual reductions, with the final retained solo gate at `1355.26 ms`. Ticket
+`150FITLWASM-034` later rejected the original `<=250 ms` blocker and reset
+this ticket's active gate to `<=1800 ms`.
 
-## Reassessment Update (2026-05-02, Phase 5 handoff)
+## Reassessment Update (2026-05-02, Phase 5 handoff; superseded 2026-05-04)
 
 Ticket `149FITLEVNUMVM-022` ran the final Phase 4B same-seam profile and the gate remained red:
 
 - `timeout 180 env LUDOFORGE_POLICY_VM=on node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final` — RED: per-card `elapsedMs=6702.65`, threshold `<=250`.
 
-User-approved decision: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. This ticket remains the later F14 default-flip/deletion owner, but it must not execute until `specs/150-fitl-policy-vm-wasm-port.md` and its implementation tickets make the `<=250 ms` gate truthful. Post-review of ticket `150FITLWASM-001` created `150FITLWASM-002` for WASM policy-bytecode execution parity; post-review of `150FITLWASM-002` created `150FITLWASM-003` for the encoded-state/action batch bridge; ticket `150FITLWASM-003` created `150FITLWASM-004` for candidate-dependent batch scoring integration; ticket `150FITLWASM-004` created `150FITLWASM-005` for non-preview score-row handoff; ticket `150FITLWASM-005` created `150FITLWASM-006` for preview-backed score-row handoff and perf gate preflight; ticket `150FITLWASM-006` created `150FITLWASM-007` for production WASM score-row integration and perf gate closure after recording a red `6539.22 ms` same-seam preflight; ticket `150FITLWASM-007` created `150FITLWASM-008` for production preview row materialization after recording an active-route red `7131.37 ms` same-seam gate; ticket `150FITLWASM-008` created `150FITLWASM-009` for preview-state surface row materialization after recording an active-route red `6593.68 ms` same-seam gate; ticket `150FITLWASM-009` created `150FITLWASM-010` for preview-drive application/runtime handoff after recording an active-route red `6632.26 ms` same-seam gate. Reassessment of `150FITLWASM-010` on 2026-05-03 split out `archive/tickets/150FITLWASM-013.md` for encoded preview-state slot inventory support; later Foundation-aligned reassessment split `archive/tickets/150FITLWASM-014.md` for the missing generic production preview-drive substrate. Ticket `150FITLWASM-014` completed that substrate, ticket `150FITLWASM-010` completed production routing and fail-closed-clean route activation but left the gate red at `4124.29 ms`, ticket `150FITLWASM-015` landed route-local literal cleanup but left the gate red at `3958.91 ms`, ticket `150FITLWASM-016` landed a generic hash-cache slice but left the gate red at `4018.94 ms`, ticket `150FITLWASM-017` landed active-route query-materialization runtime reuse but left the gate red at `2898.06 ms`, ticket `150FITLWASM-018` landed active-route token-index/digest cleanup but left the gate red at `2761.91 ms`, ticket `150FITLWASM-019` landed exact shared FNV hashing but left the gate red at `2460.65 ms`, archived ticket `150FITLWASM-020` landed generic token-hash and encoded-input reductions while leaving the gate red around `2.5 s`, ticket `150FITLWASM-021` landed a setup-hash root-counter reduction while leaving the gate red around `2.5 s`, ticket `150FITLWASM-022` landed bounded dynamic Zobrist feature-key memoization while leaving the gate red at `2539.8 ms`, ticket `150FITLWASM-023` landed apply-move token-placement hash deferral while leaving the gate red at `2557.17 ms`, archived ticket `150FITLWASM-024` landed initial full-hash runtime-table cache reuse while leaving the gate red at `2467.29 ms`, and ticket `150FITLWASM-025` landed generic FNV prefix-state reuse while leaving the gate red at `2375.99 ms`; `150FITLWASM-026` is now the active perf-gate owner.
+User-approved decision at the time: stop Phase 4B as failed for the original budget and promote Phase 5/WASM as the next architectural owner. That blocker chain is now superseded by the 2026-05-04 budget reset above; the historical successor tickets remain archived evidence for the reset.
 
 This is a Foundation 14 atomic cut spanning the full deletion blast radius. Mechanical uniformity rationale: the closure-tree call site is a single dispatch point in `policy-runtime.ts`, and `compiled-policy-runtime.ts:buildPolicyExprClosure` has a bounded set of consumers in `policy-evaluation-core.ts` (verified during ticket 015 prep).
 
@@ -87,14 +110,14 @@ Foundation-aligned decision:
   - `archive/tickets/149FITLEVNUMVM-019.md` — generic kernel expression/query AOT or bytecode.
   - `archive/tickets/149FITLEVNUMVM-020.md` — preview state and token-index lifetime redesign.
   - `archive/tickets/149FITLEVNUMVM-021.md` — preview hashing and verification strategy.
-  - `tickets/149FITLEVNUMVM-022.md` — final reprofile gate that unblocks this ticket only if `<=250 ms` is truthful.
+  - `archive/tickets/149FITLEVNUMVM-022.md` — terminal final reprofile gate that handed off to Spec 150 after the original `<=250 ms` gate remained red.
 
 ## Assumption Reassessment (2026-04-28)
 
 1. Ticket 015 has landed the VM with A/B routing via `LUDOFORGE_POLICY_VM=on`. Parity is proven via ticket 014's equivalence harness on all 4 baseline profiles × 20 seeds.
 2. The closure-tree path is `compiled-policy-runtime.ts:buildPolicyExprClosure` → `policy-evaluation-core.ts:CompiledPolicyExprClosure` callees. Spec §Phase 4 acceptance explicitly mandates deleting these.
 3. `RESOLVE_DYNAMIC` opcode count must be zero before this ticket can land — verify by running the compiler against all 4 FITL baseline profiles and asserting zero `RESOLVE_DYNAMIC` emissions. If any remain, eliminate them first (cite spec §5 edge case "Logged as a perf warning so it gets eliminated").
-4. The per-card cost ≤ 250 ms target is the original Spec 149 evolution-readiness budget.
+4. The original per-card cost `<=250 ms` target is retired as an active blocker by the 2026-05-04 budget reset; the current gate is `<=1800 ms`.
 
 ## Architecture Check
 
@@ -105,21 +128,26 @@ Foundation-aligned decision:
 
 ## What to Change
 
-### 1. Phase 5/WASM gate precondition
+### 1. Successor runtime gate precondition
 
-Before any deletion, verify the Phase 5/WASM successor path is complete and records a green same-seam profile at the original Phase 4 budget:
+Before any deletion, verify the successor runtime path records a green
+same-seam profile at the reset Phase 4 budget:
 
 ```bash
-timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final
+timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4-reset-final
 ```
 
-The gate remains `<=250 ms` under all 4 baseline profiles with `verifyIncrementalHash=true`. Do not weaken the target or treat current policy-VM correctness or red Phase 4B evidence as sufficient.
+The gate is `<=1800 ms` under all 4 baseline profiles with
+`verifyIncrementalHash=true`, and active-route diagnostics remain clean. Do not
+weaken this reset gate without a new user-approved 1-3-1 decision.
 
 ### 2. Perf gate test
 
-Create or update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` at the truthful Phase 4 budget: ≤ 250 ms. The earlier Phase 1 5500 ms and Phase 2 3000 ms gate calibrations were superseded by the `149FITLEVNUMVM-017` stop-condition decision. Update the calibration comment so future readers do not chase the false Phase 1 gate.
+Create or update `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` at the reset Phase 4 budget: `<=1800 ms`. The earlier Phase 1 `5500 ms`, Phase 2 `3000 ms`, and original `<=250 ms` gate calibrations were superseded by the stop-condition and 2026-05-04 budget-reset decisions. Update the calibration comment so future readers do not chase the retired Phase 1 or `<=250 ms` gates.
 
-The gate must exercise the VM path and report per-profile elapsed values. Do not weaken the gate to match the current red number unless the user explicitly approves a spec-level target change through 1-3-1.
+The gate must exercise the successor runtime path and report per-profile
+elapsed values. Do not weaken the gate to match a future red number unless the
+user explicitly approves a spec-level target change through 1-3-1.
 
 ### 3. `packages/engine/src/agents/policy-runtime.ts` (modify)
 
@@ -145,9 +173,9 @@ This ticket does NOT touch the CI workflow files directly. The engine-test block
 
 ### 7. Profiling proof gate
 
-After this ticket lands, run a one-card profile and confirm the 250 ms target:
+After this ticket lands, run a one-card profile and confirm the reset target:
 ```bash
-node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-final
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-reset-final
 ```
 Record the per-profile elapsed values in this ticket's Outcome.
 
@@ -161,15 +189,15 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 - `packages/engine/src/agents/policy-runtime.ts` (modify — delete A/B switch, default to VM)
 - `packages/engine/src/agents/compiled-policy-runtime.ts` (modify or delete)
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify — delete closure-tree consumers)
-- `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` (modify — tighten to 250 ms)
+- `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` (modify — add/reset to 1800 ms)
 
 ## Out of Scope
 
 - Remaining CI workflow restoration (ticket 003's determinism-timeout unwind — triggered by this ticket's closure).
 - Phase 4B runtime closure work, now owned by tickets 019-022.
-- Implementing the Phase 5 WASM port; `specs/150-fitl-policy-vm-wasm-port.md` and its tickets own that.
+- Implementing the Phase 5 WASM port; `archive/specs/150-fitl-policy-vm-wasm-port.md` and its tickets own that.
 - Recalibrating `fitl-parity-drive.perf.test.ts` (deferred to a follow-up if measurement shows it's needed).
-- Weakening the Phase 4 per-card target, deleting coverage, or adding game-specific FITL fast paths to make the gate pass.
+- Further weakening the reset Phase 4 per-card target, deleting coverage, or adding game-specific FITL fast paths to make the gate pass.
 
 ## Acceptance Criteria
 
@@ -177,7 +205,7 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 
 1. Replay-identity tests stay green on ALL 10 determinism shards (no `LUDOFORGE_POLICY_VM` env var needed — bytecode is default).
 2. Score-equivalence: ticket 014's harness still passes (now exercising the VM as the default path; closure-tree no longer exists to compare against, so harness is repurposed as a VM correctness check).
-3. **Per-card cost: ≤ 250 ms under all 4 baseline profiles** (`verifyIncrementalHash=true`).
+3. **Per-card cost: ≤ 1800 ms under all 4 baseline profiles** (`verifyIncrementalHash=true`).
 4. The Outcome records exact Phase 4B gate evidence, default-flip/deletion proof, and closure-tree removal proof.
 5. `engine-tests.yml` ticket-002 lanes (`fitl-events-shard-c` and `fitl-rules`) complete within their pre-Phase-0 budgets.
 6. `engine-determinism.yml` job-level timeout (still 60 m at this ticket; ticket 003 reverts) accommodates the determinism shards comfortably.
@@ -201,11 +229,87 @@ Verify that `fitl-events-sihanouk.test.ts` and `fitl-march-free-operation.test.t
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`.
-2. Successor runtime gate confirmation: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4b-final`.
+2. Successor runtime gate confirmation: `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4-reset-final`.
 3. Focused correctness tests for accepted VM/perf changes.
 4. `pnpm -F @ludoforge/engine test`.
 5. `cd packages/engine && node scripts/run-tests.mjs --lane determinism dist/test/determinism/*.test.js` (full determinism corpus).
-6. `pnpm -F @ludoforge/engine test:perf` (with the tightened 250 ms gate).
-7. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-final` (record in Outcome).
+6. `pnpm -F @ludoforge/engine test:perf` (with the reset 1800 ms gate).
+7. `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label phase4-reset-final` (record in Outcome).
 8. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
 9. `grep -rn 'buildPolicyExprClosure\|CompiledPolicyExprClosure' packages/engine/src` — must return zero hits.
+
+## Outcome (2026-05-04)
+
+Implemented the F14 default-flip/deletion cut under the user-approved
+`<=1800 ms` reset gate:
+
+- Removed the `LUDOFORGE_POLICY_VM` rollout switch from the policy runtime.
+- Deleted `packages/engine/src/agents/compiled-policy-runtime.ts`.
+- Rewired `PolicyEvaluationContext.evaluateCompiledExpr` to default through the
+  bytecode VM for the supported encoded numeric substrate, with direct
+  expression evaluation retained only for expression shapes the compact VM
+  explicitly does not own (for example preview-surface reads, filtered token
+  aggregates, adjacent/seat aggregates, zone attributes, non-numeric literals,
+  and unencodable synthetic states). No closure-tree runtime or `_legacy`
+  fallback remains.
+- Added `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` as
+  the reset `<=1800 ms` per-card gate.
+- Updated the bytecode equivalence harness to compare default bytecode behavior
+  and WASM-supported rows after closure-tree deletion.
+
+Final reset profile:
+
+```text
+node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label phase4-reset-final
+elapsedMs=1493.12
+per-card elapsedMs=1492.96
+target <=1800 ms
+headroom=307.04 ms
+wasmScoreRowUnsupportedCount=0
+wasmPreviewCandidateFeatureRowUnsupportedCount=0
+wasmScoreRowBytecodeCompileCount=0
+wasmProductionPreviewDriveBatchCount=232
+driveExitTotal=0
+```
+
+Deletion proof:
+
+```text
+rg -n 'buildPolicyExprClosure|CompiledPolicyExprClosure|LUDOFORGE_POLICY_VM' packages/engine/src packages/engine/test
+```
+
+returned zero hits.
+
+Budget lane proof:
+
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-events-sihanouk.test.js` — PASS, suite `duration_ms=18030.142666` (under 1m 31s).
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/fitl-march-free-operation.test.js` — PASS, suite `duration_ms=4885.25769` (under 1m 10s).
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine test` — PASS unsandboxed; default lane summary `60/60 files passed`.
+- `node scripts/run-tests.mjs --lane determinism dist/test/determinism/*.test.js` — PASS; `87` tests, `28` suites.
+- `pnpm -F @ludoforge/engine test:perf` — PASS; includes the new Spec 149 reset gate.
+- `pnpm turbo build` — PASS.
+- `pnpm turbo lint` — PASS.
+- `pnpm turbo typecheck` — PASS.
+- Schema/artifact surfaces: no serialized schema or generated artifact contract
+  changed; build/lint/typecheck and the unchanged schema/artifact diff confirmed
+  no schema regeneration was needed.
+- File-size closeout: `policy-evaluation-core.ts` was already over repo
+  guidance and retained active growth (`1555` lines after the cut) because the
+  ticket-owned deletion/default-flip path needed to keep the shared
+  policy-evaluation routing in one reviewed seam. Extraction was considered but
+  deferred because splitting the mixed VM/direct-evaluator dispatch during the
+  F14 atomic cut would widen the review surface; no new residual ticket is
+  created from this review.
+
+Materiality ledger:
+
+- Reset baseline evidence: ticket `150FITLWASM-034` retained `1512.38 ms`.
+- Retained green successor samples from ticket `150FITLWASM-033`: `1355.26 ms`
+  and `1383.35 ms`.
+- Final decisive sample for this ticket: `1492.96 ms` per card.
+- Verdict: green under the `<=1800 ms` reset gate; ticket `149FITLEVNUMVM-003`
+  is now unblocked for the remaining CI restoration unwind.

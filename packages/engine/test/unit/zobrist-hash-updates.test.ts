@@ -4,18 +4,23 @@ import { describe, it } from 'node:test';
 
 import {
   asActionId,
+  asDecisionFrameId,
   asPhaseId,
   asPlayerId,
+  asSeatId,
+  asTurnId,
   asTokenId,
   asZoneId,
   computeFullHash,
   createZobristTable,
+  type DecisionStackFrame,
   type GameDef,
   type GameState,
   updateHashFeatureChange,
   updateHashTokenPlacement,
 } from '../../src/kernel/index.js';
 import { canonicalTokenFilterKey } from '../../src/kernel/hidden-info-grants.js';
+import { reconcileRunningHash } from '../../src/kernel/zobrist-phase-hash.js';
 
 const createGameDef = (): GameDef =>
   ({
@@ -434,5 +439,61 @@ describe('zobrist full hash and incremental update helpers', () => {
     const ba = computeFullHash(table, { ...base, activeLastingEffects: [effectB, effectA] });
 
     assert.notEqual(ab, ba);
+  });
+
+  it('reconciles decision-stack and frame-id changes without full-hash bailout', () => {
+    const table = createZobristTable(createGameDef());
+    const beforeHash = computeFullHash(table, createBaseState());
+    const before: GameState = {
+      ...createBaseState(),
+      _runningHash: beforeHash,
+      stateHash: beforeHash,
+    };
+    const frame: DecisionStackFrame = {
+      frameId: asDecisionFrameId(0),
+      parentFrameId: null,
+      turnId: asTurnId(7),
+      context: {
+        kind: 'chooseOne',
+        seatId: asSeatId('1'),
+        decisionKey: '$choice' as never,
+        options: [
+          { value: 'a', legality: 'legal', illegalReason: null },
+          { value: 'b', legality: 'legal', illegalReason: null },
+        ],
+      },
+      effectFrame: {
+        programCounter: 2,
+        boundedIterationCursors: {},
+        localBindings: {},
+        pendingTriggerQueue: [],
+      },
+    };
+    const after: GameState = {
+      ...before,
+      decisionStack: [frame],
+      nextFrameId: asDecisionFrameId(1),
+      activeDeciderSeatId: asSeatId('1'),
+    };
+
+    assert.equal(reconcileRunningHash(table, before, after), computeFullHash(table, after));
+  });
+
+  it('reconciles unavailable action changes without full-hash bailout', () => {
+    const table = createZobristTable(createGameDef());
+    const beforeHash = computeFullHash(table, createBaseState());
+    const before: GameState = {
+      ...createBaseState(),
+      _runningHash: beforeHash,
+      stateHash: beforeHash,
+    };
+    const after: GameState = {
+      ...before,
+      unavailableActionsPerTurn: {
+        '0:1': ['pass' as never, 'march' as never],
+      },
+    };
+
+    assert.equal(reconcileRunningHash(table, before, after), computeFullHash(table, after));
   });
 });

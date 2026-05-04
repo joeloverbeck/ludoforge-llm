@@ -252,7 +252,8 @@ function formatMessage<C extends KernelRuntimeErrorCode>(message: string, contex
   if (context === undefined) {
     return message;
   }
-  return `${message} context=${JSON.stringify(context)}`;
+  return `${message} context=${JSON.stringify(context, (_key, value: unknown) =>
+    typeof value === 'bigint' ? `0x${value.toString(16)}` : value)}`;
 }
 
 export class KernelRuntimeError<C extends KernelRuntimeErrorCode = KernelRuntimeErrorCode> extends Error {

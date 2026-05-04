@@ -172,7 +172,7 @@ let zobristKeyCacheHitCount = 0;
 let zobristKeyCacheMissCount = 0;
 let zobristKeyUncachedCount = 0;
 
-const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
+export const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
   const cached = decisionStackFrameDigestCache.get(frame);
   if (cached !== undefined) {
     return cached;

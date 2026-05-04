@@ -168,6 +168,65 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
       }
       return compileZoneCountAccessor(expr.zone, expr);
 
+    case 'zoneProp':
+      return (ctx) => {
+        const zoneId = resolveMapSpaceId(expr.zone, ctx);
+        const zoneDef = getZoneMap(ctx.def).get(String(zoneId));
+        if (zoneDef === undefined) {
+          throw zonePropNotFoundError(`Zone not found: ${String(zoneId)}`, {
+            reference: expr,
+            zoneId,
+            availableZoneIds: ctx.def.zones.map((zone) => zone.id),
+          });
+        }
+
+        if (expr.prop === 'id') {
+          return zoneDef.id;
+        }
+        if (expr.prop === 'category') {
+          if (zoneDef.category === undefined) {
+            throw zonePropNotFoundError(`Property "${expr.prop}" not found on zone ${String(zoneId)} (zone has no category)`, {
+              reference: expr,
+              zoneId,
+              prop: expr.prop,
+              availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
+            });
+          }
+          return zoneDef.category;
+        }
+
+        const propValue = zoneDef.attributes?.[expr.prop];
+        if (propValue === undefined) {
+          throw zonePropNotFoundError(`Property "${expr.prop}" not found on zone ${String(zoneId)}`, {
+            reference: expr,
+            zoneId,
+            prop: expr.prop,
+            availableProps: ['id', ...(zoneDef.category !== undefined ? ['category'] : []), ...Object.keys(zoneDef.attributes ?? {})],
+          });
+        }
+        if (Array.isArray(propValue)) {
+          throw typeMismatchError(
+            `Property "${expr.prop}" on zone ${String(zoneId)} is an array, not a scalar. Use zonePropIncludes to check array membership.`,
+            {
+              reference: expr,
+              zoneId,
+              prop: expr.prop,
+              actualType: 'array',
+            },
+          );
+        }
+        if (!isScalarValue(propValue)) {
+          throw typeMismatchError(`Property "${expr.prop}" on zone ${String(zoneId)} must be a scalar`, {
+            reference: expr,
+            zoneId,
+            prop: expr.prop,
+            actualType: typeof propValue,
+            value: propValue,
+          });
+        }
+        return propValue;
+      };
+
     case 'tokenProp':
       return (ctx) => {
         const boundToken = ctx.bindings[expr.token];
@@ -598,14 +657,9 @@ export const tryCompileCondition = (
       if (!isNonEmptyArray(cond.args)) {
         return null;
       }
-      const compiledArgs: CompiledConditionPredicate[] = [];
-      for (const arg of cond.args) {
-        const compiledArg = tryCompileCondition(arg);
-        if (compiledArg === null) {
-          return null;
-        }
-        compiledArgs.push(compiledArg);
-      }
+      const compiledArgs: CompiledConditionPredicate[] = cond.args.map((arg) =>
+        tryCompileCondition(arg) ?? ((ctx) => evalCondition(arg, ctx))
+      );
       return (ctx, snapshot) => {
         for (const arg of compiledArgs) {
           if (!arg(ctx, snapshot)) {
@@ -620,14 +674,9 @@ export const tryCompileCondition = (
       if (!isNonEmptyArray(cond.args)) {
         return null;
       }
-      const compiledArgs: CompiledConditionPredicate[] = [];
-      for (const arg of cond.args) {
-        const compiledArg = tryCompileCondition(arg);
-        if (compiledArg === null) {
-          return null;
-        }
-        compiledArgs.push(compiledArg);
-      }
+      const compiledArgs: CompiledConditionPredicate[] = cond.args.map((arg) =>
+        tryCompileCondition(arg) ?? ((ctx) => evalCondition(arg, ctx))
+      );
       return (ctx, snapshot) => {
         for (const arg of compiledArgs) {
           if (arg(ctx, snapshot)) {

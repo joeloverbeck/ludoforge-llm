@@ -9,3 +9,4 @@ export * from './policy-bytecode/index.js';
 export * from './policy-wasm-runtime.js';
 export * from './policy-wasm-preview-drive.js';
 export * from './policy-wasm-production-preview-drive.js';
+export * from './policy-wasm-score-bytecode-cache.js';

@@ -1,5 +1,5 @@
 import * as assert from 'node:assert/strict';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +16,10 @@ export interface CompiledProductionSpec {
 }
 
 export interface ProductionGameFixture extends CompiledProductionSpec {
+  readonly gameDef: NonNullable<CompileResult['gameDef']>;
+}
+
+export interface ProductionGameDefFixture {
   readonly gameDef: NonNullable<CompileResult['gameDef']>;
 }
 
@@ -100,6 +104,25 @@ export function getFitlProductionFixture(): ProductionGameFixture {
   };
 
   return cachedFitlFixture;
+}
+
+/**
+ * Runtime perf harnesses that only need the compiled GameDef should not retain
+ * parser/source-map artifacts into the measured route.
+ */
+export function getFitlProductionGameDefFixture(): ProductionGameDefFixture {
+  const compiled = compileProductionSpec();
+  const gameDef = compiled.compiled.gameDef;
+  cachedFitlBundle = null;
+  cachedFitlResult = null;
+  cachedFitlFixture = null;
+  return { gameDef };
+}
+
+export function getFitlBootstrapGameDefFixture(): ProductionGameDefFixture {
+  return {
+    gameDef: JSON.parse(readFileSync(join(REPO_ROOT, 'packages', 'runner', 'src', 'bootstrap', 'fitl-game-def.json'), 'utf8')) as NonNullable<CompileResult['gameDef']>,
+  };
 }
 
 export function deriveFitlPopulationZeroSpaces(): readonly string[] {

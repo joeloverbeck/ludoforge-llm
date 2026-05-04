@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-032.md`
+**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-033.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-032.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-033.md`
 
 ## Problem
 
@@ -165,6 +165,8 @@ hash/canonicalization, and allocation/GC residual closure. Ticket
 `150FITLWASM-031` landed generic microturn continuation-binding allocation
 cleanup, a `tokenZones` allocation cleanup, and a compiled `zoneVar`
 dynamic-selector parity fix while leaving the confirmed final gate red at
-per-card `elapsedMs=1773.64`. The active successor owner moved to
-`tickets/150FITLWASM-032.md` for remaining reference/eval, token-index,
-hash/canonicalization, and allocation/GC residual closure.
+per-card `elapsedMs=1773.64`. Ticket `150FITLWASM-032` landed the larger
+post-031 residual slice and left the final gate red at per-card
+`elapsedMs=1561.81`. The active successor owner moved to
+`tickets/150FITLWASM-033.md` for post-count hash/canonicalization, token-index,
+WASM input, token-filter/count-loop, and allocation/GC residual closure.

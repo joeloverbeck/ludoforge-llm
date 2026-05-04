@@ -1,7 +1,7 @@
 import type { ReadContext } from './eval-context.js';
 import { evalCondition } from './eval-condition.js';
 import { divisionByZeroError, typeMismatchError } from './eval-error.js';
-import { evalQuery } from './eval-query.js';
+import { countQueryResults, evalQuery } from './eval-query.js';
 import { computeTierAdmissibility } from './prioritized-tier-legality.js';
 import { resolveRef, resolveRefMemoised } from './resolve-ref.js';
 import { VALUE_EXPR_TAG } from './types.js';
@@ -33,7 +33,7 @@ function countAggregateItems(
 ): number {
   const query = aggregate.query;
   if (query.query !== 'prioritized') {
-    return evalQuery(query, ctx).length;
+    return countQueryResults(query, ctx);
   }
 
   if (query.qualifierKey === undefined) {

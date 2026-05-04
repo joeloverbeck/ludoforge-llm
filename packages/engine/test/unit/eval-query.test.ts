@@ -10,6 +10,7 @@ import {
   asPlayerId,
   asTokenId,
   asZoneId,
+  evalValue,
   evalQuery,
   getCompiledCondition,
   isEvalErrorCode,
@@ -2823,6 +2824,139 @@ describe('evalQuery', () => {
           },
           makeCtx({ maxQueryResults: 2 }),
         ),
+      (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
+    );
+  });
+
+  it('counts filtered map-space aggregates without changing query parity or bounds', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      zones: [
+        ...makeDef().zones,
+        {
+          id: asZoneId('alpha:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+        },
+        {
+          id: asZoneId('bravo:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+        },
+        {
+          id: asZoneId('charlie:none'),
+          zoneKind: 'board',
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'province',
+        },
+      ],
+    };
+    const ctx = makeCtx({
+      def,
+      adjacencyGraph: buildAdjacencyGraph(def.zones),
+    });
+    const query = {
+      query: 'mapSpaces' as const,
+      filter: {
+        condition: {
+          op: '==' as const,
+          left: { _t: 2 as const, ref: 'zoneProp' as const, zone: '$zone', prop: 'category' },
+          right: 'province',
+        },
+      },
+    } as const;
+    const countExpr = { _t: 5 as const, aggregate: { op: 'count' as const, query } };
+
+    assert.equal(evalValue(countExpr, ctx), evalQuery(query, ctx).length);
+    assert.throws(
+      () => evalValue({ _t: 5 as const, aggregate: { op: 'count' as const, query: { query: 'mapSpaces' as const } } }, makeCtx({
+        def,
+        adjacencyGraph: buildAdjacencyGraph(def.zones),
+        maxQueryResults: 2,
+      })),
+      (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
+    );
+  });
+
+  it('counts token-query aggregates without materialization-specific semantics drift', () => {
+    const def: GameDef = {
+      ...makeDef(),
+      zones: makeDef().zones.map((zone) => {
+        if (zone.id === asZoneId('battlefield:none')) {
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'province',
+          };
+        }
+        if (zone.id === asZoneId('tableau:2')) {
+          return {
+            ...zone,
+            zoneKind: 'board' as const,
+            category: 'city',
+          };
+        }
+        return zone;
+      }),
+    };
+    const state = makeState();
+    const ctx = makeCtx({
+      def,
+      adjacencyGraph: buildAdjacencyGraph(def.zones),
+      state: {
+        ...state,
+        zones: {
+          ...state.zones,
+          'tableau:2': [
+            makeFactionToken('arvn-tableau-1', 'ARVN'),
+            makeFactionToken('us-tableau-1', 'US'),
+          ],
+        },
+      },
+    });
+    const queries = [
+      {
+        query: 'tokensInZone' as const,
+        zone: 'battlefield:none',
+        filter: { prop: 'faction' as const, op: 'eq' as const, value: 'US' },
+      },
+      {
+        query: 'tokensInMapSpaces' as const,
+        filter: { prop: 'faction' as const, op: 'eq' as const, value: 'ARVN' },
+      },
+      {
+        query: 'tokensInAdjacentZones' as const,
+        zone: 'bench:1',
+        filter: { prop: 'faction' as const, op: 'eq' as const, value: 'US' },
+      },
+    ];
+
+    for (const query of queries) {
+      assert.equal(
+        evalValue({ _t: 5 as const, aggregate: { op: 'count' as const, query } }, ctx),
+        evalQuery(query, ctx).length,
+      );
+    }
+
+    assert.throws(
+      () => evalValue({
+        _t: 5 as const,
+        aggregate: {
+          op: 'count' as const,
+          query: {
+            query: 'tokensInZone' as const,
+            zone: 'battlefield:none',
+          },
+        },
+      }, makeCtx({ maxQueryResults: 2 })),
       (error: unknown) => isEvalErrorCode(error, 'QUERY_BOUNDS_EXCEEDED'),
     );
   });

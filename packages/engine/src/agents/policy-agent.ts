@@ -125,7 +125,7 @@ const chooseStructuralFrontierDecision = (
   return {
     decision: selected.decision,
     rng,
-    agentDecision: buildPolicyAgentDecisionTrace(metadata, traceLevel),
+    ...(traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(metadata, traceLevel) }),
   };
 };
 
@@ -209,7 +209,8 @@ export class PolicyAgent implements Agent {
       return this.chooseFrontierDecision(input);
     }
 
-    const evalHeapBefore = heapUsedMb();
+    const traceHeapDelta = shouldLogPolicyOomTrace();
+    const evalHeapBefore = traceHeapDelta ? heapUsedMb() : 0;
     const evaluation = evaluatePolicyMove({
       def: input.def,
       state: input.state,
@@ -220,11 +221,12 @@ export class PolicyAgent implements Agent {
       ...(this.profileId === undefined ? {} : { profileIdOverride: this.profileId }),
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(this.traceLevel === 'none' ? { diagnosticsMode: 'disabled' as const } : {}),
     });
     logPolicyOomTrace(
       'actionSelection:evaluated',
       input,
-      ` actionMoves=${actionDecisions.length} heapDeltaMb=${heapUsedMb() - evalHeapBefore} finalScore=${evaluation.metadata.finalScore ?? 'null'}`,
+      ` actionMoves=${actionDecisions.length} heapDeltaMb=${traceHeapDelta ? heapUsedMb() - evalHeapBefore : 'n/a'} finalScore=${evaluation.metadata.finalScore ?? 'null'}`,
     );
     const selectedMoveKey = toMoveIdentityKey(input.def, evaluation.move);
     const selectedDecision = actionDecisions.find(
@@ -237,7 +239,7 @@ export class PolicyAgent implements Agent {
     return {
       decision: selectedDecision,
       rng: evaluation.rng,
-      agentDecision: buildPolicyAgentDecisionTrace(evaluation.metadata, this.traceLevel),
+      ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(evaluation.metadata, this.traceLevel) }),
     };
   }
 
@@ -278,7 +280,7 @@ export class PolicyAgent implements Agent {
       return {
         decision: guidedChoice.matchedDecision,
         rng: input.rng,
-        agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel),
+        ...(this.traceLevel === 'none' ? {} : { agentDecision: buildPolicyAgentDecisionTrace(metadata, this.traceLevel) }),
       };
     }
 

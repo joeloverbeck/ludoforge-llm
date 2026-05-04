@@ -546,8 +546,29 @@ User-approved resolution: retire the original `<=250 ms` target as a blocker
 for the current same-seam architecture and reset the active successor-runtime
 gate to `<=1800 ms`. Ticket `149FITLEVNUMVM-016` is again the active F14
 default-flip/deletion owner after it confirms that reset gate. Ticket
-`149FITLEVNUMVM-003` remains blocked on ticket 016 closure and the reset gate,
-not on the retired `<=250 ms` target.
+`149FITLEVNUMVM-003` remains blocked on ticket 016 closure and the required
+post-reset CI confirmations, not on the retired `<=250 ms` target.
+
+### 2026-05-04 reset-gate regression follow-up
+
+During `154POLBCDISP-003` reassessment, the current keep-arm baseline reran
+`packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` three times
+and found the reset gate red: `2479.77 ms`, `2461.18 ms`, and `2421.83 ms`
+against `<=1800 ms`. Ticket `archive/tickets/149FITLEVNUMVM-023.md` owned
+revalidating or repairing that reset gate before `149FITLEVNUMVM-003` could
+unwind CI budgets or `154POLBCDISP-003` could consume the gate for its
+keep-vs-delete measurement.
+
+Archived ticket `149FITLEVNUMVM-023` resolved the contradiction as perf-gate
+harness drift. The checked-in test now measures the same successor-runtime
+surface as the archived reset evidence: compiled bootstrap GameDef, no
+policy-agent trace diagnostics, and pre-timed WASM score-row precompilation.
+The repaired compiled gate passed three serial local samples and the Spec 149
+subtest was green inside `pnpm -F @ludoforge/engine test:perf`; the broad lane
+still has an unrelated Spec 145 preview-pipeline corpus failure. The `<=1800 ms`
+ceiling was not changed. `149FITLEVNUMVM-003` still requires
+its 3+ consecutive CI confirmations; `154POLBCDISP-003` is unblocked for its
+own keep-vs-delete measurement.
 
 ---
 
@@ -575,6 +596,7 @@ Decomposed via `/spec-to-tickets` on 2026-04-28:
 - [`archive/tickets/149FITLEVNUMVM-020.md`](../archive/tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
 - [`archive/tickets/149FITLEVNUMVM-021.md`](../archive/tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
 - [`archive/tickets/149FITLEVNUMVM-022.md`](../archive/tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate; red, handed off to Spec 150 and later superseded by the 2026-05-04 budget reset
+- [`archive/tickets/149FITLEVNUMVM-023.md`](../archive/tickets/149FITLEVNUMVM-023.md) — Revalidate or repair the reset FITL per-card gate
 - [`archive/specs/150-fitl-policy-vm-wasm-port.md`](../archive/specs/150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
 - [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
 - [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity

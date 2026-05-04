@@ -265,14 +265,14 @@ The test serves three purposes:
 
 Not in scope for D4: assertion against specific values. The test is about the dispatch contract, not the per-kind semantic correctness (which is covered by the existing `policy-bytecode-equivalence.test.ts` and downstream integration tests).
 
-### D5. Sequencing note on PR #239 perf gate recalibration (not a deliverable)
+### D5. Sequencing note on perf gate recalibration (satisfied by 149FITLEVNUMVM-016)
 
 Two perf gates were calibrated against the buggy fast path in PR #239 and now under-fit reality:
 
-- `test/perf/agents/fitl-per-card-cost.perf.test.ts` ceiling is 1800 ms (`PHASE4_RESET_CEILING_MS`, line 37); real cost with library refs evaluating correctly is ~2596 ms. Needs recalibration with a comment citing `beb3c3993`.
+- `test/perf/agents/fitl-per-card-cost.perf.test.ts` originally carried the stale 1800 ms (`PHASE4_RESET_CEILING_MS`, line 37) ceiling from the buggy fast path. On 2026-05-04, `archive/tickets/149FITLEVNUMVM-016.md` reset that gate to the user-approved `<=1800 ms` successor-runtime ceiling backed by `archive/tickets/150FITLWASM-034.md` and confirmed it with `pnpm -F @ludoforge/engine test:perf`.
 - `test/perf/agents/preview-pipeline.perf.test.ts` corpus parameters need adjustment so 50 ARVN action-selections fit in `maxTurns`.
 
-These are NOT deliverables of Spec 154. They are PR #239 follow-up work and have their own ticket trail. If still unaddressed at this spec's implementation time, the implementing PR should not absorb them — open a separate ticket against PR #239's namespace and reference it from the Spec 154 implementing PR. The D3 follow-on ticket (per §D3) blocks on the recalibrated gate, not on Spec 154's main implementation; the safety net (D1) and registry + test (D4) can ship without the recalibration.
+These are NOT deliverables of Spec 154. The per-card reset prerequisite was historically satisfied by `archive/tickets/149FITLEVNUMVM-016.md`, but `tickets/154POLBCDISP-003.md` later found the current keep-arm baseline red against the reset gate. `archive/tickets/149FITLEVNUMVM-023.md` reclassified that result as perf-gate harness drift, repaired the checked-in gate, and proved the reset surface green again before D3 consumes it.
 
 ## Acceptance Criteria
 
@@ -296,7 +296,7 @@ These are NOT deliverables of Spec 154. They are PR #239 follow-up work and have
 - Adding native VM handlers for `candidateFeature` / `stateFeature` / `candidateAggregate` (rejected in Brainstorm Context — wrong layer).
 - Changes to the bytecode emitter (`featureRefForCompiledPolicyRef`) — the existing emitted shapes are correct; the gap is downstream. The registry in D4a narrows the type but does not change emitter behavior.
 - Deciding whether to delete the explicit `candidateFeature` / `stateFeature` / `candidateAggregate` handlers added by `beb3c3993` (deferred to a follow-on ticket — see §D3 and Follow-On Tickets below).
-- Recalibrating the per-card cost gate ceiling or the preview-pipeline corpus (PR #239 follow-up; the D3 follow-on ticket sequences after this).
+- Recalibrating the per-card cost gate ceiling or the preview-pipeline corpus. The per-card reset prerequisite is now satisfied by `archive/tickets/149FITLEVNUMVM-023.md`; the preview-pipeline corpus remains a separate follow-up surface.
 - Reintroducing closure-tree (rejected per F#14).
 - Cross-game changes (FITL-specific or Texas-specific) — the bug class is engine-generic; the fix is engine-generic.
 - Changes to WASM scoring routing (`policy-wasm-score-routing.ts`) — the WASM route has its own dispatch model and is unaffected by this spec.
@@ -307,7 +307,7 @@ Proposed namespace: `154POLBCDISP` (POLicy ByteCode DISPatch). Anticipated decom
 
 - **154POLBCDISP-001 — Safety-net restoration (D1)**. Change `resolveVmFallbackFeature`'s `default:` branch to throw `PolicyBytecodeVmUnsupportedError`; add the `try { executeBytecode } catch (PolicyBytecodeVmUnsupportedError) { evaluateCompiledExprDirect }` wrapper in `evaluateCompiledExprWithVm`. Acceptance: criterion 1 above.
 - **154POLBCDISP-002 — `FeatureRefKind` registry + enumeration test (D4)**. Introduce `FEATURE_REF_KINDS` const-array and `FeatureRefKind` union in `types.ts`; narrow `FeatureRef.kind`. Add `policy-bytecode-fallback-completeness.test.ts` with the satisfies-clause and per-kind fixture coverage. Acceptance: criteria 2 and 3 above. Sequenced after `-001` so the safety-net catch is in place before the test exercises every kind.
-- **154POLBCDISP-003 — Explicit-handler decision (D3 follow-on, sequenced after PR #239 perf-gate recalibration lands)**. Measure perf delta of `keep` vs `delete` for the `candidateFeature` / `stateFeature` / `candidateAggregate` explicit handlers (and the `findLibraryRef` helper) against the recalibrated `fitl-per-card-cost.perf.test.ts` ceiling. Apply the winning resolution; record evidence in the commit body. Acceptance: criterion 7 above.
+- **154POLBCDISP-003 — Explicit-handler decision (D3 follow-on, reset gate repaired by 149FITLEVNUMVM-023)**. Measure perf delta of `keep` vs `delete` for the `candidateFeature` / `stateFeature` / `candidateAggregate` explicit handlers (and the `findLibraryRef` helper) against the reset `fitl-per-card-cost.perf.test.ts` ceiling after confirming the repaired reset gate remains green. Apply the winning resolution; record evidence in the commit body. Acceptance: criterion 7 above.
 
 ## Tickets
 
@@ -315,4 +315,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-04:
 
 - [`archive/tickets/154POLBCDISP-001.md`](../archive/tickets/154POLBCDISP-001.md) — Restore policy-bytecode safety-net fallback (covers D1 + D2)
 - [`archive/tickets/154POLBCDISP-002.md`](../archive/tickets/154POLBCDISP-002.md) — Promote FeatureRef.kind into a typed registry + add enumeration completeness test (covers D4)
-- [`tickets/154POLBCDISP-003.md`](../tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3, deferred-execution)
+- [`tickets/154POLBCDISP-003.md`](../tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3; reset-gate prerequisite repaired by [`archive/tickets/149FITLEVNUMVM-023.md`](../archive/tickets/149FITLEVNUMVM-023.md))

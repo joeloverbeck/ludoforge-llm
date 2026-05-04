@@ -47,6 +47,19 @@ describe('runtime error context contracts', () => {
     limits: [],
   };
 
+  it('formats bigint context fields without masking the kernel error', () => {
+    const error = kernelRuntimeError('HASH_DRIFT', 'hash drift', {
+      expected: 0x12n,
+      actual: 0x34n,
+      turnCount: 7,
+      currentPhase: 'main',
+    });
+
+    assert.match(error.message, /expected":"0x12"/);
+    assert.match(error.message, /actual":"0x34"/);
+    assert.equal(error.context?.expected, 0x12n);
+  });
+
   it('illegalMoveError emits ILLEGAL_MOVE context contract', () => {
     const move: Move = {
       actionId: action.id,

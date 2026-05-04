@@ -55,7 +55,16 @@ export interface PerfProfiler {
   readonly dynamic: Map<string, PerfBucket>;
 }
 
+export interface PerfHotPathBucket {
+  readonly key: string;
+  readonly count: number;
+  readonly totalMs: number;
+}
+
 const createBucket = (): PerfBucket => ({ count: 0, totalMs: 0 });
+
+export let hotPathProfilingEnabled = false;
+const hotPathBuckets = new Map<string, PerfBucket>();
 
 export function createPerfProfiler(): PerfProfiler {
   return {
@@ -123,4 +132,49 @@ export function perfCount(profiler: PerfProfiler | undefined, key: string, incre
     }
     bucket.count += increment;
   }
+}
+
+export function setHotPathProfilingEnabled(enabled: boolean): void {
+  hotPathProfilingEnabled = enabled;
+}
+
+export function resetHotPathProfilerCounters(): void {
+  hotPathBuckets.clear();
+}
+
+export function perfHotPathStart(): number {
+  return hotPathProfilingEnabled ? performance.now() : 0;
+}
+
+export function perfHotPathEnd(key: string, startTime: number): void {
+  if (!hotPathProfilingEnabled) {
+    return;
+  }
+  let bucket = hotPathBuckets.get(key);
+  if (bucket === undefined) {
+    bucket = { count: 0, totalMs: 0 };
+    hotPathBuckets.set(key, bucket);
+  }
+  bucket.totalMs += performance.now() - startTime;
+  bucket.count += 1;
+}
+
+export function perfHotPathCount(key: string, increment = 1): void {
+  if (!hotPathProfilingEnabled) {
+    return;
+  }
+  let bucket = hotPathBuckets.get(key);
+  if (bucket === undefined) {
+    bucket = { count: 0, totalMs: 0 };
+    hotPathBuckets.set(key, bucket);
+  }
+  bucket.count += increment;
+}
+
+export function snapshotHotPathProfilerCounters(): readonly PerfHotPathBucket[] {
+  return [...hotPathBuckets.entries()].map(([key, bucket]) => ({
+    key,
+    count: bucket.count,
+    totalMs: bucket.totalMs,
+  }));
 }

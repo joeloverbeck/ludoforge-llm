@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new WASM package/build path plus engine bridge skeleton
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `tickets/149FITLEVNUMVM-022.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `tickets/149FITLEVNUMVM-022.md`
 
 ## Problem
 
@@ -38,11 +38,11 @@ Add a TypeScript bridge or test helper that loads the built WASM artifact and ex
 
 ### 4. Follow-up decomposition
 
-If the skeleton proves a different crate/package layout is required, update `specs/150-fitl-policy-vm-wasm-port.md` before implementation continues and create the next ticket for policy-bytecode parity.
+If the skeleton proves a different crate/package layout is required, update `archive/specs/150-fitl-policy-vm-wasm-port.md` before implementation continues and create the next ticket for policy-bytecode parity.
 
 ## Files to Touch
 
-- `specs/150-fitl-policy-vm-wasm-port.md` (modify if ABI/package details change)
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` (modify if ABI/package details change)
 - `tickets/150FITLWASM-001.md`
 - `packages/engine-wasm/` or repo-approved equivalent (new)
 - `packages/engine/src/agents/policy-wasm-runtime.ts` or repo-approved equivalent bridge (new)
@@ -90,7 +90,7 @@ Implemented the Phase 5 WASM architecture and ABI skeleton.
 - Added Rust crate `packages/engine-wasm/policy-vm` built with `cargo build --target wasm32-unknown-unknown --release`.
 - Added the Node bridge `packages/engine/src/agents/policy-wasm-runtime.ts` and exported it from the engine agents surface.
 - Added `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts`.
-- Documented the concrete package layout and smoke ABI in `specs/150-fitl-policy-vm-wasm-port.md`.
+- Documented the concrete package layout and smoke ABI in `archive/specs/150-fitl-policy-vm-wasm-port.md`.
 
 The initial ABI is a raw little-endian `i32` buffer:
 

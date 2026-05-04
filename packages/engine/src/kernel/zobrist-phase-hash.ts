@@ -17,7 +17,7 @@ import type { ActionId } from './branded.js';
 import type { GameState, ZobristFeature, Token, VariableValue } from './types-core.js';
 import type { ZobristTable } from './types-core.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
-import { computeFullHash, zobristKey } from './zobrist.js';
+import { digestDecisionStackFrame, zobristKey } from './zobrist.js';
 
 /** Update hash for a currentPhase change. */
 export const updatePhaseHash = (
@@ -209,6 +209,61 @@ const xorActionUsage = (
   return h;
 };
 
+const xorDecisionStack = (
+  hash: bigint,
+  table: ZobristTable,
+  stack: NonNullable<GameState['decisionStack']>,
+): bigint => {
+  let h = hash;
+  stack.forEach((frame, slot) => {
+    h ^= zobristKey(table, {
+      kind: 'decisionStackFrame',
+      slot,
+      digest: digestDecisionStackFrame(frame),
+    });
+  });
+  return h;
+};
+
+const xorUnavailableActionsPerTurn = (
+  hash: bigint,
+  table: ZobristTable,
+  unavailableActionsPerTurn: NonNullable<GameState['unavailableActionsPerTurn']>,
+): bigint => {
+  let h = hash;
+  for (const key of Object.keys(unavailableActionsPerTurn).sort()) {
+    const actions = unavailableActionsPerTurn[key] ?? [];
+    actions.forEach((actionId, slot) => {
+      h ^= zobristKey(table, {
+        kind: 'unavailableAction',
+        key,
+        actionId,
+        slot,
+      });
+    });
+  }
+  return h;
+};
+
+const xorNonZeroCounterFeature = (
+  hash: bigint,
+  table: ZobristTable,
+  kind: 'nextFrameId' | 'nextTurnId',
+  value: number | undefined,
+): bigint => {
+  const normalized = value ?? 0;
+  return normalized === 0
+    ? hash
+    : hash ^ zobristKey(table, { kind, value: normalized });
+};
+
+const activeDeciderSeatHashValue = (state: GameState): string | undefined => {
+  const decisionStack = state.decisionStack ?? [];
+  return decisionStack.length === 0
+    ? undefined
+    : state.activeDeciderSeatId ?? String(state.activePlayer);
+};
+
 /**
  * Compute the correct `_runningHash` for `target` by diffing ALL hashed
  * feature categories against `baseline`.
@@ -232,15 +287,6 @@ export const reconcileRunningHash = (
   baseline: GameState,
   target: GameState,
 ): bigint => {
-  if (
-    baseline.decisionStack !== target.decisionStack
-    || baseline.nextFrameId !== target.nextFrameId
-    || baseline.nextTurnId !== target.nextTurnId
-    || baseline.activeDeciderSeatId !== target.activeDeciderSeatId
-  ) {
-    return computeFullHash(table, target);
-  }
-
   let h = baseline._runningHash;
 
   // --- Scalar features ---
@@ -445,6 +491,41 @@ export const reconcileRunningHash = (
     for (let slot = 0; slot < newInterrupt.length; slot++) {
       const f = newInterrupt[slot]!;
       h ^= zobristKey(table, { kind: 'interruptPhaseFrame', slot, phase: f.phase, resumePhase: f.resumePhase });
+    }
+  }
+
+  const oldDecisionStack = baseline.decisionStack ?? [];
+  const newDecisionStack = target.decisionStack ?? [];
+  if (oldDecisionStack !== newDecisionStack) {
+    h = xorDecisionStack(h, table, oldDecisionStack);
+    h = xorDecisionStack(h, table, newDecisionStack);
+  }
+
+  const oldUnavailableActions = baseline.unavailableActionsPerTurn ?? {};
+  const newUnavailableActions = target.unavailableActionsPerTurn ?? {};
+  if (oldUnavailableActions !== newUnavailableActions) {
+    h = xorUnavailableActionsPerTurn(h, table, oldUnavailableActions);
+    h = xorUnavailableActionsPerTurn(h, table, newUnavailableActions);
+  }
+
+  if (baseline.nextFrameId !== target.nextFrameId) {
+    h = xorNonZeroCounterFeature(h, table, 'nextFrameId', baseline.nextFrameId);
+    h = xorNonZeroCounterFeature(h, table, 'nextFrameId', target.nextFrameId);
+  }
+
+  if (baseline.nextTurnId !== target.nextTurnId) {
+    h = xorNonZeroCounterFeature(h, table, 'nextTurnId', baseline.nextTurnId);
+    h = xorNonZeroCounterFeature(h, table, 'nextTurnId', target.nextTurnId);
+  }
+
+  const oldActiveDeciderSeatId = activeDeciderSeatHashValue(baseline);
+  const newActiveDeciderSeatId = activeDeciderSeatHashValue(target);
+  if (oldActiveDeciderSeatId !== newActiveDeciderSeatId) {
+    if (oldActiveDeciderSeatId !== undefined) {
+      h ^= zobristKey(table, { kind: 'activeDeciderSeatId', seatId: oldActiveDeciderSeatId });
+    }
+    if (newActiveDeciderSeatId !== undefined) {
+      h ^= zobristKey(table, { kind: 'activeDeciderSeatId', seatId: newActiveDeciderSeatId });
     }
   }
 

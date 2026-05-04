@@ -436,6 +436,33 @@ describe('condition compiler', () => {
     assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneCount', zone: 'board:none' }, ctx));
   });
 
+  it('compiles scalar zoneProp references for dynamic zones and matches interpreter behavior', () => {
+    const def: GameDef = ({
+      ...makeDef(),
+      zones: [
+        {
+          id: asZoneId('saigon:none'),
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          category: 'city',
+          attributes: { population: 2 },
+        },
+      ],
+    }) as unknown as GameDef;
+    const ctx = makeCtx({
+      def,
+      state: {
+        ...makeState(),
+        zones: { 'saigon:none': [] },
+      },
+      bindings: { '$zone': 'saigon:none' },
+    });
+    const expr: ValueExpr = { _t: 2, ref: 'zoneProp', zone: '$zone', prop: 'population' };
+
+    assert.equal(evaluateCompiledValue(expr, ctx), resolveRef({ ref: 'zoneProp', zone: '$zone', prop: 'population' }, ctx));
+  });
+
   it('compiles zoneVar references for static zones and vars, including snapshot-backed reads', () => {
     const expr: ValueExpr = { _t: 2, ref: 'zoneVar', zone: 'board:none', var: 'threat' };
     const state: GameState = {
@@ -928,6 +955,51 @@ describe('condition compiler', () => {
 
     assert.equal(evaluateCompiled(condition, ctx), true);
     assert.equal(evaluateCompiled(condition, ctx), evalCondition(condition, ctx));
+  });
+
+  it('partially compiles boolean trees and preserves interpreter fallback short-circuiting', () => {
+    const def: GameDef = ({
+      ...makeDef(),
+      zones: [
+        {
+          id: asZoneId('board:none'),
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+          adjacentTo: [{ to: asZoneId('target:none') }],
+        },
+        {
+          id: asZoneId('target:none'),
+          owner: 'none',
+          visibility: 'public',
+          ordering: 'set',
+        },
+      ],
+    }) as unknown as GameDef;
+    const ctx = makeCtx({
+      def,
+      state: {
+        ...makeState(),
+        zones: { 'board:none': [], 'target:none': [] },
+      },
+    });
+    const mixedCondition: ConditionAST = {
+      op: 'and',
+      args: [
+        { op: '==', left: { _t: 2, ref: 'gvar', var: 'resources' }, right: 4 },
+        { op: 'adjacent', left: 'board:none', right: 'target:none' },
+      ],
+    };
+    const unreachableMissingCondition: ConditionAST = {
+      op: 'and',
+      args: [
+        false,
+        { op: '==', left: { _t: 2, ref: 'gvar', var: 'missing' }, right: 1 },
+      ],
+    };
+
+    assert.equal(evaluateCompiled(mixedCondition, ctx), evalCondition(mixedCondition, ctx));
+    assert.equal(evaluateCompiled(unreachableMissingCondition, ctx), false);
   });
 
   it('matches interpreter errors for missing binding, missing vars, and ordering type mismatch', () => {

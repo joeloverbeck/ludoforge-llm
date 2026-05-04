@@ -4,11 +4,17 @@ import { createEvalContext, createEvalRuntimeResources, type ReadContext } from 
 import { resolveZoneRefWithOwnerFallback } from '../kernel/resolve-zone-ref.js';
 import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
-import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
+import {
+  buildEncodedState,
+  buildEncodedStateLayout,
+  type EncodedState,
+  type EncodedStateLayout,
+} from '../kernel/encoded-state/index.js';
 import {
   compilePolicyBytecode,
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
+import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AgentPreviewCompletionPolicy,
   AttributeValue,
@@ -32,7 +38,6 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyRuntimeProviders,
-  isPolicyVmEnabled,
   type PolicyRuntimeCandidate,
   type PolicyRuntimeProviders,
 } from './policy-runtime.js';
@@ -44,8 +49,18 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
-import { buildPolicyExprClosure, type CompiledPolicyExprClosure } from './compiled-policy-runtime.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
+
+const CURRENT_SURFACE_SCOPE = 0;
+const PREVIEW_SURFACE_SCOPE = 1;
+
+const tryBuildEncodedState = (state: GameState, layout: EncodedStateLayout): EncodedState | undefined => {
+  try {
+    return buildEncodedState(state, layout);
+  } catch {
+    return undefined;
+  }
+};
 
 export interface PolicyRuntimeFailure {
   readonly code: string;
@@ -86,7 +101,6 @@ export interface CreatePolicyEvaluationContextInput {
   readonly runtime?: GameDefRuntime;
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
-  readonly policyVmMode?: 'enabled' | 'disabled';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -236,9 +250,10 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
-  private readonly compiledExprClosureCache = new WeakMap<CompiledPolicyExpr, CompiledPolicyExprClosure>();
   private readonly compiledExprBytecodeCache = new WeakMap<CompiledPolicyExpr, ReturnType<typeof compilePolicyBytecode>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
+  private readonly encodedStateLayout: EncodedStateLayout;
+  private readonly encodedState: EncodedState | undefined;
   private readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
   private transientZoneReadContext: { readonly stateHash: bigint; readonly context: ReadContext } | null = null;
@@ -252,9 +267,9 @@ export class PolicyEvaluationContext {
   ) {
     this.currentCandidates = candidates;
     this.activeState = input.state;
-    this.encodedZoneIndexById = input.encodedStateLayout === undefined
-      ? undefined
-      : new Map(input.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
+    this.encodedStateLayout = input.encodedStateLayout ?? buildEncodedStateLayout(input.def);
+    this.encodedState = input.encodedState ?? tryBuildEncodedState(input.state, this.encodedStateLayout);
+    this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
       state: input.state,
@@ -266,8 +281,8 @@ export class PolicyEvaluationContext {
       ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
-      ...(input.encodedStateLayout === undefined ? {} : { encodedStateLayout: input.encodedStateLayout }),
-      ...(input.encodedState === undefined ? {} : { encodedState: input.encodedState }),
+      encodedStateLayout: this.encodedStateLayout,
+      ...(this.encodedState === undefined ? {} : { encodedState: this.encodedState }),
       ...(input.completion === undefined ? {} : { completion: input.completion }),
     });
   }
@@ -482,73 +497,383 @@ export class PolicyEvaluationContext {
   }
 
   evaluateCompiledExpr(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
-    const vmEnabled = this.input.policyVmMode === 'enabled'
-      || (this.input.policyVmMode !== 'disabled' && isPolicyVmEnabled());
-    if (vmEnabled) {
-      const bytecodeValue = this.evaluateCompiledExprWithVm(expr, candidate);
-      if (bytecodeValue !== undefined) {
-        return bytecodeValue;
-      }
-    }
-    let closure = this.compiledExprClosureCache.get(expr);
-    if (closure === undefined) {
-      closure = buildPolicyExprClosure(expr, this);
-      this.compiledExprClosureCache.set(expr, closure);
-    }
-    return closure(candidate);
+    return this.evaluateCompiledExprWithVm(expr, candidate);
   }
 
   private evaluateCompiledExprWithVm(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
-    const view = this.getRootEncodedView();
-    if (view === undefined) {
-      return undefined;
+    if (this.encodedState === undefined || this.requiresDirectLiteralSemantics(expr)) {
+      return this.evaluateCompiledExprDirect(expr, candidate);
     }
     let bytecode = this.compiledExprBytecodeCache.get(expr);
     if (bytecode === undefined) {
-      bytecode = compilePolicyBytecode(expr, this.input.def, view.layout);
+      bytecode = compilePolicyBytecode(expr, this.input.def, this.encodedStateLayout);
       this.compiledExprBytecodeCache.set(expr, bytecode);
     }
-    const fallback = (): PolicyValue => {
-      let closure = this.compiledExprClosureCache.get(expr);
-      if (closure === undefined) {
-        closure = buildPolicyExprClosure(expr, this);
-        this.compiledExprClosureCache.set(expr, closure);
-      }
-      return closure(candidate);
-    };
+    const candidateIndex = candidate === undefined ? undefined : this.currentCandidates.indexOf(candidate);
     const vmContext: VMContext = {
       def: this.input.def,
-      layout: view.layout,
+      layout: this.encodedStateLayout,
       state: this.input.state,
-      ...(candidate === undefined ? {} : { candidateIndex: this.currentCandidates.indexOf(candidate) }),
+      ...(candidate === undefined ? {} : { candidateIndex: candidateIndex === undefined || candidateIndex < 0 ? 0 : candidateIndex }),
+      legalMoves: candidate === undefined || candidateIndex === undefined || candidateIndex >= 0
+        ? this.currentCandidates.map((entry) => entry.move)
+        : [candidate.move],
       playerId: Number(this.input.playerId),
       seatId: this.input.seatId,
-      resolveFeature: (ref) => this.resolveVmFallbackFeature(ref),
-      resolveRef: () => undefined,
-      resolveDynamic: fallback,
+      resolveFeature: (ref) => this.resolveVmFallbackFeature(ref, expr, candidate),
+      resolveRef: (refId) => this.resolveVmRef(refId),
+      resolveDynamic: () => {
+        return this.evaluateCompiledExprDirect(expr, candidate);
+      },
     };
-    try {
-      const result = executeBytecode(bytecode, view.encoded, vmContext);
-      return result.value;
-    } catch (error) {
-      if (error instanceof PolicyBytecodeVmUnsupportedError) {
-        return fallback();
-      }
-      throw error;
+    const result = executeBytecode(bytecode, this.encodedState, vmContext);
+    return result.value;
+  }
+
+  private evaluateCompiledExprDirect(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
+    switch (expr.kind) {
+      case 'literal':
+        return expr.value === null ? undefined : expr.value;
+      case 'param':
+        return this.resolveCompiledPolicyParam(expr.id);
+      case 'ref':
+        return this.resolveCompiledPolicyRef(expr.ref, candidate);
+      case 'op':
+        return this.evaluateCompiledOpDirect(expr, candidate);
+      case 'zoneProp':
+        return this.evaluateCompiledZoneProp(expr.zone, expr.prop, candidate);
+      case 'zoneTokenAgg':
+        return this.evaluateCompiledZoneTokenAggregate(expr, candidate);
+      case 'globalTokenAgg':
+        return this.evaluateCompiledGlobalTokenAggregate(expr);
+      case 'globalZoneAgg':
+        return this.evaluateCompiledGlobalZoneAggregate(expr);
+      case 'adjacentTokenAgg':
+        return this.evaluateCompiledAdjacentTokenAggregate(expr, candidate);
+      case 'seatAgg':
+        return this.evaluateCompiledSeatAggregate(
+          expr.over,
+          expr.aggOp,
+          (seatCandidate) => this.evaluateCompiledExprDirect(expr.expr, seatCandidate),
+          candidate,
+        );
     }
   }
 
-  private resolveVmFallbackFeature(ref: FeatureRef): PolicyValue {
+  private requiresDirectLiteralSemantics(expr: CompiledPolicyExpr): boolean {
+    const visit = (current: CompiledPolicyExpr | CompiledPolicyZoneSource | undefined): boolean => {
+      if (current === undefined || typeof current === 'string') {
+        return false;
+      }
+      switch (current.kind) {
+        case 'literal':
+          return typeof current.value !== 'number';
+        case 'op':
+          return current.args.some(visit);
+        case 'zoneTokenAgg':
+          return visit(current.zone);
+        case 'adjacentTokenAgg':
+          return true;
+        case 'seatAgg':
+          return true;
+        case 'zoneProp':
+          return true;
+        case 'ref':
+          return current.ref.kind === 'previewSurface' || current.ref.kind === 'candidateTag';
+        case 'globalTokenAgg':
+          return current.tokenFilter !== undefined || current.zoneFilter !== undefined;
+        case 'globalZoneAgg':
+          return current.zoneFilter !== undefined;
+        case 'param':
+          return false;
+      }
+    };
+    return visit(expr);
+  }
+
+  private evaluateCompiledOpDirect(
+    expr: Extract<CompiledPolicyExpr, { readonly kind: 'op' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const values = expr.args.map((arg) => this.evaluateCompiledExprDirect(arg, candidate));
+    const first = values[0];
+    switch (expr.op) {
+      case 'add':
+        return values.every((value): value is number => typeof value === 'number')
+          ? values.reduce((sum, value) => sum + value, 0)
+          : undefined;
+      case 'mul':
+        return values.every((value): value is number => typeof value === 'number')
+          ? values.reduce((product, value) => product * value, 1)
+          : undefined;
+      case 'sub':
+      case 'div': {
+        if (values.length !== 2 || typeof values[0] !== 'number' || typeof values[1] !== 'number') {
+          return undefined;
+        }
+        if (expr.op === 'sub') return values[0] - values[1];
+        if (values[1] === 0) {
+          throw this.runtimeError('RUNTIME_EVALUATION_ERROR', 'Policy expression division evaluated with a zero denominator.');
+        }
+        return Math.trunc(values[0] / values[1]);
+      }
+      case 'min':
+      case 'max': {
+        const numericValues = values.filter((value): value is number => typeof value === 'number');
+        if (numericValues.length !== values.length || numericValues.length === 0) return undefined;
+        return expr.op === 'min' ? Math.min(...numericValues) : Math.max(...numericValues);
+      }
+      case 'abs':
+        return typeof first === 'number' ? Math.abs(first) : undefined;
+      case 'neg':
+        return typeof first === 'number' ? -first : undefined;
+      case 'eq':
+        return values.length === 2 && values[0] !== undefined && values[1] !== undefined ? values[0] === values[1] : undefined;
+      case 'ne':
+        return values.length === 2 && values[0] !== undefined && values[1] !== undefined ? values[0] !== values[1] : undefined;
+      case 'lt':
+      case 'lte':
+      case 'gt':
+      case 'gte':
+        if (values.length !== 2 || typeof values[0] !== 'number' || typeof values[1] !== 'number') return undefined;
+        if (expr.op === 'lt') return values[0] < values[1];
+        if (expr.op === 'lte') return values[0] <= values[1];
+        if (expr.op === 'gt') return values[0] > values[1];
+        return values[0] >= values[1];
+      case 'and':
+        return values.includes(false) ? false : values.every((value) => value === true) ? true : undefined;
+      case 'or':
+        return values.includes(true) ? true : values.every((value) => value === false) ? false : undefined;
+      case 'not':
+        return typeof first === 'boolean' ? !first : undefined;
+      case 'if':
+        return values.length === 3 && typeof values[0] === 'boolean' ? (values[0] ? values[1] : values[2]) : undefined;
+      case 'in':
+        return values.length === 2 && values[0] !== undefined && Array.isArray(values[1])
+          ? values[1].includes(String(values[0]))
+          : undefined;
+      case 'coalesce':
+        return values.find((value) => value !== undefined);
+      case 'clamp':
+        if (values.length !== 3 || typeof values[0] !== 'number') return undefined;
+        return Math.min(Math.max(values[0], typeof values[1] === 'number' ? values[1] : values[0]), typeof values[2] === 'number' ? values[2] : values[0]);
+      case 'boolToNumber':
+        return typeof first === 'boolean' ? (first ? 1 : 0) : undefined;
+    }
+  }
+
+  private resolveVmRef(refId: number): PolicyValue {
+    for (const [id, value] of Object.entries(this.input.parameterValues)) {
+      if (stablePayloadCode({ kind: 'param', id }) === refId) {
+        return value;
+      }
+    }
+    return undefined;
+  }
+
+  private resolveVmFallbackFeature(
+    ref: FeatureRef,
+    expr: CompiledPolicyExpr,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
     switch (ref.kind) {
-      case 'dynamicRef':
-      case 'dynamicSurface':
-      case 'dynamicExpr':
+      case 'dynamicSurface': {
+        const surfaceRef = this.findDynamicSurfaceRef(expr, ref);
+        if (surfaceRef !== undefined) {
+          return this.resolveSurfaceRef(surfaceRef, candidate);
+        }
+        break;
+      }
+      case 'dynamicRef': {
+        const agentRef = this.findDynamicAgentRef(expr, ref.aux[0]);
+        if (agentRef !== undefined) {
+          return this.toVmStackValue(this.resolveAgentPolicyRef(agentRef, candidate));
+        }
+        break;
+      }
+      case 'dynamicExpr': {
+        const dynamicExpr = this.findDynamicExpr(expr, ref.aux[0]);
+        if (dynamicExpr !== undefined) {
+          return this.evaluateCompiledExprDirect(dynamicExpr, candidate);
+        }
+        break;
+      }
+      case 'candidateFeature': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined || candidate === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'candidateFeature', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateCandidateFeature(candidate, libRef.id);
+        }
+        break;
+      }
+      case 'stateFeature': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'stateFeature', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateStateFeature(libRef.id);
+        }
+        break;
+      }
+      case 'candidateAggregate': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'aggregate', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateAggregate(libRef.id);
+        }
+        break;
+      }
+      case 'candidateTags':
+        return candidate === undefined ? undefined : this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
       case 'adjacentTokenAgg':
       case 'seatAgg':
-        throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" falls back to the closure-tree evaluator.`);
+        throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
       default:
         return undefined;
     }
+    throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
+  }
+
+  private toVmStackValue(value: PolicyValue): PolicyValue {
+    if (typeof value === 'string') {
+      return stablePayloadCode({ literal: value });
+    }
+    return value;
+  }
+
+  private findDynamicSurfaceRef(expr: CompiledPolicyExpr, ref: FeatureRef): CompiledSurfaceRef | undefined {
+    const scope = ref.aux[0];
+    const payloadCode = ref.aux[1];
+    if (payloadCode === undefined) {
+      return undefined;
+    }
+    const expectedKind = scope === CURRENT_SURFACE_SCOPE
+      ? 'currentSurface'
+      : scope === PREVIEW_SURFACE_SCOPE
+        ? 'previewSurface'
+        : undefined;
+    if (expectedKind === undefined) {
+      return undefined;
+    }
+    for (const candidateRef of this.collectAgentPolicyRefs(expr)) {
+      if (candidateRef.kind !== expectedKind) {
+        continue;
+      }
+      if (stablePayloadCode({
+        family: candidateRef.family,
+        id: candidateRef.id,
+        selector: candidateRef.selector,
+      }) === payloadCode) {
+        return candidateRef;
+      }
+    }
+    return undefined;
+  }
+
+  private findDynamicAgentRef(expr: CompiledPolicyExpr, payloadCode: number | undefined): CompiledAgentPolicyRef | undefined {
+    if (payloadCode === undefined) {
+      return undefined;
+    }
+    return this.collectAgentPolicyRefs(expr).find((ref) => stablePayloadCode(ref) === payloadCode);
+  }
+
+  private findDynamicExpr(expr: CompiledPolicyExpr, payloadCode: number | undefined): CompiledPolicyExpr | undefined {
+    if (payloadCode === undefined) {
+      return undefined;
+    }
+    return this.collectCompiledPolicyExprs(expr).find((candidate) => stablePayloadCode(candidate) === payloadCode);
+  }
+
+  private findLibraryRef(
+    expr: CompiledPolicyExpr,
+    refKind: 'candidateFeature' | 'stateFeature' | 'previewStateFeature' | 'aggregate',
+    idCode: number,
+  ): Extract<CompiledAgentPolicyRef, { readonly kind: 'library' }> | undefined {
+    for (const ref of this.collectAgentPolicyRefs(expr)) {
+      if (ref.kind === 'library' && ref.refKind === refKind && stableStringCode(ref.id) === idCode) {
+        return ref;
+      }
+    }
+    return undefined;
+  }
+
+  private collectCompiledPolicyExprs(expr: CompiledPolicyExpr): readonly CompiledPolicyExpr[] {
+    const exprs: CompiledPolicyExpr[] = [];
+    const visit = (current: CompiledPolicyExpr | CompiledPolicyZoneSource | undefined): void => {
+      if (current === undefined || typeof current === 'string') {
+        return;
+      }
+      exprs.push(current);
+      switch (current.kind) {
+        case 'op':
+          current.args.forEach(visit);
+          return;
+        case 'zoneTokenAgg':
+          visit(current.zone);
+          return;
+        case 'adjacentTokenAgg':
+          visit(current.anchorZone);
+          return;
+        case 'seatAgg':
+          visit(current.expr);
+          return;
+        case 'zoneProp':
+          visit(current.zone);
+          return;
+        case 'literal':
+        case 'param':
+        case 'ref':
+        case 'globalTokenAgg':
+        case 'globalZoneAgg':
+          return;
+      }
+    };
+    visit(expr);
+    return exprs;
+  }
+
+  private collectAgentPolicyRefs(expr: CompiledPolicyExpr): readonly CompiledAgentPolicyRef[] {
+    const refs: CompiledAgentPolicyRef[] = [];
+    const visit = (current: CompiledPolicyExpr | CompiledPolicyZoneSource | undefined): void => {
+      if (current === undefined || typeof current === 'string') {
+        return;
+      }
+      switch (current.kind) {
+        case 'ref':
+          refs.push(current.ref);
+          return;
+        case 'op':
+          current.args.forEach(visit);
+          return;
+        case 'zoneTokenAgg':
+          visit(current.zone);
+          return;
+        case 'adjacentTokenAgg':
+          visit(current.anchorZone);
+          return;
+        case 'seatAgg':
+          visit(current.expr);
+          return;
+        case 'zoneProp':
+          visit(current.zone);
+          return;
+        case 'literal':
+        case 'param':
+        case 'globalTokenAgg':
+        case 'globalZoneAgg':
+          return;
+      }
+    };
+    visit(expr);
+    return refs;
   }
 
   resolveCompiledPolicyParam(id: string): PolicyValue {
@@ -670,7 +995,7 @@ export class PolicyEvaluationContext {
   evaluateCompiledSeatAggregate(
     over: Extract<CompiledPolicyExpr, { readonly kind: 'seatAgg' }>['over'],
     aggOp: AgentPolicyZoneTokenAggOp,
-    inner: CompiledPolicyExprClosure,
+    inner: (candidate: PolicyEvaluationCandidate | undefined) => PolicyValue,
     candidate: PolicyEvaluationCandidate | undefined,
   ): PolicyValue {
     const seatIds = this.resolveSeatAggregateSeatIds(over);
@@ -872,7 +1197,7 @@ export class PolicyEvaluationContext {
   ): ZoneId | undefined {
     const resolvedZone = typeof zoneExpr === 'string'
       ? zoneExpr
-      : buildPolicyExprClosure(zoneExpr, this)(candidate);
+      : this.evaluateCompiledExprDirect(zoneExpr, candidate);
     if (typeof resolvedZone !== 'string' || resolvedZone.length === 0) {
       return undefined;
     }
@@ -933,10 +1258,10 @@ export class PolicyEvaluationContext {
   }
 
   private getRootEncodedView(): { readonly layout: EncodedStateLayout; readonly encoded: EncodedState } | undefined {
-    if (this.activeState !== this.input.state || this.input.encodedStateLayout === undefined || this.input.encodedState === undefined) {
+    if (this.activeState !== this.input.state || this.encodedState === undefined) {
       return undefined;
     }
-    return { layout: this.input.encodedStateLayout, encoded: this.input.encodedState };
+    return { layout: this.encodedStateLayout, encoded: this.encodedState };
   }
 
   private resolveEncodedZoneVariable(zoneId: string, variableId: string): number | undefined {

@@ -2,6 +2,7 @@ import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTabl
 import type { MutableGameState } from './state-draft.js';
 import { fnv1a64, fnv1a64FromState, updateFnv1a64State, type Fnv1a64State } from './fnv1a64.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
+import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
 
 type TokenPlacementFeature = Extract<ZobristFeature, { readonly kind: 'tokenPlacement' }>;
 type PerPlayerVarFeature = Extract<ZobristFeature, { readonly kind: 'perPlayerVar' }>;
@@ -135,34 +136,12 @@ const encodeFeature = (feature: ZobristFeature): string => {
   }
 };
 
-const canonicalizeHashValue = (value: unknown): string => {
-  if (value === null) {
-    return 'null';
-  }
-  if (typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'number' || typeof value === 'boolean') {
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'bigint') {
-    return `"${value.toString()}"`;
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalizeHashValue(entry)).join(',')}]`;
-  }
-  if (typeof value === 'object') {
-    const entries = Object.entries(value as Record<string, unknown>).sort(([left], [right]) => left.localeCompare(right));
-    return `{${entries.map(([key, entry]) => `${JSON.stringify(key)}:${canonicalizeHashValue(entry)}`).join(',')}}`;
-  }
-  return JSON.stringify(String(value));
-};
-
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
 const FRAME_DIGEST_PREFIX_A = updateFnv1a64State(`${FRAME_DIGEST_SALT_A}|`);
 const FRAME_DIGEST_PREFIX_B = updateFnv1a64State(`${FRAME_DIGEST_SALT_B}|`);
 const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
+const DECISION_STACK_FRAME_STRUCTURAL_CACHE_MAX_CHARS = 8192;
 const DYNAMIC_FEATURE_KEY_CACHE_LIMIT = 4096;
 const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
 const decisionStackFrameDigestByEncoded = new Map<string, string>();
@@ -172,25 +151,59 @@ let zobristKeyCacheHitCount = 0;
 let zobristKeyCacheMissCount = 0;
 let zobristKeyUncachedCount = 0;
 
-const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
+const stringifyDecisionStackFrameDigestValue = (_key: string, value: unknown): unknown =>
+  typeof value === 'bigint' ? value.toString() : value;
+
+const encodeDecisionStackFrameDigestInput = (frame: NonNullable<GameState['decisionStack']>[number]): string =>
+  // Decision-stack frames are constructed through typed engine paths; preserving
+  // that schema order avoids a full sorted-key walk over large suspended frames.
+  JSON.stringify(frame, stringifyDecisionStackFrameDigestValue);
+
+export const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
   const cached = decisionStackFrameDigestCache.get(frame);
   if (cached !== undefined) {
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('zobrist:decisionStackFrameWeakCacheHit');
+    }
     return cached;
   }
-  const encoded = canonicalizeHashValue(frame);
-  const structurallyCached = decisionStackFrameDigestByEncoded.get(encoded);
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0Encode = profileHotPath ? perfHotPathStart() : 0;
+  const encoded = encodeDecisionStackFrameDigestInput(frame);
+  if (profileHotPath) {
+    perfHotPathEnd('zobrist:encodeDecisionStackFrame', t0Encode);
+  }
+  const canUseStructuralCache = encoded.length <= DECISION_STACK_FRAME_STRUCTURAL_CACHE_MAX_CHARS;
+  const structurallyCached = canUseStructuralCache
+    ? decisionStackFrameDigestByEncoded.get(encoded)
+    : undefined;
   if (structurallyCached !== undefined) {
+    if (profileHotPath) {
+      perfHotPathCount('zobrist:decisionStackFrameStructuralCacheHit');
+    }
     decisionStackFrameDigestCache.set(frame, structurallyCached);
     return structurallyCached;
   }
+  if (profileHotPath) {
+    perfHotPathCount('zobrist:decisionStackFrameStructuralCacheMiss');
+    perfHotPathCount('zobrist:decisionStackFrameEncodedChars', encoded.length);
+  }
+  const t0Digest = profileHotPath ? perfHotPathStart() : 0;
   const digestA = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_A).toString(16).padStart(16, '0');
   const digestB = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_B).toString(16).padStart(16, '0');
+  if (profileHotPath) {
+    perfHotPathEnd('zobrist:digestDecisionStackFrame', t0Digest);
+  }
   const digest = `${digestA}:${digestB}`;
   decisionStackFrameDigestCache.set(frame, digest);
-  if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
-    decisionStackFrameDigestByEncoded.clear();
+  if (canUseStructuralCache) {
+    if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
+      decisionStackFrameDigestByEncoded.clear();
+    }
+    decisionStackFrameDigestByEncoded.set(encoded, digest);
+  } else if (profileHotPath) {
+    perfHotPathCount('zobrist:decisionStackFrameStructuralCacheSkipped');
   }
-  decisionStackFrameDigestByEncoded.set(encoded, digest);
   return digest;
 };
 

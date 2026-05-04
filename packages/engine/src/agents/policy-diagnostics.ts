@@ -10,7 +10,7 @@ import type {
 } from '../kernel/types.js';
 import type { PolicyEvaluationMetadata } from './policy-eval.js';
 
-export type PolicyDecisionTraceLevel = 'summary' | 'verbose';
+export type PolicyDecisionTraceLevel = 'none' | 'summary' | 'verbose';
 
 export interface PolicyDiagnosticsSnapshot {
   readonly seatId: string | null;

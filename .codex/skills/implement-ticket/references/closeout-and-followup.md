@@ -18,6 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
+   - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
@@ -30,6 +31,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
+- for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
@@ -51,6 +53,12 @@ Examples: changing scope, touched-file/header classification, acceptance wording
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
+Suggested late-edit proof-validity ledger:
+
+- `late edits`: `<paths changed after first final-proof lane>`
+- `edit class`: `runtime | test | fixture | schema/artifact | ticket/spec closeout | dependency graph | clerical`
+- `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "unused-code removal only; reran lint/typecheck/build; no runtime/test/acceptance-story change">`
+
 ## Durable Outcome Block
 
 For tracked tickets, prefer making the closeout durable inside the ticket itself. A minimal tracked-ticket outcome block should capture:
@@ -60,6 +68,8 @@ For tracked tickets, prefer making the closeout durable inside the ticket itself
 - any boundary correction or semantic correction confirmed during reassessment
 - verification commands that actually ran
 - whether schema/artifact fallout was checked and whether it changed
+- any retained `preexisting oversize + active growth` ledger when a touched source file stayed over repo guidance and grew during the ticket
+- any late-edit proof-validity ledger needed to explain why final proof remained valid after post-proof edits
 
 ## Durable State Classification
 
@@ -151,13 +161,13 @@ Exception for red measured gates: if the active ticket explicitly allows complet
 For red measured-gate tickets, prefer this terminal-status order unless the active ticket already dictates a different accepted closeout choreography:
 
 1. Before the decisive metric, prewrite the active ticket outcome/status as pending or nonterminal.
-2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record the final delta as `material`, `minor`, or `not demonstrated`.
+2. Run the decisive metric and capture exact red/green values plus route diagnostics; if ticket/spec/reviewer wording requires materiality, record a compact ledger with `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`.
 3. If red and successor completion is allowed, create or update the successor, dependent tickets, and spec ticket list.
 4. Run dependency integrity immediately after the ticket graph rewrite.
 5. Run the final acceptance-proof lanes affected by the code and handoff state.
 6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
 
-If the materiality classification is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state.
+If the materiality verdict is `minor` or `not demonstrated`, do not set red-plus-successor terminal status unless the user confirms that revised closeout through `1-3-1`; otherwise use a truthful non-green durable state. Treat broad phrases such as "next owner", "follow up", or "handoff" as authorization to draft successor ownership, not as authorization to mark the active red gate complete.
 
 Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
 
@@ -165,11 +175,17 @@ Pre-`apply_patch` stop-check: if a patch both sets terminal status and creates o
 
 If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
 
+For red-gate successor closeout, include a compact post-metric proof-validity ledger in the active ticket outcome or final closeout:
+
+- `post-metric graph edits`: `<successor/spec/dependency/status files changed after the decisive metric>`
+- `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "metric-only ownership transcription; no code, command, threshold, scope, or acceptance-boundary change">`
+
 ## Follow-Up Ticket Creation During Implementation
 
 When implementation reassessment proves that remaining work belongs in a new or extended follow-up ticket, apply the same authoring discipline expected by `post-ticket-review`:
 
 1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
+   - For numbered series or repeated residual tickets, use a concrete overlap preflight before authoring, for example `rg -n '<series-prefix>|<residual keyword>|<candidate owner>' tickets specs` plus targeted reads of plausible hits. Record a one-line `overlap checked` note in working notes, the active ticket outcome, or the successor when the handoff is nontrivial.
 2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
 3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
    - For profiling or benchmark successors backed by CPU-profile evidence, include a compact profiling evidence block in the successor: `profile command`, `profile artifact path` or explicit ephemeral-artifact note, `parser command` or parser method, baseline/current metric, top owners or residual stack samples, sample-surface classification (`inside timed acceptance surface`, `setup/process lifetime`, or `post-processing/observer overhead`), and why this successor is non-overlapping with the completed active slice.
@@ -229,6 +245,7 @@ For benchmark/performance tickets where a code slice is worth keeping but the ti
 - `accepted implementation`: `<landed root-cause reduction and files/seam changed>`
 - `green proof`: `<focused build/test/correctness lanes>`
 - `measured improvement`: `<owned root-cause metric before -> after, plus command/artifact>`
+- `materiality`: `<baseline, decisive final, target, delta, percent change, verdict, terminal status allowed?>`
 - `red acceptance lane`: `<ticket-named command and exact red result>`
 - `durable status`: `IN PROGRESS | BLOCKED | PARTIAL | repo-equivalent`
 - `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`

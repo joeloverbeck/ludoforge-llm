@@ -1,6 +1,5 @@
 import * as assert from 'node:assert/strict';
 
-import { buildPolicyExprClosure } from '../../src/agents/compiled-policy-runtime.js';
 import { PolicyEvaluationContext } from '../../src/agents/policy-evaluation-core.js';
 import {
   asPlayerId,
@@ -259,19 +258,15 @@ export function evaluateCompiledConsiderationSample(
   sample: CompiledConsiderationSample,
 ): number {
   const evaluation = createEvaluationContext(def, catalog, sample);
-  const consideration = sample.compiled;
-  if (consideration.when !== undefined) {
-    const when = buildPolicyExprClosure(consideration.when, evaluation)(undefined);
-    if (when !== true) {
-      return 0;
-    }
+  try {
+    return evaluation.evaluateConsideration(
+      { [sample.considerationId]: sample.compiled },
+      sample.considerationId,
+      undefined,
+    );
+  } finally {
+    evaluation.dispose();
   }
-  const weight = buildPolicyExprClosure(consideration.weight, evaluation)(undefined);
-  const value = buildPolicyExprClosure(consideration.value, evaluation)(undefined);
-  if (typeof weight !== 'number' || typeof value !== 'number') {
-    return consideration.unknownAs ?? 0;
-  }
-  return clampContribution(weight * value, consideration.clamp);
 }
 
 export function evaluateCompiledExpressionSample(
@@ -279,7 +274,12 @@ export function evaluateCompiledExpressionSample(
   catalog: AgentPolicyCatalog,
   sample: CompiledPolicyExpressionSample,
 ): ReturnType<PolicyEvaluationContext['evaluateCompiledExpr']> {
-  return buildPolicyExprClosure(sample.compiled, createEvaluationContext(def, catalog, sample))(undefined);
+  const evaluation = createEvaluationContext(def, catalog, sample);
+  try {
+    return evaluation.evaluateCompiledExpr(sample.compiled, undefined);
+  } finally {
+    evaluation.dispose();
+  }
 }
 
 function createEvaluationContext(
@@ -304,20 +304,6 @@ function createEvaluationContext(
 
 function resolveSeatId(catalog: AgentPolicyCatalog, profileId: string): string | undefined {
   return Object.entries(catalog.bindingsBySeat).find(([, boundProfileId]) => boundProfileId === profileId)?.[0];
-}
-
-function clampContribution(
-  contribution: number,
-  clamp: CompiledPolicyConsideration['clamp'],
-): number {
-  let clamped = contribution;
-  if (clamp?.min !== undefined) {
-    clamped = Math.max(clamp.min, clamped);
-  }
-  if (clamp?.max !== undefined) {
-    clamped = Math.min(clamp.max, clamped);
-  }
-  return clamped;
 }
 
 function recordExprKinds(

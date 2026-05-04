@@ -71,10 +71,19 @@ const config = {
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
 const [
-  { PolicyAgent, evaluateProductionPreviewDriveBatchWithWasm },
-  { assertValidatedGameDef, createGameDefRuntime, createPerfProfiler, initialState, zobristInternals },
+  { PolicyAgent, evaluateProductionPreviewDriveBatchWithWasm, getPolicyEncodedStateLayout, precompilePolicyWasmScoreRows },
+  {
+    assertValidatedGameDef,
+    createGameDefRuntime,
+    createPerfProfiler,
+    initialState,
+    resetHotPathProfilerCounters,
+    setHotPathProfilingEnabled,
+    snapshotHotPathProfilerCounters,
+    zobristInternals,
+  },
   { runGame },
-  { getFitlProductionFixture },
+  { getFitlBootstrapGameDefFixture },
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
   { __internal_for_tests: policyWasmRuntimeInternals },
@@ -93,8 +102,9 @@ const [
 ]);
 
 const policyWasmRuntime = initializePolicyWasmRuntimeSync();
+setHotPathProfilingEnabled(config.profileBuckets);
 
-const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
+const def = assertValidatedGameDef(getFitlBootstrapGameDefFixture().gameDef);
 const runtime = createGameDefRuntime(def);
 
 // FITL seat order matches FITL_BASELINE_PROFILES so we can pin each running
@@ -122,6 +132,10 @@ const buildSeatToProfileId = () => {
   return map;
 };
 const seatToProfileId = buildSeatToProfileId();
+const preparedScoreRowLayout = getPolicyEncodedStateLayout(def);
+for (const profileId of new Set(seatToProfileId.values())) {
+  precompilePolicyWasmScoreRows(def, preparedScoreRowLayout, def.agents, profileId);
+}
 
 // (profileId, exitKind) -> Map<depth, count>
 const driveExitHistogram = new Map();
@@ -144,17 +158,18 @@ const recordDriveResult = (capture) => {
 
 const buildAgents = () => {
   if (config.profilesAll) {
-    return FITL_BASELINE_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }));
+    return FITL_BASELINE_PROFILES.map((profileId) => new PolicyAgent({ profileId, traceLevel: 'none' }));
   }
   // Single-profile mode still needs `playerCount` agents — fill the remaining
   // seats with the same profile so legality doesn't change vs production.
   return Array.from({ length: config.playerCount }, () =>
-    new PolicyAgent({ profileId: config.profileId, traceLevel: 'summary' }),
+    new PolicyAgent({ profileId: config.profileId, traceLevel: 'none' }),
   );
 };
 
 const runOnce = () => {
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
+  resetHotPathProfilerCounters();
   zobristInternals.resetZobristKeyCounters();
   policyWasmRuntimeInternals.resetProductionScoreRowCounters();
   policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
@@ -322,6 +337,11 @@ function snapshotProfilerBuckets(profiler) {
   for (const [key, bucket] of profiler.dynamic) {
     if (bucket.count > 0 || bucket.totalMs > 0) {
       rows.push({ key, count: bucket.count, totalMs: round2(bucket.totalMs) });
+    }
+  }
+  for (const bucket of snapshotHotPathProfilerCounters()) {
+    if (bucket.count > 0 || bucket.totalMs > 0) {
+      rows.push({ key: bucket.key, count: bucket.count, totalMs: round2(bucket.totalMs) });
     }
   }
   rows.sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));

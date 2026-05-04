@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference resolution, spatial filter evaluation, score-row encoding, token-index, and remaining stable-fingerprint/hash residual work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-026.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-026.md`
 
 ## Problem
 

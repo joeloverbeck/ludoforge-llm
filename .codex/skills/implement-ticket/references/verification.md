@@ -56,6 +56,7 @@ If a verification lane fails immediately after overlapping output-contending com
 7. **Long-running commands**: Some ticket-required commands may run for minutes with sparse output. Treat that as normal when consistent with repo history; keep running and provide periodic progress updates.
 8. **Post-clean reruns**: If a later authoritative command cleans shared build output (e.g., `dist`), rerun earlier test lanes after rebuilding. Treat the first post-clean module-resolution failure as an ordering issue.
 9. **Ticket-named Turbo rebuilds**: When a ticket-named broad Turbo lane internally rebuilds or cleans a shared output tree, the command may still be valid broad proof, but any earlier compiled-output tests that consumed that tree must be rerun afterward before closeout. If rerunning is disproportionate, substitute package-local serial lanes only when the ticket allows that substitution and the active ticket records it before final proof.
+10. **Sandbox child-process failures**: If a test wrapper, `node --test`, or package lane fails with environment-shaped child-process errors such as `spawnSync /bin/sh EPERM`, classify that first run as inconclusive unless a product assertion is visible. Rerun the smallest failing lane with the required sandbox escalation or equivalent unsandboxed command, then rerun the ticket-named broad lane unsandboxed when that broad lane is final acceptance. Record the substitution and final classification in the active ticket outcome or final closeout.
 
 ## Build Ordering & Output Contention
 
@@ -118,6 +119,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 **Built-test reporter fallback**: When a focused built-file `node --test` invocation reports only a top-level failure without nested assertion details, rerun the built module directly or with a repo-approved verbose reporter so the failing subtest becomes visible before patching.
 
 **Opaque Node test child failure**: If `node --test <compiled-test-file>` or a package wrapper reports only `test failed`, run the compiled module directly with `node <compiled-test-file>` from the package cwd when safe. This often exposes nested assertion, cwd, or child-process errors hidden by the test-runner child boundary. If repo-root and package-cwd behavior differ, classify the cwd/process-boundary difference before patching code or tests.
+
+**Sandbox EPERM child failure**: If the direct rerun exposes only `EPERM`, shell spawn denial, or another sandbox permission boundary, do not patch code against that signal. Escalate the same focused command or use the repo-approved unsandboxed proof, then rerun any ticket-required broad lane before closeout if the focused rerun was only diagnostic.
 
 **Raw-vs-classified debugging**: Compare raw `legalMoves(...)`, classified `enumerateLegalMoves(...)`, and downstream agent preparation surfaces separately. For agent-driven regressions, inspect the preparation layer (e.g., `preparePlayableMoves(...)`) before assuming the bug belongs to legality or move enumeration.
 

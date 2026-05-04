@@ -181,6 +181,20 @@ describe('policy agent microturn evaluation', () => {
     assert.equal(completionDecision.agentDecision?.kind, 'policy');
   });
 
+  it('can disable policy decision diagnostics without changing legal action selection', () => {
+    const def = createDef();
+    const state = initialState(def, 7, 2).state;
+    const summaryAgent = new PolicyAgent({ traceLevel: 'summary' });
+    const traceFreeAgent = new PolicyAgent({ traceLevel: 'none' });
+
+    const actionSelection = publishMicroturn(def, state);
+    const summarySelected = summaryAgent.chooseDecision({ def, state, microturn: actionSelection, rng: createRng(11n) });
+    const traceFreeSelected = traceFreeAgent.chooseDecision({ def, state, microturn: actionSelection, rng: createRng(11n) });
+
+    assert.deepEqual(traceFreeSelected.decision, summarySelected.decision);
+    assert.equal(traceFreeSelected.agentDecision, undefined);
+  });
+
   it('prefers progress over remove-thrashing on exact-cardinality chooseNStep frontiers', () => {
     const def = createExactChooseNDef();
     const agent = new PolicyAgent({ traceLevel: 'summary' });

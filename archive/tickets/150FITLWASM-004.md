@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy evaluation integration, perf gate wiring
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-003.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-003.md`
 
 ## Problem
 
@@ -49,7 +49,7 @@ If the supported candidate-dependent batch path is sufficient, run the Spec 150 
 - `packages/engine/src/agents/policy-evaluation-core.ts` or nearby policy-evaluation integration module (modify)
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or nearby batch scoring parity test (modify or new)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` (modify)
-- `specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
 - this ticket (modify Outcome before archival)
 
 ## Out of Scope

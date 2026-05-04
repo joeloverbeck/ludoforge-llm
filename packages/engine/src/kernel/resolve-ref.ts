@@ -33,9 +33,9 @@ export type ResolveRefCacheValue = number | boolean | string | ScalarArrayValue;
  *
  * F8 (determinism): `resolveRef` is referentially transparent for fixed
  * `(ref, ctx)`. The cache is keyed on every input that affects output:
- * the ref shape, bindings reference identity, free-operation overlay identity,
- * `state.stateHash`, and `activePlayer` / `actorPlayer`. Same input → same key
- * → same cached output.
+ * the ref object identity, bindings reference identity, free-operation overlay
+ * identity, `state.stateHash`, and `activePlayer` / `actorPlayer`. Same input
+ * → same key → same cached output.
  *
  * Bindings-mutation hook: `eval-value.ts:evalAggregate` reuses one mutable
  * `itemBindings` object across aggregate items. The cache must be told to
@@ -57,13 +57,14 @@ export interface ResolveRefCache {
  *   its own inner `Map`, so mutation of one bindings object cannot pollute
  *   another (e.g., outer ctx vs aggregate's `itemBindings`).
  * - Inner key: deterministic string composed of `state.stateHash`, free-operation
- *   overlay reference identity, `activePlayer`, `actorPlayer`, and a
- *   serialised ref shape. Bindings identity is implicit in the outer key.
+ *   overlay reference identity, `activePlayer`, and `actorPlayer`. Ref identity
+ *   is stored under that context key in a WeakMap; binding identity is implicit
+ *   in the outer key.
  * - Mutation safety: `invalidateBindings(obj)` drops the inner map for `obj`,
  *   which is what `evalAggregate` calls after each `itemBindings[bind] = item`.
  */
 export function createResolveRefCache(): ResolveRefCache {
-  const entriesByBindings = new WeakMap<object, Map<string, ResolveRefCacheValue>>();
+  const entriesByBindings = new WeakMap<object, Map<string, WeakMap<Reference, ResolveRefCacheValue>>>();
   let nextOverlayId = 1;
   const overlayIdMap = new WeakMap<object, number>();
 
@@ -79,10 +80,10 @@ export function createResolveRefCache(): ResolveRefCache {
     return id;
   };
 
-  const buildInnerKey = (ref: Reference, ctx: ReadContext): string => {
+  const buildContextKey = (ctx: ReadContext): string => {
     const overlayId = overlayIdFor(ctx.freeOperationOverlay);
     const stateHashHex = ctx.state.stateHash.toString(16);
-    return `${stateHashHex}|${overlayId}|${String(ctx.activePlayer)}|${String(ctx.actorPlayer)}|${JSON.stringify(ref)}`;
+    return `${stateHashHex}|${overlayId}|${String(ctx.activePlayer)}|${String(ctx.actorPlayer)}`;
   };
 
   // The set of bindings objects the cache has populated entries for. WeakMap
@@ -97,7 +98,7 @@ export function createResolveRefCache(): ResolveRefCache {
       if (innerMap === undefined) {
         return undefined;
       }
-      return innerMap.get(buildInnerKey(ref, ctx));
+      return innerMap.get(buildContextKey(ctx))?.get(ref);
     },
     set(ref, ctx, value) {
       let innerMap = entriesByBindings.get(ctx.bindings);
@@ -106,7 +107,13 @@ export function createResolveRefCache(): ResolveRefCache {
         entriesByBindings.set(ctx.bindings, innerMap);
         knownBindings.add(ctx.bindings);
       }
-      innerMap.set(buildInnerKey(ref, ctx), value);
+      const contextKey = buildContextKey(ctx);
+      let entriesByRef = innerMap.get(contextKey);
+      if (entriesByRef === undefined) {
+        entriesByRef = new WeakMap();
+        innerMap.set(contextKey, entriesByRef);
+      }
+      entriesByRef.set(ref, value);
     },
     invalidateBindings(bindings) {
       entriesByBindings.delete(bindings);

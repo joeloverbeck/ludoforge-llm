@@ -177,8 +177,11 @@ gate red at `2408.84 ms`. Ticket `150FITLWASM-027` delivered a generic
 namespace-prefix stable-fingerprint hasher for decision-sequence pending
 requests, removed the direct `stableFingerprintHex` / `fnv1a64` CPU bucket,
 kept the active route clean, and left the same-seam gate red at `2477.81 ms`.
-Ticket `150FITLWASM-028` is the residual query/eval, encoding, token-index,
-spatial-filter, decision-stack digest, and remaining-hash successor.
+Ticket `150FITLWASM-028` delivered generic query/spatial allocation reductions
+and cached WASM layout encoding, kept the active route clean, and reduced the
+same-seam gate into the low `~2.1 s` range while leaving it red. Ticket
+`150FITLWASM-029` is the remaining allocation, encoding, query/eval,
+token-index, digest, and hash/canonicalization closure successor.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -241,4 +244,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-025.md`](../archive/tickets/150FITLWASM-025.md) — Completed generic FNV prefix-state residual closure with red measured gate successor.
 - [`archive/tickets/150FITLWASM-026.md`](../archive/tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
 - [`archive/tickets/150FITLWASM-027.md`](../archive/tickets/150FITLWASM-027.md) — Completed stable-fingerprint prefix-hasher closure with red measured gate successor.
-- [`tickets/150FITLWASM-028.md`](../tickets/150FITLWASM-028.md) — Residual query/eval, encoding, token-index, and digest closure.
+- [`archive/tickets/150FITLWASM-028.md`](../archive/tickets/150FITLWASM-028.md) — Completed query/spatial allocation and layout-encoding residual closure with red measured gate successor.
+- [`tickets/150FITLWASM-029.md`](../tickets/150FITLWASM-029.md) — Remaining allocation, encoding, query/eval, token-index, and digest closure.

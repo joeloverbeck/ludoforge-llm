@@ -208,26 +208,6 @@ function normalizeMaxDepth(maxDepth: number | undefined, graph: AdjacencyGraph):
   return Math.max(0, Math.floor(maxDepth));
 }
 
-function evaluateVia(
-  via: ConditionAST | undefined,
-  candidateZone: ZoneId,
-  state: GameState,
-  evalCtx: ReadContext,
-): boolean {
-  if (via === undefined) {
-    return true;
-  }
-
-  return evaluateConditionWithCache(via, {
-    ...evalCtx,
-    state,
-    bindings: {
-      ...evalCtx.bindings,
-      $zone: candidateZone,
-    },
-  });
-}
-
 export function queryAdjacentZones(graph: AdjacencyGraph, zone: ZoneId): readonly ZoneId[] {
   return [...getNeighbors(graph, zone)];
 }
@@ -261,6 +241,23 @@ export function queryConnectedZones(
   const visited = new Set<ZoneId>([zone]);
   const queue: Array<{ readonly zone: ZoneId; readonly depth: number }> = [{ zone, depth: 0 }];
   let cursor = 0;
+  const viaBindings = via === undefined ? undefined : { ...evalCtx.bindings };
+  const viaCtx = via === undefined || viaBindings === undefined
+    ? undefined
+    : {
+        ...evalCtx,
+        state,
+        bindings: viaBindings,
+      };
+
+  const evaluateVia = (candidateZone: ZoneId): boolean => {
+    if (via === undefined || viaBindings === undefined || viaCtx === undefined) {
+      return true;
+    }
+    viaBindings.$zone = candidateZone;
+    evalCtx.resources.resolveRefCache?.invalidateBindings(viaBindings);
+    return evaluateConditionWithCache(via, viaCtx);
+  };
 
   if (includeStart) {
     discovered.push(zone);
@@ -279,7 +276,7 @@ export function queryConnectedZones(
         continue;
       }
 
-      const passesVia = evaluateVia(via, neighborZone, state, evalCtx);
+      const passesVia = evaluateVia(neighborZone);
       if (!passesVia && !allowTargetOutsideVia) {
         continue;
       }

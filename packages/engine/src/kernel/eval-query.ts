@@ -455,14 +455,15 @@ function applyZonesFilter(
   }
 
   if (queryCondition !== undefined) {
+    const conditionBindings = { ...ctx.bindings };
+    const conditionCtx = {
+      ...ctx,
+      bindings: conditionBindings,
+    };
     filteredZones = filteredZones.filter((zone) => {
-      return evaluateConditionWithCache(queryCondition, {
-        ...ctx,
-        bindings: {
-          ...ctx.bindings,
-          $zone: zone.id,
-        },
-      });
+      conditionBindings.$zone = zone.id;
+      ctx.resources.resolveRefCache?.invalidateBindings(conditionBindings);
+      return evaluateConditionWithCache(queryCondition, conditionCtx);
     });
   }
 
@@ -597,15 +598,16 @@ function evalNextInOrderByConditionQuery(
   }
 
   const startOffset = query.includeFrom === true ? 0 : 1;
+  const conditionBindings = { ...ctx.bindings };
+  const conditionCtx = {
+    ...ctx,
+    bindings: conditionBindings,
+  };
   for (let offset = 0; offset < sourceOrder.length; offset += 1) {
     const candidate = sourceOrder[normalizeOrderIndex(anchorIndex + startOffset + offset, sourceOrder.length)]!;
-    const matches = evaluateConditionWithCache(query.where, {
-      ...ctx,
-      bindings: {
-        ...ctx.bindings,
-        [query.bind]: candidate,
-      },
-    });
+    conditionBindings[query.bind] = candidate;
+    ctx.resources.resolveRefCache?.invalidateBindings(conditionBindings);
+    const matches = evaluateConditionWithCache(query.where, conditionCtx);
     if (matches) {
       return [candidate];
     }

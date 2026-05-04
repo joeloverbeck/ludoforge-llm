@@ -8,6 +8,10 @@ import {
   resetScoreRowBytecodeCompileCount,
 } from './policy-wasm-score-bytecode-cache.js';
 import {
+  cachedLayoutIdentity,
+  cachedZoneKindCodes,
+} from './policy-wasm-layout-encoding-cache.js';
+import {
   decodePolicyWasmPreviewDriveRows,
   encodePolicyWasmPreviewDriveInput,
   firstUnsupportedPreviewDriveClass,
@@ -236,52 +240,6 @@ const writeBigUint64Array = (words: number[], values: BigUint64Array): void => {
   }
 };
 
-const layoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
-  let hash = 0x811c9dc5;
-  const mix = (value: number): void => {
-    hash ^= value | 0;
-    hash = Math.imul(hash, 0x01000193);
-  };
-  for (const value of [
-    layout.zoneIds.length,
-    layout.playerIds.length,
-    layout.tokenLayout.scalarPropIds.length,
-    layout.varLayout.globalVariableIds.length,
-    layout.varLayout.perPlayerVariableIds.length,
-    layout.varLayout.zoneVariableIds.length,
-    layout.bitsetLayout.globalMarkerWordCount,
-  ]) {
-    mix(value);
-  }
-  for (const zoneId of layout.zoneIds) {
-    const zone = def.zones.find((entry) => String(entry.id) === String(zoneId));
-    mix((zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1);
-  }
-  return hash >>> 1;
-};
-
-const layoutIdentityCache = new WeakMap<EncodedStateLayout, WeakMap<GameDef, number>>();
-
-const cachedLayoutIdentity = (layout: EncodedStateLayout, def: GameDef): number => {
-  const cachedByDef = layoutIdentityCache.get(layout);
-  const cached = cachedByDef?.get(def);
-  if (cached !== undefined) {
-    return cached;
-  }
-  const identity = layoutIdentity(layout, def);
-  if (cachedByDef !== undefined) {
-    cachedByDef.set(def, identity);
-  } else {
-    layoutIdentityCache.set(layout, new WeakMap([[def, identity]]));
-  }
-  return identity;
-};
-
-const zoneKindCode = (def: GameDef, zoneId: string): number => {
-  const zone = def.zones.find((entry) => String(entry.id) === zoneId);
-  return (zone?.zoneKind ?? 'board') === 'aux' ? 2 : 1;
-};
-
 const encodePolicyBytecodeInput = (
   bytecode: PolicyBytecode,
   encoded: EncodedState,
@@ -327,7 +285,7 @@ const encodePolicyBytecodeInput = (
     }
   }
 
-  writeI32Array(words, context.layout.zoneIds.map((zoneId) => zoneKindCode(context.def, String(zoneId))));
+  writeI32Array(words, cachedZoneKindCodes(context.layout, context.def));
   writeI32Array(words, encoded.tokenZone);
   writeI32Array(words, encoded.tokenOccurrenceOffset);
   writeI32Array(words, encoded.tokenOccurrenceCount);

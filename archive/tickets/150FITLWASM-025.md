@@ -1,6 +1,6 @@
 # 150FITLWASM-025: Query/eval and initial-hash residual closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference resolution, initial/full-hash, token-index, and residual encoding work
@@ -153,3 +153,80 @@ still the cleanest residual owner.
 2. Focused tests for the changed generic seam.
 3. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-residual-perf`.
+
+## Outcome
+
+2026-05-04 implementation landed generic prefix-state hashing for repeated
+Zobrist feature-key and decision-stack digest FNV inputs while preserving the
+active WASM score-row and preview-state routes.
+
+- `packages/engine/src/kernel/fnv1a64.ts` now exposes deterministic FNV state
+  continuation helpers. They compute the same canonical FNV-1a value as hashing
+  the full string at once, but allow callers to reuse already-hashed stable
+  prefixes.
+- `packages/engine/src/kernel/zobrist.ts` now reuses the FNV state after the
+  stable `zobrist-key-v1|seed=...|` prefix for feature keys and after the two
+  decision-stack digest salt prefixes. Canonical Zobrist values and frame
+  digests stay unchanged; the existing Zobrist oracle test proves the feature
+  key output against the BigInt FNV oracle.
+
+Measured result:
+
+- Diagnostic pre-change same-seam CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm025-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-residual-profile`
+  — RED, per-card `elapsedMs=2479.19`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=2319`, `zobristKeyCacheHitCount=188266`,
+  `zobristKeyUncachedCount=333`.
+- Final non-CPU same-seam profile:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-prefix-state-final`
+  — RED, per-card `elapsedMs=2375.99`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=2319`, `zobristKeyCacheHitCount=188266`,
+  `zobristKeyUncachedCount=333`.
+- Post-change CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm025-final-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-prefix-state-final-profile`
+  — RED, per-card `elapsedMs=2526.98` with CPU profiling enabled,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Parser command:
+  `node .codex/skills/implement-ticket/scripts/parse-cpuprofile.mjs /tmp/ludoforge-150fitlwasm025-final-profile/CPU.20260504.024826.3.0.001.cpuprofile --targets fnv1a64,fnv1a64FromState,updateFnv1a64State,resolveRef,evalCondition,evalValue,evalQuery,encodePolicyBytecodeInput,buildTokenStateIndex,refreshCachedTokenStateIndexEntries`.
+- Post-change CPU evidence shows the prior `fnv1a64` feature-key bucket moved
+  out of the top residual list. Remaining top residual owners include
+  `resolveRef=188`, `evalCondition=139`, `evalValue=104`, `evalQuery=69`,
+  `encodePolicyBytecodeInput=64`, `refreshCachedTokenStateIndexEntries=51`,
+  `buildTokenStateIndex=16`, and residual `fnv1a64=75` mostly under
+  stable-fingerprint or pre-cached decision-stack digest paths.
+
+Retained candidate classification:
+
+- `owned metric improved`: same-seam per-card wall time moved from diagnostic
+  `2479.19 ms` to final non-CPU `2375.99 ms` while preserving clean active
+  route counters. The result remains red against `<=250 ms`, so no perf gate
+  test was added.
+- `root-cause bucket improved`: post-change CPU parsing shows Zobrist
+  feature-key hashing no longer dominates `fnv1a64`; the retained helper is
+  generic and keyed only by immutable table/salt prefixes.
+- `wall-clock gate still red`: `149FITLEVNUMVM-016` and
+  `149FITLEVNUMVM-022` remain blocked.
+
+Created successor `tickets/150FITLWASM-026.md` for the next non-overlapping
+owner: residual query/eval/reference-resolution, spatial filter evaluation,
+score-row encoding, token-index refresh/build, and remaining hash residuals.
+Tickets `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` remain blocked until that
+or a later successor makes the `<=250 ms` gate truthful.
+
+No-invalidation note: the post-measurement ticket/spec/dependency edits only
+transcribe the measured red result and move successor ownership; they do not
+change code, command semantics, thresholds, or acceptance boundaries.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 60 pnpm -F @ludoforge/engine exec node --test dist/test/unit/zobrist-table.test.js` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-prefix-state-final` — RED as expected for the retained red-gate handoff; per-card `elapsedMs=2375.99`, unsupported counters both `0`.
+- `pnpm run check:ticket-deps` — PASS after creating `tickets/150FITLWASM-026.md` and rewiring dependent tickets.
+- `git diff --check` — PASS.

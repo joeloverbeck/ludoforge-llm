@@ -1,6 +1,6 @@
 import type { GameDef, GameState, ZobristFeature, ZobristSortedKeys, ZobristTable } from './types.js';
 import type { MutableGameState } from './state-draft.js';
-import { fnv1a64 } from './fnv1a64.js';
+import { fnv1a64, fnv1a64FromState, updateFnv1a64State, type Fnv1a64State } from './fnv1a64.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 
 type TokenPlacementFeature = Extract<ZobristFeature, { readonly kind: 'tokenPlacement' }>;
@@ -160,11 +160,14 @@ const canonicalizeHashValue = (value: unknown): string => {
 
 const FRAME_DIGEST_SALT_A = 'decision-stack-frame-v1:a';
 const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
+const FRAME_DIGEST_PREFIX_A = updateFnv1a64State(`${FRAME_DIGEST_SALT_A}|`);
+const FRAME_DIGEST_PREFIX_B = updateFnv1a64State(`${FRAME_DIGEST_SALT_B}|`);
 const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
 const DYNAMIC_FEATURE_KEY_CACHE_LIMIT = 4096;
 const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
 const decisionStackFrameDigestByEncoded = new Map<string, string>();
 const dynamicFeatureKeyCaches = new WeakMap<ZobristTable, Map<string, bigint>>();
+const zobristFeaturePrefixStates = new WeakMap<ZobristTable, Fnv1a64State>();
 let zobristKeyCacheHitCount = 0;
 let zobristKeyCacheMissCount = 0;
 let zobristKeyUncachedCount = 0;
@@ -180,8 +183,8 @@ const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>
     decisionStackFrameDigestCache.set(frame, structurallyCached);
     return structurallyCached;
   }
-  const digestA = fnv1a64(`${FRAME_DIGEST_SALT_A}|${encoded}`).toString(16).padStart(16, '0');
-  const digestB = fnv1a64(`${FRAME_DIGEST_SALT_B}|${encoded}`).toString(16).padStart(16, '0');
+  const digestA = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_A).toString(16).padStart(16, '0');
+  const digestB = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_B).toString(16).padStart(16, '0');
   const digest = `${digestA}:${digestB}`;
   decisionStackFrameDigestCache.set(frame, digest);
   if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
@@ -257,6 +260,19 @@ const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
   }
 };
 
+const getZobristFeaturePrefixState = (table: ZobristTable): Fnv1a64State => {
+  const cached = zobristFeaturePrefixStates.get(table);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const state = updateFnv1a64State(`zobrist-key-v1|seed=${table.seedHex}|`);
+  zobristFeaturePrefixStates.set(table, state);
+  return state;
+};
+
+const hashZobristFeature = (table: ZobristTable, encoded: string): bigint =>
+  fnv1a64FromState(encoded, getZobristFeaturePrefixState(table));
+
 export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint => {
   const encoded = encodeFeature(feature);
   if (!shouldCacheFeatureKey(feature)) {
@@ -271,7 +287,7 @@ export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint
       return cached;
     }
     zobristKeyUncachedCount += 1;
-    const key = fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+    const key = hashZobristFeature(table, encoded);
     if (dynamicCache.size >= DYNAMIC_FEATURE_KEY_CACHE_LIMIT) {
       dynamicCache.clear();
     }
@@ -284,7 +300,7 @@ export const zobristKey = (table: ZobristTable, feature: ZobristFeature): bigint
     return cached;
   }
   zobristKeyCacheMissCount += 1;
-  const key = fnv1a64(`zobrist-key-v1|seed=${table.seedHex}|${encoded}`);
+  const key = hashZobristFeature(table, encoded);
   table.keyCache.set(encoded, key);
   return key;
 };

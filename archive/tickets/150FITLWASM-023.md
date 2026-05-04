@@ -89,7 +89,7 @@ optimization, record exact metrics and create the next non-overlapping owner.
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` only if additional counters are needed
 - focused route/perf witnesses near the changed production seam
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
-- `tickets/150FITLWASM-024.md` if the gate remains red and needs the next
+- `archive/tickets/150FITLWASM-024.md` if the gate remains red and needs the next
   non-overlapping owner
 - this ticket (Outcome before closeout)
 
@@ -208,7 +208,7 @@ Retained candidate classification:
   `2.56 s` versus the `<=250 ms` target, so no perf gate test was added and
   `149FITLEVNUMVM-016` remains blocked.
 
-Created successor `tickets/150FITLWASM-024.md` for the next non-overlapping
+Created successor `archive/tickets/150FITLWASM-024.md` for the next non-overlapping
 owner: initial-state/full-hash, query/eval/reference-resolution, encoding, and
 token-index residual closure. Tickets `149FITLEVNUMVM-016` and
 `149FITLEVNUMVM-022` remain blocked until that or a later successor makes the
@@ -235,7 +235,7 @@ Final proof:
 - `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/zobrist-incremental-tokens.test.js dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js` — PASS.
 - `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
 - `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-token-hash-residual-perf` — RED by threshold, active route clean, per-card `elapsedMs=2557.17` versus `<=250`.
-- `pnpm run check:ticket-deps` — PASS after creating `tickets/150FITLWASM-024.md` and repointing dependent tickets.
+- `pnpm run check:ticket-deps` — PASS after creating `archive/tickets/150FITLWASM-024.md` and repointing dependent tickets.
 
 No-invalidation note: the post-profile ticket/spec/dependency edits transcribe
 the final measured red result and successor ownership only; they did not change

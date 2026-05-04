@@ -13,6 +13,7 @@ import {
   createGameDefRuntime,
   createRng,
   createZobristTable,
+  initialState,
   type EffectAST,
   type GameDef,
   type GameState,
@@ -125,6 +126,26 @@ const makeCtx = (
 describe('zobrist incremental hash — token effect handlers', () => {
   const def = makeDef();
   const table = createZobristTable(def);
+
+  it('seeds the supplied runtime Zobrist table from initial full-hash computation', () => {
+    const setupDef = {
+      ...def,
+      setup: [
+        eff({ createToken: { type: 'card', zone: 'hand:none', props: { suit: 'hearts' } } }),
+        eff({ createToken: { type: 'card', zone: 'discard:none', props: { suit: 'spades' } } }),
+      ],
+    } as unknown as GameDef;
+    const runtime = createGameDefRuntime(setupDef);
+
+    const state = initialState(setupDef, 17, 2, undefined, runtime).state;
+
+    assert.equal(state.stateHash, computeFullHash(runtime.zobristTable, state));
+    assert.equal(state._runningHash, state.stateHash);
+    assert.ok(
+      runtime.zobristTable.keyCache.size > 0,
+      'initial full-hash computation should populate the supplied run-local table cache',
+    );
+  });
 
   describe('moveToken', () => {
     it('updates _runningHash to match full recompute', () => {

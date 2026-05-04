@@ -119,7 +119,7 @@ export const initialState = (
     options?.profiler,
   );
   const withTurnFlow = initializeTurnFlowEligibilityState(validatedDef, stateWithRng);
-  const table = createZobristTable(validatedDef);
+  const table = cachedRuntime?.zobristTable ?? createZobristTable(validatedDef);
 
   const fullHash = computeFullHash(table, withTurnFlow);
   return {

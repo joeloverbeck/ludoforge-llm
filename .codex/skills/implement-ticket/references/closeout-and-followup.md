@@ -157,6 +157,8 @@ For red measured-gate tickets, prefer this terminal-status order unless the acti
 5. Run the final acceptance-proof lanes affected by the code and handoff state.
 6. Set the active ticket's terminal status as the last ticket edit when all lanes are green, classified, or explicitly substituted.
 
+Before patching the active ticket to a terminal status in the same edit that creates or rewrites a successor, ask whether every non-metric final lane has already run against the current code and ticket graph. If not, leave status pending or nonterminal in that patch, run the remaining final lanes, then apply the terminal status as a final narrow ticket edit. If the final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
+
 If a final metric must remain valid after successor/dependency transcription, record explicitly that those edits did not change code, command semantics, thresholds, scope, or acceptance boundaries. If any of those changed, rerun the narrowest affected proof lane.
 
 ## Follow-Up Ticket Creation During Implementation
@@ -166,6 +168,7 @@ When implementation reassessment proves that remaining work belongs in a new or 
 1. inspect active tickets for overlap before creating a new owner; prefer extending an existing active ticket when that is clearer and non-overlapping
 2. read `tickets/README.md` and `tickets/_TEMPLATE.md` when creating a new ticket, unless the repo has an already-current series-local template or established series format that the new ticket must follow
 3. include concrete live evidence, deps, acceptance criteria, architecture/foundations check, and repo-valid verification commands
+   - For profiling or benchmark successors backed by CPU-profile evidence, include a compact profiling evidence block in the successor: `profile command`, `profile artifact path` or explicit ephemeral-artifact note, `parser command` or parser method, baseline/current metric, top owners or residual stack samples, and why this successor is non-overlapping with the completed active slice.
 4. update the active ticket, sibling tickets, and deps/status fields so the series tells one ownership story
 5. run the narrowest available ticket-dependency or markdown integrity check immediately after the rewrite when the repo provides one
 6. include the new untracked ticket in the final dirty-state delta and touched-file scope sweep

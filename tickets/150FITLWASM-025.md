@@ -1,37 +1,45 @@
-# 150FITLWASM-024: Initial full-hash and query/eval residual closure
+# 150FITLWASM-025: Query/eval and initial-hash residual closure
 
 **Status**: PENDING
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — generic initial/full-hash, query/eval/reference resolution, token-index, and residual encoding work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-023.md`
+**Engine Changes**: Yes — generic query/eval/reference resolution, initial/full-hash, token-index, and residual encoding work
+**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-024.md`
 
 ## Problem
 
-Ticket `150FITLWASM-023` preserved fail-closed-clean production WASM score-row
-and preview-state routes while landing apply-move token-placement hash deferral
-for reconciled move boundaries. The same-seam gate is still red:
+Ticket `150FITLWASM-024` preserved fail-closed-clean production WASM score-row
+and preview-state routes while landing run-local initial full-hash Zobrist table
+cache reuse. The same-seam gate is still red:
 
 - Command:
-  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-token-hash-residual-perf`.
-- Post-023 final result: RED, per-card `elapsedMs=2557.17` versus `<=250 ms`.
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-initial-full-hash-query-eval-residual-perf`.
+- Post-024 final result: RED, per-card `elapsedMs=2467.29` versus `<=250 ms`.
 - Active route remained clean:
   `wasmScoreRowUnsupportedCount=0` and
   `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
 - The retained root counter improved:
-  `zobristKeyCacheMissCount=3717 -> 2837`.
-- Post-023 CPU evidence shows residual owners in initial-state/full-hash
-  token-placement hashing, decision-stack frame digests, `resolveRef`,
-  `evalCondition`, `evalValue`, `evalQuery`, `encodePolicyBytecodeInput`, and
-  token-index refresh.
+  `zobristKeyCacheMissCount=2837 -> 2319`.
+- Post-024 CPU evidence still shows residual owners in initial-state/full-hash
+  token-placement hashing, `resolveRef`, `evalCondition`, `evalValue`,
+  `evalQuery`, `encodePolicyBytecodeInput`, and token-index refresh/build work.
+
+Profile evidence handoff from ticket `150FITLWASM-024`:
+
+- Profile artifact: `/tmp/ludoforge-150fitlwasm024-runtime-table-profile/CPU.20260504.020911.3.0.001.cpuprofile` (ephemeral).
+- Parser command:
+  `node .codex/skills/implement-ticket/scripts/parse-cpuprofile.mjs /tmp/ludoforge-150fitlwasm024-runtime-table-profile/CPU.20260504.020911.3.0.001.cpuprofile --targets fnv1a64,resolveRef,evalCondition,evalValue,evalQuery,encodePolicyBytecodeInput,buildTokenStateIndex,refreshTokenStateIndex`.
+- Baseline/current metric: baseline same-seam per-card `elapsedMs=2441.04`, final same-seam per-card `elapsedMs=2467.29`; the retained root counter improved `zobristKeyCacheMissCount=2837 -> 2319`.
+- Top residual owners in the retained profile: `fnv1a64=442`, `resolveRef=159`, `evalCondition=129`, `evalValue=93`, `evalQuery=80`, `encodePolicyBytecodeInput=58`, `buildTokenStateIndex=21`, `refreshTokenStateIndex=0` self samples.
+- Non-overlap rationale: ticket `150FITLWASM-024` kept only run-local initial full-hash Zobrist table reuse; this ticket owns the remaining query/eval/reference-resolution, initial/full-hash token-placement, token-index, and encoding residuals without reverting that cache-reuse slice.
 
 ## Assumption Reassessment (2026-05-04)
 
 1. Production WASM score-row and preview-state routes are active and
    fail-closed-clean; this ticket must preserve those diagnostics.
-2. Ticket `150FITLWASM-023` removed redundant apply-move token-placement hash
-   work from reconciled move scopes, but the decisive same-seam wall time
-   remains around `2.56 s`.
+2. Ticket `150FITLWASM-024` moved initial full-hash key population onto the
+   run-local runtime Zobrist table, reducing later cache misses, but the
+   decisive wall-clock gate remained around `2.47 s`.
 3. The `<=250 ms` target is unchanged. Ticket `149FITLEVNUMVM-016` remains
    blocked until this or a later successor makes the gate truthful.
 
@@ -39,8 +47,8 @@ for reconciled move boundaries. The same-seam gate is still red:
 
 1. Keep the implementation generic: no FITL-specific ids, schemas, branches,
    card names, action names, or hardcoded score behavior.
-2. Preserve Foundation 8 determinism. Any full-hash shortcut, digest cache,
-   query/eval cache, token-index change, or encoding shortcut must be keyed by
+2. Preserve Foundation 8 determinism. Any query/eval cache, lowered evaluator,
+   full-hash shortcut, token-index change, or encoding shortcut must be keyed by
    every semantic input and must not depend on ambient process state.
 3. Preserve Foundation 11 immutability. Mutable preview/apply/index/cache state
    must remain private and must not alias caller-visible state.
@@ -49,12 +57,11 @@ for reconciled move boundaries. The same-seam gate is still red:
 
 ## What to Change
 
-### 1. Profile the post-023 residual
+### 1. Profile the post-024 residual
 
 Use the same-seam harness and CPU-profile parser to separate:
 
 - initial-state/full-hash token-placement hashing;
-- decision-stack frame digest hashing;
 - query/eval/reference resolution;
 - token-index refresh/build work;
 - residual score-row input/batch encoding.
@@ -64,11 +71,10 @@ Use the same-seam harness and CPU-profile parser to separate:
 Move the largest proven generic residual out of the active route. Plausible
 directions include:
 
-- a deterministic initial-state/full-hash strategy that avoids redundant
-  token-placement FNV work without changing canonical hash values;
-- a generic decision-frame digest shortcut keyed by immutable frame structure;
 - a generic query/eval or reference-resolution cache/lowering path for repeated
   filter shapes on immutable state;
+- a deterministic initial/full-hash strategy that avoids repeated
+  token-placement FNV work without changing canonical hash values;
 - reducing token-index refresh/build work without weakening copy-on-write
   lifetime guarantees;
 - further score-row input/batch encoding reduction only if profiling proves it
@@ -118,7 +124,7 @@ still the cleanest residual owner.
 1. Active route remains fail-closed-clean:
    `wasmScoreRowUnsupportedCount=0` and
    `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
-2. Focused tests prove any full-hash, decision-frame digest, query/eval,
+2. Focused tests prove any full-hash, query/eval, reference-resolution,
    token-index, cache, or encoding change preserves deterministic semantics and
    does not call the TypeScript preview driver for supported preview-state
    feature rows.
@@ -146,4 +152,4 @@ still the cleanest residual owner.
 1. `pnpm -F @ludoforge/engine build`.
 2. Focused tests for the changed generic seam.
 3. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
-4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-initial-full-hash-query-eval-residual-perf`.
+4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-initial-hash-residual-perf`.

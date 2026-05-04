@@ -4,11 +4,11 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (potentially)
-**Deps**: `archive/tickets/154POLBCDISP-001.md`, `tickets/154POLBCDISP-002.md`
+**Deps**: `archive/tickets/154POLBCDISP-001.md`, `archive/tickets/154POLBCDISP-002.md`
 
 ## Problem
 
-PR #239 commit `beb3c3993` added explicit `resolveVmFallbackFeature` handlers for `candidateFeature` (`policy-evaluation-core.ts:701-710`), `stateFeature` (lines 712-721), and `candidateAggregate` (lines 723-732), plus the `findLibraryRef` helper (lines 795-806). With the safety net from `archive/tickets/154POLBCDISP-001.md` and the registry + enumeration test from `tickets/154POLBCDISP-002.md` in place, those handlers become a duplicated fast-path: any unhandled library-ref kind would fall through to the safety-net catch and dispatch to the direct evaluator, which resolves the same library refs via the IR.
+PR #239 commit `beb3c3993` added explicit `resolveVmFallbackFeature` handlers for `candidateFeature` (`policy-evaluation-core.ts:701-710`), `stateFeature` (lines 712-721), and `candidateAggregate` (lines 723-732), plus the `findLibraryRef` helper (lines 795-806). With the safety net from `archive/tickets/154POLBCDISP-001.md` and the registry + enumeration test from `archive/tickets/154POLBCDISP-002.md` in place, those handlers become a duplicated fast-path: any unhandled library-ref kind would fall through to the safety-net catch and dispatch to the direct evaluator, which resolves the same library refs via the IR.
 
 Two valid resolutions exist (per spec §D3):
 
@@ -23,13 +23,13 @@ The choice depends on a perf measurement against the per-card gate (`test/perf/a
 
 1. The three explicit handlers and `findLibraryRef` exist as cited at `packages/engine/src/agents/policy-evaluation-core.ts:701-732` and `:795-806`. Verified via direct read in the reassess-spec session.
 2. `archive/tickets/154POLBCDISP-001.md` is sequenced first; the safety-net try/catch must be in place before the perf measurement, otherwise the "delete" arm of the experiment would crash on any unhandled kind that reaches the fallback default. The hot-fix's three handlers also currently mask any latent silent gap in the four `findLibraryRef` accepted refKinds — the safety net is the architectural prerequisite.
-3. `tickets/154POLBCDISP-002.md` is sequenced before this ticket so the architectural-invariant test runs against either the keep or delete state and continues to pass — neither arm should regress the dispatch-completeness contract.
+3. `archive/tickets/154POLBCDISP-002.md` is sequenced before this ticket so the architectural-invariant test runs against either the keep or delete state and continues to pass — neither arm should regress the dispatch-completeness contract.
 4. `findLibraryRef`'s type signature accepts `'candidateFeature' | 'stateFeature' | 'previewStateFeature' | 'aggregate'`. Today no caller passes `'previewStateFeature'` (`featureRefForCompiledPolicyRef` does not emit it — `library:previewStateFeature` refs fall through to `dynamicRef` at `feature-table.ts:249-254`). If "delete" is chosen, `findLibraryRef` and the three case bodies all go together; the `previewStateFeature` slot in the type signature is dead code and disappears with the helper.
 5. The recalibration of `fitl-per-card-cost.perf.test.ts` is NOT a deliverable of this spec or this namespace — it lives in PR #239's follow-up trail. Treat its landing as an external precondition, not a sibling ticket.
 
 ## Architecture Check
 
-1. Both arms preserve the architectural invariant from `archive/tickets/154POLBCDISP-001.md` and `tickets/154POLBCDISP-002.md`: every emitter-produced kind resolves either via the VM, an explicit JS-fallback handler, or the safety-net catch + direct evaluator. The choice between arms is a perf-vs-simplicity tradeoff inside that envelope, not a contract change.
+1. Both arms preserve the architectural invariant from `archive/tickets/154POLBCDISP-001.md` and `archive/tickets/154POLBCDISP-002.md`: every emitter-produced kind resolves either via the VM, an explicit JS-fallback handler, or the safety-net catch + direct evaluator. The choice between arms is a perf-vs-simplicity tradeoff inside that envelope, not a contract change.
 2. Foundation 14 compliance is automatic: whichever arm is chosen, the change is in-place (delete dead code, or keep it as documented fast-path). No `_legacy` shim, no toggle, no rollout switch.
 3. Engine-agnostic: `policy-evaluation-core.ts` is part of the universal interpreter; no game-specific identifiers introduced or referenced.
 4. The decision criterion is concrete and measurement-driven: if "delete" regresses the recalibrated per-card gate by ≤5% over "keep", prefer "delete" for architectural simplicity; otherwise keep the fast-paths. Document the measurement evidence in the implementing PR's commit body — that record is itself the architectural artifact (Foundation 13: artifact identity).
@@ -38,7 +38,7 @@ The choice depends on a perf measurement against the per-card gate (`test/perf/a
 
 ### 1. Confirm preconditions
 
-- Verify `archive/tickets/154POLBCDISP-001.md` and `tickets/154POLBCDISP-002.md` are landed and the architectural-invariant test passes.
+- Verify `archive/tickets/154POLBCDISP-001.md` and `archive/tickets/154POLBCDISP-002.md` are landed and the architectural-invariant test passes.
 - Verify PR #239's perf-gate recalibration has landed (`PHASE4_RESET_CEILING_MS` in `test/perf/agents/fitl-per-card-cost.perf.test.ts` reflects the post-fix ceiling, not the buggy 1800 ms baseline).
 
 ### 2. Run the perf measurement
@@ -80,7 +80,7 @@ In the implementing PR's commit body (or a co-located `reports/154POLBCDISP-003-
 - Recalibrating `fitl-per-card-cost.perf.test.ts` ceiling — that's PR #239's follow-up trail, not this ticket. This ticket consumes the recalibrated ceiling, does not produce it.
 - Recalibrating `preview-pipeline.perf.test.ts` corpus parameters — same external trail.
 - Adding native VM handlers for `candidateFeature` / `stateFeature` / `candidateAggregate` (rejected in spec Brainstorm Context — wrong layer).
-- Any change to the `FEATURE_REF_KINDS` registry or the architectural-invariant test from `tickets/154POLBCDISP-002.md` — both arms must keep that test passing without modification.
+- Any change to the `FEATURE_REF_KINDS` registry or the architectural-invariant test from `archive/tickets/154POLBCDISP-002.md` — both arms must keep that test passing without modification.
 - Any change to the safety-net catch from `archive/tickets/154POLBCDISP-001.md` — that contract is fixed regardless of which arm wins.
 
 ## Acceptance Criteria
@@ -88,14 +88,14 @@ In the implementing PR's commit body (or a co-located `reports/154POLBCDISP-003-
 ### Tests That Must Pass
 
 1. The recalibrated `fitl-per-card-cost.perf.test.ts` passes after applying the winning resolution.
-2. `policy-bytecode-fallback-completeness.test.ts` (from `tickets/154POLBCDISP-002.md`) passes — the architectural-invariant holds under either arm.
+2. `policy-bytecode-fallback-completeness.test.ts` (from `archive/tickets/154POLBCDISP-002.md`) passes — the architectural-invariant holds under either arm.
 3. `policy-bytecode-equivalence.test.ts` continues to pass — the equivalence assertion does not depend on which arm is chosen (both produce the same values via different paths).
 4. Full engine suite passes: `pnpm -F @ludoforge/engine test`.
 5. `slow-parity-shard-b` and `test:performance` lanes stay green.
 
 ### Invariants
 
-1. The dispatch contract from `tickets/154POLBCDISP-002.md` continues to hold: every emitter-produced `FeatureRef.kind` resolves without silent `undefined` from `evaluateCompiledExprWithVm`.
+1. The dispatch contract from `archive/tickets/154POLBCDISP-002.md` continues to hold: every emitter-produced `FeatureRef.kind` resolves without silent `undefined` from `evaluateCompiledExprWithVm`.
 2. Replay parity is preserved across the change: same `(GameDef, initial state, seed, actions)` produces an identical canonical state hash before and after, regardless of which arm is chosen.
 3. Measurement evidence is recorded — either in the implementing PR's commit body or in a checked-in measurement report. The decision must be auditable.
 
@@ -103,7 +103,7 @@ In the implementing PR's commit body (or a co-located `reports/154POLBCDISP-003-
 
 ### New/Modified Tests
 
-No new tests in this ticket. The architectural-invariant test from `tickets/154POLBCDISP-002.md` is the structural gate; this ticket adjusts the implementation under that invariant based on a perf measurement.
+No new tests in this ticket. The architectural-invariant test from `archive/tickets/154POLBCDISP-002.md` is the structural gate; this ticket adjusts the implementation under that invariant based on a perf measurement.
 
 ### Commands
 

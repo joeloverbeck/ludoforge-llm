@@ -230,7 +230,7 @@ export interface FeatureRef {
 }
 ```
 
-`featureRefForCompiledPolicyRef` (`packages/engine/src/cnl/policy-bytecode/feature-table.ts:187`) already produces only these 18 kinds; the narrower type assignment is a no-op for the emitter except that future emitter changes that introduce a new kind without registering it now fail to type-check at the construction site. The two consumers downstream (`resolveBuiltInFeature` in `vm.ts` and `resolveVmFallbackFeature` in `policy-evaluation-core.ts`) keep their existing switch shapes; adding a new kind to the registry would not by itself break their compilation, but the new test in D4b will fail until the kind is covered by one of the resolution paths.
+`featureRefForCompiledPolicyRef` (`packages/engine/src/cnl/policy-bytecode/feature-table.ts:187`) already produces only these 19 kinds; the narrower type assignment is a no-op for the emitter except that future emitter changes that introduce a new kind without registering it now fail to type-check at the construction site. The two consumers downstream (`resolveBuiltInFeature` in `vm.ts` and `resolveVmFallbackFeature` in `policy-evaluation-core.ts`) keep their existing switch shapes; adding a new kind to the registry would not by itself break their compilation, but the new test in D4b will fail until the kind is covered by one of the resolution paths.
 
 #### D4b. Enumeration test
 
@@ -277,7 +277,7 @@ These are NOT deliverables of Spec 154. They are PR #239 follow-up work and have
 ## Acceptance Criteria
 
 1. **Defensive throw + try/catch in place**. `resolveVmFallbackFeature`'s `default:` branch throws `PolicyBytecodeVmUnsupportedError`. `evaluateCompiledExprWithVm` catches it and dispatches to `evaluateCompiledExprDirect`. Verified by reading the diff.
-2. **`FeatureRefKind` registry in place**. `packages/engine/src/cnl/policy-bytecode/types.ts` exports `FEATURE_REF_KINDS` (const-array of the 18 emitter-produced kinds) and `FeatureRefKind` (union derived from it); `FeatureRef.kind` is typed as `FeatureRefKind`. The whole engine package type-checks (`pnpm -F @ludoforge/engine typecheck`) without changes to the emitter or VM dispatch sites.
+2. **`FeatureRefKind` registry in place**. `packages/engine/src/cnl/policy-bytecode/types.ts` exports `FEATURE_REF_KINDS` (const-array of the 19 emitter-produced kinds) and `FeatureRefKind` (union derived from it); `FeatureRef.kind` is typed as `FeatureRefKind`. The whole engine package type-checks (`pnpm -F @ludoforge/engine typecheck`) without changes to the emitter or VM dispatch sites.
 3. **Enumeration test passes**. `policy-bytecode-fallback-completeness.test.ts` runs in `pnpm -F @ludoforge/engine test:unit` and passes for every kind in `FEATURE_REF_KINDS`. The `KINDS_PRODUCED_BY_EMITTER satisfies readonly FeatureRefKind[]` clause type-checks; the test file declares `// @test-class: architectural-invariant`.
 4. **No regression on the original CI lanes**. `slow-parity-shard-b`, `test:performance`, and the engine default test lane stay green. Run locally.
 5. **`policy-bytecode-equivalence.test.ts` continues to pass.** The existing equivalence test should not require changes — both sides of the test go through the same evaluator path (post-Spec-149), and that path now resolves library refs through the safety net rather than the silent gap.
@@ -314,5 +314,5 @@ Proposed namespace: `154POLBCDISP` (POLicy ByteCode DISPatch). Anticipated decom
 Decomposed via `/spec-to-tickets` on 2026-05-04:
 
 - [`archive/tickets/154POLBCDISP-001.md`](../archive/tickets/154POLBCDISP-001.md) — Restore policy-bytecode safety-net fallback (covers D1 + D2)
-- [`tickets/154POLBCDISP-002.md`](../tickets/154POLBCDISP-002.md) — Promote FeatureRef.kind into a typed registry + add enumeration completeness test (covers D4)
+- [`archive/tickets/154POLBCDISP-002.md`](../archive/tickets/154POLBCDISP-002.md) — Promote FeatureRef.kind into a typed registry + add enumeration completeness test (covers D4)
 - [`tickets/154POLBCDISP-003.md`](../tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3, deferred-execution)

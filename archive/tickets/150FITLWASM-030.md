@@ -1,6 +1,6 @@
 # 150FITLWASM-030: Query/eval, hash, token-index, and GC red-gate residual closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference-resolution, token-index, hash/canonicalization, and allocation/GC residual work
@@ -182,3 +182,83 @@ separable.
 2. Focused tests for the changed generic seam.
 3. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-hash-token-index-gc-residual-perf`.
+
+## Outcome
+
+Completed on 2026-05-04 with the same-seam perf gate still red and successor
+owner `tickets/150FITLWASM-031.md`.
+
+This ticket landed a generic spatial/query allocation reduction for the active
+same-seam route:
+
+- `packages/engine/src/kernel/spatial.ts` now uses parallel zone/depth queues in
+  `queryConnectedZones` instead of allocating one object per queued BFS entry.
+- `packages/engine/src/kernel/eval-condition.ts` now evaluates `connected`
+  conditions through `isZoneConnected`, a boolean traversal that stops when the
+  target is found instead of materializing the full connected-zone list.
+- `packages/engine/src/kernel/eval-query.ts` no longer allocates an empty
+  traversal-options object for default `connectedZones` queries.
+
+Measured diagnostic results before final proof:
+
+- Current baseline:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-030-current-baseline`
+  — RED, per-card `elapsedMs=2645.73` versus `<=250`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `wasmProductionPreviewDriveBatchCount=232`.
+- Retained spatial queue probe:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-030-spatial-queue-probe`
+  — RED, route clean, per-card `elapsedMs=1937.89`.
+- Retained connected-condition probe:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-030-connected-condition-probe`
+  — RED, route clean, per-card `elapsedMs=1810.51`.
+- Retained helper-cleanup probe:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-030-connected-helper-probe`
+  — RED, route clean, per-card `elapsedMs=1881.14`.
+- Decisive final same-seam metric:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-030-final`
+  — RED, per-card `elapsedMs=1910.21` versus `<=250`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `wasmProductionPreviewDriveBatchCount=232`.
+- CPU profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm030-after-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-030-after-profile`
+  — RED, per-card `elapsedMs=1864.6` with CPU profiling enabled, active-route
+  unsupported counters both `0`.
+- Parser command:
+  `node .codex/skills/implement-ticket/scripts/parse-cpuprofile.mjs /tmp/ludoforge-150fitlwasm030-after-profile/CPU.20260504.082542.3.0.001.cpuprofile --targets resolveRef,evalCondition,evalValue,evalQuery,encodePolicyBytecodeInput,encodeBatchInput,getEncodedBatchCandidateWords,buildTokenStateIndex,refreshCachedTokenStateIndexEntries,queryConnectedZones,isZoneConnected,canonicalizeHashValue,fnv1a64FromState,updateFnv1a64State,canonicalizeFingerprintValue,normalizeMoveBinding,createMemoKey,evalMapSpacesQuery,validateKnownZone,matchesTokenFilterExprInContext,filterTokensByExprInContext,applyZonesFilter,evalTokensInMapSpacesQuery,resolveBindingTemplate,getCachedContextEntries,setCachedContextEntries,bindingsVersionFor`.
+- Remaining CPU evidence after the retained slice: `resolveRef=139`,
+  `evalCondition=106`, `evalValue=75`, `evalQuery=44`,
+  `refreshCachedTokenStateIndexEntries=48`, `buildTokenStateIndex=17`,
+  `canonicalizeHashValue=57`, `updateFnv1a64State=50`,
+  `fnv1a64FromState=29`, `canonicalizeFingerprintValue=22`, and high GC
+  samples. Encoding remains small (`encodePolicyBytecodeInput=10`,
+  `encodeBatchInput=6`).
+
+The gate remains red against `<=250 ms`, so the non-overlapping successor owner
+is `tickets/150FITLWASM-031.md`.
+
+Source-size ledger:
+
+- `packages/engine/src/kernel/spatial.ts`: remains within repo guidance after
+  the new generic traversal helper (`354` lines).
+- `packages/engine/src/kernel/eval-condition.ts`: remains within repo guidance
+  (`248` lines).
+- `packages/engine/src/kernel/eval-query.ts`: preexisting oversize file
+  (`1087` lines); active change is a one-line default-options allocation
+  cleanup in the ticket-named query path. Extracting broader query logic would
+  widen this performance slice, so no extraction was attempted here.
+
+Ticket/spec graph edits are ownership handoff only; they do not change code,
+command semantics, thresholds, or acceptance boundaries for the measured route.
+The terminal status edit transcribes the already-run final proof and does not
+invalidate the final proof lanes.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/spatial-queries.test.js dist/test/unit/spatial-conditions.test.js dist/test/unit/eval-query.test.js dist/test/integration/spatial-kernel-integration.test.js dist/test/integration/compiled-condition-equivalence.test.js`
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-030-final` — RED, route clean, per-card `elapsedMs=1910.21`.
+- `pnpm run check:ticket-deps`

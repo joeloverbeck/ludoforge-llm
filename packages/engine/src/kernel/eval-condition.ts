@@ -6,7 +6,7 @@ import { evalValue } from './eval-value.js';
 import { emitConditionTrace } from './execution-collector.js';
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveMapSpaceId, resolveSingleZoneSel } from './resolve-selectors.js';
-import { queryConnectedZones } from './spatial.js';
+import { isZoneConnected } from './spatial.js';
 import { isSpaceMarkerStateAllowed, resolveSpaceMarkerShift } from './space-marker-rules.js';
 import { matchesMembership } from './query-predicate.js';
 import type { ConditionAST, ConditionTraceEntry, EffectTraceProvenance, ScalarArrayValue, ScalarValue } from './types.js';
@@ -108,11 +108,14 @@ export function evalCondition(cond: ConditionAST, ctx: ReadContext): boolean {
     case 'connected': {
       const fromZoneId = resolveSingleZoneSel(cond.from, ctx);
       const toZoneId = resolveSingleZoneSel(cond.to, ctx);
-      const reachableZones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, fromZoneId, ctx, cond.via, {
-        ...(cond.allowTargetOutsideVia === undefined ? {} : { allowTargetOutsideVia: cond.allowTargetOutsideVia }),
-        ...(cond.maxDepth === undefined ? {} : { maxDepth: cond.maxDepth }),
-      });
-      return reachableZones.includes(toZoneId);
+      const options =
+        cond.allowTargetOutsideVia === undefined && cond.maxDepth === undefined
+          ? undefined
+          : {
+              ...(cond.allowTargetOutsideVia === undefined ? {} : { allowTargetOutsideVia: cond.allowTargetOutsideVia }),
+              ...(cond.maxDepth === undefined ? {} : { maxDepth: cond.maxDepth }),
+            };
+      return isZoneConnected(ctx.adjacencyGraph, ctx.state, fromZoneId, toZoneId, ctx, cond.via, options);
     }
 
     case 'zonePropIncludes': {

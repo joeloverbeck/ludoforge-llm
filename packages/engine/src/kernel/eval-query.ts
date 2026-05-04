@@ -996,9 +996,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
               ...(query.allowTargetOutsideVia === undefined ? {} : { allowTargetOutsideVia: query.allowTargetOutsideVia }),
               ...(query.maxDepth === undefined ? {} : { maxDepth: query.maxDepth }),
             };
-      const zones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, zoneId, ctx, query.via, {
-        ...options,
-      });
+      const zones = queryConnectedZones(ctx.adjacencyGraph, ctx.state, zoneId, ctx, query.via, options);
       assertWithinBounds(zones.length, query, maxQueryResults);
       return zones;
     }

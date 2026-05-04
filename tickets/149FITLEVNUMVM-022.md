@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-030.md`
+**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-031.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-030.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-031.md`
 
 ## Problem
 
@@ -156,6 +156,9 @@ post-review, landed static binding-name shortcuts, token-index scan allocation
 reduction, and a versioned per-context `resolveRef` cache, kept the active
 route clean, produced a diagnostic per-card `elapsedMs=1891.88`, and left the
 decisive final same-seam gate red at per-card `elapsedMs=2046.48` versus
-`<=250`. The active successor owner moved to
-`tickets/150FITLWASM-030.md` for remaining query/eval/reference-resolution,
-token-index, hash/canonicalization, and allocation/GC residual closure.
+`<=250`. Ticket `150FITLWASM-030` landed connected-zone queue allocation and
+boolean connected-condition traversal reductions, kept the active route clean,
+and left the decisive final same-seam gate red at per-card `elapsedMs=1910.21`
+versus `<=250`. The active successor owner moved to
+`tickets/150FITLWASM-031.md` for remaining reference/eval, token-index,
+hash/canonicalization, and allocation/GC residual closure.

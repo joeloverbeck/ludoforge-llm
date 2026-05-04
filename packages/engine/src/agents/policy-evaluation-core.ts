@@ -14,7 +14,7 @@ import {
   compilePolicyBytecode,
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
-import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
+import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AgentPreviewCompletionPolicy,
   AttributeValue,
@@ -698,6 +698,39 @@ export class PolicyEvaluationContext {
         }
         break;
       }
+      case 'candidateFeature': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined || candidate === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'candidateFeature', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateCandidateFeature(candidate, libRef.id);
+        }
+        break;
+      }
+      case 'stateFeature': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'stateFeature', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateStateFeature(libRef.id);
+        }
+        break;
+      }
+      case 'candidateAggregate': {
+        const idCode = ref.aux[0];
+        if (idCode === undefined) {
+          return undefined;
+        }
+        const libRef = this.findLibraryRef(expr, 'aggregate', idCode);
+        if (libRef !== undefined) {
+          return this.evaluateAggregate(libRef.id);
+        }
+        break;
+      }
       case 'candidateTags':
         return candidate === undefined ? undefined : this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
       case 'adjacentTokenAgg':
@@ -757,6 +790,19 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return this.collectCompiledPolicyExprs(expr).find((candidate) => stablePayloadCode(candidate) === payloadCode);
+  }
+
+  private findLibraryRef(
+    expr: CompiledPolicyExpr,
+    refKind: 'candidateFeature' | 'stateFeature' | 'previewStateFeature' | 'aggregate',
+    idCode: number,
+  ): Extract<CompiledAgentPolicyRef, { readonly kind: 'library' }> | undefined {
+    for (const ref of this.collectAgentPolicyRefs(expr)) {
+      if (ref.kind === 'library' && ref.refKind === refKind && stableStringCode(ref.id) === idCode) {
+        return ref;
+      }
+    }
+    return undefined;
   }
 
   private collectCompiledPolicyExprs(expr: CompiledPolicyExpr): readonly CompiledPolicyExpr[] {

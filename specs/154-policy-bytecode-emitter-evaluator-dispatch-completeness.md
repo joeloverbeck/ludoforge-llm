@@ -4,10 +4,10 @@
 **Priority**: P2 (medium — closes a recurring CI break shape introduced by Spec 149's F14 cut; modest scope; very high signal-to-noise — the bug class silently corrupts agent scores until a downstream test happens to notice)
 **Complexity**: S (one defensive throw, one try/catch fallback, one enumeration test; ~30 lines + a focused unit test)
 **Dependencies**:
-- Foundation 8 (Determinism Is Sacred) — agent scores are part of the deterministic trajectory; silent zero-scores violate replay parity by trajectory shift.
+- Spec 149 [fitl-evolution-readiness-numeric-substrate-bytecode-vm] (DRAFT in `specs/`) — its Phase 4 F14 cut at commit `5628cd41f` (`Implemented 149FITLEVNUMVM-016`) deleted the closure-tree fallback and replaced it with `requiresDirectLiteralSemantics`, creating the silent dispatch gap this spec closes. The architectural shape proposed here (try/catch + direct-evaluator fallback) replaces Spec 149's deleted closure-tree-as-safety-net with an equivalent post-F14 mechanism.
 - Foundation 14 (No Backwards Compatibility) — the fix replaces `default: return undefined` with a defensive throw; no compatibility shim. Direct evaluator already exists as the in-tree fallback.
 - Foundation 15 (Architectural Completeness) — the bytecode emitter and evaluator are paired contracts; this spec closes the gap that allowed them to drift silently.
-- Foundation 16 (Testing as Proof) — the gap was caught only by a downstream test asserting `captures.length > 0`. A direct enumeration test should be the proof.
+- Foundation 16 (Testing as Proof) — the gap was caught only by a downstream test asserting `captures.length > 0`. A direct enumeration test, type-checked against an exported `FeatureRefKind` union, should be the proof.
 
 **Source**:
 - PR #239 commit `beb3c3993` `fix(agents): restore library-ref evaluation in policy bytecode VM fallback`. Surgical patch added explicit handlers in `resolveVmFallbackFeature` for `candidateFeature`, `stateFeature`, `candidateAggregate` — the three feature kinds the bytecode emitter (`featureRefForCompiledPolicyRef` in `packages/engine/src/cnl/policy-bytecode/feature-table.ts`) emits for `library:*` refs that the JS-side fallback (`resolveVmFallbackFeature` in `packages/engine/src/agents/policy-evaluation-core.ts`) was silently swallowing via a `default: return undefined` branch.
@@ -51,11 +51,13 @@ This pair re-establishes the closure-tree-equivalent semantics: the bytecode VM 
    - `resolveVmFallbackFeature`'s `default:` becomes a defensive throw.
    - `evaluateCompiledExprWithVm` wraps the `executeBytecode` call in a try/catch that falls back to `evaluateCompiledExprDirect` on `PolicyBytecodeVmUnsupportedError`.
 
-2. **Remove the now-redundant explicit handlers** added in PR #239 commit `beb3c3993` for `candidateFeature` / `stateFeature` / `candidateAggregate`. With the safety net in place, the direct evaluator handles these kinds via the IR, so the explicit fallback handlers (which look up the library ref by stable string code in the surrounding expr) become a duplicated path. Keeping both is safe but redundant; deleting them simplifies the dispatch table to "VM handles known-fast kinds; direct evaluator handles everything else."
+2. **Defer the explicit-handler delete-vs-keep decision to a follow-on ticket.** With the safety net (Deliverable 1) in place, the explicit handlers for `candidateFeature` / `stateFeature` / `candidateAggregate` added in PR #239 commit `beb3c3993` become a duplicated fast-path: keeping both is safe but redundant; deleting them simplifies the dispatch table to "VM handles known-fast kinds; direct evaluator handles everything else." Choosing between the two requires perf measurement against the recalibrated per-card gate (see D5), which is sequencing-coupled to PR #239's pending follow-up. Rather than block this spec on that measurement, the safety-net architecture ships first (Deliverables 1 + 3); the explicit-handler decision becomes its own follow-on ticket once the safety net is stable and perf gates are recalibrated.
 
-   Decision deferred to implementation: keep the explicit handlers for measurable perf benefit (avoids re-running the whole expression through the direct evaluator) OR delete them for architectural simplicity. The audit step (D3) measures the perf delta to decide.
+3. **Promote the dispatch contract into a typed registry, then add a direct enumeration test against it.** Two coupled changes:
+   - In `packages/engine/src/cnl/policy-bytecode/types.ts`, introduce an exported `FEATURE_REF_KINDS` const-array and a `FeatureRefKind = (typeof FEATURE_REF_KINDS)[number]` union, and narrow `FeatureRef.kind` from `string` to `FeatureRefKind`. This turns the dispatch contract into a compile-time-checkable surface: a future emitter change that adds a new kind without registering it fails to type-check at the emitter site.
+   - Add a direct enumeration test that asserts every kind in the registry resolves to a non-undefined value (or a documented-undefined value with explicit reason) in `evaluateCompiledExprWithVm` against a representative encoded state. The test's `KINDS_PRODUCED_BY_EMITTER satisfies readonly FeatureRefKind[]` clause type-checks the test against the registry; any new kind added to the registry that isn't covered by the test fails to compile.
 
-3. **Add a direct enumeration test** that asserts every output kind of `featureRefForCompiledPolicyRef` resolves to a non-undefined value (or a documented-undefined value with explicit reason) in `evaluateCompiledExprWithVm` against a representative encoded state. This is the F#16 "Testing as Proof" close: the bug manifests as `undefined`-from-VM; the test asserts the absence of that manifestation directly rather than relying on downstream agents to notice.
+   This is the F#16 "Testing as Proof" close: the bug manifests as `undefined`-from-VM; the test asserts the absence of that manifestation directly rather than relying on downstream agents to notice.
 
 **Alternatives explicitly considered (and rejected)**.
 
@@ -64,7 +66,7 @@ This pair re-establishes the closure-tree-equivalent semantics: the bytecode VM 
 - **Keep the explicit handlers from `beb3c3993` as the only fix and skip the safety net**. Closes the three known cases but leaves the silent-undefined trap waiting for the next emitter change. Treats the symptom rather than the class. Rejected — F#15 calls for the architectural close.
 - **Delete `requiresDirectLiteralSemantics` entirely; route everything through the bytecode VM with the safety-net fallback**. Simplifies the dispatch decision. Tempting, but `requiresDirectLiteralSemantics` exists because some IR shapes (`adjacentTokenAgg`, `seatAgg`, certain literals) are KNOWN to be unsupported by the VM and routing them through the VM only to immediately fall back is wasted compilation. Keep the gate as a fast-path optimization; the safety net catches what the gate misses. Rejected — both layers are useful.
 
-**User constraints reflected**. F#8 (Determinism Is Sacred — silent score corruption is a determinism bug because the trajectory shift is observable on every replay), F#14 (no `_legacy` shim, no env switch, no closure-tree resurrection), F#15 (architectural completeness — close the gap that allowed emitter and evaluator to drift), F#16 (Testing as Proof — direct invariant test, not downstream canary).
+**User constraints reflected**. F#14 (no `_legacy` shim, no env switch, no closure-tree resurrection), F#15 (architectural completeness — close the gap that allowed emitter and evaluator to drift), F#16 (Testing as Proof — direct invariant test, not downstream canary). F#8 is preserved by the current code (replays are deterministic in either the buggy or fixed state); the bug class is an F#15 gap, not an F#8 violation.
 
 ## Overview
 
@@ -72,9 +74,11 @@ Three deliverables, all in `packages/engine/`:
 
 1. **`packages/engine/src/agents/policy-evaluation-core.ts`** — change `resolveVmFallbackFeature`'s `default: return undefined` to a defensive throw, and re-add the `try/catch (PolicyBytecodeVmUnsupportedError) { return evaluateCompiledExprDirect(expr, candidate); }` wrapper in `evaluateCompiledExprWithVm`.
 
-2. **(Optional, decided at implementation time)** Remove the explicit `candidateFeature` / `stateFeature` / `candidateAggregate` cases added in `beb3c3993` and the `findLibraryRef` helper, IF the safety-net fallback's measured cost is within budget for the per-card perf gate. Otherwise keep them as a fast-path that avoids redundant fallback dispatch for the three most common library-ref kinds.
+2. **`packages/engine/src/cnl/policy-bytecode/types.ts`** — introduce an exported `FEATURE_REF_KINDS` const-array and a `FeatureRefKind` union derived from it; narrow `FeatureRef.kind` from `string` to `FeatureRefKind` so the dispatch contract is compile-time-checkable.
 
-3. **`packages/engine/test/unit/agents/policy-bytecode-fallback-completeness.test.ts`** (new) — enumerates every `FeatureRef.kind` produced by `featureRefForCompiledPolicyRef` (introspect via the discriminated union or an exported registry), constructs a minimal `PolicyEvaluationContext` and a representative `CompiledPolicyExpr` that uses each kind, and asserts that `evaluateCompiledExprWithVm` returns either a typed value OR throws `PolicyBytecodeVmUnsupportedError` (which the test catches and treats as "fallback path will handle it"). The assertion: for no kind does the VM silently return `undefined` while the IR-level evaluator would have produced a value.
+3. **`packages/engine/test/unit/agents/policy-bytecode-fallback-completeness.test.ts`** (new) — enumerates every kind in `FEATURE_REF_KINDS` (with a `KINDS_PRODUCED_BY_EMITTER satisfies readonly FeatureRefKind[]` type-check), constructs a minimal `PolicyEvaluationContext` and a representative `CompiledPolicyExpr` that uses each kind, and asserts that `evaluateCompiledExprWithVm` returns either a typed value OR throws `PolicyBytecodeVmUnsupportedError` (which the test catches and treats as "fallback path will handle it"). The assertion: for no kind does the VM silently return `undefined` while the IR-level evaluator would have produced a value.
+
+The D3 explicit-handler delete-vs-keep decision (whether to remove the `candidateFeature` / `stateFeature` / `candidateAggregate` cases added in `beb3c3993` plus the `findLibraryRef` helper, or keep them as fast-paths) is deferred to a follow-on ticket — see §D3 and Follow-On Tickets below.
 
 ## Problem Statement
 
@@ -108,7 +112,7 @@ The three independent dispatch tables are not test-checked for completeness. The
 
 ### Why the existing tests didn't catch it
 
-- `policy-bytecode-equivalence.test.ts` compares VM output to a reference. The reference uses the same emitter; if the reference produces `undefined` for these kinds, the test "passes" by agreement on the broken value. (Verified: the test was modified in commit `5628cd41f` and passed in the buggy state.)
+- `policy-bytecode-equivalence.test.ts` (`packages/engine/test/integration/policy-bytecode-equivalence.test.ts:430-465`) does not compare two distinct evaluator paths post-Spec-149. Its `captureDefaultScores` and `captureVmScores` both call the same `evaluatePolicyMoveCore` function with identical arguments — they exist as separate helpers for historical reasons (they predated the closure-tree deletion), but in the current code they go through the same VM path. Both sides produced the same buggy `unknownAs ?? 0` values, the `assert.deepEqual(vmScores, defaultScores, ...)` at line 443 passed vacuously, and the test gave no signal. (Verified: the test was modified in commit `5628cd41f` and passed in the buggy state.)
 - `fitl-per-card-cost.perf.test.ts` (added in `5628cd41f`) measured per-card cost. It passed at 1492.96 ms — but that fast number was the buggy fast path (no real preview drives running). The author's commit message claimed the gate was green; it was, vacuously.
 - `drive-fingerprint-property.test.ts` (in slow-parity-shard-b lane) asserts `captures.length > 0`. It noticed the bug, but only as a downstream symptom: "no drives happened". The diagnosis path from "captures.length === 0" back to "library refs return undefined" is several layers deep.
 - `spec-140-compound-turn-overhead.test.ts` (in performance lane) asserts `totalCompoundTurns <= 600`. It also noticed downstream — agents making different decisions caused trajectories to bloat past budget.
@@ -178,29 +182,37 @@ private resolveVmFallbackFeature(...): PolicyValue {
 
 The default-throw turns the silent gap into an audible signal. The try/catch in D1 catches it and falls back.
 
-### D3. Decide on the explicit handlers from `beb3c3993`
+### D3. Defer the explicit-handler delete-vs-keep decision to a follow-on ticket
 
-The hot-fix added explicit cases for `candidateFeature`, `stateFeature`, `candidateAggregate` plus a `findLibraryRef` helper. Two options at implementation time:
+The hot-fix from `beb3c3993` added explicit cases in `resolveVmFallbackFeature` for `candidateFeature`, `stateFeature`, `candidateAggregate` plus a `findLibraryRef` helper. With D1 + D2 in place, those three handlers become a duplicated fast-path: the safety-net catch already routes any VM-unsupported throw to `evaluateCompiledExprDirect`, which resolves the same library refs via the IR.
 
-- **Keep them as fast-paths**. Avoids the cost of falling back to `evaluateCompiledExprDirect` for the three most common library-ref shapes. The fallback would re-walk the entire expression and recompute the same value via `resolveAgentPolicyRef` → `evaluateCandidateFeature`, so for a simple top-level ref (`{ ref: feature.X }`) the cost is one extra dispatch and one extra cache lookup. Probably negligible but measurable.
-- **Delete them; rely on the safety net**. Architecturally cleaner — the dispatch table reads "VM handles X, Y, Z natively; everything else falls back". One source of truth. Removes the maintenance burden of keeping `findLibraryRef` in sync with future library refKinds.
+Two valid resolutions exist:
 
-Decision: measure both with `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/fitl-per-card-cost.perf.test.js` after D1 + D2 are in. If "delete" stays under whatever ceiling the per-card gate is recalibrated to (see PR #239's pending follow-up), prefer "delete" for architectural simplicity. If "delete" measurably regresses, keep the fast-paths.
+- **Keep them as fast-paths**. Avoids the cost of falling back to `evaluateCompiledExprDirect` for the three most common library-ref shapes. For a simple top-level ref (`{ ref: feature.X }`) the fallback walks the expression and dispatches via `resolveAgentPolicyRef` → `evaluateCandidateFeature`; the explicit handler short-circuits this to one direct call.
+- **Delete them; rely on the safety net.** Architecturally cleaner — the dispatch table reads "VM handles X, Y, Z natively; everything else falls back through the safety net". One source of truth. Removes the maintenance burden of keeping `findLibraryRef` in sync with future library refKinds.
 
-### D4. New test: enumeration completeness
+Choosing between them requires a perf measurement against the per-card gate, and the per-card gate is itself pending recalibration as part of PR #239's follow-up (see D5). Sequencing this spec on outside work would block the safety-net architecture for no architectural reason. Therefore: **D3 is deferred to a follow-on ticket** under the namespace below. The safety net (D1) and registry + test (D2 + D4) ship first; the follow-on ticket measures the perf delta against the recalibrated gate and applies whichever resolution wins, with the measurement evidence documented in its commit body.
 
-`packages/engine/test/unit/agents/policy-bytecode-fallback-completeness.test.ts` (architectural-invariant). One test per `FeatureRef.kind` that the emitter produces. Each test:
+### D4. Promote the dispatch contract into a typed registry, then add an enumeration test
 
-1. Constructs the corresponding `CompiledAgentPolicyRef` (using direct IR construction — bypass the YAML compiler so the test is hermetic).
-2. Wraps it in a minimal `CompiledPolicyExpr` envelope.
-3. Constructs a minimal `PolicyEvaluationContext` with a small `GameDef` fixture (1-2 zones, 2-4 tokens, 2-3 player vars, 1 marker — just enough to exercise the kind).
-4. Calls `evaluateCompiledExprWithVm` (or its public-facing alias `evaluateCompiledExpr`).
-5. Asserts the result is either a typed `PolicyValue` (number / string / boolean / array, NOT bare `undefined`) OR documents an explicit `undefined` return with a reason comment in the test (e.g., "previewSurface ref with no candidate context legitimately returns undefined").
+D4 has two coupled sub-deliverables. The registry sub-deliverable lands first because the test depends on the union it exports.
 
-The test source enumerates the kinds explicitly:
+#### D4a. `FEATURE_REF_KINDS` registry in `types.ts`
+
+Currently `FeatureRef.kind` is typed as plain `string` (`packages/engine/src/cnl/policy-bytecode/types.ts:78-82`):
 
 ```ts
-const KINDS_PRODUCED_BY_EMITTER = [
+export interface FeatureRef {
+  readonly kind: string;
+  readonly layoutIndex: number;
+  readonly aux: readonly number[];
+}
+```
+
+This is the structural-typing root cause of why the emitter and evaluator can drift silently: there's no compile-time surface anywhere that the two sides share. Replace with an exported registry:
+
+```ts
+export const FEATURE_REF_KINDS = [
   'globalVar', 'playerInt', 'globalMarker',
   'zoneProp', 'zoneTokenAgg', 'globalTokenAgg', 'globalZoneAgg',
   'candidateIntrinsic', 'candidateParam', 'candidateTag', 'candidateTags',
@@ -208,33 +220,69 @@ const KINDS_PRODUCED_BY_EMITTER = [
   'adjacentTokenAgg', 'seatAgg',
   'dynamicRef', 'dynamicSurface', 'dynamicExpr',
 ] as const;
-// any FeatureRef.kind not in this list is a bug in the test (TS type assertion will catch).
+
+export type FeatureRefKind = (typeof FEATURE_REF_KINDS)[number];
+
+export interface FeatureRef {
+  readonly kind: FeatureRefKind;
+  readonly layoutIndex: number;
+  readonly aux: readonly number[];
+}
+```
+
+`featureRefForCompiledPolicyRef` (`packages/engine/src/cnl/policy-bytecode/feature-table.ts:187`) already produces only these 18 kinds; the narrower type assignment is a no-op for the emitter except that future emitter changes that introduce a new kind without registering it now fail to type-check at the construction site. The two consumers downstream (`resolveBuiltInFeature` in `vm.ts` and `resolveVmFallbackFeature` in `policy-evaluation-core.ts`) keep their existing switch shapes; adding a new kind to the registry would not by itself break their compilation, but the new test in D4b will fail until the kind is covered by one of the resolution paths.
+
+#### D4b. Enumeration test
+
+`packages/engine/test/unit/agents/policy-bytecode-fallback-completeness.test.ts` (new):
+
+```ts
+// @test-class: architectural-invariant
+```
+
+One assertion per kind in `FEATURE_REF_KINDS`. Each iteration:
+
+1. Constructs a corresponding `CompiledAgentPolicyRef` (using direct IR construction — bypass the YAML compiler so the test is hermetic) for kinds that originate from a `CompiledAgentPolicyRef`. For kinds that originate as inner shapes of an aggregate or zoneProp expression, construct the surrounding `CompiledPolicyExpr` directly.
+2. Wraps it in a minimal `CompiledPolicyExpr` envelope.
+3. Constructs a minimal `PolicyEvaluationContext` with a small `GameDef` fixture (1-2 zones, 2-4 tokens, 2-3 player vars, 1 marker — just enough to exercise the kind).
+4. Calls `evaluateCompiledExprWithVm` (or its public-facing alias `evaluateCompiledExpr`).
+5. Asserts the result is either a typed `PolicyValue` (number / string / boolean / array, NOT bare `undefined`) OR a `PolicyBytecodeVmUnsupportedError` was thrown and caught (which D1's catch handles in production by falling back to the direct evaluator).
+
+The kind-enumeration is type-checked against the registry:
+
+```ts
+const KINDS_PRODUCED_BY_EMITTER = [...FEATURE_REF_KINDS] as const;
+// Type-level cross-check: if FEATURE_REF_KINDS gains a new member,
+// the satisfies clause forces this list to be extended too, which forces
+// the test loop body to handle the new kind.
+KINDS_PRODUCED_BY_EMITTER satisfies readonly FeatureRefKind[];
 ```
 
 The test serves three purposes:
 - **Gate against the original bug recurring**: any kind that returns silent `undefined` from the bytecode path fails the test directly.
-- **Gate against new emitter kinds without evaluator coverage**: when a future emitter change adds a new `FeatureRef.kind`, the TS type assertion in the test forces the author to extend `KINDS_PRODUCED_BY_EMITTER`, which surfaces the need for a corresponding evaluator handler.
+- **Gate against new emitter kinds without evaluator coverage**: when a future change adds a kind to `FEATURE_REF_KINDS`, the satisfies-clause forces this test's enumeration to include it, which forces the test author to construct a fixture exercising it, which surfaces the need for a corresponding evaluator handler.
 - **Document the contract**: the test is a readable enumeration of "every kind the emitter produces, and the expected resolution path". Future authors can use it as the spec of the dispatch contract.
 
 Not in scope for D4: assertion against specific values. The test is about the dispatch contract, not the per-kind semantic correctness (which is covered by the existing `policy-bytecode-equivalence.test.ts` and downstream integration tests).
 
-### D5. PR #239 perf gate recalibration (referenced, not owned)
+### D5. Sequencing note on PR #239 perf gate recalibration (not a deliverable)
 
-This spec's implementation will surface (or be blocked by) PR #239's pending perf-gate recalibration:
+Two perf gates were calibrated against the buggy fast path in PR #239 and now under-fit reality:
 
-- `test/perf/agents/fitl-per-card-cost.perf.test.ts` ceiling was 1800 ms when measured against the buggy fast path; real cost is ~2596 ms. Needs recalibration with a comment citing `beb3c3993`.
+- `test/perf/agents/fitl-per-card-cost.perf.test.ts` ceiling is 1800 ms (`PHASE4_RESET_CEILING_MS`, line 37); real cost with library refs evaluating correctly is ~2596 ms. Needs recalibration with a comment citing `beb3c3993`.
 - `test/perf/agents/preview-pipeline.perf.test.ts` corpus parameters need adjustment so 50 ARVN action-selections fit in `maxTurns`.
 
-These are not deliverables of this spec but are likely landed in the same PR or immediately preceding it. If still unaddressed at this spec's implementation time, they should be addressed alongside D1-D4.
+These are NOT deliverables of Spec 154. They are PR #239 follow-up work and have their own ticket trail. If still unaddressed at this spec's implementation time, the implementing PR should not absorb them — open a separate ticket against PR #239's namespace and reference it from the Spec 154 implementing PR. The D3 follow-on ticket (per §D3) blocks on the recalibrated gate, not on Spec 154's main implementation; the safety net (D1) and registry + test (D4) can ship without the recalibration.
 
 ## Acceptance Criteria
 
 1. **Defensive throw + try/catch in place**. `resolveVmFallbackFeature`'s `default:` branch throws `PolicyBytecodeVmUnsupportedError`. `evaluateCompiledExprWithVm` catches it and dispatches to `evaluateCompiledExprDirect`. Verified by reading the diff.
-2. **Enumeration test passes**. `policy-bytecode-fallback-completeness.test.ts` runs in `pnpm -F @ludoforge/engine test:unit` and passes for every `FeatureRef.kind` listed in `KINDS_PRODUCED_BY_EMITTER`.
-3. **No regression on the original CI lanes**. `slow-parity-shard-b`, `test:performance`, and the engine default test lane stay green. Run locally.
-4. **Decision on explicit handlers documented**. The implementing PR's body (or a follow-up commit) records whether the explicit `candidateFeature` / `stateFeature` / `candidateAggregate` cases were kept as fast-paths or deleted, with the measurement evidence supporting the choice.
-5. **`policy-bytecode-equivalence.test.ts` continues to pass.** The existing equivalence test should not require changes — the fallback path produces the same values the bytecode path does (via direct evaluator), so equivalence holds.
+2. **`FeatureRefKind` registry in place**. `packages/engine/src/cnl/policy-bytecode/types.ts` exports `FEATURE_REF_KINDS` (const-array of the 18 emitter-produced kinds) and `FeatureRefKind` (union derived from it); `FeatureRef.kind` is typed as `FeatureRefKind`. The whole engine package type-checks (`pnpm -F @ludoforge/engine typecheck`) without changes to the emitter or VM dispatch sites.
+3. **Enumeration test passes**. `policy-bytecode-fallback-completeness.test.ts` runs in `pnpm -F @ludoforge/engine test:unit` and passes for every kind in `FEATURE_REF_KINDS`. The `KINDS_PRODUCED_BY_EMITTER satisfies readonly FeatureRefKind[]` clause type-checks; the test file declares `// @test-class: architectural-invariant`.
+4. **No regression on the original CI lanes**. `slow-parity-shard-b`, `test:performance`, and the engine default test lane stay green. Run locally.
+5. **`policy-bytecode-equivalence.test.ts` continues to pass.** The existing equivalence test should not require changes — both sides of the test go through the same evaluator path (post-Spec-149), and that path now resolves library refs through the safety net rather than the silent gap.
 6. **No new `PolicyBytecodeVmUnsupportedError` thrown out of `evaluatePolicyMove` in production runs.** Run the full engine test suite + a few representative profile-fitl-preview-drive script invocations; the catch in D1 should swallow every unsupported throw cleanly.
+7. **D3 explicit-handler decision is NOT in this spec's scope.** The follow-on ticket (per Follow-On Tickets below) records the keep-vs-delete measurement and applies the chosen resolution.
 
 ## Risks
 
@@ -246,8 +294,25 @@ These are not deliverables of this spec but are likely landed in the same PR or 
 ## Out Of Scope
 
 - Adding native VM handlers for `candidateFeature` / `stateFeature` / `candidateAggregate` (rejected in Brainstorm Context — wrong layer).
-- Changes to the bytecode emitter (`featureRefForCompiledPolicyRef`) — the existing emitted shapes are correct; the gap is downstream.
-- Recalibrating the per-card cost gate ceiling or the preview-pipeline corpus (PR #239 follow-up).
+- Changes to the bytecode emitter (`featureRefForCompiledPolicyRef`) — the existing emitted shapes are correct; the gap is downstream. The registry in D4a narrows the type but does not change emitter behavior.
+- Deciding whether to delete the explicit `candidateFeature` / `stateFeature` / `candidateAggregate` handlers added by `beb3c3993` (deferred to a follow-on ticket — see §D3 and Follow-On Tickets below).
+- Recalibrating the per-card cost gate ceiling or the preview-pipeline corpus (PR #239 follow-up; the D3 follow-on ticket sequences after this).
 - Reintroducing closure-tree (rejected per F#14).
 - Cross-game changes (FITL-specific or Texas-specific) — the bug class is engine-generic; the fix is engine-generic.
 - Changes to WASM scoring routing (`policy-wasm-score-routing.ts`) — the WASM route has its own dispatch model and is unaffected by this spec.
+
+## Follow-On Tickets
+
+Proposed namespace: `154POLBCDISP` (POLicy ByteCode DISPatch). Anticipated decomposition (final shape to be set by `/spec-to-tickets specs/154-policy-bytecode-emitter-evaluator-dispatch-completeness.md 154POLBCDISP`):
+
+- **154POLBCDISP-001 — Safety-net restoration (D1)**. Change `resolveVmFallbackFeature`'s `default:` branch to throw `PolicyBytecodeVmUnsupportedError`; add the `try { executeBytecode } catch (PolicyBytecodeVmUnsupportedError) { evaluateCompiledExprDirect }` wrapper in `evaluateCompiledExprWithVm`. Acceptance: criterion 1 above.
+- **154POLBCDISP-002 — `FeatureRefKind` registry + enumeration test (D4)**. Introduce `FEATURE_REF_KINDS` const-array and `FeatureRefKind` union in `types.ts`; narrow `FeatureRef.kind`. Add `policy-bytecode-fallback-completeness.test.ts` with the satisfies-clause and per-kind fixture coverage. Acceptance: criteria 2 and 3 above. Sequenced after `-001` so the safety-net catch is in place before the test exercises every kind.
+- **154POLBCDISP-003 — Explicit-handler decision (D3 follow-on, sequenced after PR #239 perf-gate recalibration lands)**. Measure perf delta of `keep` vs `delete` for the `candidateFeature` / `stateFeature` / `candidateAggregate` explicit handlers (and the `findLibraryRef` helper) against the recalibrated `fitl-per-card-cost.perf.test.ts` ceiling. Apply the winning resolution; record evidence in the commit body. Acceptance: criterion 7 above.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-04:
+
+- [`archive/tickets/154POLBCDISP-001.md`](../archive/tickets/154POLBCDISP-001.md) — Restore policy-bytecode safety-net fallback (covers D1 + D2)
+- [`tickets/154POLBCDISP-002.md`](../tickets/154POLBCDISP-002.md) — Promote FeatureRef.kind into a typed registry + add enumeration completeness test (covers D4)
+- [`tickets/154POLBCDISP-003.md`](../tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3, deferred-execution)

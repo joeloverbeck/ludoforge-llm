@@ -526,8 +526,15 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledExprDirect(expr, candidate);
       },
     };
-    const result = executeBytecode(bytecode, this.encodedState, vmContext);
-    return result.value;
+    try {
+      const result = executeBytecode(bytecode, this.encodedState, vmContext);
+      return result.value;
+    } catch (error) {
+      if (error instanceof PolicyBytecodeVmUnsupportedError) {
+        return this.evaluateCompiledExprDirect(expr, candidate);
+      }
+      throw error;
+    }
   }
 
   private evaluateCompiledExprDirect(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
@@ -737,7 +744,9 @@ export class PolicyEvaluationContext {
       case 'seatAgg':
         throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
       default:
-        return undefined;
+        throw new PolicyBytecodeVmUnsupportedError(
+          `Policy bytecode feature kind "${(ref as { kind: string }).kind}" has no handler in resolveVmFallbackFeature; falling back to direct evaluator.`,
+        );
     }
     throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
   }

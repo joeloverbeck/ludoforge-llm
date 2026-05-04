@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts`
-**Deps**: `specs/154-policy-bytecode-emitter-evaluator-dispatch-completeness.md`
+**Deps**: `archive/specs/154-policy-bytecode-emitter-evaluator-dispatch-completeness.md`
 
 ## Problem
 

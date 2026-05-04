@@ -1,6 +1,6 @@
 # Spec 154: Policy Bytecode Emitter / Evaluator Dispatch Completeness
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P2 (medium — closes a recurring CI break shape introduced by Spec 149's F14 cut; modest scope; very high signal-to-noise — the bug class silently corrupts agent scores until a downstream test happens to notice)
 **Complexity**: S (one defensive throw, one try/catch fallback, one enumeration test; ~30 lines + a focused unit test)
 **Dependencies**:
@@ -272,7 +272,7 @@ Two perf gates were calibrated against the buggy fast path in PR #239 and now un
 - `test/perf/agents/fitl-per-card-cost.perf.test.ts` originally carried the stale 1800 ms (`PHASE4_RESET_CEILING_MS`, line 37) ceiling from the buggy fast path. On 2026-05-04, `archive/tickets/149FITLEVNUMVM-016.md` reset that gate to the user-approved `<=1800 ms` successor-runtime ceiling backed by `archive/tickets/150FITLWASM-034.md` and confirmed it with `pnpm -F @ludoforge/engine test:perf`.
 - `test/perf/agents/preview-pipeline.perf.test.ts` corpus parameters need adjustment so 50 ARVN action-selections fit in `maxTurns`.
 
-These are NOT deliverables of Spec 154. The per-card reset prerequisite was historically satisfied by `archive/tickets/149FITLEVNUMVM-016.md`, but `tickets/154POLBCDISP-003.md` later found the current keep-arm baseline red against the reset gate. `archive/tickets/149FITLEVNUMVM-023.md` reclassified that result as perf-gate harness drift, repaired the checked-in gate, and proved the reset surface green again before D3 consumes it.
+These are NOT deliverables of Spec 154. The per-card reset prerequisite was historically satisfied by `archive/tickets/149FITLEVNUMVM-016.md`, but `archive/tickets/154POLBCDISP-003.md` later found the current keep-arm baseline red against the reset gate. `archive/tickets/149FITLEVNUMVM-023.md` reclassified that result as perf-gate harness drift, repaired the checked-in gate, and proved the reset surface green again before D3 consumes it.
 
 ## Acceptance Criteria
 
@@ -315,4 +315,33 @@ Decomposed via `/spec-to-tickets` on 2026-05-04:
 
 - [`archive/tickets/154POLBCDISP-001.md`](../archive/tickets/154POLBCDISP-001.md) — Restore policy-bytecode safety-net fallback (covers D1 + D2)
 - [`archive/tickets/154POLBCDISP-002.md`](../archive/tickets/154POLBCDISP-002.md) — Promote FeatureRef.kind into a typed registry + add enumeration completeness test (covers D4)
-- [`tickets/154POLBCDISP-003.md`](../tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3; reset-gate prerequisite repaired by [`archive/tickets/149FITLEVNUMVM-023.md`](../archive/tickets/149FITLEVNUMVM-023.md))
+- [`archive/tickets/154POLBCDISP-003.md`](../archive/tickets/154POLBCDISP-003.md) — Explicit-handler delete-vs-keep decision (covers D3; reset-gate prerequisite repaired by [`archive/tickets/149FITLEVNUMVM-023.md`](../archive/tickets/149FITLEVNUMVM-023.md))
+
+## Outcome
+
+Completed on 2026-05-05.
+
+Spec 154 is finished. Its three implementation tickets are archived:
+
+- `archive/tickets/154POLBCDISP-001.md` restored the policy-bytecode
+  unsupported-feature safety net with the defensive throw plus direct-evaluator
+  fallback.
+- `archive/tickets/154POLBCDISP-002.md` promoted `FeatureRef.kind` into the
+  typed `FEATURE_REF_KINDS` registry and added the fallback-completeness
+  architectural-invariant test.
+- `archive/tickets/154POLBCDISP-003.md` completed the D3 measured
+  delete-vs-keep decision. The delete arm won with a `2.69%` median regression
+  against the explicit-handler keep arm, below the ticket's `<=5%` threshold,
+  and stayed under the repaired `1800 ms` per-card reset gate. The final
+  implementation removed the three explicit `candidateFeature`, `stateFeature`,
+  and `candidateAggregate` fallback handlers plus `findLibraryRef`.
+
+The measured D3 evidence is recorded in
+`reports/154POLBCDISP-003-measurement.md`.
+
+Final verification for the closing ticket included `pnpm turbo lint`,
+`pnpm turbo typecheck`, `pnpm -F @ludoforge/engine build`, focused
+fallback-completeness and policy-bytecode-equivalence tests, the per-card reset
+gate, `pnpm -F @ludoforge/engine test`,
+`pnpm -F @ludoforge/engine test:integration:slow-parity:shard-b`, and
+`pnpm -F @ludoforge/engine test:performance`.

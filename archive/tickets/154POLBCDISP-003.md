@@ -1,6 +1,6 @@
 # 154POLBCDISP-003: Explicit-handler delete-vs-keep decision (D3 deferred-execution, post-recalibration)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` (potentially)
@@ -122,26 +122,59 @@ No new tests in this ticket. The architectural-invariant test from `archive/tick
 
 ## Outcome
 
-Blocked then reopened: 2026-05-04.
+Completed on 2026-05-04.
 
-This run corrected the stale prerequisite story first: the reset gate did land through `archive/tickets/149FITLEVNUMVM-016.md`, so the earlier PR #239 pending-recalibration wording was no longer truthful. Dependency integrity passed after adding that archived prerequisite.
+The reset-gate prerequisite remained satisfied: `archive/tickets/149FITLEVNUMVM-023.md`
+is completed, the checked-in per-card gate uses the repaired `<=1800 ms` reset
+surface, and the current keep-arm preflight was green before the delete
+experiment.
 
-The current keep-arm baseline then failed the ticket-named perf gate three times after `pnpm -F @ludoforge/engine build`:
+Measured decision:
 
-- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/fitl-per-card-cost.perf.test.js` — RED, `elapsedMs=2479.77`, `ceilingMs=1800`.
-- Same command — RED, `elapsedMs=2461.18`, `ceilingMs=1800`.
-- Same command — RED, `elapsedMs=2421.83`, `ceilingMs=1800`.
+- Build before measurement: `pnpm -F @ludoforge/engine build` — PASS.
+- Keep arm, `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/fitl-per-card-cost.perf.test.js` — PASS, samples `1460.23`, `1488.11`, `1504.53 ms`; median `1488.11 ms`.
+- Delete arm, same command after removing the three explicit handlers and `findLibraryRef` — PASS, samples `1645.26`, `1528.19`, `1514.11 ms`; median `1528.19 ms`.
+- Delete-vs-keep delta: `+40.08 ms`, `+2.69%`, below the ticket's `<=5%` delete threshold.
+- Reset-gate verdict: delete median remains below the `1800 ms` ceiling.
 
-Median keep-arm baseline: `2461.18 ms`, `661.18 ms` over the reset ceiling (`36.7%` red).
+Resolution: delete wins. `packages/engine/src/agents/policy-evaluation-core.ts`
+now relies on the `archive/tickets/154POLBCDISP-001.md` safety-net fallback for
+`candidateFeature`, `stateFeature`, and `candidateAggregate`, and the dead
+`findLibraryRef` helper was removed with those handlers.
 
-Decision at that time: do not run the delete-arm experiment or modify `packages/engine/src/agents/policy-evaluation-core.ts` while the keep baseline fails the reset gate. `archive/tickets/149FITLEVNUMVM-023.md` owned revalidating or repairing that gate. This ticket was blocked at that point, with no runtime source changes retained.
+Measurement evidence is recorded in
+`reports/154POLBCDISP-003-measurement.md` because this no-commit implementation
+session cannot use the implementing PR commit body as the durable evidence
+ledger.
 
-Follow-up update: `archive/tickets/149FITLEVNUMVM-023.md` repaired the reset perf gate
-as harness drift and proved it green. This ticket is no longer blocked by the
-reset prerequisite; its own keep-vs-delete measurement remains unstarted.
+Touched-file scope correction: the original Files to Touch list named only
+`packages/engine/src/agents/policy-evaluation-core.ts`; the checked-in
+measurement report is also intentionally touched as the ticket-authorized
+evidence artifact.
 
-Verification and graph checks:
+File-size ledger: `policy-evaluation-core.ts` was preexisting oversize
+(`1610` lines) before this ticket. The winning change deletes code, so there is
+no retained active growth and no extraction owner is created here.
 
-- `pnpm -F @ludoforge/engine build` — PASS.
-- `pnpm run check:ticket-deps` — PASS before adding the new blocker dependency.
-- `pnpm run check:ticket-deps` — PASS after adding `archive/tickets/149FITLEVNUMVM-023.md` and rewiring the active dependents; checked 3 active tickets and 2229 archived tickets.
+Runtime surface breadth: shared engine agent-policy evaluation path.
+
+Final verification set:
+
+- `pnpm turbo lint` — PASS after removing the now-unused `stableStringCode` import surfaced by the first lint attempt.
+- `pnpm turbo typecheck` — PASS.
+- `pnpm -F @ludoforge/engine build` — PASS after the Turbo typecheck build-producing lane.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — PASS, `6/6` subtests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/fitl-per-card-cost.perf.test.js` — PASS, final delete-arm `duration_ms=1605.81`, below `1800 ms`.
+- `pnpm -F @ludoforge/engine test` — PASS, default lane summary `60/60 files passed`.
+- `pnpm -F @ludoforge/engine test:integration:slow-parity:shard-b` — PASS, `3/3` files passed.
+- `pnpm -F @ludoforge/engine test:performance` — PASS, `7/7` files passed.
+
+Late-edit proof-validity ledger:
+
+- Runtime edit after first final lane: removed the unused `stableStringCode`
+  import after `pnpm turbo lint` found it. Affected proof was rerun from the
+  lint/typecheck/build/focused-test sequence above.
+- Terminal status edit: status and final proof transcription only; no code,
+  command semantics, threshold, dependency ownership, scope, or acceptance
+  boundary changed, so the just-run proof lanes remain valid.

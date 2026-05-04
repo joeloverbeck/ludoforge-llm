@@ -88,9 +88,10 @@ const createPendingRequestFingerprint = (request: ChoicePendingRequest): string 
   });
 
 const createMemoKey = (
-  move: Move,
+  actionId: Move['actionId'],
+  moveBindingKey: string,
   requestFingerprint: string,
-): string => `${String(move.actionId)}:${normalizeMoveBinding(move)}:${requestFingerprint}`;
+): string => `${String(actionId)}:${moveBindingKey}:${requestFingerprint}`;
 
 const assignDecisionSelection = (
   move: Move,
@@ -344,8 +345,7 @@ export const analyzeDecisionSequence = (
     return { classification: 'unknown' };
   };
 
-  const discoverRequest = (move: Move): ChoiceRequest | SearchOutcome => {
-    const bindingKey = normalizeMoveBinding(move);
+  const discoverRequest = (move: Move, bindingKey: string): ChoiceRequest | SearchOutcome => {
     const cached = requestCache.get(bindingKey);
     if (cached !== undefined) {
       return cached;
@@ -381,7 +381,8 @@ export const analyzeDecisionSequence = (
   };
 
   const search = (move: Move): SearchOutcome => {
-    const discovered = discoverRequest(move);
+    const bindingKey = normalizeMoveBinding(move);
+    const discovered = discoverRequest(move, bindingKey);
     if ('classification' in discovered) {
       return discovered;
     }
@@ -399,7 +400,7 @@ export const analyzeDecisionSequence = (
       return { classification: 'explicitStochastic' };
     }
 
-    const memoKey = createMemoKey(move, getPendingRequestFingerprint(request));
+    const memoKey = createMemoKey(move.actionId, bindingKey, getPendingRequestFingerprint(request));
     const cached = memo.get(memoKey);
     if (cached !== undefined) {
       return cached;

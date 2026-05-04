@@ -33,11 +33,35 @@ import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
 import { getZoneMap } from './def-lookup.js';
-import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr } from './types.js';
+import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, ZoneDef } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
 type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | ZoneId;
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
+const sortedZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
+const sortedMapSpaceZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
+
+function compareZoneId(left: ZoneDef, right: ZoneDef): number {
+  return left.id.localeCompare(right.id);
+}
+
+function getSortedZones(zones: readonly ZoneDef[]): readonly ZoneDef[] {
+  let cached = sortedZoneCache.get(zones);
+  if (cached === undefined) {
+    cached = [...zones].sort(compareZoneId);
+    sortedZoneCache.set(zones, cached);
+  }
+  return cached;
+}
+
+function getSortedMapSpaceZones(zones: readonly ZoneDef[]): readonly ZoneDef[] {
+  let cached = sortedMapSpaceZoneCache.get(zones);
+  if (cached === undefined) {
+    cached = zones.filter((zone) => zone.zoneKind === 'board').sort(compareZoneId);
+    sortedMapSpaceZoneCache.set(zones, cached);
+  }
+  return cached;
+}
 
 function resolveIntDomainBound(bound: NumericValueExpr, ctx: ReadContext): number | null {
   let value: unknown;
@@ -429,29 +453,33 @@ const evaluateFreeOperationZoneFilterForZone = (
 };
 
 function applyZonesFilter(
-  zones: readonly { readonly id: ZoneId; readonly owner: 'none' | 'player' }[],
+  zones: readonly ZoneDef[],
   queryFilter: ZoneQueryFilter,
   ctx: ReadContext,
 ): readonly ZoneId[] {
-  let filteredZones = [...zones];
+  let filteredZones = zones;
   const queryCondition = queryFilter?.condition;
   const freeOperationZoneFilter = ctx.freeOperationOverlay?.zoneFilter;
 
   if (queryFilter?.owner !== undefined) {
-    const owners = new Set(resolvePlayerSel(queryFilter.owner, ctx));
-    filteredZones = filteredZones.filter((zone) => {
+    const owners = resolvePlayerSel(queryFilter.owner, ctx);
+    const nextZones: ZoneDef[] = [];
+    for (const zone of filteredZones) {
       if (zone.owner !== 'player') {
-        return false;
+        continue;
       }
 
       const ownerQualifier = extractOwnerQualifier(zone.id);
       if (ownerQualifier === null || !/^[0-9]+$/.test(ownerQualifier)) {
-        return false;
+        continue;
       }
 
       const playerId = asPlayerId(Number(ownerQualifier));
-      return owners.has(playerId);
-    });
+      if (owners.includes(playerId)) {
+        nextZones.push(zone);
+      }
+    }
+    filteredZones = nextZones;
   }
 
   if (queryCondition !== undefined) {
@@ -460,28 +488,38 @@ function applyZonesFilter(
       ...ctx,
       bindings: conditionBindings,
     };
-    filteredZones = filteredZones.filter((zone) => {
+    const nextZones: ZoneDef[] = [];
+    for (const zone of filteredZones) {
       conditionBindings.$zone = zone.id;
       ctx.resources.resolveRefCache?.invalidateBindings(conditionBindings);
-      return evaluateConditionWithCache(queryCondition, conditionCtx);
-    });
+      if (evaluateConditionWithCache(queryCondition, conditionCtx)) {
+        nextZones.push(zone);
+      }
+    }
+    filteredZones = nextZones;
   }
 
   if (freeOperationZoneFilter !== undefined) {
     const rebindableAliases = collectFreeOperationZoneFilterProbeRebindableAliases(freeOperationZoneFilter);
-    filteredZones = filteredZones.filter((zone) => {
+    const nextZones: ZoneDef[] = [];
+    for (const zone of filteredZones) {
       const result = evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
       if (result.status === 'resolved') {
-        return result.matched;
+        if (result.matched) {
+          nextZones.push(zone);
+        }
+        continue;
       }
       if (result.status === 'deferred') {
-        return true;
+        nextZones.push(zone);
+        continue;
       }
       // status === 'failed': apply surface-aware deferral policy
       const diagnostics = ctx.freeOperationOverlay?.zoneFilterDiagnostics;
       if (diagnostics !== undefined) {
         if (shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, result.error)) {
-          return true;
+          nextZones.push(zone);
+          continue;
         }
         throw freeOperationZoneFilterEvaluationError({
           surface: diagnostics.source,
@@ -493,35 +531,29 @@ function applyZonesFilter(
         });
       }
       throw result.error;
-    });
+    }
+    filteredZones = nextZones;
   }
 
   return filteredZones.map((zone) => zone.id);
 }
 
 function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: ReadContext): readonly ZoneId[] {
-  const allZones = [...ctx.def.zones].sort((left, right) => left.id.localeCompare(right.id));
-  return applyZonesFilter(allZones, query.filter, ctx);
+  return applyZonesFilter(getSortedZones(ctx.def.zones), query.filter, ctx);
 }
 
 function evalMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'mapSpaces' }>,
   ctx: ReadContext,
 ): readonly ZoneId[] {
-  const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => zone.zoneKind === 'board')
-    .sort((left, right) => left.id.localeCompare(right.id));
-  return applyZonesFilter(mapSpaceZones, query.filter, ctx);
+  return applyZonesFilter(getSortedMapSpaceZones(ctx.def.zones), query.filter, ctx);
 }
 
 function evalTokensInMapSpacesQuery(
   query: Extract<OptionsQuery, { readonly query: 'tokensInMapSpaces' }>,
   ctx: ReadContext,
 ): readonly Token[] {
-  const mapSpaceZones = [...ctx.def.zones]
-    .filter((zone) => zone.zoneKind === 'board')
-    .sort((left, right) => left.id.localeCompare(right.id));
-  const selectedZones = applyZonesFilter(mapSpaceZones, query.spaceFilter, ctx);
+  const selectedZones = applyZonesFilter(getSortedMapSpaceZones(ctx.def.zones), query.spaceFilter, ctx);
   const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);
   return query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : zoneTokens;
 }

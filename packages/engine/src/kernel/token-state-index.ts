@@ -280,30 +280,41 @@ export function refreshCachedTokenStateIndexEntries(
     zoneRank = ranks;
     return ranks;
   };
+  const scanZoneOccurrences = (
+    occurrences: TokenOccurrence[],
+    scannedZoneIds: string[],
+    zoneId: string,
+    tokenId: string,
+  ): void => {
+    if (scannedZoneIds.includes(zoneId)) {
+      return;
+    }
+    scannedZoneIds.push(zoneId);
+    const tokens = state.zones[zoneId];
+    if (tokens === undefined) {
+      return;
+    }
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+      const token = tokens[tokenIndex];
+      if (token !== undefined && String(token.id) === tokenId) {
+        occurrences.push({ zoneId, index: tokenIndex, token });
+      }
+    }
+  };
 
   for (const tokenId of affectedTokenIds) {
     const prior = updated.get(tokenId);
-    const zonesToScan = new Set<string>(mutatedZoneIds);
+    const scannedZoneIds: string[] = [];
+    const occurrences: TokenOccurrence[] = [];
+    for (const zoneId of mutatedZoneIds) {
+      scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
+    }
     if (prior !== undefined) {
       if (prior.occurrenceCount <= 1) {
-        zonesToScan.add(prior.zoneId);
+        scanZoneOccurrences(occurrences, scannedZoneIds, prior.zoneId, tokenId);
       } else {
         for (const zoneId of prior.occurrenceZoneIds) {
-          zonesToScan.add(zoneId);
-        }
-      }
-    }
-
-    const occurrences: TokenOccurrence[] = [];
-    for (const zoneId of zonesToScan) {
-      const tokens = state.zones[zoneId];
-      if (tokens === undefined) {
-        continue;
-      }
-      for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
-        const token = tokens[tokenIndex];
-        if (token !== undefined && String(token.id) === tokenId) {
-          occurrences.push({ zoneId, index: tokenIndex, token });
+          scanZoneOccurrences(occurrences, scannedZoneIds, zoneId, tokenId);
         }
       }
     }

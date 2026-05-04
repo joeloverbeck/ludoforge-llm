@@ -1,10 +1,10 @@
 # 149FITLEVNUMVM-022: Phase 4B final reprofile gate
 
-**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-029.md`
+**Status**: BLOCKED by red Phase 5/WASM successor gate — successor owner `tickets/150FITLWASM-030.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Maybe — perf gate test/report helper only if the current harness cannot assert the owned metric
-**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-029.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-019.md`, `archive/tickets/149FITLEVNUMVM-020.md`, `archive/tickets/149FITLEVNUMVM-021.md`, `archive/tickets/150FITLWASM-013.md`, `archive/tickets/150FITLWASM-014.md`, `archive/tickets/150FITLWASM-010.md`, `tickets/150FITLWASM-030.md`
 
 ## Problem
 
@@ -146,6 +146,16 @@ closure.
 query/spatial allocation reductions and cached WASM layout encoding, kept the
 active route clean, and reduced the same-seam gate from the prior `~2.5 s`
 range into the low `~2.1 s` range while it remained red versus `<=250`. The
-current active successor owner moved to `tickets/150FITLWASM-029.md` for
-remaining allocation, encoding, query/eval, token-index, decision-stack digest,
-and hash/canonicalization closure.
+post-review correction kept `150FITLWASM-029` active for remaining
+allocation, encoding, query/eval, token-index, decision-stack digest, and
+hash/canonicalization closure because the reviewer note requires continuing
+same-ticket residual reduction before a successor handoff.
+
+2026-05-04 successor update: ticket `150FITLWASM-029` continued after
+post-review, landed static binding-name shortcuts, token-index scan allocation
+reduction, and a versioned per-context `resolveRef` cache, kept the active
+route clean, produced a diagnostic per-card `elapsedMs=1891.88`, and left the
+decisive final same-seam gate red at per-card `elapsedMs=2046.48` versus
+`<=250`. The active successor owner moved to
+`tickets/150FITLWASM-030.md` for remaining query/eval/reference-resolution,
+token-index, hash/canonicalization, and allocation/GC residual closure.

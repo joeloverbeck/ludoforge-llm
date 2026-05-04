@@ -65,6 +65,23 @@ export interface ResolveRefCache {
  */
 export function createResolveRefCache(): ResolveRefCache {
   const entriesByBindings = new WeakMap<object, Map<string, WeakMap<Reference, ResolveRefCacheValue>>>();
+  const bindingsVersions = new WeakMap<object, number>();
+  const contextKeyCache = new WeakMap<ReadContext, {
+    readonly stateHash: bigint;
+    readonly overlay: object | undefined;
+    readonly activePlayer: unknown;
+    readonly actorPlayer: unknown;
+    readonly key: string;
+  }>();
+  const contextEntriesCache = new WeakMap<ReadContext, {
+    readonly bindings: object;
+    readonly bindingsVersion: number;
+    readonly stateHash: bigint;
+    readonly overlay: object | undefined;
+    readonly activePlayer: unknown;
+    readonly actorPlayer: unknown;
+    readonly entriesByRef: WeakMap<Reference, ResolveRefCacheValue>;
+  }>();
   let nextOverlayId = 1;
   const overlayIdMap = new WeakMap<object, number>();
 
@@ -81,9 +98,60 @@ export function createResolveRefCache(): ResolveRefCache {
   };
 
   const buildContextKey = (ctx: ReadContext): string => {
+    const cached = contextKeyCache.get(ctx);
+    if (
+      cached !== undefined
+      && cached.stateHash === ctx.state.stateHash
+      && cached.overlay === ctx.freeOperationOverlay
+      && cached.activePlayer === ctx.activePlayer
+      && cached.actorPlayer === ctx.actorPlayer
+    ) {
+      return cached.key;
+    }
     const overlayId = overlayIdFor(ctx.freeOperationOverlay);
     const stateHashHex = ctx.state.stateHash.toString(16);
-    return `${stateHashHex}|${overlayId}|${String(ctx.activePlayer)}|${String(ctx.actorPlayer)}`;
+    const key = `${stateHashHex}|${overlayId}|${String(ctx.activePlayer)}|${String(ctx.actorPlayer)}`;
+    contextKeyCache.set(ctx, {
+      stateHash: ctx.state.stateHash,
+      overlay: ctx.freeOperationOverlay,
+      activePlayer: ctx.activePlayer,
+      actorPlayer: ctx.actorPlayer,
+      key,
+    });
+    return key;
+  };
+
+  const bindingsVersionFor = (bindings: object): number => bindingsVersions.get(bindings) ?? 0;
+
+  const getCachedContextEntries = (ctx: ReadContext): WeakMap<Reference, ResolveRefCacheValue> | undefined => {
+    const cached = contextEntriesCache.get(ctx);
+    if (
+      cached !== undefined
+      && cached.bindings === ctx.bindings
+      && cached.bindingsVersion === bindingsVersionFor(ctx.bindings)
+      && cached.stateHash === ctx.state.stateHash
+      && cached.overlay === ctx.freeOperationOverlay
+      && cached.activePlayer === ctx.activePlayer
+      && cached.actorPlayer === ctx.actorPlayer
+    ) {
+      return cached.entriesByRef;
+    }
+    return undefined;
+  };
+
+  const setCachedContextEntries = (
+    ctx: ReadContext,
+    entriesByRef: WeakMap<Reference, ResolveRefCacheValue>,
+  ): void => {
+    contextEntriesCache.set(ctx, {
+      bindings: ctx.bindings,
+      bindingsVersion: bindingsVersionFor(ctx.bindings),
+      stateHash: ctx.state.stateHash,
+      overlay: ctx.freeOperationOverlay,
+      activePlayer: ctx.activePlayer,
+      actorPlayer: ctx.actorPlayer,
+      entriesByRef,
+    });
   };
 
   // The set of bindings objects the cache has populated entries for. WeakMap
@@ -94,11 +162,20 @@ export function createResolveRefCache(): ResolveRefCache {
 
   return {
     get(ref, ctx) {
+      const cachedEntries = getCachedContextEntries(ctx);
+      if (cachedEntries !== undefined) {
+        return cachedEntries.get(ref);
+      }
       const innerMap = entriesByBindings.get(ctx.bindings);
       if (innerMap === undefined) {
         return undefined;
       }
-      return innerMap.get(buildContextKey(ctx))?.get(ref);
+      const entriesByRef = innerMap.get(buildContextKey(ctx));
+      if (entriesByRef === undefined) {
+        return undefined;
+      }
+      setCachedContextEntries(ctx, entriesByRef);
+      return entriesByRef.get(ref);
     },
     set(ref, ctx, value) {
       let innerMap = entriesByBindings.get(ctx.bindings);
@@ -113,14 +190,17 @@ export function createResolveRefCache(): ResolveRefCache {
         entriesByRef = new WeakMap();
         innerMap.set(contextKey, entriesByRef);
       }
+      setCachedContextEntries(ctx, entriesByRef);
       entriesByRef.set(ref, value);
     },
     invalidateBindings(bindings) {
+      bindingsVersions.set(bindings, bindingsVersionFor(bindings) + 1);
       entriesByBindings.delete(bindings);
       knownBindings.delete(bindings);
     },
     clear() {
       for (const bindings of knownBindings) {
+        bindingsVersions.set(bindings, bindingsVersionFor(bindings) + 1);
         entriesByBindings.delete(bindings);
       }
       knownBindings.clear();
@@ -239,7 +319,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
   // Fast path: 'binding' refs are the most common type in effect chains
   // (let-bound values). Check first to avoid falling through 14 if-else checks.
   if (ref.ref === 'binding') {
-    const resolvedName = resolveBindingTemplate(ref.name, ctx.bindings);
+    const resolvedName = ref.name.indexOf('{') === -1 ? ref.name : resolveBindingTemplate(ref.name, ctx.bindings);
     const value = ctx.bindings[resolvedName];
     if (value === undefined) {
       throw missingBindingError(`Binding not found: ${resolvedName}`, {

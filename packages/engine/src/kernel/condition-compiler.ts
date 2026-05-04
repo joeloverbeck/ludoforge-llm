@@ -211,9 +211,10 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
         return propValue;
       };
 
-    case 'binding':
+    case 'binding': {
+      const staticName = expr.name.indexOf('{') === -1 ? expr.name : null;
       return (ctx) => {
-        const resolvedName = resolveBindingTemplate(expr.name, ctx.bindings);
+        const resolvedName = staticName ?? resolveBindingTemplate(expr.name, ctx.bindings);
         const value = ctx.bindings[resolvedName];
         if (value === undefined) {
           throw missingBindingError(`Binding not found: ${resolvedName}`, {
@@ -235,6 +236,7 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
 
         return value;
       };
+    }
 
     default:
       return null;
@@ -603,8 +605,14 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (ctx, snapshot) =>
-        compiledArgs.every((arg) => arg(ctx, snapshot));
+      return (ctx, snapshot) => {
+        for (const arg of compiledArgs) {
+          if (!arg(ctx, snapshot)) {
+            return false;
+          }
+        }
+        return true;
+      };
     }
 
     case 'or': {
@@ -619,8 +627,14 @@ export const tryCompileCondition = (
         }
         compiledArgs.push(compiledArg);
       }
-      return (ctx, snapshot) =>
-        compiledArgs.some((arg) => arg(ctx, snapshot));
+      return (ctx, snapshot) => {
+        for (const arg of compiledArgs) {
+          if (arg(ctx, snapshot)) {
+            return true;
+          }
+        }
+        return false;
+      };
     }
 
     case 'not': {

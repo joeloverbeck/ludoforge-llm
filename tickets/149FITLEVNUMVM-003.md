@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
-**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `archive/tickets/149FITLEVNUMVM-016.md`, `archive/tickets/150FITLWASM-001.md`
+**Deps**: `archive/tickets/149FITLEVNUMVM-001.md`, `archive/tickets/149FITLEVNUMVM-002.md`, `archive/tickets/149FITLEVNUMVM-018.md`, `archive/tickets/149FITLEVNUMVM-016.md`, `archive/tickets/150FITLWASM-001.md`, `archive/tickets/149FITLEVNUMVM-023.md`
 
 ## Problem
 
@@ -22,6 +22,22 @@ architecture. User approved option 2: replace the active blocker with a
 measured `<=1800 ms` successor-runtime gate. This ticket remains blocked on
 ticket 016 closure and then the required 3+ consecutive CI confirmations, but
 no longer waits for the retired `<=250 ms` budget.
+
+**2026-05-04 reset-gate regression update**: `154POLBCDISP-003` keep-arm
+preflight reran the reset perf gate on the current checkout and found it red
+on three serial local samples: `2479.77 ms`, `2461.18 ms`, and `2421.83 ms`
+against `<=1800 ms`. New prerequisite `archive/tickets/149FITLEVNUMVM-023.md` owns
+revalidating or repairing that reset gate before this CI restoration ticket can
+consume the gate for unwind.
+
+**2026-05-04 reset-gate repair update**: `archive/tickets/149FITLEVNUMVM-023.md`
+classified the red samples as perf-gate harness drift and repaired the checked-in
+gate without changing the `<=1800 ms` ceiling. The repaired compiled gate passed
+three serial local samples, and the Spec 149 subtest was green inside
+`pnpm -F @ludoforge/engine test:perf`; the broad lane still has an unrelated
+Spec 145 preview-pipeline corpus failure. This ticket remains blocked on the
+original 3+ consecutive CI confirmations and the determinism-timeout unwind
+criteria, not on a currently red local reset gate.
 
 **2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the reset Phase 4 gate is confirmed by the required 3+ consecutive CI runs.
 

@@ -12,14 +12,21 @@ import * as assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 import { describe, it } from 'node:test';
 
-import { PolicyAgent } from '../../../src/agents/index.js';
+import {
+  getPolicyEncodedStateLayout,
+  PolicyAgent,
+  policyWasmProductionPreviewDriveInternals,
+  precompilePolicyWasmScoreRows,
+  __internal_for_tests as policyWasmRuntimeInternals,
+} from '../../../src/agents/index.js';
+import { initializePolicyWasmRuntimeSync } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
   type Agent,
 } from '../../../src/kernel/index.js';
 import { runGame } from '../../../src/sim/index.js';
-import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
+import { getFitlBootstrapGameDefFixture } from '../../helpers/production-spec-helpers.js';
 
 const FITL_BASELINE_PROFILES = [
   'us-baseline',
@@ -38,8 +45,13 @@ const PHASE4_RESET_CEILING_MS = 1_800;
 
 describe('Spec 149 Phase 4 FITL per-card reset gate', () => {
   it(`runs the one-card successor-runtime workload within ${PHASE4_RESET_CEILING_MS} ms`, () => {
-    const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
+    initializePolicyWasmRuntimeSync();
+    const def = assertValidatedGameDef(getFitlBootstrapGameDefFixture().gameDef);
     const runtime = createGameDefRuntime(def);
+    precompileResetGateScoreRows(def);
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+    policyWasmProductionPreviewDriveInternals.resetProductionPreviewDriveBatchCount();
+
     const elapsedMs = measure(def, runtime);
 
     assert.ok(
@@ -53,15 +65,29 @@ describe('Spec 149 Phase 4 FITL per-card reset gate', () => {
       `maxTurns=${WORKLOAD.maxTurns} profiles=${FITL_BASELINE_PROFILES.join(',')} ` +
       `verifyIncrementalHash=true`,
     );
+    assert.equal(policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(), 0);
+    assert.equal(policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(), 0);
+    assert.equal(policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(), 0);
+    assert.equal(policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(), 232);
   });
 });
+
+function precompileResetGateScoreRows(
+  def: ReturnType<typeof assertValidatedGameDef>,
+): void {
+  assert.ok(def.agents !== undefined, 'FITL reset gate requires compiled agent catalog.');
+  const layout = getPolicyEncodedStateLayout(def);
+  for (const profileId of FITL_BASELINE_PROFILES) {
+    precompilePolicyWasmScoreRows(def, layout, def.agents, profileId);
+  }
+}
 
 function measure(
   def: ReturnType<typeof assertValidatedGameDef>,
   runtime: ReturnType<typeof createGameDefRuntime>,
 ): number {
   const agents: Agent[] = FITL_BASELINE_PROFILES.map(
-    (profileId) => new PolicyAgent({ profileId, traceLevel: 'summary' }),
+    (profileId) => new PolicyAgent({ profileId, traceLevel: 'none' }),
   );
 
   const startedAt = performance.now();

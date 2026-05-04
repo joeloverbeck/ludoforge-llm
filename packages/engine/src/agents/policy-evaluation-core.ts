@@ -14,7 +14,7 @@ import {
   compilePolicyBytecode,
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
-import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
+import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AgentPreviewCompletionPolicy,
   AttributeValue,
@@ -526,8 +526,15 @@ export class PolicyEvaluationContext {
         return this.evaluateCompiledExprDirect(expr, candidate);
       },
     };
-    const result = executeBytecode(bytecode, this.encodedState, vmContext);
-    return result.value;
+    try {
+      const result = executeBytecode(bytecode, this.encodedState, vmContext);
+      return result.value;
+    } catch (error) {
+      if (error instanceof PolicyBytecodeVmUnsupportedError) {
+        return this.evaluateCompiledExprDirect(expr, candidate);
+      }
+      throw error;
+    }
   }
 
   private evaluateCompiledExprDirect(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {
@@ -698,46 +705,15 @@ export class PolicyEvaluationContext {
         }
         break;
       }
-      case 'candidateFeature': {
-        const idCode = ref.aux[0];
-        if (idCode === undefined || candidate === undefined) {
-          return undefined;
-        }
-        const libRef = this.findLibraryRef(expr, 'candidateFeature', idCode);
-        if (libRef !== undefined) {
-          return this.evaluateCandidateFeature(candidate, libRef.id);
-        }
-        break;
-      }
-      case 'stateFeature': {
-        const idCode = ref.aux[0];
-        if (idCode === undefined) {
-          return undefined;
-        }
-        const libRef = this.findLibraryRef(expr, 'stateFeature', idCode);
-        if (libRef !== undefined) {
-          return this.evaluateStateFeature(libRef.id);
-        }
-        break;
-      }
-      case 'candidateAggregate': {
-        const idCode = ref.aux[0];
-        if (idCode === undefined) {
-          return undefined;
-        }
-        const libRef = this.findLibraryRef(expr, 'aggregate', idCode);
-        if (libRef !== undefined) {
-          return this.evaluateAggregate(libRef.id);
-        }
-        break;
-      }
       case 'candidateTags':
         return candidate === undefined ? undefined : this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
       case 'adjacentTokenAgg':
       case 'seatAgg':
         throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
       default:
-        return undefined;
+        throw new PolicyBytecodeVmUnsupportedError(
+          `Policy bytecode feature kind "${(ref as { kind: string }).kind}" has no handler in resolveVmFallbackFeature; falling back to direct evaluator.`,
+        );
     }
     throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
   }
@@ -790,19 +766,6 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return this.collectCompiledPolicyExprs(expr).find((candidate) => stablePayloadCode(candidate) === payloadCode);
-  }
-
-  private findLibraryRef(
-    expr: CompiledPolicyExpr,
-    refKind: 'candidateFeature' | 'stateFeature' | 'previewStateFeature' | 'aggregate',
-    idCode: number,
-  ): Extract<CompiledAgentPolicyRef, { readonly kind: 'library' }> | undefined {
-    for (const ref of this.collectAgentPolicyRefs(expr)) {
-      if (ref.kind === 'library' && ref.refKind === refKind && stableStringCode(ref.id) === idCode) {
-        return ref;
-      }
-    }
-    return undefined;
   }
 
   private collectCompiledPolicyExprs(expr: CompiledPolicyExpr): readonly CompiledPolicyExpr[] {

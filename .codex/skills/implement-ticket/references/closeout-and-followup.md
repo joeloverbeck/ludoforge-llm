@@ -126,10 +126,11 @@ When the ticket lands successfully but the live investigation disproves part of 
 
 For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
 
-1. Update the draft ticket status truthfully (`COMPLETED`, `BLOCKED`, etc.).
-2. Record what landed, any boundary correction, and the verification set you intend to run.
+1. Keep the draft ticket's terminal status pending unless all named final lanes have already run and are green, classified, or explicitly substituted.
+2. Record the intended durable state in prose, what landed, any boundary correction, and the verification set you intend to run.
 3. Make any needed ticket-scope or touched-file corrections before the final acceptance-proof pass.
 4. Run the final acceptance-proof set after those ticket edits so the last green run matches both code and ticket artifact.
+5. Apply the terminal status (`COMPLETED`, `BLOCKED`, etc.) as the final narrow edit when the proof story is settled. If that final edit only sets the already-proven status and transcribes exact proof results without changing scope, command semantics, thresholds, dependency ownership, or acceptance boundaries, record the no-invalidation decision; otherwise rerun the narrowest affected proof lane.
 
 If those ticket edits include path, dependency, archival, or ticket-id corrections, do one immediate narrow integrity pass before treating closeout as done:
 

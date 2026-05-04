@@ -989,6 +989,7 @@ const executeMoveAction = (
     moveParams: move.params,
     resources: shared.evalRuntimeResources,
     ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
+    ...(tracker === undefined ? {} : { skipRunningHashUpdates: true }),
     ...(options?.verifyCompiledEffects === undefined ? {} : { verifyCompiledEffects: options.verifyCompiledEffects }),
     ...(shared.phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget: shared.phaseTransitionBudget }),
     ...(profiler === undefined ? {} : { profiler }),
@@ -1314,6 +1315,7 @@ const applyReleasedDeferredEventEffects = (
       moveParams: deferredEventEffect.moveParams,
       resources: shared.evalRuntimeResources,
       ...(shared.cachedRuntime === undefined ? {} : { cachedRuntime: shared.cachedRuntime }),
+      ...(tracker === undefined ? {} : { skipRunningHashUpdates: true }),
       traceContext: {
         eventContext: 'actionEffect',
         actionId: deferredEventEffect.actionId,

@@ -465,7 +465,7 @@ export const applyMoveToken = (
   const zoneMutations: Record<string, readonly Token[]> = fromZoneId === toZoneId
     ? { [fromZoneId]: destinationAfter }
     : { [fromZoneId]: sourceAfter, [toZoneId]: destinationAfter };
-  const table = cursor.tracker ? env.cachedRuntime?.zobristTable : undefined;
+  const table = cursor.tracker && env.skipRunningHashUpdates !== true ? env.cachedRuntime?.zobristTable : undefined;
   if (table !== undefined) {
     if (fromZoneId === toZoneId) {
       updateZoneTokenHash(cursor.state as MutableGameState, table, fromZoneId, sourceTokens, destinationAfter);
@@ -655,7 +655,7 @@ export const applyDestroyToken = (
     provenance: resolveTraceProvenance(traceCtx),
   });
 
-  if (cursor.tracker) {
+  if (cursor.tracker && env.skipRunningHashUpdates !== true) {
     updateZoneTokenHash(cursor.state as MutableGameState, env.cachedRuntime?.zobristTable, occurrence.zoneId, sourceTokens, zoneAfter);
   }
   const newState = writeZoneMutations(cursor, { [occurrence.zoneId]: zoneAfter });
@@ -852,8 +852,10 @@ export const applyDraw = (
       if (cursor.tracker) {
         const ms = currentState as MutableGameState;
         const table = env.cachedRuntime?.zobristTable;
-        updateZoneTokenHash(ms, table, fromZoneId, sourceTokens, shuffled.tokens as Token[]);
-        updateZoneTokenHash(ms, table, reshuffleZoneId, reshuffleTokens, []);
+        if (env.skipRunningHashUpdates !== true) {
+          updateZoneTokenHash(ms, table, fromZoneId, sourceTokens, shuffled.tokens as Token[]);
+          updateZoneTokenHash(ms, table, reshuffleZoneId, reshuffleTokens, []);
+        }
         ensureZoneCloned(ms, cursor.tracker, fromZoneId);
         ensureZoneCloned(ms, cursor.tracker, reshuffleZoneId);
         (ms.zones as Record<string, Token[]>)[fromZoneId] = shuffled.tokens as Token[];
@@ -971,8 +973,10 @@ export const applyDraw = (
     // sourceTokens is the current from-zone content (post-reshuffle if applicable);
     // destinationTokens is the current to-zone content. Hash updates for reshuffle
     // were already applied above, so these cover only the draw itself.
-    updateZoneTokenHash(ms, table, fromZoneId, sourceTokens, sourceAfter);
-    updateZoneTokenHash(ms, table, toZoneId, destinationTokens, destinationAfter);
+    if (env.skipRunningHashUpdates !== true) {
+      updateZoneTokenHash(ms, table, fromZoneId, sourceTokens, sourceAfter);
+      updateZoneTokenHash(ms, table, toZoneId, destinationTokens, destinationAfter);
+    }
     // fromZoneId may already have been cloned during reshuffle; ensureZoneCloned is idempotent
     ensureZoneCloned(ms, cursor.tracker, fromZoneId);
     ensureZoneCloned(ms, cursor.tracker, toZoneId);
@@ -1105,7 +1109,7 @@ export const applyMoveAll = (
     }
   }
 
-  if (cursor.tracker) {
+  if (cursor.tracker && env.skipRunningHashUpdates !== true) {
     const table = env.cachedRuntime?.zobristTable;
     updateZoneTokenHash(cursor.state as MutableGameState, table, fromZoneId, sourceTokens, sourceAfter);
     updateZoneTokenHash(cursor.state as MutableGameState, table, toZoneId, destinationTokens, destinationAfter);
@@ -1174,7 +1178,7 @@ export const applyShuffle = (
     provenance: resolveTraceProvenance(traceCtx),
   });
 
-  if (cursor.tracker) {
+  if (cursor.tracker && env.skipRunningHashUpdates !== true) {
     updateZoneTokenHash(cursor.state as MutableGameState, env.cachedRuntime?.zobristTable, zoneId, zoneTokens, result.tokens);
   }
   const newState = writeZoneMutations(cursor, { [zoneId]: result.tokens });

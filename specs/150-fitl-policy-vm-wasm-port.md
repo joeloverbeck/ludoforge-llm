@@ -163,8 +163,11 @@ active route clean, but the same-seam gate remained red around `2.5 s`. Ticket
 kept the active route clean, but the same-seam gate remained red around
 `2.5 s`. Ticket `150FITLWASM-022` delivered bounded dynamic Zobrist
 feature-key memoization and kept the active route clean, but the same-seam gate
-remained red at `2539.8 ms`. Ticket `150FITLWASM-023` is the residual
-query/eval/reference-resolution and token-hash successor.
+remained red at `2539.8 ms`. Ticket `150FITLWASM-023` delivered reconciled
+apply-move token-placement hash deferral and kept the active route clean, but
+the same-seam gate remained red at `2557.17 ms`. Ticket `150FITLWASM-024` is
+the initial full-hash, query/eval/reference-resolution, encoding, and
+token-index residual successor.
 
 ### Phase 4 — Same-seam performance gate
 
@@ -222,4 +225,5 @@ Once the WASM path is correct and the budget is green, ticket `149FITLEVNUMVM-01
 - [`archive/tickets/150FITLWASM-020.md`](../archive/tickets/150FITLWASM-020.md) — Completed residual active-route query/eval/encoding slice with red measured gate successor.
 - [`archive/tickets/150FITLWASM-021.md`](../archive/tickets/150FITLWASM-021.md) — Completed deeper active-route query/apply/hash residual closure with red measured gate successor.
 - [`archive/tickets/150FITLWASM-022.md`](../archive/tickets/150FITLWASM-022.md) — Completed bounded dynamic Zobrist feature-key cache with red measured gate successor.
-- [`tickets/150FITLWASM-023.md`](../tickets/150FITLWASM-023.md) — Residual query/eval and token-hash closure.
+- [`archive/tickets/150FITLWASM-023.md`](../archive/tickets/150FITLWASM-023.md) — Completed residual apply-move token-hash deferral with red measured gate successor.
+- [`tickets/150FITLWASM-024.md`](../tickets/150FITLWASM-024.md) — Initial full-hash and query/eval residual closure.

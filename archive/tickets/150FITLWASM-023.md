@@ -1,6 +1,6 @@
 # 150FITLWASM-023: Residual query/eval and token-hash closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference resolution, token-placement hashing, and residual preview-drive runtime work
@@ -89,6 +89,8 @@ optimization, record exact metrics and create the next non-overlapping owner.
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` only if additional counters are needed
 - focused route/perf witnesses near the changed production seam
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
+- `tickets/150FITLWASM-024.md` if the gate remains red and needs the next
+  non-overlapping owner
 - this ticket (Outcome before closeout)
 
 If this ticket touches `packages/engine/src/agents/policy-wasm-runtime.ts`, keep
@@ -144,3 +146,97 @@ that same file is still the cleanest residual owner.
 2. Focused tests for the changed generic seam.
 3. `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js`.
 4. `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-token-hash-residual-perf`.
+
+## Outcome
+
+2026-05-04 implementation landed a generic apply-move token-placement hash
+deferral while preserving the active WASM score-row and preview-state routes.
+
+- `packages/engine/src/kernel/apply-move.ts` now marks tracker-backed
+  apply-move effect scopes with `skipRunningHashUpdates` because the move
+  boundary already reconciles the final state hash from the original input
+  state to the final progressed state and `verifyIncrementalHash` still
+  recomputes the canonical full hash afterward.
+- `packages/engine/src/kernel/effects-token.ts` now honors that existing
+  internal flag for `moveToken`, `destroyToken`, `draw`, `moveAll`, and
+  `shuffle` token-placement hash updates. Direct effect execution outside a
+  reconciled move boundary keeps the existing incremental hash behavior.
+- `packages/engine/test/unit/kernel/zobrist-incremental-tokens.test.ts` proves
+  token handlers can leave `_runningHash` unchanged when boundary
+  reconciliation owns final hashing, while the canonical full hash still
+  changes for the moved token placements.
+
+Measured result:
+
+- Baseline after fresh build:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm023-baseline-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-023-baseline-cpu`
+  — RED, per-card `elapsedMs=2533.28`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=3717`,
+  `zobristKeyCacheHitCount=189243`, `zobristKeyUncachedCount=334`.
+- Post-change same-seam profile:
+  `timeout 180 node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-150fitlwasm023-token-skip-profile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-023-token-hash-skip-probe`
+  — RED, per-card `elapsedMs=2402.77`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=2837`,
+  `zobristKeyCacheHitCount=187747`, `zobristKeyUncachedCount=334`.
+- Final same-seam profile after code, test, ticket, spec, and dependency edits:
+  `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-token-hash-residual-perf`
+  — RED, per-card `elapsedMs=2557.17`,
+  `wasmScoreRowUnsupportedCount=0`,
+  `wasmPreviewCandidateFeatureRowUnsupportedCount=0`,
+  `zobristKeyCacheMissCount=2837`,
+  `zobristKeyCacheHitCount=187747`, `zobristKeyUncachedCount=334`.
+- Post-change CPU parser evidence shows token-placement update hashing was
+  removed from the active apply-move stacks. Residual owners remain in
+  initial-state/full-hash token-placement hashing, decision-stack frame
+  digests, `resolveRef`, `evalCondition`, `evalValue`, `evalQuery`,
+  `encodePolicyBytecodeInput`, and token-index refresh.
+
+Retained candidate classification:
+
+- `root-cause counter improved`: reconciled apply-move scopes no longer pay
+  redundant token-placement key updates that are replaced by the final
+  boundary hash reconciliation. The same-seam probe reduced
+  `zobristKeyCacheMissCount` from `3717` to `2837`.
+- `wall-clock variance/unproven`: a CPU-profile probe moved per-card wall time
+  from `2533.28 ms` to `2402.77 ms`, but the decisive final same-seam profile
+  drifted to `2557.17 ms`.
+- `wall-clock gate still red`: the decisive same-seam profile remained around
+  `2.56 s` versus the `<=250 ms` target, so no perf gate test was added and
+  `149FITLEVNUMVM-016` remains blocked.
+
+Created successor `tickets/150FITLWASM-024.md` for the next non-overlapping
+owner: initial-state/full-hash, query/eval/reference-resolution, encoding, and
+token-index residual closure. Tickets `149FITLEVNUMVM-016` and
+`149FITLEVNUMVM-022` remain blocked until that or a later successor makes the
+`<=250 ms` gate truthful.
+
+Oversize file ledger:
+
+- `packages/engine/src/kernel/apply-move.ts`: preexisting oversize file,
+  `2140` lines after this ticket. Active growth is one internal flag threaded
+  into apply-move effect contexts. Extraction would be disproportionate because
+  the touched logic is the local move-boundary context setup.
+- `packages/engine/src/kernel/effects-token.ts`: preexisting oversize file,
+  `1186` lines after this ticket. Active growth is a narrow guard around
+  existing token hash update call sites. Extraction would widen this
+  red-gate slice beyond the retained generic residual change.
+
+Schema/artifact fallout: none. The change is internal hash-lifetime behavior
+plus a focused unit test; no serialized schema, ABI, golden, or compiled
+GameDef artifact changed.
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/kernel/zobrist-incremental-tokens.test.js dist/test/determinism/zobrist-incremental-parity-fitl-seed-42.test.js` — PASS.
+- `timeout 90 pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-driver.test.js` — PASS.
+- `timeout 180 node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec150-wasm-query-eval-token-hash-residual-perf` — RED by threshold, active route clean, per-card `elapsedMs=2557.17` versus `<=250`.
+- `pnpm run check:ticket-deps` — PASS after creating `tickets/150FITLWASM-024.md` and repointing dependent tickets.
+
+No-invalidation note: the post-profile ticket/spec/dependency edits transcribe
+the final measured red result and successor ownership only; they did not change
+code, command semantics, thresholds, or acceptance boundaries.

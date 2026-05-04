@@ -97,7 +97,7 @@ const makeState = (def: GameDef, table: ReturnType<typeof createZobristTable>, z
 const makeCtx = (
   def: GameDef,
   state: GameState,
-  opts?: { noCachedRuntime?: boolean; bindings?: Record<string, unknown> },
+  opts?: { noCachedRuntime?: boolean; bindings?: Record<string, unknown>; skipRunningHashUpdates?: boolean },
 ) => {
   const runtime = opts?.noCachedRuntime ? undefined : createGameDefRuntime(def);
   const baseCtx = makeExecutionEffectContext({
@@ -111,7 +111,11 @@ const makeCtx = (
     moveParams: {},
     collector: createCollector(),
   });
-  return runtime ? { ...baseCtx, cachedRuntime: runtime } : baseCtx;
+  const ctx = {
+    ...baseCtx,
+    ...(opts?.skipRunningHashUpdates === true ? { skipRunningHashUpdates: true } : {}),
+  };
+  return runtime ? { ...ctx, cachedRuntime: runtime } : ctx;
 };
 
 // ---------------------------------------------------------------------------
@@ -233,6 +237,27 @@ describe('zobrist incremental hash — token effect handlers', () => {
 
       const expected = computeFullHash(table, result.state);
       assert.equal(result.state._runningHash, expected, 'incremental hash must match full recompute after multi draw');
+    });
+
+    it('can defer token-placement hash updates to a reconciled move boundary', () => {
+      const state = makeState(def, table);
+      const ctx = makeCtx(def, state, { skipRunningHashUpdates: true });
+
+      const effect: EffectAST = eff({
+        draw: { from: 'hand:none', to: 'board:none', count: 2 },
+      });
+      const result = applyEffects([effect], ctx);
+
+      assert.equal(
+        result.state._runningHash,
+        state._runningHash,
+        'token handlers must leave the running hash unchanged when boundary reconciliation owns final hashing',
+      );
+      assert.notEqual(
+        computeFullHash(table, result.state),
+        state._runningHash,
+        'the moved token placements still change the canonical full hash',
+      );
     });
   });
 

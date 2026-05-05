@@ -47,6 +47,8 @@ jobs:
       - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
       - run: pnpm -F @ludoforge/engine build
+      - name: Warm GameDef cache
+        run: pnpm -F @ludoforge/engine cache:gamedef:warm
       - name: Upload engine dist
         uses: actions/upload-artifact@v7
         with:

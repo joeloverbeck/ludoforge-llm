@@ -34,6 +34,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
+- reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run.
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
@@ -41,7 +42,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for new packages, crates, or other workspace units, confirm they are discoverable by the workspace/package filter, their build artifacts are intentionally ignored or checked in, and any package/task-runner output declarations remain truthful
 - for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
-- for completed active tickets, use the explicit status spelling `**Status**: COMPLETED` unless the repo artifact already documents a different final status class such as `BLOCKED`, `DEFERRED`, or `REJECTED`
+- for completed active tickets, use the explicit repo-local terminal status already used by the ticket or series, such as `IMPLEMENTED` or `COMPLETED`; do not normalize to `COMPLETED` when the family uses a different terminal implementation status
 
 ## Acceptance-Proof Invalidation
 

@@ -5,8 +5,21 @@ import { fileURLToPath } from 'node:url';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { LoadedGameSpecBundle } from '../../src/cnl/index.js';
-import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
-import { loadGameSpecBundleFromEntrypoint, loadGameSpecSource, runGameSpecStagesFromBundle } from '../../src/cnl/index.js';
+import type { CompileResult, CompileSectionResults, RunGameSpecStagesResult } from '../../src/cnl/index.js';
+import {
+  loadGameSpecBundleFromEntrypoint,
+  loadGameSpecBundleSourcesFromEntrypoint,
+  loadGameSpecSource,
+  runGameSpecStagesFromBundle,
+} from '../../src/cnl/index.js';
+import { assertValidatedGameDef } from '../../src/kernel/validate-gamedef.js';
+import {
+  deriveGameKeyFromEntrypoint,
+  GAMEDEF_CACHE_FORMAT_VERSION,
+  readGameDefCache,
+  writeGameDefCache,
+  type GameDefCacheKey,
+} from './gamedef-cache.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
@@ -45,16 +58,45 @@ const TEXAS_PRODUCTION_ENTRYPOINT_PATH = join(REPO_ROOT, 'data', 'games', 'texas
 const FIXTURE_BASE_PATH = join(REPO_ROOT, 'packages', 'engine', 'test', 'fixtures', 'cnl', 'compiler');
 
 let cachedFitlBundle: LoadedGameSpecBundle | null = null;
+let cachedFitlSourceFingerprint: string | null = null;
 let cachedFitlResult: CompiledProductionSpec | null = null;
 let cachedFitlFixture: ProductionGameFixture | null = null;
 let cachedTexasBundle: LoadedGameSpecBundle | null = null;
+let cachedTexasSourceFingerprint: string | null = null;
 let cachedTexasResult: CompiledProductionSpec | null = null;
 let cachedTexasFixture: ProductionGameFixture | null = null;
+
+/**
+ * Test-only seam for integration tests that must distinguish persistent cache
+ * hits from this module's in-process production-spec cache.
+ */
+export function __resetProductionSpecCacheForTests(): void {
+  cachedFitlBundle = null;
+  cachedFitlSourceFingerprint = null;
+  cachedFitlResult = null;
+  cachedFitlFixture = null;
+  cachedTexasBundle = null;
+  cachedTexasSourceFingerprint = null;
+  cachedTexasResult = null;
+  cachedTexasFixture = null;
+}
 
 /**
  * Loads the FITL production spec through the canonical entrypoint and caches the parsed result.
  */
 export function parseProductionSpec(): RunGameSpecStagesResult['parsed'] {
+  const bundleSources = loadFitlBundleSources();
+  if (cachedFitlResult !== null && cachedFitlSourceFingerprint === bundleSources.sourceFingerprint) {
+    return cachedFitlResult.parsed;
+  }
+
+  const cacheKey = productionCacheKey(FITL_PRODUCTION_ENTRYPOINT_PATH, bundleSources.sourceFingerprint);
+  const cached = loadParsedProductionSpecFromPersistentCache('FITL production spec', cacheKey);
+  if (cached !== null) {
+    cachedFitlSourceFingerprint = bundleSources.sourceFingerprint;
+    return cached;
+  }
+
   return loadFitlBundle().parsed;
 }
 
@@ -71,11 +113,20 @@ export function readTexasProductionSpec(): string {
  * All FITL game-rule tests should use this instead of per-fixture compilation.
  */
 export function compileProductionSpec(): CompiledProductionSpec {
-  const bundle = loadFitlBundle();
-  if (cachedFitlResult !== null && cachedFitlBundle?.sourceFingerprint === bundle.sourceFingerprint) {
+  const bundleSources = loadFitlBundleSources();
+  if (cachedFitlResult !== null && cachedFitlSourceFingerprint === bundleSources.sourceFingerprint) {
     return cachedFitlResult;
   }
 
+  const cacheKey = productionCacheKey(FITL_PRODUCTION_ENTRYPOINT_PATH, bundleSources.sourceFingerprint);
+  const cached = loadCompiledProductionSpecFromPersistentCache('FITL production spec', bundleSources, cacheKey);
+  if (cached !== null) {
+    cachedFitlResult = cached;
+    cachedFitlSourceFingerprint = bundleSources.sourceFingerprint;
+    return cachedFitlResult;
+  }
+
+  const bundle = loadFitlBundle();
   const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
@@ -85,7 +136,9 @@ export function compileProductionSpec(): CompiledProductionSpec {
     validatorDiagnostics: staged.validation.diagnostics,
     compiled,
   };
+  cachedFitlSourceFingerprint = bundle.sourceFingerprint;
 
+  persistCompiledProductionSpec(cacheKey, cachedFitlResult);
   return cachedFitlResult;
 }
 
@@ -114,6 +167,7 @@ export function getFitlProductionGameDefFixture(): ProductionGameDefFixture {
   const compiled = compileProductionSpec();
   const gameDef = compiled.compiled.gameDef;
   cachedFitlBundle = null;
+  cachedFitlSourceFingerprint = null;
   cachedFitlResult = null;
   cachedFitlFixture = null;
   return { gameDef };
@@ -149,11 +203,20 @@ export function deriveFitlPopulationZeroSpaces(): readonly string[] {
  * Cache invalidates when the file content hash changes.
  */
 export function compileTexasProductionSpec(): CompiledProductionSpec {
-  const bundle = loadTexasBundle();
-  if (cachedTexasResult !== null && cachedTexasBundle?.sourceFingerprint === bundle.sourceFingerprint) {
+  const bundleSources = loadTexasBundleSources();
+  if (cachedTexasResult !== null && cachedTexasSourceFingerprint === bundleSources.sourceFingerprint) {
     return cachedTexasResult;
   }
 
+  const cacheKey = productionCacheKey(TEXAS_PRODUCTION_ENTRYPOINT_PATH, bundleSources.sourceFingerprint);
+  const cached = loadCompiledProductionSpecFromPersistentCache('Texas production spec', bundleSources, cacheKey);
+  if (cached !== null) {
+    cachedTexasResult = cached;
+    cachedTexasSourceFingerprint = bundleSources.sourceFingerprint;
+    return cachedTexasResult;
+  }
+
+  const bundle = loadTexasBundle();
   const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('Texas production spec', staged);
 
@@ -163,7 +226,9 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
     validatorDiagnostics: staged.validation.diagnostics,
     compiled,
   };
+  cachedTexasSourceFingerprint = bundle.sourceFingerprint;
 
+  persistCompiledProductionSpec(cacheKey, cachedTexasResult);
   return cachedTexasResult;
 }
 
@@ -225,6 +290,117 @@ function requireSuccessfulProductionCompilation(
   return compiled as CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
 }
 
+function loadCompiledProductionSpecFromPersistentCache(
+  label: string,
+  bundleSources: Pick<LoadedGameSpecBundle, 'sources' | 'sourceFingerprint'>,
+  cacheKey: GameDefCacheKey,
+): CompiledProductionSpec | null {
+  const cached = readGameDefCache(cacheKey);
+  if (cached === null || cached.parsed === undefined || cached.validatorDiagnostics === undefined) {
+    return null;
+  }
+
+  try {
+    const gameDef = assertValidatedGameDef(cached.gameDef);
+    assert.equal(
+      hasErrorDiagnostics(cached.parsed.diagnostics),
+      false,
+      `${label} should not contain parser errors:\n${formatDiagnosticSummary(cached.parsed.diagnostics)}`,
+    );
+    assert.equal(
+      hasErrorDiagnostics(cached.validatorDiagnostics),
+      false,
+      `${label} should not contain validator errors:\n${formatDiagnosticSummary(cached.validatorDiagnostics)}`,
+    );
+
+    return {
+      markdown: bundleSources.sources.map((source) => source.markdown).join('\n\n'),
+      parsed: cached.parsed,
+      validatorDiagnostics: cached.validatorDiagnostics,
+      compiled: {
+        gameDef,
+        sections: sectionsFromGameDef(gameDef),
+        diagnostics: [],
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function loadParsedProductionSpecFromPersistentCache(
+  label: string,
+  cacheKey: GameDefCacheKey,
+): RunGameSpecStagesResult['parsed'] | null {
+  const cached = readGameDefCache(cacheKey);
+  if (cached === null || cached.parsed === undefined) {
+    return null;
+  }
+
+  try {
+    assertValidatedGameDef(cached.gameDef);
+    assert.equal(
+      hasErrorDiagnostics(cached.parsed.diagnostics),
+      false,
+      `${label} should not contain parser errors:\n${formatDiagnosticSummary(cached.parsed.diagnostics)}`,
+    );
+    return cached.parsed;
+  } catch {
+    return null;
+  }
+}
+
+function persistCompiledProductionSpec(
+  cacheKey: GameDefCacheKey,
+  compiled: CompiledProductionSpec,
+): void {
+  try {
+    writeGameDefCache(cacheKey, {
+      gameDef: compiled.compiled.gameDef,
+      sourceFingerprint: cacheKey.sourceFingerprint,
+      compilerStamp: '',
+      parsed: compiled.parsed,
+      validatorDiagnostics: compiled.validatorDiagnostics,
+    });
+  } catch {
+    // Persistent cache writes are accelerators; a failed write must not fail tests.
+  }
+}
+
+function productionCacheKey(entrypointPath: string, sourceFingerprint: string): GameDefCacheKey {
+  return {
+    gameKey: deriveGameKeyFromEntrypoint(entrypointPath),
+    sourceFingerprint,
+    cacheFormatVersion: GAMEDEF_CACHE_FORMAT_VERSION,
+  };
+}
+
+function sectionsFromGameDef(gameDef: NonNullable<CompileResult['gameDef']>): CompileSectionResults {
+  return {
+    metadata: gameDef.metadata,
+    constants: gameDef.constants,
+    globalVars: gameDef.globalVars,
+    globalMarkerLattices: gameDef.globalMarkerLattices ?? null,
+    perPlayerVars: gameDef.perPlayerVars,
+    zoneVars: gameDef.zoneVars ?? null,
+    zones: gameDef.zones,
+    tokenTypes: gameDef.tokenTypes,
+    setup: gameDef.setup,
+    turnStructure: gameDef.turnStructure,
+    turnOrder: gameDef.turnOrder ?? null,
+    actionPipelines: gameDef.actionPipelines ?? null,
+    derivedMetrics: gameDef.derivedMetrics ?? null,
+    observers: gameDef.observers ?? null,
+    agents: gameDef.agents ?? null,
+    terminal: gameDef.terminal,
+    actions: gameDef.actions,
+    triggers: gameDef.triggers,
+    eventDecks: gameDef.eventDecks ?? null,
+    victoryStandings: gameDef.victoryStandings ?? null,
+    verbalization: gameDef.verbalization ?? null,
+  };
+}
+
 function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {
   return diagnostics.some((diagnostic) => diagnostic.severity === 'error');
 }
@@ -245,7 +421,12 @@ function loadFitlBundle(): LoadedGameSpecBundle {
     return cachedFitlBundle;
   }
   cachedFitlBundle = loaded;
+  cachedFitlSourceFingerprint = loaded.sourceFingerprint;
   return loaded;
+}
+
+function loadFitlBundleSources(): Pick<LoadedGameSpecBundle, 'sources' | 'sourceFingerprint'> {
+  return loadGameSpecBundleSourcesFromEntrypoint(FITL_PRODUCTION_ENTRYPOINT_PATH);
 }
 
 function loadTexasBundle(): LoadedGameSpecBundle {
@@ -254,5 +435,10 @@ function loadTexasBundle(): LoadedGameSpecBundle {
     return cachedTexasBundle;
   }
   cachedTexasBundle = loaded;
+  cachedTexasSourceFingerprint = loaded.sourceFingerprint;
   return loaded;
+}
+
+function loadTexasBundleSources(): Pick<LoadedGameSpecBundle, 'sources' | 'sourceFingerprint'> {
+  return loadGameSpecBundleSourcesFromEntrypoint(TEXAS_PRODUCTION_ENTRYPOINT_PATH);
 }

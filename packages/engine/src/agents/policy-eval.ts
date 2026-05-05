@@ -188,7 +188,7 @@ export interface EvaluatePolicyMoveInput {
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly selectionGrouping?: 'none' | 'actionId';
   readonly encodedStateMode?: 'enabled' | 'disabled';
-  readonly policyVmMode?: 'enabled' | 'disabled';
+  readonly diagnosticsMode?: 'enabled' | 'disabled';
 }
 
 function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
@@ -196,15 +196,20 @@ function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
   readonly encoded: ReturnType<typeof buildEncodedState>;
 } | undefined {
   try {
-    let layout = encodedStateLayoutCache.get(def);
-    if (layout === undefined) {
-      layout = buildEncodedStateLayout(def);
-      encodedStateLayoutCache.set(def, layout);
-    }
+    const layout = getPolicyEncodedStateLayout(def);
     return { layout, encoded: buildEncodedState(state, layout) };
   } catch {
     return undefined;
   }
+}
+
+export function getPolicyEncodedStateLayout(def: GameDef): ReturnType<typeof buildEncodedStateLayout> {
+  let layout = encodedStateLayoutCache.get(def);
+  if (layout === undefined) {
+    layout = buildEncodedStateLayout(def);
+    encodedStateLayoutCache.set(def, layout);
+  }
+  return layout;
 }
 
 /**
@@ -406,10 +411,11 @@ function computeWeightedSampleProbabilities(candidates: readonly CandidateEntry[
 export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEvaluationCoreResult {
   policyEvalCallCount += 1;
   policyEvalDepth += 1;
+  const collectDiagnostics = input.diagnosticsMode !== 'disabled';
   const candidates = canonicalizeCandidates(input.def, input.legalMoves);
   const currentDepth = policyEvalDepth;
   logPolicyEvalOomTrace('start', currentDepth, input.state, candidates.length);
-  const canonicalOrder = candidates.map((candidate) => candidate.stableMoveKey);
+  const canonicalOrder = collectDiagnostics ? candidates.map((candidate) => candidate.stableMoveKey) : [];
   const requestedProfileId = input.profileIdOverride ?? null;
 
   try {
@@ -448,7 +454,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       return failureWithMetadata(candidates, null, requestedProfileId, null, {
         code: 'POLICY_CATALOG_MISSING',
         message: 'GameDef.agents is required to evaluate an authored policy.',
-      });
+      }, null, collectDiagnostics);
     }
 
     const seatId = resolvePolicyBindingSeatId(input.def, input.playerId);
@@ -457,7 +463,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         code: 'SEAT_UNRESOLVED',
         message: `Player ${input.playerId} does not resolve to a canonical seat id for policy binding.`,
         detail: { playerId: input.playerId },
-      });
+      }, null, collectDiagnostics);
     }
 
     const profileId = input.profileIdOverride ?? catalog.bindingsBySeat[seatId];
@@ -466,7 +472,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         code: 'PROFILE_BINDING_MISSING',
         message: `Seat "${seatId}" is not bound to an authored policy profile.`,
         detail: { seatId },
-      });
+      }, null, collectDiagnostics);
     }
 
     const profile = catalog.profiles[profileId];
@@ -475,7 +481,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         code: 'PROFILE_MISSING',
         message: `Compiled policy profile "${profileId}" is missing from GameDef.agents.profiles.`,
         detail: { seatId, profileId },
-      });
+      }, null, collectDiagnostics);
     }
 
     let evaluationForDispose: PolicyEvaluationContext | undefined;
@@ -499,7 +505,6 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         previewDependencies,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
         ...(encodedView === undefined ? {} : { encodedStateLayout: encodedView.layout, encodedState: encodedView.encoded }),
-        ...(input.policyVmMode === undefined ? {} : { policyVmMode: input.policyVmMode }),
       }, candidates);
       evaluationForDispose = evaluation;
       let activeCandidates = [...candidates];
@@ -625,9 +630,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
               considerations,
               considerationId,
               candidate,
-              (contribution) => {
+              collectDiagnostics ? (contribution) => {
                 candidate.scoreContributions.push({ termId: considerationId, contribution });
-              },
+              } : undefined,
             )
           ), 0);
           evaluation.finalizePreviewOutcome(candidate);
@@ -669,11 +674,13 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           }
 
           selected = bestCandidates[0] ?? selectionCandidates[0];
-          selectionTrace = {
-            mode: 'argmax',
-            candidateCount: selectionCandidates.length,
-            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-          };
+          if (collectDiagnostics) {
+            selectionTrace = {
+              mode: 'argmax',
+              candidateCount: selectionCandidates.length,
+              selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+            };
+          }
           break;
         }
         case 'softmaxSample': {
@@ -691,13 +698,15 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             probabilities,
             deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
           ).selected;
-          selectionTrace = {
-            mode: 'softmaxSample',
-            temperature,
-            candidateCount: selectionCandidates.length,
-            samplingProbabilities: probabilities,
-            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-          };
+          if (collectDiagnostics) {
+            selectionTrace = {
+              mode: 'softmaxSample',
+              temperature,
+              candidateCount: selectionCandidates.length,
+              samplingProbabilities: probabilities,
+              selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+            };
+          }
           break;
         }
         case 'weightedSample': {
@@ -707,12 +716,14 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             probabilities,
             deriveSelectionRngFromVisiblePolicyInputs(profile.fingerprint, selectionCandidates),
           ).selected;
-          selectionTrace = {
-            mode: 'weightedSample',
-            candidateCount: selectionCandidates.length,
-            samplingProbabilities: probabilities,
-            selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
-          };
+          if (collectDiagnostics) {
+            selectionTrace = {
+              mode: 'weightedSample',
+              candidateCount: selectionCandidates.length,
+              samplingProbabilities: probabilities,
+              selectedIndex: Math.max(0, selectionCandidates.findIndex((candidate) => candidate.stableMoveKey === selected?.stableMoveKey)),
+            };
+          }
           break;
         }
       }
@@ -724,7 +735,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         });
       }
 
-      const stateFeatures = evaluation.getEvaluatedStateFeatures();
+      const stateFeatures = collectDiagnostics ? evaluation.getEvaluatedStateFeatures() : {};
       logPolicyEvalOomTrace(
         'success',
         currentDepth,
@@ -743,10 +754,10 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           profileId,
           profileFingerprint: profile.fingerprint,
           canonicalOrder,
-          candidates: candidates.map(candidateMetadata),
-          pruningSteps,
-          tieBreakChain,
-          previewUsage: summarizePreviewUsage(candidates, profile.preview.mode),
+          candidates: collectDiagnostics ? candidates.map(candidateMetadata) : [],
+          pruningSteps: collectDiagnostics ? pruningSteps : [],
+          tieBreakChain: collectDiagnostics ? tieBreakChain : [],
+          previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, profile.preview.mode) : emptyPreviewUsage(profile.preview.mode),
           ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,
@@ -780,6 +791,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         profileId,
         failure,
         profile.fingerprint,
+        collectDiagnostics,
       );
     } finally {
       evaluationForDispose?.dispose();
@@ -832,6 +844,7 @@ function createGrantedOperationPreviewDependencies(
         rng: { state: postEventState.rng },
         profileIdOverride: profileId,
         ...(runtime === undefined ? {} : { runtime }),
+        diagnosticsMode: 'disabled',
       });
 
       if (result.kind !== 'success') {
@@ -876,6 +889,7 @@ function failureWithMetadata(
   profileId: string | null,
   failure: PolicyEvaluationFailure,
   profileFingerprint: string | null = null,
+  collectDiagnostics = true,
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -887,11 +901,11 @@ function failureWithMetadata(
       requestedProfileId,
       profileId,
       profileFingerprint,
-      canonicalOrder: candidates.map((candidate) => candidate.stableMoveKey),
-      candidates: candidates.map(candidateMetadata),
+      canonicalOrder: collectDiagnostics ? candidates.map((candidate) => candidate.stableMoveKey) : [],
+      candidates: collectDiagnostics ? candidates.map(candidateMetadata) : [],
       pruningSteps: [],
       tieBreakChain: [],
-      previewUsage: summarizePreviewUsage(candidates, 'exactWorld'),
+      previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, 'exactWorld') : emptyPreviewUsage('exactWorld'),
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,

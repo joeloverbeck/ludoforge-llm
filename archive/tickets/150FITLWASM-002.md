@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — Rust/WASM policy VM plus TypeScript bridge parity path
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-001.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-001.md`
 
 ## Problem
 
@@ -69,14 +69,14 @@ than silently falling back to TypeScript.
 ### 4. Handoff update
 
 If parity proves the current Phase 2 scope is too broad for one implementation
-slice, update this ticket and `specs/150-fitl-policy-vm-wasm-port.md` with the
+slice, update this ticket and `archive/specs/150-fitl-policy-vm-wasm-port.md` with the
 truthful narrowed opcode/feature subset and create the next non-overlapping
 ticket before final proof.
 
 ## Files to Touch
 
 - `tickets/150FITLWASM-002.md`
-- `specs/150-fitl-policy-vm-wasm-port.md` if the parity boundary changes
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` if the parity boundary changes
 - `packages/engine-wasm/policy-vm/` (modify)
 - `packages/engine/src/agents/policy-wasm-runtime.ts` (modify)
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or a

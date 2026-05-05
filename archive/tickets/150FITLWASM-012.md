@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: XL
 **Engine Changes**: Yes — generic encoded preview-drive class expansion for current FITL same-seam classes
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`
 
 ## Problem
 

@@ -28,11 +28,18 @@ import { filterRowsByPredicates, type ResolvedRowPredicate } from './query-predi
 import { resolvePredicateValue } from './predicate-value-resolution.js';
 import { resolveFreeOperationSequenceKey } from './free-operation-sequence-key.js';
 import { isDynamicScopedVarNameExpr, resolveScopedVarNameExprValue } from './scoped-var-name-resolution.js';
-import { filterTokensByExprInContext } from './token-filter.js';
+import {
+  filterTokensByExprInContext,
+  matchesTokenFilterExprInContext,
+  tokenFilterExprRequiresContext,
+  type TokenFilterFieldResolver,
+} from './token-filter.js';
+import { getCompiledTokenFilter } from './compiled-token-filter-cache.js';
 import { planAssetRowsLookup } from './runtime-table-lookup-plan.js';
 import { hasTokenRuntimeShapeKeys } from './token-shape.js';
 import { getTokenStateIndex } from './token-state-index.js';
 import { getZoneMap } from './def-lookup.js';
+import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
 import type { AssetRowPredicate, NumericValueExpr, OptionsQuery, Token, TokenFilterExpr, ZoneDef } from './types.js';
 
 type AssetRow = Readonly<Record<string, unknown>>;
@@ -40,6 +47,18 @@ type QueryResult = Token | AssetRow | number | string | boolean | PlayerId | Zon
 type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'empty' | 'mixed';
 const sortedZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
 const sortedMapSpaceZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
+const contextIndependentTokenFilterCountCache = new WeakMap<readonly Token[], WeakMap<TokenFilterExpr, number>>();
+const tokenFilterContextIndependenceCache = new WeakMap<TokenFilterExpr, boolean>();
+
+function tokenFilterIsContextIndependent(filter: TokenFilterExpr): boolean {
+  const cached = tokenFilterContextIndependenceCache.get(filter);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const isContextIndependent = !tokenFilterExprRequiresContext(filter);
+  tokenFilterContextIndependenceCache.set(filter, isContextIndependent);
+  return isContextIndependent;
+}
 
 function compareZoneId(left: ZoneDef, right: ZoneDef): number {
   return left.id.localeCompare(right.id);
@@ -395,24 +414,119 @@ function resolveCapturedSequenceZonesQuery(
     : (ctx.freeOperationOverlay?.capturedSequenceZonesByKey?.[resolvedKey] ?? []);
 }
 
-function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
+function resolveTokenQueryFieldValue(
+  token: Token,
+  predicate: Parameters<TokenFilterFieldResolver>[1],
+  ctx: ReadContext,
+): unknown {
   const tokenStateIndex = getTokenStateIndex(ctx.state);
   const zoneDefById = getZoneMap(ctx.def);
-  return filterTokensByExprInContext(
-    tokens,
-    filter,
-    ctx,
-    (token, predicate) => {
-      const zoneId = tokenStateIndex.get(token.id)?.zoneId;
-      if (predicate.field?.kind === 'tokenZone') {
-        return zoneId;
+  const zoneId = tokenStateIndex.get(token.id)?.zoneId;
+  if (predicate.field?.kind === 'tokenZone') {
+    return zoneId;
+  }
+  if (predicate.field?.kind === 'zoneProp') {
+    return zoneId === undefined ? undefined : Reflect.get(zoneDefById.get(zoneId as ZoneId) ?? {}, predicate.field.prop);
+  }
+  return undefined;
+}
+
+function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
+    if (ctx.freeOperationOverlay === undefined) {
+      const compiled = getCompiledTokenFilter(filter);
+      if (compiled !== null) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:applyTokenFilterCompiled');
+        }
+        return tokens.filter((token) => compiled(token, ctx));
       }
-      if (predicate.field?.kind === 'zoneProp') {
-        return zoneId === undefined ? undefined : Reflect.get(zoneDefById.get(zoneId as ZoneId) ?? {}, predicate.field.prop);
+    }
+    return filterTokensByExprInContext(
+      tokens,
+      filter,
+      ctx,
+      (token, predicate) => resolveTokenQueryFieldValue(token, predicate, ctx),
+    );
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('evalQuery:applyTokenFilter', t0);
+    }
+  }
+}
+
+function tokenMatchesFilter(token: Token, filter: TokenFilterExpr | undefined, ctx: ReadContext): boolean {
+  return filter === undefined
+    || matchesTokenFilterExprInContext(
+      token,
+      filter,
+      ctx,
+      (candidate, predicate) => resolveTokenQueryFieldValue(candidate, predicate, ctx),
+    );
+}
+
+function countMatchingTokens(tokens: readonly Token[], filter: TokenFilterExpr | undefined, ctx: ReadContext): number {
+  const profileHotPath = hotPathProfilingEnabled;
+  if (filter === undefined) {
+    if (profileHotPath) {
+      perfHotPathCount('evalQuery:countMatchingTokensNoFilter');
+      perfHotPathCount('evalQuery:countMatchingTokensNoFilterItems', tokens.length);
+    }
+    return tokens.length;
+  }
+
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
+    if (profileHotPath) {
+      perfHotPathCount('evalQuery:countMatchingTokensFilteredItems', tokens.length);
+    }
+    if (ctx.freeOperationOverlay === undefined) {
+      const canCache = tokenFilterIsContextIndependent(filter);
+      const cached = canCache
+        ? contextIndependentTokenFilterCountCache.get(tokens)?.get(filter)
+        : undefined;
+      if (cached !== undefined) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:countMatchingTokensCacheHit');
+        }
+        return cached;
       }
-      return undefined;
-    },
-  );
+      const compiled = getCompiledTokenFilter(filter);
+      if (compiled !== null) {
+        if (profileHotPath) {
+          perfHotPathCount('evalQuery:countMatchingTokensCompiled');
+        }
+        let count = 0;
+        for (const token of tokens) {
+          if (compiled(token, ctx)) {
+            count += 1;
+          }
+        }
+        if (canCache) {
+          const cachedByFilter = contextIndependentTokenFilterCountCache.get(tokens);
+          if (cachedByFilter !== undefined) {
+            cachedByFilter.set(filter, count);
+          } else {
+            contextIndependentTokenFilterCountCache.set(tokens, new WeakMap([[filter, count]]));
+          }
+        }
+        return count;
+      }
+    }
+    let count = 0;
+    for (const token of tokens) {
+      if (tokenMatchesFilter(token, filter, ctx)) {
+        count += 1;
+      }
+    }
+    return count;
+  } finally {
+    if (profileHotPath) {
+      perfHotPathEnd('evalQuery:countMatchingTokens', t0);
+    }
+  }
 }
 
 function resolveAssetRowPredicates(where: readonly AssetRowPredicate[], ctx: ReadContext): readonly ResolvedRowPredicate[] {
@@ -538,6 +652,82 @@ function applyZonesFilter(
   return filteredZones.map((zone) => zone.id);
 }
 
+function countZonesMatchingFilter(
+  zones: readonly ZoneDef[],
+  queryFilter: ZoneQueryFilter,
+  ctx: ReadContext,
+): number {
+  let count = 0;
+  const queryCondition = queryFilter?.condition;
+  const freeOperationZoneFilter = ctx.freeOperationOverlay?.zoneFilter;
+  const owners = queryFilter?.owner === undefined ? undefined : resolvePlayerSel(queryFilter.owner, ctx);
+  const conditionBindings = queryCondition === undefined ? undefined : { ...ctx.bindings };
+  const conditionCtx = conditionBindings === undefined
+    ? undefined
+    : {
+        ...ctx,
+        bindings: conditionBindings,
+      };
+  const rebindableAliases = freeOperationZoneFilter === undefined
+    ? undefined
+    : collectFreeOperationZoneFilterProbeRebindableAliases(freeOperationZoneFilter);
+
+  for (const zone of zones) {
+    if (owners !== undefined) {
+      if (zone.owner !== 'player') {
+        continue;
+      }
+
+      const ownerQualifier = extractOwnerQualifier(zone.id);
+      if (ownerQualifier === null || !/^[0-9]+$/.test(ownerQualifier)) {
+        continue;
+      }
+
+      const playerId = asPlayerId(Number(ownerQualifier));
+      if (!owners.includes(playerId)) {
+        continue;
+      }
+    }
+
+    if (queryCondition !== undefined && conditionBindings !== undefined && conditionCtx !== undefined) {
+      conditionBindings.$zone = zone.id;
+      ctx.resources.resolveRefCache?.invalidateBindings(conditionBindings);
+      if (!evaluateConditionWithCache(queryCondition, conditionCtx)) {
+        continue;
+      }
+    }
+
+    if (freeOperationZoneFilter !== undefined && rebindableAliases !== undefined) {
+      const result = evaluateFreeOperationZoneFilterForZone(freeOperationZoneFilter, rebindableAliases, zone.id, ctx);
+      if (result.status === 'resolved') {
+        if (!result.matched) {
+          continue;
+        }
+      } else if (result.status !== 'deferred') {
+        const diagnostics = ctx.freeOperationOverlay?.zoneFilterDiagnostics;
+        if (diagnostics !== undefined) {
+          if (!shouldDeferFreeOperationZoneFilterFailure(diagnostics.source, result.error)) {
+            throw freeOperationZoneFilterEvaluationError({
+              surface: diagnostics.source,
+              actionId: diagnostics.actionId,
+              moveParams: diagnostics.moveParams,
+              zoneFilter: freeOperationZoneFilter,
+              candidateZone: zone.id,
+              cause: result.error,
+            });
+          }
+        } else {
+          throw result.error;
+        }
+      }
+    }
+
+    count += 1;
+  }
+
+  return count;
+}
+
 function evalZonesQuery(query: Extract<OptionsQuery, { readonly query: 'zones' }>, ctx: ReadContext): readonly ZoneId[] {
   return applyZonesFilter(getSortedZones(ctx.def.zones), query.filter, ctx);
 }
@@ -556,6 +746,78 @@ function evalTokensInMapSpacesQuery(
   const selectedZones = applyZonesFilter(getSortedMapSpaceZones(ctx.def.zones), query.spaceFilter, ctx);
   const zoneTokens = selectedZones.flatMap((zoneId) => [...(ctx.state.zones[String(zoneId)] ?? [])]);
   return query.filter !== undefined ? applyTokenFilter(zoneTokens, query.filter, ctx) : zoneTokens;
+}
+
+function countTokensInZoneQuery(
+  query: Extract<OptionsQuery, { readonly query: 'tokensInZone' }>,
+  ctx: ReadContext,
+): number {
+  const zoneId = resolveZoneRef(query.zone, ctx);
+  const zoneTokens = ctx.state.zones[String(zoneId)];
+  if (zoneTokens === undefined) {
+    throw missingVarError(`Zone state not found for selector result: ${zoneId}`, {
+      query,
+      zoneId,
+      availableZoneIds: Object.keys(ctx.state.zones).sort(),
+    });
+  }
+  return countMatchingTokens(zoneTokens, query.filter, ctx);
+}
+
+function countTokensInMapSpacesQuery(
+  query: Extract<OptionsQuery, { readonly query: 'tokensInMapSpaces' }>,
+  ctx: ReadContext,
+): number {
+  const selectedZones = applyZonesFilter(getSortedMapSpaceZones(ctx.def.zones), query.spaceFilter, ctx);
+  let count = 0;
+  for (const zoneId of selectedZones) {
+    count += countMatchingTokens(ctx.state.zones[String(zoneId)] ?? [], query.filter, ctx);
+  }
+  return count;
+}
+
+function countTokensInAdjacentZonesQuery(
+  query: Extract<OptionsQuery, { readonly query: 'tokensInAdjacentZones' }>,
+  ctx: ReadContext,
+): number {
+  const zoneId = resolveZoneRef(query.zone, ctx);
+  let count = 0;
+  for (const neighborZoneId of queryAdjacentZones(ctx.adjacencyGraph, zoneId)) {
+    count += countMatchingTokens(ctx.state.zones[String(neighborZoneId)] ?? [], query.filter, ctx);
+  }
+  return count;
+}
+
+export function countQueryResults(query: OptionsQuery, ctx: ReadContext): number {
+  const maxQueryResults = getMaxQueryResults(ctx);
+  let count: number;
+  switch (query.query) {
+    case 'tokensInZone':
+      count = countTokensInZoneQuery(query, ctx);
+      break;
+
+    case 'tokensInMapSpaces':
+      count = countTokensInMapSpacesQuery(query, ctx);
+      break;
+
+    case 'tokensInAdjacentZones':
+      count = countTokensInAdjacentZonesQuery(query, ctx);
+      break;
+
+    case 'zones':
+      count = countZonesMatchingFilter(getSortedZones(ctx.def.zones), query.filter, ctx);
+      break;
+
+    case 'mapSpaces':
+      count = countZonesMatchingFilter(getSortedMapSpaceZones(ctx.def.zones), query.filter, ctx);
+      break;
+
+    default:
+      count = evalQuery(query, ctx).length;
+      break;
+  }
+  assertWithinBounds(count, query, maxQueryResults);
+  return count;
 }
 
 function deepEqualUnknown(left: unknown, right: unknown): boolean {

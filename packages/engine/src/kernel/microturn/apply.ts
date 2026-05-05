@@ -26,6 +26,7 @@ import type { DecisionKey } from '../decision-scope.js';
 import type { ExecutionOptions, GameDef, GameState, Move, Rng, TriggerLogEntry } from '../types-core.js';
 import type { MoveParamScalar } from '../types-ast.js';
 import { computeFullHash, createZobristTable } from '../zobrist.js';
+import { reconcileRunningHash } from '../zobrist-phase-hash.js';
 import {
   advanceChooseNStepContext,
   publishMicroturn,
@@ -58,8 +59,25 @@ const rootFrameFor = (state: GameState): DecisionStackFrame | undefined => {
   return current;
 };
 
-const updateHash = (def: GameDef, state: GameState, runtime?: GameDefRuntime): GameState => {
+const updateHash = (def: GameDef, state: GameState, runtime?: GameDefRuntime, baseline?: GameState): GameState => {
   const table = runtime?.zobristTable ?? createZobristTable(def);
+  const canonicalBaseline = baseline === undefined
+    ? undefined
+    : canonicalizeStackBaselineForHash(table, baseline);
+  const hash = canonicalBaseline === undefined
+    ? computeFullHash(table, state)
+    : reconcileRunningHash(table, canonicalBaseline, state);
+  return {
+    ...state,
+    stateHash: hash,
+    _runningHash: hash,
+  };
+};
+
+const canonicalizeStackBaselineForHash = (table: ReturnType<typeof createZobristTable>, state: GameState): GameState => {
+  if ((state.decisionStack?.length ?? 0) === 0) {
+    return state;
+  }
   const hash = computeFullHash(table, state);
   return {
     ...state,
@@ -76,7 +94,7 @@ const clearMicroturnState = (
   ...state,
   decisionStack: [],
   activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(state.activePlayer)),
-}, runtime);
+}, runtime, state);
 
 const clearUnavailableActionsForTurn = (
   state: GameState,
@@ -330,7 +348,7 @@ const applyChosenMove = (
     activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(applied.state.activePlayer)),
     decisionStack: [],
     nextTurnId: asTurnId((state.nextTurnId ?? asTurnId(0)) + 1),
-  }, runtime);
+  }, runtime, applied.state);
   return {
     state: nextState,
     log: createDecisionLog(nextState, microturn, decision, true, triggerFirings, applied.warnings, optionalLogExtras(applied)),
@@ -387,7 +405,7 @@ const spawnPendingFrame = (
     decisionStack: [updatedRoot, nextFrame],
     nextFrameId: asDecisionFrameId(Number(frameId) + 1),
     activeDeciderSeatId: nextFrame.context.seatId,
-  }, runtime);
+  }, runtime, canonicalState);
   return {
     state: nextState,
     log: createDecisionLog(nextState, microturn, decision, false, [], []),
@@ -555,7 +573,7 @@ const applyPublishedDecisionInternal = (
       decisionStack: [rootFrame, childFrame],
       nextFrameId: asDecisionFrameId(Number(childFrameId) + 1),
       activeDeciderSeatId: childFrame.context.seatId,
-    }, resolvedRuntime);
+    }, resolvedRuntime, grantReconciledState);
     return {
       state: nextState,
       log: createDecisionLog(nextState, microturn, decision, false, [], []),
@@ -623,7 +641,7 @@ const applyPublishedDecisionInternal = (
         ...canonicalState,
         decisionStack: [updatedRoot, nextTop],
         activeDeciderSeatId: nextTop.context.seatId,
-      }, resolvedRuntime);
+      }, resolvedRuntime, canonicalState);
       const selectedKeys = new Set(
         advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
       );
@@ -734,7 +752,7 @@ const applyPublishedDecisionInternal = (
       turnOrderState: withPendingFreeOperationGrants(canonicalState, nextPending).turnOrderState,
       decisionStack: canonicalState.decisionStack?.slice(0, -1) ?? [],
       activeDeciderSeatId: '__kernel',
-    }, resolvedRuntime);
+    }, resolvedRuntime, canonicalState);
     return {
       state: nextState,
       log: createDecisionLog(nextState, microturn, decision, false, [], []),
@@ -758,7 +776,7 @@ const applyPublishedDecisionInternal = (
       nextTurnId: asTurnId((canonicalState.nextTurnId ?? asTurnId(0)) + 1),
       decisionStack: [],
       activeDeciderSeatId: resolveActiveDeciderSeatIdForPlayer(def, Number(advanced.activePlayer)),
-    }, resolvedRuntime);
+    }, resolvedRuntime, advanced);
     return {
       state: nextState,
       log: createDecisionLog(nextState, microturn, decision, true, triggerFirings, []),

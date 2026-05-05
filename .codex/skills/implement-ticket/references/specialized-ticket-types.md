@@ -12,6 +12,14 @@ For tickets whose primary deliverable is a mechanical extraction, rename, dedupl
 - Acceptance proof: old local surfaces are gone, consumers reference the shared surface, authoritative non-regression commands pass.
 - Nearby dangling symbols, imports, or signature ripple necessary for refactor completion: in-scope fallout.
 
+For mechanical file-layout or rename tickets, use this compact checklist before broad proof:
+- Validate the source file, importers, re-export barrels, and direct test consumers with `rg` before the first edit.
+- Use `git mv` for repository-owned renames so the diff preserves move history.
+- Update source imports, test imports, package barrels, generated import paths, and any source-text guard expectations that name the old path.
+- Grep for old path stems and old emitted import specifiers after the rename; classify remaining hits as intended historical/prose references or update them before closeout.
+- Keep Foundation 14 explicit: do not add compatibility aliases, duplicate re-exports, or transitional wrapper files unless the user confirms a boundary reset.
+- Prove the layout invariant with the ticket-named grep or equivalent structural check, then run the smallest compile/build lane that must catch path drift.
+
 ## Gate, Audit & Profiling Tickets
 
 For tickets whose primary deliverable is a measured decision:

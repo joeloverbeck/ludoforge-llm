@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm`, `packages/engine/src/agents/policy-wasm-runtime.ts`, policy evaluator handoff, perf gate wiring
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-004.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-004.md`
 
 ## Problem
 
@@ -69,7 +69,7 @@ non-overlapping owner.
 - `packages/engine/src/agents/policy-evaluation-core.ts` or nearby policy-evaluation integration module (modify)
 - `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` or nearby score-row parity test (modify or new)
 - `packages/engine/test/unit/agents/policy-wasm-runtime.test.ts` (modify)
-- `specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` (modify if the live handoff changes)
 - dependent active tickets `149FITLEVNUMVM-016` and `149FITLEVNUMVM-022` (modify if this gate unblocks or moves)
 - this ticket (modify Outcome before archival)
 

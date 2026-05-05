@@ -75,8 +75,32 @@ export interface BytecodeInstruction {
   readonly operands: readonly number[];
 }
 
+export const FEATURE_REF_KINDS = [
+  'globalVar',
+  'playerInt',
+  'globalMarker',
+  'zoneProp',
+  'zoneTokenAgg',
+  'globalTokenAgg',
+  'globalZoneAgg',
+  'candidateIntrinsic',
+  'candidateParam',
+  'candidateTag',
+  'candidateTags',
+  'candidateFeature',
+  'stateFeature',
+  'candidateAggregate',
+  'adjacentTokenAgg',
+  'seatAgg',
+  'dynamicRef',
+  'dynamicSurface',
+  'dynamicExpr',
+] as const;
+
+export type FeatureRefKind = (typeof FEATURE_REF_KINDS)[number];
+
 export interface FeatureRef {
-  readonly kind: string;
+  readonly kind: FeatureRefKind;
   readonly layoutIndex: number;
   readonly aux: readonly number[];
 }

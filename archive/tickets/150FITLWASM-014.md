@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: XL
 **Engine Changes**: Yes — generic production preview-drive state/effect/publication substrate, WASM/buffer ABI, parity witnesses
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `archive/tickets/150FITLWASM-013.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-011.md`, `archive/tickets/150FITLWASM-012.md`, `archive/tickets/150FITLWASM-013.md`
 
 ## Problem
 
@@ -491,7 +491,7 @@ path counted as WASM-supported.
 
 When the substrate is proven, update `tickets/150FITLWASM-010.md`,
 `tickets/149FITLEVNUMVM-016.md`, `tickets/149FITLEVNUMVM-022.md`, and
-`specs/150-fitl-policy-vm-wasm-port.md` so the successor graph returns to
+`archive/specs/150-fitl-policy-vm-wasm-port.md` so the successor graph returns to
 production routing and the same-seam perf gate.
 
 ## Files to Touch
@@ -577,7 +577,7 @@ What changed:
   `productionApplicationPublication` substrate surface.
 - Updated `tickets/150FITLWASM-010.md`,
   `tickets/149FITLEVNUMVM-016.md`, `tickets/149FITLEVNUMVM-022.md`, and
-  `specs/150-fitl-policy-vm-wasm-port.md` so successor ownership returns to
+  `archive/specs/150-fitl-policy-vm-wasm-port.md` so successor ownership returns to
   `150FITLWASM-010`.
 
 Post-review correction:

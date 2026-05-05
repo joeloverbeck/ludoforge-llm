@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — generic query/eval/reference resolution, spatial filter evaluation, score-row encoding, token-index, and remaining digest/hash residual work
-**Deps**: `specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-027.md`
+**Deps**: `archive/specs/150-fitl-policy-vm-wasm-port.md`, `archive/tickets/150FITLWASM-027.md`
 
 ## Problem
 
@@ -117,7 +117,7 @@ We've gone many tickets changing just a little thing and then creating a follow-
 - focused route/perf witnesses near the changed production seam
 - `tickets/149FITLEVNUMVM-016.md` and `tickets/149FITLEVNUMVM-022.md` if the gate unblocks or moves
 - `tickets/150FITLWASM-029.md` if the gate remains red after the owned reduction
-- `specs/150-fitl-policy-vm-wasm-port.md` if successor ownership moves
+- `archive/specs/150-fitl-policy-vm-wasm-port.md` if successor ownership moves
 - this ticket (Outcome before closeout)
 
 If this ticket touches `packages/engine/src/agents/policy-wasm-runtime.ts`, keep

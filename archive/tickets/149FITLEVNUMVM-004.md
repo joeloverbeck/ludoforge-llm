@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new `packages/engine/src/kernel/encoded-state/` module
-**Deps**: `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
+**Deps**: `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
 
 ## Problem
 

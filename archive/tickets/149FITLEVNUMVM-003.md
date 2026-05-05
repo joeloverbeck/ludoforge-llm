@@ -1,6 +1,6 @@
 # 149FITLEVNUMVM-003: CI restoration unwind (post-Phase-4)
 
-**Status**: PENDING — engine-tests blocking semantics restored early; determinism timeout unwind awaits post-016 CI confirmation
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — CI workflow restoration only
@@ -10,7 +10,11 @@
 
 Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes non-blocking as a tactical unblock. Per spec 149 §Phase 0 and §Phase 4 acceptance criteria, those bumps must be reverted in a single commit once Phase 4 lands and the reset per-card budget is verified. This ticket tracks the unwind.
 
-**Gate condition**: Close this ticket only when ticket 016 has closed AND `packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` passes at the reset `<=1800 ms` target on all 4 baseline profiles (`verifyIncrementalHash=true`) for ≥3 consecutive CI runs.
+**Gate condition**: Close this ticket only when ticket 016 has closed AND
+`packages/engine/test/perf/agents/fitl-per-card-cost.perf.test.ts` passes at
+the reset `<=1800 ms` target on all 4 baseline profiles
+(`verifyIncrementalHash=true`) under the repaired reset-gate evidence, with a
+green merged CI check set for the determinism and engine-test restoration lanes.
 
 **2026-05-02 gate update**: Ticket 016 was blocked by a live Phase 4 perf-gate reassessment. User-confirmed VM parity CI history and local VM correctness were green, but the VM-on one-card probe remained red at per-card `elapsedMs=6785.31` versus `<=250`. Archived ticket `149FITLEVNUMVM-018` profiled the suspected engine-test restoration blockers and found no remaining red runtime hot path after stale golden fallout was repaired. Follow-up profiling then split the remaining non-policy-VM preview-drive runtime closure into tickets 019-022.
 
@@ -19,9 +23,9 @@ Phase 0 (tickets 001 + 002) bumped CI workflow budgets and/or marked slow lanes 
 **2026-05-04 budget reset update**: Ticket `150FITLWASM-034` proved the
 original `<=250 ms` blocker is not feasible for the current same-seam
 architecture. User approved option 2: replace the active blocker with a
-measured `<=1800 ms` successor-runtime gate. This ticket remains blocked on
-ticket 016 closure and then the required 3+ consecutive CI confirmations, but
-no longer waits for the retired `<=250 ms` budget.
+measured `<=1800 ms` successor-runtime gate. This ticket remained blocked on
+ticket 016 closure and reset-gate confirmation, but no longer waited for the
+retired `<=250 ms` budget.
 
 **2026-05-04 reset-gate regression update**: `154POLBCDISP-003` keep-arm
 preflight reran the reset perf gate on the current checkout and found it red
@@ -35,11 +39,17 @@ classified the red samples as perf-gate harness drift and repaired the checked-i
 gate without changing the `<=1800 ms` ceiling. The repaired compiled gate passed
 three serial local samples, and the Spec 149 subtest was green inside
 `pnpm -F @ludoforge/engine test:perf`; the broad lane still has an unrelated
-Spec 145 preview-pipeline corpus failure. This ticket remains blocked on the
-original 3+ consecutive CI confirmations and the determinism-timeout unwind
-criteria, not on a currently red local reset gate.
+Spec 145 preview-pipeline corpus failure. At that point, this ticket was blocked
+on the original 3+ consecutive CI confirmations and the determinism-timeout
+unwind criteria, not on a currently red local reset gate.
 
-**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. It still owns the remaining restoration work: revert the `engine-determinism.yml` determinism job timeout once ticket 016 closes and the reset Phase 4 gate is confirmed by the required 3+ consecutive CI runs.
+**2026-05-05 unwind update**: The user confirmed that the merged PR #239 CI
+pass is sufficient for this repo because the relevant CI lanes are not treated
+as flaky, and explicitly rejected requiring 3+ consecutive green runs. This
+ticket therefore consumes the PR #239 merged green CI check set plus the local
+`149FITLEVNUMVM-023` reset-gate repair evidence as the authorized unwind gate.
+
+**2026-05-02 early restoration update**: The `engine-tests.yml` `continue_on_error: true` flags for `fitl-events-shard-c` and `fitl-rules` were removed early after local proof showed the non-blocking lane masked a real stale golden failure in `fitl-turn-flow-golden.test.js`. This ticket no longer owns restoring those two matrix entries. The remaining restoration work was to revert the `engine-determinism.yml` determinism job timeout once ticket 016 closed and the reset Phase 4 gate was confirmed.
 
 ## Assumption Reassessment (2026-04-28)
 
@@ -59,10 +69,16 @@ criteria, not on a currently red local reset gate.
 
 Before any edits, verify:
 - Ticket 016 Status is CLOSED.
-- Latest 3+ consecutive CI runs on PR #231 (or main, if merged) show `fitl-per-card-cost.perf.test.ts` passing at `<=1800 ms` on all 4 baseline profiles.
-- Sihanouk and March-Free-Operation integration tests complete within their pre-bump budgets.
+- The reset perf gate is green at `<=1800 ms` on all 4 baseline profiles under
+  the repaired `149FITLEVNUMVM-023` harness evidence.
+- Merged PR #239 CI is green for the determinism shards and ticket-002
+  engine-test lanes, including Sihanouk and March-Free-Operation integration
+  coverage inside the restored 30-minute lane budgets.
 
-If gate condition is not met, do NOT execute. Close this ticket as "Declined — gate condition not met" with a follow-up ticket if the perf target is revisited.
+2026-05-05 correction: the earlier "3+ consecutive CI runs" gate was rejected
+by the user as unnecessary for this repo's non-flaky CI lanes. The authorized
+closeout witness is the merged green PR #239 CI check set plus the local
+reset-gate repair evidence already recorded by `149FITLEVNUMVM-023`.
 
 ### 2. Revert `.github/workflows/engine-determinism.yml`
 
@@ -79,7 +95,8 @@ Reference ticket 002's Outcome section for the exact entries that were modified.
 
 ### 4. Single commit
 
-All four reverts (job-level timeout, matrix-level changes, any per-test mechanism) land in a single commit per spec §Phase 0.
+The remaining revert is the determinism job-level timeout. The ticket-002
+engine-test matrix changes already landed earlier on 2026-05-02.
 
 ## Files to Touch
 
@@ -117,3 +134,29 @@ All four reverts (job-level timeout, matrix-level changes, any per-test mechanis
 1. `git diff main -- .github/workflows/engine-determinism.yml .github/workflows/engine-tests.yml` — confirm revert is byte-equivalent to pre-001/pre-002 state.
 2. `pnpm turbo build`.
 3. After push, observe full CI run completing within restored budgets.
+
+## Outcome (2026-05-05)
+
+- Restored `.github/workflows/engine-determinism.yml` determinism job
+  `timeout-minutes: 60` back to `timeout-minutes: 30`.
+- Verified-no-edit: `.github/workflows/engine-tests.yml` already has
+  `fitl-events-shard-c` and `fitl-rules` as blocking 30-minute matrix entries;
+  no `continue-on-error` restoration work remained there.
+- Boundary correction: the original 3+ consecutive CI confirmation requirement
+  was replaced by user authorization to close on the merged green PR #239 CI
+  check set plus the `149FITLEVNUMVM-023` repaired reset-gate evidence.
+- PR #239 merged at `0e0ac6cc3e15fc4783b2ef341c9ecda6f96da1eb`; its CI,
+  Engine Determinism Parity, and Engine Tests checks were green. The
+  determinism shards included `fitl-parity-zobrist-seed-42` and
+  `fitl-parity-zobrist-seed-123`; Engine Tests included green
+  `fitl-events-shard-c` and `fitl-rules` 30-minute lanes.
+- Generated fallout: none. This is workflow and ticket/spec closeout only.
+- Verification:
+  - `pnpm turbo build` — PASS.
+  - `pnpm turbo lint` — PASS.
+  - `pnpm run check:ticket-deps` — PASS.
+  - `git diff --check` — PASS.
+- Late-edit proof validity: ticket/spec edits transcribe the user-authorized
+  gate correction and PR evidence; they do not change runtime code or test
+  command semantics. Final proof reran the local structural checks listed
+  above.

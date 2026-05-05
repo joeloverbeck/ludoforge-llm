@@ -34,7 +34,7 @@ Spec 149 §12 says a Phase 1 miss after encoded-state read-path wiring should tr
 ## Files to Touch
 
 - `archive/tickets/149FITLEVNUMVM-017.md` (outcome)
-- `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` (if the stop condition fires)
+- `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` (if the stop condition fires)
 - `archive/tickets/149FITLEVNUMVM-007.md` (dependency/status after resolution)
 - Engine profiling/encoded-read files only if the measured root cause justifies a generic optimization.
 

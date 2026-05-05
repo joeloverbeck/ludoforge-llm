@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-helper module only; no kernel/compiler/runtime semantics change
-**Deps**: `specs/155-persistent-gamedef-compile-cache.md`
+**Deps**: `archive/specs/155-persistent-gamedef-compile-cache.md`
 
 ## Problem
 
@@ -148,6 +148,8 @@ Use `node --test` matching the rest of the engine unit-test suite. Place fixture
 
 ## Outcome
 
+Outcome amended: 2026-05-05
+
 Completion date: 2026-05-05
 
 **Durable state**: COMPLETED.
@@ -194,3 +196,5 @@ Completion date: 2026-05-05
 
 - Late edits before final closeout: this outcome block, the final status line, and transcription of the post-typecheck and post-Turbo final rerun results.
 - Proof invalidation: the outcome block changed the ticket proof ledger, so the narrow compiled-output proofs were rerun after it. Turbo build/test were then run and the same narrow compiled-output proofs were rerun again afterward. The final status/result transcription is status-and-evidence-only after those reruns and does not change code, scope, commands, thresholds, dependency ownership, or acceptance boundaries.
+
+Post-archive amendment: after Spec 155 was archived, this ticket dependency was updated from the former active spec path to `archive/specs/155-persistent-gamedef-compile-cache.md`. This was archival path truthing only; no implementation proof was invalidated.

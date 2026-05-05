@@ -72,4 +72,4 @@ The 30 s aggregate budget remains red for the current per-file process seam. The
 
 That lower bound is 131664 ms over the 30000 ms target, or 438.88% over budget. Therefore the remaining owner is not the production GameDef cache-hit path; it is runner/process topology and module/test registration repeated once per file.
 
-Successor owner: `tickets/155PERGAMCOM-006.md`.
+Successor owner: `archive/tickets/155PERGAMCOM-006.md`.

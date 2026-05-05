@@ -1,6 +1,6 @@
 # Spec 155: Persistent Compiled GameDef Cache for CI Test Lanes
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P2 — CI ergonomics. No correctness impact, no architectural debt repayment, no evolution-readiness gate. Worth doing because the wasted work is large (~5.5 min cumulative across the four FITL lanes per CI run) and the structural fix is small.
 **Complexity**: M — one new helper, one cache invalidation contract, one CI build-step integration, three verification tests. ~200-400 lines of new code; no kernel, compiler, or runtime semantics change.
 **Dependencies**:
@@ -166,10 +166,10 @@ Two tests + one CI assertion:
 
 2. `packages/engine/test/integration/gamedef-cache-invalidation.test.ts` (new) — `architectural-invariant`: asserts that mutating the source markdown of any spec file invalidates the cache (cache miss path is taken, fresh GameDef differs from prior cached GameDef).
 
-3. `packages/engine/scripts/measure-fitl-lane-cumulative-cost.mjs` (new) — sums per-test-file startup overhead across the FITL lanes, runs once with cache hot and once cold, and records whether the hot run's cumulative startup time is < 30 s (the warm-target budget). Wired into a non-blocking CI summary step or a manual measurement script — not a blocking gate, because the absolute number depends on CI runner hardware.
+3. `packages/engine/scripts/measure-fitl-lane-cumulative-cost.mjs` (new) — originally summed per-test-file startup overhead across the FITL lanes and recorded whether the hot run's cumulative startup time was < 30 s. Ticket `155PERGAMCOM-006` revised this into a bounded topology diagnostic: the default command records representative per-file versus reporter-inclusive batched-supervisor timings, while full aggregate batched checks are explicit exploratory runs. The measurement remains informational, not a blocking gate, because the absolute number depends on local/CI runner hardware and reporter topology.
 
 Acceptance:
-- All three artifacts land. The two equivalence/invalidation tests are blocking. The cumulative-cost measurement is informational. Ticket `155PERGAMCOM-004` delivered the manual script and measured the live no-test startup seam red (`hotCumulativeMs=1597210`, `hotMeetsBudget=false`, `speedupRatio=1.0219902204469042`). Ticket `155PERGAMCOM-005` reduced the persistent-hot helper path by caching parsed bundle metadata and deriving source fingerprints without full GameSpecDoc composition, but the revised lower-bound proof remains red. Ticket `155PERGAMCOM-006` owns residual runner/process topology or replacement-budget work.
+- All three artifacts land. The two equivalence/invalidation tests are blocking. The cumulative-cost measurement is informational. Ticket `155PERGAMCOM-004` delivered the manual script and measured the live no-test startup seam red (`hotCumulativeMs=1597210`, `hotMeetsBudget=false`, `speedupRatio=1.0219902204469042`). Ticket `155PERGAMCOM-005` reduced the persistent-hot helper path by caching parsed bundle metadata and deriving source fingerprints without full GameSpecDoc composition, but the revised lower-bound proof remained red. Ticket `155PERGAMCOM-006` diagnosed reporter-inclusive batching as non-material for the cache series (`4232 ms` representative per-file vs `3930 ms` batched, `7.14%` reduction) and retired the old 30 s target as a historical informational gate rather than retaining a zombie budget.
 
 ## 5. FOUNDATIONS.md Alignment
 
@@ -184,21 +184,21 @@ Acceptance:
 | F11 Immutability | Cached GameDef is a plain immutable JSON structure. No mutable shared state across processes. |
 | F13 Artifact Identity | The cache is a persisted form of the GameSpec-hash → GameDef-hash mapping that F13 already requires. The fingerprint is the existing reproducibility identity. |
 | F14 No Backwards Compatibility | The cache helper replaces, not wraps, the relevant call path. The opt-out env var is a debugging flag, not a long-term compatibility toggle, and is not retained beyond Phase 3. |
-| F15 Architectural Completeness | Root-cause fix for persistent GameDef reuse landed, and ticket 005 reduced the cache-hit parse/validation/load residual. The original lane-startup budget model is still incomplete because per-file Node process/module startup dominates; residual topology ownership is explicit in `155PERGAMCOM-006` rather than hidden behind a false green. |
-| F16 Testing as Proof | Equivalence and invalidation are proven by Phase 3 tests, not assumed. The cumulative-startup proof is red on the live no-test seam and is recorded as evidence for the successor. |
+| F15 Architectural Completeness | Root-cause fix for persistent GameDef reuse landed, ticket 005 reduced the cache-hit parse/validation/load residual, and ticket 006 resolved the remaining startup-budget mismatch as a stale cache-series proof surface rather than hiding it behind a false green. |
+| F16 Testing as Proof | Equivalence and invalidation are proven by Phase 3 tests, not assumed. The cumulative-startup proof is historical red evidence; the active diagnostic is an informational bounded topology report. |
 
 ## 6. Acceptance Criteria
 
 1. `compileProductionSpec` consults the persistent cache before falling back to a fresh compile, and writes the cache atomically on miss.
 2. Cache content is byte-identical to a fresh compile (Phase 3 equivalence test passes).
 3. Source mutation invalidates the cache (Phase 3 invalidation test passes).
-4. Cumulative startup overhead across `fitl-events-shard-{a,b,c}` + `fitl-rules` lanes is measured by the Phase 3 script. The 2026-05-05 manual result is red on the no-test startup seam (`fileCount=192`, `coldCumulativeMs=1632333`, `hotCumulativeMs=1597210`, `hotMeetsBudget=false`). Ticket 005's v2 cache-entry change reduced representative hot startup samples materially by caching parsed bundle metadata with the GameDef, but the fastest post-change sample still implies a 192-file lower bound of `161664 ms`; `155PERGAMCOM-006` owns residual runner/process topology or replacement-budget work.
+4. Cumulative startup overhead across `fitl-events-shard-{a,b,c}` + `fitl-rules` lanes is measured by the Phase 3 script. The 2026-05-05 manual result is red on the no-test startup seam (`fileCount=192`, `coldCumulativeMs=1632333`, `hotCumulativeMs=1597210`, `hotMeetsBudget=false`). Ticket 005's v2 cache-entry change reduced representative hot startup samples materially by caching parsed bundle metadata with the GameDef, but the fastest post-change sample still implies a 192-file lower bound of `161664 ms`. Ticket 006 then proved reporter-inclusive batching is not a material cache-series fix and retired the old `30000 ms` target as historical red evidence, not an active blocking budget.
 5. The CI build job warms the cache; the test jobs find it via the existing `engine-dist` artifact transfer.
 6. All existing engine tests pass with the cache enabled (default).
 
 ## 7. Out of Scope
 
-- **Approach B — single persistent test runner / worker pool.** Considered in the brainstorm. Now the active residual owner because Phase 3 and ticket 005 measured the per-file no-test startup seam red even with a hot v2 GameDef cache; `155PERGAMCOM-006` owns deciding whether this is the right fix or whether the proof surface should be replaced.
+- **Approach B — single persistent test runner / worker pool.** Considered in the brainstorm and rechecked by `155PERGAMCOM-006`. A no-reporter exploratory batched aggregate probe completed in `83814 ms` for all `192` files, still red against the old `30000 ms` target and not equivalent to the real reporter surface. The reporter-inclusive representative diagnostic was non-material (`7.14%` reduction), and the full reporter-inclusive aggregate returned `491477 ms`. Future runner architecture work should be specified independently of this cache series.
 - **Approach C — Rust/WASM port of the kernel evaluation hot path.** Considered and rejected. The Spec 150 plateau (4-5× ceiling, original 250 ms target retired) and the limited overlap between the policy-VM hot path and these CI lanes' actual workload make this a poor cost/benefit. May become interesting downstream of Spec 14 (evolution pipeline) if simulation throughput becomes the dominant motivator; not justified for test-CI duration.
 - **Cache for non-production specs.** This spec covers `compileProductionSpec` only — the helper mentioned by many slow integration tests. Ticket 004's live inventory found 192 files in the four FITL lanes, 150 mentioning production compile helpers, and only 25 with obvious top-level production fixture/compile calls under the no-test startup witness. Other compile call sites (unit tests building inline GameSpecDocs, fixture-based compiles, schema-validation harnesses) are fast in absolute terms and are not addressed here.
 - **Cache compression.** The original v1 FITL GameDef-only cache file was about 1.5 MB. Ticket 005's v2 FITL cache entry is about 17.9 MB because it also persists parsed bundle metadata. Compression remains deferred because the current ticket evidence only proves helper-startup reduction, while compression would add a separate read/decompress/parse tradeoff owned by a future cache-artifact-size ticket if artifact upload or cache read I/O becomes material.
@@ -208,9 +208,35 @@ Acceptance:
 
 Decomposed via `/spec-to-tickets` on 2026-05-05:
 
-- [`archive/tickets/155PERGAMCOM-001.md`](../archive/tickets/155PERGAMCOM-001.md) — Persistent gamedef cache helper and `compileProductionSpec` integration (covers Phase 1)
-- [`archive/tickets/155PERGAMCOM-002.md`](../archive/tickets/155PERGAMCOM-002.md) — CI cache warm step and `cache:gamedef:warm` package script (covers Phase 2)
-- [`archive/tickets/155PERGAMCOM-003.md`](../archive/tickets/155PERGAMCOM-003.md) — Cache equivalence and invalidation invariant tests (covers Phase 3 blocking tests)
-- [`archive/tickets/155PERGAMCOM-004.md`](../archive/tickets/155PERGAMCOM-004.md) — FITL lane cumulative startup cost measurement script and first-cause red-result classification (covers Phase 3 informational measurement)
-- [`archive/tickets/155PERGAMCOM-005.md`](../archive/tickets/155PERGAMCOM-005.md) — Reduce persistent-hot helper residual and classify the still-red startup budget
-- [`tickets/155PERGAMCOM-006.md`](../tickets/155PERGAMCOM-006.md) — Resolve residual FITL lane process startup topology or respecify the proof surface
+- [`archive/tickets/155PERGAMCOM-001.md`](../tickets/155PERGAMCOM-001.md) — Persistent gamedef cache helper and `compileProductionSpec` integration (covers Phase 1)
+- [`archive/tickets/155PERGAMCOM-002.md`](../tickets/155PERGAMCOM-002.md) — CI cache warm step and `cache:gamedef:warm` package script (covers Phase 2)
+- [`archive/tickets/155PERGAMCOM-003.md`](../tickets/155PERGAMCOM-003.md) — Cache equivalence and invalidation invariant tests (covers Phase 3 blocking tests)
+- [`archive/tickets/155PERGAMCOM-004.md`](../tickets/155PERGAMCOM-004.md) — FITL lane cumulative startup cost measurement script and first-cause red-result classification (covers Phase 3 informational measurement)
+- [`archive/tickets/155PERGAMCOM-005.md`](../tickets/155PERGAMCOM-005.md) — Reduce persistent-hot helper residual and classify the still-red startup budget
+- [`archive/tickets/155PERGAMCOM-006.md`](../tickets/155PERGAMCOM-006.md) — Resolve residual FITL lane process startup topology as non-material for the cache series and retire the old startup budget as historical evidence
+
+## Outcome (2026-05-05)
+
+Spec 155 is complete.
+
+What landed:
+
+1. A persistent compiled GameDef cache under `packages/engine/dist/.cache/`, keyed by production source fingerprint and cache format version.
+2. Production helper integration for persistent cache hits, including the v2 cache entry shape with parsed bundle metadata and validator diagnostics.
+3. Cache warm integration for CI artifact transfer, plus equivalence and invalidation proof tests.
+4. A manual FITL lane measurement script that now records bounded topology diagnostics instead of retaining the original 30 s aggregate startup budget as an active gate.
+
+Deviations from the original plan:
+
+1. The original 30 s cumulative startup target remained red after the cache work and was retired as historical informational evidence.
+2. Ticket `155PERGAMCOM-006` proved reporter-preserving batching was not a material cache-series fix (`4232 ms` representative per-file versus `3930 ms` batched, `7.14%` reduction), so no runner topology change was retained.
+3. Future FITL runner/process topology work, if needed, should be specified independently from the persistent GameDef cache series.
+
+Final verification is recorded in the completed ticket outcomes:
+
+1. `archive/tickets/155PERGAMCOM-001.md`
+2. `archive/tickets/155PERGAMCOM-002.md`
+3. `archive/tickets/155PERGAMCOM-003.md`
+4. `archive/tickets/155PERGAMCOM-004.md`
+5. `archive/tickets/155PERGAMCOM-005.md`
+6. `archive/tickets/155PERGAMCOM-006.md`

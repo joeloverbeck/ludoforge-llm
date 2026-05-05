@@ -105,13 +105,15 @@ To be determined by the selected residual owner. Prefer extending the manual mea
 
 ## Outcome (2026-05-05)
 
+Outcome amended: 2026-05-05
+
 Landed the bounded persistent-hot helper fix:
 
 1. Added `loadGameSpecBundleSourcesFromEntrypoint()` so the production helper can derive source order and `sourceFingerprint` without composing the full GameSpecDoc.
 2. Bumped `GAMEDEF_CACHE_FORMAT_VERSION` from `v1` to `v2` and stored parsed production bundle metadata plus validator diagnostics in persistent cache entries.
 3. Updated `compileProductionSpec()` and `parseProductionSpec()` to use v2 cache entries on hot paths before falling back to full composition/compile.
 4. Extended `gamedef-cache-equivalence.test.ts` to prove source-only fingerprint/source-order parity and persistent cache activation with parsed metadata.
-5. Added `reports/155PERGAMCOM-005-residual-diagnosis.md` and successor `tickets/155PERGAMCOM-006.md`.
+5. Added `reports/155PERGAMCOM-005-residual-diagnosis.md` and successor `archive/tickets/155PERGAMCOM-006.md`.
 
 Residual diagnosis:
 
@@ -132,7 +134,7 @@ Materiality ledger:
 
 Boundary corrections applied:
 
-1. Ticket 005 no longer owns single persistent runner / worker-pool topology after the cache-hit helper residual is reduced; that residual moves to `tickets/155PERGAMCOM-006.md`.
+1. Ticket 005 no longer owns single persistent runner / worker-pool topology after the cache-hit helper residual is reduced; that residual moved to `archive/tickets/155PERGAMCOM-006.md`.
 2. The replacement budget proof is a lower-bound red proof over representative warmed-cache file timings, not a rerun of the full 192-file cold/hot measurement. The full ticket-004 measurement remains the historical red corpus evidence; the lower-bound proof is sufficient to show the 30 s per-file process budget cannot be green after the v2 helper change.
 
 Source file size ledger:
@@ -158,3 +160,5 @@ Final verification:
 Post-proof edit validity: after the final code proof lanes, the only edits were metric transcription, terminal status, and proof-ledger text. They did not change code, command semantics, thresholds, dependency ownership, scope, or acceptance boundaries; no code proof was invalidated. `pnpm run check:ticket-deps` was rerun after the terminal status/proof-ledger edits.
 
 Post-review correction: before archival, Spec 155's cache API and compression prose were updated to reflect the landed v2 cache entry shape (`parsed` metadata plus validator diagnostics) and the observed 17.9 MB FITL cache entry size. This was documentation/spec truthing only; no code proof was invalidated.
+
+Post-archive amendment: after `155PERGAMCOM-006` was archived, successor-owner references in this ticket were updated from the former active path to `archive/tickets/155PERGAMCOM-006.md`. This was archival path truthing only; no implementation proof was invalidated.

@@ -35,6 +35,7 @@
     "lint": "eslint . --ext .ts --max-warnings 0",
     "typecheck": "tsc --noEmit",
     "schema:artifacts": "node scripts/run-with-dist-lock.mjs \"node scripts/schema-artifacts.mjs\"",
+    "cache:gamedef:warm": "node scripts/warm-gamedef-cache.mjs",
     "schema:artifacts:check": "node scripts/schema-artifacts.mjs --check",
     "test:unit": "node --test \"dist/test/unit/**/*.test.js\"",
     "test:integration": "node scripts/run-tests.mjs --lane integration",

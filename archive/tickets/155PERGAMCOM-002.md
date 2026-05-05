@@ -1,6 +1,6 @@
 # 155PERGAMCOM-002: CI cache warm step and `cache:gamedef:warm` package script
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — script + workflow change only
@@ -105,3 +105,48 @@ No new automated tests. Verification is manual locally and via observation of th
 5. `pnpm -F @ludoforge/engine test:integration:fitl-rules` — verify hot cache after warm.
 6. `pnpm turbo lint`
 7. `pnpm turbo test` — full suite, includes ticket-deps check.
+
+## Outcome
+
+Completion date: 2026-05-05.
+
+**Durable state**: COMPLETED.
+
+### What Landed
+
+- Added `packages/engine/scripts/warm-gamedef-cache.mjs`, which imports the compiled production spec helpers, invokes both FITL and Texas production compiles once, then prints the warmed cache file count, total bytes, and per-file sizes.
+- Added `cache:gamedef:warm` to `packages/engine/package.json`.
+- Added the `Warm GameDef cache` step to `.github/workflows/engine-tests.yml` after `pnpm -F @ludoforge/engine build` and before `Upload engine dist`.
+
+### Ticket Corrections / Proof Substitutions
+
+- The clean PR CI observation remains external to this local implementation session. Local proof verifies the same artifact boundary: clean build, warm step, non-zero FITL and Texas cache files under `packages/engine/dist/.cache/`, and a downstream hot-cache integration lane.
+- No upload/download workflow change is required; the existing `engine-dist` artifact path remains `packages/engine/dist`, so `dist/.cache/` is included by path.
+
+### Verification
+
+- `node --check packages/engine/scripts/warm-gamedef-cache.mjs` — pass.
+- `pnpm -F @ludoforge/engine clean` — pass.
+- `pnpm -F @ludoforge/engine build` — pass.
+- `pnpm -F @ludoforge/engine cache:gamedef:warm` — pass; output listed 2 files / 1,710,749 bytes:
+  - `fire-in-the-lake.6e7d5aa842f00da3429a707ce8eaab84b45815d8f33cf4a0ff833be6e7c228ba.v1.gamedef.json` — 1,511,317 bytes.
+  - `texas-holdem.625dbb57206ef2a629b030a81b45377a640011408538e74334742d300de373fb.v1.gamedef.json` — 199,432 bytes.
+- `ls -la packages/engine/dist/.cache` — pass; confirmed the same two non-zero cache files under `packages/engine/dist/.cache/`.
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` — pass, 79/79 files.
+- `pnpm turbo lint` — pass.
+- `pnpm turbo test` — pass, 5/5 tasks.
+- Post-Turbo final rerun: `pnpm -F @ludoforge/engine cache:gamedef:warm` — pass; output again listed the two expected FITL/Texas cache files with the same byte sizes.
+
+### Schema / Artifact Fallout
+
+- No schema, golden, or checked-in generated artifact changes are expected. The warmed cache lives under `packages/engine/dist/.cache/`, which is build output.
+
+### Deferred Spec 155 Scope
+
+- Cache equivalence and invalidation invariant tests remain ticket 003.
+- FITL lane cumulative startup cost measurement remains ticket 004.
+
+### Late-Edit Proof Validity
+
+- Late edits after the final proof set: this terminal status and exact evidence transcription.
+- Proof invalidation: no. The edits did not change code, workflow step order, package script command semantics, touched-file scope, dependencies, acceptance boundaries, or deferred sibling ownership. The post-Turbo warm command was already rerun after the broad lane rebuilt `packages/engine/dist`.

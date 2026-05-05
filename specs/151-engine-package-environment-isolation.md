@@ -61,7 +61,7 @@ Three deliverables:
 
 The engine ships wide-barrel re-exports (`packages/engine/src/kernel/index.ts` re-exports 141 modules; `agents/index.ts` re-exports 12). Authors writing new files in `agents/` or `kernel/` naturally use `import { ... } from '../kernel/index.js'` for convenience — value-imports, not type-imports.
 
-Vite/rollup, building the runner, traverses the import graph from `runner/src/...` through every browser-safe subpath the runner uses. Today that traversal is dominated by `@ludoforge/engine/runtime` (= `kernel/runtime.ts`, 66 of 70 runner→engine imports) with smaller contributions from `./trace` (3) and `./agents` (1) (= `agents/index.ts`); PR #235 surfaced via `./agents`, but a future regression could equally manifest through any kernel file re-exported by `runtime.ts`. Any module with a top-level `node:*` import becomes a runtime requirement of the bundle. Vite externalizes `node:*` to a stub; rollup then errors when ANY symbol from that stub is referenced (e.g., `extname is not exported by "__vite-browser-external"`).
+Vite/rollup, building the runner, traverses the import graph from `runner/src/...` through every browser-safe subpath the runner uses. Today that traversal is dominated by `@ludoforge/engine/runtime` (= `kernel/runtime.ts`, 67 of 71 runner→engine imports) with smaller contributions from `./trace` (3) and `./agents` (1) (= `agents/index.ts`); PR #235 surfaced via `./agents`, but a future regression could equally manifest through any kernel file re-exported by `runtime.ts`. Any module with a top-level `node:*` import becomes a runtime requirement of the bundle. Vite externalizes `node:*` to a stub; rollup then errors when ANY symbol from that stub is referenced (e.g., `extname is not exported by "__vite-browser-external"`).
 
 The error is reported at the OFFENDING FILE (the one with the `node:*` import), not at the wide-barrel re-export that pulled it in. Authors who didn't touch the offending file see CI fail with a mysterious error in code they didn't modify.
 
@@ -95,7 +95,7 @@ PR #235 established the convention. The next FITLWASM-style ticket has no automa
 ### D1. Convention doc (`docs/engine-environment-isolation.md`)
 
 One-page reference covering:
-- Which engine subpath exports are browser-safe: `./` (kernel/index), `./runtime`, `./agents`, `./trace`. As of this spec's authoring, runner usage measured against `packages/runner/src` is `./runtime` (66 imports), `./trace` (3), `./agents` (1), `./` (0); `./` is classified browser-safe as a forward-compatible policy choice for future browser tools, not because of current usage.
+- Which engine subpath exports are browser-safe: `./` (kernel/index), `./runtime`, `./agents`, `./trace`. As of implementation on 2026-05-05, runner usage measured against `packages/runner/src` is `./runtime` (67 imports), `./trace` (3), `./agents` (1), `./` (0); `./` is classified browser-safe as a forward-compatible policy choice for future browser tools, not because of current usage.
 - Which subpath exports are Node-only: `./cnl`, `./sim`, plus the future explicit Node-loader subpaths.
 - Naming convention: any file with top-level `node:*` imports MUST be named `<base>-node-loader.ts`. Exception: files under designated Node-only directories (`packages/engine/src/sim/cli/`, `packages/engine/src/cnl/loader/`, etc., as classified during the audit) are also exempt.
 - Split pattern: when a Node-only API needs to live alongside browser-safe code, follow the PR #235 shape — keep browser-safe core in `<name>.ts`, move file IO + auto-init to `<name>-node-loader.ts`. The loader imports from the core; the core never imports from the loader.
@@ -180,6 +180,6 @@ Optional because the ESLint rule is the primary enforcement; the smoke test only
 Decomposed via `/spec-to-tickets` on 2026-05-05:
 
 - [`archive/tickets/151ENVISO-001.md`](../archive/tickets/151ENVISO-001.md) — Audit `node:*` importers and finalize Node-only/browser-safe classification (covers D3)
-- [`tickets/151ENVISO-002.md`](../tickets/151ENVISO-002.md) — Write `docs/engine-environment-isolation.md` convention doc (covers D1)
+- [`archive/tickets/151ENVISO-002.md`](../archive/tickets/151ENVISO-002.md) — Write `docs/engine-environment-isolation.md` convention doc (covers D1)
 - [`tickets/151ENVISO-003.md`](../tickets/151ENVISO-003.md) — Add ESLint `no-restricted-imports` rule blocking `node:*` in browser-safe engine files (covers D2)
 - [`tickets/151ENVISO-004.md`](../tickets/151ENVISO-004.md) — Smoke test for `node:*` leaks in runner build output (optional, covers D4)

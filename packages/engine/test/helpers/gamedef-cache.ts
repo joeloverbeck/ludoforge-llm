@@ -3,7 +3,9 @@ import { existsSync, mkdirSync, readFileSync, rmSync, renameSync, unlinkSync, wr
 import { basename, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { GameDef } from '../../src/kernel/types.js';
+import type { LoadedGameSpecBundle } from '../../src/cnl/index.js';
 
 export interface GameDefCacheKey {
   readonly gameKey: string;
@@ -15,9 +17,11 @@ export interface CachedGameDefEntry {
   readonly gameDef: GameDef;
   readonly sourceFingerprint: string;
   readonly compilerStamp: string;
+  readonly parsed?: LoadedGameSpecBundle['parsed'];
+  readonly validatorDiagnostics?: readonly Diagnostic[];
 }
 
-export const GAMEDEF_CACHE_FORMAT_VERSION = 'v1' as const;
+export const GAMEDEF_CACHE_FORMAT_VERSION = 'v2' as const;
 
 let memoizedCompilerStamp: string | null = null;
 
@@ -62,6 +66,8 @@ export function writeGameDefCache(key: GameDefCacheKey, entry: CachedGameDefEntr
     gameDef: entry.gameDef,
     sourceFingerprint: key.sourceFingerprint,
     compilerStamp: currentCompilerStamp(),
+    ...(entry.parsed === undefined ? {} : { parsed: entry.parsed }),
+    ...(entry.validatorDiagnostics === undefined ? {} : { validatorDiagnostics: entry.validatorDiagnostics }),
   };
 
   try {

@@ -6,7 +6,11 @@ import { tmpdir } from 'node:os';
 import { afterEach, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { loadGameSpecBundleFromEntrypoint, type CompileResult } from '../../src/cnl/index.js';
+import {
+  loadGameSpecBundleFromEntrypoint,
+  loadGameSpecBundleSourcesFromEntrypoint,
+  type CompileResult,
+} from '../../src/cnl/index.js';
 import {
   clearGameDefCache,
   deriveGameKeyFromEntrypoint,
@@ -30,6 +34,11 @@ afterEach(() => {
 });
 
 describe('production GameDef persistent cache equivalence', { concurrency: 1 }, () => {
+  it('derives production source fingerprints without composing the full GameSpecDoc', () => {
+    assertSourceFingerprintParity('fire-in-the-lake');
+    assertSourceFingerprintParity('texas-holdem');
+  });
+
   it('keeps FITL cache-disabled, cache-write, and cache-read GameDefs byte-identical', () => {
     assertCacheEquivalence('fire-in-the-lake', compileProductionSpec);
   });
@@ -44,7 +53,7 @@ describe('production GameDef persistent cache equivalence', { concurrency: 1 }, 
       process.env.LUDOFORGE_GAMEDEF_CACHE = 'off';
       const disabled = compileProductionSpec();
       const entrypointPath = resolve(REPO_ROOT, 'data/games/fire-in-the-lake.game-spec.md');
-      const sourceFingerprint = loadGameSpecBundleFromEntrypoint(entrypointPath).sourceFingerprint;
+      const sourceFingerprint = loadGameSpecBundleSourcesFromEntrypoint(entrypointPath).sourceFingerprint;
 
       const sentinelGameDef = createValidGameDef();
       process.env.LUDOFORGE_GAMEDEF_CACHE = undefined;
@@ -55,7 +64,13 @@ describe('production GameDef persistent cache equivalence', { concurrency: 1 }, 
           sourceFingerprint,
           cacheFormatVersion: GAMEDEF_CACHE_FORMAT_VERSION,
         },
-        { gameDef: sentinelGameDef, sourceFingerprint, compilerStamp: '' },
+        {
+          gameDef: sentinelGameDef,
+          sourceFingerprint,
+          compilerStamp: '',
+          parsed: disabled.parsed,
+          validatorDiagnostics: disabled.validatorDiagnostics,
+        },
       );
 
       const cached = compileProductionSpec();
@@ -75,6 +90,19 @@ describe('production GameDef persistent cache equivalence', { concurrency: 1 }, 
     }
   });
 });
+
+function assertSourceFingerprintParity(gameKey: 'fire-in-the-lake' | 'texas-holdem'): void {
+  const entrypointPath = resolve(REPO_ROOT, 'data/games', `${gameKey}.game-spec.md`);
+  const composed = loadGameSpecBundleFromEntrypoint(entrypointPath);
+  const sourcesOnly = loadGameSpecBundleSourcesFromEntrypoint(entrypointPath);
+
+  assert.equal(sourcesOnly.sourceFingerprint, composed.sourceFingerprint);
+  assert.deepEqual(
+    sourcesOnly.sources.map((source) => source.path),
+    composed.sources.map((source) => source.path),
+    'source-only loader should preserve composeGameSpec source order',
+  );
+}
 
 function assertCacheEquivalence(
   label: string,

@@ -141,13 +141,13 @@ export function parseGameSpec(markdown: string, options: ParseGameSpecOptions = 
   };
 }
 
-interface ExtractedYamlBlock {
+export interface ExtractedYamlBlock {
   readonly text: string;
   readonly markdownLineStart: number;
   readonly markdownLineEnd: number;
 }
 
-function extractYamlBlocks(markdown: string): readonly ExtractedYamlBlock[] {
+export function extractYamlBlocks(markdown: string): readonly ExtractedYamlBlock[] {
   const blocks: ExtractedYamlBlock[] = [];
   const fencePattern = /```([A-Za-z0-9_-]*)\r?\n([\s\S]*?)```/g;
 

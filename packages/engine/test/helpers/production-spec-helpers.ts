@@ -5,8 +5,16 @@ import { fileURLToPath } from 'node:url';
 
 import type { Diagnostic } from '../../src/kernel/diagnostics.js';
 import type { LoadedGameSpecBundle } from '../../src/cnl/index.js';
-import type { CompileResult, RunGameSpecStagesResult } from '../../src/cnl/index.js';
-import { loadGameSpecBundleFromEntrypoint, loadGameSpecSource, runGameSpecStagesFromBundle } from '../../src/cnl/index.js';
+import type { CompileResult, CompileSectionResults, RunGameSpecStagesResult } from '../../src/cnl/index.js';
+import { loadGameSpecBundleFromEntrypoint, loadGameSpecSource, runGameSpecStagesFromBundle, validateGameSpec } from '../../src/cnl/index.js';
+import { assertValidatedGameDef } from '../../src/kernel/validate-gamedef.js';
+import {
+  deriveGameKeyFromEntrypoint,
+  GAMEDEF_CACHE_FORMAT_VERSION,
+  readGameDefCache,
+  writeGameDefCache,
+  type GameDefCacheKey,
+} from './gamedef-cache.js';
 
 export interface CompiledProductionSpec {
   readonly markdown: string;
@@ -76,6 +84,13 @@ export function compileProductionSpec(): CompiledProductionSpec {
     return cachedFitlResult;
   }
 
+  const cacheKey = productionCacheKey(FITL_PRODUCTION_ENTRYPOINT_PATH, bundle.sourceFingerprint);
+  const cached = loadCompiledProductionSpecFromPersistentCache('FITL production spec', bundle, cacheKey);
+  if (cached !== null) {
+    cachedFitlResult = cached;
+    return cachedFitlResult;
+  }
+
   const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('FITL production spec', staged);
 
@@ -86,6 +101,7 @@ export function compileProductionSpec(): CompiledProductionSpec {
     compiled,
   };
 
+  persistCompiledProductionSpec(cacheKey, compiled);
   return cachedFitlResult;
 }
 
@@ -154,6 +170,13 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
     return cachedTexasResult;
   }
 
+  const cacheKey = productionCacheKey(TEXAS_PRODUCTION_ENTRYPOINT_PATH, bundle.sourceFingerprint);
+  const cached = loadCompiledProductionSpecFromPersistentCache('Texas production spec', bundle, cacheKey);
+  if (cached !== null) {
+    cachedTexasResult = cached;
+    return cachedTexasResult;
+  }
+
   const staged = runGameSpecStagesFromBundle(bundle);
   const compiled = requireSuccessfulProductionCompilation('Texas production spec', staged);
 
@@ -164,6 +187,7 @@ export function compileTexasProductionSpec(): CompiledProductionSpec {
     compiled,
   };
 
+  persistCompiledProductionSpec(cacheKey, compiled);
   return cachedTexasResult;
 }
 
@@ -223,6 +247,94 @@ function requireSuccessfulProductionCompilation(
   }
 
   return compiled as CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> };
+}
+
+function loadCompiledProductionSpecFromPersistentCache(
+  label: string,
+  bundle: LoadedGameSpecBundle,
+  cacheKey: GameDefCacheKey,
+): CompiledProductionSpec | null {
+  const cached = readGameDefCache(cacheKey);
+  if (cached === null) {
+    return null;
+  }
+
+  try {
+    const gameDef = assertValidatedGameDef(cached.gameDef);
+    const validatorDiagnostics = validateGameSpec(bundle.parsed.doc, { sourceMap: bundle.parsed.sourceMap });
+    assert.equal(
+      hasErrorDiagnostics(bundle.parsed.diagnostics),
+      false,
+      `${label} should not contain parser errors:\n${formatDiagnosticSummary(bundle.parsed.diagnostics)}`,
+    );
+    assert.equal(
+      hasErrorDiagnostics(validatorDiagnostics),
+      false,
+      `${label} should not contain validator errors:\n${formatDiagnosticSummary(validatorDiagnostics)}`,
+    );
+
+    return {
+      markdown: bundle.sources.map((source) => source.markdown).join('\n\n'),
+      parsed: bundle.parsed,
+      validatorDiagnostics,
+      compiled: {
+        gameDef,
+        sections: sectionsFromGameDef(gameDef),
+        diagnostics: [],
+      },
+    };
+  } catch {
+    return null;
+  }
+}
+
+function persistCompiledProductionSpec(
+  cacheKey: GameDefCacheKey,
+  compiled: CompileResult & { readonly gameDef: NonNullable<CompileResult['gameDef']> },
+): void {
+  try {
+    writeGameDefCache(cacheKey, {
+      gameDef: compiled.gameDef,
+      sourceFingerprint: cacheKey.sourceFingerprint,
+      compilerStamp: '',
+    });
+  } catch {
+    // Persistent cache writes are accelerators; a failed write must not fail tests.
+  }
+}
+
+function productionCacheKey(entrypointPath: string, sourceFingerprint: string): GameDefCacheKey {
+  return {
+    gameKey: deriveGameKeyFromEntrypoint(entrypointPath),
+    sourceFingerprint,
+    cacheFormatVersion: GAMEDEF_CACHE_FORMAT_VERSION,
+  };
+}
+
+function sectionsFromGameDef(gameDef: NonNullable<CompileResult['gameDef']>): CompileSectionResults {
+  return {
+    metadata: gameDef.metadata,
+    constants: gameDef.constants,
+    globalVars: gameDef.globalVars,
+    globalMarkerLattices: gameDef.globalMarkerLattices ?? null,
+    perPlayerVars: gameDef.perPlayerVars,
+    zoneVars: gameDef.zoneVars ?? null,
+    zones: gameDef.zones,
+    tokenTypes: gameDef.tokenTypes,
+    setup: gameDef.setup,
+    turnStructure: gameDef.turnStructure,
+    turnOrder: gameDef.turnOrder ?? null,
+    actionPipelines: gameDef.actionPipelines ?? null,
+    derivedMetrics: gameDef.derivedMetrics ?? null,
+    observers: gameDef.observers ?? null,
+    agents: gameDef.agents ?? null,
+    terminal: gameDef.terminal,
+    actions: gameDef.actions,
+    triggers: gameDef.triggers,
+    eventDecks: gameDef.eventDecks ?? null,
+    victoryStandings: gameDef.victoryStandings ?? null,
+    verbalization: gameDef.verbalization ?? null,
+  };
 }
 
 function hasErrorDiagnostics(diagnostics: readonly Diagnostic[]): boolean {

@@ -43,6 +43,27 @@ export default tseslint.config(
     },
   },
   {
+    files: ["packages/engine/src/**/*.ts"],
+    ignores: ["packages/engine/src/**/*-node-loader.ts", "packages/engine/src/cnl/**/*.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["node:*"],
+              message:
+                "Engine browser-safe modules must not import node:* APIs. " +
+                "Move file IO / Node bootstrap to a sibling <name>-node-loader.ts " +
+                "and have callers import that file directly. " +
+                "See docs/engine-environment-isolation.md.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     files: ["packages/engine/src/kernel/**/*.ts", "packages/engine/src/agents/**/*.ts"],
     plugins: {
       local: {

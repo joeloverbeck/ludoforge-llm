@@ -181,5 +181,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-05:
 
 - [`archive/tickets/151ENVISO-001.md`](../archive/tickets/151ENVISO-001.md) — Audit `node:*` importers and finalize Node-only/browser-safe classification (covers D3)
 - [`archive/tickets/151ENVISO-002.md`](../archive/tickets/151ENVISO-002.md) — Write `docs/engine-environment-isolation.md` convention doc (covers D1)
-- [`tickets/151ENVISO-003.md`](../tickets/151ENVISO-003.md) — Add ESLint `no-restricted-imports` rule blocking `node:*` in browser-safe engine files (covers D2)
+- [`archive/tickets/151ENVISO-003.md`](../archive/tickets/151ENVISO-003.md) — Add ESLint `no-restricted-imports` rule blocking `node:*` in browser-safe engine files (covers D2)
 - [`tickets/151ENVISO-004.md`](../tickets/151ENVISO-004.md) — Smoke test for `node:*` leaks in runner build output (optional, covers D4)

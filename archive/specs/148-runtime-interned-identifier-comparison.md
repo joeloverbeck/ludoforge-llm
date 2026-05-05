@@ -1,6 +1,6 @@
 # Spec 148: Runtime-Interned Identifier Comparison On Kernel Hot Paths
 
-**Status**: PROPOSED
+**Status**: 🚫 NOT IMPLEMENTED — superseded 2026-05-05; the cost-benefit shift the spec's Risk #3 anticipated materialized after Spec 146 + Spec 147 landed and the `fitl-preview-perf` campaign was closed at `pass=false` (`mean_totalMs=26784.93` vs. `25600 ms` target) by explicit user acceptance on 2026-04-26. See Outcome.
 **Priority**: P3 (smallest of the three architectural-ceiling specs from the fitl-preview-perf campaign; deliver after Spec 146 + Spec 147 land, since the residual ceiling will be smaller and the cost-benefit may shift)
 **Complexity**: M (kernel-internal interning table, runtime-scoped lifetime, hot-path Map / Set replacements; no GameSpecDoc YAML change, no compiler IR change, no public-API regression risk)
 **Dependencies**:
@@ -192,3 +192,21 @@ Per Spec 141 (run-boundary contract), `GameDefRuntime` is forked per simulation 
 - Removal of branded string types from public APIs.
 - Persistence of encoded ids in serialized artifacts.
 - Cross-game codec sharing (each `GameDef` gets its own codec).
+
+## Outcome
+
+Archived 2026-05-05 as **🚫 NOT IMPLEMENTED — superseded by codebase evolution**.
+
+**Why archived without implementation.** Reassessment on 2026-05-05 against the post-147 codebase showed the spec's central premise had been substantially invalidated:
+
+1. **String-comparison cost dropped below the radar after Spec 146 + Spec 147 landed.** The spec cited a post-exp-015 V8 profile with `Builtin: StringEqual` (2.0%) + `StringCompare` (1.8%) + `StringFastLocaleCompare` (1.3%) + partial `FindOrderedHashMapEntry` (4.4%), totaling ~5-9% CPU in identifier comparisons. The post-147 final CPU profile (recorded in `archive/specs/147-aot-consideration-ast-compilation.md` Source and `archive/tickets/147AOTCON-004.md` Outcome) reports the top self-time samples as `fnv1a64` 17.68%, GC 11.28%, `resolveRef` 6.09%, `buildTokenStateIndex` 4.71%, `evalCondition` 4.09%, `evalValue` 2.89%, `evaluateVia` 2.78%, `canonicalizeHashValue` 2.74%, `digestDecisionStackFrame` 1.08%. `StringEqual` and `StringCompare` no longer appear in the top samples. The spec's own Risk #3 explicitly anticipated this scenario.
+
+2. **No active campaign objective to host the work.** The `fitl-preview-perf` campaign concluded with `pass=false` (`previewOn_totalMs_ms=27307.05,26554.94,26492.8`, `mean_totalMs=26784.93`, `mad_pct=1.3`, `hardTargetMs=25600`, `candidateBudget=465`, `sampledActionSelectionCount=50`) explicitly accepted as close-enough on 2026-04-26 by user decision per `archive/tickets/147AOTCON-004.md`. Spec 148's acceptance criterion 1 — "residual `Builtin: StringEqual` + `Builtin: StringCompare` cost on the spec-145 perf corpus drops by ≥40%" — is unsatisfiable as written because the baseline cost has already dropped below the threshold; and there is no successor perf campaign whose objective the work could serve.
+
+3. **Future hot-path leverage is elsewhere.** If a perf push reopens, the high-leverage targets per the post-147 profile are Zobrist hashing, allocation pressure (GC), `resolveRef`, and `buildTokenStateIndex` — not string identifier comparisons. A future spec targeting any of those concerns should be authored under a fresh spec id rather than recycling 148, since the design surface (interning table + GameDefRuntime field + hot-path call-site migration) is not aligned with those bottlenecks.
+
+**Sibling architectural-ceiling specs from the same lessons-global inventory.** Spec 128 (full-scope draft state, object-spread immutability), Spec 130 (canonical hot-path object shapes), Spec 146 (scoped-draft-state preview drives), and Spec 147 (AOT consideration AST compilation) all landed COMPLETED. Spec 148 was the lone remaining item — string-based ID comparisons — and is the one for which the cost-benefit no longer justifies the migration scope.
+
+**No code change.** No `IdCodec` / `IdDomain` types were introduced; no kernel hot-path call sites were migrated; `GameDefRuntime` was not extended.
+
+**Verification.** Reassessment performed via direct codebase inspection. All cited file paths in the spec exist (`legal-moves.ts`, `microturn/apply.ts`, `token-state-index.ts`, `policy-evaluation-core.ts`, `effects-token.ts`); `GameDefRuntime` exists at `packages/engine/src/kernel/gamedef-runtime.ts`; no prior `IdCodec` implementation exists. Dependency specs 141, 146, 147 confirmed COMPLETED via archive read. Post-147 final profile read from `archive/tickets/147AOTCON-004.md` Outcome.

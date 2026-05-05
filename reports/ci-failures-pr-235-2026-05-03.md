@@ -32,7 +32,7 @@ Clusters 3 and 4 have the same shape: a kernel/agents barrel re-exports a file w
 
 Other engine source files with `node:*` imports that are NOT currently in the runner's transitive closure (and would silently break the runner if someone imports them from a barrel-reachable module): `sim/trace-writer.ts`, `agents/policy-ir.ts`, `cnl/compile-observers.ts`, `cnl/load-gamespec-source.ts`. The `node:crypto` users (`createHash`) currently slip through — vite/rollup didn't error on them in this run, but they're still in the brittle category.
 
-Candidate spec slot: `specs/151-engine-package-environment-isolation.md` — codify which engine subpath exports are browser-safe vs Node-only, document the split pattern, and consider an ESLint rule (e.g., `no-restricted-imports` configured per-file or per-directory) that forbids `node:*` imports from files re-exported by a designated browser-safe barrel. Foundation 5 (One Rules Protocol, Many Clients) underwrites this.
+Candidate spec slot: `archive/specs/151-engine-package-environment-isolation.md` — codify which engine subpath exports are browser-safe vs Node-only, document the split pattern, and consider an ESLint rule (e.g., `no-restricted-imports` configured per-file or per-directory) that forbids `node:*` imports from files re-exported by a designated browser-safe barrel. Foundation 5 (One Rules Protocol, Many Clients) underwrites this.
 
 I have NOT written the spec — flagging only. Per skill, this is post-push and additive; the CI fix is shipped.
 

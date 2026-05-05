@@ -1,6 +1,6 @@
 # Spec 151: Engine Package Environment Isolation
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P2 (medium — closes a recurring CI break shape; modest scope; high signal-to-noise)
 **Complexity**: S (one ESLint rule, one audit, possibly one or two more file splits along the same pattern PR #235 already established)
 **Dependencies**:
@@ -179,7 +179,18 @@ Optional because the ESLint rule is the primary enforcement; the smoke test only
 
 Decomposed via `/spec-to-tickets` on 2026-05-05:
 
-- [`archive/tickets/151ENVISO-001.md`](../archive/tickets/151ENVISO-001.md) — Audit `node:*` importers and finalize Node-only/browser-safe classification (covers D3)
-- [`archive/tickets/151ENVISO-002.md`](../archive/tickets/151ENVISO-002.md) — Write `docs/engine-environment-isolation.md` convention doc (covers D1)
-- [`archive/tickets/151ENVISO-003.md`](../archive/tickets/151ENVISO-003.md) — Add ESLint `no-restricted-imports` rule blocking `node:*` in browser-safe engine files (covers D2)
-- [`tickets/151ENVISO-004.md`](../tickets/151ENVISO-004.md) — Smoke test for `node:*` leaks in runner build output (optional, covers D4)
+- [`archive/tickets/151ENVISO-001.md`](../tickets/151ENVISO-001.md) — Audit `node:*` importers and finalize Node-only/browser-safe classification (covers D3)
+- [`archive/tickets/151ENVISO-002.md`](../tickets/151ENVISO-002.md) — Write `docs/engine-environment-isolation.md` convention doc (covers D1)
+- [`archive/tickets/151ENVISO-003.md`](../tickets/151ENVISO-003.md) — Add ESLint `no-restricted-imports` rule blocking `node:*` in browser-safe engine files (covers D2)
+- [`archive/tickets/151ENVISO-004.md`](../tickets/151ENVISO-004.md) — Smoke test for `node:*` leaks in runner build output (optional, covers D4)
+
+## Outcome
+
+Completed on 2026-05-05.
+
+- Added `docs/engine-environment-isolation.md`, documenting browser-safe engine subpaths, Node-only surfaces, the `*-node-loader.ts` convention, and the final Node-loader inventory.
+- Audited and remediated current `node:*` importers so browser-safe engine source stays free of Node-only imports, with Node-only loading isolated in `*-node-loader.ts` files or documented CNL surfaces.
+- Added the root ESLint `no-restricted-imports` rule that blocks `node:*` imports in browser-safe engine files while exempting exactly the documented Node-only surfaces.
+- Added the runner browser-bundle smoke check in `packages/runner/scripts/verify-no-node-imports.mjs` and wired it into `@ludoforge/runner`'s build, so existing `pnpm turbo build` CI coverage catches quoted `node:*` module literals and Vite `__vite-browser-external` stubs in emitted runner assets.
+- Deviation from the draft: the optional D4 smoke test was implemented even though the audit found no current dynamic imports, because the implementation request explicitly selected `151ENVISO-004`.
+- Verification recorded across the ticket outcomes includes `pnpm turbo lint`, deliberate lint red/green checks for browser-safe engine imports, `pnpm -F @ludoforge/runner build`, a deliberate runner `node:fs` dynamic-import red check against generated Vite output, `pnpm turbo build`, `node packages/runner/scripts/verify-no-node-imports.mjs`, and `pnpm run check:ticket-deps`.

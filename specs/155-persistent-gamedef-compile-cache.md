@@ -164,10 +164,10 @@ Two tests + one CI assertion:
 
 2. `packages/engine/test/integration/gamedef-cache-invalidation.test.ts` (new) — `architectural-invariant`: asserts that mutating the source markdown of any spec file invalidates the cache (cache miss path is taken, fresh GameDef differs from prior cached GameDef).
 
-3. `packages/engine/scripts/measure-fitl-lane-cumulative-cost.mjs` (new) — sums per-test-file startup overhead across the FITL lanes, runs once with cache hot and once cold, and asserts the hot run's cumulative startup time is < 30 s (the warm-target budget). Wired into a non-blocking CI summary step or a manual measurement script — not a blocking gate, because the absolute number depends on CI runner hardware.
+3. `packages/engine/scripts/measure-fitl-lane-cumulative-cost.mjs` (new) — sums per-test-file startup overhead across the FITL lanes, runs once with cache hot and once cold, and records whether the hot run's cumulative startup time is < 30 s (the warm-target budget). Wired into a non-blocking CI summary step or a manual measurement script — not a blocking gate, because the absolute number depends on CI runner hardware.
 
 Acceptance:
-- All three artifacts land. The two equivalence/invalidation tests are blocking. The cumulative-cost measurement is informational.
+- All three artifacts land. The two equivalence/invalidation tests are blocking. The cumulative-cost measurement is informational. Ticket `155PERGAMCOM-004` delivered the manual script and measured the live no-test startup seam red (`hotCumulativeMs=1597210`, `hotMeetsBudget=false`, `speedupRatio=1.0219902204469042`); ticket `155PERGAMCOM-005` owns the residual budget miss and any replacement proof surface.
 
 ## 5. FOUNDATIONS.md Alignment
 
@@ -182,23 +182,23 @@ Acceptance:
 | F11 Immutability | Cached GameDef is a plain immutable JSON structure. No mutable shared state across processes. |
 | F13 Artifact Identity | The cache is a persisted form of the GameSpec-hash → GameDef-hash mapping that F13 already requires. The fingerprint is the existing reproducibility identity. |
 | F14 No Backwards Compatibility | The cache helper replaces, not wraps, the relevant call path. The opt-out env var is a debugging flag, not a long-term compatibility toggle, and is not retained beyond Phase 3. |
-| F15 Architectural Completeness | Root-cause fix: the per-process compile is genuinely redundant work, and the cache eliminates it structurally. Not a workaround. |
-| F16 Testing as Proof | Equivalence and invalidation are proven by Phase 3 tests, not assumed. |
+| F15 Architectural Completeness | Root-cause fix for persistent GameDef reuse landed, but Phase 3 measurement proved the original lane-startup budget model incomplete. Residual startup ownership is explicit in `155PERGAMCOM-005` rather than hidden behind a false green. |
+| F16 Testing as Proof | Equivalence and invalidation are proven by Phase 3 tests, not assumed. The cumulative-startup proof is red on the live no-test seam and is recorded as evidence for the successor. |
 
 ## 6. Acceptance Criteria
 
 1. `compileProductionSpec` consults the persistent cache before falling back to a fresh compile, and writes the cache atomically on miss.
 2. Cache content is byte-identical to a fresh compile (Phase 3 equivalence test passes).
 3. Source mutation invalidates the cache (Phase 3 invalidation test passes).
-4. Cumulative startup overhead across `fitl-events-shard-{a,b,c}` + `fitl-rules` lanes drops to < 30 s aggregate from a measured ~5.5 min baseline (Phase 3 measurement script confirms; not a blocking CI gate).
+4. Cumulative startup overhead across `fitl-events-shard-{a,b,c}` + `fitl-rules` lanes is measured by the Phase 3 script. The 2026-05-05 manual result is red on the no-test startup seam (`fileCount=192`, `coldCumulativeMs=1632333`, `hotCumulativeMs=1597210`, `hotMeetsBudget=false`); `155PERGAMCOM-005` owns resolving or respecifying this budget proof.
 5. The CI build job warms the cache; the test jobs find it via the existing `engine-dist` artifact transfer.
 6. All existing engine tests pass with the cache enabled (default).
 
 ## 7. Out of Scope
 
-- **Approach B — single persistent test runner / worker pool.** Considered in the brainstorm. Reasonable successor spec if Phase 3 shows residual startup overhead worth chasing; not bundled into this spec because it requires a substantial test-runner refactor and changes node:test conventions.
+- **Approach B — single persistent test runner / worker pool.** Considered in the brainstorm. Now a plausible residual owner because Phase 3 measured the per-file no-test startup seam red even with a hot GameDef cache; `155PERGAMCOM-005` owns deciding whether this is the right fix or whether the proof surface should be replaced.
 - **Approach C — Rust/WASM port of the kernel evaluation hot path.** Considered and rejected. The Spec 150 plateau (4-5× ceiling, original 250 ms target retired) and the limited overlap between the policy-VM hot path and these CI lanes' actual workload make this a poor cost/benefit. May become interesting downstream of Spec 14 (evolution pipeline) if simulation throughput becomes the dominant motivator; not justified for test-CI duration.
-- **Cache for non-production specs.** This spec covers `compileProductionSpec` only — the helper used by 195 of the slow integration tests. Other compile call sites (unit tests building inline GameSpecDocs, fixture-based compiles, schema-validation harnesses) are fast in absolute terms and are not addressed here.
+- **Cache for non-production specs.** This spec covers `compileProductionSpec` only — the helper mentioned by many slow integration tests. Ticket 004's live inventory found 192 files in the four FITL lanes, 150 mentioning production compile helpers, and only 25 with obvious top-level production fixture/compile calls under the no-test startup witness. Other compile call sites (unit tests building inline GameSpecDocs, fixture-based compiles, schema-validation harnesses) are fast in absolute terms and are not addressed here.
 - **Cache compression.** A 1.5 MB JSON file is small enough that gzip would save < 1 s of artifact upload and complicate the `JSON.parse` path. Skip.
 - **Persistent cache invalidation across engine code changes outside the compiler.** The `compilerStamp` covers `cnl/staged-pipeline.js`, which transitively imports the rest of the compiler. If a kernel-side change affects the GameDef shape without touching the compiler entry, cache invalidation falls back on `pnpm clean` removing `dist/.cache/` as part of `dist/`. This is the same correctness boundary the rest of the build already operates under.
 
@@ -209,4 +209,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-05:
 - [`archive/tickets/155PERGAMCOM-001.md`](../archive/tickets/155PERGAMCOM-001.md) — Persistent gamedef cache helper and `compileProductionSpec` integration (covers Phase 1)
 - [`archive/tickets/155PERGAMCOM-002.md`](../archive/tickets/155PERGAMCOM-002.md) — CI cache warm step and `cache:gamedef:warm` package script (covers Phase 2)
 - [`archive/tickets/155PERGAMCOM-003.md`](../archive/tickets/155PERGAMCOM-003.md) — Cache equivalence and invalidation invariant tests (covers Phase 3 blocking tests)
-- [`tickets/155PERGAMCOM-004.md`](../tickets/155PERGAMCOM-004.md) — FITL lane cumulative startup cost measurement script (covers Phase 3 informational measurement)
+- [`archive/tickets/155PERGAMCOM-004.md`](../archive/tickets/155PERGAMCOM-004.md) — FITL lane cumulative startup cost measurement script and first-cause red-result classification (covers Phase 3 informational measurement)
+- [`tickets/155PERGAMCOM-005.md`](../tickets/155PERGAMCOM-005.md) — Resolve residual FITL lane startup budget miss or respecify the proof surface (owns the red Phase 3 budget result)

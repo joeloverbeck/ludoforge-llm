@@ -98,6 +98,10 @@ For investigation tickets whose primary output is a checked-in measurement artif
 
 For long-running measurement tickets, that minimal probe should also validate the **output shape**, not just command viability. Before the expensive run, execute a one-seed, one-item, or otherwise tiny smoke probe and inspect that emitted rows use the promised unit of analysis, counters are per-row rather than accidental cumulative totals, required columns are present, and disabled/toggled modes report comparable fields.
 
+When the ticket's deliverable is a new long-running measurement script, design the script itself for bounded proof before the full corpus run. Prefer adding a representative subset option, file/item limit, or equivalent smoke mode that exercises the same code path and output schema as the full run. If stdout is the machine-readable artifact, send progress or heartbeat lines to stderr so a silent multi-minute run can be distinguished from a stuck child process without corrupting JSON output. The smoke mode is a preflight, not a replacement for a ticket-required full measurement unless a later 1-3-1 reset narrows the deliverable.
+
+For measurement scripts over persistent caches, generated output, warmed artifacts, or other shared mutable state, treat probes that clear, warm, read, or rewrite the same state as output-contending. Do not run those probes in parallel when their timings, hit/miss counts, or activation evidence will be cited. If an accidental parallel probe completes, label it diagnostic/contaminated and rerun the smallest needed probe serially before using the numbers in a ticket, spec, or successor.
+
 For exploratory benchmark sweeps, keep probes bounded and interruptible until the first representative case returns. Start with the smallest case that can validate the metric, avoid multi-case loops before that result is understood, and add per-case timeouts or progress output when a sweep may run silently for minutes. Before launching a silent or sparse-output command, write a compact stop plan in working notes: expected first-output or completion window, timeout/manual-stop threshold, whether the instrumentation is part of the measured surface, and the smaller fallback probe if the command exceeds the bound. If an exploratory command becomes stale or superseded, stop or classify it before final proof so delayed output does not contaminate the acceptance story.
 
 When a long-running measurement witness has a **stable earlier prefix** already backed by durable evidence and the later tail is flaky or environment-sensitive, prefer narrowing to that smallest truthful prefix over preserving the longer tail by inertia. Record the narrowed bound explicitly in the active ticket before final proof so the witness does not look silently weakened.
@@ -127,10 +131,12 @@ When the owned deliverable is a large checked-in fixture or inventory artifact, 
 When an investigation or measurement ticket needs a new checked-in helper script or harness to make the evidence repeatable:
 
 1. run a syntax check and a minimal smoke command before the expensive proof run
-2. confirm the new file appears in `git status --short`, because untracked files do not appear in `git diff --stat`
-3. add the helper to the active ticket's touched-file or outcome ledger before final proof
-4. cite the helper's exact invocation in the durable report or ticket closeout
-5. include the helper in the final touched-file scope sweep
+2. verify that the smoke command exercises the same measured seam as the full command: representative input selection, cache/warmup state, skipped-body behavior, process boundary, counters, and output fields should match unless the ticket records a deliberate substitution
+3. for scripts expected to run silently for minutes, verify progress behavior on stderr or record why the script intentionally stays silent and how liveness will be checked without perturbing the metric
+4. confirm the new file appears in `git status --short`, because untracked files do not appear in `git diff --stat`
+5. add the helper to the active ticket's touched-file or outcome ledger before final proof
+6. cite the helper's exact invocation in the durable report or ticket closeout
+7. include the helper in the final touched-file scope sweep
 
 When the helper is a fixture/golden `regenerate` script:
 

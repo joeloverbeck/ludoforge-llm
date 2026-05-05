@@ -60,6 +60,19 @@ let cachedTexasResult: CompiledProductionSpec | null = null;
 let cachedTexasFixture: ProductionGameFixture | null = null;
 
 /**
+ * Test-only seam for integration tests that must distinguish persistent cache
+ * hits from this module's in-process production-spec cache.
+ */
+export function __resetProductionSpecCacheForTests(): void {
+  cachedFitlBundle = null;
+  cachedFitlResult = null;
+  cachedFitlFixture = null;
+  cachedTexasBundle = null;
+  cachedTexasResult = null;
+  cachedTexasFixture = null;
+}
+
+/**
  * Loads the FITL production spec through the canonical entrypoint and caches the parsed result.
  */
 export function parseProductionSpec(): RunGameSpecStagesResult['parsed'] {

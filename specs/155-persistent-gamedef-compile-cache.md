@@ -208,5 +208,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-05:
 
 - [`archive/tickets/155PERGAMCOM-001.md`](../archive/tickets/155PERGAMCOM-001.md) — Persistent gamedef cache helper and `compileProductionSpec` integration (covers Phase 1)
 - [`archive/tickets/155PERGAMCOM-002.md`](../archive/tickets/155PERGAMCOM-002.md) — CI cache warm step and `cache:gamedef:warm` package script (covers Phase 2)
-- [`tickets/155PERGAMCOM-003.md`](../tickets/155PERGAMCOM-003.md) — Cache equivalence and invalidation invariant tests (covers Phase 3 blocking tests)
+- [`archive/tickets/155PERGAMCOM-003.md`](../archive/tickets/155PERGAMCOM-003.md) — Cache equivalence and invalidation invariant tests (covers Phase 3 blocking tests)
 - [`tickets/155PERGAMCOM-004.md`](../tickets/155PERGAMCOM-004.md) — FITL lane cumulative startup cost measurement script (covers Phase 3 informational measurement)

@@ -1,9 +1,9 @@
 # 155PERGAMCOM-003: Cache equivalence and invalidation invariant tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: None — integration tests only
+**Engine Changes**: None — test helper seam + integration tests only
 **Deps**: `archive/tickets/155PERGAMCOM-001.md`
 
 ## Problem
@@ -122,3 +122,24 @@ Verify the two new test files are picked up by the lane that runs them. If `pack
 3. `node --test dist/test/integration/gamedef-cache-equivalence.test.js dist/test/integration/gamedef-cache-invalidation.test.js`
 4. `pnpm turbo lint`
 5. `pnpm turbo test`
+
+## Outcome
+
+Completed on 2026-05-05. Landed the two architectural-invariant integration tests and the smallest test-only in-process reset seam in `packages/engine/test/helpers/production-spec-helpers.ts`.
+
+- `gamedef-cache-equivalence.test.ts` covers FITL and Texas cache-disabled vs cache-write vs cache-read byte identity with `JSON.stringify`, and adds a direct production-helper persistent-read activation witness using a valid sentinel entry under the live production source fingerprint so fallback compilation cannot satisfy the assertion.
+- `gamedef-cache-invalidation.test.ts` uses the existing minimal compilable compiler fixture copied to a tmpdir entrypoint, mutates the same file path's markdown bytes, asserts `sourceFingerprint` changes, asserts the new fingerprint misses the old cache entry, and asserts the mutated source compiles to a different GameDef than the stale cached content.
+- Lane-manifest check confirmed both new `gamedef-cache-*.test.ts` files are included in `integration:core`; no `packages/engine/scripts/test-lane-manifest.mjs` edit was needed.
+- Schema/artifact fallout: none expected; this ticket adds tests and a test-only reset seam only.
+- Deferred sibling scope: CI warm integration remains archived ticket 002; cumulative startup measurement remains `tickets/155PERGAMCOM-004.md`.
+- Verification:
+  - `pnpm -F @ludoforge/engine build` — pass.
+  - `timeout 120 pnpm -F @ludoforge/engine exec node --test dist/test/integration/gamedef-cache-equivalence.test.js dist/test/integration/gamedef-cache-invalidation.test.js` — pass.
+  - Lane membership probe for `integration:core` — both new files present.
+  - `pnpm -F @ludoforge/engine test:integration:core` — pass, 61/61 files before the final broad proof transcription.
+  - `pnpm -F @ludoforge/engine lint` — pass.
+  - `pnpm turbo lint` — pass.
+  - `pnpm turbo test` — pass; engine default lane included both new cache integration tests after the Turbo-triggered rebuild.
+- Proof substitution: the ticket's broad engine integration-suite acceptance line is covered by the live lane containing the new files (`integration:core`) plus the broad `pnpm turbo test` proof after rebuild; no additional game-package/FITL shard ownership was introduced by this ticket.
+- Final sweep: `git diff --check` — pass; touched source/test files are under the repo's typical file-size guidance, with `production-spec-helpers.ts` at 383 lines after the reset seam.
+- Late-edit proof validity: after the first focused and `integration:core` proof, this ticket outcome was updated before running `pnpm turbo lint` and `pnpm turbo test`; the terminal status edit only transcribes already-green proof results and does not change code, command semantics, scope, touched-file ownership, or acceptance boundaries.

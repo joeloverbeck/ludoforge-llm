@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — CI workflow + lane-mapping confirmation only
-**Deps**: `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
+**Deps**: `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
 
 ## Problem
 

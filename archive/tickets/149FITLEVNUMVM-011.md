@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new module `packages/engine/src/cnl/policy-bytecode/`
-**Deps**: `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
+**Deps**: `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
 
 ## Problem
 

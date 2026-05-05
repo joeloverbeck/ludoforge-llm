@@ -36,6 +36,14 @@ Before running broader checks, identify whether any ticket-relevant commands cle
 
 For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness. If the repo already contains a nearby passing or semantically adjacent regression that exercises the same seam, prefer adapting that witness before authoring a brand-new fixture from scratch.
 
+For new scripts that scan generated assets or build output, run a compact scanner preflight before treating the script as final proof:
+
+1. `missing output`: run or inspect the script behavior when the expected generated directory or asset set is absent, and make sure the failure explains the missing producer step
+2. `clean output`: run the scanner against current generated output after the authoritative producer completes
+3. `false-positive sample`: inspect any matches from minified, bundled, or generated text before treating substrings as real violations
+4. `deliberate violation`: inject the smallest temporary source or fixture violation, run the producer, then run the scanner and confirm the live emitted marker fails clearly
+5. `exact restore`: revert the temporary source or fixture edit, verify it no longer appears in `git diff` / `git status --short`, rebuild clean output, and rerun the scanner or package build lane before closeout
+
 If a verification lane fails immediately after overlapping output-contending commands, treat the first result as inconclusive until you rerun it serially. Recovery order:
 1. Classify the failure as a possible ordering artifact rather than as code-caused.
 2. Rebuild the touched package or regenerate the touched artifact tree to restore a clean authoritative output.

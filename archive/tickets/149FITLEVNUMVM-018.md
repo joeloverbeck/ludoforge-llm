@@ -120,7 +120,7 @@ When the live slow lanes are back inside their intended blocking CI budgets:
 - Runtime/compiler/kernel files identified by profiling.
 - Focused tests for the accepted generic optimization.
 - `tickets/149FITLEVNUMVM-016.md` if this ticket unblocks the F14 cut.
-- `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` if the measured root cause changes the Spec 149 phase story.
+- `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` if the measured root cause changes the Spec 149 phase story.
 
 ## Out of Scope
 

@@ -71,7 +71,7 @@ Until ticket 015 lands the VM, compilation is gated behind an env var (`LUDOFORG
 - `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json` (modify — regenerated integer policy catalog mirror)
 - `packages/runner/src/bootstrap/fitl-game-def.json` (modify — regenerated source mirror)
 - `packages/runner/src/bootstrap/texas-game-def.json` (modify — stale canonical drift refreshed by shared bootstrap generator)
-- `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` (modify — opcode list reflects compiler-owned generic operators)
+- `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md` (modify — opcode list reflects compiler-owned generic operators)
 
 ## Out of Scope
 

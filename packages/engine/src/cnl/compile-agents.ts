@@ -1,4 +1,4 @@
-import { fingerprintPolicyIr } from '../agents/policy-ir.js';
+import { fingerprintPolicyIr } from '../agents/policy-ir-node-loader.js';
 import { parseAuthoredPolicySurfaceRef, parseStrategicConditionRef } from '../agents/policy-surface.js';
 import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';

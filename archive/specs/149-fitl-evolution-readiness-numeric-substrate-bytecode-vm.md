@@ -1,6 +1,6 @@
 # Spec 149 — FITL Evolution-Readiness: Numeric Substrate + Bytecode VM (TS first, WASM phase 2)
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P0 — blocks evolution-readiness; PR #231 (`implemented-147`) determinism + integration CI lanes red.
 **Complexity**: XL — multi-phase architectural change spanning kernel encoded-state projection, agent preview-drive apply/undo, compiler bytecode lowering, runtime VM, and CI workflow rebalancing.
 **Dependencies**:
@@ -256,7 +256,7 @@ The slow tests live in two different workflow files. Phase 0 touches both:
 
 **Per-test budgets**: the spec's earlier draft proposed `// @timeout` annotations; that mechanism does not exist in `run-tests.mjs` (lane-level only). If per-test relief is still required after the workflow-level bumps, options are: (a) extend the lane-manifest to support per-test timeout overrides; (b) carve sihanouk and march-free-operation into a dedicated lane with a longer lane-level timeout; (c) override at runtime via env vars (`ENGINE_DETERMINISM_TEST_TIMEOUT_MS`, `ENGINE_FITL_RULES_TEST_TIMEOUT_MS`). Default lean: option (a) is the F15-aligned answer; option (c) is acceptable as a further temporary unblock.
 
-**Restoration tracking**: Ticket `149FITLEVNUMVM-003` tracks the remaining unwind — when phase 4 lands and per-card cost is green at the reset `<=1800 ms` gate, revert the remaining determinism timeout bump in a single commit. The engine-test matrix entries were restored to blocking semantics early on 2026-05-02 after the non-blocking relief masked a stale golden failure.
+**Restoration tracking**: Ticket `149FITLEVNUMVM-003` tracks the remaining unwind — when phase 4 lands and per-card cost is green at the reset `<=1800 ms` gate, revert the remaining determinism timeout bump. The engine-test matrix entries were restored to blocking semantics early on 2026-05-02 after the non-blocking relief masked a stale golden failure. On 2026-05-05, the user rejected requiring 3+ consecutive CI confirmations for the non-flaky CI lanes and authorized closing the unwind on merged green PR #239 CI evidence plus the repaired local reset-gate evidence from `149FITLEVNUMVM-023`.
 
 Out of scope for phase 0: any kernel code change. Phase 0 is configuration-only.
 
@@ -451,7 +451,7 @@ Suggested ticket prefix: `149FITLEVNUMVM` (149 + initials of "fitl evolution num
 
 Total estimate: **14-18 tickets**, ~4-7 weeks of focused work for phases 0-4.
 
-Phase 5 now has its own spec, `archive/specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, `archive/tickets/150FITLWASM-003.md` landed the encoded-state action batch bridge, `archive/tickets/150FITLWASM-004.md` landed supported scalar candidate score rows, archived ticket `archive/tickets/150FITLWASM-005.md` landed non-preview score rows, and active ticket `tickets/150FITLWASM-006.md` owns preview-backed score-row handoff and perf gate preflight.
+Phase 5 has its own archived spec, `archive/specs/150-fitl-policy-vm-wasm-port.md`. Starter ticket `archive/tickets/150FITLWASM-001.md` landed the WASM skeleton, `archive/tickets/150FITLWASM-002.md` landed policy-bytecode execution parity, `archive/tickets/150FITLWASM-003.md` landed the encoded-state action batch bridge, `archive/tickets/150FITLWASM-004.md` landed supported scalar candidate score rows, `archive/tickets/150FITLWASM-005.md` landed non-preview score rows, and `archive/tickets/150FITLWASM-006.md` landed preview-backed score-row handoff and perf gate preflight.
 
 ---
 
@@ -544,10 +544,11 @@ retained clean samples of `1355.26 ms` and `1383.35 ms`.
 
 User-approved resolution: retire the original `<=250 ms` target as a blocker
 for the current same-seam architecture and reset the active successor-runtime
-gate to `<=1800 ms`. Ticket `149FITLEVNUMVM-016` is again the active F14
-default-flip/deletion owner after it confirms that reset gate. Ticket
-`149FITLEVNUMVM-003` remains blocked on ticket 016 closure and the required
-post-reset CI confirmations, not on the retired `<=250 ms` target.
+gate to `<=1800 ms`. Ticket `149FITLEVNUMVM-016` became the active F14
+default-flip/deletion owner after it confirmed that reset gate. Ticket
+`149FITLEVNUMVM-003` was then unblocked on 2026-05-05 by merged green PR #239
+CI evidence plus the repaired reset-gate evidence, not by the retired
+`<=250 ms` target.
 
 ### 2026-05-04 reset-gate regression follow-up
 
@@ -566,44 +567,69 @@ policy-agent trace diagnostics, and pre-timed WASM score-row precompilation.
 The repaired compiled gate passed three serial local samples and the Spec 149
 subtest was green inside `pnpm -F @ludoforge/engine test:perf`; the broad lane
 still has an unrelated Spec 145 preview-pipeline corpus failure. The `<=1800 ms`
-ceiling was not changed. `149FITLEVNUMVM-003` still requires
-its 3+ consecutive CI confirmations; `154POLBCDISP-003` is unblocked for its
-own keep-vs-delete measurement.
+ceiling was not changed. On 2026-05-05, the user explicitly rejected requiring
+3+ consecutive CI confirmations for this non-flaky CI surface and authorized
+`149FITLEVNUMVM-003` to close on merged green PR #239 CI evidence plus the
+`149FITLEVNUMVM-023` reset-gate repair evidence; `154POLBCDISP-003` is
+unblocked for its own keep-vs-delete measurement.
 
 ---
 
 ## Tickets
 
 Decomposed via `/spec-to-tickets` on 2026-04-28:
-- [`archive/tickets/149FITLEVNUMVM-001.md`](../archive/tickets/149FITLEVNUMVM-001.md) — Bump engine-determinism.yml job-level timeout 30→60 (covers Phase 0)
-- [`archive/tickets/149FITLEVNUMVM-002.md`](../archive/tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml lanes for sihanouk + march-free-operation (covers Phase 0)
-- [`tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
-- [`archive/tickets/149FITLEVNUMVM-004.md`](../archive/tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
-- [`archive/tickets/149FITLEVNUMVM-005.md`](../archive/tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
-- [`archive/tickets/149FITLEVNUMVM-006.md`](../archive/tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1 correctness; measured gate resolved by 017 stop-condition decision)
-- [`archive/tickets/149FITLEVNUMVM-017.md`](../archive/tickets/149FITLEVNUMVM-017.md) — Resolve Phase 1 encoded-read measured-gate miss (covers Phase 1 stop-condition decision)
-- [`archive/tickets/149FITLEVNUMVM-007.md`](../archive/tickets/149FITLEVNUMVM-007.md) — Superseded 5500 ms Phase 1 perf gate (not truthful after 017)
-- [`archive/tickets/149FITLEVNUMVM-008.md`](../archive/tickets/149FITLEVNUMVM-008.md) — Deferred PreviewDriveScope skeleton + apply/undo log primitives (old Phase 2 branch)
-- [`archive/tickets/149FITLEVNUMVM-009.md`](../archive/tickets/149FITLEVNUMVM-009.md) — Deferred cloning-path replacement with PreviewDriveScope (old Phase 2 branch)
-- [`archive/tickets/149FITLEVNUMVM-010.md`](../archive/tickets/149FITLEVNUMVM-010.md) — Deferred apply/undo equivalence property tests (old Phase 2 branch)
-- [`archive/tickets/149FITLEVNUMVM-011.md`](../archive/tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
-- [`archive/tickets/149FITLEVNUMVM-012.md`](../archive/tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
-- [`archive/tickets/149FITLEVNUMVM-013.md`](../archive/tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
-- [`archive/tickets/149FITLEVNUMVM-014.md`](../archive/tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
-- [`archive/tickets/149FITLEVNUMVM-015.md`](../archive/tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
-- [`archive/tickets/149FITLEVNUMVM-018.md`](../archive/tickets/149FITLEVNUMVM-018.md) — Completed live FITL event-card CI lane reassessment; stale golden/workflow masking repaired, no runtime hot path accepted
-- [`archive/tickets/149FITLEVNUMVM-019.md`](../archive/tickets/149FITLEVNUMVM-019.md) — Phase 4B generic kernel expression/query AOT or bytecode
-- [`archive/tickets/149FITLEVNUMVM-020.md`](../archive/tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
-- [`archive/tickets/149FITLEVNUMVM-021.md`](../archive/tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
-- [`archive/tickets/149FITLEVNUMVM-022.md`](../archive/tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate; red, handed off to Spec 150 and later superseded by the 2026-05-04 budget reset
-- [`archive/tickets/149FITLEVNUMVM-023.md`](../archive/tickets/149FITLEVNUMVM-023.md) — Revalidate or repair the reset FITL per-card gate
-- [`archive/specs/150-fitl-policy-vm-wasm-port.md`](../archive/specs/150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
-- [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
-- [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity
-- [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge
-- [`archive/tickets/150FITLWASM-004.md`](../archive/tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration
-- [`archive/tickets/150FITLWASM-005.md`](../archive/tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split
-- [`tickets/150FITLWASM-006.md`](../tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight
-- [`archive/tickets/149FITLEVNUMVM-016.md`](../archive/tickets/149FITLEVNUMVM-016.md) — Final default-flip + closure-tree deletion F14 atomic cut, completed under the reset successor-runtime budget
+- [`archive/tickets/149FITLEVNUMVM-001.md`](../tickets/149FITLEVNUMVM-001.md) — Bump engine-determinism.yml job-level timeout 30→60 (covers Phase 0)
+- [`archive/tickets/149FITLEVNUMVM-002.md`](../tickets/149FITLEVNUMVM-002.md) — Relieve engine-tests.yml lanes for sihanouk + march-free-operation (covers Phase 0)
+- [`archive/tickets/149FITLEVNUMVM-003.md`](../tickets/149FITLEVNUMVM-003.md) — CI restoration unwind, post-Phase-4 (covers Phase 0 + Phase 4 closure)
+- [`archive/tickets/149FITLEVNUMVM-004.md`](../tickets/149FITLEVNUMVM-004.md) — EncodedStateLayout builder from GameDef (covers Phase 1)
+- [`archive/tickets/149FITLEVNUMVM-005.md`](../tickets/149FITLEVNUMVM-005.md) — EncodedState typed-array view builder (covers Phase 1)
+- [`archive/tickets/149FITLEVNUMVM-006.md`](../tickets/149FITLEVNUMVM-006.md) — Wire encoded state into policy-runtime hot read paths (covers Phase 1 correctness; measured gate resolved by 017 stop-condition decision)
+- [`archive/tickets/149FITLEVNUMVM-017.md`](../tickets/149FITLEVNUMVM-017.md) — Resolve Phase 1 encoded-read measured-gate miss (covers Phase 1 stop-condition decision)
+- [`archive/tickets/149FITLEVNUMVM-007.md`](../tickets/149FITLEVNUMVM-007.md) — Superseded 5500 ms Phase 1 perf gate (not truthful after 017)
+- [`archive/tickets/149FITLEVNUMVM-008.md`](../tickets/149FITLEVNUMVM-008.md) — Deferred PreviewDriveScope skeleton + apply/undo log primitives (old Phase 2 branch)
+- [`archive/tickets/149FITLEVNUMVM-009.md`](../tickets/149FITLEVNUMVM-009.md) — Deferred cloning-path replacement with PreviewDriveScope (old Phase 2 branch)
+- [`archive/tickets/149FITLEVNUMVM-010.md`](../tickets/149FITLEVNUMVM-010.md) — Deferred apply/undo equivalence property tests (old Phase 2 branch)
+- [`archive/tickets/149FITLEVNUMVM-011.md`](../tickets/149FITLEVNUMVM-011.md) — Bytecode opcode set + IR types + PolicyBytecode schema (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-012.md`](../tickets/149FITLEVNUMVM-012.md) — Feature-id table assignment from GameDef (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-013.md`](../tickets/149FITLEVNUMVM-013.md) — AgentPolicyExpr → bytecode compiler + disassembler (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-014.md`](../tickets/149FITLEVNUMVM-014.md) — Round-trip equivalence harness, closure-tree↔bytecode (covers Phase 3)
+- [`archive/tickets/149FITLEVNUMVM-015.md`](../tickets/149FITLEVNUMVM-015.md) — TS bytecode VM core + A/B integration via env var (covers Phase 4)
+- [`archive/tickets/149FITLEVNUMVM-018.md`](../tickets/149FITLEVNUMVM-018.md) — Completed live FITL event-card CI lane reassessment; stale golden/workflow masking repaired, no runtime hot path accepted
+- [`archive/tickets/149FITLEVNUMVM-019.md`](../tickets/149FITLEVNUMVM-019.md) — Phase 4B generic kernel expression/query AOT or bytecode
+- [`archive/tickets/149FITLEVNUMVM-020.md`](../tickets/149FITLEVNUMVM-020.md) — Phase 4B preview state and token-index lifetime redesign
+- [`archive/tickets/149FITLEVNUMVM-021.md`](../tickets/149FITLEVNUMVM-021.md) — Phase 4B preview hashing and verification strategy
+- [`archive/tickets/149FITLEVNUMVM-022.md`](../tickets/149FITLEVNUMVM-022.md) — Phase 4B final reprofile gate; red, handed off to Spec 150 and later superseded by the 2026-05-04 budget reset
+- [`archive/tickets/149FITLEVNUMVM-023.md`](../tickets/149FITLEVNUMVM-023.md) — Revalidate or repair the reset FITL per-card gate
+- [`archive/specs/150-fitl-policy-vm-wasm-port.md`](150-fitl-policy-vm-wasm-port.md) — Phase 5 Rust/WASM successor spec
+- [`archive/tickets/150FITLWASM-001.md`](../tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton
+- [`archive/tickets/150FITLWASM-002.md`](../tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity
+- [`archive/tickets/150FITLWASM-003.md`](../tickets/150FITLWASM-003.md) — Encoded-state action batch bridge
+- [`archive/tickets/150FITLWASM-004.md`](../tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration
+- [`archive/tickets/150FITLWASM-005.md`](../tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split
+- [`archive/tickets/150FITLWASM-006.md`](../tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight
+- [`archive/tickets/149FITLEVNUMVM-016.md`](../tickets/149FITLEVNUMVM-016.md) — Final default-flip + closure-tree deletion F14 atomic cut, completed under the reset successor-runtime budget
+
+## Outcome (2026-05-05)
+
+- Spec 149 is complete. Its Phase 0 through Phase 4 and Phase 4B ticket chain
+  has been archived, including the final CI restoration unwind
+  `archive/tickets/149FITLEVNUMVM-003.md`.
+- The original `<=250 ms` evolution-readiness budget was retired as an active
+  blocker by user-approved reset evidence. The completed default-flip cut now
+  closes on the reset `<=1800 ms` successor-runtime gate, with the repaired
+  reset-gate evidence in `archive/tickets/149FITLEVNUMVM-023.md`.
+- Phase 5 / WASM ownership moved to archived Spec 150
+  `archive/specs/150-fitl-policy-vm-wasm-port.md`; the Spec 150 ticket chain
+  is also archived through the budget-reset closeout.
+- CI tactical relief is unwound: `engine-tests.yml` affected lanes were
+  restored earlier, and `.github/workflows/engine-determinism.yml` is restored
+  to a 30-minute determinism job timeout.
+- Deviations from original plan: Phase 2 apply/undo was deferred after the
+  Phase 1 stop-condition decision, Phase 4B failed the original `<=250 ms`
+  target, and the final accepted budget is the user-approved `<=1800 ms`
+  reset rather than the original aspirational target.
+- Verification carried forward from the final ticket closeout: `pnpm turbo
+  build`, `pnpm turbo lint`, `pnpm run check:ticket-deps`, and `git diff
+  --check` passed before spec archival.
 
 **End of spec 149.**

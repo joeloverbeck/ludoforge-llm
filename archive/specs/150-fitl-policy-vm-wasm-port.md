@@ -4,7 +4,7 @@
 **Priority**: P0 — successor owner after Spec 149 Phase 4B missed the original evolution-readiness budget; no longer blocks on the retired `<=250 ms` target.
 **Complexity**: XL — Rust/WASM runtime, deterministic FFI boundary, TS/WASM equivalence, and eventual default-flip integration.
 **Dependencies**:
-- `specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
+- `archive/specs/149-fitl-evolution-readiness-numeric-substrate-bytecode-vm.md`
 - `archive/tickets/149FITLEVNUMVM-022.md`
 
 ## 1. Context
@@ -255,39 +255,39 @@ spec does not delete closure-tree code directly.
 
 ## 8. Initial Tickets
 
-- [`archive/tickets/150FITLWASM-001.md`](../archive/tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
-- [`archive/tickets/150FITLWASM-002.md`](../archive/tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
-- [`archive/tickets/150FITLWASM-003.md`](../archive/tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
-- [`archive/tickets/150FITLWASM-004.md`](../archive/tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
-- [`archive/tickets/150FITLWASM-005.md`](../archive/tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split.
-- [`archive/tickets/150FITLWASM-006.md`](../archive/tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight.
-- [`archive/tickets/150FITLWASM-007.md`](../archive/tickets/150FITLWASM-007.md) — Production WASM score-row integration and perf gate closure.
-- [`archive/tickets/150FITLWASM-008.md`](../archive/tickets/150FITLWASM-008.md) — Production preview row materialization WASM handoff.
-- [`archive/tickets/150FITLWASM-009.md`](../archive/tickets/150FITLWASM-009.md) — Preview-state surface row materialization WASM ABI.
-- [`archive/tickets/150FITLWASM-011.md`](../archive/tickets/150FITLWASM-011.md) — Generic encoded preview-drive substrate prerequisite.
-- [`archive/tickets/150FITLWASM-012.md`](../archive/tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
-- [`archive/tickets/150FITLWASM-013.md`](../archive/tickets/150FITLWASM-013.md) — Completed encoded preview-state slot inventory substrate prerequisite.
-- [`archive/tickets/150FITLWASM-014.md`](../archive/tickets/150FITLWASM-014.md) — Implemented generic production preview-drive substrate prerequisite.
-- [`archive/tickets/150FITLWASM-010.md`](../archive/tickets/150FITLWASM-010.md) — Completed preview-drive production routing and fail-closed-clean active route.
-- [`archive/tickets/150FITLWASM-015.md`](../archive/tickets/150FITLWASM-015.md) — Completed route-local literal fast path with red measured gate successor.
-- [`archive/tickets/150FITLWASM-016.md`](../archive/tickets/150FITLWASM-016.md) — Completed residual active-route hash-cache slice with red measured gate successor.
-- [`archive/tickets/150FITLWASM-017.md`](../archive/tickets/150FITLWASM-017.md) — Completed active-route query-materialization runtime reuse with red measured gate successor.
-- [`archive/tickets/150FITLWASM-018.md`](../archive/tickets/150FITLWASM-018.md) — Completed active-route token-index/digest cleanup with red measured gate successor.
-- [`archive/tickets/150FITLWASM-019.md`](../archive/tickets/150FITLWASM-019.md) — Completed exact shared FNV hashing with red measured gate successor.
-- [`archive/tickets/150FITLWASM-020.md`](../archive/tickets/150FITLWASM-020.md) — Completed residual active-route query/eval/encoding slice with red measured gate successor.
-- [`archive/tickets/150FITLWASM-021.md`](../archive/tickets/150FITLWASM-021.md) — Completed deeper active-route query/apply/hash residual closure with red measured gate successor.
-- [`archive/tickets/150FITLWASM-022.md`](../archive/tickets/150FITLWASM-022.md) — Completed bounded dynamic Zobrist feature-key cache with red measured gate successor.
-- [`archive/tickets/150FITLWASM-023.md`](../archive/tickets/150FITLWASM-023.md) — Completed residual apply-move token-hash deferral with red measured gate successor.
-- [`archive/tickets/150FITLWASM-024.md`](../archive/tickets/150FITLWASM-024.md) — Completed initial full-hash runtime-table cache reuse with red measured gate successor.
-- [`archive/tickets/150FITLWASM-025.md`](../archive/tickets/150FITLWASM-025.md) — Completed generic FNV prefix-state residual closure with red measured gate successor.
-- [`archive/tickets/150FITLWASM-026.md`](../archive/tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
-- [`archive/tickets/150FITLWASM-027.md`](../archive/tickets/150FITLWASM-027.md) — Completed stable-fingerprint prefix-hasher closure with red measured gate successor.
-- [`archive/tickets/150FITLWASM-028.md`](../archive/tickets/150FITLWASM-028.md) — Completed query/spatial allocation and layout-encoding residual closure with red measured gate successor.
-- [`archive/tickets/150FITLWASM-029.md`](../archive/tickets/150FITLWASM-029.md) — Completed allocation, encoding, query/eval, token-index, digest/hash, and process allocation residual closure after retained reduction slices.
-- [`archive/tickets/150FITLWASM-030.md`](../archive/tickets/150FITLWASM-030.md) — Completed connected-zone allocation and connected-condition traversal residual closure with red measured gate successor.
-- [`archive/tickets/150FITLWASM-032.md`](../archive/tickets/150FITLWASM-032.md) — Completed larger active-route residual slice: score-row precompile, diagnostics suppression, hash feature coverage, partial boolean compiler, and generic zone/token count-query materialization removal; final gate remains red at per-card `1561.81 ms`.
-- [`archive/tickets/150FITLWASM-033.md`](../archive/tickets/150FITLWASM-033.md) — Implemented material post-count residual slice: retained hot-path residual buckets, context-independent token-count cache, schema-order decision-stack frame digest input, token-index build-loop cleanup, little-endian WASM input word writes, and selected-move identity lookup; final gate remains red at best retained solo `1355.26 ms`.
-- [`archive/tickets/150FITLWASM-034.md`](../archive/tickets/150FITLWASM-034.md) — Terminal post-033 residual decision: no code retained, original `<=250 ms` blocker retired, reset `<=1800 ms` successor-runtime gate handed to `149FITLEVNUMVM-016`.
+- [`archive/tickets/150FITLWASM-001.md`](../tickets/150FITLWASM-001.md) — Phase 5 WASM architecture and ABI skeleton.
+- [`archive/tickets/150FITLWASM-002.md`](../tickets/150FITLWASM-002.md) — WASM policy bytecode execution parity.
+- [`archive/tickets/150FITLWASM-003.md`](../tickets/150FITLWASM-003.md) — Encoded-state action batch bridge.
+- [`archive/tickets/150FITLWASM-004.md`](../tickets/150FITLWASM-004.md) — Candidate-dependent WASM batch scoring integration.
+- [`archive/tickets/150FITLWASM-005.md`](../tickets/150FITLWASM-005.md) — Non-preview policy score-row WASM handoff and preview prerequisite split.
+- [`archive/tickets/150FITLWASM-006.md`](../tickets/150FITLWASM-006.md) — Preview-backed WASM score-row handoff and perf gate preflight.
+- [`archive/tickets/150FITLWASM-007.md`](../tickets/150FITLWASM-007.md) — Production WASM score-row integration and perf gate closure.
+- [`archive/tickets/150FITLWASM-008.md`](../tickets/150FITLWASM-008.md) — Production preview row materialization WASM handoff.
+- [`archive/tickets/150FITLWASM-009.md`](../tickets/150FITLWASM-009.md) — Preview-state surface row materialization WASM ABI.
+- [`archive/tickets/150FITLWASM-011.md`](../tickets/150FITLWASM-011.md) — Generic encoded preview-drive substrate prerequisite.
+- [`archive/tickets/150FITLWASM-012.md`](../tickets/150FITLWASM-012.md) — FITL-current encoded preview-drive class expansion.
+- [`archive/tickets/150FITLWASM-013.md`](../tickets/150FITLWASM-013.md) — Completed encoded preview-state slot inventory substrate prerequisite.
+- [`archive/tickets/150FITLWASM-014.md`](../tickets/150FITLWASM-014.md) — Implemented generic production preview-drive substrate prerequisite.
+- [`archive/tickets/150FITLWASM-010.md`](../tickets/150FITLWASM-010.md) — Completed preview-drive production routing and fail-closed-clean active route.
+- [`archive/tickets/150FITLWASM-015.md`](../tickets/150FITLWASM-015.md) — Completed route-local literal fast path with red measured gate successor.
+- [`archive/tickets/150FITLWASM-016.md`](../tickets/150FITLWASM-016.md) — Completed residual active-route hash-cache slice with red measured gate successor.
+- [`archive/tickets/150FITLWASM-017.md`](../tickets/150FITLWASM-017.md) — Completed active-route query-materialization runtime reuse with red measured gate successor.
+- [`archive/tickets/150FITLWASM-018.md`](../tickets/150FITLWASM-018.md) — Completed active-route token-index/digest cleanup with red measured gate successor.
+- [`archive/tickets/150FITLWASM-019.md`](../tickets/150FITLWASM-019.md) — Completed exact shared FNV hashing with red measured gate successor.
+- [`archive/tickets/150FITLWASM-020.md`](../tickets/150FITLWASM-020.md) — Completed residual active-route query/eval/encoding slice with red measured gate successor.
+- [`archive/tickets/150FITLWASM-021.md`](../tickets/150FITLWASM-021.md) — Completed deeper active-route query/apply/hash residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-022.md`](../tickets/150FITLWASM-022.md) — Completed bounded dynamic Zobrist feature-key cache with red measured gate successor.
+- [`archive/tickets/150FITLWASM-023.md`](../tickets/150FITLWASM-023.md) — Completed residual apply-move token-hash deferral with red measured gate successor.
+- [`archive/tickets/150FITLWASM-024.md`](../tickets/150FITLWASM-024.md) — Completed initial full-hash runtime-table cache reuse with red measured gate successor.
+- [`archive/tickets/150FITLWASM-025.md`](../tickets/150FITLWASM-025.md) — Completed generic FNV prefix-state residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-026.md`](../tickets/150FITLWASM-026.md) — Completed pending-request fingerprint cache with red measured gate successor.
+- [`archive/tickets/150FITLWASM-027.md`](../tickets/150FITLWASM-027.md) — Completed stable-fingerprint prefix-hasher closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-028.md`](../tickets/150FITLWASM-028.md) — Completed query/spatial allocation and layout-encoding residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-029.md`](../tickets/150FITLWASM-029.md) — Completed allocation, encoding, query/eval, token-index, digest/hash, and process allocation residual closure after retained reduction slices.
+- [`archive/tickets/150FITLWASM-030.md`](../tickets/150FITLWASM-030.md) — Completed connected-zone allocation and connected-condition traversal residual closure with red measured gate successor.
+- [`archive/tickets/150FITLWASM-032.md`](../tickets/150FITLWASM-032.md) — Completed larger active-route residual slice: score-row precompile, diagnostics suppression, hash feature coverage, partial boolean compiler, and generic zone/token count-query materialization removal; final gate remains red at per-card `1561.81 ms`.
+- [`archive/tickets/150FITLWASM-033.md`](../tickets/150FITLWASM-033.md) — Implemented material post-count residual slice: retained hot-path residual buckets, context-independent token-count cache, schema-order decision-stack frame digest input, token-index build-loop cleanup, little-endian WASM input word writes, and selected-move identity lookup; final gate remains red at best retained solo `1355.26 ms`.
+- [`archive/tickets/150FITLWASM-034.md`](../tickets/150FITLWASM-034.md) — Terminal post-033 residual decision: no code retained, original `<=250 ms` blocker retired, reset `<=1800 ms` successor-runtime gate handed to `149FITLEVNUMVM-016`.
 
 ## Outcome
 

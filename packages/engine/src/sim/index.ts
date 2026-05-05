@@ -28,4 +28,4 @@ export type {
   RunGameStepTerminal,
 } from './run-game-steps.js';
 export { runGame, runGames } from './simulator.js';
-export { writeEnrichedTrace } from './trace-writer.js';
+export { writeEnrichedTrace } from './trace-writer-node-loader.js';

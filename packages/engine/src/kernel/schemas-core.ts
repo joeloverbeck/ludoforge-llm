@@ -1165,6 +1165,16 @@ const CompiledAgentProfileSchema = z
           })
           .strict()
           .optional(),
+        inner: z
+          .object({
+            chooseOne: z.boolean(),
+            chooseNStep: z.boolean(),
+            maxOptions: z.number().int().positive(),
+            chooseNBeamWidth: z.number().int().positive(),
+            depthCap: z.number().int().positive(),
+          })
+          .strict()
+          .optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })

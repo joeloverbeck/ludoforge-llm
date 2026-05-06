@@ -24,6 +24,7 @@ import type {
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
   CompiledAgentPreviewBudgetConfig,
+  CompiledAgentPreviewInnerConfig,
   CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
@@ -77,6 +78,7 @@ type StrategicConditionWithExpr = CompiledStrategicCondition & {
 };
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
+const INNER_PREVIEW_HARD_CAP = 256;
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
 const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
@@ -776,6 +778,7 @@ function lowerPreviewConfig(
     fallbackCompletionPolicy,
     completionDepthCap,
     budget,
+    inner,
     phase1,
     phase1CompletionsPerAction,
   } = authored;
@@ -898,6 +901,10 @@ function lowerPreviewConfig(
   if (loweredBudget === undefined && budget !== undefined) {
     return undefined;
   }
+  const loweredInner = lowerPreviewInnerConfig(profileId, path, inner, diagnostics);
+  if (loweredInner === undefined && inner !== undefined) {
+    return undefined;
+  }
 
   if (phase1 !== undefined && typeof phase1 !== 'boolean') {
     diagnostics.push({
@@ -946,9 +953,109 @@ function lowerPreviewConfig(
     ...(fallbackCompletionPolicy === undefined ? {} : { fallbackCompletionPolicy }),
     ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
     ...(loweredBudget === undefined ? {} : { budget: loweredBudget }),
+    ...(loweredInner === undefined ? {} : { inner: loweredInner }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
   };
+}
+
+function lowerPreviewInnerConfig(
+  profileId: string,
+  path: string,
+  inner: NonNullable<GameSpecAgentProfileDef['preview']>['inner'] | undefined,
+  diagnostics: Diagnostic[],
+): CompiledAgentPreviewInnerConfig | undefined {
+  if (inner === undefined) {
+    return undefined;
+  }
+  if (inner === null || typeof inner !== 'object' || Array.isArray(inner)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner must be an object.`,
+      suggestion: 'Use preview.inner: { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap }.',
+    });
+    return undefined;
+  }
+
+  const { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap } = inner;
+  if (chooseOne !== undefined && typeof chooseOne !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.chooseOne`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.chooseOne must be a boolean, got ${typeof chooseOne}.`,
+      suggestion: 'Set preview.inner.chooseOne to true or false.',
+    });
+    return undefined;
+  }
+  if (chooseNStep !== undefined && typeof chooseNStep !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.chooseNStep`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.chooseNStep must be a boolean, got ${typeof chooseNStep}.`,
+      suggestion: 'Set preview.inner.chooseNStep to true or false.',
+    });
+    return undefined;
+  }
+
+  const loweredMaxOptions = lowerPreviewInnerPositiveInteger(profileId, path, 'maxOptions', maxOptions, diagnostics);
+  const loweredChooseNBeamWidth = lowerPreviewInnerPositiveInteger(
+    profileId,
+    path,
+    'chooseNBeamWidth',
+    chooseNBeamWidth,
+    diagnostics,
+  );
+  const loweredDepthCap = lowerPreviewInnerPositiveInteger(profileId, path, 'depthCap', depthCap, diagnostics);
+  if (loweredMaxOptions === undefined || loweredChooseNBeamWidth === undefined || loweredDepthCap === undefined) {
+    return undefined;
+  }
+
+  const triple = loweredMaxOptions * loweredChooseNBeamWidth * loweredDepthCap;
+  if (!Number.isSafeInteger(triple) || triple > INNER_PREVIEW_HARD_CAP) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED,
+      path: `${path}.inner`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner cost ${triple} exceeds INNER_PREVIEW_HARD_CAP ${INNER_PREVIEW_HARD_CAP}.`,
+      suggestion: `Set maxOptions * chooseNBeamWidth * depthCap to ${INNER_PREVIEW_HARD_CAP} or less.`,
+    });
+    return undefined;
+  }
+
+  return {
+    chooseOne: chooseOne ?? false,
+    chooseNStep: chooseNStep ?? false,
+    maxOptions: loweredMaxOptions,
+    chooseNBeamWidth: loweredChooseNBeamWidth,
+    depthCap: loweredDepthCap,
+  };
+}
+
+function lowerPreviewInnerPositiveInteger(
+  profileId: string,
+  path: string,
+  key: 'maxOptions' | 'chooseNBeamWidth' | 'depthCap',
+  value: number | undefined,
+  diagnostics: Diagnostic[],
+): number | undefined {
+  if (value === undefined) {
+    return 1;
+  }
+  if (!isPositiveSafeInteger(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.${key}`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.${key} must be a positive safe integer, got ${String(value)}.`,
+      suggestion: `Set preview.inner.${key} to a positive integer.`,
+    });
+    return undefined;
+  }
+  return value;
 }
 
 function lowerPreviewBudgetConfig(

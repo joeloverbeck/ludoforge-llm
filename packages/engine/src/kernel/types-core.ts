@@ -853,12 +853,21 @@ export interface CompiledAgentPreviewBudgetConfig {
   readonly widenStep?: number;
 }
 
+export interface CompiledAgentPreviewInnerConfig {
+  readonly chooseOne: boolean;
+  readonly chooseNStep: boolean;
+  readonly maxOptions: number;
+  readonly chooseNBeamWidth: number;
+  readonly depthCap: number;
+}
+
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewAuthoredCompletionPolicy;
   readonly fallbackCompletionPolicy?: AgentPreviewFallbackCompletionPolicy;
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
+  readonly inner?: CompiledAgentPreviewInnerConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }

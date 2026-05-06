@@ -1,9 +1,9 @@
 # 160PEROPTPREV-003: `preview.inner` config schema, compiler validation, `INNER_PREVIEW_HARD_CAP`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `schemas/GameDef.schema.json`, `cnl/compile-agents.ts`, `agents/policy-evaluation-core.ts`
+**Engine Changes**: Yes — `schemas/GameDef.schema.json`, `cnl/compile-agents.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`
 **Deps**: `specs/160-per-option-preview-inner-microturns.md`
 
 ## Problem
@@ -115,3 +115,25 @@ Register `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED` in the diagn
 2. `pnpm turbo schema:artifacts`
 3. `pnpm turbo typecheck`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-06.
+
+- Landed `preview.inner` as an optional authored profile block with `chooseOne` / `chooseNStep` defaulting to `false` and `maxOptions` / `chooseNBeamWidth` / `depthCap` defaulting to `1` at lowering time.
+- Added `INNER_PREVIEW_HARD_CAP = 256` in `packages/engine/src/cnl/compile-agents.ts` and compile-time validation for `maxOptions * chooseNBeamWidth * depthCap`.
+- Registered `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED`; also added `CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID` for malformed authored `preview.inner` values so direct compiler callers cannot emit an invalid compiled profile.
+- Touched-file correction: the live compiled preview type is owned by `packages/engine/src/kernel/types-core.ts` and its Zod mirror in `packages/engine/src/kernel/schemas-core.ts`; `packages/engine/src/agents/policy-evaluation-core.ts` did not require an edit because it consumes `CompiledAgentProfile` through the kernel type.
+- Schema/artifact fallout: `packages/engine/schemas/GameDef.schema.json` changed to serialize the optional compiled `preview.inner` object. `Trace.schema.json` and `EvalReport.schema.json` were checked by `pnpm turbo schema:artifacts` and remained unchanged.
+- Source file size ledger: `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/kernel/types-core.ts`, and `packages/engine/src/kernel/schemas-core.ts` were preexisting over repo guidance. This ticket adds the smallest adjacent preview-config logic and defers extraction because splitting these shared compiler/schema modules would widen the ticket.
+- Deferred scope: runtime consumption, `preview.option.*` refs, warning-on-unused opt-in, trace population, and inner preview drivers remain with tickets 004-008.
+
+Final proof:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test dist/test/unit/cnl/compile-preview-inner.test.js` — passed after the final output-producing lane (`1` test, `1` pass).
+3. `pnpm turbo schema:artifacts` — passed; regenerated `GameDef.schema.json` and checked `Trace.schema.json` / `EvalReport.schema.json` unchanged.
+4. `pnpm turbo typecheck` — passed (`3` tasks successful).
+5. `pnpm -F @ludoforge/engine test` — passed (`64/64` files, `0` failures).
+
+Proof validity: terminal status, proof transcription, and summary-field correction only. The post-proof `Engine Changes` metadata edit aligned the summary with the already-recorded touched-file correction; it did not change code, scope, acceptance criteria, command semantics, or dependency ownership. `node --test dist/test/unit/cnl/compile-preview-inner.test.js` was rerun after the broad output-producing lanes, and `pnpm run check:ticket-deps` was rerun after the ticket metadata correction.

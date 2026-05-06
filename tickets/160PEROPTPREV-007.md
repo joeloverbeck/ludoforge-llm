@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-agent.ts`
-**Deps**: `archive/tickets/160PEROPTPREV-001.md`, `tickets/160PEROPTPREV-003.md`, `tickets/160PEROPTPREV-005.md`
+**Deps**: `archive/tickets/160PEROPTPREV-001.md`, `archive/tickets/160PEROPTPREV-003.md`, `tickets/160PEROPTPREV-005.md`
 
 ## Problem
 

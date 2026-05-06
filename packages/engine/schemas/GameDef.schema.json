@@ -2322,6 +2322,40 @@
                     ],
                     "additionalProperties": false
                   },
+                  "inner": {
+                    "type": "object",
+                    "properties": {
+                      "chooseOne": {
+                        "type": "boolean"
+                      },
+                      "chooseNStep": {
+                        "type": "boolean"
+                      },
+                      "maxOptions": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "chooseNBeamWidth": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "depthCap": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "chooseOne",
+                      "chooseNStep",
+                      "maxOptions",
+                      "chooseNBeamWidth",
+                      "depthCap"
+                    ],
+                    "additionalProperties": false
+                  },
                   "phase1": {
                     "type": "boolean"
                   },

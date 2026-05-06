@@ -13,7 +13,7 @@ import {
   selectChoiceOptionsByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from '../kernel/choice-option-policy.js';
-import { scoreCompletionOption } from './completion-guidance-eval.js';
+import { scoreCompletionOptionWithContributions, type CompletionScoreContribution } from './completion-guidance-eval.js';
 
 export interface BuildCompletionChooseCallbackInput {
   readonly state: GameState;
@@ -28,7 +28,21 @@ export interface BuildCompletionChooseCallbackInput {
 export interface CompletionChoiceSelection {
   readonly value: MoveParamValue;
   readonly score: number;
+  readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
 }
+
+const scoreContributionsKeyForChooseOne = (
+  request: ChoicePendingRequest,
+  value: MoveParamValue,
+): string => `${request.type}:${request.decisionKey}:${JSON.stringify(value)}`;
+
+const scoreContributionsKeyForChooseNStepAdd = (
+  request: ChoicePendingRequest,
+  value: MoveParamValue,
+): string => `chooseNStep:${request.decisionKey}:add:${JSON.stringify(value)}`;
+
+const sumContributions = (contributions: readonly CompletionScoreContribution[]): number =>
+  contributions.reduce((total, contribution) => total + contribution.contribution, 0);
 
 const completionConsiderationIdsForProfile = (
   catalog: AgentPolicyCatalog,
@@ -55,9 +69,10 @@ export function selectBestCompletionChooseOneValue(
     return undefined;
   }
 
-  let bestSelection: CompletionChoiceSelection | undefined;
+  let bestSelection: Omit<CompletionChoiceSelection, 'scoreContributionsByOption'> | undefined;
+  const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
   for (const option of selectableOptions) {
-    const score = scoreCompletionOption(
+    const scored = scoreCompletionOptionWithContributions(
       input.state,
       input.def,
       input.catalog,
@@ -69,6 +84,8 @@ export function selectBestCompletionChooseOneValue(
       completionConsiderationIds,
       input.runtime,
     );
+    scoreContributionsByOption.set(scoreContributionsKeyForChooseOne(request, option.value), scored.scoreContributions);
+    const score = scored.score;
     if (bestSelection === undefined || score > bestSelection.score) {
       bestSelection = { value: option.value, score };
     }
@@ -80,19 +97,19 @@ export function selectBestCompletionChooseOneValue(
   if (options.requirePositiveScore === true && bestSelection.score <= 0) {
     return undefined;
   }
-  return bestSelection;
+  return { ...bestSelection, scoreContributionsByOption };
 }
 
 export function buildCompletionChooseCallback(
   input: BuildCompletionChooseCallbackInput,
-): ((request: ChoicePendingRequest) => MoveParamValue | undefined) | undefined {
+): ((request: ChoicePendingRequest) => CompletionChoiceSelection | undefined) | undefined {
   const { profile } = input;
   const completionConsiderationIds = completionConsiderationIdsForProfile(input.catalog, profile);
   if (completionConsiderationIds.length === 0) {
     return undefined;
   }
 
-  return (request: ChoicePendingRequest): MoveParamValue | undefined => {
+  return (request: ChoicePendingRequest): CompletionChoiceSelection | undefined => {
     if (request.type === 'chooseN') {
       const selectableValues = selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
       const optionCount = selectableValues.length;
@@ -107,10 +124,11 @@ export function buildCompletionChooseCallback(
         return undefined;
       }
 
+      const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
       const scoredValues = selectableValues.map((value, index) => ({
         value,
         index,
-        score: scoreCompletionOption(
+        scored: scoreCompletionOptionWithContributions(
           input.state,
           input.def,
           input.catalog,
@@ -123,28 +141,40 @@ export function buildCompletionChooseCallback(
           input.runtime,
         ),
       }));
+      for (const entry of scoredValues) {
+        scoreContributionsByOption.set(scoreContributionsKeyForChooseNStepAdd(request, entry.value), entry.scored.scoreContributions);
+      }
       const rankedValues = [...scoredValues].sort((left, right) => {
-        if (right.score !== left.score) {
-          return right.score - left.score;
+        if (right.scored.score !== left.scored.score) {
+          return right.scored.score - left.scored.score;
         }
         return left.index - right.index;
       });
-      const positiveValues = rankedValues.filter((entry) => entry.score > 0);
+      const positiveValues = rankedValues.filter((entry) => entry.scored.score > 0);
       if (positiveValues.length > 0) {
         const selected = positiveValues.slice(0, max).map((entry) => entry.value as MoveParamScalar);
         if (selected.length >= min) {
-          return selected;
+          let score = 0;
+          for (const value of selected) {
+            score += sumContributions(scoreContributionsByOption.get(scoreContributionsKeyForChooseNStepAdd(request, value)) ?? []);
+          }
+          return { value: selected, score, scoreContributionsByOption };
         }
         const supplement = rankedValues
           .filter((entry) => !selected.includes(entry.value as MoveParamScalar))
           .slice(0, min - selected.length)
           .map((entry) => entry.value as MoveParamScalar);
-        return [...selected, ...supplement];
+        const value = [...selected, ...supplement];
+        let score = 0;
+        for (const item of value) {
+          score += sumContributions(scoreContributionsByOption.get(scoreContributionsKeyForChooseNStepAdd(request, item)) ?? []);
+        }
+        return { value, score, scoreContributionsByOption };
       }
 
       return undefined;
     }
 
-    return selectBestCompletionChooseOneValue(input, request, { requirePositiveScore: true })?.value;
+    return selectBestCompletionChooseOneValue(input, request, { requirePositiveScore: true });
   };
 }

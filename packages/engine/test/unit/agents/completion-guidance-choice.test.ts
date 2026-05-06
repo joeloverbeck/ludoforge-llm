@@ -267,7 +267,7 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     });
 
-    assert.equal(choose?.(createChoiceRequest()), 'zone-b');
+    assert.equal(choose?.(createChoiceRequest())?.value, 'zone-b');
   });
 
   it('ignores illegal options when choosing', () => {
@@ -300,13 +300,13 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     });
 
-      assert.equal(choose?.(createChoiceRequest({
+    assert.equal(choose?.(createChoiceRequest({
       options: [
         { value: 'zone-a', legality: 'legal', illegalReason: null },
         { value: 'zone-c', legality: 'legal', illegalReason: null },
         { value: 'zone-b', legality: 'illegal', illegalReason: 'emptyDomain' },
       ],
-    })), 'zone-a');
+    }))?.value, 'zone-a');
   });
 
   it('returns undefined when no positive completion score exists', () => {
@@ -362,7 +362,14 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     }, createChoiceRequest(), { requirePositiveScore: false });
 
-    assert.deepEqual(selection, { value: 'zone-a', score: 0 });
+    assert.equal(selection?.value, 'zone-a');
+    assert.equal(selection?.score, 0);
+    assert.deepEqual(selection?.scoreContributionsByOption.get('chooseOne:$target:"zone-a"'), [
+      { termId: 'avoidZoneB', contribution: 0 },
+    ]);
+    assert.deepEqual(selection?.scoreContributionsByOption.get('chooseOne:$target:"zone-b"'), [
+      { termId: 'avoidZoneB', contribution: -2 },
+    ]);
   });
 
   it('scores unknown options when no legal options are available', () => {
@@ -393,7 +400,7 @@ describe('completion-guidance-choice', () => {
         { value: 'zone-a', legality: 'unknown', illegalReason: null },
         { value: 'zone-b', legality: 'unknown', illegalReason: null },
       ],
-    })), 'zone-b');
+    }))?.value, 'zone-b');
   });
 
   it('returns a chooseN subset containing all positive-scoring options up to max', () => {
@@ -426,7 +433,21 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     });
 
-    assert.deepEqual(choose?.(createChooseNRequest({ max: 2 })), ['zone-a', 'zone-c']);
+    const selection = choose?.(createChooseNRequest({ max: 2 }));
+    assert.deepEqual(selection?.value, ['zone-a', 'zone-c']);
+    assert.equal(selection?.score, 6);
+    assert.deepEqual(selection?.scoreContributionsByOption.get('chooseNStep:$targets:add:"zone-a"'), [
+      { termId: 'preferZoneA', contribution: 4 },
+      { termId: 'preferZoneC', contribution: 0 },
+    ]);
+    assert.deepEqual(selection?.scoreContributionsByOption.get('chooseNStep:$targets:add:"zone-b"'), [
+      { termId: 'preferZoneA', contribution: 0 },
+      { termId: 'preferZoneC', contribution: 0 },
+    ]);
+    assert.deepEqual(selection?.scoreContributionsByOption.get('chooseNStep:$targets:add:"zone-c"'), [
+      { termId: 'preferZoneA', contribution: 0 },
+      { termId: 'preferZoneC', contribution: 2 },
+    ]);
   });
 
   it('pads chooseN selections up to min using highest-ranked remaining options', () => {
@@ -452,7 +473,7 @@ describe('completion-guidance-choice', () => {
       profile: harness.profile,
     });
 
-    assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 2 })), ['zone-b', 'zone-a']);
+    assert.deepEqual(choose?.(createChooseNRequest({ min: 2, max: 2 }))?.value, ['zone-b', 'zone-a']);
   });
 
   it('returns undefined for chooseN when no option has a positive score', () => {

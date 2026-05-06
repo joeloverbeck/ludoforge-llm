@@ -1,6 +1,6 @@
 # 156PREVOBSUTMET-005: Inner-frontier scoreContributions parity
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/completion-guidance-choice.ts` (return per-option contributions), `policy-agent.ts` (`traceCandidatesForFrontier` populates real contributions), new tests
@@ -154,3 +154,28 @@ The caller (`chooseStructuralFrontierDecision` and the action-selection paths in
 2. `pnpm -F @ludoforge/engine test:unit -- agents/inner-frontier-multi-consideration-contributions`
 3. `pnpm -F @ludoforge/engine test:unit -- agents/completion-guidance-choice-contributions`
 4. `pnpm turbo lint typecheck test`
+
+## Outcome (2026-05-06)
+
+Implemented. The live implementation keeps the owned behavior at the same trace/chooser seams but uses the existing unit-test families instead of adding a JSON fixture:
+
+- `packages/engine/src/agents/completion-guidance-eval.ts` now exposes the same completion score with a deterministic `{ termId, contribution }` breakdown.
+- `packages/engine/src/agents/completion-guidance-choice.ts` returns `scoreContributionsByOption` from both `selectBestCompletionChooseOneValue` and the chooseN callback path. The map keys match the existing inner-frontier `stableMoveKey` strings for `chooseOne` and `chooseNStep:add` decisions.
+- `packages/engine/src/agents/policy-agent.ts` emits the mapped contributions in verbose inner-frontier candidate traces when the guided completion chooser fires; unguided structural fallback candidates still emit `scoreContributions: []`.
+- `packages/engine/src/agents/policy-preview.ts` was adjusted only to unwrap the new chooser return shape; synthetic-decision trace scoring remains out of scope for ticket 004 / Spec 159.
+- `packages/engine/test/unit/agents/completion-guidance-choice.test.ts` covers the direct chooser API, including chooseN map coverage for selected and unselected options.
+- `packages/engine/test/unit/agents/policy-agent-microturn-evaluation.test.ts` covers emitted verbose inner-frontier candidate contributions with two completion-scope considerations and asserts the contribution sum equals the candidate score.
+
+Verification command substitution: the ticket's focused `pnpm -F @ludoforge/engine test:unit -- agents/...` examples were stale for this package's Node test runner. The focused final lanes were `pnpm -F @ludoforge/engine build` followed by compiled `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/completion-guidance-choice.test.js` and `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-agent-microturn-evaluation.test.js`.
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/completion-guidance-choice.test.js` — passed, 10 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-agent-microturn-evaluation.test.js` — passed, 5 tests.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, default lane summary 64/64 files passed.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2246 archived tickets.
+
+Post-proof edit invalidation: this terminal patch transcribes the just-run proof and sets status only. It does not change implementation scope, acceptance criteria, command semantics, touched-file ownership, or dependency ownership, so the proof lanes above remain valid.

@@ -183,5 +183,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/156PREVOBSUTMET-002.md`](../archive/tickets/156PREVOBSUTMET-002.md) — readyRefStats aggregator and utility classifier (covers Phase A deliverables 1, 2)
 - [`archive/tickets/156PREVOBSUTMET-003.md`](../archive/tickets/156PREVOBSUTMET-003.md) — Per-candidate selectionReason field (covers Phase A deliverable 3)
 - [`archive/tickets/156PREVOBSUTMET-004.md`](../archive/tickets/156PREVOBSUTMET-004.md) — Synthetic-decision trace per preview drive (covers Phase B deliverable 4)
-- [`tickets/156PREVOBSUTMET-005.md`](../tickets/156PREVOBSUTMET-005.md) — Inner-frontier scoreContributions parity (covers Phase C deliverable 5)
+- [`archive/tickets/156PREVOBSUTMET-005.md`](../archive/tickets/156PREVOBSUTMET-005.md) — Inner-frontier scoreContributions parity (covers Phase C deliverable 5)
 - [`tickets/156PREVOBSUTMET-006.md`](../tickets/156PREVOBSUTMET-006.md) — Cookbook documentation for preview observability fields (covers cross-cutting docs)

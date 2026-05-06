@@ -474,7 +474,7 @@ const pickAgentGuidedChooseNStepDecision = (
     return undefined;
   }
 
-  const preferredSelection = choose(createChooseNRequest(microturn));
+  const preferredSelection = choose(createChooseNRequest(microturn))?.value;
   if (preferredSelection === undefined) {
     return undefined;
   }

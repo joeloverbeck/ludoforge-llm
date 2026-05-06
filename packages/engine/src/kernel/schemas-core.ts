@@ -1131,7 +1131,17 @@ const CompiledAgentProfileSchema = z
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
         completion: z.enum(['greedy', 'agentGuided']).optional(),
         completionDepthCap: z.number().int().positive().optional(),
-        topK: z.number().int().positive().optional(),
+        budget: z
+          .object({
+            strategy: z.literal('balancedCoverage'),
+            fullCandidateCap: z.number().int().positive(),
+            minPerGroup: IntegerSchema.nonnegative(),
+            widenOnUniformProjection: z.boolean().optional(),
+            widenCap: IntegerSchema.nonnegative().optional(),
+            widenStep: z.number().int().positive().optional(),
+          })
+          .strict()
+          .optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })

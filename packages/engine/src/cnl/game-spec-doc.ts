@@ -663,7 +663,14 @@ export interface GameSpecAgentProfileDef {
     readonly mode?: string;
     readonly completion?: string;
     readonly completionDepthCap?: number;
-    readonly topK?: number;
+    readonly budget?: {
+      readonly strategy?: string;
+      readonly fullCandidateCap?: number;
+      readonly minPerGroup?: number;
+      readonly widenOnUniformProjection?: boolean;
+      readonly widenCap?: number;
+      readonly widenStep?: number;
+    };
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;
   };

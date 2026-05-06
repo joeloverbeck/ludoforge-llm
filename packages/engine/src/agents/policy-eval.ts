@@ -5,6 +5,7 @@ import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
+  CompiledAgentPreviewBudgetConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
   CompiledPolicyConsideration,
@@ -33,6 +34,7 @@ import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import { getInitializedPolicyWasmRuntime } from './policy-wasm-runtime.js';
 import { tryScoreMoveConsiderationsWithWasm } from './policy-wasm-score-routing.js';
+import { allocatePreviewBudget } from './preview-budget-allocator.js';
 
 const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
 const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
@@ -40,6 +42,11 @@ const TWO_TO_53 = 9007199254740992;
 const FNV_OFFSET_BASIS_64 = 0xcbf29ce484222325n;
 const FNV_PRIME_64 = 0x100000001b3n;
 const POLICY_EVAL_TRACE_INTERVAL = 25;
+const DEFAULT_PREVIEW_BUDGET: CompiledAgentPreviewBudgetConfig = {
+  strategy: 'balancedCoverage',
+  fullCandidateCap: 4,
+  minPerGroup: 1,
+};
 let policyEvalCallCount = 0;
 let policyEvalDepth = 0;
 const encodedStateLayoutCache = new WeakMap<GameDef, ReturnType<typeof buildEncodedStateLayout>>();
@@ -263,6 +270,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewDrive?: PolicyPreviewDriveTrace;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
+  selectionReason?: SelectionReason;
 }
 
 const EMPTY_TRUSTED_MOVE_INDEX = new Map<string, TrustedExecutableMove>();
@@ -600,16 +608,22 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       const moveOnlyConsiderationIds = moveConsiderationIds.filter(
         (considerationId) => considerations[considerationId]?.costClass !== 'preview',
       );
-      const previewTopK = profile.preview.mode === 'disabled'
-        ? activeCandidates.length
-        : Math.min(profile.preview.topK ?? 4, activeCandidates.length);
-      const previewAllowedKeys = pickTopKByMoveOnlyScore(
-        evaluation,
-        considerations,
-        activeCandidates,
-        moveOnlyConsiderationIds,
-        previewTopK,
-      );
+      const allocatorOutput = profile.preview.mode === 'disabled'
+        ? {
+            allowedKeys: new Set(activeCandidates.map((candidate) => candidate.stableMoveKey)),
+            selectionReason: new Map(activeCandidates.map((candidate) => [candidate.stableMoveKey, 'prior' as const])),
+          }
+        : allocatePreviewBudget(
+            evaluation,
+            considerations,
+            activeCandidates,
+            moveOnlyConsiderationIds,
+            profile.preview.budget ?? DEFAULT_PREVIEW_BUDGET,
+          );
+      const previewAllowedKeys = allocatorOutput.allowedKeys;
+      for (const candidate of activeCandidates) {
+        candidate.selectionReason = allocatorOutput.selectionReason.get(candidate.stableMoveKey) ?? 'gated';
+      }
       let previewGatedCount = 0;
       let maxCachedGatedPreviewScore = Number.NEGATIVE_INFINITY;
       if (previewAllowedKeys.size < activeCandidates.length) {
@@ -1005,7 +1019,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
-    selectionReason: candidate.previewOutcome === 'gated' ? 'gated' : 'prior',
+    selectionReason: candidate.selectionReason ?? (candidate.previewOutcome === 'gated' ? 'gated' : 'prior'),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
     ...(grantedOperationMetadata ?? {}),
@@ -1037,37 +1051,6 @@ function scoreCandidateForGateFlipProbe(
   return considerationIds.reduce((total, considerationId) => (
     total + evaluation.evaluateConsideration(considerations, considerationId, probe)
   ), 0);
-}
-
-function pickTopKByMoveOnlyScore(
-  evaluation: PolicyEvaluationContext,
-  considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
-  candidates: readonly CandidateEntry[],
-  moveOnlyConsiderationIds: readonly string[],
-  topK: number,
-): ReadonlySet<string> {
-  if (topK >= candidates.length) {
-    return new Set(candidates.map((candidate) => candidate.stableMoveKey));
-  }
-  if (topK <= 0) {
-    return new Set();
-  }
-
-  const ranked = candidates.map((candidate) => ({
-    candidate,
-    score: moveOnlyConsiderationIds.reduce((total, considerationId) => (
-      total + evaluation.evaluateConsideration(considerations, considerationId, candidate)
-    ), 0),
-  }));
-
-  ranked.sort((left, right) => {
-    const scoreOrder = right.score - left.score;
-    return scoreOrder === 0
-      ? left.candidate.stableMoveKey.localeCompare(right.candidate.stableMoveKey)
-      : scoreOrder;
-  });
-
-  return new Set(ranked.slice(0, topK).map((entry) => entry.candidate.stableMoveKey));
 }
 
 function traceGrantedOperation(

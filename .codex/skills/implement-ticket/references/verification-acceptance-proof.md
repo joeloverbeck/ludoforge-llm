@@ -2,12 +2,12 @@
 
 ## Acceptance Command Reconciliation
 
-Before the final closeout, reconcile the ticket's explicit `Acceptance Criteria` and `Test Plan` commands against the commands you actually ran:
+Before the final closeout, and before applying terminal status, reconcile the ticket's explicit `Acceptance Criteria`, `Test Plan`, `Commands`, outcome draft, and any command-like checklist lines against the commands you actually ran:
 
-1. enumerate the exact named commands in the active ticket
-2. mark each one as `ran directly`, `subsumed by <broader lane>`, or `not yet proven`
-3. if any command remains `not yet proven`, run it or stop and explain why the ticket cannot truthfully close
-4. record any non-direct subsumption in the ticket outcome so the proof trail stays inspectable
+1. enumerate each literal command and shorthand command bundle in the active ticket
+2. mark each one as `ran directly`, `subsumed by <broader lane>`, `split into <lanes>`, `removed from active ticket`, or `not yet proven`
+3. if any command remains `not yet proven`, run it, rewrite the active ticket with a truthful proof substitution when authorized, or stop and explain why the ticket cannot truthfully close
+4. record any non-direct subsumption, split, or removal in the ticket outcome so the proof trail stays inspectable
 
 When a named verification command exits cleanly but proves nothing substantive in the current environment (for example `0 tests`, `0 files`, or another empty execution summary), do not count it as acceptance proof by default:
 

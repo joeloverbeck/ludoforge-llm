@@ -4613,10 +4613,43 @@
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
                   },
-                  "topK": {
-                    "type": "integer",
-                    "exclusiveMinimum": 0,
-                    "maximum": 9007199254740991
+                  "budget": {
+                    "type": "object",
+                    "properties": {
+                      "strategy": {
+                        "type": "string",
+                        "const": "balancedCoverage"
+                      },
+                      "fullCandidateCap": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "minPerGroup": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "widenOnUniformProjection": {
+                        "type": "boolean"
+                      },
+                      "widenCap": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "widenStep": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "strategy",
+                      "fullCandidateCap",
+                      "minPerGroup"
+                    ],
+                    "additionalProperties": false
                   },
                   "phase1": {
                     "type": "boolean"

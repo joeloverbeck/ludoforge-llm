@@ -484,11 +484,19 @@ Examples:
 ```yaml
 preview:
   mode: exactWorld
+  budget:
+    strategy: balancedCoverage
+    fullCandidateCap: 4
+    minPerGroup: 1
 ```
 
 ```yaml
 preview:
   mode: tolerateStochastic
+  budget:
+    strategy: balancedCoverage
+    fullCandidateCap: 8
+    minPerGroup: 1
 ```
 
 Guidance:
@@ -496,6 +504,22 @@ Guidance:
 - use `exactWorld` when you expect preview to stay deterministic enough
 - use `tolerateStochastic` when stochastic effects are common and you still want bounded preview
 - use `disabled` when the profile is intentionally current-state-only
+- use `budget.strategy: balancedCoverage` to guarantee at least `minPerGroup` previewed candidates per stable action/parameter-shape group before remaining slots are filled by move-only prior score
+- migrate an old preview cap `N` to `budget: { strategy: balancedCoverage, fullCandidateCap: N, minPerGroup: 1 }`; the compiler rejects the removed cap field with Spec 157 migration guidance
+
+Forward-looking widening fields are valid in `preview.budget` for the later widening phase:
+
+```yaml
+preview:
+  mode: exactWorld
+  budget:
+    strategy: balancedCoverage
+    fullCandidateCap: 4
+    minPerGroup: 1
+    widenOnUniformProjection: true
+    widenCap: 4
+    widenStep: 2
+```
 
 ### Selection
 

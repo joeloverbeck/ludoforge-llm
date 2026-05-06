@@ -1067,6 +1067,11 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      budget: {
+        strategy: 'balancedCoverage',
+        fullCandidateCap: 4,
+        minPerGroup: 1,
+      },
       phase1: false,
       phase1CompletionsPerAction: 1,
     });
@@ -1100,7 +1105,11 @@ describe('agents authoring surface', () => {
               mode: 'tolerateStochastic',
               completion: 'agentGuided',
               completionDepthCap: 5,
-              topK: 6,
+              budget: {
+                strategy: 'balancedCoverage',
+                fullCandidateCap: 6,
+                minPerGroup: 1,
+              },
             },
           },
         },
@@ -1115,7 +1124,11 @@ describe('agents authoring surface', () => {
       mode: 'tolerateStochastic',
       completion: 'agentGuided',
       completionDepthCap: 5,
-      topK: 6,
+      budget: {
+        strategy: 'balancedCoverage',
+        fullCandidateCap: 6,
+        minPerGroup: 1,
+      },
       phase1: false,
       phase1CompletionsPerAction: 1,
     });
@@ -1195,6 +1208,11 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      budget: {
+        strategy: 'balancedCoverage',
+        fullCandidateCap: 4,
+        minPerGroup: 1,
+      },
       phase1: true,
       phase1CompletionsPerAction: 1,
     });
@@ -1237,6 +1255,11 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
+      budget: {
+        strategy: 'balancedCoverage',
+        fullCandidateCap: 4,
+        minPerGroup: 1,
+      },
       phase1: true,
       phase1CompletionsPerAction: 3,
     });
@@ -1695,7 +1718,7 @@ describe('agents authoring surface', () => {
               completionDepthCap: 0,
             },
           },
-          badTopK: {
+          badBudget: {
             params: {},
             use: {
               pruningRules: [],
@@ -1704,7 +1727,11 @@ describe('agents authoring surface', () => {
             },
             preview: {
               mode: 'exactWorld',
-              topK: 1.5,
+              budget: {
+                strategy: 'balancedCoverage',
+                fullCandidateCap: 1.5,
+                minPerGroup: 1,
+              },
             },
           },
         },
@@ -1730,8 +1757,98 @@ describe('agents authoring surface', () => {
     );
     assert.equal(
       result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID'
+          && d.path === 'doc.agents.profiles.badBudget.preview.budget.fullCandidateCap',
+      ),
+      true,
+    );
+  });
+
+  it('rejects preview.topK with Spec 157 migration guidance', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              ['top' + 'K']: 4,
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some(
         (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_TOPK_INVALID'
-          && d.path === 'doc.agents.profiles.badTopK.preview.topK',
+          && d.path === 'doc.agents.profiles.baseline.preview.topK'
+          && d.message.includes('preview.budget'),
+      ),
+      true,
+    );
+  });
+
+  it('rejects widenOnUniformProjection without widenCap and widenStep', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              budget: {
+                strategy: 'balancedCoverage',
+                fullCandidateCap: 4,
+                minPerGroup: 1,
+                widenOnUniformProjection: true,
+              },
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    assert.equal(
+      result.diagnostics.some(
+        (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID'
+          && d.path === 'doc.agents.profiles.baseline.preview.budget',
       ),
       true,
     );
@@ -1864,6 +1981,11 @@ describe('agents authoring surface', () => {
     );
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'exactWorld',
+      budget: {
+        strategy: 'balancedCoverage',
+        fullCandidateCap: 4,
+        minPerGroup: 1,
+      },
       phase1: false,
       phase1CompletionsPerAction: 2,
     });

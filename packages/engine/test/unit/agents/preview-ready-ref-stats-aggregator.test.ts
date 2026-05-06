@@ -35,10 +35,10 @@ const emptyDeps: CompiledAgentDependencyRefs = {
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref']): AgentPolicyExpr => ({ kind: 'ref', ref });
 
-const createDef = (topK: number): GameDef => {
+const createDef = (fullCandidateCap: number): GameDef => {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
     schemaVersion: 2,
-    catalogFingerprint: `ready-ref-stats-${topK}`,
+    catalogFingerprint: `ready-ref-stats-${fullCandidateCap}`,
     surfaceVisibility: {
       globalVars: {
         projected: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
@@ -97,9 +97,12 @@ const createDef = (topK: number): GameDef => {
     },
     profiles: {
       baseline: {
-        fingerprint: `ready-ref-stats-${topK}`,
+        fingerprint: `ready-ref-stats-${fullCandidateCap}`,
         params: {},
-        preview: { mode: 'exactWorld', topK },
+        preview: {
+          mode: 'exactWorld',
+          budget: { strategy: 'balancedCoverage', fullCandidateCap, minPerGroup: 1 },
+        },
         selection: { mode: 'argmax' },
         use: {
           pruningRules: [],
@@ -161,9 +164,9 @@ const createMoves = (values: readonly number[]): readonly Move[] => values.map((
   },
 }));
 
-const evaluate = (topK: number, moves: readonly Move[]) => {
+const evaluate = (fullCandidateCap: number, moves: readonly Move[]) => {
   policyWasmRuntimeInternals.setInitializedPolicyWasmRuntime(null);
-  const def = createDef(topK);
+  const def = createDef(fullCandidateCap);
   const { state } = initialState(def, 42, 2);
   const trustedMoveIndex = new Map(
     moves.map((move) => [

@@ -26,6 +26,7 @@ import { createTrustedExecutableMove } from '../../../src/kernel/trusted-move.js
 
 const phaseId = asPhaseId('main');
 const actionId = asActionId('choose');
+const coverageActionIds = ['alpha', 'bravo', 'charlie', 'delta', 'echo', 'foxtrot'].map(asActionId);
 const emptyDeps: CompiledAgentDependencyRefs = {
   parameters: [],
   stateFeatures: [],
@@ -38,7 +39,7 @@ const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'litera
 const refExpr = (ref: Extract<AgentPolicyExpr, { readonly kind: 'ref' }>['ref']): AgentPolicyExpr => ({ kind: 'ref', ref });
 
 function createDef(
-  topK: number,
+  fullCandidateCap: number,
   options: {
     readonly materializePreviewInPruning?: boolean;
     readonly usePreviewStateFeatureRows?: boolean;
@@ -46,7 +47,7 @@ function createDef(
 ): GameDef {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
     schemaVersion: 2,
-    catalogFingerprint: 'topk-test',
+    catalogFingerprint: 'preview-budget-test',
     surfaceVisibility: {
       globalVars: {
         projected: { current: 'public', preview: { visibility: 'public', allowWhenHiddenSampling: true } },
@@ -158,9 +159,12 @@ function createDef(
     },
     profiles: {
       baseline: {
-        fingerprint: `topk-${topK}`,
+        fingerprint: `preview-budget-${fullCandidateCap}`,
         params: {},
-        preview: { mode: 'exactWorld', topK },
+        preview: {
+          mode: 'exactWorld',
+          budget: { strategy: 'balancedCoverage', fullCandidateCap, minPerGroup: 1 },
+        },
         selection: { mode: 'argmax' },
         use: {
           pruningRules: options.materializePreviewInPruning === true ? ['warmPreview'] : [],
@@ -179,7 +183,7 @@ function createDef(
   });
 
   return {
-    metadata: { id: 'topk-preview-test', players: { min: 2, max: 2 } },
+    metadata: { id: 'preview-budget-test', players: { min: 2, max: 2 } },
     constants: {},
     globalVars: [{ name: 'projected', type: 'int', init: 0, min: 0, max: 1000 }],
     perPlayerVars: [],
@@ -192,19 +196,17 @@ function createDef(
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
     agents: catalog,
-    actions: [
-      {
-        id: actionId,
-        actor: 'active',
-        executor: 'actor',
-        phase: [phaseId],
-        params: [],
-        pre: null,
-        cost: [],
-        effects: [],
-        limits: [],
-      },
-    ],
+    actions: [actionId, ...coverageActionIds].map((id) => ({
+      id,
+      actor: 'active',
+      executor: 'actor',
+      phase: [phaseId],
+      params: [],
+      pre: null,
+      cost: [],
+      effects: [],
+      limits: [],
+    })),
     triggers: [],
     terminal: { conditions: [] },
   };
@@ -214,8 +216,15 @@ function createMoves(ranks: readonly number[]): readonly Move[] {
   return ranks.map((rank) => ({ actionId, params: { rank } }));
 }
 
-function runTopK(
-  topK: number,
+function createCoverageMoves(): readonly Move[] {
+  return coverageActionIds.flatMap((id, index) => [
+    { actionId: id, params: { rank: 1 + index * 2 } },
+    { actionId: id, params: { rank: 2 + index * 2 } },
+  ]);
+}
+
+function runPreviewBudget(
+  fullCandidateCap: number,
   moves: readonly Move[],
   options: {
     readonly materializePreviewInPruning?: boolean;
@@ -227,7 +236,7 @@ function runTopK(
   readonly state: GameState;
   readonly def: GameDef;
 } {
-  const def = createDef(topK, options);
+  const def = createDef(fullCandidateCap, options);
   const { state } = initialState(def, 42, 2);
   const trustedMoveIndex = new Map(
     moves.map((move) => [
@@ -275,9 +284,9 @@ function keyFor(def: GameDef, rank: number): string {
   return toMoveIdentityKey(def, { actionId, params: { rank } });
 }
 
-describe('policy evaluation top-K preview gate', () => {
-  it('previews only the highest move-only candidate when topK=1', () => {
-    const { def, previewedKeys, result } = runTopK(1, createMoves([1, 3, 2]));
+describe('policy evaluation preview budget allocator', () => {
+  it('uses the move-only prior within a group when the cap is one', () => {
+    const { def, previewedKeys, result } = runPreviewBudget(1, createMoves([1, 3, 2]));
 
     assert.equal(result.kind, 'success');
     assert.deepEqual([...previewedKeys], [keyFor(def, 3)]);
@@ -291,9 +300,9 @@ describe('policy evaluation top-K preview gate', () => {
     assert.equal(result.metadata.candidates.find((candidate) => candidate.stableMoveKey === keyFor(def, 3))?.previewOutcome, 'ready');
   });
 
-  it('previews every candidate when topK is at least the candidate count', () => {
+  it('previews every candidate when fullCandidateCap is at least the candidate count', () => {
     const moves = createMoves([1, 2, 3]);
-    const { previewedKeys, result } = runTopK(3, moves);
+    const { previewedKeys, result } = runPreviewBudget(3, moves);
 
     assert.equal(result.kind, 'success');
     assert.equal(previewedKeys.size, 3);
@@ -302,9 +311,9 @@ describe('policy evaluation top-K preview gate', () => {
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 0);
   });
 
-  it('with default-sized topK=4 over twelve candidates gates the lower eight', () => {
+  it('with fullCandidateCap=4 over twelve same-group candidates gates the lower eight', () => {
     const moves = createMoves([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
-    const { previewedKeys, result } = runTopK(4, moves);
+    const { previewedKeys, result } = runPreviewBudget(4, moves);
 
     assert.equal(result.kind, 'success');
     assert.equal(previewedKeys.size, 4);
@@ -313,13 +322,28 @@ describe('policy evaluation top-K preview gate', () => {
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 8);
   });
 
-  it('uses stableMoveKey ordering to break ties at the top-K boundary', () => {
+  it('covers the first four action groups before prior fill when cap is four', () => {
+    const moves = createCoverageMoves();
+    const { def, previewedKeys, result } = runPreviewBudget(4, moves);
+    const previewedActionIds = new Set(
+      moves
+        .filter((move) => previewedKeys.has(toMoveIdentityKey(def, move)))
+        .map((move) => String(move.actionId)),
+    );
+
+    assert.equal(result.kind, 'success');
+    assert.deepEqual([...previewedActionIds].sort(), ['alpha', 'bravo', 'charlie', 'delta']);
+    assert.equal(result.metadata.previewGatedCount, 8);
+    assert.equal(result.metadata.candidates.filter((candidate) => candidate.selectionReason === 'coverage').length, 4);
+  });
+
+  it('uses stableMoveKey ordering to break ties at the budget boundary', () => {
     const moves = [
       { actionId, params: { rank: 7, label: 'charlie' } },
       { actionId, params: { rank: 7, label: 'alpha' } },
       { actionId, params: { rank: 7, label: 'bravo' } },
     ];
-    const { def, previewedKeys, result } = runTopK(2, moves);
+    const { def, previewedKeys, result } = runPreviewBudget(2, moves);
     const expectedPreviewedKeys = moves
       .map((move) => toMoveIdentityKey(def, move))
       .sort((left, right) => left.localeCompare(right))
@@ -337,7 +361,7 @@ describe('policy evaluation top-K preview gate', () => {
       { actionId, params: { rank: 10, projected: 0 } },
       { actionId, params: { rank: 1, projected: 1000 } },
     ];
-    const { result } = runTopK(1, moves, { materializePreviewInPruning: true });
+    const { result } = runPreviewBudget(1, moves, { materializePreviewInPruning: true });
 
     assert.equal(result.kind, 'success');
     assert.equal(result.move?.params.rank, 10);
@@ -351,7 +375,7 @@ describe('policy evaluation top-K preview gate', () => {
     policyWasmRuntimeInternals.resetProductionScoreRowCounters();
     try {
       const moves = createMoves([3]);
-      const { result, previewedKeys } = runTopK(3, moves, { usePreviewStateFeatureRows: true });
+      const { result, previewedKeys } = runPreviewBudget(3, moves, { usePreviewStateFeatureRows: true });
 
       assert.equal(result.kind, 'success');
       assert.equal(result.move?.params.rank, 3);

@@ -837,12 +837,22 @@ export interface CompiledAgentLibraryIndex {
 
 export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
 export type AgentPreviewCompletionPolicy = 'greedy' | 'agentGuided';
+export type AgentPreviewBudgetStrategy = 'balancedCoverage';
+
+export interface CompiledAgentPreviewBudgetConfig {
+  readonly strategy: AgentPreviewBudgetStrategy;
+  readonly fullCandidateCap: number;
+  readonly minPerGroup: number;
+  readonly widenOnUniformProjection?: boolean;
+  readonly widenCap?: number;
+  readonly widenStep?: number;
+}
 
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewCompletionPolicy;
   readonly completionDepthCap?: number;
-  readonly topK?: number;
+  readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }

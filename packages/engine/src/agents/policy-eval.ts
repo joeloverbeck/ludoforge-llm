@@ -77,6 +77,21 @@ export interface PolicyPreviewUnknownRef {
   readonly reason: PolicyPreviewUnavailabilityReason;
 }
 
+export const PREVIEW_UTILITY_VALUES = ['none', 'constant', 'lowInformation', 'differentiating'] as const;
+export type PreviewUtility = typeof PREVIEW_UTILITY_VALUES[number];
+
+export const SELECTION_REASONS = ['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated'] as const;
+export type SelectionReason = typeof SELECTION_REASONS[number];
+
+export interface ReadyRefStats {
+  readonly readyCount: number;
+  readonly distinctValueCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly range: number | null;
+  readonly allReadyValuesEqual: boolean;
+}
+
 export interface PolicyEvaluationFailure {
   readonly code:
     | 'EMPTY_LEGAL_MOVES'
@@ -105,6 +120,7 @@ export interface PolicyEvaluationCandidateMetadata {
   }[];
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
+  readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
   readonly previewDriveDepth?: number;
   readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
@@ -134,6 +150,8 @@ export interface PolicyEvaluationPreviewUsage {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
+  readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
+  readonly utility: PreviewUtility;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
 }
 
@@ -982,6 +1000,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
+    selectionReason: 'gated',
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
     ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
@@ -1085,6 +1104,8 @@ function summarizePreviewUsage(candidates: readonly CandidateEntry[], mode: Agen
     unknownRefs: [...unknownRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
+    readyRefStats: {},
+    utility: 'none',
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
   };
 }
@@ -1095,6 +1116,8 @@ function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage
     evaluatedCandidateCount: 0,
     refIds: [],
     unknownRefs: [],
+    readyRefStats: {},
+    utility: 'none',
     outcomeBreakdown: {
       ready: 0,
       stochastic: 0,

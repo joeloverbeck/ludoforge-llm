@@ -71,6 +71,7 @@ const traceCandidatesForFrontier = (
       scoreContributions: [],
       previewRefIds: [],
       unknownPreviewRefs: [],
+      selectionReason: 'gated',
     }))
   : [];
 
@@ -138,6 +139,8 @@ const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
   evaluatedCandidateCount: 0,
   refIds: [],
   unknownRefs: [],
+  readyRefStats: {},
+  utility: 'none',
   outcomeBreakdown: {
     ready: 0,
     stochastic: 0,
@@ -267,6 +270,7 @@ export class PolicyAgent implements Agent {
               scoreContributions: [],
               previewRefIds: [],
               unknownPreviewRefs: [],
+              selectionReason: 'gated',
             }))
           : [],
         pruningSteps: [],

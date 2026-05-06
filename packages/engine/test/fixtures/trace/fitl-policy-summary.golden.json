@@ -47,6 +47,8 @@
           "reason": "gated"
         }
       ],
+      "readyRefStats": {},
+      "utility": "none",
       "outcomeBreakdown": {
         "ready": 3,
         "stochastic": 0,

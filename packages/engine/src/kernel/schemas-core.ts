@@ -1976,15 +1976,27 @@ const PolicyPreviewUnknownRefTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewReadyRefStatsTraceSchema = z
+  .object({
+    readyCount: IntegerSchema.nonnegative(),
+    distinctValueCount: IntegerSchema.nonnegative(),
+    min: IntegerSchema.nullable(),
+    max: IntegerSchema.nullable(),
+    range: IntegerSchema.nullable(),
+    allReadyValuesEqual: BooleanSchema,
+  })
+  .strict();
+
 const PolicyCandidateDecisionTraceSchema = z
   .object({
     actionId: StringSchema,
     stableMoveKey: StringSchema,
     score: NumberSchema,
     prunedBy: z.array(StringSchema),
-    scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
-    previewRefIds: z.array(StringSchema).optional(),
-    unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema),
+    previewRefIds: z.array(StringSchema),
+    unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated']),
     previewOutcome: z.union([
       z.literal('ready'),
       z.literal('stochastic'),
@@ -2044,6 +2056,8 @@ const PolicyPreviewUsageTraceSchema = z
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
+    utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
   })
   .strict();

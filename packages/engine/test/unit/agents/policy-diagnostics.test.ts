@@ -23,6 +23,7 @@ function createMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'preferAdvance', contribution: 7 }],
         previewRefIds: ['globalVar.usMargin'],
         unknownPreviewRefs: [],
+        selectionReason: 'gated',
         previewOutcome: 'ready',
         grantedOperationSimulated: true,
         grantedOperationMove: {
@@ -39,6 +40,7 @@ function createMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'preferAdvance', contribution: 1 }],
         previewRefIds: ['globalVar.usMargin'],
         unknownPreviewRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
+        selectionReason: 'gated',
         previewOutcome: 'hidden',
       },
       {
@@ -49,6 +51,7 @@ function createMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'preferAdvance', contribution: -2 }],
         previewRefIds: ['globalVar.usMargin'],
         unknownPreviewRefs: [{ refId: 'globalVar.usMargin', reason: 'unresolved' }],
+        selectionReason: 'gated',
         previewOutcome: 'unresolved',
         previewFailureReason: 'structurallyUnsatisfiable',
       },
@@ -60,6 +63,8 @@ function createMetadata(): PolicyEvaluationMetadata {
       evaluatedCandidateCount: 3,
       refIds: ['globalVar.usMargin'],
       unknownRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
+      readyRefStats: {},
+      utility: 'none',
       outcomeBreakdown: {
         ready: 1,
         stochastic: 0,

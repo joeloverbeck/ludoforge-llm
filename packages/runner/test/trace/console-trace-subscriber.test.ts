@@ -73,6 +73,8 @@ describe('createConsoleTraceSubscriber', () => {
           evaluatedCandidateCount: 0,
           refIds: [],
           unknownRefs: [],
+          readyRefStats: {},
+          utility: 'none',
           outcomeBreakdown: {
             ready: 0,
             stochastic: 0,

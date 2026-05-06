@@ -393,8 +393,10 @@ describe('json schema artifacts', () => {
                 stableMoveKey: 'advance|{}|false|event',
                 score: 7,
                 prunedBy: [],
+                scoreContributions: [],
                 previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
                 unknownPreviewRefs: [],
+                selectionReason: 'gated',
                 previewOutcome: 'ready',
               },
               {
@@ -402,10 +404,12 @@ describe('json schema artifacts', () => {
                 stableMoveKey: 'pass|{}|false|event',
                 score: 1,
                 prunedBy: ['dropPassWhenOtherMovesExist'],
+                scoreContributions: [],
                 previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
                 unknownPreviewRefs: [
                   { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
                 ],
+                selectionReason: 'gated',
                 previewOutcome: 'hidden',
               },
               {
@@ -413,10 +417,12 @@ describe('json schema artifacts', () => {
                 stableMoveKey: 'event|{}|false|event',
                 score: -2,
                 prunedBy: [],
+                scoreContributions: [],
                 previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
                 unknownPreviewRefs: [
                   { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'unresolved' },
                 ],
+                selectionReason: 'gated',
                 previewOutcome: 'unresolved',
                 previewFailureReason: 'structurallyUnsatisfiable',
               },
@@ -439,6 +445,8 @@ describe('json schema artifacts', () => {
       evaluatedCandidateCount: fixture.agentDecision.previewUsage.evaluatedCandidateCount,
       refIds: fixture.agentDecision.previewUsage.refIds,
       unknownRefs: fixture.agentDecision.previewUsage.unknownRefs,
+      readyRefStats: fixture.agentDecision.previewUsage.readyRefStats,
+      utility: fixture.agentDecision.previewUsage.utility,
     };
     const serializedTrace = {
       ...baseSerializedTrace,

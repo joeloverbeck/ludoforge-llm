@@ -265,7 +265,7 @@ function validateConsiderationScopes(
       path,
       severity: 'error',
       message: 'agents consideration scopes must be a non-empty array.',
-      suggestion: 'Set scopes to a non-empty list containing "move" and/or "completion".',
+      suggestion: 'Set scopes to a non-empty list containing "move" or "microturn".',
     });
     return;
   }
@@ -276,20 +276,30 @@ function validateConsiderationScopes(
       path,
       severity: 'error',
       message: 'agents consideration scopes must contain at least one scope.',
-      suggestion: 'Use scopes: ["move"], scopes: ["completion"], or both.',
+      suggestion: 'Use scopes: ["move"] or scopes: ["microturn"].',
     });
   }
 
   for (const [index, entry] of value.entries()) {
-    if (entry === 'move' || entry === 'completion') {
+    if (entry === 'move' || entry === 'microturn') {
+      continue;
+    }
+    if (entry === 'completion') {
+      diagnostics.push({
+        code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: 'scopes: [completion] is removed; use scopes: [microturn] with microturn.* refs.',
+        suggestion: 'Replace completion with microturn and migrate retired refs to microturn.*.',
+      });
       continue;
     }
     diagnostics.push({
       code: 'CNL_VALIDATOR_AGENTS_DEFINITION_INVALID',
       path: `${path}.${index}`,
       severity: 'error',
-      message: `agents consideration scopes entries must be "move" or "completion", got ${JSON.stringify(entry)}.`,
-      suggestion: 'Use only the supported consideration scopes: "move" and "completion".',
+      message: `agents consideration scopes entries must be "move" or "microturn", got ${JSON.stringify(entry)}.`,
+      suggestion: 'Use only the supported consideration scopes: "move" and "microturn".',
     });
   }
 }

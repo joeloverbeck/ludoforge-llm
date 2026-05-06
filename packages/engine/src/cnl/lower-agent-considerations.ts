@@ -48,7 +48,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly onEmpty: 'skipRule' | 'error';
   }>>;
   readonly considerations: Readonly<Record<string, {
-    readonly scopes?: readonly ('move' | 'completion')[];
+    readonly scopes?: readonly ('move' | 'microturn')[];
     readonly costClass: AgentPolicyCostClass;
     readonly when?: AgentPolicyExpr;
     readonly weight: AgentPolicyExpr;

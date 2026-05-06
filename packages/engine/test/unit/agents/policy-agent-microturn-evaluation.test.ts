@@ -39,17 +39,17 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
-function completionConsiderations(
+function microturnConsiderations(
   definitions: Record<string, Omit<AgentPolicyCatalogFixtureLibrary['considerations'][string], 'scopes'>>,
 ): AgentPolicyCatalogFixtureLibrary['considerations'] {
   return Object.fromEntries(
-    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['completion'], ...definition }]),
+    Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['microturn'], ...definition }]),
   );
 }
 
 function createProfile(considerations: readonly string[]): CompiledAgentProfile {
   return {
-    fingerprint: 'completion-guided',
+    fingerprint: 'microturn-guided',
     params: {},
     preview: { mode: 'exactWorld' },
     selection: { mode: 'argmax' },
@@ -67,7 +67,7 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
   };
 }
 
-function createCompletionGuidedCatalog(): AgentPolicyCatalog {
+function createMicroturnGuidedCatalog(): AgentPolicyCatalog {
   const profile = createProfile(['preferRight', 'preferLeft']);
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
@@ -93,19 +93,19 @@ function createCompletionGuidedCatalog(): AgentPolicyCatalog {
       candidateFeatures: {},
       candidateAggregates: {},
       pruningRules: {},
-      considerations: completionConsiderations({
+      considerations: microturnConsiderations({
         preferRight: {
           costClass: 'state',
           when: literal(true),
           weight: literal(10),
-          value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('right'))),
+          value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }), literal('right'))),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
         preferLeft: {
           costClass: 'state',
           when: literal(true),
           weight: literal(2),
-          value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('left'))),
+          value: opExpr('boolToNumber', opExpr('eq', refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }), literal('left'))),
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       }),
@@ -183,7 +183,7 @@ const createDef = (): GameDef => assertValidatedGameDef({
 const createCompletionGuidedDef = (): GameDef => ({
   ...createDef(),
   seats: [{ id: 'us' }, { id: 'arvn' }],
-  agents: createCompletionGuidedCatalog(),
+  agents: createMicroturnGuidedCatalog(),
 });
 
 const createChooseOneMicroturn = (state: ReturnType<typeof initialState>['state']): MicroturnState => ({

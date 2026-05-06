@@ -55,7 +55,7 @@ function createDoc() {
 }
 
 describe('compile considerations', () => {
-  it('compiles move, completion, and dual-scope considerations', () => {
+  it('compiles move and microturn considerations', () => {
     const result = compileGameSpecToGameDef({
       ...createDoc(),
       agents: {
@@ -66,16 +66,11 @@ describe('compile considerations', () => {
               weight: 1,
               value: { boolToNumber: { ref: 'candidate.tag.pass' } },
             },
-            completionOnly: {
-              scopes: ['completion'],
+            microturnOnly: {
+              scopes: ['microturn'],
               weight: 1,
               value: 1,
-              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
-            },
-            both: {
-              scopes: ['move', 'completion'],
-              weight: 1,
-              value: 1,
+              when: { eq: [{ ref: 'microturn.kind' }, 'chooseOne'] },
             },
           },
           tieBreakers: {
@@ -87,7 +82,7 @@ describe('compile considerations', () => {
             observer: 'testObserver',
             params: {},
             use: {
-              considerations: ['moveOnly', 'completionOnly', 'both'],
+              considerations: ['moveOnly', 'microturnOnly'],
               pruningRules: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -98,10 +93,9 @@ describe('compile considerations', () => {
     });
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['moveOnly', 'completionOnly', 'both']);
+    assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['moveOnly', 'microturnOnly']);
     assert.deepEqual(result.gameDef?.agents?.library.considerations?.moveOnly?.scopes, ['move']);
-    assert.deepEqual(result.gameDef?.agents?.library.considerations?.completionOnly?.scopes, ['completion']);
-    assert.deepEqual(result.gameDef?.agents?.library.considerations?.both?.scopes, ['move', 'completion']);
+    assert.deepEqual(result.gameDef?.agents?.library.considerations?.microturnOnly?.scopes, ['microturn']);
   });
 
   it('rejects empty and invalid scopes', () => {
@@ -156,25 +150,25 @@ describe('compile considerations', () => {
     );
   });
 
-  it('enforces scope-specific refs and warns on unguarded dual-scope refs', () => {
+  it('enforces scope-specific refs and rejects mixed scopes', () => {
     const result = compileGameSpecToGameDef({
       ...createDoc(),
       agents: {
         library: {
           considerations: {
-            moveRefInCompletion: {
-              scopes: ['completion'],
+            moveRefInMicroturn: {
+              scopes: ['microturn'],
               weight: 1,
               value: { boolToNumber: { ref: 'candidate.tag.pass' } },
             },
-            completionRefInMove: {
+            microturnRefInMove: {
               scopes: ['move'],
               weight: 1,
               value: 1,
-              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              when: { eq: [{ ref: 'microturn.kind' }, 'chooseOne'] },
             },
-            dualWithoutGuard: {
-              scopes: ['move', 'completion'],
+            mixedScopes: {
+              scopes: ['move', 'microturn'],
               weight: 1,
               value: { boolToNumber: { ref: 'candidate.tag.pass' } },
             },
@@ -188,7 +182,7 @@ describe('compile considerations', () => {
             observer: 'testObserver',
             params: {},
             use: {
-              considerations: ['moveRefInCompletion', 'completionRefInMove', 'dualWithoutGuard'],
+              considerations: ['moveRefInMicroturn', 'microturnRefInMove', 'mixedScopes'],
               pruningRules: [],
               tieBreakers: ['stableMoveKey'],
             },
@@ -202,7 +196,7 @@ describe('compile considerations', () => {
       result.diagnostics.some((diagnostic) =>
         diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION
         && diagnostic.severity === 'error'
-        && diagnostic.path === 'doc.agents.library.considerations.moveRefInCompletion',
+        && diagnostic.path === 'doc.agents.library.considerations.moveRefInMicroturn',
       ),
       true,
     );
@@ -210,15 +204,15 @@ describe('compile considerations', () => {
       result.diagnostics.some((diagnostic) =>
         diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION
         && diagnostic.severity === 'error'
-        && diagnostic.path === 'doc.agents.library.considerations.completionRefInMove',
+        && diagnostic.path === 'doc.agents.library.considerations.microturnRefInMove',
       ),
       true,
     );
     assert.equal(
       result.diagnostics.some((diagnostic) =>
         diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_WARNING
-        && diagnostic.severity === 'warning'
-        && diagnostic.path === 'doc.agents.library.considerations.dualWithoutGuard',
+        && diagnostic.severity === 'error'
+        && diagnostic.path === 'doc.agents.library.considerations.mixedScopes',
       ),
       true,
     );

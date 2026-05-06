@@ -898,7 +898,7 @@ function analyzeZoneSource(
       path,
       severity: 'error',
       message: `${operatorName}.${operatorName === 'adjacentTokenAgg' ? 'anchorZone' : 'zone'} expressions must resolve to an id value.`,
-      suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "option.value" }.',
+      suggestion: 'Use a string literal zone id or an id-valued ref/expression such as { ref: "microturn.option.value" }.',
     });
     return null;
   }

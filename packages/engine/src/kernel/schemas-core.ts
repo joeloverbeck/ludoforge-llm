@@ -1,8 +1,8 @@
 import { z } from 'zod';
 import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
-  AGENT_POLICY_DECISION_INTRINSICS,
-  AGENT_POLICY_OPTION_INTRINSICS,
+  AGENT_POLICY_MICROTURN_INTRINSICS,
+  AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_FILTER_OPS,
   AGENT_POLICY_ZONE_SCOPES,
@@ -688,12 +688,12 @@ const CompiledAgentPolicyRefSchema = z.union([
     id: StringSchema,
   }).strict(),
   z.object({
-    kind: z.literal('decisionIntrinsic'),
-    intrinsic: z.enum(AGENT_POLICY_DECISION_INTRINSICS),
+    kind: z.literal('microturnIntrinsic'),
+    intrinsic: z.enum(AGENT_POLICY_MICROTURN_INTRINSICS),
   }).strict(),
   z.object({
-    kind: z.literal('optionIntrinsic'),
-    intrinsic: z.enum(AGENT_POLICY_OPTION_INTRINSICS),
+    kind: z.literal('microturnOptionIntrinsic'),
+    intrinsic: z.enum(AGENT_POLICY_MICROTURN_OPTION_INTRINSICS),
   }).strict(),
   z.object({
     kind: z.literal('seatIntrinsic'),
@@ -1008,7 +1008,7 @@ const CompiledAgentPruningRuleSchema = z
 
 const CompiledAgentConsiderationSchema = z
   .object({
-    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
+    scopes: z.array(z.union([z.literal('move'), z.literal('microturn')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
@@ -1019,7 +1019,7 @@ const CompiledAgentConsiderationSchema = z
 
 const CompiledPolicyConsiderationSchema = z
   .object({
-    scopes: z.array(z.union([z.literal('move'), z.literal('completion')])).min(1).optional(),
+    scopes: z.array(z.union([z.literal('move'), z.literal('microturn')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
     when: CompiledPolicyExprSchema.optional(),
     weight: CompiledPolicyExprSchema,

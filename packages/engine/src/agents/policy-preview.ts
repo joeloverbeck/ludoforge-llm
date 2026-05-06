@@ -48,7 +48,7 @@ import {
   type PolicyVictorySurface,
   type SurfaceResolutionContext,
 } from './policy-surface.js';
-import { buildCompletionChooseCallback, selectBestCompletionChooseOneValue } from './completion-guidance-choice.js';
+import { buildMicroturnChooseCallback, selectBestMicroturnChooseOneValue } from './microturn-option-evaluator.js';
 
 export const K_PREVIEW_DEPTH = 6;
 
@@ -439,7 +439,7 @@ const pickAgentGuidedChooseOneDecision = (
     return undefined;
   }
   const request = createChooseOneRequest(microturn);
-  const selected = selectBestCompletionChooseOneValue({
+  const selected = selectBestMicroturnChooseOneValue({
     state,
     def,
     catalog: guided.catalog,
@@ -461,7 +461,7 @@ const pickAgentGuidedChooseNStepDecision = (
   if (guided === undefined) {
     return undefined;
   }
-  const choose = buildCompletionChooseCallback({
+  const choose = buildMicroturnChooseCallback({
     state,
     def,
     catalog: guided.catalog,

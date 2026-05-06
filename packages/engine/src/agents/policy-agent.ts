@@ -9,14 +9,14 @@ import type {
   ChoicePendingChooseOneRequest,
   ChoicePendingRequest,
 } from '../kernel/types.js';
-import { buildCompletionChooseCallback, selectBestCompletionChooseOneValue } from './completion-guidance-choice.js';
+import { buildMicroturnChooseCallback, selectBestMicroturnChooseOneValue } from './microturn-option-evaluator.js';
 import { pickRandom } from './agent-move-selection.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import {
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
-import type { CompletionScoreContribution } from './completion-guidance-eval.js';
+import type { CompletionScoreContribution } from './microturn-option-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
 
@@ -318,7 +318,7 @@ export class PolicyAgent implements Agent {
       return null;
     }
 
-    const choose = buildCompletionChooseCallback({
+    const choose = buildMicroturnChooseCallback({
       state: input.state,
       def: input.def,
       catalog: resolvedProfile.catalog,
@@ -345,7 +345,7 @@ export class PolicyAgent implements Agent {
     input: AgentMicroturnDecisionInput & {
       readonly microturn: AgentMicroturnDecisionInput['microturn'] & { readonly kind: 'chooseOne' };
     },
-    choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildCompletionChooseCallback>>>,
+    choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildMicroturnChooseCallback>>>,
     resolvedProfile: NonNullable<ReturnType<typeof resolveEffectivePolicyProfile>>,
   ): GuidedChoiceMatch {
     const context = input.microturn.decisionContext as ChooseOneContext;
@@ -358,7 +358,7 @@ export class PolicyAgent implements Agent {
       targetKinds: [],
       type: 'chooseOne',
     };
-    const preferredSelection = selectBestCompletionChooseOneValue({
+    const preferredSelection = selectBestMicroturnChooseOneValue({
       state: input.state,
       def: input.def,
       catalog: resolvedProfile.catalog,
@@ -391,7 +391,7 @@ export class PolicyAgent implements Agent {
     input: AgentMicroturnDecisionInput & {
       readonly microturn: AgentMicroturnDecisionInput['microturn'] & { readonly kind: 'chooseNStep' };
     },
-    choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildCompletionChooseCallback>>>,
+    choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildMicroturnChooseCallback>>>,
   ): GuidedChoiceMatch {
     const context = input.microturn.decisionContext as ChooseNStepContext;
     const request: ChoicePendingChooseNRequest = {

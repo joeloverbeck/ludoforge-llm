@@ -404,7 +404,7 @@ describe('top-level runtime schemas', () => {
           pruningRules: {},
           considerations: {
             preferNamedOption: {
-              scopes: ['completion'],
+              scopes: ['microturn'],
               costClass: 'state',
               dependencies: {
                 parameters: [],
@@ -437,13 +437,13 @@ describe('top-level runtime schemas', () => {
           pruningRules: {},
           considerations: {
             preferNamedOption: {
-              scopes: ['completion'],
+              scopes: ['microturn'],
               costClass: 'state',
               when: {
                 kind: 'op',
                 op: 'eq',
                 args: [
-                  { kind: 'ref', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } },
+                  { kind: 'ref', ref: { kind: 'microturnIntrinsic', intrinsic: 'kind' } },
                   { kind: 'literal', value: 'chooseOne' },
                 ],
               },
@@ -456,7 +456,7 @@ describe('top-level runtime schemas', () => {
                     kind: 'op',
                     op: 'eq',
                     args: [
-                      { kind: 'ref', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } },
+                      { kind: 'ref', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'value' } },
                       { kind: 'literal', value: 'zone-a' },
                     ],
                   },

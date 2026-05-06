@@ -5,7 +5,7 @@
 **Complexity**: M (rename + rewire; new explicit fallback; trace fields; deletion of silent-fallback path; depends on Specs 156 and 158 already landed)
 **Dependencies**:
 - Spec 156 [preview-observability-and-utility-metrics] (archived) — `selectionReason: 'fallback'` and `completionPolicyFallbackCount` extend trace fields landed in 156; synthetic-decision trace records the chosen completion policy per inner microturn.
-- Spec 158 [microturn-policy-scope-and-refs] (DRAFT) — `selectBestMicroturnOption` (the renamed evaluator from 158) is the engine that `policyGuided` invokes per inner microturn.
+- Spec 158 [microturn-policy-scope-and-refs] (archived) — `selectBestMicroturnOption` (the renamed evaluator from 158) is the engine that `policyGuided` invokes per inner microturn.
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — the preview drive loop this spec re-routes.
 - Foundation 5 (One Rules Protocol, Many Clients) — `policyGuided` evaluates against the published frontier, not unpublished sub-decisions.
 - Foundation 10 (Bounded Computation) — `policyGuided` is local frontier scoring, not recursive action-selection preview; cost stays bounded.

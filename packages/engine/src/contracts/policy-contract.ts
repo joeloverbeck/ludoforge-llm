@@ -34,18 +34,25 @@ export const AGENT_POLICY_CANDIDATE_INTRINSICS = [
 
 export type AgentPolicyCandidateIntrinsic = typeof AGENT_POLICY_CANDIDATE_INTRINSICS[number];
 
-export const AGENT_POLICY_DECISION_INTRINSICS = [
-  'type',
-  'name',
-  'targetKind',
-  'optionCount',
+export const AGENT_POLICY_MICROTURN_INTRINSICS = [
+  'kind',
+  'decisionKey',
+  'actorSeat',
+  'remainingRequiredCount',
+  'remainingMaxCount',
 ] as const;
 
-export type AgentPolicyDecisionIntrinsic = typeof AGENT_POLICY_DECISION_INTRINSICS[number];
+export type AgentPolicyMicroturnIntrinsic = typeof AGENT_POLICY_MICROTURN_INTRINSICS[number];
 
-export const AGENT_POLICY_OPTION_INTRINSICS = ['value'] as const;
+export const AGENT_POLICY_MICROTURN_OPTION_INTRINSICS = [
+  'value',
+  'index',
+  'stableKey',
+  'tags',
+  'targetKind',
+] as const;
 
-export type AgentPolicyOptionIntrinsic = typeof AGENT_POLICY_OPTION_INTRINSICS[number];
+export type AgentPolicyMicroturnOptionIntrinsic = typeof AGENT_POLICY_MICROTURN_OPTION_INTRINSICS[number];
 
 export const AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS = ['self', 'active', 'none'] as const;
 

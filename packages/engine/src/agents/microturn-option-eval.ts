@@ -23,7 +23,7 @@ export interface CompletionOptionScore {
   readonly scoreContributions: readonly CompletionScoreContribution[];
 }
 
-export function scoreCompletionOption(
+export function scoreMicroturnOption(
   state: GameState,
   def: GameDef,
   catalog: AgentPolicyCatalog,
@@ -32,10 +32,11 @@ export function scoreCompletionOption(
   parameterValues: Readonly<Record<string, AgentParameterValue>>,
   request: ChoicePendingRequest,
   optionValue: MoveParamValue,
+  optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
 ): number {
-  return scoreCompletionOptionWithContributions(
+  return scoreMicroturnOptionWithContributions(
     state,
     def,
     catalog,
@@ -44,12 +45,13 @@ export function scoreCompletionOption(
     parameterValues,
     request,
     optionValue,
+    optionIndex,
     considerationIds,
     runtime,
   ).score;
 }
 
-export function scoreCompletionOptionWithContributions(
+export function scoreMicroturnOptionWithContributions(
   state: GameState,
   def: GameDef,
   catalog: AgentPolicyCatalog,
@@ -58,6 +60,7 @@ export function scoreCompletionOptionWithContributions(
   parameterValues: Readonly<Record<string, AgentParameterValue>>,
   request: ChoicePendingRequest,
   optionValue: MoveParamValue,
+  optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
 ): CompletionOptionScore {
@@ -78,6 +81,7 @@ export function scoreCompletionOptionWithContributions(
     completion: {
       request,
       optionValue,
+      optionIndex,
     },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);

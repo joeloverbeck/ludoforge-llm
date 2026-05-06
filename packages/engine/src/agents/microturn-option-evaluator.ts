@@ -1,6 +1,7 @@
 import type { PlayerId } from '../kernel/branded.js';
 import type {
   AgentPolicyCatalog,
+  ChoiceOption,
   ChoicePendingRequest,
   CompiledAgentProfile,
   GameDef,
@@ -13,9 +14,9 @@ import {
   selectChoiceOptionsByLegalityPrecedence,
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from '../kernel/choice-option-policy.js';
-import { scoreCompletionOptionWithContributions, type CompletionScoreContribution } from './completion-guidance-eval.js';
+import { scoreMicroturnOptionWithContributions, type CompletionScoreContribution } from './microturn-option-eval.js';
 
-export interface BuildCompletionChooseCallbackInput {
+export interface BuildMicroturnChooseCallbackInput {
   readonly state: GameState;
   readonly def: GameDef;
   readonly catalog: AgentPolicyCatalog;
@@ -25,7 +26,7 @@ export interface BuildCompletionChooseCallbackInput {
   readonly runtime?: GameDefRuntime;
 }
 
-export interface CompletionChoiceSelection {
+export interface MicroturnChoiceSelection {
   readonly value: MoveParamValue;
   readonly score: number;
   readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
@@ -44,23 +45,28 @@ const scoreContributionsKeyForChooseNStepAdd = (
 const sumContributions = (contributions: readonly CompletionScoreContribution[]): number =>
   contributions.reduce((total, contribution) => total + contribution.contribution, 0);
 
-const completionConsiderationIdsForProfile = (
+const microturnConsiderationIdsForProfile = (
   catalog: AgentPolicyCatalog,
   profile: CompiledAgentProfile,
 ): readonly string[] => {
   const considerations = catalog.compiled.considerations;
   return (profile.use.considerations ?? []).filter(
-    (considerationId) => considerations[considerationId]?.scopes?.includes('completion') === true,
+    (considerationId) => considerations[considerationId]?.scopes?.includes('microturn') === true,
   );
 };
 
-export function selectBestCompletionChooseOneValue(
-  input: BuildCompletionChooseCallbackInput,
+const selectableIndexForValue = (
+  selectableOptions: readonly ChoiceOption[],
+  value: MoveParamValue,
+): number => selectableOptions.findIndex((option) => Object.is(option.value, value));
+
+export function selectBestMicroturnChooseOneValue(
+  input: BuildMicroturnChooseCallbackInput,
   request: ChoicePendingRequest,
   options: { readonly requirePositiveScore?: boolean } = {},
-): CompletionChoiceSelection | undefined {
-  const completionConsiderationIds = completionConsiderationIdsForProfile(input.catalog, input.profile);
-  if (completionConsiderationIds.length === 0) {
+): MicroturnChoiceSelection | undefined {
+  const microturnConsiderationIds = microturnConsiderationIdsForProfile(input.catalog, input.profile);
+  if (microturnConsiderationIds.length === 0) {
     return undefined;
   }
 
@@ -69,10 +75,10 @@ export function selectBestCompletionChooseOneValue(
     return undefined;
   }
 
-  let bestSelection: Omit<CompletionChoiceSelection, 'scoreContributionsByOption'> | undefined;
+  let bestSelection: Omit<MicroturnChoiceSelection, 'scoreContributionsByOption'> | undefined;
   const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
-  for (const option of selectableOptions) {
-    const scored = scoreCompletionOptionWithContributions(
+  for (const [optionIndex, option] of selectableOptions.entries()) {
+    const scored = scoreMicroturnOptionWithContributions(
       input.state,
       input.def,
       input.catalog,
@@ -81,7 +87,8 @@ export function selectBestCompletionChooseOneValue(
       input.profile.params,
       request,
       option.value,
-      completionConsiderationIds,
+      optionIndex,
+      microturnConsiderationIds,
       input.runtime,
     );
     scoreContributionsByOption.set(scoreContributionsKeyForChooseOne(request, option.value), scored.scoreContributions);
@@ -100,17 +107,18 @@ export function selectBestCompletionChooseOneValue(
   return { ...bestSelection, scoreContributionsByOption };
 }
 
-export function buildCompletionChooseCallback(
-  input: BuildCompletionChooseCallbackInput,
-): ((request: ChoicePendingRequest) => CompletionChoiceSelection | undefined) | undefined {
+export function buildMicroturnChooseCallback(
+  input: BuildMicroturnChooseCallbackInput,
+): ((request: ChoicePendingRequest) => MicroturnChoiceSelection | undefined) | undefined {
   const { profile } = input;
-  const completionConsiderationIds = completionConsiderationIdsForProfile(input.catalog, profile);
-  if (completionConsiderationIds.length === 0) {
+  const microturnConsiderationIds = microturnConsiderationIdsForProfile(input.catalog, profile);
+  if (microturnConsiderationIds.length === 0) {
     return undefined;
   }
 
-  return (request: ChoicePendingRequest): CompletionChoiceSelection | undefined => {
+  return (request: ChoicePendingRequest): MicroturnChoiceSelection | undefined => {
     if (request.type === 'chooseN') {
+      const selectableOptions = selectChoiceOptionsByLegalityPrecedence(request);
       const selectableValues = selectUniqueChoiceOptionValuesByLegalityPrecedence(request);
       const optionCount = selectableValues.length;
       if (optionCount === 0) {
@@ -128,7 +136,7 @@ export function buildCompletionChooseCallback(
       const scoredValues = selectableValues.map((value, index) => ({
         value,
         index,
-        scored: scoreCompletionOptionWithContributions(
+        scored: scoreMicroturnOptionWithContributions(
           input.state,
           input.def,
           input.catalog,
@@ -137,7 +145,8 @@ export function buildCompletionChooseCallback(
           profile.params,
           request,
           value,
-          completionConsiderationIds,
+          selectableIndexForValue(selectableOptions, value),
+          microturnConsiderationIds,
           input.runtime,
         ),
       }));
@@ -175,6 +184,6 @@ export function buildCompletionChooseCallback(
       return undefined;
     }
 
-    return selectBestCompletionChooseOneValue(input, request, { requirePositiveScore: true });
+    return selectBestMicroturnChooseOneValue(input, request, { requirePositiveScore: true });
   };
 }

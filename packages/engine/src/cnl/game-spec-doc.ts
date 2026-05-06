@@ -613,7 +613,7 @@ export interface GameSpecScoreTermDef {
 }
 
 export interface GameSpecConsiderationDef {
-  readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'completion'
+  readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'microturn'
   readonly when?: GameSpecPolicyExpr;
   readonly weight: GameSpecPolicyExpr;
   readonly value: GameSpecPolicyExpr;

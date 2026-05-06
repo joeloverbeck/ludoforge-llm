@@ -87,6 +87,8 @@ export const FEATURE_REF_KINDS = [
   'candidateParam',
   'candidateTag',
   'candidateTags',
+  'microturnIntrinsic',
+  'microturnOptionIntrinsic',
   'candidateFeature',
   'stateFeature',
   'candidateAggregate',

@@ -11,12 +11,12 @@ This document is intentionally narrower than the raw compiler surface. It descri
 
 The old cookbook had drifted into teaching pre-microturn patterns as normal authoring, including:
 
-- completion-scoped scoring
-- `decision.*` / `option.value` policy refs
+- microturn-scoped inner-frontier scoring
+- retired `decision.*` / `option.value` policy refs
 - `candidate.param.*` heuristics
 - `preview.phase1` multi-step preview
 
-Those patterns are no longer part of the recommended production contract. Some internal compiler support still exists, but new production profiles should not be authored around those surfaces.
+The replacement production contract is `scopes: [microturn]` with `microturn.*` refs. Do not author new profiles around the retired names.
 
 ## Mental Model
 
@@ -52,7 +52,7 @@ Meaning:
 - `candidateFeatures`: per-action expressions, often using `preview.*`
 - `candidateAggregates`: cross-candidate reductions such as `any`, `min`, `max`
 - `pruningRules`: boolean filters that can drop bad candidates before scoring
-- `considerations`: weighted score terms; for new production authoring, keep these `scopes: [move]`
+- `considerations`: weighted score terms; use `scopes: [move]` for action-selection candidates and `scopes: [microturn]` for inner `chooseOne` / `chooseNStep` frontiers
 - `tieBreakers`: deterministic tiebreak logic after weighted scoring
 - `strategicConditions`: reusable boolean/proximity conditions
 - `profiles`: seat- or variant-specific parameter and selection config
@@ -203,7 +203,39 @@ Verbose inner-frontier candidate rows also carry `scoreContributions[]`. Each en
 | `termId` | The consideration id that contributed to this candidate's score. |
 | `contribution` | The integer contribution from that term. |
 
-Use this when diagnosing `chooseOne` or `chooseNStep` authoring. For example, a historical FITL `preferPatronageMode` inner-choice consideration should show a positive contribution on the patronage candidate row when that consideration fires. That surface is completion-scope in the current Spec 156 implementation; Spec 158 is expected to rename the authoring model to microturn scope, so do not copy `scopes: [completion]` into new production profiles.
+Use this when diagnosing `chooseOne` or `chooseNStep` authoring. For example, a FITL-style `preferPatronageMode` inner-choice consideration should show a positive contribution on the patronage candidate row when that microturn-scoped consideration fires.
+
+## Microturn Scope
+
+Use `scopes: [microturn]` when a profile needs to score the options of the currently published inner frontier. A microturn-scoped consideration fires once per `(microturn, option)` pair while the chooser is evaluating `chooseOne` or `chooseNStep`.
+
+| Ref | Meaning |
+| --- | --- |
+| `microturn.kind` | Published frontier kind, such as `chooseOne` or `chooseNStep`. |
+| `microturn.decisionKey` | Stable decision key for the current frontier. |
+| `microturn.actorSeat` | Seat currently making the decision when known. |
+| `microturn.option.value` | Current option value. |
+| `microturn.option.index` | Current option index after legality-precedence filtering. |
+| `microturn.option.stableKey` | Stable JSON key for the option value. |
+| `microturn.option.tags` | Tags attached to the option; currently empty unless the kernel supplies generic option tags. |
+| `microturn.option.targetKind` | Target kind for the current option when known. |
+| `microturn.remainingRequiredCount` | Remaining required selections for a `chooseNStep`; `1` for `chooseOne`. |
+| `microturn.remainingMaxCount` | Remaining maximum selections for a `chooseNStep`; `1` for `chooseOne`. |
+
+```yaml
+preferPatronageMode:
+  scopes: [microturn]
+  when:
+    and:
+      - eq: [{ ref: microturn.kind }, chooseOne]
+      - eq: [{ ref: microturn.decisionKey }, governMode]
+  weight: 10
+  value:
+    boolToNumber:
+      eq:
+        - { ref: microturn.option.value }
+        - patronage
+```
 
 ### Gap Diagnosis Quick Map
 
@@ -214,25 +246,6 @@ Use this when diagnosing `chooseOne` or `chooseNStep` authoring. For example, a 
 | Greedy completion picked the wrong inner option | `candidate.previewDrive.syntheticDecisions[].selectionReason` and `selectedOptionStableKey` |
 | Inner `chooseOne` / `chooseNStep` score has no obvious cause | Inner-frontier candidate `scoreContributions[]` |
 | Later policy-guided completion silently falls back | Synthetic-decision `selectionReason: 'fallback'` once that later surface lands |
-
-## Retired For New Production Profiles
-
-Do not copy these patterns into new shipped profiles:
-
-- `scopes: [completion]`
-- `decision.type`, `decision.name`, `decision.targetKind`, `decision.optionCount`
-- `option.value`
-- `candidate.param.*`
-- `preview.phase1`
-- `preview.phase1CompletionsPerAction`
-
-Why:
-
-- They encourage reasoning about unpublished sub-decisions instead of the current atomic frontier.
-- They were the exact surfaces that became misleading during the microturn overhaul.
-- The shipped FITL and Texas profiles have already been simplified away from them.
-
-If you see them in older tests or exploratory fixtures, treat them as legacy/internal coverage, not as the cookbook baseline.
 
 ## Parameters
 
@@ -410,7 +423,7 @@ considerations:
         ref: candidate.tag.govern
 ```
 
-When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Do not add completion-scoped examples to new profiles just to produce trace output; that surface is retained only for current internal coverage and pending migration work.
+When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Author inner-frontier preferences with `scopes: [microturn]` and `microturn.*` refs; completion-scoped examples must not be added to new profiles.
 
 ### Normalization Pattern
 
@@ -644,17 +657,17 @@ agents:
 
 - Prefer simple `candidate.tag.*` gating before reaching for more exotic structure.
 - Use preview sparingly and always defend it with `coalesce`.
-- Keep new production considerations `scopes: [move]`.
+- Use `scopes: [move]` for action candidates and `scopes: [microturn]` only for published inner-frontier options.
 - Default to `stableMoveKey` as the final tiebreaker.
 - Normalize with aggregates inside considerations, not candidate features.
 - If a heuristic seems to require unpublished completion structure, remove or redesign it instead of reintroducing pre-microturn assumptions.
 
 ## When You Find Older Patterns
 
-If you encounter existing docs, tests, or archived notes that promote completion scoring or param-introspective heuristics:
+If you encounter existing docs, tests, or archived notes that promote retired completion scoring or param-introspective heuristics:
 
 - do not copy them into new production YAML
-- treat them as historical or internal coverage only
-- rewrite toward move-scoped atomic-decision heuristics
+- treat them as historical evidence
+- rewrite toward move-scoped action heuristics or microturn-scoped option heuristics
 
 That is the current project direction after the microturn overhaul.

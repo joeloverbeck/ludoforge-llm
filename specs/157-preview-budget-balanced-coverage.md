@@ -256,5 +256,5 @@ Anticipated wave structure (finalized by `/spec-to-tickets`):
 Decomposed via `/spec-to-tickets` on 2026-05-06:
 
 - [`archive/tickets/157PREVBUDBALCOV-001.md`](../archive/tickets/157PREVBUDBALCOV-001.md) — Phase A: Balanced-coverage preview budget allocator (atomic cutover) (covers Phase A — schema, allocator, migration, deletion of `pickTopKByMoveOnlyScore`)
-- [`tickets/157PREVBUDBALCOV-002.md`](../tickets/157PREVBUDBALCOV-002.md) — Phase B: Compiler-side EffectFootprint and structural-impact prior (covers Phase B — `compile-effect-footprint.ts`, `priorScore × structuralImpactScore` prior pass)
+- [`archive/tickets/157PREVBUDBALCOV-002.md`](../archive/tickets/157PREVBUDBALCOV-002.md) — Phase B: Compiler-side EffectFootprint and structural-impact prior (covers Phase B — `compile-effect-footprint.ts`, `priorScore × structuralImpactScore` prior pass)
 - [`tickets/157PREVBUDBALCOV-003.md`](../tickets/157PREVBUDBALCOV-003.md) — Phase C: Bounded one-step widen-on-uniform-projection (covers Phase C — `widenedBecauseUniform`, per-decision-class memory)

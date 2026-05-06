@@ -6,31 +6,31 @@
       "type": "string"
     },
     "runCount": {
-      "type": "number"
+      "$ref": "#/definitions/anon_c0e4ebfe"
     },
     "metrics": {
       "type": "object",
       "properties": {
         "avgGameLength": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "avgBranchingFactor": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "actionDiversity": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "resourceTension": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "interactionProxy": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "dominantActionFreq": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         },
         "dramaMeasure": {
-          "type": "number"
+          "$ref": "#/definitions/anon_c0e4ebfe"
         }
       },
       "required": [
@@ -47,15 +47,7 @@
     "degeneracyFlags": {
       "type": "array",
       "items": {
-        "type": "string",
-        "enum": [
-          "LOOP_DETECTED",
-          "NO_LEGAL_MOVES",
-          "DOMINANT_ACTION",
-          "TRIVIAL_WIN",
-          "STALL",
-          "TRIGGER_DEPTH_EXCEEDED"
-        ]
+        "$ref": "#/definitions/anon_51e3e8ab"
       }
     },
     "perSeed": {
@@ -64,10 +56,10 @@
         "type": "object",
         "properties": {
           "seed": {
-            "type": "number"
+            "$ref": "#/definitions/anon_c0e4ebfe"
           },
           "turnCount": {
-            "type": "number"
+            "$ref": "#/definitions/anon_c0e4ebfe"
           },
           "stopReason": {
             "anyOf": [
@@ -89,25 +81,25 @@
             "type": "object",
             "properties": {
               "gameLength": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "avgBranchingFactor": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "actionDiversity": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "resourceTension": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "interactionProxy": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "dominantActionFreq": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               },
               "dramaMeasure": {
-                "type": "number"
+                "$ref": "#/definitions/anon_c0e4ebfe"
               }
             },
             "required": [
@@ -124,15 +116,7 @@
           "degeneracyFlags": {
             "type": "array",
             "items": {
-              "type": "string",
-              "enum": [
-                "LOOP_DETECTED",
-                "NO_LEGAL_MOVES",
-                "DOMINANT_ACTION",
-                "TRIVIAL_WIN",
-                "STALL",
-                "TRIGGER_DEPTH_EXCEEDED"
-              ]
+              "$ref": "#/definitions/anon_51e3e8ab"
             }
           }
         },
@@ -155,5 +139,227 @@
     "perSeed"
   ],
   "additionalProperties": false,
+  "definitions": {
+    "anon_51e3e8ab": {
+      "type": "string",
+      "enum": [
+        "LOOP_DETECTED",
+        "NO_LEGAL_MOVES",
+        "DOMINANT_ACTION",
+        "TRIVIAL_WIN",
+        "STALL",
+        "TRIGGER_DEPTH_EXCEEDED"
+      ]
+    },
+    "anon_c0e4ebfe": {
+      "type": "number"
+    },
+    "EffectFootprint": {
+      "type": "object",
+      "properties": {
+        "writes": {
+          "type": "object",
+          "properties": {
+            "tokens": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "zones": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "variables": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "scores": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tokens",
+            "zones",
+            "variables",
+            "scores"
+          ],
+          "additionalProperties": false
+        },
+        "reads": {
+          "type": "object",
+          "properties": {
+            "tokens": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "zones": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "variables": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            },
+            "scores": {
+              "anyOf": [
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "string",
+                  "const": "unknown"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tokens",
+            "zones",
+            "variables",
+            "scores"
+          ],
+          "additionalProperties": false
+        },
+        "mayTouchTokens": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string",
+              "const": "unknown"
+            }
+          ]
+        },
+        "mayTouchZones": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string",
+              "const": "unknown"
+            }
+          ]
+        },
+        "mayTouchVariables": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string",
+              "const": "unknown"
+            }
+          ]
+        },
+        "mayTouchScores": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            {
+              "type": "string",
+              "const": "unknown"
+            }
+          ]
+        }
+      },
+      "required": [
+        "writes",
+        "reads",
+        "mayTouchTokens",
+        "mayTouchZones",
+        "mayTouchVariables",
+        "mayTouchScores"
+      ],
+      "additionalProperties": false
+    }
+  },
   "$id": "EvalReport.schema.json"
 }

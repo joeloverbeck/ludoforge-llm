@@ -232,10 +232,11 @@ Document the `preview.budget` shape (strategy, fullCandidateCap, minPerGroup, pl
 ## Outcome
 
 Completed: 2026-05-06
+Outcome amended: 2026-05-06
 
 - Landed the Phase A atomic migration from `preview.topK` to `preview.budget` across compiled types/schema, authoring validation, generated schema, FITL authored profiles, compiled policy catalog fixtures, docs, and tests.
 - Replaced the move-only top-K gate with deterministic balanced coverage plus stable prior fill via `allocatePreviewBudget` and `previewGroupKey`; `selectionReason` now records `coverage`, `prior`, or `gated`, and `previewGatedCount` parity remains covered by tests.
 - Deleted `pickTopKByMoveOnlyScore`, removed the obsolete `derive-topk-floor.mjs` perf probe, and added residue tests proving the removed cap/helper are absent from owned source/profile/fixture surfaces.
-- Deviations from the original draft: the FITL `>= 60% differentiating` canary was retired as a Phase A terminal gate after live evidence showed balanced coverage alone remained red; active tickets `tickets/157PREVBUDBALCOV-002.md` and `tickets/157PREVBUDBALCOV-003.md` own structural-impact and widening residuals. The drafted hard-wired `widenedBecauseUniform: false` trace field did not land in Phase A; active ticket `tickets/157PREVBUDBALCOV-003.md` owns that trace surface and runtime behavior.
+- Deviations from the original draft: the FITL `>= 60% differentiating` canary was retired as a Phase A terminal gate after live evidence showed balanced coverage alone remained red; archived ticket `archive/tickets/157PREVBUDBALCOV-002.md` and active ticket `tickets/157PREVBUDBALCOV-003.md` own structural-impact and widening residuals. The drafted hard-wired `widenedBecauseUniform: false` trace field did not land in Phase A; active ticket `tickets/157PREVBUDBALCOV-003.md` owns that trace surface and runtime behavior.
 - No-commit evidence handling: the required re-bless evidence for `fitl-policy-catalog.golden.json` and `texas-policy-catalog.golden.json` is recorded in this ticket's implementation/proof ledger instead of an implementing commit body.
 - Verification passed: `pnpm turbo schema:artifacts`; focused built Node test lane for allocator/group-key/compiler/no-residue/authoring fallout (`76` tests, `7` suites); `pnpm turbo typecheck`; `pnpm turbo lint`; `pnpm -F @ludoforge/engine test` (`64/64` default files); `pnpm turbo test` (`5/5` tasks; engine `64/64` files, runner `205` files / `2019` tests); `pnpm run check:ticket-deps`.

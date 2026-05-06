@@ -13,6 +13,7 @@ import { assertDataAssetCascadeSuppression, assertNoDiagnostics, assertNoErrors 
 import { applyMove, asActionId, initialState, validateGameDef } from '../../src/kernel/index.js';
 import { readCompilerFixture } from '../helpers/production-spec-helpers.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 
 describe('compile pipeline integration', () => {
   it('passes metadata name and description through to GameDef only when provided', () => {
@@ -204,7 +205,7 @@ actor: 'active',
     });
 
     assertNoDiagnostics(compiled);
-    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(compiled.gameDef?.actions[0]?.effects), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '0',
@@ -251,7 +252,7 @@ actor: 'active',
     });
 
     assertNoDiagnostics(compiled);
-    assert.deepEqual(compiled.gameDef?.actions[0]?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(compiled.gameDef?.actions[0]?.effects), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '0',

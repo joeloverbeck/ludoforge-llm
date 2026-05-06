@@ -4,6 +4,7 @@ import { describe, it } from 'node:test';
 
 import { lowerEffectArray, type EffectLoweringContext } from '../../src/cnl/compile-effects.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 
 const context: EffectLoweringContext = {
   ownershipByBase: {
@@ -221,7 +222,7 @@ describe('compile-effects binding scope validation', () => {
       result.diagnostics.filter((diagnostic) => diagnostic.severity === 'error'),
       [],
     );
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         let: {
           bind: '$targetFactions',

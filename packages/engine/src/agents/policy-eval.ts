@@ -618,6 +618,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             considerations,
             activeCandidates,
             moveOnlyConsiderationIds,
+            moveConsiderationIds,
             profile.preview.budget ?? DEFAULT_PREVIEW_BUDGET,
           );
       const previewAllowedKeys = allocatorOutput.allowedKeys;

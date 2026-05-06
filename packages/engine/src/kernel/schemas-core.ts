@@ -953,6 +953,26 @@ const CompiledAgentDependencyRefsSchema = z
   })
   .strict();
 
+const EffectFootprintTargetSetSchema = z.union([z.array(StringSchema), z.literal('unknown')]);
+const EffectFootprintSurfaceSchema = z
+  .object({
+    tokens: EffectFootprintTargetSetSchema,
+    zones: EffectFootprintTargetSetSchema,
+    variables: EffectFootprintTargetSetSchema,
+    scores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+const EffectFootprintSchema = z
+  .object({
+    writes: EffectFootprintSurfaceSchema,
+    reads: EffectFootprintSurfaceSchema,
+    mayTouchTokens: EffectFootprintTargetSetSchema,
+    mayTouchZones: EffectFootprintTargetSetSchema,
+    mayTouchVariables: EffectFootprintTargetSetSchema,
+    mayTouchScores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+
 const CompiledAgentStateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
@@ -993,6 +1013,7 @@ const CompiledAgentConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+    readFootprint: EffectFootprintSchema.optional(),
   })
   .strict();
 
@@ -1006,6 +1027,7 @@ const CompiledPolicyConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+    readFootprint: EffectFootprintSchema.optional(),
   })
   .strict();
 

@@ -18,7 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
-   - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale
+   - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
 5. If the user wants archival or follow-up review, hand off to `post-ticket-review`. When the main remaining work is archival hygiene, dependency integrity, or adjacent-ticket review, suggest it as the default next step. If this implementation superseded semantics in a recently archived sibling, call that out in the handoff.
@@ -59,6 +59,7 @@ Suggested late-edit proof-validity ledger:
 - `late edits`: `<paths changed after first final-proof lane>`
 - `edit class`: `runtime | test | fixture | schema/artifact | ticket/spec closeout | dependency graph | clerical`
 - `proof invalidation`: `<affected lanes rerun, or no-invalidation rationale such as "unused-code removal only; reran lint/typecheck/build; no runtime/test/acceptance-story change">`
+- `no-invalidation`: for status/proof transcription only, `terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`
 
 ## Durable Outcome Block
 

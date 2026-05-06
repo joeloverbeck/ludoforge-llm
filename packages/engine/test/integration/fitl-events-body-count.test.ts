@@ -13,6 +13,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
@@ -84,10 +85,10 @@ describe('FITL card-72 Body Count', () => {
       "'If it's dead, it's VC': Place 1 VC Guerrilla in each Active Opposition space, 2 NVA Troops in each Laos/Cambodia space.",
     );
     assert.equal(card?.tags?.includes('momentum'), true);
-    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.setupEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.lastingEffects?.[0]?.setupEffects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'mom_bodyCount', value: true } },
     ]));
-    assert.deepEqual(card?.unshaded?.lastingEffects?.[0]?.teardownEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.lastingEffects?.[0]?.teardownEffects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'mom_bodyCount', value: false } },
     ]));
 

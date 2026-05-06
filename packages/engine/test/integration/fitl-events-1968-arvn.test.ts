@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -56,8 +57,8 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
     assert.equal(card?.tags?.includes('ARVN'), true);
     assert.equal(card?.unshaded?.text, 'ARVN in 1 Transport destination after Ops may free Assault.');
     assert.equal(card?.shaded?.text, 'Transport Rangers only.');
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'unshaded' } }]));
-    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'shaded' } }]));
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'unshaded' } }]));
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: 'cap_armoredCavalry', state: 'shaded' } }]));
   });
 
   it('encodes card 77 (Detente) with insurgent-only unshaded losses and the shaded NVA-then-VC branch structure', () => {
@@ -72,7 +73,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
       card?.unshaded?.text,
       'Cut NVA and VC Resources each to half their total (round down). 5 Available NVA Troops out of play.',
     );
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'nvaResources', value: { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'gvar', var: 'nvaResources' }, right: 2 } } },
       { setVar: { scope: 'global', var: 'vcResources', value: { _t: 6, op: 'floorDiv', left: { _t: 2, ref: 'gvar', var: 'vcResources' }, right: 2 } } },
       {
@@ -101,7 +102,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
     assert.deepEqual(card?.shaded?.branches?.map((branch) => branch.id), ['detente-nva-add-resources', 'detente-nva-infiltrate']);
 
     const addResources = card?.shaded?.branches?.find((branch) => branch.id === 'detente-nva-add-resources');
-    assert.deepEqual(addResources?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(addResources?.effects), tagEffectAsts([
       { addVar: { scope: 'global', var: 'nvaResources', delta: 9 } },
       {
         grantFreeOperation: {
@@ -133,7 +134,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
         actionIds: ['infiltrate'],
       },
     ]);
-    assert.deepEqual(infiltrate?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(infiltrate?.effects), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: 'vc',
@@ -171,7 +172,7 @@ describe('FITL 1968 ARVN-first event-card production spec', () => {
     ]);
 
     const unshadedEffects = card?.unshaded?.effects ?? [];
-    assert.deepEqual(unshadedEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(unshadedEffects), tagEffectAsts([
       { shiftMarker: { space: 'saigon:none', marker: 'supportOpposition', delta: 1 } },
       { addVar: { scope: 'global', var: 'patronage', delta: 5 } },
     ]));

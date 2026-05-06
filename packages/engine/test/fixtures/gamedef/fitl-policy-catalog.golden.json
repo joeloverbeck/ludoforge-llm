@@ -1936,6 +1936,24 @@
           ],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preserveResources": {
@@ -1965,6 +1983,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferEvent": {
@@ -1997,6 +2033,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferTrainAction": {
@@ -2027,6 +2081,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferPatrolAction": {
@@ -2057,6 +2129,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferAssaultAction": {
@@ -2087,6 +2177,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferAdviseAction": {
@@ -2117,6 +2225,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferSweepAction": {
@@ -2147,6 +2273,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferGovernAction": {
@@ -2177,6 +2321,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferRallyAction": {
@@ -2207,6 +2369,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferRallyWeighted": {
@@ -2239,6 +2419,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferMarchAction": {
@@ -2269,6 +2467,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferAttackAction": {
@@ -2299,6 +2515,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferTerrorAction": {
@@ -2329,6 +2563,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferTaxAction": {
@@ -2359,6 +2611,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferTaxWeighted": {
@@ -2391,6 +2661,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferGovernWeighted": {
@@ -2423,6 +2711,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferTrainWeighted": {
@@ -2455,6 +2761,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferSweepWeighted": {
@@ -2487,6 +2811,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferAssaultWeighted": {
@@ -2519,6 +2861,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferSubvertAction": {
@@ -2549,6 +2909,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferInfiltrateAction": {
@@ -2579,6 +2957,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferBombardAction": {
@@ -2609,6 +3005,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "trainWhenFewTroops": {
@@ -2659,6 +3073,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "governWhenPatronageLow": {
@@ -2709,6 +3141,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "trainWhenControlLow": {
@@ -2759,6 +3209,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferNormalizedMargin": {
@@ -2841,6 +3309,24 @@
             "minMarginScore"
           ],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferStrongNormalizedMargin": {
@@ -2923,6 +3409,24 @@
             "minMarginScore"
           ],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "valueCapabilityGain": {
@@ -2950,6 +3454,24 @@
           ],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "penalizeAttack": {
@@ -2980,6 +3502,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "observeGameState": {
@@ -3052,6 +3592,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       }
     },
@@ -3351,5 +3909,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "4c870e21cd9528392a654af75d25463b0cba52837efb524832d66d01d5cb398d"
+  "catalogFingerprint": "5982af1a1c5e45a638c362488c42a78b499e089543cefff21cbe6a1a75f690fb"
 }

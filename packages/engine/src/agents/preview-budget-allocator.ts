@@ -1,4 +1,5 @@
 import type { CompiledAgentPreviewBudgetConfig, CompiledPolicyConsideration } from '../kernel/types.js';
+import { structuralImpactScore, unionFootprints } from '../cnl/compile-effect-footprint.js';
 import { compareCodepoint, previewGroupKey, type PreviewGroupCandidate } from './preview-group-key.js';
 import type { PolicyEvaluationCandidate, PolicyEvaluationContext } from './policy-evaluation-core.js';
 
@@ -18,6 +19,7 @@ export function allocatePreviewBudget(
   considerations: Readonly<Record<string, CompiledPolicyConsideration>>,
   candidates: readonly PreviewBudgetCandidate[],
   moveOnlyConsiderationIds: readonly string[],
+  moveConsiderationIds: readonly string[],
   budget: CompiledAgentPreviewBudgetConfig,
 ): AllocatorOutput {
   const cap = Math.min(budget.fullCandidateCap, candidates.length);
@@ -33,6 +35,12 @@ export function allocatePreviewBudget(
   }
 
   const priorScores = new Map<string, number>();
+  const previewReadFootprint = unionFootprints(
+    moveConsiderationIds
+      .map((considerationId) => considerations[considerationId])
+      .filter((consideration): consideration is CompiledPolicyConsideration => consideration?.costClass === 'preview')
+      .flatMap((consideration) => consideration.readFootprint === undefined ? [] : [consideration.readFootprint]),
+  );
   const priorScore = (candidate: PreviewBudgetCandidate): number => {
     const existing = priorScores.get(candidate.stableMoveKey);
     if (existing !== undefined) return existing;
@@ -40,6 +48,14 @@ export function allocatePreviewBudget(
       total + evaluation.evaluateConsideration(considerations, considerationId, candidate)
     ), 0);
     priorScores.set(candidate.stableMoveKey, score);
+    return score;
+  };
+  const impactScores = new Map<string, number>();
+  const impactScore = (candidate: PreviewBudgetCandidate): number => {
+    const existing = impactScores.get(candidate.stableMoveKey);
+    if (existing !== undefined) return existing;
+    const score = structuralImpactScore(evaluation.getActionEffectFootprint(candidate.actionId), previewReadFootprint);
+    impactScores.set(candidate.stableMoveKey, score);
     return score;
   };
 
@@ -76,7 +92,7 @@ export function allocatePreviewBudget(
 
   const remaining = candidates
     .filter((candidate) => !allowedKeys.has(candidate.stableMoveKey))
-    .sort((left, right) => compareRankedCandidates(left, right, priorScore));
+    .sort((left, right) => compareRankedCandidates(left, right, (candidate) => priorScore(candidate) * impactScore(candidate)));
   for (const candidate of remaining) {
     if (quota <= 0) break;
     allowedKeys.add(candidate.stableMoveKey);

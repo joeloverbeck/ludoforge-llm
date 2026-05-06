@@ -14,6 +14,18 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 const paramExpr = (id: string): AgentPolicyExpr => ({ kind: 'param', id });
+const emptyReadFootprint = {
+  writes: { tokens: [], zones: [], variables: [], scores: [] },
+  reads: { tokens: [], zones: [], variables: [], scores: [] },
+  mayTouchTokens: [],
+  mayTouchZones: [],
+  mayTouchVariables: [],
+  mayTouchScores: [],
+};
+const unknownReadFootprint = {
+  ...emptyReadFootprint,
+  reads: { tokens: 'unknown', zones: 'unknown', variables: 'unknown', scores: 'unknown' },
+};
 
 /** Observer that makes victory.currentMargin public (equivalent to old agents.visibility). */
 function createTestObservability(overrides?: GameSpecObservabilitySection['observers']): GameSpecObservabilitySection {
@@ -357,6 +369,7 @@ describe('agents authoring surface', () => {
             aggregates: [],
             strategicConditions: [],
           },
+          readFootprint: unknownReadFootprint,
         },
       },
       tieBreakers: {
@@ -859,6 +872,7 @@ describe('agents authoring surface', () => {
         aggregates: [],
         strategicConditions: [],
       },
+      readFootprint: emptyReadFootprint,
     });
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['preferNamedOption']);
   });
@@ -937,6 +951,7 @@ describe('agents authoring surface', () => {
         aggregates: [],
         strategicConditions: [],
       },
+      readFootprint: emptyReadFootprint,
     });
   });
 

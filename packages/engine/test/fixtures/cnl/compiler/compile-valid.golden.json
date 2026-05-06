@@ -58,6 +58,7 @@
         "cost": [],
         "effects": [
           {
+            "_k": 29,
             "forEach": {
               "bind": "$p",
               "over": {
@@ -65,13 +66,68 @@
               },
               "effects": [
                 {
+                  "_k": 7,
                   "draw": {
                     "from": "deck:none",
                     "to": "hand:$p",
                     "count": 1
+                  },
+                  "footprint": {
+                    "writes": {
+                      "tokens": "unknown",
+                      "zones": [
+                        "deck:none",
+                        "hand:$p"
+                      ],
+                      "variables": [],
+                      "scores": []
+                    },
+                    "reads": {
+                      "tokens": [],
+                      "zones": [
+                        "deck:none",
+                        "hand:$p"
+                      ],
+                      "variables": [],
+                      "scores": []
+                    },
+                    "mayTouchTokens": "unknown",
+                    "mayTouchZones": [
+                      "deck:none",
+                      "hand:$p"
+                    ],
+                    "mayTouchVariables": [],
+                    "mayTouchScores": []
                   }
                 }
               ]
+            },
+            "footprint": {
+              "writes": {
+                "tokens": "unknown",
+                "zones": [
+                  "deck:none",
+                  "hand:$p"
+                ],
+                "variables": [],
+                "scores": []
+              },
+              "reads": {
+                "tokens": [],
+                "zones": [
+                  "deck:none",
+                  "hand:$p"
+                ],
+                "variables": [],
+                "scores": []
+              },
+              "mayTouchTokens": "unknown",
+              "mayTouchZones": [
+                "deck:none",
+                "hand:$p"
+              ],
+              "mayTouchVariables": [],
+              "mayTouchScores": []
             }
           }
         ],

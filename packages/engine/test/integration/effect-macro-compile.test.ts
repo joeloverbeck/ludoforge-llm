@@ -9,6 +9,7 @@ import {
   type EffectMacroDef,
 } from '../../src/cnl/index.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 
 function makeMinimalDoc() {
   return {
@@ -60,7 +61,7 @@ actor: 'active',
     assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
 
-    assert.deepEqual(result.gameDef.setup, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.gameDef.setup), tagEffectAsts([
       { setVar: { scope: 'global', var: 'score', value: 10 } },
     ]));
   });
@@ -98,7 +99,7 @@ actor: 'active',
 
     const actionEffects = result.gameDef.actions[0]?.effects;
     assert.ok(actionEffects !== undefined);
-    assert.deepEqual(actionEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(actionEffects), tagEffectAsts([
       { addVar: { scope: 'global', var: 'score', delta: 5 } },
     ]));
   });
@@ -147,7 +148,7 @@ actor: 'active',
     assert.deepEqual(errors, [], `Unexpected errors: ${JSON.stringify(errors, null, 2)}`);
     assert.ok(result.gameDef !== null, 'Expected valid GameDef');
 
-    assert.deepEqual(result.gameDef.setup, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.gameDef.setup), tagEffectAsts([
       { setVar: { scope: 'global', var: 'score', value: 0 } },
       { setVar: { scope: 'global', var: 'count', value: 0 } },
     ]));

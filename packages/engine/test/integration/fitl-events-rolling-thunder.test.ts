@@ -17,6 +17,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -66,7 +67,7 @@ describe('FITL card-10 Rolling Thunder', () => {
     assert.deepEqual(card?.unshaded?.eligibilityOverrides, [
       { target: { kind: 'seat', seat: 'nva' }, eligible: false, windowId: 'make-ineligible' },
     ]);
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       { addVar: { scope: 'global', var: 'trail', delta: -2 } },
       { addVar: { scope: 'global', var: 'nvaResources', delta: -9 } },
     ]));

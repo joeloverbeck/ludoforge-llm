@@ -1,10 +1,59 @@
 # 157PREVBUDBALCOV-002: Phase B — Compiler-side EffectFootprint and structural-impact prior
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Large
 **Engine Changes**: Yes — new `compile-effect-footprint.ts` module; existing `compile-effects-*.ts` emit footprints; `policy-evaluation-core.ts` types; allocator prior-pass scoring in `policy-eval.ts`
 **Deps**: `archive/tickets/157PREVBUDBALCOV-001.md`
+
+## Implementation Outcome (2026-05-06)
+
+**Closeout state**: implemented in code; terminal proof passed on 2026-05-06.
+
+Phase B landed as compiler-emitted conservative footprint metadata and allocator-side structural impact ranking:
+
+- Added `EffectFootprint` metadata on compiled `EffectAST` nodes, with schema support in the generated GameDef/Trace effect schemas.
+- Added `compile-effect-footprint.ts` for deterministic footprint derivation, unioning, preview-read footprint derivation, and integer-only `structuralImpactScore`.
+- Emitted footprints from the existing compiled-effect wrappers, including nested lowered effect arrays.
+- Added `readFootprint` to compiled policy/agent considerations and regenerated the policy-catalog goldens.
+- Exposed action-effect footprints through `PolicyEvaluationCore.getActionEffectFootprint`.
+- Updated the preview-budget allocator's prior-fill pass to rank by `priorScore * structuralImpactScore`, while leaving Phase A coverage ordering unchanged.
+- Updated JSON Schema artifact generation to use reusable `$ref` definitions and exact effect `_k` literals, preserving footprint schema support without producing AJV stack overflows on production-sized Texas GameDefs.
+
+Semantic corrections against the draft ticket:
+
+- The live compiled-effect type is `EffectAST`; the ticket's `CompiledEffect` wording maps to that live type.
+- The live allocator integration point is `preview-budget-allocator.ts`, called from `policy-eval.ts`, not an inline `for c in priorRanked` block inside `policy-eval.ts`.
+- The spec's one-line `priorScore + structuralImpactScore` mention was treated as stale; this ticket's multiplicative `priorScore * structuralImpactScore` acceptance text is authoritative.
+- The generated fallout includes `packages/engine/schemas/Trace.schema.json` as well as `GameDef.schema.json`, because trace schemas embed the GameDef effect schema.
+
+Diagnostic FITL utility probe:
+
+- Command shape: production FITL, seeds `1..10`, `maxTurns=5`, `PolicyAgent({ traceLevel: 'summary' })`, `fullCandidateCap` at production default.
+- Result: `decisions=2797`, `none=1731`, `constant=628`, `lowInformation=69`, `differentiating=369`.
+- Interpreted rate: `369/2797` over all policy decisions, or `369/1066` over preview-active decisions excluding `none`.
+- This is diagnostic successor input for ticket 003, not a terminal acceptance gate for Phase B. The denominator differs from Phase A's archived 29-decision sampled corpus, so it is not recorded as a direct green/red replacement for that sample.
+
+Source-size/runtime-surface ledger:
+
+- New footprint logic lives in `compile-effect-footprint.ts`; active edits to existing large compiler/schema files stayed surgical.
+- Preexisting file-size risk remains in `compile-agents.ts`/schema surfaces; this ticket did not add new compiler-agent bulk.
+- Runtime surface breadth: policy/agent-only for allocator behavior, shared GameDef/Trace schema metadata for footprint serialization.
+
+Final proof lanes:
+
+- `pnpm run check:ticket-deps` — passed before status flip; rerun after status flip passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-effect-footprint.test.js dist/test/unit/agents/preview-budget-allocator.test.js` — passed, 14 tests across 2 suites.
+- `pnpm turbo schema:artifacts` — passed; regenerated `GameDef.schema.json`, `Trace.schema.json`, and `EvalReport.schema.json`.
+- `pnpm -F @ludoforge/engine test` — passed, default lane summary `64/64 files passed`.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — passed, 5 successful tasks.
+
+Verification substitution:
+
+- The drafted `pnpm -F @ludoforge/engine test:unit -- agents/...` command does not filter Node test files in the live package script; it runs the entire `dist/test/unit/**/*.test.js` glob and passes `agents/...` as test-runner args. The owned focused witness is therefore the direct compiled Node-test command above. The broad `pnpm -F @ludoforge/engine test` lane remains in the final proof set.
 
 ## Problem
 
@@ -146,3 +195,16 @@ For every action in the FITL action corpus, the footprint must mark every variab
 2. `pnpm -F @ludoforge/engine test:unit -- agents/preview-budget-allocator`
 3. `pnpm turbo schema:artifacts`
 4. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completed: 2026-05-06
+
+- Landed Phase B compiler-emitted conservative `EffectFootprint` metadata on compiled effects, including schema support and generated `GameDef`/`Trace`/`EvalReport` schema artifacts.
+- Added deterministic footprint derivation, preview-read footprint derivation, footprint unioning, and integer-only structural-impact scoring in `compile-effect-footprint.ts`.
+- Wired action-effect footprints and consideration `readFootprint` data into policy evaluation, then updated the preview-budget allocator prior pass to rank by `priorScore * structuralImpactScore` while preserving Phase A coverage ordering.
+- Updated policy catalog and compiler goldens for the new footprint metadata, plus exact-shape tests through a shared footprint-stripping helper where the owned assertion is not the new metadata.
+- Deviations from the draft: the live compiled-effect type is `EffectAST`; the live allocator integration point is `preview-budget-allocator.ts`; the generated fallout includes `Trace.schema.json`; the spec's one-line additive-score mention was stale and the ticket's multiplicative prior acceptance text was kept authoritative.
+- Diagnostic FITL utility probe recorded: `decisions=2797`, `none=1731`, `constant=628`, `lowInformation=69`, `differentiating=369`; this is successor input for Phase C, not a Phase B terminal gate.
+- Post-review correction: token movement, draw/create/remove-by-priority, and zone-marker effects now mark affected zones as touched for structural impact; `'unknown'` target sets no longer score against preview surfaces that read no entries for that surface. `compile-valid.golden.json` was refreshed for the resulting precise zone-touch footprint drift.
+- Verification passed: `pnpm run check:ticket-deps`; `pnpm -F @ludoforge/engine build`; focused built Node lane for `preview-effect-footprint` and `preview-budget-allocator` (`15` tests, `2` suites after post-review correction); `pnpm turbo schema:artifacts`; `pnpm -F @ludoforge/engine test` (`64/64` default files after post-review correction); `pnpm turbo lint`; `pnpm turbo typecheck`; `pnpm turbo test`.

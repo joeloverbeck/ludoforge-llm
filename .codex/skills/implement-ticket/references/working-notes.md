@@ -12,6 +12,7 @@
 - `authoritative boundary`: the final owned implementation slice after reassessment
 - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`; if editing `schemas-core.ts`, serialized trace/result unions, generated-schema-bearing types, or other compiled public schema surfaces, default to `schema artifacts likely` until `schema:artifacts:check` proves otherwise
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
+- `reference guidance loaded`: triggered references actually loaded for the current ticket, such as `working-notes`, `schema-and-migration`, `verification`, or `verification-acceptance-proof`; if a normally triggered reference is skipped, record `not loaded + why`
 - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
 - `terminal status plan`: when the ticket status may become terminal; keep the repo-local terminal status, such as `IMPLEMENTED` or `COMPLETED`, pending until final lanes are green, classified, or explicitly substituted
 - `red-gate materiality ledger`: for benchmark/measured-gate tickets, record `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`; use `not applicable` for non-measured tickets

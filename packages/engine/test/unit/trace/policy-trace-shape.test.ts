@@ -29,6 +29,14 @@ const propertySchema = (schema: Record<string, unknown>, property: string): Reco
   return asRecord(properties[property]);
 };
 
+const withDefinitions = (
+  rootSchema: Record<string, unknown>,
+  schema: Record<string, unknown>,
+): Record<string, unknown> => ({
+  ...schema,
+  definitions: rootSchema.definitions,
+});
+
 const findObjectWithProperty = (
   value: unknown,
   property: string,
@@ -116,8 +124,8 @@ describe('policy trace shape', () => {
     const candidatesSchema = propertySchema(agentDecisionSchema!, 'candidates');
     const candidateSchema = asRecord(candidatesSchema.items);
     const ajv = new Ajv({ allErrors: true, strict: false });
-    const validatePreviewUsage = ajv.compile(previewUsageSchema);
-    const validateCandidate = ajv.compile(candidateSchema);
+    const validatePreviewUsage = ajv.compile(withDefinitions(traceSchema, previewUsageSchema));
+    const validateCandidate = ajv.compile(withDefinitions(traceSchema, candidateSchema));
     const trace = buildPolicyAgentDecisionTrace(createMetadata(), 'verbose');
 
     assert.deepEqual(trace.previewUsage.readyRefStats, {});

@@ -14,6 +14,11 @@ import type {
   CompiledPolicyTieBreaker,
   CompiledPolicyZoneSource,
 } from '../kernel/types.js';
+import {
+  computeDependenciesReadFootprint,
+  computePolicyExprReadFootprint,
+  unionFootprints,
+} from './compile-effect-footprint.js';
 
 export interface AgentPolicyLibraryWithExpr {
   readonly stateFeatures: Readonly<Record<string, {
@@ -127,6 +132,12 @@ export function lowerAgentConsiderations(
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
+      readFootprint: unionFootprints([
+        ...(when === null ? [] : [computePolicyExprReadFootprint(when)]),
+        computePolicyExprReadFootprint(weight),
+        computePolicyExprReadFootprint(value),
+        computeDependenciesReadFootprint(consideration.dependencies),
+      ]),
     };
   }
 

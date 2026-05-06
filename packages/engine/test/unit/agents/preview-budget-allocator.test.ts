@@ -23,6 +23,7 @@ import {
 import { withCompiledPolicyCatalog } from '../../helpers/policy-catalog-fixtures.js';
 import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { createTrustedExecutableMove } from '../../../src/kernel/trusted-move.js';
+import { setVar } from '../../../src/kernel/ast-builders.js';
 
 const phaseId = asPhaseId('main');
 const actionId = asActionId('choose');
@@ -43,6 +44,8 @@ function createDef(
   options: {
     readonly materializePreviewInPruning?: boolean;
     readonly usePreviewStateFeatureRows?: boolean;
+    readonly minPerGroup?: number;
+    readonly actionEffects?: Readonly<Record<string, GameDef['actions'][number]['effects']>>;
   } = {},
 ): GameDef {
   const catalog: AgentPolicyCatalog = withCompiledPolicyCatalog({
@@ -163,7 +166,7 @@ function createDef(
         params: {},
         preview: {
           mode: 'exactWorld',
-          budget: { strategy: 'balancedCoverage', fullCandidateCap, minPerGroup: 1 },
+          budget: { strategy: 'balancedCoverage', fullCandidateCap, minPerGroup: options.minPerGroup ?? 1 },
         },
         selection: { mode: 'argmax' },
         use: {
@@ -185,7 +188,10 @@ function createDef(
   return {
     metadata: { id: 'preview-budget-test', players: { min: 2, max: 2 } },
     constants: {},
-    globalVars: [{ name: 'projected', type: 'int', init: 0, min: 0, max: 1000 }],
+    globalVars: [
+      { name: 'projected', type: 'int', init: 0, min: 0, max: 1000 },
+      { name: 'unrelated', type: 'int', init: 0, min: 0, max: 1000 },
+    ],
     perPlayerVars: [],
     zones: [
       { id: asZoneId('board:none'), owner: 'none', visibility: 'public', ordering: 'set', attributes: {} },
@@ -204,7 +210,7 @@ function createDef(
       params: [],
       pre: null,
       cost: [],
-      effects: [],
+      effects: options.actionEffects?.[String(id)] ?? [],
       limits: [],
     })),
     triggers: [],
@@ -229,6 +235,8 @@ function runPreviewBudget(
   options: {
     readonly materializePreviewInPruning?: boolean;
     readonly usePreviewStateFeatureRows?: boolean;
+    readonly minPerGroup?: number;
+    readonly actionEffects?: Readonly<Record<string, GameDef['actions'][number]['effects']>>;
   } = {},
 ): {
   readonly result: ReturnType<typeof evaluatePolicyMoveCore>;
@@ -354,6 +362,22 @@ describe('policy evaluation preview budget allocator', () => {
     assert.equal(result.metadata.previewGatedCount, 1);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.ready, 2);
     assert.equal(result.metadata.previewUsage.outcomeBreakdown.unknownGated, 1);
+  });
+
+  it('uses structural impact to rank the prior pass after coverage is skipped', () => {
+    const moves = [
+      { actionId: asActionId('alpha'), params: { rank: 1 } },
+      { actionId: asActionId('bravo'), params: { rank: 1 } },
+    ];
+    const actionEffects: NonNullable<Parameters<typeof createDef>[1]>['actionEffects'] = {
+      alpha: [setVar({ scope: 'global', var: 'unrelated', value: 1 })],
+      bravo: [setVar({ scope: 'global', var: 'projected', value: 1 })],
+    };
+    const { def, previewedKeys, result } = runPreviewBudget(1, moves, { minPerGroup: 0, actionEffects });
+
+    assert.equal(result.kind, 'success');
+    assert.deepEqual([...previewedKeys], [toMoveIdentityKey(def, moves[1]!)]);
+    assert.equal(result.metadata.candidates.find((candidate) => candidate.stableMoveKey === toMoveIdentityKey(def, moves[1]!))?.selectionReason, 'prior');
   });
 
   it('detects when an already-cached gated preview would have flipped the selected candidate', () => {

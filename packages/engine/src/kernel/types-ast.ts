@@ -340,6 +340,24 @@ export type TransferVarEndpoint = ScopedVarEndpointContract<
   ScopedVarNameExpr
 >;
 
+export type EffectFootprintTargetSet = readonly string[] | 'unknown';
+
+export interface EffectFootprintSurface {
+  readonly tokens: EffectFootprintTargetSet;
+  readonly zones: EffectFootprintTargetSet;
+  readonly variables: EffectFootprintTargetSet;
+  readonly scores: EffectFootprintTargetSet;
+}
+
+export interface EffectFootprint {
+  readonly writes: EffectFootprintSurface;
+  readonly reads: EffectFootprintSurface;
+  readonly mayTouchTokens: EffectFootprintTargetSet;
+  readonly mayTouchZones: EffectFootprintTargetSet;
+  readonly mayTouchVariables: EffectFootprintTargetSet;
+  readonly mayTouchScores: EffectFootprintTargetSet;
+}
+
 export type SetVarPayload = ScopedVarPayloadContract<
   'global',
   'pvar',
@@ -646,7 +664,10 @@ export interface EffectKindMap {
 export type EffectKind = keyof EffectKindMap;
 
 export type WithKindTag<K extends EffectKind> =
-  EffectKindMap[K] & { readonly _k: typeof EFFECT_KIND_TAG[K] };
+  EffectKindMap[K] & {
+    readonly _k: typeof EFFECT_KIND_TAG[K];
+    readonly footprint?: EffectFootprint;
+  };
 
 export type EffectOfKind<K extends EffectKind> = WithKindTag<K>;
 export type EffectAST = { [K in EffectKind]: WithKindTag<K> }[EffectKind];

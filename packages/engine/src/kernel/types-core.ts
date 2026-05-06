@@ -12,6 +12,7 @@ import type {
   ActionExecutorSel,
   ConditionAST,
   EffectAST,
+  EffectFootprint,
   MoveParamScalar,
   MoveParamValue,
   NumericValueExpr,
@@ -617,6 +618,7 @@ export interface CompiledPolicyConsideration {
     readonly max?: number;
   };
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly readFootprint?: EffectFootprint;
 }
 
 export interface CompiledPolicyTieBreaker {
@@ -810,6 +812,7 @@ export interface CompiledAgentConsideration {
     readonly max?: number;
   };
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly readFootprint?: EffectFootprint;
 }
 
 export interface CompiledAgentTieBreaker {

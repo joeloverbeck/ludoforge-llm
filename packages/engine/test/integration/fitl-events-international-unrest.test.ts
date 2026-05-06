@@ -17,6 +17,7 @@ import {
 } from '../../src/kernel/index.js';
 import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -120,7 +121,7 @@ describe('FITL card-57 International Unrest', () => {
     assert.equal((card?.unshaded?.effects?.[0] as { chooseN?: { bind?: string; min?: number; max?: number } })?.chooseN?.bind, '$casualtiesToAvailable');
     assert.equal((card?.unshaded?.effects?.[0] as { chooseN?: { min?: number } })?.chooseN?.min, 0);
     assert.equal((card?.unshaded?.effects?.[0] as { chooseN?: { max?: number } })?.chooseN?.max, 2);
-    assert.deepEqual((card?.shaded?.effects?.[1] as { rollRandom?: { min?: number; max?: number } })?.rollRandom, tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints((card?.shaded?.effects?.[1] as { rollRandom?: { min?: number; max?: number } })?.rollRandom), tagEffectAsts({
       bind: '$dieRoll',
       min: 1,
       max: 6,

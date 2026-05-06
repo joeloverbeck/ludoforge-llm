@@ -14,6 +14,7 @@ import {
 } from '../../src/kernel/index.js';
 import { resolveDecisionContinuation } from '../../src/kernel/microturn/continuation.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { matchesDecisionRequest } from '../helpers/decision-key-matchers.js';
 import { applyMoveWithResolvedDecisionIds, type DecisionOverrideRule } from '../helpers/decision-param-helpers.js';
@@ -178,8 +179,8 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       assert.notEqual(card, undefined);
       assert.equal(card?.tags?.includes('capability'), true, `${expected.id} must include capability tag`);
       assert.equal(card?.tags?.includes('NVA'), true, `${expected.id} must include NVA tag`);
-      assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
-      assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
+      assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
+      assert.deepEqual(stripEffectFootprints(card?.shaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
 
       if (expected.id === 'card-32') {
         assert.equal(
@@ -238,7 +239,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.notEqual(card, undefined);
     assert.equal(card?.unshaded?.text, 'Degrade the Trail by 3 boxes.');
     assert.equal(card?.shaded?.text, 'Improve Trail by 1 box. Then add three times Trail value to NVA Resources.');
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       {
         addVar: {
           scope: 'global',
@@ -336,16 +337,16 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       | undefined;
     assert.equal(filterCondition?.op, 'and');
     assert.equal(filterCondition?.args?.length, 3);
-    assert.deepEqual(card?.unshaded?.targets?.[0]?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.targets?.[0]?.effects), tagEffectAsts([
       { setMarker: { space: '$targetSpace', marker: 'supportOpposition', state: 'passiveSupport' } },
     ]));
-    assert.deepEqual(card?.unshaded?.effects?.[0], tagEffectAsts([{ addVar: { scope: 'global', var: 'patronage', delta: 2 } }])[0]);
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects?.[0]), tagEffectAsts([{ addVar: { scope: 'global', var: 'patronage', delta: 2 } }])[0]);
 
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-bombing-pause');
     assert.notEqual(momentum, undefined);
     assert.equal(momentum?.duration, 'round');
-    assert.deepEqual(momentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_bombingPause', value: true } }]));
-    assert.deepEqual(momentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_bombingPause', value: false } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.setupEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_bombingPause', value: true } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.teardownEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_bombingPause', value: false } }]));
   });
 
   it('encodes card 42 (Chou En Lai) with NVA-selected die-roll troop removal and shaded trail-value resource gain', () => {
@@ -364,7 +365,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     );
 
     const unshadedEffects = card?.unshaded?.effects ?? [];
-    assert.deepEqual(unshadedEffects[0], tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: -10 } }])[0]);
+    assert.deepEqual(stripEffectFootprints(unshadedEffects[0]), tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: -10 } }])[0]);
     const rollRandom = (unshadedEffects[1] as { rollRandom?: { bind?: string; min?: number; max?: number; in?: unknown[] } })?.rollRandom;
     assert.equal(rollRandom?.bind, '$chouEnLaiTroopLossRoll');
     assert.equal(rollRandom?.min, 1);
@@ -384,7 +385,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.equal(typeof (guardedRemoval?.then?.[1] as { forEach?: unknown })?.forEach, 'object');
 
     const shadedEffects = card?.shaded?.effects ?? [];
-    assert.deepEqual(shadedEffects[0], tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: 10 } }])[0]);
+    assert.deepEqual(stripEffectFootprints(shadedEffects[0]), tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: 10 } }])[0]);
     const shadedTrailLet = (
       shadedEffects[1] as { let?: { bind?: string; value?: unknown; in?: Array<{ addVar?: unknown }> } }
     )?.let;
@@ -603,7 +604,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       card?.shaded?.text,
       'Photos galvanize home front: NVA place 6 Troops outside South Vietnam, add +6 Resources, and, if executing, stay Eligible.',
     );
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       {
         removeByPriority: {
           budget: 3,
@@ -628,7 +629,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
     assert.equal(card?.shaded?.effects?.length, 3);
     assert.equal(card?.shaded?.effects?.[0] !== undefined && 'chooseN' in card.shaded.effects[0], true);
     assert.equal(card?.shaded?.effects?.[1] !== undefined && 'forEach' in card.shaded.effects[1], true);
-    assert.deepEqual(card?.shaded?.effects?.[2], tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: 6 } }])[0]);
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.effects?.[2]), tagEffectAsts([{ addVar: { scope: 'global', var: 'nvaResources', delta: 6 } }])[0]);
     assert.deepEqual(card?.shaded?.eligibilityOverrides, [
       {
         target: { kind: 'active' },

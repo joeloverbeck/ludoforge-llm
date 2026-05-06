@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `policy-eval.ts` allocator widening + per-decision-class memory; `policy-evaluation-core.ts` `previewUsage` trace surface
-**Deps**: `archive/tickets/157PREVBUDBALCOV-001.md`
+**Deps**: `archive/tickets/157PREVBUDBALCOV-001.md`, `archive/tickets/157PREVBUDBALCOV-002.md`
 
 ## Problem
 

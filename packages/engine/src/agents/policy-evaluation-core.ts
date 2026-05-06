@@ -14,6 +14,7 @@ import {
   compilePolicyBytecode,
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
+import { computeEffectFootprint, unionFootprints } from '../cnl/compile-effect-footprint.js';
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AttributeValue,
@@ -512,6 +513,17 @@ export class PolicyEvaluationContext {
     }
     onContribution?.(contribution);
     return contribution;
+  }
+
+  getActionEffectFootprint(actionId: string): import('../kernel/types.js').EffectFootprint | undefined {
+    const action = this.input.def.actions.find((entry) => String(entry.id) === actionId);
+    if (action === undefined) {
+      return undefined;
+    }
+    return unionFootprints([
+      ...action.cost.map((effect) => effect.footprint ?? computeEffectFootprint(effect)),
+      ...action.effects.map((effect) => effect.footprint ?? computeEffectFootprint(effect)),
+    ]);
   }
 
   evaluateCompiledExpr(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {

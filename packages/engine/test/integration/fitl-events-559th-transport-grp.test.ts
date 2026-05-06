@@ -18,6 +18,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -75,8 +76,8 @@ describe('FITL card-46 559th Transport Grp', () => {
       card?.unshaded?.text,
       'Degrade the Trail by 2 boxes. Until Coup, Infiltrate is max 1 space. MOMENTUM',
     );
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ addVar: { scope: 'global', var: 'trail', delta: -2 } }]));
-    assert.deepEqual(card?.unshaded?.lastingEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([{ addVar: { scope: 'global', var: 'trail', delta: -2 } }]));
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.lastingEffects), tagEffectAsts([
       {
         id: 'mom-559th-transport-grp',
         duration: 'round',
@@ -101,7 +102,7 @@ describe('FITL card-46 559th Transport Grp', () => {
         actionIds: ['infiltrate'],
       },
     ]);
-    assert.deepEqual(card?.shaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.effects), tagEffectAsts([
       {
         let: {
           bind: '$trailValue',

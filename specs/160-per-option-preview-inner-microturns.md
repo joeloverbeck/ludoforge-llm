@@ -6,7 +6,7 @@
 **Dependencies**:
 - Spec 158 [microturn-policy-scope-and-refs] (DRAFT) — `microturn.option.*` refs exist; this spec adds the `preview.option.*` family that's queryable from microturn-scope considerations.
 - Spec 159 [preview-policy-guided-completion] (DRAFT) — per-option synthetic completion uses `policyGuided` as the inner-completion policy (with the same explicit fallback semantics).
-- Spec 156 [preview-observability-and-utility-metrics] (DRAFT) — per-option preview emits the same `selectionReason`, synthetic-decision, and utility metrics as action-selection preview.
+- Spec 156 [preview-observability-and-utility-metrics] (archived) — per-option preview emits the same `selectionReason`, synthetic-decision, and utility metrics as action-selection preview.
 - Spec 146 [scoped-draft-state-for-preview-drive] (archived) — bounded copy-on-write draft state. Per-option preview reuses this directly: each option preview is a separately-scoped draft.
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the bounded-completion driver shape this spec generalizes to inner microturns.
 - Foundation 4 (Authoritative State and Observer Views) — per-option preview must honor hidden-information policy; `preview.option.*` refs must return `unknownHidden` when the option preview would touch hidden surfaces.

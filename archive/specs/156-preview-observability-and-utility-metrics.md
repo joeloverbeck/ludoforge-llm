@@ -1,6 +1,6 @@
 # Spec 156: Preview Observability and Utility Metrics
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (gates Specs 157–160 — every subsequent change to the preview pipeline ships blind without these diagnostics; closes the diagnostic half of Gaps 3 and 6 in `reports/microturn-preview-architectural-gaps-2026-05-06.md`)
 **Complexity**: M (trace schema additions + emitters at three call sites; no behavior changes; new exported types and a verbose-trace tier; FOUNDATIONS-aligned trace expansion only)
 **Dependencies**:
@@ -184,4 +184,29 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/156PREVOBSUTMET-003.md`](../archive/tickets/156PREVOBSUTMET-003.md) — Per-candidate selectionReason field (covers Phase A deliverable 3)
 - [`archive/tickets/156PREVOBSUTMET-004.md`](../archive/tickets/156PREVOBSUTMET-004.md) — Synthetic-decision trace per preview drive (covers Phase B deliverable 4)
 - [`archive/tickets/156PREVOBSUTMET-005.md`](../archive/tickets/156PREVOBSUTMET-005.md) — Inner-frontier scoreContributions parity (covers Phase C deliverable 5)
-- [`tickets/156PREVOBSUTMET-006.md`](../tickets/156PREVOBSUTMET-006.md) — Cookbook documentation for preview observability fields (covers cross-cutting docs)
+- [`archive/tickets/156PREVOBSUTMET-006.md`](../archive/tickets/156PREVOBSUTMET-006.md) — Cookbook documentation for preview observability fields (covers cross-cutting docs)
+
+## Outcome (2026-05-06)
+
+Spec 156 completed as the archived ticket wave listed above.
+
+What landed:
+
+- Trace schema/type groundwork and required preview observability fields.
+- Populated `previewUsage.readyRefStats` and `previewUsage.utility`.
+- Per-candidate `selectionReason` parity with `previewGatedCount`.
+- Verbose nested `candidate.previewDrive.syntheticDecisions[]`.
+- Inner-frontier `scoreContributions[]` for guided chooseOne / chooseNStep candidates.
+- Cookbook documentation for reading the new preview trace fields.
+
+Deviations from the draft plan:
+
+- Live implementation kept current `completionPolicy: 'greedy' | 'agentGuided'` wording for Spec 156; later `policyGuided` / fallback semantics remain owned by later specs.
+- Golden/test locations followed live repo layout rather than the draft's `packages/engine/test/golden/**` shorthand.
+
+Verification recorded across the archived tickets included:
+
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm run check:ticket-deps`

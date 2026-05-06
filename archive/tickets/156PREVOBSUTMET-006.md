@@ -1,6 +1,6 @@
 # 156PREVOBSUTMET-006: Cookbook documentation for preview observability fields
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — documentation only
@@ -82,3 +82,30 @@ None (documentation-only). Manual reviewer verifies field coverage against the s
 
 1. `pnpm turbo lint typecheck`
 2. `grep -E "readyRefStats|previewUsage\\.utility|selectionReason|syntheticDecisions" docs/agent-dsl-cookbook.md` — verifies all five fields are mentioned.
+
+## Outcome (2026-05-06)
+
+Owned slice landed in `docs/agent-dsl-cookbook.md`:
+
+- Added "Reading the Preview Trace" after "Preview Refs".
+- Documented `previewUsage.readyRefStats`, `previewUsage.utility`, action-selection candidate `selectionReason`, verbose `candidate.previewDrive.syntheticDecisions[]`, and inner-frontier `scoreContributions[]`.
+- Added the requested preview-ref cross-link and a considerations-section note pointing trace readers to inner-frontier `scoreContributions[]`.
+- Kept examples prose-only and did not add new production YAML using `scopes: [completion]`, `option.value`, `decision.*`, `candidate.param.*`, or `preview.phase1`.
+
+Ticket corrections applied:
+
+- Command reconciliation: the draft shorthand `pnpm turbo lint typecheck` is executed as the repo-valid split lanes `pnpm turbo lint` and `pnpm turbo typecheck`.
+- Live trace wording: the current Spec 156 schema uses `completionPolicy: 'greedy' | 'agentGuided'`; later `policyGuided` / fallback semantics remain explicitly forward-looking and out of scope.
+- Schema/artifact fallout: documentation-only; `Trace.schema.json` was inspected for the documented field names and no schema artifact regeneration is owned.
+
+Final proof:
+
+1. `grep -E "readyRefStats|previewUsage\\.utility|selectionReason|syntheticDecisions|scoreContributions" docs/agent-dsl-cookbook.md` — passed; all five documented surfaces are present.
+2. `grep -E "scopes: \\[completion\\]|option\\.value|decision\\.\\*|candidate\\.param\\.\\*|preview\\.phase1" docs/agent-dsl-cookbook.md` — reviewed; hits are the existing retired-surface warnings plus the new "do not copy" prose note, not new worked YAML examples.
+3. `git diff --check -- docs/agent-dsl-cookbook.md tickets/156PREVOBSUTMET-006.md` — passed.
+4. `wc -l docs/agent-dsl-cookbook.md` — 636 lines, under repo guidance.
+5. `pnpm turbo lint` — passed.
+6. `pnpm turbo typecheck` — passed.
+7. `pnpm -F @ludoforge/engine test` — passed; default lane summary reported 64/64 files passed.
+
+Late-edit proof validity: after the final proof lanes, this ticket edit only set the already-proven terminal status and transcribed exact proof results. It did not change scope, commands, acceptance criteria, touched files, or documentation content, so the proof lanes above are not invalidated.

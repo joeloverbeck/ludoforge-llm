@@ -4,7 +4,7 @@
 **Priority**: P1 (closes the load-bearing Gap 2 — circular gating — from `reports/microturn-preview-architectural-gaps-2026-05-06.md`; eliminates the structural pathology where preview-needed candidates are systematically gated out before preview runs)
 **Complexity**: L (replaces the `topK` gate with a multi-pass deterministic allocator; introduces a compiler-side conservative effect-footprint analysis for the structural-impact prior; deletes `pickTopKByMoveOnlyScore`; phased delivery in three waves)
 **Dependencies**:
-- Spec 156 [preview-observability-and-utility-metrics] (DRAFT) — `selectionReason` enum and `previewUsage.utility` are populated by this spec; `widenOnUniformProjection` reads `utility === 'constant'` as its trigger.
+- Spec 156 [preview-observability-and-utility-metrics] (archived) — `selectionReason` enum and `previewUsage.utility` are populated by this spec; `widenOnUniformProjection` reads `utility === 'constant'` as its trigger.
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the candidate-set and per-candidate preview drive this spec re-budgets.
 - Spec 146 [scoped-draft-state-for-preview-drive] (archived) — bounded copy-on-write draft state per preview drive; this spec preserves Spec 146's isolation contract.
 - Foundation 8 (Determinism Is Sacred) — the allocator is deterministic and stable across `Math.trunc`-exact comparisons; no `localeCompare`, no shuffle.

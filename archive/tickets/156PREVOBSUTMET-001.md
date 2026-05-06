@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/schemas/Trace.schema.json`, `packages/engine/src/agents/policy-eval.ts`, `policy-agent.ts`, fixture/replay JSON files
-**Deps**: `specs/156-preview-observability-and-utility-metrics.md`
+**Deps**: `archive/specs/156-preview-observability-and-utility-metrics.md`
 
 ## Problem
 
@@ -121,6 +121,8 @@ Ajv-validate every emitted trace against the updated `Trace.schema.json`. Catch 
 3. `pnpm turbo lint typecheck test`
 
 ## Outcome (2026-05-06)
+
+Outcome amended: 2026-05-06
 
 Implemented the ticket-001 trace plumbing boundary after a Foundations-driven reset:
 

@@ -124,6 +124,97 @@ candidateFeatures:
         - { ref: feature.selfMargin }
 ```
 
+When tuning preview, read `previewUsage.utility` and `previewUsage.readyRefStats` in the agent-decision trace to confirm the refs differentiate ready candidates.
+
+## Reading the Preview Trace
+
+Preview trace fields answer three separate questions:
+
+- did preview run for this decision?
+- did ready preview candidates produce different projected values?
+- why were candidates or synthetic inner choices selected?
+
+### `previewUsage.readyRefStats`
+
+`previewUsage.readyRefStats` is keyed by preview ref id. Each entry summarizes the values produced by candidates whose `previewOutcome` is `ready`:
+
+| Field | Meaning |
+| --- | --- |
+| `readyCount` | Number of ready candidates that resolved this ref. |
+| `distinctValueCount` | Number of distinct resolved values among those candidates. |
+| `min` | Lowest resolved integer value, or `null` when no ready value exists. |
+| `max` | Highest resolved integer value, or `null` when no ready value exists. |
+| `range` | `max - min`, or `null` when no ready value exists. |
+| `allReadyValuesEqual` | `true` when every ready value for this ref is identical. |
+
+Healthy preview has at least one important ref with `distinctValueCount > 1`. That means candidates are projecting to meaningfully different states. Degenerate preview often shows high `readyCount` but `allReadyValuesEqual: true` for every requested ref; the synthetic drive completed, but it gave the policy no useful ordering signal.
+
+### `previewUsage.utility`
+
+`previewUsage.utility` classifies the decision-level usefulness of the ready preview set:
+
+| Value | Policy-quality meaning |
+| --- | --- |
+| `none` | No candidate was ready, so preview did not contribute a projected-value signal. |
+| `constant` | Ready candidates projected identical values for every requested ref. Preview fired, but it added no scoring signal. This is the common signature of greedy completion picking state-neutral inner options. |
+| `lowInformation` | Some requested refs differentiate and others do not. Preview is partially useful; inspect which refs stayed constant. |
+| `differentiating` | At least one requested ref has `distinctValueCount > 1`. Preview is doing real work for this decision. |
+
+Treat `previewOutcome: ready` as a transport status, not as proof of policy value. A decision with `utility: constant` can have many ready candidates and still be blind because every ready candidate scored against the same projected value.
+
+### `candidate.selectionReason`
+
+Each action-selection candidate carries `selectionReason`, which explains preview-budget selection at the candidate row:
+
+| Value | Current meaning |
+| --- | --- |
+| `gated` | Excluded by the preview budget gate; parity-checks against `previewGatedCount`. |
+| `prior` | Current placeholder for non-gated candidates until the later budget allocator distinguishes reasons. |
+| `coverage` | Reserved for a coverage pass in the later balanced-budget allocator. |
+| `widening` | Reserved for a later widen-on-uniform-projection pass. |
+| `shallowDelta` | Reserved for a later shallow-preview pass. |
+| `cache` | Reserved for future cache-backed selection. |
+
+This field lives on the action-selection candidate. The `selectionReason` inside `previewDrive.syntheticDecisions[]` is a different surface: it explains how the preview driver selected an inner microturn option.
+
+### `candidate.previewDrive.syntheticDecisions[]`
+
+Verbose traces include `candidate.previewDrive.syntheticDecisions[]` for each preview drive. Each entry records one synthetic inner microturn:
+
+| Field | Meaning |
+| --- | --- |
+| `depth` | One-based depth inside this preview drive. |
+| `microturnKind` | Inner frontier kind, currently `chooseOne` or `chooseNStep`. |
+| `decisionKey` | Stable key for the inner decision request. |
+| `selectedOptionStableKey` | Stable key for the option selected by the driver. |
+| `selectionReason` | Inner-selection reason. Today `greedyAlphabetical` is the populated value; `microturnPolicy` and `fallback` are reserved for later policy-guided completion work. |
+| `score` | Inner-selection score recorded for the synthetic decision. |
+| `scoreContributions` | Term-level contribution breakdown for the synthetic decision; currently a placeholder for later policy-guided completion work. |
+| `completionPolicy` | Completion policy used by the drive, currently `greedy` or `agentGuided`. |
+
+For Gap 3-style diagnosis, inspect the selected option for the inner choice that should change the projected metric. A FITL govern-mode `chooseOne` where `selectedOptionStableKey` points at `aid` and `selectionReason` is `greedyAlphabetical` explains why projected patronage or margin refs may remain constant across otherwise ready candidates.
+
+### Inner-Frontier `scoreContributions[]`
+
+Verbose inner-frontier candidate rows also carry `scoreContributions[]`. Each entry has:
+
+| Field | Meaning |
+| --- | --- |
+| `termId` | The consideration id that contributed to this candidate's score. |
+| `contribution` | The integer contribution from that term. |
+
+Use this when diagnosing `chooseOne` or `chooseNStep` authoring. For example, a historical FITL `preferPatronageMode` inner-choice consideration should show a positive contribution on the patronage candidate row when that consideration fires. That surface is completion-scope in the current Spec 156 implementation; Spec 158 is expected to rename the authoring model to microturn scope, so do not copy `scopes: [completion]` into new production profiles.
+
+### Gap Diagnosis Quick Map
+
+| Symptom | Trace field to inspect |
+| --- | --- |
+| Too many candidates never previewed | `candidate.selectionReason: 'gated'`, `previewUsage.outcomeBreakdown.unknownGated`, `previewGatedCount` |
+| Preview is ready but not useful | `previewUsage.utility: 'constant'`, plus `readyRefStats[*].allReadyValuesEqual` |
+| Greedy completion picked the wrong inner option | `candidate.previewDrive.syntheticDecisions[].selectionReason` and `selectedOptionStableKey` |
+| Inner `chooseOne` / `chooseNStep` score has no obvious cause | Inner-frontier candidate `scoreContributions[]` |
+| Later policy-guided completion silently falls back | Synthetic-decision `selectionReason: 'fallback'` once that later surface lands |
+
 ## Retired For New Production Profiles
 
 Do not copy these patterns into new shipped profiles:
@@ -318,6 +409,8 @@ considerations:
       boolToNumber:
         ref: candidate.tag.govern
 ```
+
+When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Do not add completion-scoped examples to new profiles just to produce trace output; that surface is retained only for current internal coverage and pending migration work.
 
 ### Normalization Pattern
 

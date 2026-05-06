@@ -15,12 +15,13 @@ import {
 } from '../../helpers/compiled-condition-production-helpers.js';
 
 describe('preview selectionReason gated parity', () => {
-  it('matches previewGatedCount and keeps non-gated FITL candidates on the prior placeholder', () => {
+  it('matches previewGatedCount and keeps FITL selection reasons deterministic', () => {
     const def = compileFitlValidatedGameDef();
     const runtime = createGameDefRuntime(def);
     const states = buildDeterministicFitlStateCorpus(def, { seeds: [11, 23], maxPly: 2 });
     let checkedDecisions = 0;
     let checkedGatedDecisions = 0;
+    let checkedCoverageDecisions = 0;
 
     for (const state of states) {
       const moves = legalMoves(def, state, undefined, runtime);
@@ -65,9 +66,9 @@ describe('preview selectionReason gated parity', () => {
         first.metadata.previewUsage.outcomeBreakdown.unknownGated,
         first.metadata.previewGatedCount,
       );
-      assert.deepEqual(
-        new Set(nonGatedReasons),
-        new Set(['prior']),
+      assert.ok(
+        nonGatedReasons.every((reason) => reason === 'coverage' || reason === 'prior'),
+        'expected non-gated candidates to be selected by coverage or prior fill',
       );
       assert.deepEqual(
         first.metadata.candidates.map((candidate) => candidate.selectionReason),
@@ -78,9 +79,13 @@ describe('preview selectionReason gated parity', () => {
       if (gatedCount > 0) {
         checkedGatedDecisions += 1;
       }
+      if (nonGatedReasons.includes('coverage')) {
+        checkedCoverageDecisions += 1;
+      }
     }
 
     assert.ok(checkedDecisions > 0, 'expected the FITL fixture to expose action-selection decisions');
     assert.ok(checkedGatedDecisions > 0, 'expected the FITL fixture to exercise preview-gated candidates');
+    assert.ok(checkedCoverageDecisions > 0, 'expected the FITL fixture to exercise coverage-selected candidates');
   });
 });

@@ -71,6 +71,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
       ],
       readyRefStats: {},
       utility: 'none',
+      widenedBecauseUniform: true,
       outcomeBreakdown: {
         ready: 1,
         stochastic: 0,

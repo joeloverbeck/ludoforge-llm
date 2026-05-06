@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -60,8 +61,8 @@ describe('FITL 1968 VC-first event-card production spec', () => {
     const momentum = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'mom-typhoon-kate');
     assert.notEqual(momentum, undefined);
     assert.equal(momentum?.duration, 'round');
-    assert.deepEqual(momentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_typhoonKate', value: true } }]));
-    assert.deepEqual(momentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_typhoonKate', value: false } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.setupEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_typhoonKate', value: true } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.teardownEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_typhoonKate', value: false } }]));
   });
 
   it('encodes card 96 shaded side with generic Tet-return lifecycle move', () => {

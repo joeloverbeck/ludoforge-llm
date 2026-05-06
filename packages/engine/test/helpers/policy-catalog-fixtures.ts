@@ -1,4 +1,9 @@
 import { lowerAgentPolicyExpr } from '../../src/cnl/lower-agent-considerations.js';
+import {
+  computeDependenciesReadFootprint,
+  computePolicyExprReadFootprint,
+  unionFootprints,
+} from '../../src/cnl/compile-effect-footprint.js';
 import type {
   AgentPolicyCatalog,
   AgentPolicyExpr,
@@ -124,6 +129,12 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
           ...(when === undefined ? {} : { when }),
           weight,
           value,
+          readFootprint: unionFootprints([
+            ...(when === undefined ? [] : [computePolicyExprReadFootprint(when)]),
+            computePolicyExprReadFootprint(weight),
+            computePolicyExprReadFootprint(value),
+            computeDependenciesReadFootprint(consideration.dependencies),
+          ]),
         },
       };
     }

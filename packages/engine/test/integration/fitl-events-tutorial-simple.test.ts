@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -22,7 +23,7 @@ describe('FITL tutorial simple event-card production spec', () => {
 
     const unshadedIf = card?.unshaded?.effects?.find((effect) => 'if' in effect);
     assert.notEqual(unshadedIf, undefined);
-    assert.deepEqual(unshadedIf, tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints(unshadedIf), tagEffectAsts({
       if: {
         when: {
           op: '==',
@@ -35,11 +36,11 @@ describe('FITL tutorial simple event-card production spec', () => {
     }));
 
     const shadedShift = card?.shaded?.effects?.find((effect) => 'shiftMarker' in effect);
-    assert.deepEqual(shadedShift, tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints(shadedShift), tagEffectAsts({
       shiftMarker: { space: 'saigon:none', marker: 'supportOpposition', delta: -1 },
     }));
     const shadedAid = card?.shaded?.effects?.find((effect) => 'addVar' in effect);
-    assert.deepEqual(shadedAid, tagEffectAsts({ addVar: { scope: 'global', var: 'aid', delta: -12 } }));
+    assert.deepEqual(stripEffectFootprints(shadedAid), tagEffectAsts({ addVar: { scope: 'global', var: 'aid', delta: -12 } }));
   });
 
   it('compiles card 43 (Economic Aid) with dual-side branch choices', () => {
@@ -59,11 +60,11 @@ describe('FITL tutorial simple event-card production spec', () => {
       ['return-us-bases-and-aid', 'return-arvn-bases-and-resources'],
     );
     const unshadedAid = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'addVar' in effect);
-    assert.deepEqual(unshadedAid, tagEffectAsts({ addVar: { scope: 'global', var: 'aid', delta: 12 } }));
+    assert.deepEqual(stripEffectFootprints(unshadedAid), tagEffectAsts({ addVar: { scope: 'global', var: 'aid', delta: 12 } }));
     const unshadedUsReturn = card?.unshaded?.branches?.[0]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedUsReturn, undefined);
     const unshadedResources = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'addVar' in effect);
-    assert.deepEqual(unshadedResources, tagEffectAsts({ addVar: { scope: 'global', var: 'arvnResources', delta: 6 } }));
+    assert.deepEqual(stripEffectFootprints(unshadedResources), tagEffectAsts({ addVar: { scope: 'global', var: 'arvnResources', delta: 6 } }));
     const unshadedArvnReturn = card?.unshaded?.branches?.[1]?.effects?.find((effect) => 'removeByPriority' in effect);
     assert.notEqual(unshadedArvnReturn, undefined);
 
@@ -71,11 +72,11 @@ describe('FITL tutorial simple event-card production spec', () => {
       card?.shaded?.branches?.map((branch) => branch.id),
       ['improve-trail-twice', 'improve-trail-and-add-resources'],
     );
-    assert.deepEqual(card?.shaded?.branches?.[0]?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.branches?.[0]?.effects), tagEffectAsts([
       { addVar: { scope: 'global', var: 'trail', delta: 1 } },
       { addVar: { scope: 'global', var: 'trail', delta: 1 } },
     ]));
-    assert.deepEqual(card?.shaded?.branches?.[1]?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.branches?.[1]?.effects), tagEffectAsts([
       { addVar: { scope: 'global', var: 'trail', delta: 1 } },
       { addVar: { scope: 'global', var: 'nvaResources', delta: 10 } },
     ]));
@@ -93,7 +94,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.equal(card?.sideMode, 'dual');
     assert.equal(card?.metadata?.period, '1964');
 
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ addVar: { scope: 'global', var: 'aid', delta: 20 } }]));
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([{ addVar: { scope: 'global', var: 'aid', delta: 20 } }]));
 
     // Shaded: no single-space targeting
     assert.equal(card?.shaded?.targets, undefined);
@@ -133,7 +134,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.equal(forEachEffect.forEach.countBind, '$removedCount');
     assert.notEqual(forEachEffect.forEach.in, undefined);
     assert.equal(forEachEffect.forEach.in.length, 1);
-    assert.deepEqual(forEachEffect.forEach.in[0], tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints(forEachEffect.forEach.in[0]), tagEffectAsts({
       addVar: {
         scope: 'global',
         var: 'patronage',
@@ -167,7 +168,7 @@ describe('FITL tutorial simple event-card production spec', () => {
     assert.deepEqual(shadedTarget?.cardinality, { max: 3 });
     assert.equal(card?.shaded?.effects, undefined);
     const shadedShift = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'shiftMarker' in effect);
-    assert.deepEqual(shadedShift, tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints(shadedShift), tagEffectAsts({
       shiftMarker: { space: '$targetProvince', marker: 'supportOpposition', delta: -1 },
     }));
     const shadedChoose = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'chooseN' in effect) as

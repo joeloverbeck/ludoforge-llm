@@ -22,6 +22,7 @@ When a change touches schemas or contracts, check updates across these layers:
 **Additive changes**:
 - New authored config key, surface family, or section field: update authored-shape doc types even if the ticket only names lowering or validator files.
 - Preparatory tickets may add optional schema/trace/contract fields ahead of logic tickets, so long as verification proves artifact surfaces remain in sync.
+- When adding metadata or helper fields to recursive AST/IR unions, treat generated JSON Schema size and `$ref` reuse as an early risk. Run a focused validation against at least one production-sized artifact that exercises the recursive union, inspect whether generated schemas expand the union inline or reuse definitions, and hoist/reuse shared subschemas before broad proof if validator recursion or stack depth becomes the first failure.
 - When adding a new schema file under an existing schema/artifact directory, classify it before implementation as `generator-owned` or `manual artifact`. Check the generator's file list or write targets, decide whether the new schema should be added to that list, and name the validation lane that proves the decision. If it is intentionally manual, record that in the ticket closeout so later schema-artifact runs are not misread as missing the new file.
 - For additive compiled-field migrations, requiring the new field in compiler-owned artifacts while leaving handwritten TypeScript fixtures temporarily optional is valid when explicit, Foundation-compliant, and verified.
 - If a new field mainly supports one feature path, consider keeping it optional on local test-helper contracts to avoid unnecessary fixture churn.
@@ -51,6 +52,7 @@ When a change alters compiled output, scoring, move selection, observability, or
 - Treat owned production goldens as expected update surfaces unless evidence shows unexpected drift outside the ticket boundary.
 - Before editing an owned golden, capture fresh authoritative output from the current built runtime or test harness.
 - When earlier groundwork introduced a required placeholder and the current ticket populates it, expect goldens to drift from stubs to populated values.
+- When metadata is added broadly to AST/IR nodes or compiled effects, search exact serialized-output tests and fixtures early. Prefer one shared strip/normalization helper for legacy exact-shape assertions when the metadata is orthogonal to the behavior those tests own, and update production goldens only where the new field is part of the public compiled contract.
 - When enriching diagnostics or trace output, prefer preserving the existing coarse summary field and adding an optional detail field unless the ticket owns a breaking schema redesign.
 - Probe nearby goldens that look like expected drift explicitly.
 - In this repo, compiled-agent contract changes often surface first in policy production goldens (`policy-production-golden.test.ts`, policy catalog fixtures, fixed-seed policy summaries); check those before assuming broader regression.

@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 
 const FITL_PRODUCTION_FIXTURE = getFitlProductionFixture();
 
@@ -64,8 +65,8 @@ describe('FITL 1965 US-first event-card production spec', () => {
       assert.notEqual(card, undefined);
       assert.equal(card?.tags?.includes('capability'), true, `${expected.id} must include capability tag`);
       assert.equal(card?.tags?.includes('US'), true, `${expected.id} must include US tag`);
-      assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
-      assert.deepEqual(card?.shaded?.effects, tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
+      assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'unshaded' } }]));
+      assert.deepEqual(stripEffectFootprints(card?.shaded?.effects), tagEffectAsts([{ setGlobalMarker: { marker: expected.marker, state: 'shaded' } }]));
     }
   });
 
@@ -102,8 +103,8 @@ describe('FITL 1965 US-first event-card production spec', () => {
       const effect = side?.lastingEffects?.find((entry) => entry.id === expected.effectId);
       assert.notEqual(effect, undefined, `${expected.id} ${expected.side} must include ${expected.effectId}`);
       assert.equal(effect?.duration, 'round');
-      assert.deepEqual(effect?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: true } }]));
-      assert.deepEqual(effect?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: false } }]));
+      assert.deepEqual(stripEffectFootprints(effect?.setupEffects), tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: true } }]));
+      assert.deepEqual(stripEffectFootprints(effect?.teardownEffects), tagEffectAsts([{ setVar: { scope: 'global', var: expected.varName, value: false } }]));
     }
   });
 
@@ -124,8 +125,8 @@ describe('FITL 1965 US-first event-card production spec', () => {
     const momentum = card?.shaded?.lastingEffects?.find((entry) => entry.id === 'mom-da-nang');
     assert.notEqual(momentum, undefined);
     assert.equal(momentum?.duration, 'round');
-    assert.deepEqual(momentum?.setupEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_daNang', value: true } }]));
-    assert.deepEqual(momentum?.teardownEffects, tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_daNang', value: false } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.setupEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_daNang', value: true } }]));
+    assert.deepEqual(stripEffectFootprints(momentum?.teardownEffects), tagEffectAsts([{ setVar: { scope: 'global', var: 'mom_daNang', value: false } }]));
   });
 
   it('encodes card-23 with tunnel-space chained grants, temporary tunnel override window, and shaded tunnel-space casualty roll', () => {
@@ -147,13 +148,13 @@ describe('FITL 1965 US-first event-card production spec', () => {
     const tunnelWindow = card?.unshaded?.lastingEffects?.find((effect) => effect.id === 'evt-operation-attleboro-tunnel-window');
     assert.notEqual(tunnelWindow, undefined);
     assert.equal(tunnelWindow?.duration, 'turn');
-    assert.deepEqual(tunnelWindow?.setupEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(tunnelWindow?.setupEffects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: true } },
     ]));
-    assert.deepEqual(tunnelWindow?.teardownEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(tunnelWindow?.teardownEffects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: false } },
     ]));
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       { setVar: { scope: 'global', var: 'fitl_operationAttleboroTunnelOverride', value: false } },
     ]));
 

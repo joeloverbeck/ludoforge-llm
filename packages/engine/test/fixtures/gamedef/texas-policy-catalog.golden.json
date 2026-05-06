@@ -743,6 +743,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "preferCall": {
@@ -773,6 +791,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "avoidFold": {
@@ -803,6 +839,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "foldWhenBadPotOdds": {
@@ -864,6 +918,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       },
       "alwaysRaise": {
@@ -894,6 +966,24 @@
           "candidateFeatures": [],
           "aggregates": [],
           "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
         }
       }
     },
@@ -930,9 +1020,6 @@
       },
       "preview": {
         "mode": "disabled",
-        "completion": "greedy",
-        "completionDepthCap": 8,
-        "topK": 4,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -956,11 +1043,11 @@
           "alwaysRaise"
         ]
       },
-      "fingerprint": "611471255deffbc5e1be0d2d1571449adba6a69cd37f8b56235f1f76ab08e9d1"
+      "fingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588"
     }
   },
   "bindingsBySeat": {
     "neutral": "baseline"
   },
-  "catalogFingerprint": "0e46b5f048237f686ef8511d7f4a844a85c7ba9fdea6c63453d932eeef67e0d0"
+  "catalogFingerprint": "b5094f83131bfa2e575beec410aef989624806cc5f4e2e327625fbd903d41e96"
 }

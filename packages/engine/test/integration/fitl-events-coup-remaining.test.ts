@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
@@ -35,7 +36,7 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card126?.tags?.includes('coup'), true);
     assert.equal(card126?.shaded, undefined);
     assert.equal(card126?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card126?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card126?.unshaded?.effects), tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'youngTurks' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
     ]));
@@ -46,7 +47,7 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card127?.tags?.includes('coup'), true);
     assert.equal(card127?.shaded, undefined);
     assert.equal(card127?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card127?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card127?.unshaded?.effects), tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'ky' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
     ]));
@@ -57,7 +58,7 @@ describe('FITL remaining coup event-card production spec', () => {
     assert.equal(card128?.tags?.includes('coup'), true);
     assert.equal(card128?.shaded, undefined);
     assert.equal(card128?.unshaded?.lastingEffects, undefined);
-    assert.deepEqual(card128?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card128?.unshaded?.effects), tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'thieu' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
     ]));

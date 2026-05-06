@@ -953,6 +953,26 @@ const CompiledAgentDependencyRefsSchema = z
   })
   .strict();
 
+const EffectFootprintTargetSetSchema = z.union([z.array(StringSchema), z.literal('unknown')]);
+const EffectFootprintSurfaceSchema = z
+  .object({
+    tokens: EffectFootprintTargetSetSchema,
+    zones: EffectFootprintTargetSetSchema,
+    variables: EffectFootprintTargetSetSchema,
+    scores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+const EffectFootprintSchema = z
+  .object({
+    writes: EffectFootprintSurfaceSchema,
+    reads: EffectFootprintSurfaceSchema,
+    mayTouchTokens: EffectFootprintTargetSetSchema,
+    mayTouchZones: EffectFootprintTargetSetSchema,
+    mayTouchVariables: EffectFootprintTargetSetSchema,
+    mayTouchScores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+
 const CompiledAgentStateFeatureSchema = z
   .object({
     type: AgentPolicyValueTypeSchema,
@@ -993,6 +1013,7 @@ const CompiledAgentConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+    readFootprint: EffectFootprintSchema.optional(),
   })
   .strict();
 
@@ -1006,6 +1027,7 @@ const CompiledPolicyConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
+    readFootprint: EffectFootprintSchema.optional(),
   })
   .strict();
 
@@ -1131,7 +1153,17 @@ const CompiledAgentProfileSchema = z
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
         completion: z.enum(['greedy', 'agentGuided']).optional(),
         completionDepthCap: z.number().int().positive().optional(),
-        topK: z.number().int().positive().optional(),
+        budget: z
+          .object({
+            strategy: z.literal('balancedCoverage'),
+            fullCandidateCap: z.number().int().positive(),
+            minPerGroup: IntegerSchema.nonnegative(),
+            widenOnUniformProjection: z.boolean().optional(),
+            widenCap: IntegerSchema.nonnegative().optional(),
+            widenStep: z.number().int().positive().optional(),
+          })
+          .strict()
+          .optional(),
         phase1: z.boolean().optional(),
         phase1CompletionsPerAction: z.number().int().positive().optional(),
       })
@@ -2078,6 +2110,7 @@ const PolicyPreviewUsageTraceSchema = z
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
+    widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
   })
   .strict();

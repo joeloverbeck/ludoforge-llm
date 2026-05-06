@@ -12,6 +12,7 @@ import { FreeOperationSequenceContextSchema } from './free-operation-sequence-co
 import { createTurnFlowFreeOperationGrantSchema } from './free-operation-grant-zod.js';
 import { FreeOperationSequenceKeySchema } from './free-operation-sequence-key-schema.js';
 import { AST_SCOPED_VAR_SCOPES, createScopedVarContractSchema } from './scoped-var-contract.js';
+import { EFFECT_KIND_TAG } from './types-ast.js';
 
 export const OBJECT_STRICTNESS_POLICY = 'strict' as const;
 
@@ -184,6 +185,30 @@ export const TransferVarEndpointSchema = createScopedVarContractSchema({
     zone: ZoneRefSchema,
   },
 });
+
+const EffectFootprintTargetSetSchema = z.union([z.array(StringSchema), z.literal('unknown')]);
+const EffectFootprintSurfaceSchema = z
+  .object({
+    tokens: EffectFootprintTargetSetSchema,
+    zones: EffectFootprintTargetSetSchema,
+    variables: EffectFootprintTargetSetSchema,
+    scores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+const EffectFootprintSchema = z
+  .object({
+    writes: EffectFootprintSurfaceSchema,
+    reads: EffectFootprintSurfaceSchema,
+    mayTouchTokens: EffectFootprintTargetSetSchema,
+    mayTouchZones: EffectFootprintTargetSetSchema,
+    mayTouchVariables: EffectFootprintTargetSetSchema,
+    mayTouchScores: EffectFootprintTargetSetSchema,
+  })
+  .strict();
+
+function createEffectNodeSchema<T extends z.ZodRawShape>(shape: T): z.ZodObject<T & { footprint: z.ZodOptional<typeof EffectFootprintSchema> }> {
+  return z.object({ ...shape, footprint: EffectFootprintSchema.optional() }).strict();
+}
 
 export const SetVarPayloadSchema = createScopedVarContractSchema({
   scopes: AST_SCOPED_VAR_SCOPES,
@@ -537,31 +562,24 @@ tokenFilterExprSchemaInternal = z.union([
 ]);
 
 effectAstSchemaInternal = z.union([
-  z
-    .object({
-      _k: IntegerSchema,
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.setVar),
       setVar: SetVarPayloadSchema,
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.setActivePlayer),
       setActivePlayer: z
         .object({
           player: PlayerSelSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.addVar),
       addVar: AddVarPayloadSchema,
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.transferVar),
       transferVar: z
         .object({
           from: TransferVarEndpointSchema,
@@ -573,11 +591,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.moveToken),
       moveToken: z
         .object({
           token: TokenSelSchema,
@@ -586,11 +602,9 @@ effectAstSchemaInternal = z.union([
           position: z.union([z.literal('top'), z.literal('bottom'), z.literal('random')]).optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.moveAll),
       moveAll: z
         .object({
           from: ZoneRefSchema,
@@ -598,11 +612,9 @@ effectAstSchemaInternal = z.union([
           filter: ConditionASTSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.moveTokenAdjacent),
       moveTokenAdjacent: z
         .object({
           token: TokenSelSchema,
@@ -610,11 +622,9 @@ effectAstSchemaInternal = z.union([
           direction: StringSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.draw),
       draw: z
         .object({
           from: ZoneRefSchema,
@@ -622,11 +632,9 @@ effectAstSchemaInternal = z.union([
           count: NumberSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.reveal),
       reveal: z
         .object({
           zone: ZoneRefSchema,
@@ -634,11 +642,9 @@ effectAstSchemaInternal = z.union([
           filter: TokenFilterExprSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.conceal),
       conceal: z
         .object({
           zone: ZoneRefSchema,
@@ -646,12 +652,10 @@ effectAstSchemaInternal = z.union([
           filter: TokenFilterExprSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z.object({ _k: IntegerSchema, shuffle: z.object({ zone: ZoneRefSchema }).strict() }).strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({ _k: z.literal(EFFECT_KIND_TAG.shuffle), shuffle: z.object({ zone: ZoneRefSchema }).strict() }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.createToken),
       createToken: z
         .object({
           type: StringSchema,
@@ -659,12 +663,13 @@ effectAstSchemaInternal = z.union([
           props: z.record(StringSchema, ValueExprSchema).optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z.object({ _k: IntegerSchema, destroyToken: z.object({ token: TokenSelSchema }).strict() }).strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.destroyToken),
+      destroyToken: z.object({ token: TokenSelSchema }).strict(),
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.setTokenProp),
       setTokenProp: z
         .object({
           token: TokenSelSchema,
@@ -672,11 +677,9 @@ effectAstSchemaInternal = z.union([
           value: ValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.if),
       if: z
         .object({
           when: ConditionASTSchema,
@@ -684,11 +687,9 @@ effectAstSchemaInternal = z.union([
           else: z.array(EffectASTSchema).optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.forEach),
       forEach: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -700,11 +701,9 @@ effectAstSchemaInternal = z.union([
           in: z.array(EffectASTSchema).optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.reduce),
       reduce: z
         .object({
           itemBind: CanonicalBindingIdentifierSchema,
@@ -720,11 +719,9 @@ effectAstSchemaInternal = z.union([
           in: z.array(EffectASTSchema),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.removeByPriority),
       removeByPriority: z
         .object({
           budget: NumericValueExprSchema,
@@ -745,11 +742,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.let),
       let: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -758,11 +753,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.bindValue),
       bindValue: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -770,11 +763,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.evaluateSubset),
       evaluateSubset: z
         .object({
           source: OptionsQuerySchema,
@@ -788,11 +779,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.chooseOne),
       chooseOne: z
         .object({
           internalDecisionId: StringSchema,
@@ -803,11 +792,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.chooseN),
       chooseN: z.union([
         z
           .object({
@@ -833,11 +820,9 @@ effectAstSchemaInternal = z.union([
           })
           .strict(),
       ]),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.rollRandom),
       rollRandom: z
         .object({
           bind: CanonicalBindingIdentifierSchema,
@@ -847,11 +832,9 @@ effectAstSchemaInternal = z.union([
           macroOrigin: MacroOriginSchema.optional(),
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.setMarker),
       setMarker: z
         .object({
           space: ZoneRefSchema,
@@ -859,11 +842,9 @@ effectAstSchemaInternal = z.union([
           state: ValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.shiftMarker),
       shiftMarker: z
         .object({
           space: ZoneRefSchema,
@@ -871,22 +852,18 @@ effectAstSchemaInternal = z.union([
           delta: NumericValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.setGlobalMarker),
       setGlobalMarker: z
         .object({
           marker: StringSchema,
           state: ValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.flipGlobalMarker),
       flipGlobalMarker: z
         .object({
           marker: ValueExprSchema,
@@ -894,22 +871,18 @@ effectAstSchemaInternal = z.union([
           stateB: ValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.shiftGlobalMarker),
       shiftGlobalMarker: z
         .object({
           marker: StringSchema,
           delta: NumericValueExprSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.grantFreeOperation),
       grantFreeOperation: createTurnFlowFreeOperationGrantSchema({
         id: StringSchema.optional(),
         seat: StringSchema,
@@ -935,39 +908,30 @@ effectAstSchemaInternal = z.union([
         sequenceContext: FreeOperationSequenceContextSchema.optional(),
         executionContext: FreeOperationExecutionContextSchema.optional(),
       }),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.gotoPhaseExact),
       gotoPhaseExact: z
         .object({
           phase: StringSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.advancePhase),
       advancePhase: z.object({}).strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.pushInterruptPhase),
       pushInterruptPhase: z
         .object({
           phase: StringSchema,
           resumePhase: StringSchema,
         })
         .strict(),
-    })
-    .strict(),
-  z
-    .object({
-      _k: IntegerSchema,
+    }),
+  createEffectNodeSchema({
+      _k: z.literal(EFFECT_KIND_TAG.popInterruptPhase),
       popInterruptPhase: z.object({}).strict(),
-    })
-    .strict(),
+    }),
 ]);

@@ -41,7 +41,7 @@ If the implemented ticket is already archived, still proceed with the review.
 
 Inspect `git status --short` early. Separate unrelated dirty files from the implemented-ticket review scope, and leave them alone unless the completed ticket or concrete same-seam evidence makes them part of the review.
 
-If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice.
+If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice. If an in-flight verification command from before compaction cannot be polled or its result is otherwise unobservable, rerun the idempotent check instead of treating the lost session as evidence.
 
 ## Evidence Model
 
@@ -143,6 +143,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
    - normalize the implemented ticket to archival-ready terminal status accepted by `docs/archival-workflow.md`, add or refresh `## Outcome`, and ensure it records what landed, deviations, verification, and any post-review cleanup
    - if review cleanup changed production runtime, compiler, schema, or shared tests, include a short post-review correction bullet and refreshed proof ledger inside that Outcome before archival
+   - before running archival tooling, confirm every verification command listed in `## Outcome` is current after review-created code, schema, test, fixture, or shared artifact edits; if a command is intentionally retained as prior proof rather than rerun, label it that way in the outcome instead of implying it proves the post-review state
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 14. If no unresolved `must-fix-now` cleanup remains and the original ticket was not reopened, archive the implemented ticket per `docs/archival-workflow.md`.
@@ -153,6 +154,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - when sweeping markdown literals that may include backticks, use single-quoted shell patterns or split the search into plain-string anchors so the shell does not execute backtick contents before `rg` runs
    - remember that `scripts/archive-ticket.mjs` rewrites active tickets only; specs, roadmaps, reports, and archived-ticket prose may still contain stale markdown links or live-path instructions
    - classify each old-path hit as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable references, not harmless historical prose
+   - when rewriting an already-archived ticket's `## Outcome` in a way that changes the recorded handoff or ownership meaning, add a dated amendment note; purely mechanical non-semantic path fixes do not need an amendment note
    - reread every file changed by the archive script or by the old-path sweep and confirm the remaining literals are ownership-correct
 16. Run verification for review-created edits:
    - always run `pnpm run check:ticket-deps` after archiving or changing ticket dependencies

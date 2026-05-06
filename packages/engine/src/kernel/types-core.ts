@@ -12,6 +12,7 @@ import type {
   ActionExecutorSel,
   ConditionAST,
   EffectAST,
+  EffectFootprint,
   MoveParamScalar,
   MoveParamValue,
   NumericValueExpr,
@@ -617,6 +618,7 @@ export interface CompiledPolicyConsideration {
     readonly max?: number;
   };
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly readFootprint?: EffectFootprint;
 }
 
 export interface CompiledPolicyTieBreaker {
@@ -810,6 +812,7 @@ export interface CompiledAgentConsideration {
     readonly max?: number;
   };
   readonly dependencies: CompiledAgentDependencyRefs;
+  readonly readFootprint?: EffectFootprint;
 }
 
 export interface CompiledAgentTieBreaker {
@@ -837,12 +840,22 @@ export interface CompiledAgentLibraryIndex {
 
 export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
 export type AgentPreviewCompletionPolicy = 'greedy' | 'agentGuided';
+export type AgentPreviewBudgetStrategy = 'balancedCoverage';
+
+export interface CompiledAgentPreviewBudgetConfig {
+  readonly strategy: AgentPreviewBudgetStrategy;
+  readonly fullCandidateCap: number;
+  readonly minPerGroup: number;
+  readonly widenOnUniformProjection?: boolean;
+  readonly widenCap?: number;
+  readonly widenStep?: number;
+}
 
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewCompletionPolicy;
   readonly completionDepthCap?: number;
-  readonly topK?: number;
+  readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }
@@ -1760,6 +1773,7 @@ export interface PolicyPreviewUsageTrace {
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
   readonly utility: PolicyPreviewUtilityTrace;
+  readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
 }
 

@@ -3,6 +3,7 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 
@@ -22,7 +23,7 @@ describe('FITL tutorial coup event-card production spec', () => {
     assert.equal(card?.metadata?.flavorText, 'Corps commanders ascendant.');
     assert.equal(card?.unshaded?.text, 'Transport uses max 1 LoC space.');
 
-    assert.deepEqual(card?.unshaded?.effects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.unshaded?.effects), tagEffectAsts([
       { setGlobalMarker: { marker: 'activeLeader', state: 'khanh' } },
       { addVar: { scope: 'global', var: 'leaderBoxCardCount', delta: 1 } },
     ]));

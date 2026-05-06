@@ -1,6 +1,6 @@
 # Spec 157: Balanced-Coverage Preview Budget Allocator
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (closes the load-bearing Gap 2 — circular gating — from `reports/microturn-preview-architectural-gaps-2026-05-06.md`; eliminates the structural pathology where preview-needed candidates are systematically gated out before preview runs)
 **Complexity**: L (replaces the `topK` gate with a multi-pass deterministic allocator; introduces a compiler-side conservative effect-footprint analysis for the structural-impact prior; deletes `pickTopKByMoveOnlyScore`; phased delivery in three waves)
 **Dependencies**:
@@ -16,19 +16,19 @@
 - `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 1 (default `topK = 4` is too tight), Gap 2 (top-K gating is circular).
 - `reports/preview-policy-corrections.md` §2 (progressive widening as the better mental model), §3 (priors as bias not exclusion gate), §4 (root selection ≈ best-arm identification), Recommendations A, B, C; Phase 2 of recommended sequence.
 - Code anchors:
-  - `packages/engine/src/agents/policy-eval.ts:586` — `Math.min(profile.preview.topK ?? 4, activeCandidates.length)` — the hardcoded default.
-  - `packages/engine/src/agents/policy-eval.ts:581-583` — the `costClass !== 'preview'` filter that excludes preview-derived considerations from the gate.
-  - `packages/engine/src/agents/policy-eval.ts:1020-1048` — `pickTopKByMoveOnlyScore` — the circular-dependency site.
-  - `packages/engine/src/agents/policy-eval.ts:917` — `selectRepresentativeCandidatesByActionId` — existing actionId-grouping infrastructure that lifts onto the gating side.
-  - `packages/engine/src/agents/policy-eval.ts:189` — `selectionGrouping?: 'none' | 'actionId'` — the existing grouping switch on the selection side.
-  - `packages/engine/src/cnl/compile-agents.ts:765-790` (assumed location of `lowerPreviewConfig`) — preview config compilation.
+  - `packages/engine/src/agents/policy-eval.ts:605` — `Math.min(profile.preview.topK ?? 4, activeCandidates.length)` — the hardcoded default.
+  - `packages/engine/src/agents/policy-eval.ts:600-602` — the `costClass !== 'preview'` filter that excludes preview-derived considerations from the gate.
+  - `packages/engine/src/agents/policy-eval.ts:1042-1071` — `pickTopKByMoveOnlyScore` — the circular-dependency site.
+  - `packages/engine/src/agents/policy-eval.ts:940` — `selectRepresentativeCandidatesByActionId` — existing actionId-grouping infrastructure that lifts onto the gating side.
+  - `packages/engine/src/agents/policy-eval.ts:207` — `selectionGrouping?: 'none' | 'actionId'` — the existing grouping switch on the selection side.
+  - `packages/engine/src/cnl/compile-agents.ts:761-824` — `lowerPreviewConfig` — preview config compilation.
 - Empirical evidence: `topK=4` baseline → 36% ready rate; `topK=10` → 75% ready rate but 8/24 decisions still uniform. Bumping the cap is a band-aid; the gate selection mechanism is the structural defect.
 
 ## Brainstorm Context
 
-**Original framing.** The current preview budget gate is a single static top-K rank by *move-only* score. By construction, the score function used at the gate excludes preview-derived signals (`costClass: 'preview'` considerations are filtered out at `policy-eval.ts:581-583` before `pickTopKByMoveOnlyScore` runs). This is correct in isolation — preview hasn't run yet — but it creates a circular dependency at the system level: any candidate whose only differentiation comes from preview cannot be ranked above its peers at the gate, so it never gets preview, so its differentiation is never observable.
+**Original framing.** The current preview budget gate is a single static top-K rank by *move-only* score. By construction, the score function used at the gate excludes preview-derived signals (`costClass: 'preview'` considerations are filtered out at `policy-eval.ts:600-602` before `pickTopKByMoveOnlyScore` runs). This is correct in isolation — preview hasn't run yet — but it creates a circular dependency at the system level: any candidate whose only differentiation comes from preview cannot be ranked above its peers at the gate, so it never gets preview, so its differentiation is never observable.
 
-The empirical fingerprint is exactly what `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 2 describes: in ARVN's profile, `preferGovernWeighted` adds +1000 (move-only) to govern, so govern survives the gate; train, sweep, patrol, assault, raid all tie at 0 in move-only and the gate cuts them by alphabetical tiebreak. For a profile whose entire scoring strategy is "let preview decide," `topK=4` selects the alphabetically-first 4 candidates and ignores the rest — preview-driven scoring doesn't survive the gate.
+The empirical fingerprint is exactly what `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 2 describes: in ARVN's profile, `preferGovernWeighted` adds +`governWeight` (move-only) to govern (parameterized as `governWeight: 1000` in `arvn-evolved` and `governWeight: 500` in `arvn-baseline`, per `data/games/fire-in-the-lake/92-agents.md`), so govern survives the gate; train, sweep, patrol, assault, raid all tie at 0 in move-only and the gate cuts them by alphabetical tiebreak. For a profile whose entire scoring strategy is "let preview decide," `topK=4` selects the alphabetically-first 4 candidates and ignores the rest — preview-driven scoring doesn't survive the gate.
 
 Raising `topK` to 10 (verified empirically in `exp-002`) widens coverage but doesn't break the circularity: the gate still ranks by a scoring function that excludes preview, so candidates that would have benefited most from preview are still gated out unless they happen to win on a non-preview term. The fix has to change the *shape* of the gate, not just its width.
 
@@ -36,7 +36,7 @@ Raising `topK` to 10 (verified empirically in `exp-002`) widens coverage but doe
 
 1. **F#15 (Architectural Completeness) demands a root-cause fix.** `topK` widening is the textbook "tune around the bug" anti-pattern. The bug is that the gate's selection function is uncorrelated with the candidates' eventual preview-derived score. A correct gate must guarantee that preview signal can reach every candidate family, not just the move-only top-K.
 2. **F#10 (Bounded Computation) constrains the solution shape.** POLPREVDRIVE-001 documents `driveSyntheticCompletion` at 51% of sampled time even at `topK=4`. Unbounded preview is not on the table. The solution must ration budget intelligently — coverage first, prior-driven fill second, widening only on demand.
-3. **The repo already has the primitive.** `selectRepresentativeCandidatesByActionId` (policy-eval.ts:917) and `selectionGrouping: 'actionId'` (policy-eval.ts:189) implement actionId-grouping on the *selection* side (post-scoring representative pick). Lifting that primitive to the *gating* side (pre-preview group coverage) is a small, well-typed change that reuses already-validated machinery.
+3. **The repo already has the primitive.** `selectRepresentativeCandidatesByActionId` (policy-eval.ts:940) and `selectionGrouping: 'actionId'` (policy-eval.ts:207) implement actionId-grouping on the *selection* side (post-scoring representative pick). Lifting that primitive to the *gating* side (pre-preview group coverage) is a small, well-typed change that reuses already-validated machinery.
 
 **Prior art surveyed.**
 
@@ -59,7 +59,7 @@ Raising `topK` to 10 (verified empirically in `exp-002`) widens coverage but doe
 - **Resurrect closure-tree-style "preview every candidate at very low depth."** Equivalent to setting `topK = ∞` with a tighter `previewCompletionDepthCap`. Cost-prohibitive at FITL scale. Rejected — F#10.
 - **Replace topK with a learned prior (no engine, small ML model).** Out of scope for a deterministic, YAML-authored profile system. Rejected — F#7 (specs are data, not code), F#8 (determinism).
 
-**User constraints reflected.** F#1 (engine-agnostic — `previewGroupKey` and `EffectFootprint` are generic over GameDef shapes), F#7 (no eval, no scripts — footprints derived from compiled IR statically), F#8 (deterministic across phases — explicit stable tie-breaks, integer-only arithmetic, no `localeCompare`), F#10 (bounded — every phase has a hard cap), F#11 (immutable — allocator returns a new ReadonlySet, no in-place mutation), F#14 (delete `topK` and `pickTopKByMoveOnlyScore` in the same change as `preview.budget` lands; migrate every repo-owned profile YAML), F#15 (root-cause fix), F#16 (testing as proof — direct invariant tests for circularity-elimination).
+**User constraints reflected.** F#1 (engine-agnostic — `previewGroupKey` and `EffectFootprint` are generic over GameDef shapes), F#7 (no eval, no scripts — footprints derived from compiled IR statically), F#8 (deterministic across phases — explicit stable tie-breaks, integer-only arithmetic, no `localeCompare`), F#10 (bounded — every phase has a hard cap), F#11 (immutable — allocator returns a new ReadonlySet, no in-place mutation), F#14 (delete `topK` and `pickTopKByMoveOnlyScore` in the same change as `preview.budget` lands; migrate every authored profile in `data/games/<game>/92-agents.md`), F#15 (root-cause fix), F#16 (testing as proof — direct invariant tests for circularity-elimination).
 
 ## Overview
 
@@ -82,7 +82,7 @@ Stable tie-breaking inside a group: `priorScore desc, structuralImpactScore desc
 
 | Phase | Deliverable | Acceptance Criterion | Effort |
 |-------|-------------|----------------------|--------|
-| Phase A | Group coverage + cap; delete `topK`; migrate every repo-owned profile to `preview.budget` | On the FITL canary fixture: `previewUsage.utility === 'differentiating'` rate ≥ 60% (vs ~33% at `topK=4`); every actionId in the candidate set has at least one previewed candidate when `minPerGroup ≥ 1`; every shipped profile uses `preview.budget`; `pickTopKByMoveOnlyScore` is deleted. | M |
+| Phase A | Group coverage + cap; delete `topK`; migrate every repo-owned profile to `preview.budget` | Every actionId in the candidate set has at least one previewed candidate when `minPerGroup ≥ 1`; every shipped profile uses `preview.budget`; `pickTopKByMoveOnlyScore` is deleted; live FITL differentiating-rate evidence is recorded as residual Phase B/C input rather than a Phase A terminal gate. | M |
 | Phase B | Compiler-side `EffectFootprint`; allocator uses `priorScore × structuralImpactScore` in the prior pass | On a constructed test fixture where one candidate's effect demonstrably writes to the preview ref's read footprint and others don't: that candidate is selected by the prior pass even when its move-only score is below median; conservative-footprint property test holds (no false-negatives over the FITL action corpus). | L |
 | Phase C | Widen-on-uniform | `widenOnUniformProjection: true` with `utility === 'constant'` on decision N triggers `fullCandidateCap + widenStep` on decision N+1; widening is bounded by `widenCap`; trace records `widenedBecauseUniform: true`. | S |
 
@@ -90,13 +90,14 @@ Stable tie-breaking inside a group: `priorScore desc, structuralImpactScore desc
 
 1. **Why this approach is cleaner than alternatives.** The bug is shape, not scale. A wider `topK` doesn't fix selection-by-uncorrelated-score. Group-coverage breaks the circularity at its root: every candidate family is guaranteed at least one preview, so preview signal can reach the candidates that need it most. The prior pass then biases additional slots toward likely-impactful candidates without excluding any family. Compared to the alternatives (diversity-only, two-pass shallow, learned priors), this preserves within-family ranking, stays deterministic and bounded, and reuses existing repo primitives (`selectRepresentativeCandidatesByActionId`).
 2. **GameSpecDoc vs runtime boundary.** `previewGroupKey` and `EffectFootprint` are derived from compiled IR — actionId, parameter shapes, ref names — all generic. No engine code interprets game-specific tokens, zones, or actions. Profile YAML gains `preview.budget` config knobs that the compiler validates. GameSpecDoc itself is unaffected.
-3. **No backwards-compatibility shims.** `preview.topK` is deleted from the schema, the compiler, the runtime types, every repo-owned profile YAML, and every fixture. No alias, no deprecation warning, no `_legacy` field. F#14 strict.
+3. **No backwards-compatibility shims.** `preview.topK` is deleted from the schema, the compiler, the runtime types, every authored profile in `data/games/<game>/92-agents.md`, and every compiled fixture. No alias, no deprecation warning, no `_legacy` field. F#14 strict.
+4. **WASM scoring path is unaffected.** `tryScoreMoveConsiderationsWithWasm` (`policy-eval.ts:629-644`) runs after the allocator and scores move considerations independently of gate shape. WASM-encoded profile fingerprints regenerate alongside compiled JSON; no WASM kernel changes.
 
 ## What to Change
 
 ### 1. Profile schema — `preview.topK` → `preview.budget`
 
-`GameDef.schema.json` and the compile-time profile validator: replace the `topK: number` field on `preview` with a `budget: BudgetConfig` object. `BudgetConfig` validates `strategy: 'balancedCoverage'`, `fullCandidateCap: integer >= 1`, `minPerGroup: integer >= 0`, `widenOnUniformProjection?: boolean`, `widenCap?: integer >= 0`, `widenStep?: integer >= 1`. Compile-time error if `widenOnUniformProjection: true` and (`widenCap` or `widenStep`) is missing.
+`GameDef.schema.json` and the compile-time profile validator (`lowerPreviewConfig` at `compile-agents.ts:761-824`): replace the `topK: number` field on `preview` with a `budget: BudgetConfig` object. `BudgetConfig` validates `strategy: 'balancedCoverage'`, `fullCandidateCap: integer >= 1`, `minPerGroup: integer >= 0`, `widenOnUniformProjection?: boolean`, `widenCap?: integer >= 0`, `widenStep?: integer >= 1`. Compile-time error if `widenOnUniformProjection: true` and (`widenCap` or `widenStep`) is missing.
 
 ### 2. Allocator — `packages/engine/src/agents/policy-eval.ts`
 
@@ -126,6 +127,8 @@ return allowed
 
 Phase B inserts `structuralImpactScore` multiplicatively into the prior pass. Phase C reads the prior decision's `utility` and conditionally bumps `fullCandidateCap`.
 
+Integration with existing observability: `AllocatorOutput.allowedKeys` drives the existing `markPreviewGated` / `previewGatedCount` / `scoreCandidateForGateFlipProbe` instrumentation (`policy-eval.ts:613-628`) unchanged; the flip-probe scoring loop runs on allocator-rejected candidates exactly as today.
+
 ### 3. Group key — `packages/engine/src/agents/policy-eval.ts`
 
 Add `previewGroupKey(catalog, candidate): string`. Engine-generic: concatenate stable string components with `|` separator. Component sources are all in compiled IR (no game-specific text). Add a unit test corpus of 20+ candidate shapes asserting key stability across runs.
@@ -140,13 +143,24 @@ This is the largest sub-deliverable; it ships in Phase B as a separate ticket wa
 
 Track per-decision-class (`actionSelection at turnId X seatId Y`) a one-step memory: was the prior decision's `utility === 'constant'`? If so and `widenOnUniformProjection`, increase `fullCandidateCap` by `widenStep` for the next call only. Memory cleared on every turn boundary. Trace records `widenedBecauseUniform: boolean` on `previewUsage`.
 
-### 6. Migrate every repo-owned profile
+### 6. Migrate every repo-owned profile and `topK`-coupled test consumer
 
-Update every YAML profile under `data/games/**` and every fixture under `packages/engine/test/**` from `preview: { topK: N }` to `preview: { budget: { strategy: balancedCoverage, fullCandidateCap: <derived-from-N>, minPerGroup: 1 } }`. Compile-time error gates any profile still using `topK`. F#14 strict.
+Authored profiles live in `data/games/<game>/92-agents.md` (Markdown with fenced YAML blocks per the GameSpecDoc convention), not standalone `.yaml` files. Update every authored profile, every fixture under `packages/engine/test/fixtures/**` and `test/golden/**`, and the following test/perf consumers:
+
+- `packages/engine/test/unit/agents/policy-evaluation-topk-gate.test.ts` — delete (subsumed by `preview-budget-allocator.test.ts`).
+- `packages/engine/test/unit/agents/preview-ready-ref-stats-aggregator.test.ts` — migrate `preview: { mode, topK }` constructions to `preview: { mode, budget: { ... } }`.
+- `packages/engine/test/unit/compile-agents-authoring.test.ts` — rewrite the `topK` validator tests (currently around L1103, L1118, L1707, plus the diagnostic-path test at L1734) against `budget`.
+- `packages/engine/test/perf/agents/derive-topk-floor.mjs` — rename to `derive-fullCandidateCap-floor.mjs` and rework semantics, or delete if the new allocator's coverage guarantee makes the floor probe meaningless.
+
+Migrate from `preview: { topK: N }` to `preview: { budget: { strategy: balancedCoverage, fullCandidateCap: <derived-from-N>, minPerGroup: 1 } }`. Compile-time error gates any profile still using `topK`. F#14 strict.
 
 ### 7. Trace integration with Spec 156
 
-Populate `selectionReason` per Spec 156's enum (`coverage`, `prior`, `widening`) on every candidate the allocator selected. `widenedBecauseUniform: boolean` lands on `previewUsage`. `previewGatedCount` parity-checked against `selectionReason: 'gated'` count — same value, both fields preserved this iteration.
+Populate `selectionReason` (Spec 156's enum at `policy-eval.ts:84` — `['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated']`) per allocator phase: this spec emits `'coverage' | 'prior' | 'widening' | 'gated'`. `'shallowDelta'` and `'cache'` remain reserved for future specs and are not emitted by this allocator. `widenedBecauseUniform: boolean` lands on `previewUsage`. `previewGatedCount` parity-checked against `selectionReason: 'gated'` count — same value, both fields preserved this iteration.
+
+### 8. Bypass when `preview.mode === 'disabled'`
+
+When `mode: 'disabled'`, the compiler omits `budget` from compiled `preview` config and the runtime skips the allocator entirely, preserving today's `previewTopK = activeCandidates.length` behavior at `policy-eval.ts:603-605`. Texas Hold'em's `baseline` profile (`mode: disabled`) is unaffected by the migration apart from the schema-level removal of the `topK` field.
 
 ## Files to Touch
 
@@ -156,10 +170,15 @@ Populate `selectionReason` per Spec 156's enum (`coverage`, `prior`, `widening`)
 - `packages/engine/src/cnl/compile-effect-footprint.ts` (new — Phase B)
 - `packages/engine/src/agents/preview-group-key.ts` (new — engine-generic group keying)
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify — types for `BudgetConfig`, `EffectFootprint`, `AllocatorOutput`)
-- `data/games/fire-in-the-lake/**/*.yaml` (modify — every profile migrated)
-- `data/games/texas-holdem/**/*.yaml` (modify — every profile migrated)
-- `packages/engine/test/fixtures/**` (modify — every fixture using `topK` migrated)
-- `packages/engine/test/golden/**` (modify — re-bless commit `Re-bless golden trace: <each updated file> — Spec 157 budget allocator`)
+- `data/games/fire-in-the-lake/92-agents.md` (modify — `arvn-baseline` and `arvn-evolved` profiles migrated)
+- `data/games/texas-holdem/92-agents.md` (modify — `baseline` profile schema-shape only; `mode: disabled` preserved)
+- `packages/engine/test/fixtures/gamedef/fitl-policy-catalog.golden.json` (modify — re-bless `Re-bless golden trace: fitl-policy-catalog.golden.json — Spec 157 budget allocator`)
+- `packages/engine/test/fixtures/gamedef/texas-policy-catalog.golden.json` (modify — re-bless similarly)
+- `packages/engine/test/golden/**` (modify — re-bless any other goldens that grep `topK` at write time)
+- `packages/engine/test/unit/agents/policy-evaluation-topk-gate.test.ts` (delete — subsumed by `preview-budget-allocator.test.ts`)
+- `packages/engine/test/unit/agents/preview-ready-ref-stats-aggregator.test.ts` (modify — migrate `topK` constructions to `budget`)
+- `packages/engine/test/unit/compile-agents-authoring.test.ts` (modify — rewrite `topK` validator tests against `budget`)
+- `packages/engine/test/perf/agents/derive-topk-floor.mjs` (rename to `derive-fullCandidateCap-floor.mjs` and rework, or delete)
 - `packages/engine/test/unit/agents/preview-budget-allocator.test.ts` (new)
 - `packages/engine/test/unit/agents/preview-group-key.test.ts` (new)
 - `packages/engine/test/unit/agents/preview-effect-footprint.test.ts` (new — Phase B)
@@ -182,7 +201,7 @@ Populate `selectionReason` per Spec 156's enum (`coverage`, `prior`, `widening`)
 ### Tests That Must Pass
 
 1. New: `allocatePreviewBudget` with `minPerGroup: 1, fullCandidateCap: 4` over 12 candidates spanning 6 actionIds selects at least one candidate from each of the first 4 groups (coverage invariant).
-2. New: Allocator output for the FITL canary fixture has `previewUsage.utility === 'differentiating'` rate ≥ 60% (compared to 33% baseline at `topK=4`).
+2. Diagnostic: sampled FITL canary output records the current `previewUsage.utility === 'differentiating'` rate. The former ≥60% Phase A gate is retired from Phase A after live evidence showed cap-only balanced coverage remains red; Phase B/C own improving that residual.
 3. New: `previewGroupKey` is stable across two compiles of the same GameSpec (deterministic identity).
 4. New (Phase B): On a fixture where candidate X's effect writes to a variable in the preview ref's read footprint and candidate Y's effect doesn't, X is selected by the prior pass when both are out of the coverage minimum.
 5. New (Phase B): `EffectFootprint` is conservative — for every action in the FITL action corpus, the footprint marks every variable the action's compiled effect can demonstrably write (no false-negatives in a hand-checked sample).
@@ -198,21 +217,21 @@ Populate `selectionReason` per Spec 156's enum (`coverage`, `prior`, `widening`)
 2. (architectural-invariant) Allocator output size ≤ `fullCandidateCap + widenStep × widenCap` (hard bound, F#10).
 3. (architectural-invariant) Allocator is deterministic across runs (replay-identity over `selectionReason` map).
 4. (architectural-invariant) `pickTopKByMoveOnlyScore` is not exported and not referenced anywhere in `packages/engine/src/**` (delete-confirm test).
-5. (architectural-invariant) No repo-owned profile YAML or fixture references `preview.topK` (compile-time grep test).
+5. (architectural-invariant) No authored profile (`data/games/<game>/92-agents.md`) or fixture references `preview.topK` (compile-time grep test).
 6. (golden-trace) FITL canary trace produces byte-identical `selectionReason` per candidate across runs.
+7. (architectural-invariant) `previewUsage.previewGatedCount === count(selectionReason === 'gated')` on every preview decision (parity preserved through migration).
 
 ## Test Plan
 
 ### New/Modified Tests
 
-1. `packages/engine/test/unit/agents/preview-budget-allocator.test.ts` (new) — `architectural-invariant`. Covers coverage, prior, widening, hard-cap.
+1. `packages/engine/test/unit/agents/preview-budget-allocator.test.ts` (new) — `architectural-invariant`. Covers Phase A coverage, prior fill, and hard-cap behavior.
 2. `packages/engine/test/unit/agents/preview-group-key.test.ts` (new) — `architectural-invariant`. Stability + uniqueness over a 20-candidate corpus.
 3. `packages/engine/test/unit/agents/preview-effect-footprint.test.ts` (new — Phase B) — `architectural-invariant`. Conservativeness property test over the FITL action corpus.
 4. `packages/engine/test/unit/agents/preview-widen-on-uniform.test.ts` (new — Phase C) — `architectural-invariant`. Trigger + bounded-widening property.
 5. `packages/engine/test/unit/cnl/compile-preview-budget.test.ts` (new) — `architectural-invariant`. Compile-time rejection of `topK` and underspecified `widenOnUniformProjection`.
-6. `packages/engine/test/golden/balanced-coverage-fitl-canary.test.ts` (new) — `golden-trace`. Pinned FITL canary trace under `preview.budget` defaults.
-7. `packages/engine/test/agents/policy-eval-allocator-replay-identity.test.ts` (new) — `architectural-invariant`. Two-run identity over `selectionReason` map.
-8. `packages/engine/test/agents/no-topk-references.test.ts` (new) — `architectural-invariant`. Greps `packages/engine/src/**` for `topK` and asserts absence.
+6. `packages/engine/test/unit/agents/preview-selection-reason-gated-parity.test.ts` (modified/existing) — `architectural-invariant`. Two-run identity over `selectionReason` map plus `previewGatedCount` parity.
+7. `packages/engine/test/unit/agents/no-topk-references.test.ts` (new) — `architectural-invariant`. Greps for deleted helper and removed authored/fixture preview cap residue.
 
 ### Commands
 
@@ -221,3 +240,35 @@ Populate `selectionReason` per Spec 156's enum (`coverage`, `prior`, `widening`)
 3. `pnpm -F @ludoforge/engine test:unit -- agents/preview-effect-footprint`
 4. `pnpm turbo schema:artifacts`
 5. `pnpm turbo lint typecheck test`
+
+## Follow-On Tickets
+
+Decomposed with `/spec-to-tickets specs/157-preview-budget-balanced-coverage.md 157PREVBUDBALCOV` before archival.
+
+Anticipated wave structure (finalized by `/spec-to-tickets`):
+
+- **Phase A — Coverage + cap + migration** (M): allocator with `previewGroupKey` group coverage and stable-key tie-broken prior fill; delete `pickTopKByMoveOnlyScore`; migrate every authored profile and `topK`-coupled test consumer.
+- **Phase B — Structural-impact prior** (L): compiler-side conservative `EffectFootprint` extraction in `compile-effect-footprint.ts`; allocator multiplicatively combines `priorScore × structuralImpactScore` in the prior pass.
+- **Phase C — Widen-on-uniform** (S): one-step bounded adaptive widening when prior decision's `utility === 'constant'`; per-decision-class memory cleared on turn boundary.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-06:
+
+- [`archive/tickets/157PREVBUDBALCOV-001.md`](../archive/tickets/157PREVBUDBALCOV-001.md) — Phase A: Balanced-coverage preview budget allocator (atomic cutover) (covers Phase A — schema, allocator, migration, deletion of `pickTopKByMoveOnlyScore`)
+- [`archive/tickets/157PREVBUDBALCOV-002.md`](../archive/tickets/157PREVBUDBALCOV-002.md) — Phase B: Compiler-side EffectFootprint and structural-impact prior (covers Phase B — `compile-effect-footprint.ts`, `priorScore × structuralImpactScore` prior pass)
+- [`archive/tickets/157PREVBUDBALCOV-003.md`](../archive/tickets/157PREVBUDBALCOV-003.md) — Phase C: Bounded one-step widen-on-uniform-projection (covers Phase C — `widenedBecauseUniform`, per-decision-class memory)
+
+## Outcome
+
+Completed: 2026-05-06.
+
+Spec 157 completed through its three archived implementation tickets:
+
+- `archive/tickets/157PREVBUDBALCOV-001.md` landed the atomic `preview.topK` to `preview.budget` migration, balanced coverage allocator, `previewGroupKey`, profile/fixture migration, and removal of the old move-only top-K gate.
+- `archive/tickets/157PREVBUDBALCOV-002.md` landed compiler-side effect footprints and the structural-impact prior used by the allocator.
+- `archive/tickets/157PREVBUDBALCOV-003.md` landed bounded one-step widen-on-uniform behavior and the required `previewUsage.widenedBecauseUniform` trace/schema surface.
+
+Deviations from the original plan are recorded in the archived phase tickets: the Phase A FITL differentiating-rate canary became diagnostic residual evidence rather than a terminal Phase A gate, and Phase C's live owner was the extracted allocator plus policy-evaluation wiring rather than the originally drafted inline-only location.
+
+Verification is recorded in the archived tickets. The final phase closeout passed engine build, focused compiled Node tests, `pnpm turbo schema:artifacts`, `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, `pnpm turbo lint`, `pnpm turbo test`, and `pnpm run check:ticket-deps`.

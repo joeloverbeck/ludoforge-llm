@@ -43,6 +43,8 @@ When the terminal, VM, WSL instance, or host environment hangs or is restarted d
 5. classify the interruption as `host/interrupted`, `likely resource pressure`, `harness-noisy`, or `owned test hang` only after that direct evidence
 6. record the resumed proof strategy and any remaining unproven broad lane explicitly in the active ticket outcome
 
+If context compaction, tool-session loss, or handoff means the original proof session id cannot be polled for a final exit code, classify that lane as `no final exit code observed` rather than inferred green. Use any visible output only as diagnostic evidence, then rerun the lane or a truthful focused substitute before citing it as final acceptance proof.
+
 ## Resource-Hotspot Evidence
 
 When a corpus lane may be causing OOM, swap pressure, or host-level stalls, collect resource evidence from the smallest representative command before tuning thresholds or rewriting tests:

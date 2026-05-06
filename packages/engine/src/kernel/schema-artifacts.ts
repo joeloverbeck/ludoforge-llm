@@ -9,6 +9,8 @@ export const SCHEMA_ARTIFACT_FILENAMES = [
 
 export type SchemaArtifactFilename = (typeof SCHEMA_ARTIFACT_FILENAMES)[number];
 
+const JSON_SCHEMA_OPTIONS = { target: 'draft-7', reused: 'ref' } as const;
+
 const withId = (id: SchemaArtifactFilename, schema: Record<string, unknown>): Record<string, unknown> => ({
   ...schema,
   $id: id,
@@ -38,6 +40,85 @@ const canonicalStringify = (value: unknown): string => {
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, entryValue]) => `${JSON.stringify(key)}:${canonicalStringify(entryValue)}`);
   return `{${entries.join(',')}}`;
+};
+
+const effectFootprintTargetSetJsonSchema = {
+  anyOf: [
+    {
+      type: 'array',
+      items: {
+        type: 'string',
+      },
+    },
+    {
+      type: 'string',
+      const: 'unknown',
+    },
+  ],
+};
+
+const effectFootprintSurfaceJsonSchema = {
+  type: 'object',
+  properties: {
+    tokens: effectFootprintTargetSetJsonSchema,
+    zones: effectFootprintTargetSetJsonSchema,
+    variables: effectFootprintTargetSetJsonSchema,
+    scores: effectFootprintTargetSetJsonSchema,
+  },
+  required: ['tokens', 'zones', 'variables', 'scores'],
+  additionalProperties: false,
+};
+
+const effectFootprintJsonSchema = {
+  type: 'object',
+  properties: {
+    writes: effectFootprintSurfaceJsonSchema,
+    reads: effectFootprintSurfaceJsonSchema,
+    mayTouchTokens: effectFootprintTargetSetJsonSchema,
+    mayTouchZones: effectFootprintTargetSetJsonSchema,
+    mayTouchVariables: effectFootprintTargetSetJsonSchema,
+    mayTouchScores: effectFootprintTargetSetJsonSchema,
+  },
+  required: ['writes', 'reads', 'mayTouchTokens', 'mayTouchZones', 'mayTouchVariables', 'mayTouchScores'],
+  additionalProperties: false,
+};
+
+const effectFootprintJsonSchemaKey = canonicalStringify(effectFootprintJsonSchema);
+
+const hoistEffectFootprintDefinition = (schema: Record<string, unknown>): Record<string, unknown> => {
+  const rewriteFootprintRefs = (value: unknown): unknown => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => rewriteFootprintRefs(entry));
+    }
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
+    if (canonicalStringify(value) === effectFootprintJsonSchemaKey) {
+      return { $ref: '#/definitions/EffectFootprint' };
+    }
+    const next: Record<string, unknown> = {};
+    for (const [key, entryValue] of Object.entries(value)) {
+      next[key] = rewriteFootprintRefs(entryValue);
+    }
+    return next;
+  };
+
+  const rewritten = rewriteFootprintRefs(schema) as Record<string, unknown>;
+  const existingDefinitions =
+    rewritten.definitions !== undefined &&
+    rewritten.definitions !== null &&
+    typeof rewritten.definitions === 'object' &&
+    !Array.isArray(rewritten.definitions)
+      ? (rewritten.definitions as Record<string, unknown>)
+      : {};
+
+  return {
+    ...rewritten,
+    definitions: {
+      ...existingDefinitions,
+      EffectFootprint: effectFootprintJsonSchema,
+    },
+  };
 };
 
 const renameAnonymousDefinitions = (schema: Record<string, unknown>): Record<string, unknown> => {
@@ -113,14 +194,14 @@ const renameAnonymousDefinitions = (schema: Record<string, unknown>): Record<str
 export const buildSchemaArtifactMap = (): Record<SchemaArtifactFilename, Record<string, unknown>> => ({
   'GameDef.schema.json': withId(
     'GameDef.schema.json',
-    renameAnonymousDefinitions(z.toJSONSchema(GameDefSchema, { target: 'draft-7' })),
+    hoistEffectFootprintDefinition(renameAnonymousDefinitions(z.toJSONSchema(GameDefSchema, JSON_SCHEMA_OPTIONS))),
   ),
   'Trace.schema.json': withId(
     'Trace.schema.json',
-    renameAnonymousDefinitions(z.toJSONSchema(SerializedGameTraceSchema, { target: 'draft-7' })),
+    hoistEffectFootprintDefinition(renameAnonymousDefinitions(z.toJSONSchema(SerializedGameTraceSchema, JSON_SCHEMA_OPTIONS))),
   ),
   'EvalReport.schema.json': withId(
     'EvalReport.schema.json',
-    renameAnonymousDefinitions(z.toJSONSchema(SerializedEvalReportSchema, { target: 'draft-7' })),
+    hoistEffectFootprintDefinition(renameAnonymousDefinitions(z.toJSONSchema(SerializedEvalReportSchema, JSON_SCHEMA_OPTIONS))),
   ),
 });

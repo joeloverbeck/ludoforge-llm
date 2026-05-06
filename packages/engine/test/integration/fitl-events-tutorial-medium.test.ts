@@ -6,6 +6,7 @@ import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 import { findDeep } from '../helpers/ast-search-helpers.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 
 describe('FITL tutorial medium event-card production spec', () => {
   it('compiles card 55 (Trucks) with trail degradation and Laos/Cambodia scoped removal model', () => {
@@ -23,7 +24,7 @@ describe('FITL tutorial medium event-card production spec', () => {
 
     // Unshaded: Trail degrades 2 boxes (not 1), NVA selects pieces via chooseN (not removeByPriority)
     const unshadedTrail = card?.unshaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
-    assert.deepEqual(unshadedTrail, tagEffectAsts({ addVar: { scope: 'global', var: 'trail', delta: -2 } }));
+    assert.deepEqual(stripEffectFootprints(unshadedTrail), tagEffectAsts({ addVar: { scope: 'global', var: 'trail', delta: -2 } }));
     const unshadedChooseN = findDeep(card?.unshaded?.effects ?? [], (node) => typeof node?.chooseN?.bind === 'string');
     assert.equal(unshadedChooseN.length, 2, 'Expected nested Laos and Cambodia chooseN removals');
 
@@ -65,7 +66,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     }
 
     const shadedShift = card?.shaded?.targets?.[0]?.effects?.find((effect) => 'shiftMarker' in effect);
-    assert.deepEqual(shadedShift, tagEffectAsts({
+    assert.deepEqual(stripEffectFootprints(shadedShift), tagEffectAsts({
       shiftMarker: { space: '$targetCity', marker: 'supportOpposition', delta: -2 },
     }));
     assert.equal(card?.shaded?.effects, undefined);
@@ -180,7 +181,7 @@ describe('FITL tutorial medium event-card production spec', () => {
     assert.equal(card?.unshaded?.targets, undefined);
 
     const shadedTrail = card?.shaded?.effects?.find((effect) => 'addVar' in effect && effect.addVar.var === 'trail');
-    assert.deepEqual(shadedTrail, tagEffectAsts({ addVar: { scope: 'global', var: 'trail', delta: 2 } }));
+    assert.deepEqual(stripEffectFootprints(shadedTrail), tagEffectAsts({ addVar: { scope: 'global', var: 'trail', delta: 2 } }));
 
     const shadedRoll = card?.shaded?.effects?.find((effect) => 'rollRandom' in effect);
     assert.notEqual(shadedRoll, undefined);
@@ -188,7 +189,7 @@ describe('FITL tutorial medium event-card production spec', () => {
       assert.equal(shadedRoll.rollRandom.bind, '$dieRoll');
       assert.equal(shadedRoll.rollRandom.min, 1);
       assert.equal(shadedRoll.rollRandom.max, 6);
-      assert.deepEqual(shadedRoll.rollRandom.in, tagEffectAsts([
+      assert.deepEqual(stripEffectFootprints(shadedRoll.rollRandom.in), tagEffectAsts([
         {
           addVar: {
             scope: 'global',

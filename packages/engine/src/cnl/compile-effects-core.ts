@@ -58,6 +58,7 @@ import {
   lowerDistributeTokensEffects,
 } from './compile-effects-choice.js';
 import { lowerGrantFreeOperationEffect } from './compile-effects-free-op.js';
+import { attachEffectFootprint } from './compile-effect-footprint.js';
 
 export function lowerFreeOperationExecutionContextNode(
   source: unknown,
@@ -193,7 +194,15 @@ export function lowerEffectArray(
 const wrapSingleEffectLowering = (result: EffectLoweringResult<EffectAST>): EffectLoweringResult<readonly EffectAST[]> => (
   result.value === null
     ? { value: null, diagnostics: result.diagnostics }
-    : { value: [result.value], diagnostics: result.diagnostics }
+    : { value: [attachEffectFootprint(result.value)], diagnostics: result.diagnostics }
+);
+
+const wrapEffectArrayLowering = (
+  result: EffectLoweringResult<readonly EffectAST[]>,
+): EffectLoweringResult<readonly EffectAST[]> => (
+  result.value === null
+    ? result
+    : { value: result.value.map(attachEffectFootprint), diagnostics: result.diagnostics }
 );
 
 function lowerEffectNode(
@@ -296,7 +305,7 @@ function lowerEffectNode(
     return wrapSingleEffectLowering(lowerChooseNEffect(source.chooseN, context, scope, `${path}.chooseN`));
   }
   if (isRecord(source.distributeTokens)) {
-    return lowerDistributeTokensEffects(source.distributeTokens, context, scope, `${path}.distributeTokens`);
+    return wrapEffectArrayLowering(lowerDistributeTokensEffects(source.distributeTokens, context, scope, `${path}.distributeTokens`));
   }
   if (isRecord(source.rollRandom)) {
     return wrapSingleEffectLowering(lowerRollRandomEffect(source.rollRandom, context, scope, `${path}.rollRandom`));

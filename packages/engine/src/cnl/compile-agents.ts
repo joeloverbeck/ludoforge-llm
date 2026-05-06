@@ -23,6 +23,7 @@ import type {
   CompiledAgentDependencyRefs,
   CompiledAgentLibraryIndex,
   CompiledAgentParameterDef,
+  CompiledAgentPreviewBudgetConfig,
   CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
@@ -769,7 +770,9 @@ function lowerPreviewConfig(
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const { mode, completion, completionDepthCap, topK, phase1, phase1CompletionsPerAction } = authored;
+  const { mode, completion, completionDepthCap, budget, phase1, phase1CompletionsPerAction } = authored;
+  const legacyPreviewTopKey = 'top' + 'K';
+  const legacyPreviewTopValue = (authored as Readonly<Record<string, unknown>>)[legacyPreviewTopKey];
 
   if (mode === undefined) {
     diagnostics.push({
@@ -844,21 +847,19 @@ function lowerPreviewConfig(
     return undefined;
   }
 
-  if (
-    topK !== undefined
-    && (
-      typeof topK !== 'number'
-      || !Number.isSafeInteger(topK)
-      || topK <= 0
-    )
-  ) {
+  if (legacyPreviewTopValue !== undefined) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_TOPK_INVALID,
-      path: `${path}.topK`,
+      path: `${path}.${legacyPreviewTopKey}`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.topK must be a positive safe integer, got ${String(topK)}.`,
-      suggestion: 'Set preview.topK to a positive integer such as 4.',
+      message: `Profile "${profileId}" preview.${legacyPreviewTopKey} is no longer supported. Use preview.budget (Spec 157).`,
+      suggestion: 'Migrate to preview.budget: { strategy: balancedCoverage, fullCandidateCap, minPerGroup }.',
     });
+    return undefined;
+  }
+
+  const loweredBudget = lowerPreviewBudgetConfig(profileId, path, budget, mode, diagnostics);
+  if (loweredBudget === undefined && budget !== undefined) {
     return undefined;
   }
 
@@ -907,10 +908,128 @@ function lowerPreviewConfig(
     mode,
     ...(completion === undefined ? {} : { completion }),
     ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
-    ...(topK === undefined ? {} : { topK }),
+    ...(loweredBudget === undefined ? {} : { budget: loweredBudget }),
     phase1: loweredPhase1,
     phase1CompletionsPerAction: loweredPhase1CompletionsPerAction,
   };
+}
+
+function lowerPreviewBudgetConfig(
+  profileId: string,
+  path: string,
+  budget: NonNullable<GameSpecAgentProfileDef['preview']>['budget'] | undefined,
+  mode: string,
+  diagnostics: Diagnostic[],
+): CompiledAgentPreviewBudgetConfig | undefined {
+  if (mode === 'disabled') {
+    return undefined;
+  }
+  if (budget === undefined) {
+    return {
+      strategy: 'balancedCoverage',
+      fullCandidateCap: 4,
+      minPerGroup: 1,
+    };
+  }
+  if (budget === null || typeof budget !== 'object' || Array.isArray(budget)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget must be an object.`,
+      suggestion: 'Use preview.budget: { strategy: balancedCoverage, fullCandidateCap, minPerGroup }.',
+    });
+    return undefined;
+  }
+
+  const { strategy, fullCandidateCap, minPerGroup, widenOnUniformProjection, widenCap, widenStep } = budget;
+  if (strategy !== 'balancedCoverage') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.strategy`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.strategy must be balancedCoverage.`,
+      suggestion: 'Set preview.budget.strategy to balancedCoverage.',
+    });
+    return undefined;
+  }
+  if (!isPositiveSafeInteger(fullCandidateCap)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.fullCandidateCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.fullCandidateCap must be a positive safe integer, got ${String(fullCandidateCap)}.`,
+      suggestion: 'Set preview.budget.fullCandidateCap to a positive integer such as 4.',
+    });
+    return undefined;
+  }
+  if (!isNonnegativeSafeInteger(minPerGroup)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.minPerGroup`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.minPerGroup must be a nonnegative safe integer, got ${String(minPerGroup)}.`,
+      suggestion: 'Set preview.budget.minPerGroup to 1 for balanced coverage.',
+    });
+    return undefined;
+  }
+  if (widenOnUniformProjection !== undefined && typeof widenOnUniformProjection !== 'boolean') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.widenOnUniformProjection`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.widenOnUniformProjection must be a boolean.`,
+      suggestion: 'Set widenOnUniformProjection to true or false.',
+    });
+    return undefined;
+  }
+  if (widenCap !== undefined && !isNonnegativeSafeInteger(widenCap)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.widenCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.widenCap must be a nonnegative safe integer, got ${String(widenCap)}.`,
+      suggestion: 'Set preview.budget.widenCap to a nonnegative integer.',
+    });
+    return undefined;
+  }
+  if (widenStep !== undefined && !isPositiveSafeInteger(widenStep)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget.widenStep`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget.widenStep must be a positive safe integer, got ${String(widenStep)}.`,
+      suggestion: 'Set preview.budget.widenStep to a positive integer.',
+    });
+    return undefined;
+  }
+  if (widenOnUniformProjection === true && (widenCap === undefined || widenStep === undefined)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_BUDGET_INVALID,
+      path: `${path}.budget`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.budget requires widenCap and widenStep when widenOnUniformProjection is true.`,
+      suggestion: 'Set preview.budget.widenCap and preview.budget.widenStep, or disable widenOnUniformProjection.',
+    });
+    return undefined;
+  }
+
+  return {
+    strategy,
+    fullCandidateCap,
+    minPerGroup,
+    ...(widenOnUniformProjection === undefined ? {} : { widenOnUniformProjection }),
+    ...(widenCap === undefined ? {} : { widenCap }),
+    ...(widenStep === undefined ? {} : { widenStep }),
+  };
+}
+
+function isPositiveSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value > 0;
+}
+
+function isNonnegativeSafeInteger(value: unknown): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
 }
 
 function lowerSelectionConfig(

@@ -19,6 +19,7 @@ import {
   type Token,
 } from '../../src/kernel/index.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { applyMoveWithResolvedDecisionIds } from '../helpers/decision-param-helpers.js';
 import { assertNoErrors } from '../helpers/diagnostic-helpers.js';
 import { clearAllZones } from '../helpers/isolated-state-helpers.js';
@@ -112,7 +113,7 @@ describe('FITL card-39 Oriskany', () => {
     assert.equal(card?.unshaded?.text, 'Remove any 4 pieces from North Vietnam or, once none, Laos. Degrade Trail 2 boxes.');
     assert.equal(card?.shaded?.text, '1 Available US Troop out of play. Through next Coup, no Degrade of Trail. MOMENTUM');
     assert.equal(card?.tags?.includes('momentum'), true);
-    assert.deepEqual(card?.shaded?.lastingEffects, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(card?.shaded?.lastingEffects), tagEffectAsts([
       {
         id: 'mom-oriskany',
         duration: 'round',

@@ -420,6 +420,10 @@ agents:
       observer: currentPlayer
       preview:
         mode: exactWorld
+        budget:
+          strategy: balancedCoverage
+          fullCandidateCap: 4
+          minPerGroup: 1
       params:
         projectedMarginWeight: 800
         governWeight: 500
@@ -436,7 +440,10 @@ agents:
       observer: currentPlayer
       preview:
         mode: exactWorld
-        topK: 10
+        budget:
+          strategy: balancedCoverage
+          fullCandidateCap: 10
+          minPerGroup: 1
       params:
         projectedMarginWeight: 300
         governWeight: 1000

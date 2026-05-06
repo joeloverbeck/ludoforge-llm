@@ -15,6 +15,7 @@ import { expandEffectMacros } from '../../src/cnl/expand-effect-macros.js';
 import { createEmptyGameSpecDoc, type EffectMacroDef } from '../../src/cnl/game-spec-doc.js';
 import { canonicalizeNamedSets } from '../../src/cnl/named-set-utils.js';
 import { assertNoDiagnostics } from '../helpers/diagnostic-helpers.js';
+import { stripEffectFootprints } from '../helpers/effect-footprint-test-helpers.js';
 import { tagEffectAsts } from '../../src/kernel/tag-effect-asts.js';
 import { buildDiscriminatedEndpointMatrix } from '../helpers/transfer-endpoint-matrix.js';
 
@@ -113,7 +114,7 @@ describe('compile-effects lowering', () => {
 
     assert.deepEqual(first, second);
     assertNoDiagnostics(first);
-    assert.deepEqual(first.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(first.value), tagEffectAsts([
       { draw: { from: 'deck:none', to: 'hand:$actor', count: 1 } },
       { setActivePlayer: { player: { chosen: '$actor' } } },
       { transferVar: { from: { scope: 'pvar', player: 'actor', var: 'coins' }, to: { scope: 'global', var: 'pot' }, amount: 2 } },
@@ -179,7 +180,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         conceal: {
           zone: 'hand:$actor',
@@ -332,7 +333,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         reveal: {
           zone: 'hand:$actor',
@@ -369,7 +370,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       { setVar: { scope: 'pvar', player: { id: 2 }, var: 'resources', value: 1 } },
       { moveAll: { from: 'deck:none', to: 'hand:3' } },
     ]));
@@ -878,7 +879,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         createToken: {
           type: 'unit',
@@ -924,7 +925,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'pvar', player: { chosen: '$actor' }, var: 'coins' },
@@ -954,7 +955,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'global', var: 'bank' },
@@ -981,7 +982,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         transferVar: {
           from: { scope: 'zoneVar', zone: 'board:none', var: 'supply' },
@@ -1010,7 +1011,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       { setVar: { scope: 'global', var: { ref: 'binding', name: '$track' }, value: 1 } },
       { addVar: { scope: 'pvar', player: 'active', var: { ref: 'grantContext', key: 'targetVar' }, delta: 2 } },
       {
@@ -1085,7 +1086,7 @@ describe('compile-effects lowering', () => {
     const result = lowerEffectArray(source, context, 'doc.actions.0.effects');
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseN',
@@ -1141,7 +1142,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         chooseOne: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
@@ -1280,7 +1281,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         chooseN: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.distributeTokens.selectTokens',
@@ -1544,7 +1545,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         chooseOne: {
           internalDecisionId: 'decision:doc.actions.0.effects.0.chooseOne',
@@ -1585,7 +1586,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         grantFreeOperation: {
           id: 'apc-vc-uprising',
@@ -1619,7 +1620,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '3',
@@ -1650,7 +1651,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '3',
@@ -1849,7 +1850,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '1',
@@ -1878,7 +1879,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         grantFreeOperation: {
           seat: '1',
@@ -2060,7 +2061,7 @@ describe('compile-effects lowering', () => {
     );
 
     assertNoDiagnostics(result);
-    assert.deepEqual(result.value, tagEffectAsts([
+    assert.deepEqual(stripEffectFootprints(result.value), tagEffectAsts([
       {
         gotoPhaseExact: {
           phase: 'commitment',

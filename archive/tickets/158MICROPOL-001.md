@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — scope enum, ref kinds, evaluator pair, runtime scope filters, schema, simulator policy agent, IR lowering
-**Deps**: `specs/158-microturn-policy-scope-and-refs.md`
+**Deps**: `archive/specs/158-microturn-policy-scope-and-refs.md`
 
 ## Problem
 
@@ -165,6 +165,8 @@ Delete the retired source and their tests (Foundation 14 mandates removal in the
 
 ## Outcome
 
+Outcome amended: 2026-05-06
+
 Implemented. Implementation updates landed in the working tree:
 
 - Completion date: 2026-05-06.
@@ -173,7 +175,7 @@ Implemented. Implementation updates landed in the working tree:
 - Added `microturn.*` ref lowering/runtime resolution for the ten refs named by this ticket and compile-time diagnostics for the retired completion-scope refs.
 - Updated `docs/agent-dsl-cookbook.md` to document microturn scope instead of the retired completion section.
 - `packages/engine/src/agents/policy-wasm-runtime.ts` was verified as no-edit: its score-row path remains move-scope-only and does not consume microturn-scoped considerations, so no completion-scope branch existed there to migrate.
-- The full new architectural-invariant test-file matrix, including exhaustive per-retired-ref grep/diagnostic coverage, remains owned by active follow-up `tickets/158MICROPOL-002.md`. This ticket landed the migration and existing-test updates needed for the contract cut; ticket 002 owns the broader new invariant files listed as out of scope here.
+- The full new architectural-invariant test-file matrix, including exhaustive per-retired-ref grep/diagnostic coverage, was completed by archived follow-up `archive/tickets/158MICROPOL-002.md`. This ticket landed the migration and existing-test updates needed for the contract cut; ticket 002 owned the broader new invariant files listed as out of scope here.
 
 Command substitution ledger:
 

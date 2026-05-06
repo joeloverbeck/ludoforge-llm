@@ -1,6 +1,6 @@
 # 158MICROPOL-002: Architectural-invariant tests for microturn scope
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
@@ -17,6 +17,7 @@ Ticket 001 lands the F#14 atomic cut migrating `scopes: [completion]` → `scope
 3. **Empirical baseline behavior** captured from prior campaigns: `preferPatronageMode` (weight 10) flipped 4/4 govern-mode chooseOnes from `aid` to `patronage` (per `campaigns/lessons-global.jsonl` exp-003 + restart exp-001). The convergence-witness asserts the new microturn-scope evaluator reproduces this captured expected-output sequence on a fixed FITL seed.
 4. **Test path convention** is `packages/engine/test/unit/agents/...` and `packages/engine/test/unit/cnl/...` — confirmed.
 5. **Test-class taxonomy** per `.claude/rules/testing.md` — four files are `architectural-invariant`; the migration-equivalence test is `convergence-witness` with a documented `@witness:` id.
+6. **Foundations-aligned F#14 grep boundary corrected after reassessment** — F#14 forbids supported compatibility shims, alias runtime paths, authored/serialized retired contracts, and executable completion-scope evaluator surfaces. It does **not** forbid compiler diagnostics or tests from naming a removed surface while rejecting it. Therefore `no-completion-scope-references.test.ts` must enforce semantic absence of the retired runtime/authoring contract and allow migration-diagnostic strings that reject `completion` and point to `microturn`.
 
 ## Architecture Check
 
@@ -48,8 +49,8 @@ Ticket 001 lands the F#14 atomic cut migrating `scopes: [completion]` → `scope
 
 `packages/engine/test/unit/agents/no-completion-scope-references.test.ts` (new) — `architectural-invariant`. Grep tests asserting:
 
-- `packages/engine/src/**` contains no `scopes: [completion]`, `option.value` (as a ref kind), `decision.name`, `decision.type`, `decision.targetKind`, `decision.optionCount`, `candidate.param.`, `preview.phase1`, `preview.phase1CompletionsPerAction`.
-- `data/games/**` contains the same — proves continued absence going forward (today already empty; this test prevents regression).
+- `packages/engine/src/**` contains no executable support for `scopes: [completion]`, `option.value` (as a ref kind), `decision.name`, `decision.type`, `decision.targetKind`, `decision.optionCount`, `candidate.param.`, `preview.phase1`, `preview.phase1CompletionsPerAction`. Migration diagnostics and tests that reject those strings are allowed; runtime support, schema enum support, evaluator exports/imports, and authored contract examples are not.
+- `data/games/**` contains no authored retired-scope or retired-ref contract — proves continued absence going forward (today already empty; this test prevents regression).
 - `selectBestCompletionChooseOneValue` and `buildCompletionChooseCallback` are not exported and not imported in `packages/engine/src/**` (delete-confirm).
 - `completion-guidance-choice.ts` and `completion-guidance-eval.ts` do not exist under `packages/engine/src/agents/` (delete-confirm).
 
@@ -84,7 +85,7 @@ The expected decision output is the empirically-captured "patronage 4/4 flipped 
 1. `microturn-option-evaluator.test.ts` — all ten ref kinds produce expected per-option scores; chooseOne and chooseNStep branches both pass.
 2. `microturn-scope-validation.test.ts` — all cross-scope and retired-surface rejections fire with the correct diagnostic text.
 3. `compile-microturn-refs.test.ts` — all ten ref kinds lower to the expected IR / bytecode shape.
-4. `no-completion-scope-references.test.ts` — zero matches across `packages/engine/src/**` and `data/games/**` for retired surfaces; `selectBestCompletionChooseOneValue` / `buildCompletionChooseCallback` undefined; deleted files absent.
+4. `no-completion-scope-references.test.ts` — no supported retired contract across `packages/engine/src/**` and `data/games/**`; migration-diagnostic strings are allowed only when they reject retired surfaces; `selectBestCompletionChooseOneValue` / `buildCompletionChooseCallback` undefined; deleted files absent.
 5. `migration-equivalence-prefer-patronage.test.ts` — microturn-scope `preferPatronageMode` produces the captured expected decision output on the FITL canary seed.
 6. Engine suite: `pnpm -F @ludoforge/engine test`.
 
@@ -114,3 +115,53 @@ The expected decision output is the empirically-captured "patronage 4/4 flipped 
 4. `pnpm -F @ludoforge/engine test:unit -- agents/no-completion-scope-references`
 5. `pnpm -F @ludoforge/engine test:unit -- agents/migration-equivalence-prefer-patronage`
 6. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Outcome amended: 2026-05-06
+
+Completed on 2026-05-06.
+
+Ticket correction applied before implementation:
+
+- F#14 grep enforcement corrected from literal source-string silence to semantic retired-contract absence. Compiler diagnostics and tests may name `completion`, `option.value`, `decision.*`, `candidate.param.*`, and `preview.phase1*` only while rejecting those retired authoring surfaces and naming the `microturn` migration. Runtime support, schema enum support, evaluator exports/imports, and production data authoring remain forbidden.
+
+Implementation landed in the working tree:
+
+- Added `packages/engine/test/unit/agents/microturn-option-evaluator.test.ts` to score all ten microturn refs against `chooseOne` and `chooseNStep` request shapes.
+- Added `packages/engine/test/unit/agents/microturn-scope-validation.test.ts` to prove cross-scope rejection, retired `completion` scope rejection, and retired-ref migration diagnostics.
+- Added `packages/engine/test/unit/cnl/compile-microturn-refs.test.ts` to lock the feature-table / bytecode shape for all ten microturn refs.
+- Added `packages/engine/test/unit/agents/no-completion-scope-references.test.ts` to enforce semantic F#14 deletion: retired evaluator files/symbols absent, executable completion-scope support absent, production data free of retired authoring, and schema scope support limited to `move` / `microturn`.
+- Added `packages/engine/test/unit/agents/migration-equivalence-prefer-patronage.test.ts` as convergence witness `spec-158-completion-to-microturn-equivalence`; it documents the retired completion-scope baseline and proves the microturn rewrite selects `patronage` for the first four govern-mode choices on fixed FITL seed 1001.
+
+Command substitution ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine test:unit -- agents/microturn-option-evaluator | replaced by build + direct compiled node --test | PASS in focused five-file command`
+- `Test Plan | pnpm -F @ludoforge/engine test:unit -- agents/microturn-scope-validation | replaced by build + direct compiled node --test | PASS in focused five-file command`
+- `Test Plan | pnpm -F @ludoforge/engine test:unit -- cnl/compile-microturn-refs | replaced by build + direct compiled node --test | PASS in focused five-file command`
+- `Test Plan | pnpm -F @ludoforge/engine test:unit -- agents/no-completion-scope-references | replaced by build + direct compiled node --test | PASS in focused five-file command`
+- `Test Plan | pnpm -F @ludoforge/engine test:unit -- agents/migration-equivalence-prefer-patronage | replaced by build + direct compiled node --test | PASS in focused five-file command`
+- `Acceptance Criteria | pnpm -F @ludoforge/engine test | PASS; 64/64 default files passed`
+- `Test Plan | pnpm turbo lint typecheck test | run literally twice | BLOCKED by repeat aggregate-runner failure in pre-existing walker deletion unit file; direct file rerun PASS and full package engine test PASS`
+
+Verification:
+
+1. `pnpm turbo lint typecheck test` — `@ludoforge/engine:lint`, `@ludoforge/engine:typecheck`, `@ludoforge/engine-wasm:build`, `@ludoforge/runner:lint`, `@ludoforge/runner:typecheck`, and `@ludoforge/runner:build` passed/replayed; `@ludoforge/engine#test` failed during aggregate `dist/test/unit/**/*.test.js` on `dist/test/unit/walker-deletion-enforcement.test.js` with no assertion detail.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/walker-deletion-enforcement.test.js` — PASS, `2/2` tests.
+3. `pnpm -F @ludoforge/engine test` — PASS, `64/64` default files passed.
+4. `pnpm turbo lint typecheck test` — repeated after the package pass; same aggregate-runner failure at `dist/test/unit/walker-deletion-enforcement.test.js`, while the new microturn tests had already passed in the stream.
+5. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/walker-deletion-enforcement.test.js` — PASS, `2/2` tests.
+6. `pnpm -F @ludoforge/engine build` — PASS.
+7. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/microturn-option-evaluator.test.js dist/test/unit/agents/microturn-scope-validation.test.js dist/test/unit/cnl/compile-microturn-refs.test.js dist/test/unit/agents/no-completion-scope-references.test.js dist/test/unit/agents/migration-equivalence-prefer-patronage.test.js` — PASS, `14/14` tests.
+8. `pnpm -F @ludoforge/engine test` — PASS, `64/64` default files passed.
+9. `pnpm run check:ticket-deps` — PASS, `1` active ticket and `2252` archived tickets checked.
+
+Post-review cleanup:
+
+- Updated `docs/agent-dsl-cookbook.md` to remove stale "completion-scoped examples retained pending migration" wording and point inner-frontier authoring at `scopes: [microturn]` / `microturn.*` refs.
+
+No-invalidation note: the final ticket status/proof transcription and post-review cookbook wording cleanup do not alter runtime, schemas, source, or tests. The engine build/test proof remains valid for the test-only implementation; the post-review cleanup was verified through markdown/path/dependency checks.
+
+Schema/artifact fallout: no source schema edits; `no-completion-scope-references.test.ts` validates the generated `GameDef.schema.json` scope boundary.
+
+Source-size ledger: all new files are under repo guidance (`80` to `236` lines each); no production source file grew.

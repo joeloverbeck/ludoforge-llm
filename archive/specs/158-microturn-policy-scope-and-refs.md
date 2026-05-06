@@ -1,6 +1,6 @@
 # Spec 158: Microturn Policy Scope and Refs
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (closes Gap 5 from `reports/microturn-preview-architectural-gaps-2026-05-06.md` — the cookbook deprecates `scopes: [completion]` while `agentGuided` still depends on it; cookbook-compliant profiles cannot author inner-microturn preferences; required by Spec 159 (`policyGuided` completion))
 **Complexity**: M (new authoring surface — scope, refs, compiler validation, evaluator dispatch; mechanical migration of repo-owned profiles; deletion of completion-scope code paths; F#14 strict)
 **Dependencies**:
@@ -213,4 +213,33 @@ Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema
 Decomposed via `/spec-to-tickets` on 2026-05-06:
 
 - [`archive/tickets/158MICROPOL-001.md`](../archive/tickets/158MICROPOL-001.md) — Migrate `scopes: [completion]` → `scopes: [microturn]` (F#14 atomic cut) (covers What to Change §1–§9 + §10 migration script)
-- [`tickets/158MICROPOL-002.md`](../tickets/158MICROPOL-002.md) — Architectural-invariant tests for microturn scope (covers Test Plan §1–§5)
+- [`archive/tickets/158MICROPOL-002.md`](../archive/tickets/158MICROPOL-002.md) — Architectural-invariant tests for microturn scope (covers Test Plan §1–§5)
+
+## Outcome
+
+Completed on 2026-05-06.
+
+What changed:
+
+- Replaced the retired policy consideration scope `completion` with `microturn` across compiler validation, runtime schema, generated schema artifacts, policy evaluator routing, and tests.
+- Added the ten `microturn.*` refs named by this spec, with compiler/runtime lowering and validation.
+- Renamed the completion evaluator pair to the microturn option evaluator surface and removed the retired completion evaluator files/tests.
+- Migrated existing fixtures and tests off retired completion-scope refs, and updated `docs/agent-dsl-cookbook.md` to document microturn scope.
+- Added the architectural-invariant test matrix for microturn scoring, cross-scope validation, bytecode shape, F#14 retired-surface enforcement, and the `preferPatronageMode` migration witness.
+
+Deviations from original plan:
+
+- `packages/engine/src/agents/policy-wasm-runtime.ts` required no edit because its score-row path remained move-scope-only and had no completion-scope branch to migrate.
+- `scripts/migrate-completion-to-microturn.mjs` was not retained; the final fixture migration did not require a persistent one-shot script.
+- Full source extraction for already-large files such as `compile-agents.ts` was deferred to avoid widening this contract migration beyond the completed spec boundary.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- Focused compiled microturn/authoring tests passed, including `microturn-option-evaluator`, `microturn-scope-validation`, `compile-microturn-refs`, `no-completion-scope-references`, and `migration-equivalence-prefer-patronage`.
+- `pnpm -F @ludoforge/engine test` passed: 64/64 default-lane files.
+- `pnpm turbo schema:artifacts` passed.
+- `pnpm turbo lint` passed.
+- `pnpm turbo typecheck` passed.
+- `pnpm turbo test` had a known aggregate-runner failure at `dist/test/unit/walker-deletion-enforcement.test.js`, but the file passed when run directly and the full package engine test passed.
+- `pnpm run check:ticket-deps` passed before spec archival.

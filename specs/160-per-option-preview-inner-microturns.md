@@ -4,7 +4,7 @@
 **Priority**: P1 (closes Gap 4 from `reports/microturn-preview-architectural-gaps-2026-05-06.md` — inner `chooseOne` / `chooseNStep` microturns currently have no per-option preview signal; the only differentiation path is microturn-scope considerations on static features. With per-option preview, an operator can author "prefer the option whose projected margin is higher" directly.)
 **Complexity**: L (new evaluation context at inner microturns; per-option synthetic completion driver; chooseN beam preview with bounded triple product; hidden-information protection; new `preview.option.*` ref family; opt-in config; reuses Spec 146 draft state)
 **Dependencies**:
-- Spec 158 [microturn-policy-scope-and-refs] (DRAFT) — `microturn.option.*` refs exist; this spec adds the `preview.option.*` family that's queryable from microturn-scope considerations.
+- Spec 158 [microturn-policy-scope-and-refs] (archived) — `microturn.option.*` refs exist; this spec adds the `preview.option.*` family that's queryable from microturn-scope considerations.
 - Spec 159 [preview-policy-guided-completion] (DRAFT) — per-option synthetic completion uses `policyGuided` as the inner-completion policy (with the same explicit fallback semantics).
 - Spec 156 [preview-observability-and-utility-metrics] (archived) — per-option preview emits the same `selectionReason`, synthetic-decision, and utility metrics as action-selection preview.
 - Spec 146 [scoped-draft-state-for-preview-drive] (archived) — bounded copy-on-write draft state. Per-option preview reuses this directly: each option preview is a separately-scoped draft.

@@ -423,7 +423,7 @@ considerations:
         ref: candidate.tag.govern
 ```
 
-When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Do not add completion-scoped examples to new profiles just to produce trace output; that surface is retained only for current internal coverage and pending migration work.
+When inspecting inner `chooseOne` or `chooseNStep` scoring in verbose traces, use candidate `scoreContributions[]` to see which consideration terms fired. Author inner-frontier preferences with `scopes: [microturn]` and `microturn.*` refs; completion-scoped examples must not be added to new profiles.
 
 ### Normalization Pattern
 

@@ -40,6 +40,7 @@ These are the reminders whose canonical guidance lives nowhere else in this skil
 - If the user-provided ticket path does not resolve, do a quick normalized-id/stem search across active tickets before assuming the request is blocked. Proceed only when the replacement ticket is unambiguous, and record the correction in working notes.
 - If live reassessment changes an **explicit ticket deliverable** rather than only clarifying proof shape — for example the required artifact, the default reproduction command, the owned witness shape, or another user-facing contract the ticket explicitly promised — do not silently rewrite that boundary just because the draft is wrong. In this repo, `AGENTS.md` `Ticket Fidelity` still applies: stop for `1-3-1` unless the user has already authorized that class of deliverable correction.
   - Use a concrete deliverable-correction detector before editing active acceptance text: if the durable witness changes nouns such as `score -> value`, `whole corpus -> supported subset`, `exact seed -> surrogate`, `live simulator -> synthetic fixture`, or `regenerate artifact -> validate unchanged`, treat that as an explicit deliverable correction and stop for `1-3-1` unless already authorized. Do not hide that change as a mere proof-shape clarification.
+  - Treat test-layout and fixture-layout substitutions the same way when the ticket makes them explicit. Changing `new test file -> existing test file`, `checked-in fixture -> in-memory fixture`, or `production corpus artifact -> synthetic/public-seam fixture` is a witness-artifact correction unless the ticket already allows that alternative. Stop for `1-3-1` or record prior authorization before relying on the substituted witness.
   - For mixed policy/VM/FFI tickets, classify `value`, `score`, `row`, `candidate`, and `batch` nouns separately before closeout. A ticket that explicitly promises score-producing candidate rows cannot be closed on value-only parity unless the active ticket has first been split, rewritten, or user-authorized; a ticket that already defines a supported subset plus a fail-closed successor may close only after the residual score/candidate owner is explicit.
   - When changing the default from an interpreter, closure tree, fallback runtime, or direct evaluator to a narrower VM/bytecode/native route, build a support matrix before deleting fallback calls: expression families and value types, context shapes, production entrypoints, direct-evaluator-required cases, fail-closed cases, and tests for each routed class. Make the distinction durable between `retired fallback path` and `still-required direct evaluation for unsupported semantics`; do not accidentally treat a successful default flip as proof that every non-VM evaluator can be removed.
   - For score-row parity, choose the oracle that evaluates the exact row-batch contract. Do not compare against a higher-level policy selection, preview-gating, or orchestration path unless the ticket explicitly owns production routing; those paths can reorder, gate, or reclassify candidates outside the score-row seam.
@@ -97,7 +98,9 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 1. the active ticket's intended durable state and outcome block already match the live intended result (`BLOCKED`, narrowed scope, pending repo-local terminal status such as `IMPLEMENTED`, user-approved exception, etc.), without implying unproven broad lanes are green
 2. any command substitutions or ticket-correction ledger entries are already written into the active ticket when needed
 3. any sibling-ticket, dependency, spec, or touched-file-scope edits required for a truthful closeout are already done
-4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`)
+4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`). For tickets with commands in multiple sections, shorthand command bundles, or mixed direct/focused substitutions, write a compact pre-terminal command ledger before setting terminal status:
+   - `ticket section | literal command/shorthand | ran directly/subsumed/split/not run | final citation`
+   - Example: `Test Plan | pnpm turbo lint typecheck test | split into pnpm turbo lint + pnpm turbo typecheck + pnpm turbo test | all three cited green`
 5. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
 6. stable-output proof sequencing is settled before any final lane starts: no final proof lane is running in parallel with a build, schema, or artifact producer that can clean or rewrite the same output tree; a zero-test or module-resolution "green" from an overlapped compiled-output lane is invalid until rerun serially
    - If a final proof consumes `dist/` or another generated tree, schedule build-producing broad lanes before that final consumer proof when practical. If a later accepted lane rebuilds or cleans that tree, rerun the narrowest affected generated-output consumer proof before citing it as final.
@@ -117,6 +120,15 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 17. for shared performance or cleanup changes, the closeout names the runtime surface breadth: `ticket-specific`, `policy/agent-only`, `script/profile-only`, or `shared engine/kernel`, with any relevant non-agent paths called out
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
+
+For ordinary non-measured tickets whose final lanes go green, use this compact green closeout order:
+
+1. Before final proof, make the active ticket truthful about scope, command substitutions, generated fallout, touched-file ownership, and the proof lanes you intend to cite, but leave the repo-local terminal status pending.
+2. Run the final proof lanes serially with stable generated outputs; if a later accepted lane rebuilds or cleans `dist/`, schemas, fixtures, or another consumed output tree, rerun the narrowest affected consumer proof.
+3. After all final lanes are green, classified, or explicitly substituted, apply the terminal status plus exact proof-result transcription as the final narrow ticket edit when practical.
+4. If that edit only records the just-run proof and does not change scope, acceptance criteria, command semantics, touched-file ownership, proof claims, follow-up ownership, or dependency classification, record the no-invalidation rationale in the ticket outcome or final closeout instead of rerunning broad lanes.
+5. Run `pnpm run check:ticket-deps` when terminal status, dependencies, successor ownership, or other ticket-graph facts changed or when the active ticket/family expects dependency integrity proof.
+6. Finish with an untracked-aware `git status --short` sweep and hand off to `$post-ticket-review` unless the user explicitly included archival in the implementation request.
 
 When the decisive proof lane itself determines the final classification, do not pretend the outcome can be fully written beforehand. Instead:
 
@@ -231,6 +243,8 @@ For **small test-only regression tickets** whose owned deliverable is one new or
 
 When a ticket otherwise looks bounded but changes a **serialized trace/result shape, generated schema, exported union, or required diagnostic field**, classify it as mixed `bounded local refactor + shared-contract` rather than pure bounded-local. Do an early cross-package `rg` for the changed field/type/literal, list runner/UI/report/fixture consumers, and plan a workspace-level build or typecheck lane before closeout.
 
+If the ticket only changes **population of an existing serialized field** and does not change field name, required/optional status, enum values, property type, schema source, or generated artifact shape, classify it as `existing serialized-field population`. Still validate the serialized consumer path with focused tests and schema/artifact checks when nearby, but do not assume artifact regeneration is owned unless a generator or schema check reports drift.
+
 ### Bounded Local Refactor Fast Path
 
 When ticket triage confirms a bounded local refactor, load `references/bounded-local-refactor.md` for the lean 9-step path. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
@@ -329,6 +343,15 @@ If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, o
 For profiling or benchmark red-gate tickets, use a fast reference set unless reassessment triggers heavier guidance: `references/working-notes.md`, `references/ticket-type-triage.md`, `references/specialized-ticket-types.md` for gate/audit/profiling guidance, and `references/verification.md` for measured-gate and CPU-profile handling. This profiling fast path overrides the default non-bounded-ticket load of `references/implementation-general.md`; load `implementation-general.md` only when one of the heavier-guidance triggers below appears. Load `references/closeout-and-followup.md` before creating/updating any successor, dependent-ticket rewrite, spec ticket-list update, status transition, or other ticket-graph closeout artifact. Ticket-graph closeout alone does not require `implementation-general.md` when `closeout-and-followup.md` covers the handoff. Load broader references such as `references/implementation-general.md`, `references/triage-and-resolution.md`, `references/schema-and-migration.md`, or `references/verification-acceptance-proof.md` only when triggered by split ownership, nontrivial discrepancy, shared contract/schema fallout, noisy harness behavior, command-wrapper ambiguity, or post-proof invalidation.
 
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`. Covers in-memory vs serialized decisions, post-migration sweeps, identifier consumer sweeps, interim shared-contract state for staged tickets, and historical benchmark worktree handling.
+
+For serialized trace/result shape migrations, use this compact checklist before the first broad proof lane:
+
+- update the authoritative source type or union and every direct writer of the field
+- update schema source and regenerate/check the generated schema artifact
+- search direct readers, hand-authored object literals, report/diagnostic consumers, fixtures, goldens, and exhaustiveness assumptions
+- prove any intended trace-tier boundary such as verbose-only emission or summary omission
+- add or update a focused replay/determinism witness when the field is serialized, ordered, or seed-sensitive
+- include at least one proof lane that consumes the generated output or public serialized contract, plus the package/workspace typecheck lane when downstream consumers can see the shape
 
 ## Verification
 

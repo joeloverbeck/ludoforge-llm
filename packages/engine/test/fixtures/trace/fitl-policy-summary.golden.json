@@ -16,10 +16,11 @@
     "seatId": "us",
     "requestedProfileId": null,
     "resolvedProfileId": "us-baseline",
-    "profileFingerprint": "cb70458191639a96121de3d8ba59933773274cff9f24dcd703c3b7651f9a06d8",
+    "profileFingerprint": "549d63ba107dca28e6bd59327645ddf5ce1b9b9066e21315f1c1066d872fb0f0",
     "initialCandidateCount": 7,
     "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\"}|false|event",
-    "finalScore": -9.6,
+    "finalScore": -960,
+    "previewGatedCount": 2,
     "pruningSteps": [
       {
         "ruleId": "dropPassWhenOtherMovesExist",
@@ -46,6 +47,8 @@
           "reason": "gated"
         }
       ],
+      "readyRefStats": {},
+      "utility": "none",
       "outcomeBreakdown": {
         "ready": 3,
         "stochastic": 0,

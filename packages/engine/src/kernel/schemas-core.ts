@@ -1976,15 +1976,48 @@ const PolicyPreviewUnknownRefTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewReadyRefStatsTraceSchema = z
+  .object({
+    readyCount: IntegerSchema.nonnegative(),
+    distinctValueCount: IntegerSchema.nonnegative(),
+    min: IntegerSchema.nullable(),
+    max: IntegerSchema.nullable(),
+    range: IntegerSchema.nullable(),
+    allReadyValuesEqual: BooleanSchema,
+  })
+  .strict();
+
+const SyntheticDecisionTraceEntrySchema = z
+  .object({
+    depth: IntegerSchema.positive(),
+    microturnKind: z.enum(['chooseOne', 'chooseNStep']),
+    decisionKey: StringSchema,
+    selectedOptionStableKey: StringSchema,
+    selectionReason: z.enum(['greedyAlphabetical', 'microturnPolicy', 'fallback']),
+    score: NumberSchema,
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema),
+    completionPolicy: z.enum(['greedy', 'agentGuided']),
+  })
+  .strict();
+
+const PolicyPreviewDriveTraceSchema = z
+  .object({
+    depth: IntegerSchema.nonnegative(),
+    completionPolicy: z.enum(['greedy', 'agentGuided']),
+    syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
+  })
+  .strict();
+
 const PolicyCandidateDecisionTraceSchema = z
   .object({
     actionId: StringSchema,
     stableMoveKey: StringSchema,
     score: NumberSchema,
     prunedBy: z.array(StringSchema),
-    scoreContributions: z.array(AgentDecisionScoreContributionSchema).optional(),
-    previewRefIds: z.array(StringSchema).optional(),
-    unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema).optional(),
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema),
+    previewRefIds: z.array(StringSchema),
+    unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated']),
     previewOutcome: z.union([
       z.literal('ready'),
       z.literal('stochastic'),
@@ -1996,8 +2029,7 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]).optional(),
-    previewDriveDepth: IntegerSchema.nonnegative().optional(),
-    previewCompletionPolicy: z.enum(['greedy', 'agentGuided']).optional(),
+    previewDrive: PolicyPreviewDriveTraceSchema.optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({
       actionId: StringSchema,
@@ -2044,6 +2076,8 @@ const PolicyPreviewUsageTraceSchema = z
     evaluatedCandidateCount: NumberSchema,
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
+    utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
   })
   .strict();

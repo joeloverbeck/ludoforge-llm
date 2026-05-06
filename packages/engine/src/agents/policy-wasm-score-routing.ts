@@ -293,14 +293,19 @@ const materializePreviewDynamicRowsWithWasm = (
           return undefined;
         }
         candidate.previewOutcome = row.outcome;
-        candidate.previewDriveDepth = row.depth;
-        candidate.previewCompletionPolicy = input.profile.preview.completion ?? 'greedy';
+        candidate.previewDrive = {
+          depth: row.depth,
+          completionPolicy: input.profile.preview.completion ?? 'greedy',
+          syntheticDecisions: [],
+        };
         if (row.outcome !== 'ready' && row.outcome !== 'stochastic') {
           candidate.previewFailureReason = row.outcome === 'failed' ? 'wasmProductionPreviewDriveFailed' : row.outcome;
           candidate.unknownPreviewRefs.set(refId, row.outcome);
           return undefined;
         }
-        return previewValueFromWasmRow(input, ref, row.previewStateValues, slots);
+        const value = previewValueFromWasmRow(input, ref, row.previewStateValues, slots);
+        input.evaluation.recordResolvedPreviewRefValue(candidate, refId, value);
+        return value;
       }),
     };
   });

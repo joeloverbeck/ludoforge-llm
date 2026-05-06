@@ -16,6 +16,7 @@ import {
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
+import type { CompletionScoreContribution } from './completion-guidance-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 
 export interface PolicyAgentConfig {
@@ -62,15 +63,17 @@ const logPolicyOomTrace = (
 const traceCandidatesForFrontier = (
   traceLevel: PolicyDecisionTraceLevel,
   frontier: readonly FrontierCandidate[],
+  scoreContributionsByOption?: ReadonlyMap<string, readonly CompletionScoreContribution[]>,
 ): PolicyEvaluationMetadata['candidates'] => traceLevel === 'verbose'
   ? frontier.map((candidate) => ({
       actionId: candidate.decision.kind === 'actionSelection' ? String(candidate.decision.actionId) : candidate.decision.kind,
       stableMoveKey: candidate.stableMoveKey,
       score: candidate.score,
       prunedBy: [],
-      scoreContributions: [],
+      scoreContributions: [...(scoreContributionsByOption?.get(candidate.stableMoveKey) ?? [])],
       previewRefIds: [],
       unknownPreviewRefs: [],
+      selectionReason: 'gated',
     }))
   : [];
 
@@ -130,7 +133,11 @@ const chooseStructuralFrontierDecision = (
 };
 
 type GuidedChoiceMatch =
-  | { readonly matchedDecision: Decision; readonly score: number }
+  | {
+      readonly matchedDecision: Decision;
+      readonly score: number;
+      readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
+    }
   | null;
 
 const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
@@ -138,6 +145,8 @@ const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
   evaluatedCandidateCount: 0,
   refIds: [],
   unknownRefs: [],
+  readyRefStats: {},
+  utility: 'none',
   outcomeBreakdown: {
     ready: 0,
     stochastic: 0,
@@ -222,6 +231,7 @@ export class PolicyAgent implements Agent {
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       ...(this.traceLevel === 'none' ? { diagnosticsMode: 'disabled' as const } : {}),
+      traceLevel: this.traceLevel,
     });
     logPolicyOomTrace(
       'actionSelection:evaluated',
@@ -264,9 +274,10 @@ export class PolicyAgent implements Agent {
               stableMoveKey: frontierDecisionKey(input.def, decision),
               score: decision === guidedChoice.matchedDecision ? guidedChoice.score : 0,
               prunedBy: [],
-              scoreContributions: [],
+              scoreContributions: [...(guidedChoice.scoreContributionsByOption.get(frontierDecisionKey(input.def, decision)) ?? [])],
               previewRefIds: [],
               unknownPreviewRefs: [],
+              selectionReason: 'gated',
             }))
           : [],
         pruningSteps: [],
@@ -348,10 +359,11 @@ export class PolicyAgent implements Agent {
       profile: resolvedProfile.profile,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
     }, request, { requirePositiveScore: false });
-    const preferredValue = preferredSelection?.value ?? choose(request);
-    if (preferredValue === undefined || Array.isArray(preferredValue)) {
+    const fallbackSelection = preferredSelection ?? choose(request);
+    if (fallbackSelection === undefined || Array.isArray(fallbackSelection.value)) {
       return null;
     }
+    const preferredValue = fallbackSelection.value;
     const matchedDecision = input.microturn.legalActions.find(
       (decision): decision is Extract<Decision, { readonly kind: 'chooseOne' }> =>
         decision.kind === 'chooseOne'
@@ -360,7 +372,11 @@ export class PolicyAgent implements Agent {
     );
     return matchedDecision === undefined
       ? null
-      : { matchedDecision, score: preferredSelection?.score ?? 1 };
+      : {
+          matchedDecision,
+          score: fallbackSelection.score,
+          scoreContributionsByOption: fallbackSelection.scoreContributionsByOption,
+        };
   }
 
   private matchGuidedChooseNStepDecision(
@@ -387,9 +403,9 @@ export class PolicyAgent implements Agent {
     if (preferredSelection === undefined) {
       return null;
     }
-    const preferredValues = Array.isArray(preferredSelection)
-      ? preferredSelection
-      : [preferredSelection];
+    const preferredValues = Array.isArray(preferredSelection.value)
+      ? preferredSelection.value
+      : [preferredSelection.value];
     const currentValues = context.selectedSoFar;
     const nextAdd = preferredValues.find((value) => !currentValues.some((selected: string | number | boolean) => selected === value));
     if (nextAdd !== undefined) {
@@ -401,7 +417,12 @@ export class PolicyAgent implements Agent {
           && decision.value === nextAdd,
       );
       if (matchedAdd !== undefined) {
-        return { matchedDecision: matchedAdd, score: 1 };
+        return {
+          matchedDecision: matchedAdd,
+          score: preferredSelection.scoreContributionsByOption.get(frontierDecisionKey(input.def, matchedAdd))
+            ?.reduce((total, contribution) => total + contribution.contribution, 0) ?? 0,
+          scoreContributionsByOption: preferredSelection.scoreContributionsByOption,
+        };
       }
     }
 
@@ -415,7 +436,11 @@ export class PolicyAgent implements Agent {
           && decision.command === 'confirm',
       );
       if (matchedConfirm !== undefined) {
-        return { matchedDecision: matchedConfirm, score: 1 };
+        return {
+          matchedDecision: matchedConfirm,
+          score: 0,
+          scoreContributionsByOption: preferredSelection.scoreContributionsByOption,
+        };
       }
     }
 

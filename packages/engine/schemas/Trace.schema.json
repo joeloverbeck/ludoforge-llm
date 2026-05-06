@@ -3603,6 +3603,84 @@
                       "additionalProperties": false
                     }
                   },
+                  "readyRefStats": {
+                    "type": "object",
+                    "propertyNames": {
+                      "type": "string"
+                    },
+                    "additionalProperties": {
+                      "type": "object",
+                      "properties": {
+                        "readyCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "distinctValueCount": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "min": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "max": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "range": {
+                          "anyOf": [
+                            {
+                              "type": "integer",
+                              "minimum": -9007199254740991,
+                              "maximum": 9007199254740991
+                            },
+                            {
+                              "type": "null"
+                            }
+                          ]
+                        },
+                        "allReadyValuesEqual": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "readyCount",
+                        "distinctValueCount",
+                        "min",
+                        "max",
+                        "range",
+                        "allReadyValuesEqual"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "utility": {
+                    "type": "string",
+                    "enum": [
+                      "none",
+                      "constant",
+                      "lowInformation",
+                      "differentiating"
+                    ]
+                  },
                   "outcomeBreakdown": {
                     "type": "object",
                     "properties": {
@@ -3652,7 +3730,9 @@
                   "mode",
                   "evaluatedCandidateCount",
                   "refIds",
-                  "unknownRefs"
+                  "unknownRefs",
+                  "readyRefStats",
+                  "utility"
                 ],
                 "additionalProperties": false
               },
@@ -3828,6 +3908,17 @@
                         "additionalProperties": false
                       }
                     },
+                    "selectionReason": {
+                      "type": "string",
+                      "enum": [
+                        "coverage",
+                        "prior",
+                        "shallowDelta",
+                        "widening",
+                        "cache",
+                        "gated"
+                      ]
+                    },
                     "previewOutcome": {
                       "anyOf": [
                         {
@@ -3868,17 +3959,102 @@
                         }
                       ]
                     },
-                    "previewDriveDepth": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 9007199254740991
-                    },
-                    "previewCompletionPolicy": {
-                      "type": "string",
-                      "enum": [
-                        "greedy",
-                        "agentGuided"
-                      ]
+                    "previewDrive": {
+                      "type": "object",
+                      "properties": {
+                        "depth": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "completionPolicy": {
+                          "type": "string",
+                          "enum": [
+                            "greedy",
+                            "agentGuided"
+                          ]
+                        },
+                        "syntheticDecisions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "depth": {
+                                "type": "integer",
+                                "exclusiveMinimum": 0,
+                                "maximum": 9007199254740991
+                              },
+                              "microturnKind": {
+                                "type": "string",
+                                "enum": [
+                                  "chooseOne",
+                                  "chooseNStep"
+                                ]
+                              },
+                              "decisionKey": {
+                                "type": "string"
+                              },
+                              "selectedOptionStableKey": {
+                                "type": "string"
+                              },
+                              "selectionReason": {
+                                "type": "string",
+                                "enum": [
+                                  "greedyAlphabetical",
+                                  "microturnPolicy",
+                                  "fallback"
+                                ]
+                              },
+                              "score": {
+                                "type": "number"
+                              },
+                              "scoreContributions": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "termId": {
+                                      "type": "string"
+                                    },
+                                    "contribution": {
+                                      "type": "number"
+                                    }
+                                  },
+                                  "required": [
+                                    "termId",
+                                    "contribution"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
+                              "completionPolicy": {
+                                "type": "string",
+                                "enum": [
+                                  "greedy",
+                                  "agentGuided"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "depth",
+                              "microturnKind",
+                              "decisionKey",
+                              "selectedOptionStableKey",
+                              "selectionReason",
+                              "score",
+                              "scoreContributions",
+                              "completionPolicy"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "depth",
+                        "completionPolicy",
+                        "syntheticDecisions"
+                      ],
+                      "additionalProperties": false
                     },
                     "grantedOperationSimulated": {
                       "type": "boolean"
@@ -3914,7 +4090,11 @@
                     "actionId",
                     "stableMoveKey",
                     "score",
-                    "prunedBy"
+                    "prunedBy",
+                    "scoreContributions",
+                    "previewRefIds",
+                    "unknownPreviewRefs",
+                    "selectionReason"
                   ],
                   "additionalProperties": false
                 }

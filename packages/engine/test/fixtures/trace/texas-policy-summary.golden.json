@@ -2,7 +2,7 @@
   "move": {
     "actionId": "raise",
     "params": {
-      "raiseAmount": 120
+      "raiseAmount": 426
     }
   },
   "agentDecision": {
@@ -13,10 +13,11 @@
     "seatId": "neutral",
     "requestedProfileId": null,
     "resolvedProfileId": "baseline",
-    "profileFingerprint": "611471255deffbc5e1be0d2d1571449adba6a69cd37f8b56235f1f76ab08e9d1",
+    "profileFingerprint": "953d48f6c13a6ea5f45404064466dbfd8656f089829470789355ff7de659b588",
     "initialCandidateCount": 12,
-    "selectedStableMoveKey": "raise|{\"raiseAmount\":120}|false|unclassified",
+    "selectedStableMoveKey": "raise|{\"raiseAmount\":426}|false|unclassified",
     "finalScore": 90,
+    "previewGatedCount": 0,
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {
@@ -24,6 +25,8 @@
       "evaluatedCandidateCount": 0,
       "refIds": [],
       "unknownRefs": [],
+      "readyRefStats": {},
+      "utility": "none",
       "outcomeBreakdown": {
         "ready": 0,
         "stochastic": 0,
@@ -54,7 +57,7 @@
         0.09999999997938847,
         0.09999999997938847
       ],
-      "selectedIndex": 3
+      "selectedIndex": 7
     },
     "emergencyFallback": false,
     "failure": null,

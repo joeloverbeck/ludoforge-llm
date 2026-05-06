@@ -52,6 +52,18 @@ When the user approves continuing under the **same ticket** after a `FOUNDATIONS
 
 Use this path when the user explicitly authorizes the widened same-ticket boundary. Do not force an unnecessary successor-ticket split once the user has chosen completion under the active ticket.
 
+## Confirmed Narrowed or Deferred Boundary Re-Entry
+
+When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling handoff while the active ticket still remains the implementation owner for a smaller slice, do not continue on the pre-reset draft contract. Use this re-entry order before coding:
+
+1. Restate the approved active-ticket boundary and the specific deferred or sibling-owned surface.
+2. Update the active ticket, spec, and affected sibling tickets first when their current wording still claims the deferred surface.
+3. Emit a fresh working-notes checkpoint for the narrowed slice, including `deferred sibling/spec scope`, `verification substitutions`, and any changed final proof lanes.
+4. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket before implementation.
+5. Only then resume coding and verification under the corrected boundary.
+
+Use this path when the active ticket remains closeable after the correction. If the correction makes the active ticket evidence-only, blocked, or successor-owned, use the non-implementation rewrite or successor re-entry path instead.
+
 ## Foundation Numeric Normalization
 
 When a `FOUNDATIONS.md` reset requires replacing non-integer rule-authoritative values with an exact integer representation, do not treat the edit as a mechanical value rewrite. Use this proof shape:

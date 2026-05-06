@@ -43,13 +43,15 @@ Classify: design | decision/triage | operational
               [Optional] External prior-art survey for architectural topics
                        |
                        v
-              Propose 2-3 approaches with tradeoffs
+              Propose 2-4 approaches with tradeoffs
                        |
                        v
               Present design section by section, get approval per section
                        |
                        v
               [If implementation topic] Validate against FOUNDATIONS.md
+                       |
+                       +--> [If recommendation is dismiss] confirm rationale + optional reports/ memo + Continual Learning -> end
                        |
                        v
               Write design doc to docs/plans/
@@ -66,7 +68,7 @@ Classify: design | decision/triage | operational
 
 2. **Topic classification**: Determine the brainstorm mode:
    - **Design** (default): The goal is to explore a problem and produce a design. Covers implementation-related topics (code changes, architecture, new features, bug fixes) and non-implementation topics (process, tooling, workflow, strategy, skill design). Follow the full Step 2-6 flow.
-   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc). **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision. **Triage compound-move shape**: After Step 1.5 verification, the brief interview may take the form of one consolidated message — findings recap (including any framing corrections surfaced during verification) → proposed artifact set with per-item classifications and tradeoffs → batched multiple-choice gap-closers (scope, sequencing, phasing) with a recommendation. The user's single response then resolves all gaps and authorises Step 5 artifact writes. This mirrors the design-mode compound-move variant in Step 2.
+   - **Decision/triage**: The goal is to evaluate existing analysis and decide what artifacts to create (specs, tickets, or nothing). Triggered when the reference file contains analyzed findings with recommendations, and the user asks to act on them. Follow the shortened flow: brief interview (confirm intent + risk tolerance) -> verify claims if needed -> write artifacts directly. Skip Steps 3-5 (approaches, section-by-section design, design doc) unless the **Transition to design** sub-rule below applies. **Dismiss outcome**: If triage concludes no artifact is warranted, confirm the dismissal rationale with the user and end. No output file is needed — the decision is recorded in the conversation context. Do not modify the reference file's original content without user approval. Appending a triage coverage table is permitted when the user has approved a plan that includes this step. **Transition to design**: If triage results in a non-trivial artifact that requires design (e.g., a skill rewrite, a spec with multiple interacting sections), transition to Steps 3-4 (Propose Approaches, Present Design) for the artifact construction phase. The shortened interview from triage mode still applies — do not restart the full interview. **Confidence blocks in short flows**: For triage flows where a single user answer resolves all gaps, the confidence block after verification results may be the only one needed. Transition directly to the outcome when the user's response is both an answer and a decision. **Triage compound-move shape**: After Step 1.5 verification, the brief interview may take the form of one consolidated message — findings recap (including any framing corrections surfaced during verification) → proposed artifact set with per-item classifications and tradeoffs → batched multiple-choice gap-closers (scope, sequencing, phasing) with a recommendation. The user's single response then resolves all gaps and authorises Step 5 artifact writes. This mirrors the design-mode compound-move variant in Step 2.
    - **Operational**: The goal is to safely execute a concrete destructive or system-affecting action (rollback, cleanup, repair, migration, dependency upgrade, environment reset). Triggered when the user requests a specific action with side effects, not a design or evaluation of analysis. Follow the shortened flow: brief interview to confirm scope and risk tolerance → verify current system state (git, fs, build, tests) → write an executable plan with explicit numbered steps, expected outputs, and verification checks. Skip Steps 3-4 (approaches, section-by-section design); the action is the request, the design is the step list. The artifact is a plan-style doc, not a spec or ticket. See Step 5 for output format. Operational tasks frequently run under plan mode — see "Plan Mode Interaction" below.
    - **Decision-requiring-design**: If a decision/triage question can only be answered by producing a design (e.g., "should X and Y be merged?" requires designing the merged version to evaluate feasibility), classify as design from the start. The decision is embedded in the design approval.
    - **External LLM analysis**: When the reference file is analysis produced by another LLM (e.g., ChatGPT evaluating a skill, architecture, or design), follow decision/triage mode if the user asks to evaluate the proposals, or design mode if the user asks to act on them. Verify factual claims about the codebase before accepting them as constraints.
@@ -171,7 +173,17 @@ If the user says something like "just go" or "that's enough questions", respect 
 
 If prior session context (e.g., extended debugging, codebase exploration, or diagnostic work earlier in the conversation) puts starting confidence above 80%, the interview may reduce to 1-2 targeted questions about remaining gaps. If confidence reaches 95% after context reading alone (no user questions needed), announce the confidence score with explicit gaps/assumptions and proceed directly to Step 3. The interview is a tool for gap-filling, not a mandatory ceremony.
 
-**Compound-move variant at 80–94%**: When the remaining gaps are all multiple-choice terminal decisions (which approach, is scope X in or out, amend foundation Y), the Step 3 approach presentation and the final gap-closer questions may be combined into a single message — the user's choice of approach simultaneously resolves the remaining gaps. This is the natural flow when the gaps are "which option" rather than "what's the problem", and the approach recommendations already implicitly argue for one scope/amendment answer over the others. The message shape: short findings recap → 2-3 approaches with tradeoffs → explicit batched gap-closers ending with "pick one and call out the other gaps". See Interview Rule 1's terminal-round exception.
+**Compound-move variant at 80–94%**: When the remaining gaps are all multiple-choice terminal decisions (which approach, is scope X in or out, amend foundation Y), the Step 3 approach presentation and the final gap-closer questions may be combined into a single message — the user's choice of approach simultaneously resolves the remaining gaps. This is the natural flow when the gaps are "which option" rather than "what's the problem", and the approach recommendations already implicitly argue for one scope/amendment answer over the others. The message shape: short findings recap → 2-4 approaches with tradeoffs → explicit batched gap-closers ending with "pick one and call out the other gaps". See Interview Rule 1's terminal-round exception.
+
+### Pre-Set Directives
+
+A "no clarifying questions" directive set ahead of the brainstorm invocation (e.g., a session-wide system reminder like "the user has asked you to work without stopping for clarifying questions") interacts with three gates in this skill — surface its handling once, here, so the interaction is visible up front:
+
+1. **Step 1.5 Trigger A**: Run prescribed verifications autonomously and report results inline. Do not present the "Should I run them now?" question.
+2. **Step 2 interview**: Collapse to zero rounds when starting confidence is ≥80% (per Stacked-trigger confidence and High-Confidence Start). State assumptions explicitly in the compound-move presentation; give the user a redirect opportunity after presenting approaches.
+3. **Step 4 Compound-move + auto-mode intersection**: The directive does NOT waive the section preview. "Without stopping for clarifying questions" constrains interview rounds, not transparency gates. The section-bullet preview is still required as a separate message before the artifact write (this matches the existing disqualification clause in Step 4).
+
+If starting confidence is below 80%, the directive does not give license to skip problem- or constraint-level gap-closing — investigate via Investigation Questions below instead of asking the user, and announce confidence deltas inline as each investigation phase concludes.
 
 ### Investigation Questions
 
@@ -208,12 +220,14 @@ This is a solution-space survey, not an interview replacement. Do not substitute
 
 ## Step 3: Propose Approaches
 
-Present **2-3 distinct approaches** with:
+Present **2-4 distinct approaches** with:
 
 - **Name**: A short descriptive label
 - **How it works**: 2-4 sentences
 - **Tradeoffs**: What you gain, what you give up
 - **Recommendation**: Lead with your recommended option and explain why
+
+A 4th approach is justified only when it sits on an axis orthogonal to the primary 3 (i.e., not just a variant intensity of the same idea) AND the reference file documents it as load-bearing context that materially changes the recommendation. Default to 2-3; the 4th is opt-in, not encouraged.
 
 **If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
 
@@ -255,7 +269,9 @@ The list above is a starting menu, not a fixed schema — domain-appropriate sub
 
 **Plan mode override**: If plan mode is active, the harness specifies the artifact path; write there instead of the per-mode default below. See "Plan Mode Interaction" earlier in this skill.
 
-**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `specs/archive/`, `tickets/`, `archive/tickets/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. For tickets continuing an existing prefix series (e.g., `POLPREVDRIVE-001` is archived; new tickets are `POLPREVDRIVE-002+`), inspect `archive/tickets/<PREFIX>-*.md` for the highest existing number and continue from `+1`. Follow established formatting conventions from existing specs.
+**Section-preview gate**: If Step 2 used the compound-move variant and the user's response did not contain an explicit waiver phrase from the Step 4 enumeration ("just write the file", "skip the preview", "no need to walk me through it", "go ahead and write"), send the section-bullet preview now as its own message before writing the artifact. This applies even under "no clarifying questions" (which constrains interview rounds, not transparency gates per Pre-Set Directives §3). Skip this gate when plan mode is active — the plan file is itself the preview surface.
+
+**Numbering convention (applies to spec/ticket outputs)**: When writing specs or tickets, check existing files in `specs/`, `archive/specs/`, `tickets/`, `archive/tickets/`, and git history (`git log --oneline --all | grep -oP '[Ss]pec \K[0-9]+'`) to determine the next available number. For tickets continuing an existing prefix series (e.g., `POLPREVDRIVE-001` is archived; new tickets are `POLPREVDRIVE-002+`), inspect `archive/tickets/<PREFIX>-*.md` for the highest existing number and continue from `+1`. Follow established formatting conventions from existing specs.
 
 ### Design mode (default)
 
@@ -270,6 +286,13 @@ Once all sections are approved, determine the output format:
 **Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a phase-boundaries table where each phase row pairs a measurable acceptance criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this table — a single acceptance criteria section suffices.
 
 **Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
+
+**Design Dismiss outcome**: When the brainstorm concludes that no artifact should be produced (e.g., the recommendation is "don't do this" after evaluating approaches), do not slide into silence. The dismissal is a legitimate brainstorm outcome that mirrors triage mode's `Dismiss outcome`, and the analytic work product needs an exit path:
+
+1. Confirm the dismissal rationale with the user explicitly. Recap the corrected reasoning so the user can object before the thread closes.
+2. Offer to write a short rationale memo to `reports/YYYY-MM-DD-<topic>-rationale.md` capturing the dismissal reasoning, including any corrections to prior specs, reports, or analyses. The memo is opt-in — if the user declines, end without recording.
+3. If the dismissal surfaced a documentation gap in a prior spec, report, or skill (e.g., the prior artifact's reasoning is now miscalibrated by the brainstorm's findings), offer to update it (Continual Learning, per CLAUDE.md). Step 6's Continual Learning prompt is structurally bypassed by the no-menu path on dismissal, so it must fire here instead.
+4. End. Do not present Step 6's next-steps menu — there is no artifact to act on.
 
 Do NOT commit the file. Leave it for user review.
 
@@ -350,13 +373,13 @@ What would you like to do next?
 **If output was already a spec** (`specs/`):
 ```
 What would you like to do next?
-1. Decompose into implementation tickets (invoke spec-to-tickets with namespace <SUGGESTED>)
+1. Decompose into implementation tickets (invoke spec-to-tickets with the spec path and namespace <SUGGESTED>)
 2. Review the spec first — recommended for XL specs (many tickets, broad scope) where direct implementation would skip the decomposition step
 3. Start implementing directly — appropriate for small specs (single ticket or small contiguous slice)
 4. Done for now — I'll review the spec later
 ```
 
-Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-INITIALS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`. Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
+Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-LETTER-CHUNKS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` (letter chunks are typically 2-to-5 letters per word — not single-letter initials; common stop-words like "and", "the", "native" are dropped) — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`. Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
 
 Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
 
@@ -375,7 +398,7 @@ Recommend option 1 only when the lowest-numbered ticket is genuinely independent
 **If triage produced spec(s) and/or report updates**:
 ```
 What would you like to do next?
-1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
+1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with each spec path and namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
 2. Run another missing-abstractions analysis on a different test suite
 3. Done for now — I'll review the artifacts later
 ```

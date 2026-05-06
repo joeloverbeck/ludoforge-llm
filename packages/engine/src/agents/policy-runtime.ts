@@ -23,6 +23,7 @@ import {
   type Phase1ActionPreviewEntry,
   type PolicyPreviewDependencies,
   type PolicyPreviewCompletionMetadata,
+  type PolicyPreviewDriveTrace,
   type PolicyPreviewGrantedOperation,
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
@@ -78,6 +79,7 @@ export interface PolicyPreviewSurfaceProvider {
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
   getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
+  getPreviewDrive(candidate: PolicyRuntimeCandidate): PolicyPreviewDriveTrace | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
@@ -111,6 +113,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly catalog: AgentPolicyCatalog;
   readonly previewDependencies?: PolicyPreviewDependencies;
   readonly runtime?: GameDefRuntime;
+  readonly traceLevel?: 'none' | 'summary' | 'verbose';
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
   readonly completion?: {
@@ -186,6 +189,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
+    captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasCompletionConsiderations
       ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),
@@ -371,6 +375,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getCompletionMetadata(candidate) {
         return previewRuntime.getCompletionMetadata(candidate);
+      },
+      getPreviewDrive(candidate) {
+        return previewRuntime.getPreviewDrive(candidate);
       },
       getGrantedOperation(candidate) {
         return previewRuntime.getGrantedOperation(candidate);

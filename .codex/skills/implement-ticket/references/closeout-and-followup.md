@@ -99,6 +99,8 @@ For active-ticket rewrites that change the ticket graph itself, an optional fina
 
 For active untracked draft tickets, prefer the same durable closeout pattern before finishing the turn: update the draft ticket status and outcome so later sessions inherit the corrected contract, touched-file scope, and repo-valid verification commands rather than the stale draft wording.
 
+Plain `git diff -- <path>` does not show untracked draft-ticket or draft-spec contents. For untracked active artifacts, inspect the file directly with `sed`/`rg`, include it in `git status --short`, or use an explicit baseline/no-index comparison when you need a textual diff. Do not treat an empty `git diff -- <untracked path>` as evidence that the draft artifact was unchanged.
+
 ## Touched-File Scope Sweep
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`. Remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.

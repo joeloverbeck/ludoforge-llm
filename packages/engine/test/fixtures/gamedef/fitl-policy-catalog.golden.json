@@ -3192,6 +3192,7 @@
       },
       "preview": {
         "mode": "exactWorld",
+        "topK": 10,
         "phase1": false,
         "phase1CompletionsPerAction": 1
       },
@@ -3221,7 +3222,7 @@
           "trainWhenControlLow"
         ]
       },
-      "fingerprint": "ff0e89acea604a4b254803924d4da12b4fa7a5f5999667850dea686da9805864"
+      "fingerprint": "9bc7be091416e3ac30471ec98f78d76a25672d9731ae4f732d428274625cc2d9"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -3336,5 +3337,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "7627dacd454d9e8164ce0be33c63e7d2088e6503bde581db71adde452385f0db"
+  "catalogFingerprint": "31e30b540427f9dc06a9beb81bfe04308a4a69d01318ec75aec46273a2464f08"
 }

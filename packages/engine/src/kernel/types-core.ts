@@ -1689,17 +1689,49 @@ export interface PolicyPreviewUnknownRefTrace {
   readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
 }
 
+export interface PolicyPreviewReadyRefStatsTrace {
+  readonly readyCount: number;
+  readonly distinctValueCount: number;
+  readonly min: number | null;
+  readonly max: number | null;
+  readonly range: number | null;
+  readonly allReadyValuesEqual: boolean;
+}
+
+export type PolicyPreviewUtilityTrace = 'none' | 'constant' | 'lowInformation' | 'differentiating';
+
+export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated';
+
+export type SyntheticDecisionSelectionReasonTrace = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
+
+export interface SyntheticDecisionTraceEntry {
+  readonly depth: number;
+  readonly microturnKind: 'chooseOne' | 'chooseNStep';
+  readonly decisionKey: string;
+  readonly selectedOptionStableKey: string;
+  readonly selectionReason: SyntheticDecisionSelectionReasonTrace;
+  readonly score: number;
+  readonly scoreContributions: readonly AgentDecisionScoreContribution[];
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+}
+
+export interface PolicyPreviewDriveTrace {
+  readonly depth: number;
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+  readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+}
+
 export interface PolicyCandidateDecisionTrace {
   readonly actionId: string;
   readonly stableMoveKey: string;
   readonly score: number;
   readonly prunedBy: readonly string[];
-  readonly scoreContributions?: readonly AgentDecisionScoreContribution[];
-  readonly previewRefIds?: readonly string[];
-  readonly unknownPreviewRefs?: readonly PolicyPreviewUnknownRefTrace[];
+  readonly scoreContributions: readonly AgentDecisionScoreContribution[];
+  readonly previewRefIds: readonly string[];
+  readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
+  readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
-  readonly previewDriveDepth?: number;
-  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
+  readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -1726,6 +1758,8 @@ export interface PolicyPreviewUsageTrace {
   readonly evaluatedCandidateCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
+  readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
+  readonly utility: PolicyPreviewUtilityTrace;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
 }
 

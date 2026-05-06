@@ -1,6 +1,6 @@
 # 160PEROPTPREV-005: `chooseOne` per-option preview driver + hidden-info routing
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-preview-inner.ts` (new)
@@ -96,3 +96,24 @@ Add the entry point that `chooseFrontierDecision` will call (in ticket 007). For
 2. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-preview-inner-hidden-info.test.js`
 3. `pnpm turbo typecheck`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-07.
+
+- Landed boundary: added `packages/engine/src/agents/policy-preview-inner.ts` with `runChooseOneInnerPreview(input)`, one preview drive per published chooseOne option, independent Spec 146 draft snapshots, bounded same-compound-turn completion through `pickInnerDecision`, per-option `resolvedRefs`, `driveDepth`, `outcome`, and `outcomeBreakdown`.
+- Hidden-info routing: `preview.option.*` surface refs use the existing policy-surface visibility rules and return the existing `previewOutcome: 'hidden'` classification; `outcomeBreakdown.unknownHidden` increments per hidden option. No new enum value was introduced.
+- Ref dispatch consumption: ticket 004's `previewOption.resolvedRefs` runtime dispatch remains the canonical read seam. This ticket added the small option-score plumbing in `microturn-option-eval.ts` / `microturn-option-evaluator.ts` so a caller can pass the per-option resolved-ref map into microturn-scope consideration scoring; ticket 007 still owns invoking this from `chooseFrontierDecision`.
+- Touched-file ledger: `policy-preview-inner.ts` done; `policy-preview-inner-chooseone.test.ts` done; `policy-preview-inner-hidden-info.test.ts` done; `microturn-option-eval.ts` and `microturn-option-evaluator.ts` are owned fallout for consuming the driver-populated ref map; `policy-expr.ts` verified-no-edit because live ref dispatch is in `policy-evaluation-core.ts` per ticket 004's correction.
+- Deferred sibling/spec scope: chooseN beam preview remains ticket 006; trace/agent frontier integration remains ticket 007; opt-in warning remains ticket 008; FITL golden remains ticket 009; cookbook docs remain ticket 010.
+- Generated fallout: none expected and none persisted; `pnpm -F @ludoforge/engine test` ran `schema:artifacts:check` cleanly.
+- Source file size ledger: new `policy-preview-inner.ts` is 423 lines, slightly above the repo's typical 200-400-line band but under the 800-line maximum; splitting it now would obscure the single driver seam. Existing oversized hubs `policy-preview.ts` and `policy-evaluation-core.ts` were not grown; the small scorer plumbing stayed in sub-200-line files. Residual owner: none unless future tickets grow the driver.
+- Runtime surface breadth: policy/agent-only runtime support for inner microturn preview; no game-specific logic and no schema/serialized-trace contract change.
+- Final proof, serial order:
+  1. `pnpm -F @ludoforge/engine build` — passed.
+  2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-inner-chooseone.test.js dist/test/unit/agents/policy-preview-inner-hidden-info.test.js` — passed, 3 tests.
+  3. `pnpm turbo typecheck` — passed, 3/3 tasks.
+  4. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-inner-chooseone.test.js dist/test/unit/agents/policy-preview-inner-hidden-info.test.js` — rerun after the Turbo rebuild; passed, 3 tests.
+  5. `pnpm -F @ludoforge/engine test` — passed; `schema:artifacts:check` passed and default lane reported `64/64 files passed`.
+  6. `pnpm run check:ticket-deps` — passed for 6 active tickets and 2261 archived tickets.
+- No-invalidation: this outcome/status/dependency-check transcription records the just-run proof and touched-file scope only; no code, test, schema, acceptance criteria, command semantics, sibling ownership, dependency edge, or follow-up boundary changed after the final proof lanes.

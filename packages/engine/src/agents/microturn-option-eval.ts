@@ -10,6 +10,7 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { PolicyEvaluationContext } from './policy-evaluation-core.js';
+import type { PolicyValue } from './policy-surface.js';
 
 const EMPTY_TRUSTED_MOVE_INDEX: ReadonlyMap<string, TrustedExecutableMove> = new Map();
 
@@ -35,6 +36,7 @@ export function scoreMicroturnOption(
   optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
+  previewOptionResolvedRefs?: ReadonlyMap<string, PolicyValue>,
 ): number {
   return scoreMicroturnOptionWithContributions(
     state,
@@ -48,6 +50,7 @@ export function scoreMicroturnOption(
     optionIndex,
     considerationIds,
     runtime,
+    previewOptionResolvedRefs,
   ).score;
 }
 
@@ -63,6 +66,7 @@ export function scoreMicroturnOptionWithContributions(
   optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
+  previewOptionResolvedRefs?: ReadonlyMap<string, PolicyValue>,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
     return { score: 0, scoreContributions: [] };
@@ -83,6 +87,9 @@ export function scoreMicroturnOptionWithContributions(
       optionValue,
       optionIndex,
     },
+    ...(previewOptionResolvedRefs === undefined
+      ? {}
+      : { previewOption: { resolvedRefs: previewOptionResolvedRefs } }),
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 

@@ -15,6 +15,7 @@ import {
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from '../kernel/choice-option-policy.js';
 import { scoreMicroturnOptionWithContributions, type CompletionScoreContribution } from './microturn-option-eval.js';
+import type { PolicyValue } from './policy-surface.js';
 
 export interface BuildMicroturnChooseCallbackInput {
   readonly state: GameState;
@@ -24,6 +25,7 @@ export interface BuildMicroturnChooseCallbackInput {
   readonly seatId: string;
   readonly profile: CompiledAgentProfile;
   readonly runtime?: GameDefRuntime;
+  readonly previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>;
 }
 
 export interface MicroturnChoiceSelection {
@@ -90,6 +92,7 @@ export function selectBestMicroturnChooseOneValue(
       optionIndex,
       microturnConsiderationIds,
       input.runtime,
+      input.previewOptionResolvedRefsByOptionKey?.get(scoreContributionsKeyForChooseOne(request, option.value)),
     );
     scoreContributionsByOption.set(scoreContributionsKeyForChooseOne(request, option.value), scored.scoreContributions);
     const score = scored.score;
@@ -148,6 +151,7 @@ export function buildMicroturnChooseCallback(
           selectableIndexForValue(selectableOptions, value),
           microturnConsiderationIds,
           input.runtime,
+          input.previewOptionResolvedRefsByOptionKey?.get(scoreContributionsKeyForChooseNStepAdd(request, value)),
         ),
       }));
       for (const entry of scoredValues) {

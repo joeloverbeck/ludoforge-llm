@@ -250,7 +250,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/160PEROPTPREV-002.md`](../archive/tickets/160PEROPTPREV-002.md) — Export `pickInnerDecision` from `policy-preview.ts` (covers §2 prerequisite)
 - [`archive/tickets/160PEROPTPREV-003.md`](../archive/tickets/160PEROPTPREV-003.md) — `preview.inner` config schema, compiler validation, `INNER_PREVIEW_HARD_CAP` (covers §1)
 - [`archive/tickets/160PEROPTPREV-004.md`](../archive/tickets/160PEROPTPREV-004.md) — `preview.option.*` ref family + dispatch (covers §4)
-- [`tickets/160PEROPTPREV-005.md`](../tickets/160PEROPTPREV-005.md) — `chooseOne` per-option preview driver + hidden-info routing (covers §2 + §5)
+- [`archive/tickets/160PEROPTPREV-005.md`](../archive/tickets/160PEROPTPREV-005.md) — `chooseOne` per-option preview driver + hidden-info routing (covers §2 + §5)
 - [`tickets/160PEROPTPREV-006.md`](../tickets/160PEROPTPREV-006.md) — `chooseNStep` beam preview driver (covers §3)
 - [`tickets/160PEROPTPREV-007.md`](../tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
 - [`tickets/160PEROPTPREV-008.md`](../tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)

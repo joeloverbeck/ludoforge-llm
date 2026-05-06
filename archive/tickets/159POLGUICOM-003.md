@@ -1,6 +1,6 @@
 # 159POLGUICOM-003: Compile-time warning for `policyGuided` without microturn considerations
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL validator (`validate-agents.ts`)
@@ -102,3 +102,39 @@ Add `CNL_COMPILER_AGENT_PREVIEW_POLICYGUIDED_NO_MICROTURN_CONSIDERATIONS` to `CN
 
 1. `pnpm -F @ludoforge/engine test:unit -- cnl/compile-policy-guided-warning`
 2. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completed on 2026-05-06.
+
+Implemented the compile-time warning in `packages/engine/src/cnl/validate-agents.ts`. The validator now emits a warning when an authored profile sets `preview.completion: policyGuided` and the profile's referenced considerations contain no `scopes: [microturn]` entry. The warning uses the canonical live diagnostic-code registry in `packages/engine/src/cnl/compiler-diagnostic-codes.ts`; `packages/engine/src/kernel/diagnostics.ts` only owns the generic diagnostic shape.
+
+Added `packages/engine/test/unit/cnl/compile-policy-guided-warning.test.ts` with the ticket-owned architectural-invariant cases:
+
+- fires for `policyGuided` with no microturn-scope considerations
+- suppresses for `policyGuided` with a microturn-scope consideration
+- suppresses for `greedy` and unset completion policies
+
+Generated/artifact fallout: none. This ticket does not change schema, serialized trace/result shape, generated JSON, runtime behavior, or cookbook documentation.
+
+Deferred sibling/spec scope: `tickets/159POLGUICOM-004.md` still owns cookbook documentation for `policyGuided` and fallback diagnostics. No spec or sibling-ticket rewrite was needed.
+
+Source file size ledger: `validate-agents.ts` is 440 lines after the helper addition, `compiler-diagnostic-codes.ts` is 358 lines, and the new test is 137 lines. All are under the repo's 800-line maximum; extraction is not needed for this bounded diagnostic slice.
+
+Command ledger for final proof:
+
+| Ticket command | Final citation |
+| --- | --- |
+| `pnpm -F @ludoforge/engine test:unit -- cnl/compile-policy-guided-warning` | Replaced by build plus focused compiled Node test: `pnpm -F @ludoforge/engine build`, then `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/compile-policy-guided-warning.test.js`. The package script's `-- <pattern>` form is stale for this repo's Node test runner wiring. Final focused rerun passed after the broad lanes, 3 tests. |
+| `pnpm turbo lint typecheck test` | Split into `pnpm turbo lint`, `pnpm turbo typecheck`, and `pnpm turbo test`; all passed. |
+
+Final proof:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/compile-policy-guided-warning.test.js` — passed, 3 tests. Rerun after `pnpm turbo test` so the cited focused proof consumed the final stable `dist` output.
+- `pnpm turbo typecheck` — passed, 3 tasks.
+- `pnpm turbo lint` — passed, 2 tasks.
+- `pnpm turbo test` — passed, 5 tasks. Engine default lane passed 64/64 files; runner passed 205 files / 2019 tests.
+- `pnpm run check:ticket-deps` — passed for 2 active tickets and 2255 archived tickets.
+
+Late-edit proof validity: after final proof, ticket edits only set the terminal status and transcribed exact proof/dependency-check results. They did not change code, generated artifacts, scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, or dependency classification, so no proof rerun is required.

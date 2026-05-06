@@ -7,6 +7,8 @@
 
 ## Minimal Codex Working-Notes Checklist
 
+This reference is the canonical compact checklist for normal Codex runs. If the main `SKILL.md` adds fields for a specific ticket type, use the union of this list and the main skill's triggered fields rather than treating this section as a reason to omit them.
+
 - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
 - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
 - `authoritative boundary`: the final owned implementation slice after reassessment
@@ -18,7 +20,9 @@
 - `terminal status plan`: when the ticket status may become terminal; keep the repo-local terminal status, such as `IMPLEMENTED` or `COMPLETED`, pending until final lanes are green, classified, or explicitly substituted
 - `ticket-named deliverables ledger`: for tracked tickets with explicit `What to Change`, `Files to Touch`, artifacts, or named witness files, classify each concrete item as `planned`, `already satisfied / verified-no-edit`, `needs rewrite`, `blocked`, or `needs 1-3-1` before coding
 - `single-use migration-script ledger`: when a ticket names a one-shot migration/helper script, classify it as `retained`, `run then deleted`, `unnecessary after live inventory`, or `needs 1-3-1`; record where durable evidence lives when the script is not retained
+- `commit-body / durable evidence deliverables`: commit-body evidence, seed rationale, failure output, re-bless lines, or other ledgers the ticket requires; for no-commit sessions, plan the checked-in ticket/report/final-closeout location that will carry the evidence, or stop for `1-3-1` if the commit body itself is semantically required
 - `red-gate materiality ledger`: for benchmark/measured-gate tickets, record `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`; use `not applicable` for non-measured tickets
+- `diagnostic metric gates`: for architecture, migration, proof, or non-benchmark tickets that embed a numeric/percentage canary, classify each metric as `terminal acceptance`, `diagnostic evidence`, or `successor input`; if that changes an explicit deliverable or terminal gate, stop for `1-3-1` unless already authorized
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant
 - `source file size risk`: optional; include when a named source file is already near/over repo guidance and active work will add logic there, with `extract now`, `defer with rationale`, or `1-3-1 needed`. For profiling/investigation tickets, update this field when profiling selects an unlisted implementation file that may be near/over guidance.

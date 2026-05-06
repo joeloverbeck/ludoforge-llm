@@ -3,6 +3,7 @@ import {
   AGENT_POLICY_LIBRARY_BUCKETS,
   AGENT_POLICY_PROFILE_USE_BUCKETS,
 } from '../contracts/index.js';
+import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecDoc } from './game-spec-doc.js';
 import {
   isNonEmptyTrimmedString,
@@ -118,7 +119,49 @@ function validateProfiles(
     validateInlineProfileLogic(profileDef, profilePath, diagnostics);
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
+    validatePolicyGuidedMicroturnConsiderations(profileId, profileDef, profilePath, library, diagnostics);
   }
+}
+
+function validatePolicyGuidedMicroturnConsiderations(
+  profileId: string,
+  profileDef: Record<string, unknown>,
+  profilePath: string,
+  library: AgentLibraryBucketMap | undefined,
+  diagnostics: Diagnostic[],
+): void {
+  const preview = profileDef.preview;
+  if (!isRecord(preview) || preview.completion !== 'policyGuided') {
+    return;
+  }
+
+  const use = profileDef.use;
+  const considerationIds = isRecord(use) && Array.isArray(use.considerations)
+    ? use.considerations
+    : [];
+  const hasMicroturnScope = considerationIds.some((considerationId) => {
+    if (!isNonEmptyString(considerationId)) {
+      return false;
+    }
+    const consideration = library?.considerations?.[considerationId];
+    return isRecord(consideration)
+      && Array.isArray(consideration.scopes)
+      && consideration.scopes.includes('microturn');
+  });
+  if (hasMicroturnScope) {
+    return;
+  }
+
+  const fallbackPolicy = isNonEmptyString(preview.fallbackCompletionPolicy)
+    ? preview.fallbackCompletionPolicy
+    : 'greedy';
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_POLICYGUIDED_NO_MICROTURN_CONSIDERATIONS,
+    path: `${profilePath}.preview.completion`,
+    severity: 'warning',
+    message: `Profile "${profileId}" declares preview.completion: policyGuided but has no scopes: [microturn] considerations; completion will always fall back to ${fallbackPolicy}.`,
+    suggestion: 'Add at least one consideration with scopes: [microturn] to the profile, or set preview.completion to greedy.',
+  });
 }
 
 function validateProfileObserverRef(

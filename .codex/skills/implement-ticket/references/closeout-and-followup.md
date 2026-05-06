@@ -43,6 +43,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 - for completed active tickets, use the explicit repo-local terminal status already used by the ticket or series, such as `IMPLEMENTED` or `COMPLETED`; do not normalize to `COMPLETED` when the family uses a different terminal implementation status
+- when adding files, do not summarize the touched-file surface from `git diff --stat` alone. Pair it with `git status --short` or explicitly list untracked files, because new tests, fixtures, reports, and tickets may otherwise disappear from the closeout.
 
 ## Acceptance-Proof Invalidation
 

@@ -229,5 +229,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 
 - [`archive/tickets/159POLGUICOM-001.md`](../archive/tickets/159POLGUICOM-001.md) — Mechanical rename `agentGuided` → `policyGuided` (covers §What to Change §1; AC#5)
 - [`archive/tickets/159POLGUICOM-002.md`](../archive/tickets/159POLGUICOM-002.md) — Explicit fallback + `completionPolicyFallbackCount` trace (covers §What to Change §2-4; AC#1-3, #6-7)
-- [`tickets/159POLGUICOM-003.md`](../tickets/159POLGUICOM-003.md) — Compile-time warning for `policyGuided` without microturn considerations (covers §What to Change §5; AC#4)
+- [`archive/tickets/159POLGUICOM-003.md`](../archive/tickets/159POLGUICOM-003.md) — Compile-time warning for `policyGuided` without microturn considerations (covers §What to Change §5; AC#4)
 - [`tickets/159POLGUICOM-004.md`](../tickets/159POLGUICOM-004.md) — Cookbook update for `policyGuided` and fallback diagnostics (covers §What to Change §7)

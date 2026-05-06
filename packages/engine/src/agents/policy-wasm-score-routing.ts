@@ -300,7 +300,9 @@ const materializePreviewDynamicRowsWithWasm = (
           candidate.unknownPreviewRefs.set(refId, row.outcome);
           return undefined;
         }
-        return previewValueFromWasmRow(input, ref, row.previewStateValues, slots);
+        const value = previewValueFromWasmRow(input, ref, row.previewStateValues, slots);
+        input.evaluation.recordResolvedPreviewRefValue(candidate, refId, value);
+        return value;
       }),
     };
   });

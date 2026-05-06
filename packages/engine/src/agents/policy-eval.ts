@@ -30,6 +30,7 @@ import type {
 import { type PolicyValue } from './policy-surface.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
+import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import { getInitializedPolicyWasmRuntime } from './policy-wasm-runtime.js';
 import { tryScoreMoveConsiderationsWithWasm } from './policy-wasm-score-routing.js';
 
@@ -775,7 +776,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           candidates: collectDiagnostics ? candidates.map(candidateMetadata) : [],
           pruningSteps: collectDiagnostics ? pruningSteps : [],
           tieBreakChain: collectDiagnostics ? tieBreakChain : [],
-          previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, profile.preview.mode) : emptyPreviewUsage(profile.preview.mode),
+          previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, profile.preview.mode, evaluation) : emptyPreviewUsage(profile.preview.mode),
           ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,
@@ -810,6 +811,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         failure,
         profile.fingerprint,
         collectDiagnostics,
+        evaluationForDispose,
       );
     } finally {
       evaluationForDispose?.dispose();
@@ -908,6 +910,7 @@ function failureWithMetadata(
   failure: PolicyEvaluationFailure,
   profileFingerprint: string | null = null,
   collectDiagnostics = true,
+  evaluation?: PolicyEvaluationContext,
 ): PolicyEvaluationCoreResult {
   return {
     kind: 'failure',
@@ -923,7 +926,9 @@ function failureWithMetadata(
       candidates: collectDiagnostics ? candidates.map(candidateMetadata) : [],
       pruningSteps: [],
       tieBreakChain: [],
-      previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, 'exactWorld') : emptyPreviewUsage('exactWorld'),
+      previewUsage: collectDiagnostics && evaluation !== undefined
+        ? summarizePreviewUsage(candidates, 'exactWorld', evaluation)
+        : emptyPreviewUsage('exactWorld'),
       selectedStableMoveKey: null,
       finalScore: null,
       usedFallback: false,
@@ -1089,7 +1094,11 @@ function traceGrantedOperation(
   };
 }
 
-function summarizePreviewUsage(candidates: readonly CandidateEntry[], mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {
+function summarizePreviewUsage(
+  candidates: readonly CandidateEntry[],
+  mode: AgentPreviewMode,
+  evaluation: PolicyEvaluationContext,
+): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
   const evaluatedCandidates = candidates.filter((candidate) => candidate.previewRefIds.size > 0);
@@ -1097,17 +1106,75 @@ function summarizePreviewUsage(candidates: readonly CandidateEntry[], mode: Agen
     candidate.previewRefIds.forEach((refId) => refIds.add(refId));
     candidate.unknownPreviewRefs.forEach((reason, refId) => unknownRefs.set(refId, reason));
   }
+  const sortedRefIds = [...refIds].sort();
+  const readyRefStats = summarizeReadyRefStats(candidates, sortedRefIds, evaluation);
   return {
     mode,
     evaluatedCandidateCount: evaluatedCandidates.length,
-    refIds: [...refIds].sort(),
+    refIds: sortedRefIds,
     unknownRefs: [...unknownRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
-    readyRefStats: {},
-    utility: 'none',
+    readyRefStats,
+    utility: classifyPreviewUtility(readyRefStats),
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
   };
+}
+
+function summarizeReadyRefStats(
+  candidates: readonly CandidateEntry[],
+  refIds: readonly string[],
+  evaluation: PolicyEvaluationContext,
+): Readonly<Record<string, ReadyRefStats>> {
+  const stats: Record<string, ReadyRefStats> = {};
+  const canonicalCandidates = [...candidates].sort((left, right) => left.canonicalIndex - right.canonicalIndex);
+  for (const refId of refIds) {
+    const values: number[] = [];
+    for (const candidate of canonicalCandidates) {
+      if (candidate.previewOutcome !== 'ready') {
+        continue;
+      }
+      const value = evaluation.getResolvedPreviewRefValue(candidate, refId);
+      if (value !== undefined) {
+        values.push(value);
+      }
+    }
+
+    if (values.length === 0) {
+      stats[refId] = {
+        readyCount: 0,
+        distinctValueCount: 0,
+        min: null,
+        max: null,
+        range: null,
+        allReadyValuesEqual: true,
+      };
+      continue;
+    }
+
+    let min = values[0]!;
+    let max = values[0]!;
+    const distinct = new Set<number>();
+    for (const value of values) {
+      distinct.add(value);
+      if (value < min) {
+        min = value;
+      }
+      if (value > max) {
+        max = value;
+      }
+    }
+
+    stats[refId] = {
+      readyCount: values.length,
+      distinctValueCount: distinct.size,
+      min,
+      max,
+      range: max - min,
+      allReadyValuesEqual: distinct.size <= 1,
+    };
+  }
+  return stats;
 }
 
 function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {

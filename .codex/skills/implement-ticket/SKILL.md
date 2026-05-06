@@ -97,7 +97,9 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 1. the active ticket's intended durable state and outcome block already match the live intended result (`BLOCKED`, narrowed scope, pending repo-local terminal status such as `IMPLEMENTED`, user-approved exception, etc.), without implying unproven broad lanes are green
 2. any command substitutions or ticket-correction ledger entries are already written into the active ticket when needed
 3. any sibling-ticket, dependency, spec, or touched-file-scope edits required for a truthful closeout are already done
-4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`)
+4. the ticket's named commands are reconciled against the exact wrapper commands you intend to cite (for example root `pnpm test` versus `pnpm turbo test`). For tickets with commands in multiple sections, shorthand command bundles, or mixed direct/focused substitutions, write a compact pre-terminal command ledger before setting terminal status:
+   - `ticket section | literal command/shorthand | ran directly/subsumed/split/not run | final citation`
+   - Example: `Test Plan | pnpm turbo lint typecheck test | split into pnpm turbo lint + pnpm turbo typecheck + pnpm turbo test | all three cited green`
 5. the exact final proof order is chosen and no later ticket-artifact rewrite is still expected
 6. stable-output proof sequencing is settled before any final lane starts: no final proof lane is running in parallel with a build, schema, or artifact producer that can clean or rewrite the same output tree; a zero-test or module-resolution "green" from an overlapped compiled-output lane is invalid until rerun serially
    - If a final proof consumes `dist/` or another generated tree, schedule build-producing broad lanes before that final consumer proof when practical. If a later accepted lane rebuilds or cleans that tree, rerun the narrowest affected generated-output consumer proof before citing it as final.

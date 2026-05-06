@@ -1,6 +1,6 @@
 # 156PREVOBSUTMET-002: readyRefStats aggregator and utility classifier
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts`, new pure-function classifier module, new unit tests
@@ -149,3 +149,38 @@ If the resolved-ref-value accessor doesn't exist as a single API today, add it d
 2. `pnpm -F @ludoforge/engine test:unit -- agents/preview-ready-ref-stats-aggregator`
 3. `pnpm -F @ludoforge/engine test:integration -- preview-utility-fitl-golden`
 4. `pnpm turbo lint typecheck test`
+
+## Outcome (2026-05-06)
+
+Implemented the ticket-002 boundary:
+
+- Added `packages/engine/src/agents/preview-utility-classifier.ts` and exported it from the agents package surface.
+- Recorded resolved numeric preview-ref values inside `PolicyEvaluationContext` at the existing preview-surface and preview-state-feature resolution seams, including the WASM score-routing path.
+- Populated `previewUsage.readyRefStats` and `previewUsage.utility` in `policy-eval.ts` from the recorded ready-candidate values.
+- Added classifier, aggregator, determinism, and FITL report-excerpt golden tests.
+- Added `packages/engine/test/fixtures/trace/preview-utility-fitl-canary.json`, pinned to the `exp-002` appendix excerpts in `reports/microturn-preview-architectural-gaps-2026-05-06.md`.
+
+Ticket corrections applied:
+
+- The draft assumed a preexisting `getResolvedPreviewRefValue` API; the live implementation added the narrow equivalent on `PolicyEvaluationContext` and records values where refs are already resolved.
+- The focused `test:unit -- agents/...` commands are stale for this package's Node test runner. Repo-valid focused substitution is `pnpm -F @ludoforge/engine build` followed by direct `pnpm -F @ludoforge/engine exec node --test dist/test/...` paths.
+- The touched-file scope includes `packages/engine/src/agents/index.ts` so the new pure classifier is available from the agents package surface.
+
+Schema/artifact fallout: none expected; this ticket populates fields added by ticket 001 and does not change `schemas-core.ts` or generated schema artifacts.
+
+Deferred sibling scope: ticket 003 still owns non-placeholder `selectionReason`; ticket 004 still owns synthetic decisions; ticket 005 still owns inner-frontier `scoreContributions`; ticket 006 still owns cookbook documentation.
+
+Source file size ledger: `policy-eval.ts` and `policy-evaluation-core.ts` were already over repo guidance before this ticket. Active growth is limited to trace-population wiring and an internal value-recording seam; classifier logic lives in a new module. Extraction was considered but deferred because a broader split would widen this ticket beyond the owned population work.
+
+Proof:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-utility-classifier.test.js dist/test/unit/agents/preview-ready-ref-stats-aggregator.test.js dist/test/integration/preview-utility-fitl-golden.test.js` — passed.
+- `pnpm -F @ludoforge/engine test` — passed; `schema:artifacts:check` passed and default lane reported `63/63` files passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-utility-classifier.test.js dist/test/unit/agents/preview-ready-ref-stats-aggregator.test.js dist/test/integration/preview-utility-fitl-golden.test.js` — passed after `pnpm turbo typecheck` rebuilt `packages/engine/dist`.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo test` — passed; Turbo reported 5 successful tasks and the engine default lane again reported `63/63` files passed.
+- `pnpm run check:ticket-deps` — passed for 5 active tickets and 2243 archived tickets.
+
+Late-edit proof validity: the final status/proof edit is transcription-only. It does not change code, scope, command semantics, acceptance criteria, dependency ownership, or the touched-file boundary; the focused compiled tests were rerun after the final build-producing lane.

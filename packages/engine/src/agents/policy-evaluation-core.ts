@@ -251,6 +251,7 @@ export class PolicyEvaluationContext {
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
   private readonly compiledExprBytecodeCache = new WeakMap<CompiledPolicyExpr, ReturnType<typeof compilePolicyBytecode>>();
+  private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private readonly encodedStateLayout: EncodedStateLayout;
   private readonly encodedState: EncodedState | undefined;
@@ -292,6 +293,7 @@ export class PolicyEvaluationContext {
     this.candidateFeatureCache.clear();
     this.aggregateCache.clear();
     this.strategicConditionCache.clear();
+    this.resolvedPreviewRefValues.clear();
     this.transientStateFeatureCache?.cache.clear();
     this.transientStateFeatureCache = null;
     this.transientZoneReadContext = null;
@@ -357,6 +359,22 @@ export class PolicyEvaluationContext {
 
   evaluatePreviewStateFeatureRef(candidate: PolicyEvaluationCandidate, featureId: string): PolicyValue {
     return this.resolvePreviewStateFeatureRef(featureId, candidate);
+  }
+
+  recordResolvedPreviewRefValue(candidate: PolicyEvaluationCandidate, refId: string, value: PolicyValue): void {
+    if (typeof value !== 'number') {
+      return;
+    }
+    let candidateValues = this.resolvedPreviewRefValues.get(candidate.stableMoveKey);
+    if (candidateValues === undefined) {
+      candidateValues = new Map<string, number>();
+      this.resolvedPreviewRefValues.set(candidate.stableMoveKey, candidateValues);
+    }
+    candidateValues.set(refId, value);
+  }
+
+  getResolvedPreviewRefValue(candidate: PolicyEvaluationCandidate, refId: string): number | undefined {
+    return this.resolvedPreviewRefValues.get(candidate.stableMoveKey)?.get(refId);
   }
 
   hasPreviewData(candidate: PolicyEvaluationCandidate): boolean {
@@ -1426,7 +1444,11 @@ export class PolicyEvaluationContext {
       if (candidate.previewOutcome === undefined) {
         this.syncPreviewMetadata(candidate);
       }
-      return resolution.kind === 'value' ? resolution.value : undefined;
+      if (resolution.kind === 'value') {
+        this.recordResolvedPreviewRefValue(candidate, refId, resolution.value);
+        return resolution.value;
+      }
+      return undefined;
     }
     return this.runtimeProviders.currentSurface.resolveSurface(ref, this.activeState, this.currentSeatContext);
   }
@@ -1481,7 +1503,9 @@ export class PolicyEvaluationContext {
       }
       return undefined;
     }
-    return this.evaluateStateFeatureAgainstState(featureId, previewState);
+    const value = this.evaluateStateFeatureAgainstState(featureId, previewState);
+    this.recordResolvedPreviewRefValue(candidate, refId, value);
+    return value;
   }
 
   private syncPreviewMetadata(candidate: PolicyEvaluationCandidate): void {

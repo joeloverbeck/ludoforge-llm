@@ -1716,7 +1716,7 @@ export interface PolicyPreviewReadyRefStatsTrace {
 
 export type PolicyPreviewUtilityTrace = 'none' | 'constant' | 'lowInformation' | 'differentiating';
 
-export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated';
+export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated' | 'beamPruned';
 
 export type SyntheticDecisionSelectionReasonTrace = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
 

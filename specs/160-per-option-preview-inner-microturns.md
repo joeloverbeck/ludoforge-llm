@@ -5,7 +5,7 @@
 **Complexity**: L (new evaluation context at inner microturns; per-option synthetic completion driver; chooseN beam preview with bounded triple product; hidden-information protection; new `preview.option.*` ref family; opt-in config; reuses Spec 146 draft state)
 **Dependencies**:
 - Spec 158 [microturn-policy-scope-and-refs] (archived) — `microturn.option.*` refs exist; this spec adds the `preview.option.*` family that's queryable from microturn-scope considerations.
-- Spec 159 [preview-policy-guided-completion] (DRAFT) — per-option synthetic completion uses `policyGuided` as the inner-completion policy (with the same explicit fallback semantics).
+- Spec 159 [preview-policy-guided-completion] (archived) — per-option synthetic completion uses `policyGuided` as the inner-completion policy (with the same explicit fallback semantics).
 - Spec 156 [preview-observability-and-utility-metrics] (archived) — per-option preview emits the same `selectionReason`, synthetic-decision, and utility metrics as action-selection preview.
 - Spec 146 [scoped-draft-state-for-preview-drive] (archived) — bounded copy-on-write draft state. Per-option preview reuses this directly: each option preview is a separately-scoped draft.
 - Spec 145 [bounded-synthetic-completion-preview] (archived) — establishes the bounded-completion driver shape this spec generalizes to inner microturns.
@@ -18,9 +18,10 @@
 - `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 4 (inner microturns `previewUsage.mode: "disabled"` everywhere).
 - `reports/preview-policy-corrections.md` §5 (split-move literature), §"Recommendation G" (preview only for published options), §"Recommendation 5" (per-option preview for inner microturns), Phase 5 of recommended sequence.
 - Code anchors:
-  - `packages/engine/src/agents/policy-agent.ts:118` — `previewUsage: emptyPreviewUsage()` on every `chooseFrontierDecision` call (inner-microturn path).
-  - `packages/engine/src/agents/policy-agent.ts:136-152` — `emptyPreviewUsage()` shape.
-  - `packages/engine/src/agents/policy-preview.ts:494+` — `createPolicyPreviewRuntime` entry point that this spec generalizes.
+  - `packages/engine/src/agents/policy-agent.ts:122` — `previewUsage: emptyPreviewUsage()` hardcoded inside `chooseStructuralFrontierDecision`, the inner-microturn path reached via `chooseFrontierDecision`.
+  - `packages/engine/src/agents/policy-agent.ts:144-164` — module-private `emptyPreviewUsage()` (no-arg) shape.
+  - `packages/engine/src/agents/policy-eval.ts:1226` — second module-private `emptyPreviewUsage(mode: AgentPreviewMode)` definition. The two duplicate definitions are consolidated in §6 of "What to Change".
+  - `packages/engine/src/agents/policy-preview.ts:591` — `createPolicyPreviewRuntime` entry point that this spec generalizes.
 
 ## Brainstorm Context
 
@@ -38,7 +39,7 @@ The Claude report's Gap 4 recognizes the structural decision: Spec 145 explicitl
 
 - **Split-move literature in General Game Playing (`reports/preview-policy-corrections.md` §5).** Decisions composed of several lower-level decisions can be searched at any granularity. Per-option preview is the LudoForge analog: at a chooseOne, evaluate each option as if it were chosen, then complete the rest of the compound turn.
 - **TAG / OpenSpiel forward-model rollouts at sub-decision granularity (`reports/preview-policy-corrections.md` §7).** Both frameworks let agents probe "what happens if I make this lower-level choice?" by applying the choice to a draft state and continuing. The shape this spec adopts is exactly the same: apply option to draft, continue with `policyGuided` to depth cap, resolve refs.
-- **Spec 146 [scoped-draft-state-for-preview-drive] (archived).** Already provides bounded copy-on-write draft state per preview drive; per-option preview drives are nested within the outer action-selection preview drive (or stand alone when the agent is at an inner microturn already), each in its own scope.
+- **Spec 146 [scoped-draft-state-for-preview-drive] (archived).** Already provides bounded copy-on-write draft state per preview drive via `createMutableState` (`packages/engine/src/kernel/state-draft.ts:52`). Each per-option preview drive obtains an independent draft (per-call isolation, not stacked scopes); when the agent is at an inner microturn already, the per-option drive runs against the current authoritative state with no parent-scope coupling.
 - **`preview.victory.currentMargin.self` (existing).** The action-selection-level family. `preview.option.victory.currentMargin.self` is the analog at inner-microturn granularity. The naming convention is consistent.
 
 **Synthesis.**
@@ -78,7 +79,7 @@ Eight new refs in the `preview.option.*` family. Inner-microturn `previewUsage` 
 | Phase | Deliverable | Acceptance Criterion | Effort |
 |-------|-------------|----------------------|--------|
 | Phase A | `preview.inner.chooseOne` + `preview.option.*` refs | A microturn-scope consideration `preferOptionProjectedMargin: { weight: 300, feature: preview.option.delta.victory.currentMargin.self }` flips a govern-mode chooseOne from `aid` to the option whose projected margin delta is higher; per-option preview drives are bounded by `maxOptions × depthCap` per microturn; hidden-info fixture returns `unknownHidden` correctly. | M |
-| Phase B | `preview.inner.chooseNStep` + beam preview | A chooseN with 8 legal options and `beamWidth: 2, depthCap: 3` evaluates at most `8 × 2 × 3 = 48` synthetic decisions; beam pruning trace records pruned partial selections with reason; replay produces byte-identical beam state. | M |
+| Phase B | `preview.inner.chooseNStep` + beam preview | A chooseN with 8 legal options and `beamWidth: 2, depthCap: 3` evaluates at most `8 × 2 × 3 = 48` per-option synthetic preview drives (beam candidates × steps); beam pruning trace records pruned partial selections with reason; replay produces byte-identical beam state. | M |
 | Phase C | Trace integration parity | Inner-microturn trace shape matches action-selection (mode, outcomeBreakdown, readyRefStats, utility); synthetic-decision trace propagates per-option drives; replay-identity test holds. | S |
 
 ## Architecture Check
@@ -91,13 +92,13 @@ Eight new refs in the `preview.option.*` family. Inner-microturn `previewUsage` 
 
 ### 1. `preview.inner` config — schema, compiler, runtime
 
-Schema gains `preview.inner: { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap }`. Compiler validates `maxOptions × chooseNBeamWidth × depthCap <= INNER_PREVIEW_HARD_CAP` (default 256, configurable per spec). Runtime types updated.
+Schema gains `preview.inner: { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap }`. Compiler validates `maxOptions × chooseNBeamWidth × depthCap <= INNER_PREVIEW_HARD_CAP`. The constant `INNER_PREVIEW_HARD_CAP = 256` is declared in `packages/engine/src/cnl/compile-agents.ts` alongside existing preview-budget constants; validation lives in `lowerPreviewConfig`. Runtime types updated.
 
 ### 2. `chooseOne` per-option preview driver — `packages/engine/src/agents/policy-preview-inner.ts` (new)
 
-New module hosting the inner-microturn preview drivers, parallel to `policy-preview.ts`. Reuses `applyPublishedDecision`, `pickInnerDecision` (from Spec 159), and Spec 146's draft state. Per option:
-- Snapshot a draft state (Spec 146).
-- Apply the chooseOne option.
+New module hosting the inner-microturn preview drivers, parallel to `policy-preview.ts`. Reuses `applyPublishedDecision` (already exported from `packages/engine/src/kernel/microturn/apply.ts:469`) and Spec 146's `createMutableState` primitive. `pickInnerDecision` is currently module-private at `packages/engine/src/agents/policy-preview.ts:520`; this spec exports it as a deliverable so the new inner-preview module can reuse it (smaller change versus reimplementing the picker). Per option:
+- Snapshot a draft state via `createMutableState` (Spec 146).
+- Apply the chooseOne option to the draft.
 - Drive remaining microturns with `policyGuided` to `depthCap` or compound-turn retirement, whichever first.
 - Resolve `preview.option.*` refs against the resulting state.
 - Return `{ resolvedRefs, driveDepth, outcome }`.
@@ -112,15 +113,17 @@ for step in 1..N:
   candidates = []
   for partial in beam:
     for option in legalOptions(partial.state):
-      draft = applyOption(partial.state, option)
-      score = scoreByMicroturnConsiderations(draft, partial.partialSelection ++ [option])
+      draft = applyPublishedDecision(partial.state, option)
+      // selectBestMicroturnChooseOneValue lives at
+      // packages/engine/src/agents/microturn-option-evaluator.ts:53 (Spec 159 helper).
+      score = selectBestMicroturnChooseOneValue(draft, option, partial.partialSelection ++ [option])
       candidates.push({ partialSelection: partial.partialSelection ++ [option], state: draft, score })
   candidates.sort(by score desc, stableMoveKey asc)
   beam = candidates.slice(0, chooseNBeamWidth)
 return beam[0].partialSelection  -- expose per-option refs from beam
 ```
 
-Trace records pruned partial selections with reason `'beamPruned'`.
+Trace records pruned partial selections with reason `'beamPruned'`. This value extends the closed `SELECTION_REASONS` `as const` at `packages/engine/src/agents/policy-eval.ts:95`; the enum extension is an explicit deliverable in "Files to Touch" below.
 
 ### 4. `preview.option.*` refs — `packages/engine/src/cnl/policy-bytecode/feature-table.ts`, ref dispatch
 
@@ -128,11 +131,13 @@ Eight new ref kinds. Dispatch to the per-option preview driver when the inner-mi
 
 ### 5. Hidden-information protection — `packages/engine/src/agents/policy-preview-inner.ts`
 
-`preview.option.*` refs returning `unknownHidden` when their underlying surface is hidden for the agent's seat. Reuse existing `evaluateState`/`preview-state-policy-surface` plumbing — the F#4 contract is centralized there. Test fixture: a chooseOne whose option preview would resolve a ref whose value is hidden for the seat returns `unknownHidden`.
+When a `preview.option.*` ref's underlying surface is hidden for the agent's seat, the per-option preview drive surfaces this through the existing `previewOutcome: 'hidden'` enum value (`packages/engine/src/kernel/types-core.ts:1749`) and increments `outcomeBreakdown.unknownHidden` accordingly. There is no new `unknownHidden` enum value introduced. The hidden-info plumbing is reused from `packages/engine/src/agents/policy-surface.ts` (which centralizes the F#4 contract for preview surface refs). Test fixture: a chooseOne whose option preview would resolve a ref whose value is hidden for the seat surfaces the ref as hidden via the existing mechanism.
 
-### 6. Trace integration — `packages/engine/src/agents/policy-agent.ts`
+### 6. Trace integration and `emptyPreviewUsage` consolidation — `packages/engine/src/agents/policy-agent.ts`, `packages/engine/src/agents/policy-eval.ts`
 
 `chooseFrontierDecision` no longer hardcodes `emptyPreviewUsage()`. When `preview.inner.chooseOne === true` and the microturn is `chooseOne`, the previewUsage payload is populated with the same shape action-selection uses today: `mode`, `evaluatedCandidateCount`, `refIds`, `outcomeBreakdown`, `readyRefStats`, `utility`. Synthetic-decision trace propagates per-option drives.
+
+The two existing module-private definitions of `emptyPreviewUsage` (`policy-agent.ts:144` no-arg, `policy-eval.ts:1226` taking `AgentPreviewMode`) are consolidated into a single exported helper in `policy-eval.ts` (the `AgentPreviewMode`-taking version becomes canonical). `policy-agent.ts` is updated to import the consolidated helper and call it with `'disabled'`. F#15 (Architectural Completeness): a single source of truth for the disabled-preview shape.
 
 ### 7. Compile-time warning — `packages/engine/src/cnl/validate-agents.ts`
 
@@ -141,11 +146,13 @@ When a profile has `preview.inner.chooseOne: true` but no `microturn`-scope cons
 ## Files to Touch
 
 - `packages/engine/schemas/GameDef.schema.json` (modify — `preview.inner` config; `preview.option.*` ref enum)
-- `packages/engine/src/cnl/compile-agents.ts` (modify — `lowerPreviewConfig` extended; triple-product validation)
+- `packages/engine/src/cnl/compile-agents.ts` (modify — `lowerPreviewConfig` extended; triple-product validation; declares `INNER_PREVIEW_HARD_CAP = 256`)
 - `packages/engine/src/cnl/validate-agents.ts` (modify — compile-time warning for opt-in without consideration)
 - `packages/engine/src/cnl/policy-bytecode/feature-table.ts` (modify — eight new ref kinds)
 - `packages/engine/src/agents/policy-preview-inner.ts` (new — per-option drivers)
-- `packages/engine/src/agents/policy-agent.ts` (modify — `chooseFrontierDecision` populates previewUsage when inner preview is enabled)
+- `packages/engine/src/agents/policy-preview.ts` (modify — export `pickInnerDecision` so the new inner-preview module can reuse it)
+- `packages/engine/src/agents/policy-agent.ts` (modify — `chooseFrontierDecision` populates previewUsage when inner preview is enabled; replaces local `emptyPreviewUsage` with import of consolidated helper)
+- `packages/engine/src/agents/policy-eval.ts` (modify — extend `SELECTION_REASONS` `as const` with `'beamPruned'`; promote `emptyPreviewUsage(mode: AgentPreviewMode)` to exported canonical helper)
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify — types)
 - `packages/engine/src/agents/policy-expr.ts` (modify — ref dispatch for `preview.option.*`)
 - `data/games/fire-in-the-lake/**/*.yaml` — no migration required (opt-in default `false`); diagnostic profile may opt in for testing
@@ -153,8 +160,9 @@ When a profile has `preview.inner.chooseOne: true` but no `microturn`-scope cons
 - `packages/engine/test/unit/agents/policy-preview-inner-choosen-beam.test.ts` (new)
 - `packages/engine/test/unit/agents/policy-preview-inner-hidden-info.test.ts` (new)
 - `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` (new)
-- `packages/engine/test/agents/inner-preview-replay-identity.test.ts` (new)
-- `packages/engine/test/golden/policy-preview-inner-fitl-canary.test.ts` (new)
+- `packages/engine/test/determinism/spec-160-inner-preview-replay-identity.test.ts` (new — convention precedent: `packages/engine/test/determinism/spec-159-replay-identity.test.ts`)
+- `packages/engine/test/determinism/spec-160-inner-preview-no-op-default.test.ts` (new — default-off byte-identical-trace invariant)
+- `packages/engine/test/integration/policy-preview-inner-fitl-canary-golden.test.ts` (new — modeled on `packages/engine/test/integration/synthetic-decision-fitl-canary-golden.test.ts`)
 - `docs/agent-dsl-cookbook.md` (modify — `preview.inner` documented; `preview.option.*` ref family documented; worked example for govern-mode chooseOne with `preferOptionProjectedMargin`)
 
 ## Out of Scope
@@ -172,7 +180,7 @@ When a profile has `preview.inner.chooseOne: true` but no `microturn`-scope cons
 1. New (Phase A): `preview.inner.chooseOne: true` with `preferOptionProjectedMargin` consideration flips a govern-mode chooseOne from `aid` to `patronage` on a fixture where `patronage` has higher projected margin.
 2. New (Phase A): Inner preview drive count for a 2-option chooseOne with `depthCap: 4` is exactly 2 (one drive per option), each driving up to depth 4.
 3. New (Phase A): Hidden-info fixture: chooseOne whose option preview would resolve a ref hidden for the seat returns `preview.option.victory.currentMargin.self: unknownHidden`.
-4. New (Phase B): chooseN with 8 legal options, `beamWidth: 2, depthCap: 3` evaluates at most 48 synthetic decisions (hard cap from triple product).
+4. New (Phase B): chooseN with 8 legal options, `beamWidth: 2, depthCap: 3` evaluates at most 48 per-option synthetic preview drives — i.e., beam-candidate evaluations across all steps (hard cap from triple product).
 5. New (Phase B): Beam pruning trace records pruned partial selections with `selectionReason: 'beamPruned'`.
 6. New (Phase C): Inner-microturn `previewUsage` matches action-selection schema parity (Ajv validation).
 7. New (Phase C): Replay-identity — same GameDef + seed + actions twice produces byte-identical inner-microturn previewUsage and synthetic-decision arrays.
@@ -199,15 +207,52 @@ When a profile has `preview.inner.chooseOne: true` but no `microturn`-scope cons
 2. `packages/engine/test/unit/agents/policy-preview-inner-choosen-beam.test.ts` (new) — `architectural-invariant`. Beam width invariant; pruning trace.
 3. `packages/engine/test/unit/agents/policy-preview-inner-hidden-info.test.ts` (new) — `architectural-invariant`. F#4 hidden-info enforcement.
 4. `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` (new) — `architectural-invariant`. Triple-product cap; opt-in warning.
-5. `packages/engine/test/agents/inner-preview-replay-identity.test.ts` (new) — `architectural-invariant`. Two-run identity over inner trace.
-6. `packages/engine/test/agents/inner-preview-no-op-default.test.ts` (new) — `architectural-invariant`. Default-off invariant: pre-Spec-160 baseline trace identical.
-7. `packages/engine/test/golden/policy-preview-inner-fitl-canary.test.ts` (new) — `golden-trace`. Pinned FITL canary with opt-in.
+5. `packages/engine/test/determinism/spec-160-inner-preview-replay-identity.test.ts` (new) — `architectural-invariant`. Two-run identity over inner trace. Convention precedent: `packages/engine/test/determinism/spec-159-replay-identity.test.ts`.
+6. `packages/engine/test/determinism/spec-160-inner-preview-no-op-default.test.ts` (new) — `architectural-invariant`. Default-off invariant: pre-Spec-160 baseline trace identical.
+7. `packages/engine/test/integration/policy-preview-inner-fitl-canary-golden.test.ts` (new) — `golden-trace`. Pinned FITL canary with opt-in. Modeled on `packages/engine/test/integration/synthetic-decision-fitl-canary-golden.test.ts`.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit -- agents/policy-preview-inner-chooseone`
-2. `pnpm -F @ludoforge/engine test:unit -- agents/policy-preview-inner-choosen-beam`
-3. `pnpm -F @ludoforge/engine test:unit -- agents/policy-preview-inner-hidden-info`
-4. `pnpm -F @ludoforge/engine test:unit -- cnl/compile-preview-inner`
-5. `pnpm turbo schema:artifacts`
-6. `pnpm turbo lint typecheck test`
+The engine `test:unit` script is `node --test "dist/test/unit/**/*.test.js"`; it does not accept a Jest-style filter argument. Run a single compiled test file by absolute dist path, or run the whole suite:
+
+1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-preview-inner-chooseone.test.js`
+2. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-preview-inner-choosen-beam.test.js`
+3. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-preview-inner-hidden-info.test.js`
+4. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/compile-preview-inner.test.js`
+5. `pnpm -F @ludoforge/engine test:determinism` (covers replay-identity + no-op-default)
+6. `pnpm -F @ludoforge/engine test:integration` (covers FITL canary golden)
+7. `pnpm turbo schema:artifacts`
+8. `pnpm turbo lint typecheck test`
+
+## Follow-On Tickets
+
+Proposed namespace: `160PEROPTPREV` (Per-Option PREView at inner microturns).
+
+Decomposition outline (informational; finalized by `/spec-to-tickets`):
+
+1. Schema + compiler: `preview.inner` block, `INNER_PREVIEW_HARD_CAP`, triple-product validation, `lowerPreviewConfig` extension.
+2. `policy-eval.ts` cleanup: extend `SELECTION_REASONS` with `'beamPruned'`; promote `emptyPreviewUsage` to exported canonical helper; update `policy-agent.ts` to import.
+3. `policy-preview.ts`: export `pickInnerDecision`.
+4. `preview.option.*` ref family: feature-table additions, `policy-expr.ts` dispatch, eight ref kinds.
+5. `policy-preview-inner.ts` (new): chooseOne per-option driver.
+6. `policy-preview-inner.ts` (extend): chooseNStep beam preview driver.
+7. Hidden-information routing: per-option ref → `previewOutcome: 'hidden'` + `outcomeBreakdown.unknownHidden`.
+8. Trace integration: `chooseFrontierDecision` populates `previewUsage`; synthetic-decision trace propagates per-option drives.
+9. Compile-time warning: opt-in without `preview.option.*` consideration.
+10. Tests: unit (chooseone, choosen-beam, hidden-info, compile-preview-inner), determinism (replay-identity, no-op-default), integration (FITL canary golden).
+11. Cookbook: `preview.inner` + `preview.option.*` documentation; worked example.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-06:
+
+- [`archive/tickets/160PEROPTPREV-001.md`](../archive/tickets/160PEROPTPREV-001.md) — Consolidate `emptyPreviewUsage` and extend `SELECTION_REASONS` (covers §6 consolidation + §3 `beamPruned` foundation)
+- [`tickets/160PEROPTPREV-002.md`](../tickets/160PEROPTPREV-002.md) — Export `pickInnerDecision` from `policy-preview.ts` (covers §2 prerequisite)
+- [`tickets/160PEROPTPREV-003.md`](../tickets/160PEROPTPREV-003.md) — `preview.inner` config schema, compiler validation, `INNER_PREVIEW_HARD_CAP` (covers §1)
+- [`tickets/160PEROPTPREV-004.md`](../tickets/160PEROPTPREV-004.md) — `preview.option.*` ref family + dispatch (covers §4)
+- [`tickets/160PEROPTPREV-005.md`](../tickets/160PEROPTPREV-005.md) — `chooseOne` per-option preview driver + hidden-info routing (covers §2 + §5)
+- [`tickets/160PEROPTPREV-006.md`](../tickets/160PEROPTPREV-006.md) — `chooseNStep` beam preview driver (covers §3)
+- [`tickets/160PEROPTPREV-007.md`](../tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
+- [`tickets/160PEROPTPREV-008.md`](../tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)
+- [`tickets/160PEROPTPREV-009.md`](../tickets/160PEROPTPREV-009.md) — FITL canary golden test for inner preview (covers AC #6)
+- [`tickets/160PEROPTPREV-010.md`](../tickets/160PEROPTPREV-010.md) — Cookbook documentation for `preview.inner` and `preview.option.*` (covers cookbook deliverable)

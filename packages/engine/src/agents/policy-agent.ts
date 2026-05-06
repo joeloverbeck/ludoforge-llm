@@ -13,6 +13,7 @@ import { buildMicroturnChooseCallback, selectBestMicroturnChooseOneValue } from 
 import { pickRandom } from './agent-move-selection.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import {
+  emptyPreviewUsage,
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
@@ -119,7 +120,7 @@ const chooseStructuralFrontierDecision = (
     candidates: traceCandidatesForFrontier(traceLevel, frontier),
     pruningSteps: [],
     tieBreakChain: [],
-    previewUsage: emptyPreviewUsage(),
+    previewUsage: emptyPreviewUsage('disabled'),
     selectedStableMoveKey: selected.stableMoveKey,
     finalScore: selected.score,
     usedFallback: false,
@@ -140,28 +141,6 @@ type GuidedChoiceMatch =
       readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
     }
   | null;
-
-const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
-  mode: 'disabled',
-  evaluatedCandidateCount: 0,
-  completionPolicyFallbackCount: 0,
-  refIds: [],
-  unknownRefs: [],
-  readyRefStats: {},
-  utility: 'none',
-  widenedBecauseUniform: false,
-  outcomeBreakdown: {
-    ready: 0,
-    stochastic: 0,
-    unknownRandom: 0,
-    unknownHidden: 0,
-    unknownUnresolved: 0,
-    unknownDepthCap: 0,
-    unknownNoPreviewDecision: 0,
-    unknownGated: 0,
-    unknownFailed: 0,
-  },
-});
 
 const frontierDecisionKey = (def: AgentMicroturnDecisionInput['def'], decision: Decision): string => {
   switch (decision.kind) {
@@ -291,7 +270,7 @@ export class PolicyAgent implements Agent {
           : [],
         pruningSteps: [],
         tieBreakChain: [],
-        previewUsage: emptyPreviewUsage(),
+        previewUsage: emptyPreviewUsage('disabled'),
         selectedStableMoveKey: frontierDecisionKey(input.def, guidedChoice.matchedDecision),
         finalScore: guidedChoice.score,
         usedFallback: false,

@@ -2269,7 +2269,8 @@
                         "shallowDelta",
                         "widening",
                         "cache",
-                        "gated"
+                        "gated",
+                        "beamPruned"
                       ]
                     },
                     "previewOutcome": {

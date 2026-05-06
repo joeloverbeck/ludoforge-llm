@@ -2050,7 +2050,7 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
-    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated']),
+    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated', 'beamPruned']),
     previewOutcome: z.union([
       z.literal('ready'),
       z.literal('stochastic'),

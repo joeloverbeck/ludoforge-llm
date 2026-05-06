@@ -60,6 +60,17 @@ const MICROTURN_OPTION_INTRINSIC_CODE: Readonly<Record<string, number>> = {
   targetKind: 4,
 };
 
+const PREVIEW_OPTION_REF_KIND_CODE: Readonly<Record<string, number>> = {
+  victoryCurrentMarginSelf: 0,
+  victoryCurrentRankSelf: 1,
+  deltaVictoryCurrentMarginSelf: 2,
+  globalVar: 3,
+  perPlayerVarSelf: 4,
+  derivedMetric: 5,
+  outcome: 6,
+  driveDepth: 7,
+};
+
 const PLAYER_SELECTOR_CODE: Readonly<Record<'self' | 'active', number>> = {
   self: 0,
   active: 1,
@@ -275,6 +286,14 @@ function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: Enc
       kind: 'microturnOptionIntrinsic',
       layoutIndex: DYNAMIC_LAYOUT_INDEX,
       aux: [MICROTURN_OPTION_INTRINSIC_CODE[ref.intrinsic] ?? stableStringCode(ref.intrinsic)],
+    };
+  }
+
+  if (ref.kind === 'previewOptionRef') {
+    return {
+      kind: 'previewOptionRef',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [PREVIEW_OPTION_REF_KIND_CODE[ref.refKind] ?? stableStringCode(ref.refKind), ref.id === undefined ? 0 : stableStringCode(ref.id)],
     };
   }
 

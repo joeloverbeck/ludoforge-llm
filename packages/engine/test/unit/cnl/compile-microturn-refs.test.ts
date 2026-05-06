@@ -46,6 +46,17 @@ const microturnRefs = [
   ['microturn.option.targetKind', { kind: 'microturnOptionIntrinsic', intrinsic: 'targetKind' }, 4],
 ] as const;
 
+const previewOptionRefs = [
+  ['preview.option.victory.currentMargin.self', { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginSelf' }, [0, 0]],
+  ['preview.option.victory.currentRank.self', { kind: 'previewOptionRef', refKind: 'victoryCurrentRankSelf' }, [1, 0]],
+  ['preview.option.delta.victory.currentMargin.self', { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' }, [2, 0]],
+  ['preview.option.var.global.score', { kind: 'previewOptionRef', refKind: 'globalVar', id: 'score' }, [3, stableStringCode('score')]],
+  ['preview.option.var.player.self.tempo', { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id: 'tempo' }, [4, stableStringCode('tempo')]],
+  ['preview.option.metric.pressure', { kind: 'previewOptionRef', refKind: 'derivedMetric', id: 'pressure' }, [5, stableStringCode('pressure')]],
+  ['preview.option.outcome', { kind: 'previewOptionRef', refKind: 'outcome' }, [6, 0]],
+  ['preview.option.driveDepth', { kind: 'previewOptionRef', refKind: 'driveDepth' }, [7, 0]],
+] as const;
+
 const instructions = (bytecode: { readonly instructions: Int32Array }): readonly number[] =>
   Array.from(bytecode.instructions);
 
@@ -76,5 +87,16 @@ describe('microturn policy refs bytecode shape', () => {
       aux: [stableStringCode('futureIntrinsic')],
     }]);
     assert.deepEqual(instructions(bytecode), [Opcode.LOAD_FEATURE, 0, Opcode.HALT]);
+  });
+
+  it('lowers every preview-option ref kind to the expected feature-table and bytecode shape', () => {
+    const layout = buildEncodedStateLayout(def);
+
+    for (const [label, ref, aux] of previewOptionRefs) {
+      const bytecode = compilePolicyBytecode(refExpr(ref as CompiledAgentPolicyRef), def, layout);
+      const expectedRef: FeatureRef = { kind: 'previewOptionRef', layoutIndex: 0, aux };
+      assert.deepEqual(bytecode.featureTable.refs, [expectedRef], label);
+      assert.deepEqual(instructions(bytecode), [Opcode.LOAD_FEATURE, 0, Opcode.HALT], label);
+    }
   });
 });

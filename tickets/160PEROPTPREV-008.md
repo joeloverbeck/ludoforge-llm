@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `cnl/validate-agents.ts`
-**Deps**: `archive/tickets/160PEROPTPREV-003.md`, `tickets/160PEROPTPREV-004.md`
+**Deps**: `archive/tickets/160PEROPTPREV-003.md`, `archive/tickets/160PEROPTPREV-004.md`
 
 ## Problem
 

@@ -61,6 +61,7 @@ import type {
   AgentPolicyCandidateIntrinsic,
   AgentPolicyMicroturnIntrinsic,
   AgentPolicyMicroturnOptionIntrinsic,
+  AgentPolicyPreviewOptionRefKind,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -406,6 +407,11 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'microturnOptionIntrinsic';
       readonly intrinsic: AgentPolicyMicroturnOptionIntrinsic;
+    }
+  | {
+      readonly kind: 'previewOptionRef';
+      readonly refKind: AgentPolicyPreviewOptionRefKind;
+      readonly id?: string;
     }
   | {
       readonly kind: 'seatIntrinsic';

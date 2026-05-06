@@ -89,6 +89,7 @@ export const FEATURE_REF_KINDS = [
   'candidateTags',
   'microturnIntrinsic',
   'microturnOptionIntrinsic',
+  'previewOptionRef',
   'candidateFeature',
   'stateFeature',
   'candidateAggregate',

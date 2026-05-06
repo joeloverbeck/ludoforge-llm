@@ -2272,6 +2272,11 @@ class AgentLibraryCompiler {
       return { type: 'idList', costClass: 'candidate', ref: { kind: 'candidateTags' } };
     }
 
+    const previewOptionResolved = this.resolvePreviewOptionRuntimeRef(scope, refPath, path);
+    if (previewOptionResolved !== null) {
+      return previewOptionResolved;
+    }
+
     const previewResolved = this.resolvePreviewRuntimeRef(scope, refPath, path);
     if (previewResolved !== null) {
       return previewResolved;
@@ -2352,6 +2357,80 @@ class AgentLibraryCompiler {
       default:
         return null;
     }
+  }
+
+  private resolvePreviewOptionRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (!refPath.startsWith('preview.option.')) {
+      return null;
+    }
+    if (scope === 'stateFeature') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED,
+        path,
+        severity: 'error',
+        message: `State features may not use preview-option refs ("${refPath}").`,
+        suggestion: 'Use preview.option.* refs only from microturn-scope considerations.',
+      });
+      return null;
+    }
+
+    const optionPath = refPath.slice('preview.option.'.length);
+    switch (optionPath) {
+      case 'victory.currentMargin.self':
+        if (this.options.hasVictoryMargins === false) {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'victoryCurrentMarginSelf' } };
+      case 'victory.currentRank.self':
+        if (this.options.hasVictoryMargins === false) {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'victoryCurrentRankSelf' } };
+      case 'delta.victory.currentMargin.self':
+        if (this.options.hasVictoryMargins === false) {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' } };
+      case 'outcome':
+        return { type: 'id', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'outcome' } };
+      case 'driveDepth':
+        return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'driveDepth' } };
+      default:
+        break;
+    }
+
+    if (optionPath.startsWith('var.global.')) {
+      const id = optionPath.slice('var.global.'.length);
+      if (id.length === 0 || this.surfaceVisibility.globalVars[id] === undefined) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'globalVar', id } };
+    }
+
+    if (optionPath.startsWith('var.player.self.')) {
+      const id = optionPath.slice('var.player.self.'.length);
+      if (id.length === 0 || this.surfaceVisibility.perPlayerVars[id] === undefined) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'perPlayerVarSelf', id } };
+    }
+
+    if (optionPath.startsWith('metric.')) {
+      const id = optionPath.slice('metric.'.length);
+      if (id.length === 0 || this.surfaceVisibility.derivedMetrics[id] === undefined) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return { type: 'number', costClass: 'preview', ref: { kind: 'previewOptionRef', refKind: 'derivedMetric', id } };
+    }
+
+    this.reportUnknownLibraryRef(refPath, path);
+    return null;
   }
 
   private resolvePreviewRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
@@ -2947,6 +3026,7 @@ function collectConsiderationRefKinds(
         return;
       case 'microturnIntrinsic':
       case 'microturnOptionIntrinsic':
+      case 'previewOptionRef':
         kinds.add('microturn');
         return;
       case 'contextKind':

@@ -108,6 +108,9 @@ export interface CreatePolicyEvaluationContextInput {
     readonly optionValue: MoveParamValue;
     readonly optionIndex?: number;
   };
+  readonly previewOption?: {
+    readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+  };
 }
 
 function resolveZoneTokenAggOwner(
@@ -1128,6 +1131,8 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.completion?.resolveMicroturnIntrinsic(ref.intrinsic);
       case 'microturnOptionIntrinsic':
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
+      case 'previewOptionRef':
+        return this.resolvePreviewOptionRef(ref);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1183,6 +1188,15 @@ export class PolicyEvaluationContext {
 
     this.strategicConditionCache.set(cacheKey, value);
     return value;
+  }
+
+  private resolvePreviewOptionRef(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): PolicyValue {
+    const resolvedRefs = this.input.previewOption?.resolvedRefs;
+    if (resolvedRefs === undefined) {
+      return undefined;
+    }
+    const key = previewOptionRefKey(ref);
+    return resolvedRefs.get(key);
   }
 
   private resolveCompiledPolicyZoneId(
@@ -1602,4 +1616,25 @@ function previewRefKey(ref: CompiledSurfaceRef): string {
   return ref.selector.kind === 'role'
     ? `${ref.family}.${ref.id}.${ref.selector.seatToken}`
     : `${ref.family}.${ref.id}.${ref.selector.player}`;
+}
+
+function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): string {
+  switch (ref.refKind) {
+    case 'victoryCurrentMarginSelf':
+      return 'preview.option.victory.currentMargin.self';
+    case 'victoryCurrentRankSelf':
+      return 'preview.option.victory.currentRank.self';
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'preview.option.delta.victory.currentMargin.self';
+    case 'globalVar':
+      return `preview.option.var.global.${ref.id ?? ''}`;
+    case 'perPlayerVarSelf':
+      return `preview.option.var.player.self.${ref.id ?? ''}`;
+    case 'derivedMetric':
+      return `preview.option.metric.${ref.id ?? ''}`;
+    case 'outcome':
+      return 'preview.option.outcome';
+    case 'driveDepth':
+      return 'preview.option.driveDepth';
+  }
 }

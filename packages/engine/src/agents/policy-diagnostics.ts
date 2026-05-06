@@ -235,6 +235,10 @@ function collectSurfaceRefs(
       preview.add(surfaceRefKey(ref));
       return;
     }
+    if (ref.kind === 'previewOptionRef') {
+      preview.add(previewOptionRefKey(ref));
+      return;
+    }
     if (ref.kind !== 'library') {
       return;
     }
@@ -345,6 +349,27 @@ function walkExpr(expr: CompiledPolicyExpr, visitRef: (ref: CompiledAgentPolicyR
   }
   if ((expr.kind === 'zoneProp' || expr.kind === 'zoneTokenAgg') && typeof expr.zone !== 'string') {
     walkExpr(expr.zone, visitRef);
+  }
+}
+
+function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): string {
+  switch (ref.refKind) {
+    case 'victoryCurrentMarginSelf':
+      return 'option.victory.currentMargin.self';
+    case 'victoryCurrentRankSelf':
+      return 'option.victory.currentRank.self';
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'option.delta.victory.currentMargin.self';
+    case 'globalVar':
+      return `option.var.global.${ref.id ?? ''}`;
+    case 'perPlayerVarSelf':
+      return `option.var.player.self.${ref.id ?? ''}`;
+    case 'derivedMetric':
+      return `option.metric.${ref.id ?? ''}`;
+    case 'outcome':
+      return 'option.outcome';
+    case 'driveDepth':
+      return 'option.driveDepth';
   }
 }
 

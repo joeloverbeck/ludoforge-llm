@@ -1,10 +1,38 @@
 # 156PREVOBSUTMET-003: Per-candidate selectionReason field
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-eval.ts` (selectionReason population), one new unit test
 **Deps**: `archive/tickets/156PREVOBSUTMET-001.md`
+
+## Implementation Outcome
+
+Completed on 2026-05-06. The action-selection candidate metadata emitter now sets `selectionReason: 'gated'` only for candidates whose `previewOutcome` is `'gated'`; every surviving non-gated candidate uses the intentional `'prior'` placeholder until Spec 157 refines allocator reasons.
+
+Added `packages/engine/test/unit/agents/preview-selection-reason-gated-parity.test.ts`, an `architectural-invariant` FITL fixture that checks:
+
+1. `Σ candidate.selectionReason === 'gated'` equals `metadata.previewGatedCount`.
+2. `previewUsage.outcomeBreakdown.unknownGated` remains in parity with `metadata.previewGatedCount`.
+3. Every non-gated candidate uses `selectionReason: 'prior'`.
+4. `selectionReason` arrays are byte-identical across two identical evaluations.
+
+Ticket corrections applied: `previewUsage.previewGatedCount` -> live `metadata.previewGatedCount`; focused `test:unit -- agents/...` command -> build plus direct compiled `node --test` file.
+
+Schema/artifact fallout: none expected; ticket 001 already added the required schema/type field and enum.
+
+Source file size ledger: `packages/engine/src/agents/policy-eval.ts` was preexisting over repo guidance at 1318 lines; this ticket adds one local metadata expression there. Extraction would widen the ticket beyond the owned trace-field population slice, so it is deferred with no new residual owner.
+
+Deferred sibling/spec scope: Spec 157 owns `coverage` / `widening` refinements; ticket 004 owns synthetic-decision trace; ticket 005 owns inner-frontier `scoreContributions`; ticket 006 owns cookbook documentation.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — pass.
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-selection-reason-gated-parity.test.js` — pass (rerun after `pnpm turbo typecheck` rebuilt `dist/`).
+3. `pnpm -F @ludoforge/engine test` — pass; schema artifact check plus default lane, 63/63 files passed.
+4. `pnpm turbo typecheck` — pass.
+
+Late-edit proof validity: final status/proof transcription changed only this ticket's status and evidence ledger after the green lanes. It did not change code, tests, schema/artifact surfaces, command semantics, scope, thresholds, dependencies, or acceptance boundaries, so no proof lane was invalidated by the terminal status edit.
 
 ## Problem
 
@@ -15,7 +43,7 @@ Ticket 001 added the field to the schema and types with default `'gated'`. This 
 ## Assumption Reassessment (2026-05-06)
 
 1. `evaluation.markPreviewGated(candidate)` is the single call site that flags a gated candidate today (`policy-eval.ts:606`). Every other candidate in `activeCandidates` survived the gate and gets the `'prior'` placeholder. Confirm via `grep -n markPreviewGated packages/engine/src/agents/`.
-2. `previewGatedCount` is computed at `policy-eval.ts:594-608` and stamped on `previewUsage`. Parity check: `Σ candidates where selectionReason === 'gated'` MUST equal `previewGatedCount`. The two fields coexist this iteration; a future cleanup spec may consolidate.
+2. `previewGatedCount` is computed at `policy-eval.ts:594-608` and stamped on policy evaluation metadata. Parity check: `Σ candidates where selectionReason === 'gated'` MUST equal `metadata.previewGatedCount`. The two fields coexist this iteration; a future cleanup spec may consolidate.
 3. Per-candidate trace metadata is the `PolicyEvaluationCandidateMetadata` type (`policy-eval.ts:97`). Ticket 001 added `selectionReason` as a required field with default `'gated'`. This ticket sets the actual value at metadata-composition time.
 4. The placeholder `'prior'` is a documented, intentional placeholder. Spec 157 will refine to `'coverage' | 'prior' | 'widening'` based on which allocator phase selected the candidate. No alias issue.
 
@@ -39,7 +67,7 @@ Or, if the gating state is tracked separately from `previewOutcome`: query `eval
 
 ### 2. Parity invariant test
 
-`packages/engine/test/unit/agents/preview-selection-reason-gated-parity.test.ts` (new) — for every action-selection decision in a constructed FITL fixture, assert `Σ (candidate.selectionReason === 'gated') === previewUsage.previewGatedCount`. `architectural-invariant`.
+`packages/engine/test/unit/agents/preview-selection-reason-gated-parity.test.ts` (new) — for every action-selection decision in a constructed FITL fixture, assert `Σ (candidate.selectionReason === 'gated') === metadata.previewGatedCount`. `architectural-invariant`.
 
 ### 3. Replay-identity test extension
 
@@ -61,7 +89,7 @@ Extend `packages/engine/test/unit/trace/policy-trace-shape.test.ts` (or add a de
 
 ### Tests That Must Pass
 
-1. New: parity test — for every action-selection decision, `Σ candidates where selectionReason === 'gated'` equals `previewUsage.previewGatedCount`.
+1. New: parity test — for every action-selection decision, `Σ candidates where selectionReason === 'gated'` equals `metadata.previewGatedCount`.
 2. New: every non-gated candidate has `selectionReason: 'prior'` (placeholder invariant) until Spec 157 refines.
 3. Existing engine suite: `pnpm -F @ludoforge/engine test`.
 4. Existing typecheck: `pnpm turbo typecheck`.
@@ -80,5 +108,30 @@ Extend `packages/engine/test/unit/trace/policy-trace-shape.test.ts` (or add a de
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit -- agents/preview-selection-reason-gated-parity`
-2. `pnpm turbo lint typecheck test`
+1. `pnpm -F @ludoforge/engine build`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-selection-reason-gated-parity.test.js`
+3. `pnpm -F @ludoforge/engine test`
+4. `pnpm turbo typecheck`
+
+Focused command correction: the package `test:unit` script runs the compiled `dist/test/unit/**/*.test.js` glob and is not the reliable focused-file entrypoint for this new witness. Build first, then run the concrete compiled test file with `node --test`.
+
+## Outcome
+
+Completed: 2026-05-06.
+
+What changed:
+
+- `packages/engine/src/agents/policy-eval.ts` now emits per-candidate `selectionReason: 'gated'` only when `previewOutcome` is `'gated'`; every non-gated action-selection candidate emits the intentional `'prior'` placeholder.
+- Added `packages/engine/test/unit/agents/preview-selection-reason-gated-parity.test.ts` to prove gated-count parity, non-gated placeholder behavior, and deterministic `selectionReason` arrays on a FITL production fixture.
+
+Deviations from original plan:
+
+- The draft's `previewUsage.previewGatedCount` wording was corrected to the live `metadata.previewGatedCount` field.
+- The focused test command was corrected from `test:unit -- agents/...` to build plus direct compiled `node --test` execution.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — pass.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-selection-reason-gated-parity.test.js` — pass, including rerun after `pnpm turbo typecheck` rebuilt `dist/`.
+- `pnpm -F @ludoforge/engine test` — pass; schema artifact check plus default lane, 63/63 files passed.
+- `pnpm turbo typecheck` — pass.

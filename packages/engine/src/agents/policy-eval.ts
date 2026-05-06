@@ -1005,7 +1005,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
-    selectionReason: 'gated',
+    selectionReason: candidate.previewOutcome === 'gated' ? 'gated' : 'prior',
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
     ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),

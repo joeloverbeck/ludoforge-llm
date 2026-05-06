@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: `archive/tickets/156PREVOBSUTMET-002.md`, `tickets/156PREVOBSUTMET-003.md`, `tickets/156PREVOBSUTMET-004.md`, `tickets/156PREVOBSUTMET-005.md`
+**Deps**: `archive/tickets/156PREVOBSUTMET-002.md`, `archive/tickets/156PREVOBSUTMET-003.md`, `tickets/156PREVOBSUTMET-004.md`, `tickets/156PREVOBSUTMET-005.md`
 
 ## Problem
 

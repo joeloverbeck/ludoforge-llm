@@ -1,6 +1,6 @@
 # 159POLGUICOM-004: Cookbook update for `policyGuided` and fallback diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs only
@@ -17,7 +17,7 @@ After tickets 001-002 land, the engine surfaces `policyGuided` as the named comp
    After this ticket, it reads `greedy` or `policyGuided` (or `fallback` for the runtime trace value, when documenting the trace surface). Verified during reassessment of spec 159.
 2. The cookbook does not yet document `fallbackCompletionPolicy` (the new config field added by ticket 002) or `completionPolicyFallbackCount` (the new aggregate added by ticket 002). Both are operator-visible diagnostics that warrant cookbook coverage.
 3. The cookbook's existing "preview" section is the natural home for the fallback-config documentation; the trace-table surface is the natural home for `completionPolicyFallbackCount`.
-4. No engine code is touched by this ticket — pure documentation. The Engine Changes field reads `None — runner-only` to keep the template's enum honest, even though the change is docs-only rather than runner-only. (The template's enum has only two values; treat `None — docs-only` as equivalent.)
+4. No engine code is touched by this ticket — pure documentation. The Engine Changes field reads `None — docs only`.
 5. Tickets 001-002 must land before this one — the cookbook documents fields that exist post-002.
 
 ## Architecture Check
@@ -95,3 +95,21 @@ After applying the edits:
 1. `grep -n agentGuided docs/agent-dsl-cookbook.md` (expect zero matches)
 2. `grep -n -E 'policyGuided|fallbackCompletionPolicy|completionPolicyFallbackCount' docs/agent-dsl-cookbook.md` (expect matches in updated locations)
 3. `pnpm turbo lint typecheck test` (sanity — no code changes, suite should still pass)
+
+## Outcome
+
+Completed: 2026-05-06.
+
+- Updated `docs/agent-dsl-cookbook.md` to replace the stale `agentGuided` trace-table wording with the live `policyGuided` / `fallback` trace contract.
+- Documented `fallbackCompletionPolicy: greedy` and `fallbackCompletionPolicy: fail` in the preview profile configuration section, including the compiler restriction that the field is meaningful only with `completion: policyGuided`.
+- Documented `previewUsage.completionPolicyFallbackCount` as the aggregate diagnostic for whether policy-guided completion is actually selecting inner microturns or falling back.
+- No engine, schema, fixture, or generated artifacts changed; archived tickets 001-003 already own the runtime, schema, and compile-time-warning surfaces.
+
+Verification:
+
+- `rg -n '\bagentGuided\b' docs/agent-dsl-cookbook.md` — passed; zero matches. `rg` returned exit code 1, which is the expected empty-result pass condition.
+- `rg -n 'policyGuided|fallbackCompletionPolicy|completionPolicyFallbackCount' docs/agent-dsl-cookbook.md` — passed; matches appeared in the aggregate diagnostic, synthetic-decision trace table, gap diagnosis map, and preview config guidance.
+- `pnpm turbo lint typecheck test` — passed; 9/9 tasks successful.
+- `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 1 active ticket and 2256 archived tickets.
+
+Late-edit proof validity: after final proof, ticket edits only set terminal status and transcribed the exact proof/dependency-check results. They did not change documentation scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, engine behavior, generated artifacts, or dependency edges, so the proof lanes remain valid.

@@ -162,6 +162,15 @@ Healthy preview has at least one important ref with `distinctValueCount > 1`. Th
 
 Treat `previewOutcome: ready` as a transport status, not as proof of policy value. A decision with `utility: constant` can have many ready candidates and still be blind because every ready candidate scored against the same projected value.
 
+### `previewUsage.completionPolicyFallbackCount`
+
+`previewUsage.completionPolicyFallbackCount` counts how many synthetic inner microturns fell back while evaluating all previewed candidates for the decision. Use it to answer whether `policyGuided` is actually selecting inner options for the profile:
+
+- `0` means no policy-guided fallback fired for the decision
+- non-zero means at least one inner microturn could not be selected by the microturn policy evaluator and used the configured fallback path
+
+Pair this aggregate with `candidate.previewDrive.syntheticDecisions[]` entries whose `selectionReason` and `completionPolicy` are both `fallback` to inspect the exact inner microturns that fell back.
+
 ### `candidate.selectionReason`
 
 Each action-selection candidate carries `selectionReason`, which explains preview-budget selection at the candidate row:
@@ -187,10 +196,10 @@ Verbose traces include `candidate.previewDrive.syntheticDecisions[]` for each pr
 | `microturnKind` | Inner frontier kind, currently `chooseOne` or `chooseNStep`. |
 | `decisionKey` | Stable key for the inner decision request. |
 | `selectedOptionStableKey` | Stable key for the option selected by the driver. |
-| `selectionReason` | Inner-selection reason. Today `greedyAlphabetical` is the populated value; `microturnPolicy` and `fallback` are reserved for later policy-guided completion work. |
+| `selectionReason` | Inner-selection reason: `greedyAlphabetical` for greedy completion, `microturnPolicy` for policy-guided completion, or `fallback` when policy-guided completion could not select an inner option and the configured fallback fired. |
 | `score` | Inner-selection score recorded for the synthetic decision. |
-| `scoreContributions` | Term-level contribution breakdown for the synthetic decision; currently a placeholder for later policy-guided completion work. |
-| `completionPolicy` | Completion policy used by the drive, currently `greedy` or `agentGuided`. |
+| `scoreContributions` | Term-level contribution breakdown for the synthetic decision. |
+| `completionPolicy` | Completion policy used for this inner synthetic decision: `greedy`, `policyGuided`, or `fallback`. `fallback` is a trace value only, not an authorable config value. |
 
 For Gap 3-style diagnosis, inspect the selected option for the inner choice that should change the projected metric. A FITL govern-mode `chooseOne` where `selectedOptionStableKey` points at `aid` and `selectionReason` is `greedyAlphabetical` explains why projected patronage or margin refs may remain constant across otherwise ready candidates.
 
@@ -245,7 +254,7 @@ preferPatronageMode:
 | Preview is ready but not useful | `previewUsage.utility: 'constant'`, plus `readyRefStats[*].allReadyValuesEqual` |
 | Greedy completion picked the wrong inner option | `candidate.previewDrive.syntheticDecisions[].selectionReason` and `selectedOptionStableKey` |
 | Inner `chooseOne` / `chooseNStep` score has no obvious cause | Inner-frontier candidate `scoreContributions[]` |
-| Later policy-guided completion silently falls back | Synthetic-decision `selectionReason: 'fallback'` once that later surface lands |
+| Policy-guided completion is falling back | `previewUsage.completionPolicyFallbackCount`, plus synthetic-decision `selectionReason: 'fallback'` and `completionPolicy: 'fallback'` |
 
 ## Parameters
 
@@ -497,6 +506,8 @@ Examples:
 ```yaml
 preview:
   mode: exactWorld
+  completion: policyGuided
+  fallbackCompletionPolicy: greedy
   budget:
     strategy: balancedCoverage
     fullCandidateCap: 4
@@ -517,8 +528,14 @@ Guidance:
 - use `exactWorld` when you expect preview to stay deterministic enough
 - use `tolerateStochastic` when stochastic effects are common and you still want bounded preview
 - use `disabled` when the profile is intentionally current-state-only
+- use `completion: policyGuided` when synthetic inner microturns should be scored by the profile's microturn-scoped policy considerations
+- use `completion: greedy` for fast, non-discriminating alphabetical completion; it is deterministic, useful as a baseline or fallback, and can be adversarial for projected-value signals
+- use `fallbackCompletionPolicy: greedy` with `policyGuided` to keep preview ready when the microturn evaluator cannot decide; each firing is recorded in the synthetic-decision trace and counted in `previewUsage.completionPolicyFallbackCount`
+- use `fallbackCompletionPolicy: fail` with `policyGuided` when diagnostic profiles should abort preview with `previewOutcome: noPreviewDecision` instead of completing through greedy fallback
 - use `budget.strategy: balancedCoverage` to guarantee at least `minPerGroup` previewed candidates per stable action/parameter-shape group before remaining slots are filled by move-only prior score
 - migrate an old preview cap `N` to `budget: { strategy: balancedCoverage, fullCandidateCap: N, minPerGroup: 1 }`; the compiler rejects the removed cap field with Spec 157 migration guidance
+
+`completion: policyGuided` scores synthetic inner microturn options with the same policy consideration machinery that scores real decisions, bounded to the currently published inner frontier. `fallbackCompletionPolicy` is meaningful only with `completion: policyGuided`; the compiler rejects it under greedy completion. A `policyGuided` profile needs at least one consideration with `scopes: [microturn]` to select inner options through policy scoring. Without one, the compiler warns and runtime always uses the configured fallback.
 
 Forward-looking widening fields are valid in `preview.budget` for the later widening phase:
 

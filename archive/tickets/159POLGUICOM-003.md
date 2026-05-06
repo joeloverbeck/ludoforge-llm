@@ -105,6 +105,8 @@ Add `CNL_COMPILER_AGENT_PREVIEW_POLICYGUIDED_NO_MICROTURN_CONSIDERATIONS` to `CN
 
 ## Outcome
 
+Outcome amended: 2026-05-06 — updated the deferred sibling path after `159POLGUICOM-004` was archived.
+
 Completed on 2026-05-06.
 
 Implemented the compile-time warning in `packages/engine/src/cnl/validate-agents.ts`. The validator now emits a warning when an authored profile sets `preview.completion: policyGuided` and the profile's referenced considerations contain no `scopes: [microturn]` entry. The warning uses the canonical live diagnostic-code registry in `packages/engine/src/cnl/compiler-diagnostic-codes.ts`; `packages/engine/src/kernel/diagnostics.ts` only owns the generic diagnostic shape.
@@ -117,7 +119,7 @@ Added `packages/engine/test/unit/cnl/compile-policy-guided-warning.test.ts` with
 
 Generated/artifact fallout: none. This ticket does not change schema, serialized trace/result shape, generated JSON, runtime behavior, or cookbook documentation.
 
-Deferred sibling/spec scope: `tickets/159POLGUICOM-004.md` still owns cookbook documentation for `policyGuided` and fallback diagnostics. No spec or sibling-ticket rewrite was needed.
+Deferred sibling/spec scope: `archive/tickets/159POLGUICOM-004.md` owns the completed cookbook documentation for `policyGuided` and fallback diagnostics. No further sibling-ticket rewrite was needed.
 
 Source file size ledger: `validate-agents.ts` is 440 lines after the helper addition, `compiler-diagnostic-codes.ts` is 358 lines, and the new test is 137 lines. All are under the repo's 800-line maximum; extraction is not needed for this bounded diagnostic slice.
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — kernel schemas, kernel types, CNL compiler, agents preview, agents runtime
-**Deps**: `specs/159-preview-policy-guided-completion.md`
+**Deps**: `archive/specs/159-preview-policy-guided-completion.md`
 
 ## Problem
 
@@ -159,6 +159,8 @@ Run `pnpm turbo schema:artifacts` to update `packages/engine/schemas/GameDef.sch
 6. `pnpm turbo lint typecheck test`
 
 ## Outcome
+
+Outcome amended: 2026-05-06 — updated the Spec 159 dependency path after the spec was archived.
 
 Implemented on 2026-05-06. The implementation keeps this ticket's mechanical boundary:
 

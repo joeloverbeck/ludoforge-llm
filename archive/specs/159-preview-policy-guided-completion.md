@@ -1,6 +1,6 @@
 # Spec 159: `policyGuided` Completion With Trace-Visible Fallback
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (closes Gap 3 — uniform projected margins under `greedy` — and the silent-fallback half of Gap 5 from `reports/microturn-preview-architectural-gaps-2026-05-06.md`; replaces `agentGuided` as the default high-quality completion policy now that the microturn-scope authoring surface exists)
 **Complexity**: M (rename + rewire; new explicit fallback; trace fields; deletion of silent-fallback path; depends on Specs 156 and 158 already landed)
 **Dependencies**:
@@ -230,4 +230,25 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/159POLGUICOM-001.md`](../archive/tickets/159POLGUICOM-001.md) — Mechanical rename `agentGuided` → `policyGuided` (covers §What to Change §1; AC#5)
 - [`archive/tickets/159POLGUICOM-002.md`](../archive/tickets/159POLGUICOM-002.md) — Explicit fallback + `completionPolicyFallbackCount` trace (covers §What to Change §2-4; AC#1-3, #6-7)
 - [`archive/tickets/159POLGUICOM-003.md`](../archive/tickets/159POLGUICOM-003.md) — Compile-time warning for `policyGuided` without microturn considerations (covers §What to Change §5; AC#4)
-- [`tickets/159POLGUICOM-004.md`](../tickets/159POLGUICOM-004.md) — Cookbook update for `policyGuided` and fallback diagnostics (covers §What to Change §7)
+- [`archive/tickets/159POLGUICOM-004.md`](../archive/tickets/159POLGUICOM-004.md) — Cookbook update for `policyGuided` and fallback diagnostics (covers §What to Change §7)
+
+## Outcome
+
+Outcome amended: 2026-05-06 — updated the final hygiene command path after this spec was archived.
+
+Completed: 2026-05-06.
+
+Spec 159 landed as the four archived implementation tickets above:
+
+- `159POLGUICOM-001` completed the strict `agentGuided` to `policyGuided` rename with no compatibility alias.
+- `159POLGUICOM-002` replaced silent greedy fallback with explicit `fallbackCompletionPolicy`, emitted `selectionReason: 'fallback'` / `completionPolicy: 'fallback'`, and added `previewUsage.completionPolicyFallbackCount`.
+- `159POLGUICOM-003` added the compile-time warning for `policyGuided` profiles with no microturn-scope considerations.
+- `159POLGUICOM-004` updated `docs/agent-dsl-cookbook.md` with the live policy-guided completion and fallback diagnostics contract.
+
+Deviation from original plan: none material. The runtime default for undeclared profile preview completion remains `greedy`, as specified, while authored high-quality completion uses `policyGuided` plus an explicit fallback policy.
+
+Verification was recorded in the archived tickets. Final archive-level checks after spec archival:
+
+- `pnpm turbo lint typecheck test` — passed during `159POLGUICOM-004` closeout; 9/9 tasks successful.
+- `pnpm run check:ticket-deps` — passed after spec archival; 0 active tickets and 2257 archived tickets.
+- `git diff --check -- docs/agent-dsl-cookbook.md archive/specs/159-preview-policy-guided-completion.md archive/tickets/159POLGUICOM-001.md archive/tickets/159POLGUICOM-003.md archive/tickets/159POLGUICOM-004.md specs/159-preview-policy-guided-completion.md tickets/159POLGUICOM-004.md` — passed after spec archival edits.

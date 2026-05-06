@@ -809,7 +809,7 @@ describe('agents authoring surface', () => {
     );
   });
 
-  it('lowers completion-scoped considerations into compiled completion score terms and profile use', () => {
+  it('lowers microturn-scoped considerations into compiled microturn score terms and profile use', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
@@ -818,12 +818,12 @@ describe('agents authoring surface', () => {
         library: {
           considerations: {
             preferNamedOption: {
-              scopes: ['completion'],
-              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              scopes: ['microturn'],
+              when: { eq: [{ ref: 'microturn.kind' }, 'chooseOne'] },
               weight: 2,
               value: {
                 if: [
-                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  { eq: [{ ref: 'microturn.option.value' }, 'zone-a'] },
                   1,
                   0,
                 ],
@@ -855,13 +855,13 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.compiled.considerations?.preferNamedOption, {
-      scopes: ['completion'],
+      scopes: ['microturn'],
       costClass: 'state',
-      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      when: opExpr('eq', refExpr({ kind: 'microturnIntrinsic', intrinsic: 'kind' }), literal('chooseOne')),
       weight: literal(2),
       value: opExpr(
         'if',
-        opExpr('eq', refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }), literal('zone-a')),
+        opExpr('eq', refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }), literal('zone-a')),
         literal(1),
         literal(0),
       ),
@@ -877,7 +877,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.use.considerations, ['preferNamedOption']);
   });
 
-  it('lowers dynamic zoneProp completion considerations through the shared expression pipeline', () => {
+  it('lowers dynamic zoneProp microturn considerations through the shared expression pipeline', () => {
     const result = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       zones: [
@@ -890,14 +890,14 @@ describe('agents authoring surface', () => {
         library: {
           considerations: {
             preferHigherPopulation: {
-              scopes: ['completion'],
-              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              scopes: ['microturn'],
+              when: { eq: [{ ref: 'microturn.kind' }, 'chooseOne'] },
               weight: 1,
               value: {
                 coalesce: [
                   {
                     zoneProp: {
-                      zone: { ref: 'option.value' },
+                      zone: { ref: 'microturn.option.value' },
                       prop: 'population',
                     },
                   },
@@ -931,15 +931,15 @@ describe('agents authoring surface', () => {
     assert.equal(result.gameDef === null, false);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.compiled.considerations?.preferHigherPopulation, {
-      scopes: ['completion'],
+      scopes: ['microturn'],
       costClass: 'state',
-      when: opExpr('eq', refExpr({ kind: 'decisionIntrinsic', intrinsic: 'type' }), literal('chooseOne')),
+      when: opExpr('eq', refExpr({ kind: 'microturnIntrinsic', intrinsic: 'kind' }), literal('chooseOne')),
       weight: literal(1),
       value: opExpr(
         'coalesce',
         {
           kind: 'zoneProp',
-          zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+          zone: refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }),
           prop: 'population',
         },
         literal(0),
@@ -2114,7 +2114,7 @@ describe('agents authoring surface', () => {
     );
   });
 
-  it('accepts valid completion-scoped considerations without validator diagnostics', () => {
+  it('accepts valid microturn-scoped considerations without validator diagnostics', () => {
     const diagnostics = validateGameSpec({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
@@ -2122,12 +2122,12 @@ describe('agents authoring surface', () => {
         library: {
           considerations: {
             preferNamedOption: {
-              scopes: ['completion'],
-              when: { eq: [{ ref: 'decision.type' }, 'chooseOne'] },
+              scopes: ['microturn'],
+              when: { eq: [{ ref: 'microturn.kind' }, 'chooseOne'] },
               weight: 2,
               value: {
                 if: [
-                  { eq: [{ ref: 'option.value' }, 'zone-a'] },
+                  { eq: [{ ref: 'microturn.option.value' }, 'zone-a'] },
                   1,
                   0,
                 ],
@@ -2752,111 +2752,23 @@ describe('agents authoring surface', () => {
     assert.equal(compiled.gameDef, null);
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_DEPENDENCY_CYCLE' && diagnostic.path === 'doc.agents.library.stateFeatures.loopA'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_PREVIEW_NESTED' && diagnostic.path === 'doc.agents.library.candidateFeatures.badPreview.expr.ref'));
-    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID' && diagnostic.path === 'doc.agents.library.candidateFeatures.badCandidateParam.expr.ref'));
+    assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN' && diagnostic.path === 'doc.agents.library.candidateFeatures.badCandidateParam.expr.ref'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_AGGREGATE_INPUT_INVALID' && diagnostic.path === 'doc.agents.library.candidateAggregates.badAggregate.of'));
     assert.ok(compiled.diagnostics.some((diagnostic) => diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_DIVIDE_BY_ZERO' && diagnostic.path === 'doc.agents.library.considerations.divideByZero.value'));
   });
 
-  it('derives candidate.param refs from concrete action params instead of agents parameters', () => {
+  it('rejects retired candidate.param refs with migration diagnostics', () => {
     const compiled = compileGameSpecToGameDef({
       ...createCompileReadyDoc(),
       dataAssets: [createSeatCatalogAsset(['us'])],
-      actions: [
-        {
-          id: 'event',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [
-            { name: 'eventCardId', domain: { query: 'enums', values: ['card-1', 'card-2'] } },
-            { name: 'spaces', domain: { query: 'intsInRange', min: 1, max: 3 } },
-          ],
-          pre: null,
-          cost: [],
-          effects: [],
-          limits: [],
-        },
-      ],
       agents: withObserver({
-        parameters: {
-          tuningMode: {
-            type: 'enum',
-            default: 'safe',
-            values: ['safe', 'bold'],
-          },
-        },
+        parameters: {},
         library: {
           candidateFeatures: {
-            chosenCard: {
+            retiredParam: {
               type: 'id',
               expr: { ref: 'candidate.param.eventCardId' },
             },
-            selectedSpaces: {
-              type: 'number',
-              expr: { ref: 'candidate.param.spaces' },
-            },
-          },
-          tieBreakers: {
-            stableMoveKey: {
-              kind: 'stableMoveKey',
-            },
-          },
-        },
-        profiles: {
-          baseline: {
-            params: {},
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: ['stableMoveKey'],
-            },
-          },
-        },
-        bindings: {
-          us: 'baseline',
-        },
-      }),
-    });
-
-    assert.equal(compiled.gameDef === null, false);
-    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(compiled.gameDef?.agents?.candidateParamDefs, {
-      eventCardId: { type: 'id' },
-      spaces: { type: 'number' },
-    });
-  });
-
-  it('rejects candidate.param refs that alias agents parameters instead of concrete action params', () => {
-    const compiled = compileGameSpecToGameDef({
-      ...createCompileReadyDoc(),
-      dataAssets: [createSeatCatalogAsset(['us'])],
-      actions: [
-        {
-          id: 'event',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [{ name: 'eventCardId', domain: { query: 'enums', values: ['card-1'] } }],
-          pre: null,
-          cost: [],
-          effects: [],
-          limits: [],
-        },
-      ],
-      agents: withObserver({
-        parameters: {
-          tuningMode: {
-            type: 'enum',
-            default: 'safe',
-            values: ['safe', 'bold'],
-          },
-        },
-        library: {
-          candidateFeatures: {
-            invalidAlias: {
-              type: 'id',
-              expr: { ref: 'candidate.param.tuningMode' },
-            },
           },
           tieBreakers: {
             stableMoveKey: {
@@ -2884,200 +2796,9 @@ describe('agents authoring surface', () => {
     assert.ok(
       compiled.diagnostics.some(
         (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
-          && diagnostic.path === 'doc.agents.library.candidateFeatures.invalidAlias.expr.ref',
-      ),
-    );
-  });
-
-  it('rejects candidate.param refs when concrete actions define the same param name with conflicting policy types', () => {
-    const compiled = compileGameSpecToGameDef({
-      ...createCompileReadyDoc(),
-      dataAssets: [createSeatCatalogAsset(['us'])],
-      actions: [
-        {
-          id: 'alpha',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [{ name: 'target', domain: { query: 'enums', values: ['zone-a', 'zone-b'] } }],
-          pre: null,
-          cost: [],
-          effects: [],
-          limits: [],
-        },
-        {
-          id: 'beta',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [{ name: 'target', domain: { query: 'intsInRange', min: 1, max: 2 } }],
-          pre: null,
-          cost: [],
-          effects: [],
-          limits: [],
-        },
-      ],
-      agents: withObserver({
-        parameters: {},
-        library: {
-          candidateFeatures: {
-            conflictingTarget: {
-              type: 'id',
-              expr: { ref: 'candidate.param.target' },
-            },
-          },
-          tieBreakers: {
-            stableMoveKey: {
-              kind: 'stableMoveKey',
-            },
-          },
-        },
-        profiles: {
-          baseline: {
-            params: {},
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: ['stableMoveKey'],
-            },
-          },
-        },
-        bindings: {
-          us: 'baseline',
-        },
-      }),
-    });
-
-    assert.equal(compiled.gameDef, null);
-    assert.ok(
-      compiled.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
-          && diagnostic.path === 'doc.agents.library.candidateFeatures.conflictingTarget.expr.ref',
-      ),
-    );
-  });
-
-  it('derives exact chooseN id-list candidate params from static action choice binds', () => {
-    const compiled = compileGameSpecToGameDef({
-      ...createCompileReadyDoc(),
-      dataAssets: [createSeatCatalogAsset(['us'])],
-      actions: [
-        {
-          id: 'event',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [],
-          pre: null,
-          cost: [],
-          effects: [
-            { chooseN: { bind: '$targets', options: { query: 'zones' }, n: 2 } },
-          ],
-          limits: [],
-        },
-      ],
-      agents: withObserver({
-        parameters: {},
-        library: {
-          candidateFeatures: {
-            targetsZoneA: {
-              type: 'boolean',
-              expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
-            },
-          },
-          tieBreakers: {
-            stableMoveKey: {
-              kind: 'stableMoveKey',
-            },
-          },
-        },
-        profiles: {
-          baseline: {
-            params: {},
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: ['stableMoveKey'],
-            },
-          },
-        },
-        bindings: {
-          us: 'baseline',
-        },
-      }),
-    });
-
-    assert.equal(compiled.gameDef === null, false);
-    assert.equal(compiled.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
-    assert.deepEqual(compiled.gameDef?.agents?.candidateParamDefs, {
-      '$targets': {
-        type: 'idList',
-        cardinality: {
-          kind: 'exact',
-          n: 2,
-        },
-      },
-    });
-  });
-
-  it('rejects candidate.param refs for chooseN binds without static exact id-list contracts', () => {
-    const compiled = compileGameSpecToGameDef({
-      ...createCompileReadyDoc(),
-      dataAssets: [createSeatCatalogAsset(['us'])],
-      actions: [
-        {
-          id: 'event',
-          actor: 'active',
-          executor: 'actor',
-          phase: ['main'],
-          params: [],
-          pre: null,
-          cost: [],
-          effects: [
-            { chooseN: { bind: '$targets', options: { query: 'zones' }, max: 2 } },
-          ],
-          limits: [],
-        },
-      ],
-      agents: withObserver({
-        parameters: {},
-        library: {
-          candidateFeatures: {
-            targetsZoneA: {
-              type: 'boolean',
-              expr: { in: ['zone-a', { ref: 'candidate.param.$targets' }] },
-            },
-          },
-          tieBreakers: {
-            stableMoveKey: {
-              kind: 'stableMoveKey',
-            },
-          },
-        },
-        profiles: {
-          baseline: {
-            params: {},
-            use: {
-              pruningRules: [],
-              considerations: [],
-              tieBreakers: ['stableMoveKey'],
-            },
-          },
-        },
-        bindings: {
-          us: 'baseline',
-        },
-      }),
-    });
-
-    assert.equal(compiled.gameDef, null);
-    assert.ok(
-      compiled.diagnostics.some(
-        (diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
-          && diagnostic.path === 'doc.agents.library.candidateFeatures.targetsZoneA.expr.in.1.ref',
+          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          && diagnostic.path === 'doc.agents.library.candidateFeatures.retiredParam.expr.ref'
+          && diagnostic.message.includes('candidate.param.* refs are removed'),
       ),
     );
   });

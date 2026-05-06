@@ -74,6 +74,14 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
   candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount' } } },
   candidateTag: { expr: { kind: 'ref', ref: { kind: 'candidateTag', tagName: 'urgent' } } },
   candidateTags: { expr: { kind: 'ref', ref: { kind: 'candidateTags' } } },
+  microturnIntrinsic: {
+    expr: { kind: 'ref', ref: { kind: 'microturnIntrinsic', intrinsic: 'kind' } },
+    allowUnsupported: true,
+  },
+  microturnOptionIntrinsic: {
+    expr: { kind: 'ref', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'value' } },
+    allowUnsupported: true,
+  },
   candidateFeature: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'candidateFeature', id: 'mobility' } } },
   stateFeature: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'stateFeature', id: 'tempo' } } },
   candidateAggregate: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'aggregate', id: 'pressure' } } },

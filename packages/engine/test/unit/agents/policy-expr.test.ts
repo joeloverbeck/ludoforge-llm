@@ -57,11 +57,11 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
             ref: { kind: 'library' as const, refKind: 'aggregate' as const, id: 'bestProjectedMargin' },
             dependency: { kind: 'aggregates' as const, id: 'bestProjectedMargin' },
           };
-        case 'option.value':
+        case 'microturn.option.value':
           return {
             type: 'id' as const,
             costClass: 'state' as const,
-            ref: { kind: 'optionIntrinsic' as const, intrinsic: 'value' as const },
+            ref: { kind: 'microturnOptionIntrinsic' as const, intrinsic: 'value' as const },
           };
         case 'victory.currentMargin.$seat':
           return {
@@ -250,12 +250,12 @@ describe('policy-expr analysis', () => {
     });
   });
 
-  it('accepts completion-oriented option.value refs inside dynamic zoneTokenAgg zones', () => {
+  it('accepts microturn option value refs inside dynamic zoneTokenAgg zones', () => {
     const diagnostics: Parameters<typeof analyzePolicyExpr>[2] = [];
     const analysis = analyzePolicyExpr(
       {
         zoneTokenAgg: {
-          zone: { ref: 'option.value' },
+          zone: { ref: 'microturn.option.value' },
           owner: 'self',
           prop: 'rank',
           op: 'count',
@@ -269,7 +269,7 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(diagnostics, []);
     assert.deepEqual(analysis?.expr, {
       kind: 'zoneTokenAgg',
-      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      zone: refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }),
       owner: 'self',
       prop: 'rank',
       aggOp: 'count',
@@ -304,7 +304,7 @@ describe('policy-expr analysis', () => {
     const dynamicAnalysis = analyzePolicyExpr(
       {
         zoneProp: {
-          zone: { ref: 'option.value' },
+          zone: { ref: 'microturn.option.value' },
           prop: 'category',
         },
       },
@@ -316,7 +316,7 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(dynamicDiagnostics, []);
     assert.deepEqual(dynamicAnalysis?.expr, {
       kind: 'zoneProp',
-      zone: refExpr({ kind: 'optionIntrinsic', intrinsic: 'value' }),
+      zone: refExpr({ kind: 'microturnOptionIntrinsic', intrinsic: 'value' }),
       prop: 'category',
     });
     assert.equal(dynamicAnalysis?.costClass, 'state');

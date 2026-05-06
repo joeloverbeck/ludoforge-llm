@@ -105,6 +105,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
+    readonly optionIndex?: number;
   };
 }
 
@@ -1122,10 +1123,10 @@ export class PolicyEvaluationContext {
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
-      case 'decisionIntrinsic':
-        return this.runtimeProviders.completion?.resolveDecisionIntrinsic(ref.intrinsic);
-      case 'optionIntrinsic':
-        return this.runtimeProviders.completion?.resolveOptionIntrinsic(ref.intrinsic);
+      case 'microturnIntrinsic':
+        return this.runtimeProviders.completion?.resolveMicroturnIntrinsic(ref.intrinsic);
+      case 'microturnOptionIntrinsic':
+        return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1141,7 +1142,7 @@ export class PolicyEvaluationContext {
         return this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
       }
       case 'contextKind':
-        return this.input.completion !== undefined ? 'completion' : 'move';
+        return this.input.completion !== undefined ? 'microturn' : 'move';
     }
   }
 

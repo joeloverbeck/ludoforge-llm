@@ -86,11 +86,11 @@ export interface PolicyPreviewSurfaceProvider {
 }
 
 export interface PolicyCompletionProvider {
-  resolveDecisionIntrinsic(
-    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'decisionIntrinsic' }>['intrinsic'],
+  resolveMicroturnIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'microturnIntrinsic' }>['intrinsic'],
   ): PolicyValue;
-  resolveOptionIntrinsic(
-    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'optionIntrinsic' }>['intrinsic'],
+  resolveMicroturnOptionIntrinsic(
+    intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'microturnOptionIntrinsic' }>['intrinsic'],
   ): PolicyValue;
 }
 
@@ -119,6 +119,7 @@ export interface CreatePolicyRuntimeProvidersInput {
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
+    readonly optionIndex?: number;
   };
   readonly runtimeError: (code: string, message: string, detail?: Readonly<Record<string, unknown>>) => Error;
 }
@@ -177,8 +178,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
   const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
-  const profileHasCompletionConsiderations = activeProfile !== undefined
-    && hasCompletionScopedConsideration(input.catalog, activeProfile);
+  const profileHasMicroturnConsiderations = activeProfile !== undefined
+    && hasMicroturnScopedConsideration(input.catalog, activeProfile);
   const previewRuntime = createPolicyPreviewRuntime({
     def: input.def,
     state: input.state,
@@ -190,7 +191,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
     captureSyntheticDecisions: input.traceLevel === 'verbose',
-    ...(profileHasCompletionConsiderations
+    ...(profileHasMicroturnConsiderations
       ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
@@ -395,6 +396,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           completion: createPolicyCompletionProvider(
             input.completion.request,
             input.completion.optionValue,
+            input.completion.optionIndex,
           ),
         }),
     dispose() {
@@ -412,49 +414,69 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   };
 }
 
-// Memoize: a profile's set of completion-scoped considerations is fixed across
+// Memoize: a profile's set of microturn-scoped considerations is fixed across
 // a benchmark run. Per-call recomputation otherwise iterates `profile.use.considerations`
 // inside every `createPolicyRuntimeProviders` call (~50 outer microturns + several
 // per-pick scoring contexts). When the result is empty the agentGuided picker
 // becomes a no-op — callers can short-circuit allocation of pending-request
 // objects entirely.
-const profileHasCompletionCache = new WeakMap<CompiledAgentProfile, boolean>();
+const profileHasMicroturnCache = new WeakMap<CompiledAgentProfile, boolean>();
 
-function hasCompletionScopedConsideration(
+export function hasMicroturnScopedConsideration(
   catalog: AgentPolicyCatalog,
   profile: CompiledAgentProfile,
 ): boolean {
-  const cached = profileHasCompletionCache.get(profile);
+  const cached = profileHasMicroturnCache.get(profile);
   if (cached !== undefined) {
     return cached;
   }
   const considerations = catalog.compiled.considerations;
   const result = (profile.use.considerations ?? []).some(
-    (id) => considerations[id]?.scopes?.includes('completion') === true,
+    (id) => considerations[id]?.scopes?.includes('microturn') === true,
   );
-  profileHasCompletionCache.set(profile, result);
+  profileHasMicroturnCache.set(profile, result);
   return result;
 }
 
 export function createPolicyCompletionProvider(
   request: ChoicePendingRequest,
   optionValue: MoveParamValue,
+  optionIndex = request.options.findIndex((option) => Object.is(option.value, optionValue)),
 ): PolicyCompletionProvider {
+  const normalizedOptionValue = normalizeCompletionOptionValue(optionValue);
+  const normalizedStableKey = JSON.stringify(normalizedOptionValue);
   return {
-    resolveDecisionIntrinsic(intrinsic) {
+    resolveMicroturnIntrinsic(intrinsic) {
       switch (intrinsic) {
-        case 'type':
+        case 'kind':
           return request.type;
-        case 'name':
-          return request.name;
-        case 'targetKind':
-          return request.targetKinds[0] ?? 'unknown';
-        case 'optionCount':
-          return request.options.length;
+        case 'decisionKey':
+          return String(request.decisionKey);
+        case 'actorSeat':
+          return request.decisionPlayer ?? 'unknown';
+        case 'remainingRequiredCount':
+          return request.type === 'chooseN' ? Math.max((request.min ?? 0) - request.selected.length, 0) : 1;
+        case 'remainingMaxCount': {
+          if (request.type !== 'chooseN') return 1;
+          const optionCount = request.options.length;
+          const max = Math.min(request.max ?? optionCount, optionCount);
+          return Math.max(max - request.selected.length, 0);
+        }
       }
     },
-    resolveOptionIntrinsic(intrinsic) {
-      return intrinsic === 'value' ? normalizeCompletionOptionValue(optionValue) : undefined;
+    resolveMicroturnOptionIntrinsic(intrinsic) {
+      switch (intrinsic) {
+        case 'value':
+          return normalizedOptionValue;
+        case 'index':
+          return optionIndex;
+        case 'stableKey':
+          return normalizedStableKey;
+        case 'tags':
+          return [];
+        case 'targetKind':
+          return request.targetKinds[0] ?? 'unknown';
+      }
     },
   };
 }

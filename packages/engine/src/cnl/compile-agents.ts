@@ -51,7 +51,7 @@ import { lowerAgentConsiderations, type AgentPolicyLibraryWithExpr } from './low
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
 type TieBreakerKind = 'higherExpr' | 'lowerExpr' | 'preferredEnumOrder' | 'preferredIdOrder' | 'rng' | 'stableMoveKey';
-type ConsiderationScope = 'move' | 'completion';
+type ConsiderationScope = 'move' | 'microturn';
 type LibraryRefScope = 'stateFeature' | 'candidateFeature' | 'aggregate' | 'rule' | 'consideration' | 'tieBreaker' | 'strategicCondition';
 type LoweredAgentProfile = Omit<CompiledAgentProfile, 'fingerprint'>;
 type AgentLibraryWithExpr = AgentPolicyLibraryWithExpr;
@@ -1855,38 +1855,38 @@ class AgentLibraryCompiler {
     const scopes = consideration.scopes ?? [];
     const refKinds = collectConsiderationRefKinds(consideration);
     const hasMoveOnlyRefs = refKinds.has('candidate') || refKinds.has('preview');
-    const hasCompletionOnlyRefs = refKinds.has('decision');
+    const hasMicroturnOnlyRefs = refKinds.has('microturn');
 
     if (scopes.length === 1) {
       const scope = scopes[0];
-      if (scope === 'move' && hasCompletionOnlyRefs) {
+      if (scope === 'move' && hasMicroturnOnlyRefs) {
         this.diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
           path,
           severity: 'error',
-          message: `Consideration "${considerationId}" is move-scoped but references completion-only refs.`,
-          suggestion: 'Remove decision./option. refs or add the completion scope.',
+          message: `Consideration "${considerationId}" is move-scoped but references microturn-only refs.`,
+          suggestion: 'Remove microturn.* refs or use the microturn scope.',
         });
       }
-      if (scope === 'completion' && hasMoveOnlyRefs) {
+      if (scope === 'microturn' && hasMoveOnlyRefs) {
         this.diagnostics.push({
           code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
           path,
           severity: 'error',
-          message: `Consideration "${considerationId}" is completion-scoped but references move-only refs.`,
-          suggestion: 'Remove candidate./preview. refs or add the move scope.',
+          message: `Consideration "${considerationId}" is microturn-scoped but references move-only refs.`,
+          suggestion: 'move.* refs cannot be used in microturn-scope considerations; remove candidate./preview./move refs or use the move scope.',
         });
       }
       return;
     }
 
-    if (scopes.length > 1 && (hasMoveOnlyRefs || hasCompletionOnlyRefs) && !refKinds.has('contextKind')) {
+    if (scopes.length > 1) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_WARNING,
         path,
-        severity: 'warning',
-        message: `Consideration "${considerationId}" spans move and completion scopes but does not visibly guard context-specific refs with context.kind.`,
-        suggestion: 'Guard move-only and completion-only refs with context.kind in when/value/weight logic.',
+        severity: 'error',
+        message: `Consideration "${considerationId}" must use exactly one scope: move or microturn.`,
+        suggestion: 'Split mixed-scope scoring into separate move-scoped and microturn-scoped considerations.',
       });
     }
   }
@@ -2021,10 +2021,10 @@ class AgentLibraryCompiler {
 
   private resolveRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
     if (scope === 'consideration') {
-      const completionResolved = this.resolveCompletionRuntimeRef(refPath);
-      if (completionResolved !== null) {
-        return completionResolved;
-      }
+      const retiredRefDiagnostic = this.reportRetiredCompletionRuntimeRef(refPath, path);
+      if (retiredRefDiagnostic) return null;
+      const microturnResolved = this.resolveMicroturnRuntimeRef(refPath);
+      if (microturnResolved !== null) return microturnResolved;
     }
     if (refPath === 'seat.self' || refPath === 'seat.active') {
       return {
@@ -2069,21 +2069,29 @@ class AgentLibraryCompiler {
         this.reportInvalidCandidateParamRef(refPath, path);
         return null;
       }
-      const candidateParamPath = refPath.slice('candidate.param.'.length);
-      if (candidateParamPath.length === 0 || candidateParamPath.includes('.')) {
-        this.reportInvalidCandidateParamRef(refPath, path);
-        return null;
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+        path,
+        severity: 'error',
+        message: `candidate.param.* refs are removed; use move candidate features or microturn.* refs as appropriate.`,
+        suggestion: 'Do not inspect retired candidate.param.* refs from policy expressions.',
+      });
+      return null;
+    }
+
+    if (refPath.startsWith('move.')) {
+      const moveRefPath = refPath.slice('move.'.length);
+      if (moveRefPath === 'actionId') {
+        return { type: 'id', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'actionId' } };
       }
-      const candidateParamDef = this.candidateParamDefs[candidateParamPath];
-      if (candidateParamDef === undefined) {
-        this.reportInvalidCandidateParamRef(refPath, path);
-        return null;
+      if (moveRefPath === 'stableMoveKey') {
+        return { type: 'id', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'stableMoveKey' } };
       }
-      return {
-        type: candidateParamDef.type,
-        costClass: 'candidate',
-        ref: { kind: 'candidateParam', id: candidateParamPath },
-      };
+      if (moveRefPath === 'paramCount') {
+        return { type: 'number', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } };
+      }
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
     }
 
     // context.kind — evaluation context discriminator
@@ -2141,18 +2149,62 @@ class AgentLibraryCompiler {
     return null;
   }
 
-  private resolveCompletionRuntimeRef(refPath: string): ResolvedPolicyRef | null {
+  private reportRetiredCompletionRuntimeRef(refPath: string, path: string): boolean {
     switch (refPath) {
       case 'decision.type':
-        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'type' } };
       case 'decision.name':
-        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'name' } };
       case 'decision.targetKind':
-        return { type: 'id', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'targetKind' } };
       case 'decision.optionCount':
-        return { type: 'number', costClass: 'state', ref: { kind: 'decisionIntrinsic', intrinsic: 'optionCount' } };
       case 'option.value':
-        return { type: 'unknown', costClass: 'state', ref: { kind: 'optionIntrinsic', intrinsic: 'value' } };
+      case 'preview.phase1':
+      case 'preview.phase1CompletionsPerAction': {
+        const replacement = refPath === 'option.value'
+          ? 'microturn.option.value'
+          : refPath === 'decision.type'
+            ? 'microturn.kind'
+            : refPath === 'decision.name'
+              ? 'microturn.decisionKey'
+              : refPath === 'decision.targetKind'
+                ? 'microturn.option.targetKind'
+                : refPath === 'decision.optionCount'
+                  ? 'microturn.remainingMaxCount'
+                  : 'microturn.*';
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
+          path,
+          severity: 'error',
+          message: `${refPath} is removed; use ${replacement}.`,
+          suggestion: 'Migrate completion-scope refs to scopes: [microturn] with microturn.* refs.',
+        });
+        return true;
+      }
+      default:
+        return false;
+    }
+  }
+
+  private resolveMicroturnRuntimeRef(refPath: string): ResolvedPolicyRef | null {
+    switch (refPath) {
+      case 'microturn.kind':
+        return { type: 'id', costClass: 'state', ref: { kind: 'microturnIntrinsic', intrinsic: 'kind' } };
+      case 'microturn.decisionKey':
+        return { type: 'id', costClass: 'state', ref: { kind: 'microturnIntrinsic', intrinsic: 'decisionKey' } };
+      case 'microturn.actorSeat':
+        return { type: 'id', costClass: 'state', ref: { kind: 'microturnIntrinsic', intrinsic: 'actorSeat' } };
+      case 'microturn.remainingRequiredCount':
+        return { type: 'number', costClass: 'state', ref: { kind: 'microturnIntrinsic', intrinsic: 'remainingRequiredCount' } };
+      case 'microturn.remainingMaxCount':
+        return { type: 'number', costClass: 'state', ref: { kind: 'microturnIntrinsic', intrinsic: 'remainingMaxCount' } };
+      case 'microturn.option.value':
+        return { type: 'unknown', costClass: 'state', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'value' } };
+      case 'microturn.option.index':
+        return { type: 'number', costClass: 'state', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'index' } };
+      case 'microturn.option.stableKey':
+        return { type: 'id', costClass: 'state', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'stableKey' } };
+      case 'microturn.option.tags':
+        return { type: 'idList', costClass: 'state', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'tags' } };
+      case 'microturn.option.targetKind':
+        return { type: 'id', costClass: 'state', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'targetKind' } };
       default:
         return null;
     }
@@ -2696,7 +2748,7 @@ function normalizeConsiderationScopes(
       path,
       severity: 'error',
       message: 'Consideration scopes must be a non-empty array.',
-      suggestion: 'Use scopes: ["move"], scopes: ["completion"], or both.',
+      suggestion: 'Use scopes: ["move"] or scopes: ["microturn"].',
     });
     return null;
   }
@@ -2704,13 +2756,23 @@ function normalizeConsiderationScopes(
   const normalized: ConsiderationScope[] = [];
   const seen = new Set<ConsiderationScope>();
   for (const [index, entry] of value.entries()) {
-    if (entry !== 'move' && entry !== 'completion') {
+    if (entry === 'completion') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_INVALID,
+        path: `${path}.${index}`,
+        severity: 'error',
+        message: 'scopes: [completion] is removed; use scopes: [microturn] with microturn.* refs.',
+        suggestion: 'Replace completion with microturn and migrate retired refs to microturn.*.',
+      });
+      continue;
+    }
+    if (entry !== 'move' && entry !== 'microturn') {
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_INVALID,
         path: `${path}.${index}`,
         severity: 'error',
         message: `Unsupported consideration scope "${String(entry)}".`,
-        suggestion: 'Use only "move" and "completion" scopes.',
+        suggestion: 'Use only "move" and "microturn" scopes.',
       });
       continue;
     }
@@ -2726,8 +2788,8 @@ function normalizeConsiderationScopes(
 
 function collectConsiderationRefKinds(
   consideration: AgentConsiderationWithExpr,
-): ReadonlySet<'candidate' | 'preview' | 'decision' | 'contextKind'> {
-  const kinds = new Set<'candidate' | 'preview' | 'decision' | 'contextKind'>();
+): ReadonlySet<'candidate' | 'preview' | 'microturn' | 'contextKind'> {
+  const kinds = new Set<'candidate' | 'preview' | 'microturn' | 'contextKind'>();
   const visitRef = (ref: import('../kernel/types.js').CompiledAgentPolicyRef): void => {
     switch (ref.kind) {
       case 'candidateIntrinsic':
@@ -2739,9 +2801,9 @@ function collectConsiderationRefKinds(
       case 'previewSurface':
         kinds.add('preview');
         return;
-      case 'decisionIntrinsic':
-      case 'optionIntrinsic':
-        kinds.add('decision');
+      case 'microturnIntrinsic':
+      case 'microturnOptionIntrinsic':
+        kinds.add('microturn');
         return;
       case 'contextKind':
         kinds.add('contextKind');

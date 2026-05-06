@@ -59,8 +59,8 @@ import type {
 } from './microturn/types.js';
 import type {
   AgentPolicyCandidateIntrinsic,
-  AgentPolicyDecisionIntrinsic,
-  AgentPolicyOptionIntrinsic,
+  AgentPolicyMicroturnIntrinsic,
+  AgentPolicyMicroturnOptionIntrinsic,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -400,12 +400,12 @@ export type CompiledAgentPolicyRef =
       readonly id: string;
     }
   | {
-      readonly kind: 'decisionIntrinsic';
-      readonly intrinsic: AgentPolicyDecisionIntrinsic;
+      readonly kind: 'microturnIntrinsic';
+      readonly intrinsic: AgentPolicyMicroturnIntrinsic;
     }
   | {
-      readonly kind: 'optionIntrinsic';
-      readonly intrinsic: AgentPolicyOptionIntrinsic;
+      readonly kind: 'microturnOptionIntrinsic';
+      readonly intrinsic: AgentPolicyMicroturnOptionIntrinsic;
     }
   | {
       readonly kind: 'seatIntrinsic';
@@ -607,7 +607,7 @@ export interface CompiledPolicyPruningRule {
 }
 
 export interface CompiledPolicyConsideration {
-  readonly scopes?: readonly ('move' | 'completion')[];
+  readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
   readonly when?: CompiledPolicyExpr;
   readonly weight: CompiledPolicyExpr;
@@ -804,7 +804,7 @@ export interface CompiledAgentPruningRule {
 }
 
 export interface CompiledAgentConsideration {
-  readonly scopes?: readonly ('move' | 'completion')[];
+  readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
   readonly unknownAs?: number;
   readonly clamp?: {

@@ -44,6 +44,22 @@ const SELECTOR_KIND_CODE: Readonly<Record<'none' | 'player' | 'role', number>> =
   role: 2,
 };
 
+const MICROTURN_INTRINSIC_CODE: Readonly<Record<string, number>> = {
+  kind: 0,
+  decisionKey: 1,
+  actorSeat: 2,
+  remainingRequiredCount: 3,
+  remainingMaxCount: 4,
+};
+
+const MICROTURN_OPTION_INTRINSIC_CODE: Readonly<Record<string, number>> = {
+  value: 0,
+  index: 1,
+  stableKey: 2,
+  tags: 3,
+  targetKind: 4,
+};
+
 const PLAYER_SELECTOR_CODE: Readonly<Record<'self' | 'active', number>> = {
   self: 0,
   active: 1,
@@ -243,6 +259,22 @@ function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: Enc
       kind: 'candidateTags',
       layoutIndex: DYNAMIC_LAYOUT_INDEX,
       aux: [],
+    };
+  }
+
+  if (ref.kind === 'microturnIntrinsic') {
+    return {
+      kind: 'microturnIntrinsic',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [MICROTURN_INTRINSIC_CODE[ref.intrinsic] ?? stableStringCode(ref.intrinsic)],
+    };
+  }
+
+  if (ref.kind === 'microturnOptionIntrinsic') {
+    return {
+      kind: 'microturnOptionIntrinsic',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [MICROTURN_OPTION_INTRINSIC_CODE[ref.intrinsic] ?? stableStringCode(ref.intrinsic)],
     };
   }
 

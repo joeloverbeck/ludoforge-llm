@@ -13,19 +13,23 @@
 **Source**:
 - `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 5 (`agentGuided` depends on retired authoring surface).
 - `reports/preview-policy-corrections.md` §5 (microturns resemble "split moves" in general game-playing research), §"Recommendation F" (modern microturn refs), Phase 3 of recommended sequence.
-- `docs/agent-dsl-cookbook.md:127-144` — explicit list of retired surfaces, including `scopes: [completion]` and `option.value`.
+- `docs/agent-dsl-cookbook.md:218-235` (bullet list at 220-227) — explicit list of retired surfaces, including `scopes: [completion]` and `option.value`.
 - Code anchors:
-  - `packages/engine/src/agents/policy-preview.ts:394-415` — `pickAgentGuidedChooseOneDecision` calls `selectBestCompletionChooseOneValue`, which evaluates `scopes: [completion]` considerations using `option.value`.
-  - `packages/engine/src/agents/completion-guidance-choice.ts` — the chooser that evaluates completion-scope considerations.
-  - `packages/engine/src/agents/policy-preview.ts:482-483` — silent fallback from `agentGuided` to `greedy` when `selectBestCompletionChooseOneValue` returns undefined.
-  - `packages/engine/src/cnl/compile-agents.ts:578-583` — scope filtering at evaluation time (`considerations[id]?.scopes?.includes('move')`).
+  - `packages/engine/src/agents/policy-preview.ts:431-452` — `pickAgentGuidedChooseOneDecision` calls `selectBestCompletionChooseOneValue`, which evaluates `scopes: [completion]` considerations using `option.value`.
+  - `packages/engine/src/agents/policy-preview.ts:454-507` — `pickAgentGuidedChooseNStepDecision` runs the same chain via `buildCompletionChooseCallback`; both branches share the silent-fallback semantics.
+  - `packages/engine/src/agents/completion-guidance-choice.ts` — the chooser that evaluates completion-scope considerations (`selectBestCompletionChooseOneValue` at line 57; `buildCompletionChooseCallback` at line 103).
+  - `packages/engine/src/agents/completion-guidance-eval.ts:52-103` — `scoreCompletionOptionWithContributions`, the per-option scoring core that reuses `evaluateConsideration` and is structurally what becomes the new microturn scoring core under rewrite.
+  - `packages/engine/src/agents/policy-agent.ts:12,321,361` — the simulator's `PolicyAgent` (`matchGuidedChooseOneDecision`, `matchGuidedCompletionDecision`) is a second consumer of the same completion-scope chain; deletion without simulator migration breaks compilation.
+  - `packages/engine/src/agents/policy-preview.ts:519,525` — silent fallback from `agentGuided` to `greedy` (`?? pickGreedyChooseOneDecision` for chooseOne; `?? pickGreedyChooseNStepDecision` for chooseNStep) when the completion-scope chain returns undefined.
+  - `packages/engine/src/cnl/compile-agents.ts:54` — `type ConsiderationScope = 'move' | 'completion'`; compile-time scope/ref validation at `compile-agents.ts:1850-1878` (`validateConsiderationScopeRefs`).
+  - `packages/engine/src/agents/policy-eval.ts:612-614`, `packages/engine/src/agents/completion-guidance-choice.ts:50-54`, `packages/engine/src/agents/policy-runtime.ts:433`, `packages/engine/src/agents/policy-wasm-runtime.ts:635` — runtime scope filtering sites that branch on `scopes?.includes('move' | 'completion')`.
 - Empirical evidence: `exp-001` of the campaign restart reproduced `preferPatronageMode` (completion-scope, weight 10) flipping 4/4 govern-mode chooseOnes from `aid` to `patronage`. The mechanism still works mechanically; the deprecation message tells operators not to use it. The contradiction is the gap.
 
 ## Brainstorm Context
 
 **Original framing.** Spec 140 made every kernel-published decision atomic. The cookbook (post-Spec-140) deprecated the authoring surfaces that referenced unpublished sub-decisions: `scopes: [completion]`, `decision.type`, `decision.name`, `decision.targetKind`, `decision.optionCount`, `option.value`, `candidate.param.*`. The reasoning was correct: those refs encouraged operators to reason about pre-microturn template completions, which Spec 140 retired.
 
-But the engine kept evaluating `scopes: [completion]` because `agentGuided` completion in `policy-preview.ts:394-415` routes through `selectBestCompletionChooseOneValue`, which is the only evaluator for completion-scope considerations. With the cookbook telling operators not to author them, every cookbook-compliant profile gets `selectBestCompletionChooseOneValue` returning `undefined`, and `agentGuided` silently falls back to `greedy` at `policy-preview.ts:482-483`. The deprecation is one-sided: the surface is removed in spirit but not in implementation, and the "modern" replacement (`agentGuided`) is meaningless without it.
+But the engine kept evaluating `scopes: [completion]` because `agentGuided` completion in `policy-preview.ts:431-452` routes through `selectBestCompletionChooseOneValue`, which is the only evaluator for completion-scope considerations (the chooseNStep counterpart at `policy-preview.ts:454-507` runs the same chain via `buildCompletionChooseCallback`, and the simulator's `PolicyAgent` consumes the same chain at `policy-agent.ts:321,361`). With the cookbook telling operators not to author them, every cookbook-compliant profile gets `selectBestCompletionChooseOneValue` returning `undefined`, and `agentGuided` silently falls back to `greedy` at `policy-preview.ts:519` (chooseOne) and `:525` (chooseNStep). The deprecation is one-sided: the surface is removed in spirit but not in implementation, and the "modern" replacement (`agentGuided`) is meaningless without it.
 
 The fix is not "un-deprecate completion" — that violates F#14 (no shims, no quiet fallbacks) and recreates the conceptual confusion Spec 140 cleaned up. The fix is to *replace* completion scope with a microturn-native equivalent that says exactly the same thing in a way consistent with the post-Spec-140 protocol: a consideration that fires at the *currently published* atomic decision frontier, with refs over the *currently published* options. Same expressive power, coherent semantics, no deprecated terms.
 
@@ -90,19 +94,22 @@ Scope enum gains `microturn`. Scope enum loses `completion`. Validator rejects `
 
 Ten new ref kinds: `microturn:kind`, `microturn:decisionKey`, `microturn:actorSeat`, `microturn:option:value`, `microturn:option:index`, `microturn:option:stableKey`, `microturn:option:tags`, `microturn:option:targetKind`, `microturn:remainingRequiredCount`, `microturn:remainingMaxCount`. Six removed: `decision:type`, `decision:name`, `decision:targetKind`, `decision:optionCount`, `option:value`, every `candidate:param:*` flavor. Ref kind validator rejects each removed kind with a migration-naming diagnostic.
 
-### 3. Evaluator — `packages/engine/src/agents/microturn-evaluator.ts` (new)
+### 3. Evaluator — `packages/engine/src/agents/microturn-option-eval.ts` and `microturn-option-evaluator.ts` (new, rewriting existing files)
 
-New evaluator that takes (microturn, option) and returns the per-option score using the profile's microturn-scope considerations. Stable tie-breaks; integer arithmetic. Reuses the same `evaluateConsideration` machinery as move-scope, parameterized by the new ref-resolution context.
+Two new files replace the completion-scope evaluator pair, covering both `chooseOne` and `chooseNStep` branches:
 
-`completion-guidance-choice.ts` is renamed to `microturn-option-evaluator.ts` (or deleted entirely if the new evaluator subsumes it). `selectBestCompletionChooseOneValue` is removed.
+- `microturn-option-eval.ts` (rewrite of `completion-guidance-eval.ts`) — per-option scoring core. Takes (microturn, option) and returns the per-option score using the profile's microturn-scope considerations. Stable tie-breaks; integer arithmetic. Reuses the existing `evaluateConsideration` machinery via a new microturn-scope ref-resolution context.
+- `microturn-option-evaluator.ts` (rewrite of `completion-guidance-choice.ts`) — chooser/selector. Replaces `selectBestCompletionChooseOneValue` (called by chooseOne agentGuided) and `buildCompletionChooseCallback` (called by chooseNStep agentGuided and the simulator's `PolicyAgent`).
 
-### 4. Compile-time pruning — `packages/engine/src/cnl/compile-agents.ts`
+Alternative: merge the two files into a single new module if the boundary doesn't carry weight after rewrite.
 
-Every `costClass` flag, scope filter, and consideration-list aggregation that previously branched on `'completion'` is updated to branch on `'microturn'`. Dead code on the completion paths is deleted in the same patch.
+### 4. Compile-time and runtime scope filtering — `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/agents/policy-eval.ts`, `policy-runtime.ts`, `policy-wasm-runtime.ts`
 
-### 5. Profile migration — `data/games/**/*.yaml`, `packages/engine/test/fixtures/**`, `packages/engine/test/data/**`
+Every `costClass` flag, scope filter, and consideration-list aggregation that previously branched on `'completion'` is updated to branch on `'microturn'`. The compile-time `validateConsiderationScopeRefs` (`compile-agents.ts:1850-1878`) gains microturn-ref enforcement; runtime filtering at `policy-eval.ts:612-614`, `completion-guidance-choice.ts:50-54`, `policy-runtime.ts:433`, and `policy-wasm-runtime.ts:635` is updated in lockstep. Dead code on the completion paths is deleted in the same patch.
 
-Every consideration with `scopes: [completion]` rewritten to `scopes: [microturn]`; every `option.value` ref rewritten to `microturn.option.value`; every `decision.name` to `microturn.decisionKey`; etc. Mechanical, but exhaustive. Migration script lives under `scripts/migrate-completion-to-microturn.mjs` (single-use, deleted after the migration commit).
+### 5. Profile migration — `packages/engine/test/fixtures/**`, `packages/engine/test/**/*.test.ts`
+
+Production profiles (`data/games/**/*.yaml`) currently contain zero `scopes: [completion]` considerations and no retired refs — the cookbook (line 233) confirms "the shipped FITL and Texas profiles have already been simplified away from them." Migration scope is therefore test fixtures and test source files only. Every consideration with `scopes: [completion]` rewritten to `scopes: [microturn]`; every `option.value` ref rewritten to `microturn.option.value`; every `decision.name` to `microturn.decisionKey`; etc. Mechanical, but exhaustive. Migration script lives under `scripts/migrate-completion-to-microturn.mjs` (single-use, deleted after the migration commit). The F#14 grep test (Acceptance Criteria Test 8) continues to scan `data/games/**` to prove continued absence going forward.
 
 ### 6. Cookbook — `docs/agent-dsl-cookbook.md`
 
@@ -116,27 +123,36 @@ Trace shape gains no new fields — `microturn` is a scope keyword, not a new ev
 
 Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema diff is the canonical migration record.
 
+### 9. Simulator policy agent — `packages/engine/src/agents/policy-agent.ts`
+
+`PolicyAgent`'s `matchGuidedChooseOneDecision` (line 361) and `matchGuidedCompletionDecision` (line 321) are a second consumer of the completion-scope chain alongside the preview runtime. Both call sites switch from `selectBestCompletionChooseOneValue` / `buildCompletionChooseCallback` to the new microturn-scope evaluator (`microturn-option-evaluator.ts`). The simulator's user-visible behavior is unchanged for cookbook-compliant profiles (which currently fall back to greedy via the same silent-fallback semantics) and is restored for profiles that author microturn-scope considerations.
+
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-agents.ts` (modify — scope/ref validation; completion-scope removal)
 - `packages/engine/src/cnl/validate-agents.ts` (modify — diagnostics)
 - `packages/engine/src/cnl/lower-agent-considerations.ts` (modify — IR lowering for microturn refs)
 - `packages/engine/src/cnl/policy-bytecode/feature-table.ts` (modify — bytecode ref kinds)
-- `packages/engine/src/agents/microturn-option-evaluator.ts` (new — replaces `completion-guidance-choice.ts`)
+- `packages/engine/src/agents/microturn-option-eval.ts` (new — rewrite of `completion-guidance-eval.ts`, per-option scoring core)
+- `packages/engine/src/agents/microturn-option-evaluator.ts` (new — rewrite of `completion-guidance-choice.ts`, chooser/selector)
 - `packages/engine/src/agents/completion-guidance-choice.ts` (delete)
-- `packages/engine/src/agents/completion-guidance-eval.ts` (delete or rewrite — evaluate iteration over completion paths is replaced by microturn paths)
-- `packages/engine/src/agents/policy-eval.ts` (modify — scope filter `'completion'` → `'microturn'`)
-- `packages/engine/src/agents/policy-preview.ts` (modify — `pickAgentGuidedChooseOneDecision` switches to microturn evaluator; full rename happens in Spec 159)
+- `packages/engine/src/agents/completion-guidance-eval.ts` (delete)
+- `packages/engine/src/agents/policy-eval.ts` (modify — scope filter `'completion'` → `'microturn'` at `:612-614`)
+- `packages/engine/src/agents/policy-runtime.ts` (modify — runtime scope filter at `:433`)
+- `packages/engine/src/agents/policy-wasm-runtime.ts` (modify — WASM-runtime scope filter at `:635`)
+- `packages/engine/src/agents/policy-preview.ts` (modify — `pickAgentGuidedChooseOneDecision` and `pickAgentGuidedChooseNStepDecision` switch to microturn evaluator; full rename happens in Spec 159)
+- `packages/engine/src/agents/policy-agent.ts` (modify — `matchGuidedChooseOneDecision` and `matchGuidedCompletionDecision` switch to microturn evaluator)
 - `packages/engine/src/agents/policy-expr.ts` (modify — ref kind dispatch)
 - `packages/engine/schemas/GameDef.schema.json` (modify)
-- `data/games/fire-in-the-lake/**/*.yaml` (modify — every consideration migrated)
-- `data/games/texas-holdem/**/*.yaml` (modify — every consideration migrated)
-- `packages/engine/test/fixtures/**/*.yaml` (modify — every fixture migrated)
+- `packages/engine/test/fixtures/**/*.yaml` (modify — every fixture with `scopes: [completion]` or retired refs migrated)
 - `packages/engine/test/unit/compile-agents-authoring.test.ts` (modify — completion-scope rejection)
+- `packages/engine/test/unit/agents/completion-guidance-choice.test.ts` (delete)
+- `packages/engine/test/unit/agents/completion-guidance-eval.test.ts` (delete)
 - `packages/engine/test/unit/agents/microturn-option-evaluator.test.ts` (new)
 - `packages/engine/test/unit/agents/microturn-scope-validation.test.ts` (new)
 - `packages/engine/test/unit/cnl/compile-microturn-refs.test.ts` (new)
-- `packages/engine/test/agents/no-completion-scope-references.test.ts` (new — F#14 enforcement)
+- `packages/engine/test/unit/agents/no-completion-scope-references.test.ts` (new — F#14 enforcement)
+- `packages/engine/test/unit/agents/migration-equivalence-prefer-patronage.test.ts` (new — `convergence-witness`)
 - `docs/agent-dsl-cookbook.md` (modify — retired-section deleted, microturn section added)
 - `scripts/migrate-completion-to-microturn.mjs` (new — single-use, deleted in same commit-set)
 
@@ -152,12 +168,12 @@ Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema
 
 ### Tests That Must Pass
 
-1. New: `scopes: [microturn]` consideration with `microturn.kind == 'chooseOne'` and `microturn.decisionKey == 'governMode'` matches a govern-mode chooseOne and not other chooseOnes (engine-generic — verified on a non-FITL fixture).
+1. New: `scopes: [microturn]` consideration with `microturn.kind == 'chooseOne'` and `microturn.decisionKey == 'governMode'` matches a govern-mode chooseOne and not other chooseOnes; companion case with `microturn.kind == 'chooseNStep'` matches a chooseNStep microturn and not other kinds (engine-generic — verified on a non-FITL fixture).
 2. New: A consideration with `scopes: [microturn]` referencing `move.actionId` fails compilation with diagnostic `"move.* refs cannot be used in microturn-scope considerations"`.
 3. New: A profile with `scopes: [completion]` fails compilation with diagnostic naming `microturn` migration.
 4. New: A profile with `option.value` ref fails compilation with diagnostic naming `microturn.option.value`.
-5. New: Every repo-owned `data/games/**/*.yaml` profile compiles cleanly under the new schema.
-6. New: `selectBestCompletionChooseOneValue` is not exported and not imported anywhere in `packages/engine/src/**` (delete-confirm test).
+5. New: Every repo-owned `data/games/**/*.yaml` profile compiles cleanly under the new schema (no production-data changes were needed; this test proves the simplified profiles round-trip through the new scope enum).
+6. New: `selectBestCompletionChooseOneValue` and `buildCompletionChooseCallback` are not exported and not imported anywhere in `packages/engine/src/**` (delete-confirm test).
 7. New: Replay-identity test — same GameDef + seed + actions twice produces byte-identical decision output post-migration.
 8. New: F#14 grep test — `packages/engine/src/**` and `data/games/**` contain no `scopes: [completion]`, `option.value`, `decision.name`, `decision.type`, `decision.targetKind`, `decision.optionCount`, `candidate.param.`, `preview.phase1`.
 9. Existing engine suite: `pnpm -F @ludoforge/engine test`.
@@ -169,7 +185,7 @@ Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema
 2. (architectural-invariant) The set of available scope keywords is exactly `{move, microturn}` — neither superset nor subset.
 3. (architectural-invariant) The set of available `microturn.*` refs matches the schema enum exactly.
 4. (architectural-invariant) Every repo-owned consideration has `scopes: [move]` or `scopes: [microturn]` — never both, never `[completion]`.
-5. (architectural-invariant) `agentGuided` (still under that name in this spec) routing through the new microturn evaluator produces the same behavior on the FITL `preferPatronageMode` fixture as the pre-migration completion-scope path produced — equivalence proof for the migration.
+5. (architectural-invariant) `agentGuided` (still under that name in this spec) routing through the new microturn evaluator produces the same decision output as the pre-migration completion-scope path on a paired in-test `preferPatronageMode` fixture (completion-scope baseline + microturn-scope rewrite, both authored inline in the test) — equivalence proof for the migration.
 
 ## Test Plan
 
@@ -178,10 +194,10 @@ Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema
 1. `packages/engine/test/unit/agents/microturn-option-evaluator.test.ts` (new) — `architectural-invariant`. Per-option scoring matches manual computation across the ten ref kinds.
 2. `packages/engine/test/unit/agents/microturn-scope-validation.test.ts` (new) — `architectural-invariant`. Compile-time rejection of cross-scope refs.
 3. `packages/engine/test/unit/cnl/compile-microturn-refs.test.ts` (new) — `architectural-invariant`. Every microturn ref kind compiles to the expected IR / bytecode shape.
-4. `packages/engine/test/agents/no-completion-scope-references.test.ts` (new) — `architectural-invariant`. F#14 grep enforcement.
-5. `packages/engine/test/agents/migration-equivalence-prefer-patronage.test.ts` (new) — `convergence-witness` with `@witness: spec-158-completion-to-microturn-equivalence`. The pre-migration `preferPatronageMode` fixture rewritten to microturn scope produces identical decision output on a fixed FITL seed (justifies the migration as semantics-preserving).
+4. `packages/engine/test/unit/agents/no-completion-scope-references.test.ts` (new) — `architectural-invariant`. F#14 grep enforcement.
+5. `packages/engine/test/unit/agents/migration-equivalence-prefer-patronage.test.ts` (new) — `convergence-witness` with `@witness: spec-158-completion-to-microturn-equivalence`. `preferPatronageMode` is not a committed FITL profile (it lives in campaign experiment artifacts only), so the test authors **both** the completion-scope baseline AND the microturn-scope rewrite as inline test fixtures, then asserts identical decision output for both versions on a fixed FITL seed (justifies the migration as semantics-preserving).
 6. `packages/engine/test/unit/compile-agents-authoring.test.ts` (modify) — completion-scope rejection cases added; existing cases pruned.
-7. `packages/engine/test/unit/agents/completion-guidance-choice.test.ts` (delete) — file goes away with the source it tests.
+7. `packages/engine/test/unit/agents/completion-guidance-choice.test.ts` (delete) and `packages/engine/test/unit/agents/completion-guidance-eval.test.ts` (delete) — both go away with the source they test.
 
 ### Commands
 
@@ -191,3 +207,10 @@ Scope enum updated to `["move", "microturn"]`. Ref kind enum updated. The schema
 4. `pnpm -F @ludoforge/engine test:unit -- agents/migration-equivalence-prefer-patronage`
 5. `pnpm turbo schema:artifacts`
 6. `pnpm turbo lint typecheck test`
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-06:
+
+- [`archive/tickets/158MICROPOL-001.md`](../archive/tickets/158MICROPOL-001.md) — Migrate `scopes: [completion]` → `scopes: [microturn]` (F#14 atomic cut) (covers What to Change §1–§9 + §10 migration script)
+- [`tickets/158MICROPOL-002.md`](../tickets/158MICROPOL-002.md) — Architectural-invariant tests for microturn scope (covers Test Plan §1–§5)

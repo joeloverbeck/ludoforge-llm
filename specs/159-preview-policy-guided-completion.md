@@ -4,9 +4,9 @@
 **Priority**: P1 (closes Gap 3 — uniform projected margins under `greedy` — and the silent-fallback half of Gap 5 from `reports/microturn-preview-architectural-gaps-2026-05-06.md`; replaces `agentGuided` as the default high-quality completion policy now that the microturn-scope authoring surface exists)
 **Complexity**: M (rename + rewire; new explicit fallback; trace fields; deletion of silent-fallback path; depends on Specs 156 and 158 already landed)
 **Dependencies**:
-- Spec 156 [preview-observability-and-utility-metrics] (archived) — `selectionReason: 'fallback'` and `completionPolicyFallbackCount` extend trace fields landed in 156; synthetic-decision trace records the chosen completion policy per inner microturn.
-- Spec 158 [microturn-policy-scope-and-refs] (archived) — `selectBestMicroturnOption` (the renamed evaluator from 158) is the engine that `policyGuided` invokes per inner microturn.
-- Spec 145 [bounded-synthetic-completion-preview] (archived) — the preview drive loop this spec re-routes.
+- Spec 156 [preview-observability-and-utility-metrics] (completed) — landed the synthetic-decision trace shape: the `selectionReason` enum with the `'fallback'` slot reserved-but-unemitted, and the `completionPolicy` field on each inner-microturn trace entry. Spec 159 is the first to emit `selectionReason: 'fallback'` and adds the new `completionPolicyFallbackCount` aggregate on `previewUsage`.
+- Spec 158 [microturn-policy-scope-and-refs] (completed) — landed `selectBestMicroturnChooseOneValue` (chooseOne path) and `buildMicroturnChooseCallback` (chooseNStep path) in `microturn-option-evaluator.ts`. These are the engines that `policyGuided` invokes per inner microturn.
+- Spec 145 [bounded-synthetic-completion-preview] (completed) — the preview drive loop this spec re-routes.
 - Foundation 5 (One Rules Protocol, Many Clients) — `policyGuided` evaluates against the published frontier, not unpublished sub-decisions.
 - Foundation 10 (Bounded Computation) — `policyGuided` is local frontier scoring, not recursive action-selection preview; cost stays bounded.
 - Foundation 14 (No Backwards Compatibility) — `agentGuided` is renamed and the silent fallback is deleted in the same change; no `_legacy` policy name.
@@ -17,14 +17,16 @@
 - `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 3 (greedy uniform margins), Gap 5 (silent fallback when completion-scope considerations absent).
 - `reports/preview-policy-corrections.md` §"Recommendation D" (greedy as diagnostic fallback only), §"Recommendation E" (replace `agentGuided` with `policyGuided`), §6 (trace must record fallbacks), Phase 4 of recommended sequence.
 - Code anchors:
-  - `packages/engine/src/agents/policy-preview.ts:394-415` — `pickAgentGuidedChooseOneDecision` (post-Spec-158: re-routed through `selectBestMicroturnOption`).
-  - `packages/engine/src/agents/policy-preview.ts:482-483` — silent `?? pickGreedyChooseOneDecision(...)` fallback that this spec deletes.
-  - `packages/engine/src/agents/policy-preview.ts:472-492` — `pickInnerDecision` switch on `policy === 'agentGuided'` — renamed in this spec.
-  - `packages/engine/src/cnl/compile-agents.ts:765-790` (assumed location of `lowerPreviewConfig`) — preview policy validation.
+  - `packages/engine/src/agents/policy-preview.ts:431-452` — `pickAgentGuidedChooseOneDecision` (post-Spec-158: routed through `selectBestMicroturnChooseOneValue`).
+  - `packages/engine/src/agents/policy-preview.ts:454-507` — `pickAgentGuidedChooseNStepDecision` (post-Spec-158: routed through `buildMicroturnChooseCallback`).
+  - `packages/engine/src/agents/policy-preview.ts:519-520` and `:524-526` — silent `?? pickGreedy*Decision(...)` fallbacks (chooseOne and chooseNStep, respectively) that this spec deletes.
+  - `packages/engine/src/agents/policy-preview.ts:509-529` — `pickInnerDecision` switch on `policy === 'agentGuided'` — renamed in this spec.
+  - `packages/engine/src/cnl/compile-agents.ts:762-849` — `lowerPreviewConfig`, the preview policy validator/lowerer.
+  - `packages/engine/src/agents/policy-agent.ts:26` (interface) and `:186` (class) — `fallbackOnError` precedent for the proposed `fallbackCompletionPolicy` config field.
 
 ## Brainstorm Context
 
-**Original framing.** Post-Spec-158 the engine has a working microturn-scope evaluator (`selectBestMicroturnOption`) and operators have a non-deprecated authoring surface for inner-microturn preferences. But the completion policy enum in `preview.completion` still exposes `agentGuided`, a name that misleads on two counts: (1) it suggests recursion into a full agent invocation per inner microturn (it doesn't — it's local frontier scoring), and (2) it falls back silently to `greedy` when the evaluator returns undefined, hiding the failure mode in `policy-preview.ts:482-483`.
+**Original framing.** Post-Spec-158 the engine has working microturn-scope evaluators (`selectBestMicroturnChooseOneValue` for chooseOne and `buildMicroturnChooseCallback` for chooseNStep) and operators have a non-deprecated authoring surface for inner-microturn preferences. But the completion policy enum in `preview.completion` still exposes `agentGuided`, a name that misleads on two counts: (1) it suggests recursion into a full agent invocation per inner microturn (it doesn't — it's local frontier scoring), and (2) it falls back silently to `greedy` when the evaluator returns undefined, hiding the failure mode at `policy-preview.ts:519-520` (chooseOne) and `:524-526` (chooseNStep) — two parallel sites inside `pickInnerDecision`.
 
 The cookbook calls this out indirectly (it tells operators not to author the surface `agentGuided` depends on) but the user-visible config knob still says `agentGuided`. An operator who reads the cookbook, removes their completion-scope considerations, and writes a microturn-scope consideration expects `agentGuided` to use it — but until this spec lands, `agentGuided`'s implementation is hard-wired to call the (now-deleted) completion-scope evaluator. Spec 158 rewires the call site; Spec 159 renames the surface to `policyGuided`, makes the fallback explicit and trace-visible, and ships the user-facing migration.
 
@@ -36,7 +38,7 @@ The cookbook calls this out indirectly (it tells operators not to author the sur
 
 **Prior art surveyed.**
 
-- **Spec 145 [bounded-synthetic-completion-preview] (archived)** — established `agentGuided`, `greedy` as the two completion policies. Section §D5 (greedy) acknowledged greedy as deterministic but adversarial ("if I randomly close my own action, how does the world look?").
+- **Spec 145 [bounded-synthetic-completion-preview] (completed)** — established `agentGuided`, `greedy` as the two completion policies. Section §D5 (greedy) acknowledged greedy as deterministic but adversarial ("if I randomly close my own action, how does the world look?").
 - **TAG / OpenSpiel rollout policies (`reports/preview-policy-corrections.md` §6).** Both frameworks distinguish "light" rollouts (random, fast, often arbitrary) from "heavy" rollouts (knowledge-guided, slower, more accurate). The named distinction is operator-visible. `policyGuided` vs `greedy` is the LudoForge analog.
 - **PUCT priors with explicit fallback enumeration (`reports/preview-policy-corrections.md` §3).** Standard practice: when the prior cannot decide, fall back to a documented secondary choice (e.g., uniform random). The fallback is named, enumerated, and recorded.
 - **Existing `fallbackOnError` field on `PolicyAgentConfig`** (`policy-agent.ts:178`) — convention exists for explicit fallback configuration.
@@ -44,7 +46,7 @@ The cookbook calls this out indirectly (it tells operators not to author the sur
 **Synthesis.**
 
 1. Rename `agentGuided` → `policyGuided` everywhere (config schema, IR, runtime, fixtures, cookbook). Delete the `agentGuided` enum value. F#14 strict.
-2. Replace the silent `?? pickGreedyChooseOneDecision(...)` with an explicit `fallbackCompletionPolicy: 'greedy' | 'fail'` config field on `preview.completion`. Default fallback is `greedy` (matches today's behavior on the surface) but the fallback path emits `selectionReason: 'fallback'` and increments `completionPolicyFallbackCount` on `previewUsage` (Spec 156's trace surface).
+2. Replace the two silent `?? pickGreedy*Decision(...)` fallbacks (chooseOne at `policy-preview.ts:519-520`, chooseNStep at `:524-526`) with an explicit `fallbackCompletionPolicy: 'greedy' | 'fail'` config field on `preview.completion`. Default fallback is `greedy` (matches today's behavior on the surface) but the fallback path emits `selectionReason: 'fallback'` (Spec 156 reserved this slot but never emitted it) and increments the new `completionPolicyFallbackCount` aggregate on `previewUsage` (added by this spec; the synthetic-decision `completionPolicy` field on which it builds is Spec 156's contribution).
 3. `fallbackCompletionPolicy: 'fail'` causes the preview drive to abort with `previewOutcome: noPreviewDecision` (existing enum value) rather than silently downgrading. Useful for diagnostic profiles that want a loud failure when policyGuided cannot decide.
 4. Add a compile-time warning (not error) when a profile declares `preview.completion: policyGuided` but has no `scopes: [microturn]` considerations declared. This is the F#15 close on Gap 5: an operator authoring `policyGuided` without microturn considerations gets a build-time signal that their config is no-op.
 
@@ -61,14 +63,14 @@ The cookbook calls this out indirectly (it tells operators not to author the sur
 
 Two deliverables, both surface-level:
 
-1. **Rename and rewire.** `agentGuided` → `policyGuided` in `preview.completion` enum, IR, runtime, all repo-owned profiles. The implementation routes through Spec 158's `selectBestMicroturnOption`. The silent fallback at `policy-preview.ts:482-483` is replaced by an explicit, configurable, trace-visible fallback.
+1. **Rename and rewire.** `agentGuided` → `policyGuided` in `preview.completion` enum, IR, runtime, fixtures, and tests. The implementation already routes through Spec 158's `selectBestMicroturnChooseOneValue` (chooseOne) and `buildMicroturnChooseCallback` (chooseNStep). The two silent fallbacks at `policy-preview.ts:519-520` (chooseOne) and `:524-526` (chooseNStep) are replaced by an explicit, configurable, trace-visible fallback. The runtime input prop `agentGuidedDeps` is renamed to `policyGuidedDeps` in the same transaction (F#14).
 2. **Compile-time warning.** Profiles using `policyGuided` without microturn-scope considerations get a build-time warning naming the missing surface.
 
 Trace integration:
 - Per inner microturn, the synthetic-decision trace entry (Spec 156) records `completionPolicy: 'policyGuided' | 'greedy' | 'fallback'` and `selectionReason`.
 - Per preview drive, `previewUsage.completionPolicyFallbackCount: integer` totals fallback firings across all candidates in the decision.
 
-Default: new profiles default to `preview.completion: policyGuided` and `fallbackCompletionPolicy: greedy`. Operators authoring diagnostic profiles can opt into `fallbackCompletionPolicy: fail` for hard-failure tracing.
+Default disposition: new profiles **authoring** `preview.completion` should declare `policyGuided` with `fallbackCompletionPolicy: greedy`. The runtime IR default in `policy-runtime.ts:191` (`activeProfile?.preview.completion ?? 'greedy'`) remains `'greedy'` — flipping it would silently change behavior for every undeclared profile, at odds with F#15. Operators authoring diagnostic profiles can opt into `fallbackCompletionPolicy: fail` for hard-failure tracing.
 
 ## Phase Acceptance Budget
 
@@ -86,9 +88,20 @@ Single-phase delivery. The rename and the fallback change must ship together —
 
 ## What to Change
 
-### 1. Rename — `packages/engine/src/cnl/compile-agents.ts`, `policy-preview.ts`, `policy-agent.ts`, schema
+### 1. Rename — Zod schema, IR types, runtime, preview, validator, tests
 
-Replace every reference to `agentGuided` with `policyGuided`. Schema enum update. IR ref kind update. Fixture and profile YAML migration.
+Replace every reference to `agentGuided` (string literal AND identifier) with `policyGuided` across:
+
+- `packages/engine/src/kernel/schemas-core.ts` — Zod enum at lines 1154, 2031, 2038.
+- `packages/engine/src/kernel/types-core.ts` — `AgentPreviewCompletionPolicy` union at line 842.
+- `packages/engine/src/cnl/compile-agents.ts` — validation message and diagnostic suggestion.
+- `packages/engine/src/agents/policy-preview.ts` — `pickAgentGuided*` functions and policy-string switches.
+- `packages/engine/src/agents/policy-runtime.ts` — `agentGuidedDeps` consumer.
+- Affected test files (see Files to Touch).
+
+`packages/engine/schemas/GameDef.schema.json` regenerates from the Zod source via `pnpm turbo schema:artifacts`; it is not hand-edited.
+
+The runtime input prop `agentGuidedDeps` on `CreatePolicyPreviewRuntimeInput` (`policy-preview.ts:135`, consumers at `:437`, `:460`, `policy-runtime.ts:195`) is renamed to `policyGuidedDeps` in the same change. F#14: no alias; no period of "both names accepted".
 
 ### 2. Explicit fallback — `packages/engine/src/agents/policy-preview.ts`
 
@@ -106,7 +119,7 @@ const pickInnerDecision = (...): { decision: Decision | undefined; usedFallback:
 };
 ```
 
-`pickPolicyGuidedChooseOneDecision` and `pickPolicyGuidedChooseNStepDecision` (renamed from `pickAgentGuided*`) call Spec 158's `selectBestMicroturnOption`. The `?? pickGreedyChooseOneDecision(...)` silent-fallback expression at line 482-483 is deleted.
+`pickPolicyGuidedChooseOneDecision` and `pickPolicyGuidedChooseNStepDecision` (renamed from `pickAgentGuided*`) call Spec 158's `selectBestMicroturnChooseOneValue` and `buildMicroturnChooseCallback` respectively. The pseudocode shows the chooseOne shape; `pickInnerDecision` applies the same `policyGuided`/`fail`/`greedy` switch in parallel for the chooseNStep branch. Both silent-fallback expressions — `policy-preview.ts:519-520` (chooseOne) and `:524-526` (chooseNStep) — are deleted in the same change.
 
 ### 3. `fallbackCompletionPolicy` config — `packages/engine/src/cnl/compile-agents.ts`, schema
 
@@ -114,15 +127,17 @@ const pickInnerDecision = (...): { decision: Decision | undefined; usedFallback:
 
 ### 4. Trace integration — `packages/engine/src/agents/policy-preview.ts`
 
-Per inner microturn taken: synthetic-decision trace entry records `completionPolicy: 'policyGuided' | 'greedy' | 'fallback'`. Per preview drive: aggregate `completionPolicyFallbackCount` for the candidate. Per decision: aggregate across candidates and stamp on `previewUsage`.
+Per inner microturn taken: the synthetic-decision trace entry records `completionPolicy: 'policyGuided' | 'greedy' | 'fallback'` (extending the `AgentPreviewCompletionPolicy` enum from Spec 156's two values to three) and `selectionReason: 'fallback'` when the policyGuided evaluator returned undefined and `fallbackCompletionPolicy: 'greedy'` fired (Spec 156 reserved the `'fallback'` enum slot; this spec is the first to emit it). Per preview drive: aggregate the new `completionPolicyFallbackCount` for the candidate. Per decision: aggregate across candidates and stamp on `previewUsage` (`completionPolicyFallbackCount` is a new field on the `PolicyPreviewUsageTrace` type — Spec 159 owns it).
 
 ### 5. Compile-time warning — `packages/engine/src/cnl/validate-agents.ts`
 
 When `profile.preview.completion === 'policyGuided'` and `profile.use.considerations` contains no microturn-scope consideration, emit `{ severity: 'warning', message: 'preview.completion: policyGuided with no scopes: [microturn] considerations declared — completion will always fall back to ' + fallbackPolicy }`. Warning, not error: an operator might intentionally declare `policyGuided` planning to add microturn considerations later.
 
-### 6. Profile migration — `data/games/**/*.yaml`
+### 6. Profile migration — none required for repo-owned game data
 
-Every `preview.completion: agentGuided` rewritten to `preview.completion: policyGuided`. Where the spec author wants a hard-fail diagnostic profile, `fallbackCompletionPolicy: fail` is added.
+No `data/games/**/*.yaml` profile currently declares `preview.completion`; every profile relies on the runtime IR default of `'greedy'` (`policy-runtime.ts:191`). After this spec lands, any new profile authoring an explicit completion policy will write `policyGuided` (the `agentGuided` enum value is gone). Diagnostic profiles can opt into `fallbackCompletionPolicy: fail`. The IR default itself is preserved (see Overview Default disposition).
+
+Existing test files that DO declare `'agentGuided'` in inline test fixtures (`test/integration/agents/cross-game-driver-conformance.test.ts`, `test/unit/compile-agents-authoring.test.ts`, `test/unit/agents/policy-diagnostics-preview.test.ts`) are migrated to `'policyGuided'` in the same change.
 
 ### 7. Cookbook — `docs/agent-dsl-cookbook.md`
 
@@ -130,20 +145,36 @@ Every `preview.completion: agentGuided` rewritten to `preview.completion: policy
 
 ## Files to Touch
 
-- `packages/engine/schemas/GameDef.schema.json` (modify — `agentGuided` → `policyGuided`; `fallbackCompletionPolicy` added)
-- `packages/engine/src/cnl/compile-agents.ts` (modify — schema rewrites; lowerPreviewConfig)
-- `packages/engine/src/cnl/validate-agents.ts` (modify — compile-time warning)
-- `packages/engine/src/agents/policy-preview.ts` (modify — rename, explicit fallback, trace)
-- `packages/engine/src/agents/policy-agent.ts` (modify — type names; trace passthrough)
-- `packages/engine/src/agents/policy-evaluation-core.ts` (modify — type names)
-- `data/games/fire-in-the-lake/**/*.yaml` (modify)
-- `data/games/texas-holdem/**/*.yaml` (modify)
-- `packages/engine/test/fixtures/**` (modify)
-- `packages/engine/test/golden/**` (re-bless — `Re-bless golden trace: <each updated file> — Spec 159 policyGuided rename`)
-- `packages/engine/test/unit/agents/policy-guided-completion.test.ts` (new)
-- `packages/engine/test/unit/agents/completion-policy-fallback.test.ts` (new)
-- `packages/engine/test/unit/cnl/compile-policy-guided-warning.test.ts` (new)
-- `docs/agent-dsl-cookbook.md` (modify)
+Source:
+
+- `packages/engine/src/kernel/schemas-core.ts` (modify — Zod enum at lines 1154, 2031, 2038; `fallbackCompletionPolicy` added; `completionPolicyFallbackCount` added to `PolicyPreviewUsageTrace`)
+- `packages/engine/src/kernel/types-core.ts` (modify — `AgentPreviewCompletionPolicy` union at line 842 extended to `'greedy' | 'policyGuided' | 'fallback'`; `PolicyPreviewUsageTrace.completionPolicyFallbackCount` added)
+- `packages/engine/src/cnl/compile-agents.ts` (modify — `lowerPreviewConfig` at lines 762-849; validation messages; accept `fallbackCompletionPolicy`)
+- `packages/engine/src/cnl/validate-agents.ts` (modify — compile-time warning when a `policyGuided` profile declares no microturn-scope considerations)
+- `packages/engine/src/agents/policy-preview.ts` (modify — rename `pickAgentGuided*` functions and `agentGuidedDeps` prop, replace two silent fallbacks with explicit `pickInnerDecision` returning `{ decision; usedFallback }`, emit `selectionReason: 'fallback'` and aggregate `completionPolicyFallbackCount`)
+- `packages/engine/src/agents/policy-runtime.ts` (modify — `agentGuidedDeps` → `policyGuidedDeps` consumer at line 195; runtime IR default at line 191 preserved as `'greedy'`)
+
+Generated:
+
+- `packages/engine/schemas/GameDef.schema.json` (auto-regenerated by `pnpm turbo schema:artifacts` from `schemas-core.ts`; not hand-edited; `pnpm test` runs `schema:artifacts:check` which fails CI if the artifact drifts)
+
+Test (existing — migrated):
+
+- `packages/engine/test/integration/agents/cross-game-driver-conformance.test.ts` (modify — 2 `'agentGuided'` literals)
+- `packages/engine/test/unit/compile-agents-authoring.test.ts` (modify — 2 `'agentGuided'` literals)
+- `packages/engine/test/unit/agents/policy-diagnostics-preview.test.ts` (modify — 2 `'agentGuided'` literals)
+
+Test (new):
+
+- `packages/engine/test/unit/agents/policy-guided-completion.test.ts` (new — `architectural-invariant`)
+- `packages/engine/test/unit/agents/completion-policy-fallback.test.ts` (new — `architectural-invariant`)
+- `packages/engine/test/unit/cnl/compile-policy-guided-warning.test.ts` (new — `architectural-invariant`)
+- `packages/engine/test/unit/policy-guided-fitl-canary.golden.test.ts` (new — `golden-trace`; matches the repo's `test/unit/*.golden.test.ts` convention)
+- `packages/engine/test/determinism/spec-159-replay-identity.test.ts` (new — `architectural-invariant`; matches the `spec-140-replay-identity.test.ts` precedent)
+
+Docs:
+
+- `docs/agent-dsl-cookbook.md` (modify — `agentGuided` → `policyGuided` at line 193; document `fallbackCompletionPolicy` and the `completionPolicyFallbackCount` diagnostic)
 
 ## Out of Scope
 
@@ -172,7 +203,7 @@ Every `preview.completion: agentGuided` rewritten to `preview.completion: policy
 2. (architectural-invariant) `policyGuided` does not invoke `chooseDecision` recursively — local frontier scoring only (F#10).
 3. (architectural-invariant) Every `fallback` synthetic-decision trace entry has a corresponding microturn where the policyGuided evaluator returned undefined.
 4. (architectural-invariant) `Σ completionPolicyFallbackCount` over candidates equals the count of `fallback` synthetic-decision entries (parity).
-5. (architectural-invariant) `policyGuided` and `selectBestMicroturnOption` (Spec 158) are paired contracts: `policyGuided` is unimplementable without microturn refs, and microturn refs without `policyGuided` are useful but unactivated.
+5. (architectural-invariant) `policyGuided` and Spec 158's `selectBestMicroturnChooseOneValue` / `buildMicroturnChooseCallback` are paired contracts: `policyGuided` is unimplementable without microturn refs, and microturn refs without `policyGuided` are useful but unactivated.
 
 ## Test Plan
 
@@ -181,8 +212,8 @@ Every `preview.completion: agentGuided` rewritten to `preview.completion: policy
 1. `packages/engine/test/unit/agents/policy-guided-completion.test.ts` (new) — `architectural-invariant`. Covers the patronage flip, the no-matching-consideration path, and the `fail` mode.
 2. `packages/engine/test/unit/agents/completion-policy-fallback.test.ts` (new) — `architectural-invariant`. Trace-shape assertions for fallback firings.
 3. `packages/engine/test/unit/cnl/compile-policy-guided-warning.test.ts` (new) — `architectural-invariant`. Warning fires/suppresses based on declared considerations.
-4. `packages/engine/test/agents/policy-guided-replay-identity.test.ts` (new) — `architectural-invariant`. Two-run identity over synthetic-decision arrays.
-5. `packages/engine/test/golden/policy-guided-fitl-canary.test.ts` (new) — `golden-trace`. Pinned FITL canary with a microturn-scope `preferPatronageMode` consideration; asserts `previewUsage.utility === 'differentiating'`.
+4. `packages/engine/test/determinism/spec-159-replay-identity.test.ts` (new) — `architectural-invariant`. Two-run identity over synthetic-decision arrays. Path matches the `spec-140-replay-identity.test.ts` precedent under `test/determinism/`.
+5. `packages/engine/test/unit/policy-guided-fitl-canary.golden.test.ts` (new) — `golden-trace`. Pinned FITL canary with a microturn-scope `preferPatronageMode` consideration; asserts `previewUsage.utility === 'differentiating'`. Path matches the repo's `test/unit/*.golden.test.ts` convention.
 
 ### Commands
 
@@ -191,3 +222,12 @@ Every `preview.completion: agentGuided` rewritten to `preview.completion: policy
 3. `pnpm -F @ludoforge/engine test:unit -- cnl/compile-policy-guided-warning`
 4. `pnpm turbo schema:artifacts`
 5. `pnpm turbo lint typecheck test`
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-06:
+
+- [`archive/tickets/159POLGUICOM-001.md`](../archive/tickets/159POLGUICOM-001.md) — Mechanical rename `agentGuided` → `policyGuided` (covers §What to Change §1; AC#5)
+- [`tickets/159POLGUICOM-002.md`](../tickets/159POLGUICOM-002.md) — Explicit fallback + `completionPolicyFallbackCount` trace (covers §What to Change §2-4; AC#1-3, #6-7)
+- [`tickets/159POLGUICOM-003.md`](../tickets/159POLGUICOM-003.md) — Compile-time warning for `policyGuided` without microturn considerations (covers §What to Change §5; AC#4)
+- [`tickets/159POLGUICOM-004.md`](../tickets/159POLGUICOM-004.md) — Cookbook update for `policyGuided` and fallback diagnostics (covers §What to Change §7)

@@ -1151,7 +1151,7 @@ const CompiledAgentProfileSchema = z
     preview: z
       .object({
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
-        completion: z.enum(['greedy', 'agentGuided']).optional(),
+        completion: z.enum(['greedy', 'policyGuided']).optional(),
         completionDepthCap: z.number().int().positive().optional(),
         budget: z
           .object({
@@ -2028,14 +2028,14 @@ const SyntheticDecisionTraceEntrySchema = z
     selectionReason: z.enum(['greedyAlphabetical', 'microturnPolicy', 'fallback']),
     score: NumberSchema,
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
-    completionPolicy: z.enum(['greedy', 'agentGuided']),
+    completionPolicy: z.enum(['greedy', 'policyGuided']),
   })
   .strict();
 
 const PolicyPreviewDriveTraceSchema = z
   .object({
     depth: IntegerSchema.nonnegative(),
-    completionPolicy: z.enum(['greedy', 'agentGuided']),
+    completionPolicy: z.enum(['greedy', 'policyGuided']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
   })
   .strict();

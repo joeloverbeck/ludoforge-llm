@@ -192,7 +192,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
     captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasMicroturnConsiderations
-      ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
+      ? { policyGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
@@ -417,7 +417,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
 // Memoize: a profile's set of microturn-scoped considerations is fixed across
 // a benchmark run. Per-call recomputation otherwise iterates `profile.use.considerations`
 // inside every `createPolicyRuntimeProviders` call (~50 outer microturns + several
-// per-pick scoring contexts). When the result is empty the agentGuided picker
+// per-pick scoring contexts). When the result is empty the policyGuided picker
 // becomes a no-op — callers can short-circuit allocation of pending-request
 // objects entirely.
 const profileHasMicroturnCache = new WeakMap<CompiledAgentProfile, boolean>();

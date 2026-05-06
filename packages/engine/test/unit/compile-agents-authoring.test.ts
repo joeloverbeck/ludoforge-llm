@@ -1118,7 +1118,7 @@ describe('agents authoring surface', () => {
             },
             preview: {
               mode: 'tolerateStochastic',
-              completion: 'agentGuided',
+              completion: 'policyGuided',
               completionDepthCap: 5,
               budget: {
                 strategy: 'balancedCoverage',
@@ -1137,7 +1137,7 @@ describe('agents authoring surface', () => {
     assert.equal(result.diagnostics.some((d) => d.severity === 'error'), false);
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
-      completion: 'agentGuided',
+      completion: 'policyGuided',
       completionDepthCap: 5,
       budget: {
         strategy: 'balancedCoverage',
@@ -1777,6 +1777,49 @@ describe('agents authoring surface', () => {
       ),
       true,
     );
+  });
+
+  it('rejects legacy preview completion with policyGuided guidance', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              completion: 'agentGuided' as unknown as 'policyGuided',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    const diagnostic = result.diagnostics.find(
+      (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_COMPLETION_INVALID'
+        && d.path === 'doc.agents.profiles.baseline.preview.completion',
+    );
+
+    assert.equal(diagnostic?.severity, 'error');
+    assert.match(diagnostic?.message ?? '', /policyGuided/);
+    assert.match(diagnostic?.suggestion ?? '', /policyGuided/);
   });
 
   it('rejects preview.topK with Spec 157 migration guidance', () => {

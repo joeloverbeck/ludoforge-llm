@@ -132,7 +132,7 @@ function runPreview(
     previewMode: 'tolerateStochastic',
     completionPolicy: policy,
     completionDepthCap,
-    ...(policy === 'agentGuided' ? { agentGuidedDeps: profileDeps(input.def, input.seatId) } : {}),
+    ...(policy === 'policyGuided' ? { policyGuidedDeps: profileDeps(input.def, input.seatId) } : {}),
   });
   const previewState = runtime.getPreviewState(input.candidate);
   return {
@@ -196,7 +196,7 @@ describe('policy preview driver cross-game conformance', () => {
     assertReadyStateMovement(candidate, 'Texas Holdem raise');
   });
 
-  for (const policy of ['greedy', 'agentGuided'] as const) {
+  for (const policy of ['greedy', 'policyGuided'] as const) {
     it(`is deterministic for repeated ${policy} production FITL Govern previews`, () => {
       const def = getFitlProductionFixture().gameDef;
       const candidate = makeCandidate({

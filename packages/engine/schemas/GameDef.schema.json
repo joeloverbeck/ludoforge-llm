@@ -2263,7 +2263,7 @@
                     "type": "string",
                     "enum": [
                       "greedy",
-                      "agentGuided"
+                      "policyGuided"
                     ]
                   },
                   "completionDepthCap": {

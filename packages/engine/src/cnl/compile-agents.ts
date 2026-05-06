@@ -817,14 +817,14 @@ function lowerPreviewConfig(
 
   if (
     completion !== undefined
-    && (typeof completion !== 'string' || (completion !== 'greedy' && completion !== 'agentGuided'))
+    && (typeof completion !== 'string' || (completion !== 'greedy' && completion !== 'policyGuided'))
   ) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_COMPLETION_INVALID,
       path: `${path}.completion`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.completion must be greedy or agentGuided, got ${JSON.stringify(completion)}.`,
-      suggestion: 'Set preview.completion to greedy or agentGuided.',
+      message: `Profile "${profileId}" preview.completion must be greedy or policyGuided, got ${JSON.stringify(completion)}.`,
+      suggestion: 'Set preview.completion to greedy or policyGuided.',
     });
     return undefined;
   }

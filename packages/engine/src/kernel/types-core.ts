@@ -839,7 +839,7 @@ export interface CompiledAgentLibraryIndex {
 }
 
 export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
-export type AgentPreviewCompletionPolicy = 'greedy' | 'agentGuided';
+export type AgentPreviewCompletionPolicy = 'greedy' | 'policyGuided';
 export type AgentPreviewBudgetStrategy = 'balancedCoverage';
 
 export interface CompiledAgentPreviewBudgetConfig {

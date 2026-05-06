@@ -132,7 +132,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly completionPolicy?: AgentPreviewCompletionPolicy;
   readonly completionDepthCap?: number;
   readonly captureSyntheticDecisions?: boolean;
-  readonly agentGuidedDeps?: {
+  readonly policyGuidedDeps?: {
     readonly catalog: AgentPolicyCatalog;
     readonly profile: CompiledAgentProfile;
   };
@@ -428,13 +428,13 @@ const pickGreedyChooseNStepDecision = (
   );
 };
 
-const pickAgentGuidedChooseOneDecision = (
+const pickPolicyGuidedChooseOneDecision = (
   state: GameState,
   def: GameDef,
   microturn: ChooseOneMicroturn,
   input: CreatePolicyPreviewRuntimeInput,
 ): Decision | undefined => {
-  const guided = input.agentGuidedDeps;
+  const guided = input.policyGuidedDeps;
   if (guided === undefined) {
     return undefined;
   }
@@ -451,13 +451,13 @@ const pickAgentGuidedChooseOneDecision = (
   return selected === undefined ? undefined : findMatchingChooseOneDecision(microturn, selected);
 };
 
-const pickAgentGuidedChooseNStepDecision = (
+const pickPolicyGuidedChooseNStepDecision = (
   state: GameState,
   def: GameDef,
   microturn: ChooseNStepMicroturn,
   input: CreatePolicyPreviewRuntimeInput,
 ): Decision | undefined => {
-  const guided = input.agentGuidedDeps;
+  const guided = input.policyGuidedDeps;
   if (guided === undefined) {
     return undefined;
   }
@@ -515,14 +515,14 @@ const pickInnerDecision = (
 ): Decision | undefined => {
   if (microturn.kind === 'chooseOne') {
     const chooseOne = microturn as ChooseOneMicroturn;
-    return policy === 'agentGuided'
-      ? pickAgentGuidedChooseOneDecision(state, def, chooseOne, input) ?? pickGreedyChooseOneDecision(chooseOne)
+    return policy === 'policyGuided'
+      ? pickPolicyGuidedChooseOneDecision(state, def, chooseOne, input) ?? pickGreedyChooseOneDecision(chooseOne)
       : pickGreedyChooseOneDecision(chooseOne);
   }
   if (microturn.kind === 'chooseNStep') {
     const chooseN = microturn as ChooseNStepMicroturn;
-    return policy === 'agentGuided'
-      ? pickAgentGuidedChooseNStepDecision(state, def, chooseN, input) ?? pickGreedyChooseNStepDecision(chooseN)
+    return policy === 'policyGuided'
+      ? pickPolicyGuidedChooseNStepDecision(state, def, chooseN, input) ?? pickGreedyChooseNStepDecision(chooseN)
       : pickGreedyChooseNStepDecision(chooseN);
   }
   return undefined;

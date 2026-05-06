@@ -2318,7 +2318,7 @@
                           "type": "string",
                           "enum": [
                             "greedy",
-                            "agentGuided"
+                            "policyGuided"
                           ]
                         },
                         "syntheticDecisions": {
@@ -2368,7 +2368,7 @@
                                 "type": "string",
                                 "enum": [
                                   "greedy",
-                                  "agentGuided"
+                                  "policyGuided"
                                 ]
                               }
                             },

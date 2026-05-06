@@ -42,7 +42,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         previewFailureReason: 'depthCap',
         previewDrive: {
           depth: 2,
-          completionPolicy: 'agentGuided',
+          completionPolicy: 'policyGuided',
           syntheticDecisions: [],
         },
       },
@@ -104,7 +104,7 @@ describe('policy diagnostics preview metadata', () => {
     });
     assert.deepEqual(trace.candidates?.[1]?.previewDrive, {
       depth: 2,
-      completionPolicy: 'agentGuided',
+      completionPolicy: 'policyGuided',
       syntheticDecisions: [],
     });
   });

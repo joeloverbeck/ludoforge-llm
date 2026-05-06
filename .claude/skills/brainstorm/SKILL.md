@@ -43,13 +43,15 @@ Classify: design | decision/triage | operational
               [Optional] External prior-art survey for architectural topics
                        |
                        v
-              Propose 2-3 approaches with tradeoffs
+              Propose 2-4 approaches with tradeoffs
                        |
                        v
               Present design section by section, get approval per section
                        |
                        v
               [If implementation topic] Validate against FOUNDATIONS.md
+                       |
+                       +--> [If recommendation is dismiss] confirm rationale + optional reports/ memo + Continual Learning -> end
                        |
                        v
               Write design doc to docs/plans/
@@ -171,7 +173,17 @@ If the user says something like "just go" or "that's enough questions", respect 
 
 If prior session context (e.g., extended debugging, codebase exploration, or diagnostic work earlier in the conversation) puts starting confidence above 80%, the interview may reduce to 1-2 targeted questions about remaining gaps. If confidence reaches 95% after context reading alone (no user questions needed), announce the confidence score with explicit gaps/assumptions and proceed directly to Step 3. The interview is a tool for gap-filling, not a mandatory ceremony.
 
-**Compound-move variant at 80–94%**: When the remaining gaps are all multiple-choice terminal decisions (which approach, is scope X in or out, amend foundation Y), the Step 3 approach presentation and the final gap-closer questions may be combined into a single message — the user's choice of approach simultaneously resolves the remaining gaps. This is the natural flow when the gaps are "which option" rather than "what's the problem", and the approach recommendations already implicitly argue for one scope/amendment answer over the others. The message shape: short findings recap → 2-3 approaches with tradeoffs → explicit batched gap-closers ending with "pick one and call out the other gaps". See Interview Rule 1's terminal-round exception.
+**Compound-move variant at 80–94%**: When the remaining gaps are all multiple-choice terminal decisions (which approach, is scope X in or out, amend foundation Y), the Step 3 approach presentation and the final gap-closer questions may be combined into a single message — the user's choice of approach simultaneously resolves the remaining gaps. This is the natural flow when the gaps are "which option" rather than "what's the problem", and the approach recommendations already implicitly argue for one scope/amendment answer over the others. The message shape: short findings recap → 2-4 approaches with tradeoffs → explicit batched gap-closers ending with "pick one and call out the other gaps". See Interview Rule 1's terminal-round exception.
+
+### Pre-Set Directives
+
+A "no clarifying questions" directive set ahead of the brainstorm invocation (e.g., a session-wide system reminder like "the user has asked you to work without stopping for clarifying questions") interacts with three gates in this skill — surface its handling once, here, so the interaction is visible up front:
+
+1. **Step 1.5 Trigger A**: Run prescribed verifications autonomously and report results inline. Do not present the "Should I run them now?" question.
+2. **Step 2 interview**: Collapse to zero rounds when starting confidence is ≥80% (per Stacked-trigger confidence and High-Confidence Start). State assumptions explicitly in the compound-move presentation; give the user a redirect opportunity after presenting approaches.
+3. **Step 4 Compound-move + auto-mode intersection**: The directive does NOT waive the section preview. "Without stopping for clarifying questions" constrains interview rounds, not transparency gates. The section-bullet preview is still required as a separate message before the artifact write (this matches the existing disqualification clause in Step 4).
+
+If starting confidence is below 80%, the directive does not give license to skip problem- or constraint-level gap-closing — investigate via Investigation Questions below instead of asking the user, and announce confidence deltas inline as each investigation phase concludes.
 
 ### Investigation Questions
 
@@ -208,12 +220,14 @@ This is a solution-space survey, not an interview replacement. Do not substitute
 
 ## Step 3: Propose Approaches
 
-Present **2-3 distinct approaches** with:
+Present **2-4 distinct approaches** with:
 
 - **Name**: A short descriptive label
 - **How it works**: 2-4 sentences
 - **Tradeoffs**: What you gain, what you give up
 - **Recommendation**: Lead with your recommended option and explain why
+
+A 4th approach is justified only when it sits on an axis orthogonal to the primary 3 (i.e., not just a variant intensity of the same idea) AND the reference file documents it as load-bearing context that materially changes the recommendation. Default to 2-3; the 4th is opt-in, not encouraged.
 
 **If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
 
@@ -270,6 +284,13 @@ Once all sections are approved, determine the output format:
 **Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a phase-boundaries table where each phase row pairs a measurable acceptance criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this table — a single acceptance criteria section suffices.
 
 **Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
+
+**Design Dismiss outcome**: When the brainstorm concludes that no artifact should be produced (e.g., the recommendation is "don't do this" after evaluating approaches), do not slide into silence. The dismissal is a legitimate brainstorm outcome that mirrors triage mode's `Dismiss outcome`, and the analytic work product needs an exit path:
+
+1. Confirm the dismissal rationale with the user explicitly. Recap the corrected reasoning so the user can object before the thread closes.
+2. Offer to write a short rationale memo to `reports/YYYY-MM-DD-<topic>-rationale.md` capturing the dismissal reasoning, including any corrections to prior specs, reports, or analyses. The memo is opt-in — if the user declines, end without recording.
+3. If the dismissal surfaced a documentation gap in a prior spec, report, or skill (e.g., the prior artifact's reasoning is now miscalibrated by the brainstorm's findings), offer to update it (Continual Learning, per CLAUDE.md). Step 6's Continual Learning prompt is structurally bypassed by the no-menu path on dismissal, so it must fire here instead.
+4. End. Do not present Step 6's next-steps menu — there is no artifact to act on.
 
 Do NOT commit the file. Leave it for user review.
 

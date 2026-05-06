@@ -2110,6 +2110,7 @@ const PolicyPreviewUsageTraceSchema = z
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
+    widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
   })
   .strict();

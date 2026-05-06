@@ -65,6 +65,7 @@ function createMetadata(): PolicyEvaluationMetadata {
       unknownRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
       readyRefStats: {},
       utility: 'none',
+      widenedBecauseUniform: false,
       outcomeBreakdown: {
         ready: 1,
         stochastic: 0,

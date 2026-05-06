@@ -49,6 +49,7 @@
       ],
       "readyRefStats": {},
       "utility": "none",
+      "widenedBecauseUniform": false,
       "outcomeBreakdown": {
         "ready": 3,
         "stochastic": 0,

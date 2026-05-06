@@ -1,9 +1,21 @@
-import type { CompiledAgentPreviewBudgetConfig, CompiledPolicyConsideration } from '../kernel/types.js';
+import type { CompiledAgentPreviewBudgetConfig, CompiledPolicyConsideration, PolicyPreviewUtilityTrace } from '../kernel/types.js';
 import { structuralImpactScore, unionFootprints } from '../cnl/compile-effect-footprint.js';
 import { compareCodepoint, previewGroupKey, type PreviewGroupCandidate } from './preview-group-key.js';
 import type { PolicyEvaluationCandidate, PolicyEvaluationContext } from './policy-evaluation-core.js';
 
-type PreviewBudgetSelectionReason = 'coverage' | 'prior';
+type PreviewBudgetSelectionReason = 'coverage' | 'prior' | 'widening';
+
+export interface PreviewWideningMemoryEntry {
+  readonly lastUtility: PolicyPreviewUtilityTrace;
+  readonly usedWidenSteps: number;
+}
+
+export type PreviewWideningState = Map<string, PreviewWideningMemoryEntry>;
+
+export interface PreviewWideningDecisionContext {
+  readonly turnId: number;
+  readonly seatId: string;
+}
 
 export interface PreviewBudgetCandidate extends PreviewGroupCandidate, PolicyEvaluationCandidate {
   readonly stableMoveKey: string;
@@ -12,6 +24,8 @@ export interface PreviewBudgetCandidate extends PreviewGroupCandidate, PolicyEva
 export interface AllocatorOutput {
   readonly allowedKeys: ReadonlySet<string>;
   readonly selectionReason: ReadonlyMap<string, PreviewBudgetSelectionReason>;
+  readonly widenedBecauseUniform: boolean;
+  readonly decisionClassKey?: string;
 }
 
 export function allocatePreviewBudget(
@@ -21,17 +35,38 @@ export function allocatePreviewBudget(
   moveOnlyConsiderationIds: readonly string[],
   moveConsiderationIds: readonly string[],
   budget: CompiledAgentPreviewBudgetConfig,
+  wideningState?: PreviewWideningState,
+  decisionContext?: PreviewWideningDecisionContext,
 ): AllocatorOutput {
-  const cap = Math.min(budget.fullCandidateCap, candidates.length);
-  if (cap <= 0) {
-    return { allowedKeys: new Set(), selectionReason: new Map() };
+  const decisionClassKey = decisionContext === undefined
+    ? undefined
+    : previewDecisionClassKey(decisionContext);
+  const widenStep = budget.widenOnUniformProjection === true
+    && budget.widenStep !== undefined
+    && budget.widenCap !== undefined
+    && wideningState !== undefined
+    && decisionClassKey !== undefined
+    && (wideningState.get(decisionClassKey)?.lastUtility === 'constant')
+    && (wideningState.get(decisionClassKey)?.usedWidenSteps ?? 0) < budget.widenCap
+    ? budget.widenStep
+    : 0;
+  const baseCap = Math.min(budget.fullCandidateCap, candidates.length);
+  const effectiveCap = Math.min(budget.fullCandidateCap + widenStep, candidates.length);
+  const widenedBecauseUniform = widenStep > 0 && effectiveCap > baseCap;
+  if (effectiveCap <= 0) {
+    return allocatorOutput(new Set(), new Map(), widenedBecauseUniform, decisionClassKey);
   }
-  if (cap >= candidates.length) {
+  if (effectiveCap >= candidates.length) {
     const allowedKeys = new Set(candidates.map((candidate) => candidate.stableMoveKey));
-    return {
+    return allocatorOutput(
       allowedKeys,
-      selectionReason: new Map(candidates.map((candidate) => [candidate.stableMoveKey, 'prior'])),
-    };
+      new Map(candidates.map((candidate, index) => [
+        candidate.stableMoveKey,
+        widenedBecauseUniform && index >= baseCap ? 'widening' : 'prior',
+      ])),
+      widenedBecauseUniform,
+      decisionClassKey,
+    );
   }
 
   const priorScores = new Map<string, number>();
@@ -76,7 +111,11 @@ export function allocatePreviewBudget(
 
   const allowedKeys = new Set<string>();
   const selectionReason = new Map<string, PreviewBudgetSelectionReason>();
-  let quota = cap;
+  let quota = effectiveCap;
+  let selectedCount = 0;
+  const reasonForNextSelection = (normalReason: Exclude<PreviewBudgetSelectionReason, 'widening'>): PreviewBudgetSelectionReason => (
+    widenedBecauseUniform && selectedCount >= baseCap ? 'widening' : normalReason
+  );
   for (let slot = 0; slot < budget.minPerGroup && quota > 0; slot += 1) {
     for (const group of groups) {
       if (quota <= 0) break;
@@ -85,7 +124,8 @@ export function allocatePreviewBudget(
         continue;
       }
       allowedKeys.add(candidate.stableMoveKey);
-      selectionReason.set(candidate.stableMoveKey, 'coverage');
+      selectionReason.set(candidate.stableMoveKey, reasonForNextSelection('coverage'));
+      selectedCount += 1;
       quota -= 1;
     }
   }
@@ -96,11 +136,30 @@ export function allocatePreviewBudget(
   for (const candidate of remaining) {
     if (quota <= 0) break;
     allowedKeys.add(candidate.stableMoveKey);
-    selectionReason.set(candidate.stableMoveKey, 'prior');
+    selectionReason.set(candidate.stableMoveKey, reasonForNextSelection('prior'));
+    selectedCount += 1;
     quota -= 1;
   }
 
-  return { allowedKeys, selectionReason };
+  return allocatorOutput(allowedKeys, selectionReason, widenedBecauseUniform, decisionClassKey);
+}
+
+export function previewDecisionClassKey(context: PreviewWideningDecisionContext): string {
+  return `${context.turnId}:${context.seatId}`;
+}
+
+function allocatorOutput(
+  allowedKeys: ReadonlySet<string>,
+  selectionReason: ReadonlyMap<string, PreviewBudgetSelectionReason>,
+  widenedBecauseUniform: boolean,
+  decisionClassKey: string | undefined,
+): AllocatorOutput {
+  return {
+    allowedKeys,
+    selectionReason,
+    widenedBecauseUniform,
+    ...(decisionClassKey === undefined ? {} : { decisionClassKey }),
+  };
 }
 
 function compareRankedCandidates(

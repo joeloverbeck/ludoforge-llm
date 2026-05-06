@@ -83,6 +83,7 @@ const createMetadata = (): PolicyEvaluationMetadata => ({
     unknownRefs: [],
     readyRefStats: {},
     utility: 'none',
+    widenedBecauseUniform: false,
     outcomeBreakdown: {
       ready: 0,
       stochastic: 0,

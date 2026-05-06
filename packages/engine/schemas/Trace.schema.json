@@ -2072,6 +2072,9 @@
                       "differentiating"
                     ]
                   },
+                  "widenedBecauseUniform": {
+                    "$ref": "#/definitions/anon_def33f2f"
+                  },
                   "outcomeBreakdown": {
                     "type": "object",
                     "properties": {
@@ -2123,7 +2126,8 @@
                   "refIds",
                   "unknownRefs",
                   "readyRefStats",
-                  "utility"
+                  "utility",
+                  "widenedBecauseUniform"
                 ],
                 "additionalProperties": false
               },

@@ -1773,6 +1773,7 @@ export interface PolicyPreviewUsageTrace {
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;
   readonly utility: PolicyPreviewUtilityTrace;
+  readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
 }
 

@@ -1,6 +1,6 @@
 # Spec 157: Balanced-Coverage Preview Budget Allocator
 
-**Status**: DRAFT
+**Status**: COMPLETED
 **Priority**: P1 (closes the load-bearing Gap 2 — circular gating — from `reports/microturn-preview-architectural-gaps-2026-05-06.md`; eliminates the structural pathology where preview-needed candidates are systematically gated out before preview runs)
 **Complexity**: L (replaces the `topK` gate with a multi-pass deterministic allocator; introduces a compiler-side conservative effect-footprint analysis for the structural-impact prior; deletes `pickTopKByMoveOnlyScore`; phased delivery in three waves)
 **Dependencies**:
@@ -243,7 +243,7 @@ When `mode: 'disabled'`, the compiler omits `budget` from compiled `preview` con
 
 ## Follow-On Tickets
 
-Decompose with `/spec-to-tickets specs/157-preview-budget-balanced-coverage.md 157PREVBUDBALCOV`.
+Decomposed with `/spec-to-tickets specs/157-preview-budget-balanced-coverage.md 157PREVBUDBALCOV` before archival.
 
 Anticipated wave structure (finalized by `/spec-to-tickets`):
 
@@ -257,4 +257,18 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 
 - [`archive/tickets/157PREVBUDBALCOV-001.md`](../archive/tickets/157PREVBUDBALCOV-001.md) — Phase A: Balanced-coverage preview budget allocator (atomic cutover) (covers Phase A — schema, allocator, migration, deletion of `pickTopKByMoveOnlyScore`)
 - [`archive/tickets/157PREVBUDBALCOV-002.md`](../archive/tickets/157PREVBUDBALCOV-002.md) — Phase B: Compiler-side EffectFootprint and structural-impact prior (covers Phase B — `compile-effect-footprint.ts`, `priorScore × structuralImpactScore` prior pass)
-- [`tickets/157PREVBUDBALCOV-003.md`](../tickets/157PREVBUDBALCOV-003.md) — Phase C: Bounded one-step widen-on-uniform-projection (covers Phase C — `widenedBecauseUniform`, per-decision-class memory)
+- [`archive/tickets/157PREVBUDBALCOV-003.md`](../archive/tickets/157PREVBUDBALCOV-003.md) — Phase C: Bounded one-step widen-on-uniform-projection (covers Phase C — `widenedBecauseUniform`, per-decision-class memory)
+
+## Outcome
+
+Completed: 2026-05-06.
+
+Spec 157 completed through its three archived implementation tickets:
+
+- `archive/tickets/157PREVBUDBALCOV-001.md` landed the atomic `preview.topK` to `preview.budget` migration, balanced coverage allocator, `previewGroupKey`, profile/fixture migration, and removal of the old move-only top-K gate.
+- `archive/tickets/157PREVBUDBALCOV-002.md` landed compiler-side effect footprints and the structural-impact prior used by the allocator.
+- `archive/tickets/157PREVBUDBALCOV-003.md` landed bounded one-step widen-on-uniform behavior and the required `previewUsage.widenedBecauseUniform` trace/schema surface.
+
+Deviations from the original plan are recorded in the archived phase tickets: the Phase A FITL differentiating-rate canary became diagnostic residual evidence rather than a terminal Phase A gate, and Phase C's live owner was the extracted allocator plus policy-evaluation wiring rather than the originally drafted inline-only location.
+
+Verification is recorded in the archived tickets. The final phase closeout passed engine build, focused compiled Node tests, `pnpm turbo schema:artifacts`, `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, `pnpm turbo lint`, `pnpm turbo test`, and `pnpm run check:ticket-deps`.

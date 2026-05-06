@@ -34,7 +34,11 @@ import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import { getInitializedPolicyWasmRuntime } from './policy-wasm-runtime.js';
 import { tryScoreMoveConsiderationsWithWasm } from './policy-wasm-score-routing.js';
-import { allocatePreviewBudget } from './preview-budget-allocator.js';
+import {
+  allocatePreviewBudget,
+  type PreviewWideningDecisionContext,
+  type PreviewWideningState,
+} from './preview-budget-allocator.js';
 
 const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
 const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
@@ -159,6 +163,7 @@ export interface PolicyEvaluationPreviewUsage {
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
   readonly utility: PreviewUtility;
+  readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
 }
 
@@ -215,6 +220,8 @@ export interface EvaluatePolicyMoveInput {
   readonly encodedStateMode?: 'enabled' | 'disabled';
   readonly diagnosticsMode?: 'enabled' | 'disabled';
   readonly traceLevel?: 'none' | 'summary' | 'verbose';
+  readonly previewWideningState?: PreviewWideningState;
+  readonly previewDecisionContext?: PreviewWideningDecisionContext;
 }
 
 function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
@@ -612,6 +619,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         ? {
             allowedKeys: new Set(activeCandidates.map((candidate) => candidate.stableMoveKey)),
             selectionReason: new Map(activeCandidates.map((candidate) => [candidate.stableMoveKey, 'prior' as const])),
+            widenedBecauseUniform: false,
+            decisionClassKey: undefined,
           }
         : allocatePreviewBudget(
             evaluation,
@@ -620,6 +629,8 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
             moveOnlyConsiderationIds,
             moveConsiderationIds,
             profile.preview.budget ?? DEFAULT_PREVIEW_BUDGET,
+            input.previewWideningState,
+            input.previewDecisionContext ?? previewDecisionContextFromState(input.state, seatId),
           );
       const previewAllowedKeys = allocatorOutput.allowedKeys;
       for (const candidate of activeCandidates) {
@@ -777,6 +788,13 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         candidates.length,
         ` selectedCandidates=${selectionCandidates.length} finalScore=${selected.score}`,
       );
+      const previewUsageForMemory = summarizePreviewUsage(candidates, profile.preview.mode, evaluation);
+      updatePreviewWideningMemory(
+        input.previewWideningState,
+        allocatorOutput.decisionClassKey,
+        previewUsageForMemory.utility,
+        allocatorOutput.widenedBecauseUniform,
+      );
       return {
         kind: 'success',
         move: selected.move,
@@ -791,7 +809,9 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           candidates: collectDiagnostics ? candidates.map(candidateMetadata) : [],
           pruningSteps: collectDiagnostics ? pruningSteps : [],
           tieBreakChain: collectDiagnostics ? tieBreakChain : [],
-          previewUsage: collectDiagnostics ? summarizePreviewUsage(candidates, profile.preview.mode, evaluation) : emptyPreviewUsage(profile.preview.mode),
+          previewUsage: collectDiagnostics
+            ? { ...previewUsageForMemory, widenedBecauseUniform: allocatorOutput.widenedBecauseUniform }
+            : emptyPreviewUsage(profile.preview.mode),
           ...(selectionTrace === undefined ? {} : { selection: selectionTrace }),
           ...(Object.keys(stateFeatures).length > 0 ? { stateFeatures } : {}),
           selectedStableMoveKey: selected.stableMoveKey,
@@ -1080,6 +1100,7 @@ function summarizePreviewUsage(
   candidates: readonly CandidateEntry[],
   mode: AgentPreviewMode,
   evaluation: PolicyEvaluationContext,
+  widenedBecauseUniform = false,
 ): PolicyEvaluationPreviewUsage {
   const refIds = new Set<string>();
   const unknownRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
@@ -1099,8 +1120,45 @@ function summarizePreviewUsage(
       .map(([refId, reason]) => ({ refId, reason })),
     readyRefStats,
     utility: classifyPreviewUtility(readyRefStats),
+    widenedBecauseUniform,
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
   };
+}
+
+function previewDecisionContextFromState(
+  state: GameState,
+  seatId: string,
+): PreviewWideningDecisionContext {
+  return {
+    turnId: Number(state.nextTurnId ?? state.turnCount),
+    seatId,
+  };
+}
+
+function updatePreviewWideningMemory(
+  state: PreviewWideningState | undefined,
+  decisionClassKey: string | undefined,
+  utility: PreviewUtility,
+  widenedBecauseUniform: boolean,
+): void {
+  if (state === undefined || decisionClassKey === undefined) {
+    return;
+  }
+  const [turnIdPart] = decisionClassKey.split(':', 1);
+  const currentTurnId = Number(turnIdPart);
+  if (Number.isFinite(currentTurnId)) {
+    for (const key of state.keys()) {
+      const [entryTurnIdPart] = key.split(':', 1);
+      if (Number(entryTurnIdPart) < currentTurnId) {
+        state.delete(key);
+      }
+    }
+  }
+  const previous = state.get(decisionClassKey);
+  state.set(decisionClassKey, {
+    lastUtility: utility,
+    usedWidenSteps: (previous?.usedWidenSteps ?? 0) + (widenedBecauseUniform ? 1 : 0),
+  });
 }
 
 function summarizeReadyRefStats(
@@ -1167,6 +1225,7 @@ function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage
     unknownRefs: [],
     readyRefStats: {},
     utility: 'none',
+    widenedBecauseUniform: false,
     outcomeBreakdown: {
       ready: 0,
       stochastic: 0,

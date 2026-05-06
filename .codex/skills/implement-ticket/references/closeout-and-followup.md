@@ -3,7 +3,7 @@
 1. If implementation completed and no blocking discrepancy remains, update the active ticket:
    - Set ticket status to its completed state when appropriate.
    - Add or amend the ticket outcome with what landed, boundary corrections, and verification that ran.
-   - If the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome.
+   - If the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome. A named file that required no edit should appear as `already satisfied / verified-no-edit`, not as an unexplained omission.
 2. Summarize what changed, what was verified, and any residual risk. Include:
    - Audited schema/artifact ripple effects (even if none needed)
    - Deferred verification owned by another ticket
@@ -144,7 +144,7 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 
 ## Dependency Integrity Pass
 
-If the session creates a new prerequisite/follow-up ticket or rewires deps across the active series, treat dependency validation as immediate, not optional:
+If the session creates a new prerequisite/follow-up ticket, rewires deps across the active series, changes terminal status, or changes active/archive classification, treat dependency validation as immediate, not optional:
 
 1. update the affected deps/status fields first
 2. run the narrowest available ticket-dependency integrity check immediately after that rewrite when the repo provides one

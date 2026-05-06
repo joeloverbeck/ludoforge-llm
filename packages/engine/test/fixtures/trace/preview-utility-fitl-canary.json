@@ -20,6 +20,7 @@
           }
         },
         "utility": "constant",
+        "widenedBecauseUniform": false,
         "outcomeBreakdown": {
           "ready": 9,
           "stochastic": 0,
@@ -52,6 +53,7 @@
           }
         },
         "utility": "differentiating",
+        "widenedBecauseUniform": false,
         "outcomeBreakdown": {
           "ready": 5,
           "stochastic": 0,

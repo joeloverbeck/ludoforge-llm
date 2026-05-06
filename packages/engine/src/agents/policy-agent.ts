@@ -18,6 +18,7 @@ import {
 } from './policy-eval.js';
 import type { CompletionScoreContribution } from './completion-guidance-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
+import type { PreviewWideningState } from './preview-budget-allocator.js';
 
 export interface PolicyAgentConfig {
   readonly profileId?: string;
@@ -147,6 +148,7 @@ const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
   unknownRefs: [],
   readyRefStats: {},
   utility: 'none',
+  widenedBecauseUniform: false,
   outcomeBreakdown: {
     ready: 0,
     stochastic: 0,
@@ -183,6 +185,7 @@ export class PolicyAgent implements Agent {
   private readonly traceLevel: PolicyDecisionTraceLevel;
   private readonly fallbackOnError: boolean | undefined;
   private readonly disableGuidedChooser: boolean;
+  private readonly previewWideningState: PreviewWideningState = new Map();
 
   constructor(config: PolicyAgentConfig = {}) {
     this.profileId = config.profileId;
@@ -232,6 +235,11 @@ export class PolicyAgent implements Agent {
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       ...(this.traceLevel === 'none' ? { diagnosticsMode: 'disabled' as const } : {}),
       traceLevel: this.traceLevel,
+      previewWideningState: this.previewWideningState,
+      previewDecisionContext: {
+        turnId: Number(input.microturn.turnId),
+        seatId: String(input.microturn.seatId),
+      },
     });
     logPolicyOomTrace(
       'actionSelection:evaluated',

@@ -1,9 +1,9 @@
 # 157PREVBUDBALCOV-003: Phase C — Bounded one-step widen-on-uniform-projection
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
-**Engine Changes**: Yes — `policy-eval.ts` allocator widening + per-decision-class memory; `policy-evaluation-core.ts` `previewUsage` trace surface
+**Engine Changes**: Yes — allocator widening + per-decision-class memory; `previewUsage` trace/schema surface
 **Deps**: `archive/tickets/157PREVBUDBALCOV-001.md`, `archive/tickets/157PREVBUDBALCOV-002.md`
 
 ## Problem
@@ -83,6 +83,49 @@ Hook into the kernel's per-turn cleanup (the existing teardown path for per-turn
 - **Per-game widening tuning**: profiles tune `widenStep`/`widenCap` themselves; engine has no per-game branches.
 - **Re-bless of FITL canary fixture**: ticket 001's canary uses default profiles (`widenOnUniformProjection: false`); no re-bless required. New widening tests author their own minimal fixtures.
 
+## Implementation Outcome (2026-05-06)
+
+**Closeout state**: implemented in code; terminal proof passed on 2026-05-06.
+
+Phase C is implemented through explicit run-local preview widening memory:
+
+- `preview-budget-allocator.ts` now accepts optional per-decision-class widening memory keyed by `(turnId, seatId)`, applies one-step `fullCandidateCap + widenStep` when the previous same-class decision had `previewUsage.utility === 'constant'`, and marks extra selected candidates with `selectionReason: 'widening'`.
+- `PolicyAgent` owns the production `PreviewWideningState` map and passes the live microturn `turnId`/`seatId` into policy evaluation. Direct `evaluatePolicyMoveCore` callers can pass explicit widening state/context for deterministic focused tests; no module-global memory is introduced.
+- `policy-eval.ts` records `previewUsage.widenedBecauseUniform`, updates the memory after the decision utility is classified, and prunes older turn entries when a later turn id is observed.
+- `PolicyPreviewUsageTrace` and the runtime Zod/schema artifact now require `widenedBecauseUniform: boolean`; safe-empty/default paths emit `false`.
+- Added `packages/engine/test/unit/agents/preview-widen-on-uniform.test.ts` for trigger, non-trigger, cumulative bound, turn-boundary clear, seat isolation, and disabled/absent parity.
+
+Semantic corrections against the draft:
+
+- The live allocator owner is `packages/engine/src/agents/preview-budget-allocator.ts`, not an inline `policy-eval.ts` block.
+- The live turn-boundary hook is deterministic keying plus old-turn pruning from the policy decision context; there is no separate kernel event hook needed for this ticket.
+- `widenCap` is treated as the number of one-step widening triggers per turn/seat class, so cumulative added candidates are bounded by `widenStep * widenCap`, matching this ticket's acceptance invariant.
+
+Verification substitution:
+
+- The drafted `pnpm -F @ludoforge/engine test:unit -- agents/preview-widen-on-uniform` command does not focus Node tests in the live package script. The focused proof is `pnpm -F @ludoforge/engine build` followed by direct compiled `node --test dist/test/unit/agents/preview-widen-on-uniform.test.js` with the existing allocator and trace-shape consumers. The broader ticket lanes remain `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, and the split `pnpm turbo lint` / `pnpm turbo test` equivalents for `pnpm turbo lint typecheck test`.
+
+Final proof ledger:
+
+- `pnpm -F @ludoforge/engine build` passed after fixing exact-optional return shape.
+- Focused built Node lane passed after schema artifact regeneration: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-widen-on-uniform.test.js dist/test/unit/agents/preview-budget-allocator.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js` (`24` tests, `5` suites).
+- `pnpm turbo schema:artifacts` passed and regenerated `Trace.schema.json`.
+- Focused schema fallout lane passed after updating trace fixtures: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js dist/test/unit/agents/preview-widen-on-uniform.test.js dist/test/unit/trace/policy-trace-shape.test.js` (`44` tests, `3` suites).
+- `pnpm -F @ludoforge/engine test` passed after the owned trace fixture fallout was fixed (`64/64` files).
+- `pnpm turbo typecheck` initially exposed one downstream runner trace fixture missing `widenedBecauseUniform`; after the owned fixture patch, rerun passed (`3/3` tasks).
+- `pnpm turbo lint` passed (`2/2` tasks).
+- `pnpm turbo test` passed (`5/5` tasks; engine default lane `64/64` files, runner `205` files / `2019` tests).
+- `pnpm run check:ticket-deps` passed after the terminal status flip.
+
+Post-proof validity:
+
+- The terminal status and proof-ledger edits are transcription-only: they do not change code, schema, fixture, command semantics, scope, acceptance criteria, or dependency ownership. No proof lane is invalidated by this final ticket edit.
+
+Source-size/runtime-surface ledger:
+
+- Preexisting over-guidance files touched surgically: `policy-eval.ts`, `policy-evaluation-core.ts`, `types-core.ts`, and `schemas-core.ts`. New widening logic stayed in the small existing allocator module; extraction beyond this ticket is deferred because the active growth is narrow contract/wiring work.
+- Runtime surface breadth: policy/agent-only behavior plus shared engine trace/schema surface for `previewUsage.widenedBecauseUniform`.
+
 ## Acceptance Criteria
 
 ### Tests That Must Pass
@@ -114,3 +157,25 @@ Hook into the kernel's per-turn cleanup (the existing teardown path for per-turn
 
 1. `pnpm -F @ludoforge/engine test:unit -- agents/preview-widen-on-uniform`
 2. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completed: 2026-05-06.
+
+Phase C landed as a bounded, opt-in widen-on-uniform preview budget path. The allocator now observes run-local `(turnId, seatId)` preview widening memory, widens by `widenStep` only after the previous same-class decision had constant preview utility, caps cumulative widening by `widenCap`, and marks widened selections with `selectionReason: 'widening'`.
+
+The trace contract now includes required `previewUsage.widenedBecauseUniform`, with runtime type/schema updates, regenerated `Trace.schema.json`, and updated owned fixtures. The production owner is `preview-budget-allocator.ts` plus `policy-eval.ts` / `PolicyAgent` wiring; the drafted `policy-evaluation-core.ts` touched-file claim was verified unnecessary because the live trace/type owners sit in `policy-eval.ts`, `types-core.ts`, and `schemas-core.ts`.
+
+Post-review decision: no must-fix cleanup or follow-up ticket was warranted. The implementation remains aligned with Foundations: no game-specific engine branch, no compatibility alias, deterministic per-run memory, and bounded computation.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/preview-widen-on-uniform.test.js dist/test/unit/agents/preview-budget-allocator.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js`
+- `pnpm turbo schema:artifacts`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/json-schema.test.js dist/test/unit/agents/preview-widen-on-uniform.test.js dist/test/unit/trace/policy-trace-shape.test.js`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo typecheck`
+- `pnpm turbo lint`
+- `pnpm turbo test`
+- `pnpm run check:ticket-deps`

@@ -79,6 +79,7 @@ const createMetadata = (): PolicyEvaluationMetadata => ({
   previewUsage: {
     mode: 'exactWorld',
     evaluatedCandidateCount: 0,
+    completionPolicyFallbackCount: 0,
     refIds: [],
     unknownRefs: [],
     readyRefStats: {},

@@ -61,6 +61,7 @@ function createMetadata(): PolicyEvaluationMetadata {
     previewUsage: {
       mode: 'exactWorld',
       evaluatedCandidateCount: 3,
+      completionPolicyFallbackCount: 0,
       refIds: ['globalVar.usMargin'],
       unknownRefs: [{ refId: 'globalVar.usMargin', reason: 'hidden' }],
       readyRefStats: {},
@@ -146,6 +147,7 @@ describe('policy-diagnostics', () => {
       ...createMetadata(),
       previewUsage: {
         ...createMetadata().previewUsage,
+        completionPolicyFallbackCount: 0,
         refIds: ['feature.vcGuerrillaCount'],
         unknownRefs: [{ refId: 'feature.vcGuerrillaCount', reason: 'unresolved' }],
       },

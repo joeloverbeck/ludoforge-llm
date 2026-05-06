@@ -770,7 +770,15 @@ function lowerPreviewConfig(
   }
 
   const path = `doc.agents.profiles.${profileId}.preview`;
-  const { mode, completion, completionDepthCap, budget, phase1, phase1CompletionsPerAction } = authored;
+  const {
+    mode,
+    completion,
+    fallbackCompletionPolicy,
+    completionDepthCap,
+    budget,
+    phase1,
+    phase1CompletionsPerAction,
+  } = authored;
   const legacyPreviewTopKey = 'top' + 'K';
   const legacyPreviewTopValue = (authored as Readonly<Record<string, unknown>>)[legacyPreviewTopKey];
 
@@ -825,6 +833,34 @@ function lowerPreviewConfig(
       severity: 'error',
       message: `Profile "${profileId}" preview.completion must be greedy or policyGuided, got ${JSON.stringify(completion)}.`,
       suggestion: 'Set preview.completion to greedy or policyGuided.',
+    });
+    return undefined;
+  }
+
+  if (
+    fallbackCompletionPolicy !== undefined
+    && (
+      typeof fallbackCompletionPolicy !== 'string'
+      || (fallbackCompletionPolicy !== 'greedy' && fallbackCompletionPolicy !== 'fail')
+    )
+  ) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_COMPLETION_INVALID,
+      path: `${path}.fallbackCompletionPolicy`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.fallbackCompletionPolicy must be greedy or fail, got ${JSON.stringify(fallbackCompletionPolicy)}.`,
+      suggestion: 'Set preview.fallbackCompletionPolicy to greedy or fail.',
+    });
+    return undefined;
+  }
+
+  if (fallbackCompletionPolicy !== undefined && completion !== 'policyGuided') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_COMPLETION_INVALID,
+      path: `${path}.fallbackCompletionPolicy`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.fallbackCompletionPolicy only applies when preview.completion is policyGuided.`,
+      suggestion: 'Remove preview.fallbackCompletionPolicy or set preview.completion to policyGuided.',
     });
     return undefined;
   }
@@ -907,6 +943,7 @@ function lowerPreviewConfig(
   return {
     mode,
     ...(completion === undefined ? {} : { completion }),
+    ...(fallbackCompletionPolicy === undefined ? {} : { fallbackCompletionPolicy }),
     ...(completionDepthCap === undefined ? {} : { completionDepthCap }),
     ...(loweredBudget === undefined ? {} : { budget: loweredBudget }),
     phase1: loweredPhase1,

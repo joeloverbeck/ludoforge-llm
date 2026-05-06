@@ -1119,6 +1119,7 @@ describe('agents authoring surface', () => {
             preview: {
               mode: 'tolerateStochastic',
               completion: 'policyGuided',
+              fallbackCompletionPolicy: 'fail',
               completionDepthCap: 5,
               budget: {
                 strategy: 'balancedCoverage',
@@ -1138,6 +1139,7 @@ describe('agents authoring surface', () => {
     assert.deepEqual(result.gameDef?.agents?.profiles.baseline?.preview, {
       mode: 'tolerateStochastic',
       completion: 'policyGuided',
+      fallbackCompletionPolicy: 'fail',
       completionDepthCap: 5,
       budget: {
         strategy: 'balancedCoverage',
@@ -1820,6 +1822,92 @@ describe('agents authoring surface', () => {
     assert.equal(diagnostic?.severity, 'error');
     assert.match(diagnostic?.message ?? '', /policyGuided/);
     assert.match(diagnostic?.suggestion ?? '', /policyGuided/);
+  });
+
+  it('rejects fallbackCompletionPolicy without policyGuided completion', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              completion: 'greedy',
+              fallbackCompletionPolicy: 'fail',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    const diagnostic = result.diagnostics.find(
+      (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_FALLBACK_COMPLETION_INVALID'
+        && d.path === 'doc.agents.profiles.baseline.preview.fallbackCompletionPolicy',
+    );
+
+    assert.equal(diagnostic?.severity, 'error');
+    assert.match(diagnostic?.message ?? '', /policyGuided/);
+  });
+
+  it('rejects invalid fallbackCompletionPolicy values', () => {
+    const result = compileGameSpecToGameDef({
+      ...createCompileReadyDoc(),
+      dataAssets: [createSeatCatalogAsset(['us'])],
+      agents: withObserver({
+        parameters: {},
+        library: {
+          tieBreakers: {
+            stableMoveKey: {
+              kind: 'stableMoveKey',
+            },
+          },
+        },
+        profiles: {
+          baseline: {
+            params: {},
+            use: {
+              pruningRules: [],
+              considerations: [],
+              tieBreakers: ['stableMoveKey'],
+            },
+            preview: {
+              mode: 'exactWorld',
+              completion: 'policyGuided',
+              fallbackCompletionPolicy: 'random' as unknown as 'greedy',
+            },
+          },
+        },
+        bindings: {
+          us: 'baseline',
+        },
+      }),
+    });
+
+    const diagnostic = result.diagnostics.find(
+      (d) => d.code === 'CNL_COMPILER_AGENT_PREVIEW_FALLBACK_COMPLETION_INVALID'
+        && d.path === 'doc.agents.profiles.baseline.preview.fallbackCompletionPolicy',
+    );
+
+    assert.equal(diagnostic?.severity, 'error');
+    assert.match(diagnostic?.message ?? '', /greedy or fail/);
   });
 
   it('rejects preview.topK with Spec 157 migration guidance', () => {

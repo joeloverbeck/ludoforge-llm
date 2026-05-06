@@ -38,6 +38,7 @@
     "previewUsage": {
       "mode": "exactWorld",
       "evaluatedCandidateCount": 6,
+      "completionPolicyFallbackCount": 0,
       "refIds": [
         "victoryCurrentMargin.currentMargin.self"
       ],

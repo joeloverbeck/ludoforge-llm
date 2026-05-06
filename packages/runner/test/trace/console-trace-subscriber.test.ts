@@ -71,6 +71,7 @@ describe('createConsoleTraceSubscriber', () => {
         previewUsage: {
           mode: 'disabled',
           evaluatedCandidateCount: 0,
+          completionPolicyFallbackCount: 0,
           refIds: [],
           unknownRefs: [],
           readyRefStats: {},

@@ -106,6 +106,14 @@ Plain `git diff -- <path>` does not show untracked draft-ticket or draft-spec co
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`. Remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.
 
+Optional compact sweep recipe:
+
+1. Extract ticket-named paths from `What to Change`, `Files to Touch`, acceptance criteria, command blocks, and named witness/artifact bullets.
+2. Compare that list against `git diff --name-only` plus `git status --short`, not `git diff` alone, so untracked new tests, fixtures, reports, or draft tickets are visible.
+3. For each ticket-named path, record `done`, `verified-no-edit`, `rewritten in active ticket`, `blocked`, or `needs 1-3-1`.
+4. For each changed path not named by the ticket, classify it as `owned fallout`, `stale canonical drift`, or `unrelated churn`; update the active ticket closeout when the final diff intentionally includes it.
+5. If the sweep finds a named artifact still missing or an unexplained extra artifact, fix the code/ticket boundary and rerun the narrowest affected proof before terminal status.
+
 If that sweep finds ticket-named files that were intentionally left untouched because reassessment proved no live change was required, do not quietly leave the mismatch behind. Record the correction in the active ticket closeout so the final artifact explains why those paths remained unchanged.
 
 If that sweep finds additional live-diff files or generated artifacts that were not named in the ticket, treat that as the same class of ticket drift as an untouched named file. Update the active ticket before closeout so the touched-file scope explains both omitted additions and omitted removals.

@@ -1152,6 +1152,7 @@ const CompiledAgentProfileSchema = z
       .object({
         mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
         completion: z.enum(['greedy', 'policyGuided']).optional(),
+        fallbackCompletionPolicy: z.enum(['greedy', 'fail']).optional(),
         completionDepthCap: z.number().int().positive().optional(),
         budget: z
           .object({
@@ -2028,14 +2029,14 @@ const SyntheticDecisionTraceEntrySchema = z
     selectionReason: z.enum(['greedyAlphabetical', 'microturnPolicy', 'fallback']),
     score: NumberSchema,
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
-    completionPolicy: z.enum(['greedy', 'policyGuided']),
+    completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
   })
   .strict();
 
 const PolicyPreviewDriveTraceSchema = z
   .object({
     depth: IntegerSchema.nonnegative(),
-    completionPolicy: z.enum(['greedy', 'policyGuided']),
+    completionPolicy: z.enum(['greedy', 'policyGuided', 'fallback']),
     syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
   })
   .strict();
@@ -2106,6 +2107,7 @@ const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
     evaluatedCandidateCount: NumberSchema,
+    completionPolicyFallbackCount: IntegerSchema.nonnegative(),
     refIds: z.array(StringSchema),
     unknownRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     readyRefStats: z.record(StringSchema, PolicyPreviewReadyRefStatsTraceSchema),

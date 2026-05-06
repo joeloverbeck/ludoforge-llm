@@ -14,7 +14,7 @@ Use this skill when the user asks to implement a ticket, gives a ticket file pat
 
 ## Working Notes
 
-Load `references/working-notes.md` for the working-notes checklist, `commentary` usage, and the 1-3-1 boundary reset ledger format. Emit the compact working-notes checkpoint before coding. If resuming after context compaction, interruption, or a long handoff and the visible context does not include that checkpoint, reload the working-notes reference and reconstruct or re-emit the checkpoint before any further file edit.
+Load `references/working-notes.md` for the working-notes checklist, `commentary` usage, and the 1-3-1 boundary reset ledger format. Emit the compact working-notes checkpoint before coding. If resuming after context compaction, interruption, or a long handoff and the visible context does not include that checkpoint, reload the working-notes reference and reconstruct or re-emit the checkpoint before any further file edit. If the handoff only says a checkpoint happened but does not preserve the full ticket-named deliverables ledger, treat the checkpoint as incomplete: rebuild that ledger from the active ticket, final diff, and untracked files before any further edit or terminal closeout.
 
 Minimal checkpoint shape:
 
@@ -25,6 +25,7 @@ Minimal checkpoint shape:
 - `verification substitutions`: any ticket-command or proof-shape corrections
 - `reference guidance loaded`: triggered reference files loaded for this ticket, or `not loaded + why` when a normally triggered reference is intentionally skipped
 - `acceptance-proof lanes`: final lanes you intend to cite
+- `output contention / sequencing`: classify planned proof lanes that consume or rewrite `dist`, schemas, goldens, compiled JSON, or other generated trees as `parallel-safe` or `serial-only`; name any build/regeneration prerequisite and rerun needed if a later lane cleans the consumed output
 - `terminal status plan`: when the ticket status may become terminal; use the repo-local terminal wording already used by the ticket/series (for example `IMPLEMENTED`, `COMPLETED`, or an explicit exception status), and keep that terminal status pending until final lanes are green, classified, or explicitly substituted
 - `ticket-named deliverables ledger`: for tracked tickets with explicit `What to Change`, `Files to Touch`, artifacts, or named witness files, classify each concrete item before coding as `planned`, `already satisfied / verified-no-edit`, `needs rewrite`, `blocked`, or `needs 1-3-1`
 - `single-use migration-script ledger`: when a ticket names a one-shot migration/helper script, classify it as `retained`, `run then deleted`, `unnecessary after live inventory`, or `needs 1-3-1`; record the durable evidence location if the script is not retained

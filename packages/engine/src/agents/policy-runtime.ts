@@ -79,6 +79,7 @@ export interface PolicyPreviewSurfaceProvider {
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
   getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
+  getCompletionPolicyFallbackCount(candidate: PolicyRuntimeCandidate): number;
   getPreviewDrive(candidate: PolicyRuntimeCandidate): PolicyPreviewDriveTrace | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
@@ -189,6 +190,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
+    fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
     captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasMicroturnConsiderations
@@ -376,6 +378,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       getCompletionMetadata(candidate) {
         return previewRuntime.getCompletionMetadata(candidate);
+      },
+      getCompletionPolicyFallbackCount(candidate) {
+        return previewRuntime.getCompletionPolicyFallbackCount(candidate);
       },
       getPreviewDrive(candidate) {
         return previewRuntime.getPreviewDrive(candidate);

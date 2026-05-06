@@ -64,6 +64,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
     previewUsage: {
       mode: 'exactWorld',
       evaluatedCandidateCount: 3,
+      completionPolicyFallbackCount: 0,
       refIds: ['victory.currentMargin.self'],
       unknownRefs: [
         { refId: 'victory.currentMargin.self', reason: 'depthCap' },

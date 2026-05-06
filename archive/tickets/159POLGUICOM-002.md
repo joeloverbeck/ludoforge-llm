@@ -1,6 +1,6 @@
 # 159POLGUICOM-002: Explicit fallback + `completionPolicyFallbackCount` trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel schemas, kernel types, CNL compiler (preview-config lowerer), agents preview (pickInnerDecision restructure + trace emission)
@@ -156,13 +156,42 @@ fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'gr
 - `packages/engine/test/determinism/spec-159-replay-identity.test.ts` (new — `architectural-invariant`)
 - `packages/engine/test/unit/policy-guided-fitl-canary.golden.test.ts` (new — `golden-trace`)
 
+## Implementation Notes (2026-05-06)
+
+- Implemented the explicit `policyGuided` fallback branch in `packages/engine/src/agents/policy-preview.ts`: the inner picker now returns `{ decision, usedFallback }`, emits `selectionReason: 'fallback'` / `completionPolicy: 'fallback'` when the explicit fallback fires, and counts fallback firings on preview surfaces.
+- Added `preview.fallbackCompletionPolicy` as an authored/compiled config field with compiler diagnostics for invalid values and for use without `completion: policyGuided`.
+- Split the type surface so authored config remains `greedy | policyGuided` while trace/runtime can report `greedy | policyGuided | fallback`.
+- Added required `completionPolicyFallbackCount` to `PolicyPreviewUsageTrace`, schema artifacts, trace fixtures, policy-evaluation aggregation, and downstream runner trace fixture coverage.
+- Added the exact requested FITL golden test path, `packages/engine/test/unit/policy-guided-fitl-canary.golden.test.ts`, using the existing fixed FITL seed and a microturn-scope `preferPatronageMode` profile rewrite.
+- Regenerated `packages/engine/schemas/GameDef.schema.json` and `packages/engine/schemas/Trace.schema.json`. `EvalReport.schema.json` did not change.
+- `packages/engine/src/agents/policy-preview.ts` remains above the file-size guideline after this ticket (preexisting >1200-line file). Extraction was considered, but it would widen this fallback/trace contract change into a separate structural refactor, so it is left for a dedicated cleanup owner.
+
+## Closeout Corrections
+
+- The original command forms with `test:unit -- <pattern>` / `test:determinism -- <pattern>` are stale for the current Node test runner wiring. Focused proof used compiled `node --test dist/...` file paths after `pnpm -F @ludoforge/engine build`.
+- `pnpm turbo schema:artifacts:check` is not a root script in this repo shape; the truthful check command used here is `pnpm -F @ludoforge/engine run schema:artifacts:check`.
+- A first concurrent rerun of `pnpm -F @ludoforge/engine test` failed with missing `dist` files because `pnpm turbo typecheck` was simultaneously rebuilding and cleaning engine `dist`. The serial rerun passed.
+- The implementation needed shared-contract updates in `policy-evaluation-core.ts`, `policy-eval.ts`, `policy-agent.ts`, and `packages/runner/test/trace/console-trace-subscriber.test.ts`; the ticket's “do not touch” assumption for policy evaluation surfaces was stale once `completionPolicyFallbackCount` became required trace data.
+
+## Verification (2026-05-06)
+
+- `pnpm turbo schema:artifacts` — passed; regenerated schema artifacts.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-guided-completion.test.js dist/test/unit/agents/completion-policy-fallback.test.js dist/test/determinism/spec-159-replay-identity.test.js dist/test/unit/policy-guided-fitl-canary.golden.test.js` — passed, 6 tests.
+- `rg -n -F '?? pickGreedy' packages/engine/src/agents/policy-preview.ts` — no matches.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/compile-agents-authoring.test.js` — passed, 56 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — passed after schema regeneration.
+- `pnpm -F @ludoforge/runner test -- test/trace/console-trace-subscriber.test.ts` — passed; current runner command executed the full runner suite, 205 files / 2019 tests.
+- `pnpm turbo typecheck` — passed, 3 packages.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm -F @ludoforge/engine test` — passed on serial rerun, 64/64 files.
+
 ## Out of Scope
 
 - Compile-time warning when `policyGuided` is declared without microturn-scope considerations. (Ticket 003.)
 - Cookbook updates documenting the new fallback config and trace diagnostic. (Ticket 004.)
 - Changes to the runtime IR default at `policy-runtime.ts:191` — the fallback path is the new explicit knob; the IR default for `preview.completion` remains `'greedy'` for undeclared profiles (F#15).
 - Game-data migrations — no `data/games/**/*.yaml` profile declares `preview.completion`. Verified at decomposition time.
-- Touching `policy-evaluation-core.ts` or `policy-agent.ts` — neither contains `agentGuided` references and neither needs the new field surface.
 
 ## Acceptance Criteria
 
@@ -206,3 +235,32 @@ fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'gr
 5. `pnpm turbo schema:artifacts`
 6. `pnpm turbo schema:artifacts:check`
 7. `pnpm turbo lint typecheck test`
+
+## Outcome
+
+Completed: 2026-05-06
+
+The ticket landed explicit `policyGuided` fallback behavior for the preview completion driver. `pickInnerDecision` now reports `{ decision, usedFallback }`, `fallbackCompletionPolicy: 'greedy' | 'fail'` is lowered and validated, fallback firings emit `selectionReason: 'fallback'` / `completionPolicy: 'fallback'`, and `previewUsage.completionPolicyFallbackCount` is aggregated through the policy-evaluation trace surface.
+
+Artifacts and shared-contract fallout were updated in the same change: `GameDef.schema.json`, `Trace.schema.json`, policy trace fixtures, JSON/schema tests, and the runner console-trace fixture now include the required fallback-count field. `EvalReport.schema.json` remained unchanged after regeneration.
+
+Deviations from the original draft:
+
+- Repo-valid focused verification used built `node --test dist/...` paths rather than the stale `test:unit -- <pattern>` / `test:determinism -- <pattern>` examples.
+- `pnpm turbo schema:artifacts:check` was replaced by the package-local `pnpm -F @ludoforge/engine run schema:artifacts:check`, because the root Turbo task is not defined in this repo shape.
+- Shared policy-evaluation and runner trace consumers required minimal fallout updates once `completionPolicyFallbackCount` became required serialized trace data.
+- `packages/engine/src/agents/policy-preview.ts` was already over the repo file-size guideline before this ticket and grew slightly. Extraction was considered but deferred because it would widen the runtime fallback/trace change into a structural refactor.
+
+Verification:
+
+- `pnpm turbo schema:artifacts` — passed; regenerated schema artifacts.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-guided-completion.test.js dist/test/unit/agents/completion-policy-fallback.test.js dist/test/determinism/spec-159-replay-identity.test.js dist/test/unit/policy-guided-fitl-canary.golden.test.js` — passed, 6 tests.
+- `rg -n -F '?? pickGreedy' packages/engine/src/agents/policy-preview.ts` — no matches.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/compile-agents-authoring.test.js` — passed, 56 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — passed after schema regeneration.
+- `pnpm -F @ludoforge/runner test -- test/trace/console-trace-subscriber.test.ts` — passed; current runner command executed the full runner suite, 205 files / 2019 tests.
+- `pnpm turbo typecheck` — passed, 3 packages.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm -F @ludoforge/engine test` — passed on serial rerun, 64/64 files.
+- `pnpm run check:ticket-deps` — passed before archival review.

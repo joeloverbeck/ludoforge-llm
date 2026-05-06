@@ -839,7 +839,9 @@ export interface CompiledAgentLibraryIndex {
 }
 
 export type AgentPreviewMode = 'exactWorld' | 'tolerateStochastic' | 'disabled';
-export type AgentPreviewCompletionPolicy = 'greedy' | 'policyGuided';
+export type AgentPreviewAuthoredCompletionPolicy = 'greedy' | 'policyGuided';
+export type AgentPreviewCompletionPolicy = AgentPreviewAuthoredCompletionPolicy | 'fallback';
+export type AgentPreviewFallbackCompletionPolicy = 'greedy' | 'fail';
 export type AgentPreviewBudgetStrategy = 'balancedCoverage';
 
 export interface CompiledAgentPreviewBudgetConfig {
@@ -853,7 +855,8 @@ export interface CompiledAgentPreviewBudgetConfig {
 
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
-  readonly completion?: AgentPreviewCompletionPolicy;
+  readonly completion?: AgentPreviewAuthoredCompletionPolicy;
+  readonly fallbackCompletionPolicy?: AgentPreviewFallbackCompletionPolicy;
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
   readonly phase1?: boolean;
@@ -1769,6 +1772,7 @@ export interface PolicyTieBreakStepTrace {
 export interface PolicyPreviewUsageTrace {
   readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
+  readonly completionPolicyFallbackCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly readyRefStats: Readonly<Record<string, PolicyPreviewReadyRefStatsTrace>>;

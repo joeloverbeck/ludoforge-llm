@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — CNL validator (`validate-agents.ts`)
-**Deps**: `archive/tickets/159POLGUICOM-001.md`
+**Deps**: `archive/tickets/159POLGUICOM-001.md`, `archive/tickets/159POLGUICOM-002.md`
 
 ## Problem
 

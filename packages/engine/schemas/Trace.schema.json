@@ -1982,6 +1982,14 @@
                   "evaluatedCandidateCount": {
                     "$ref": "#/definitions/anon_c0e4ebfe"
                   },
+                  "completionPolicyFallbackCount": {
+                    "minimum": 0,
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_e7c99bd4"
+                      }
+                    ]
+                  },
                   "refIds": {
                     "type": "array",
                     "items": {
@@ -2123,6 +2131,7 @@
                 "required": [
                   "mode",
                   "evaluatedCandidateCount",
+                  "completionPolicyFallbackCount",
                   "refIds",
                   "unknownRefs",
                   "readyRefStats",
@@ -2318,7 +2327,8 @@
                           "type": "string",
                           "enum": [
                             "greedy",
-                            "policyGuided"
+                            "policyGuided",
+                            "fallback"
                           ]
                         },
                         "syntheticDecisions": {
@@ -2368,7 +2378,8 @@
                                 "type": "string",
                                 "enum": [
                                   "greedy",
-                                  "policyGuided"
+                                  "policyGuided",
+                                  "fallback"
                                 ]
                               }
                             },

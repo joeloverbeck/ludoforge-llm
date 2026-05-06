@@ -14,6 +14,7 @@
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
 - `reference guidance loaded`: triggered references actually loaded for the current ticket, such as `working-notes`, `schema-and-migration`, `verification`, or `verification-acceptance-proof`; if a normally triggered reference is skipped, record `not loaded + why`
 - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
+- `output contention / sequencing`: classify each planned proof lane that consumes or rewrites `dist`, schemas, goldens, compiled JSON, or another generated tree as `parallel-safe` or `serial-only`; record the producer step and any rerun required if a later lane cleans/rebuilds that output
 - `terminal status plan`: when the ticket status may become terminal; keep the repo-local terminal status, such as `IMPLEMENTED` or `COMPLETED`, pending until final lanes are green, classified, or explicitly substituted
 - `ticket-named deliverables ledger`: for tracked tickets with explicit `What to Change`, `Files to Touch`, artifacts, or named witness files, classify each concrete item as `planned`, `already satisfied / verified-no-edit`, `needs rewrite`, `blocked`, or `needs 1-3-1` before coding
 - `single-use migration-script ledger`: when a ticket names a one-shot migration/helper script, classify it as `retained`, `run then deleted`, `unnecessary after live inventory`, or `needs 1-3-1`; record where durable evidence lives when the script is not retained
@@ -25,6 +26,8 @@
 - `pre-existing dirty provenance`: before final closeout, classify referenced active tickets, specs, or siblings that were already dirty or untracked as `touched by this implementation`, `pre-existing and still unrelated`, `read-only context`, or `concurrent/sibling draft`
 
 Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
+
+If you resume from context compaction, interruption, or a long handoff summary, do not rely on a summary sentence that says the checkpoint happened unless the full ticket-named deliverables ledger is visible. Reconstruct the ledger from the active ticket's explicit `What to Change`, `Files to Touch`, named artifacts/tests, `git diff --name-only`, and `git status --short` before any further file edit or terminal closeout. Re-emit the reconstructed ledger when it changes the owned boundary, proof plan, or closeout status.
 
 If you realize after editing that this checkpoint was missed, emit a recovery checkpoint immediately. Mark it as late, list which boundary decisions and proof lanes were already chosen or run, and do not present it as satisfying the pre-edit stop requirement in later audit or closeout language.
 

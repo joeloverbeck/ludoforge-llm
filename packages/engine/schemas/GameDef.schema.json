@@ -2266,6 +2266,13 @@
                       "policyGuided"
                     ]
                   },
+                  "fallbackCompletionPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "greedy",
+                      "fail"
+                    ]
+                  },
                   "completionDepthCap": {
                     "type": "integer",
                     "exclusiveMinimum": 0,

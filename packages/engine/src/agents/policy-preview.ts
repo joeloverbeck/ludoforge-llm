@@ -24,7 +24,9 @@ import { selectChoiceOptionsByLegalityPrecedence, selectUniqueChoiceOptionValues
 import type { PlayerId, ZoneId } from '../kernel/branded.js';
 import type {
   AgentPolicyCatalog,
+  AgentPreviewAuthoredCompletionPolicy,
   AgentPreviewCompletionPolicy,
+  AgentPreviewFallbackCompletionPolicy,
   AgentPreviewMode,
   ChoicePendingChooseNRequest,
   ChoicePendingChooseOneRequest,
@@ -129,7 +131,8 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly runtime?: GameDefRuntime;
   readonly dependencies?: PolicyPreviewDependencies;
   readonly previewMode: AgentPreviewMode;
-  readonly completionPolicy?: AgentPreviewCompletionPolicy;
+  readonly completionPolicy?: AgentPreviewAuthoredCompletionPolicy;
+  readonly fallbackCompletionPolicy?: AgentPreviewFallbackCompletionPolicy;
   readonly completionDepthCap?: number;
   readonly captureSyntheticDecisions?: boolean;
   readonly policyGuidedDeps?: {
@@ -150,6 +153,7 @@ export interface PolicyPreviewRuntime {
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
   getCompletionMetadata(candidate: PolicyPreviewCandidate): PolicyPreviewCompletionMetadata | undefined;
+  getCompletionPolicyFallbackCount(candidate: PolicyPreviewCandidate): number;
   getPreviewDrive(candidate: PolicyPreviewCandidate): PolicyPreviewDriveTrace | undefined;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
@@ -222,6 +226,7 @@ type PreviewOutcome =
       readonly driveDepth: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -235,6 +240,7 @@ type PreviewOutcome =
       readonly driveDepth: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -248,6 +254,7 @@ type PreviewOutcome =
       readonly driveDepth?: number;
       readonly completionPolicy?: AgentPreviewCompletionPolicy;
       readonly syntheticDecisions?: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount?: number;
     };
 
 type PreviewCandidateClassification =
@@ -266,18 +273,21 @@ type DriveResult =
       readonly state: GameState;
       readonly depth: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
     }
   | {
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly depth: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
     }
   | {
       readonly kind: 'depthCap';
       readonly state: GameState;
       readonly depth: number;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
     }
   | {
       readonly kind: 'failed';
@@ -285,13 +295,14 @@ type DriveResult =
       readonly depth?: number;
       readonly failureReason?: string;
       readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+      readonly completionPolicyFallbackCount: number;
     };
 
 type DriveResultWithoutSynthetic =
-  | Omit<Extract<DriveResult, { readonly kind: 'completed' }>, 'syntheticDecisions'>
-  | Omit<Extract<DriveResult, { readonly kind: 'stochastic' }>, 'syntheticDecisions'>
-  | Omit<Extract<DriveResult, { readonly kind: 'depthCap' }>, 'syntheticDecisions'>
-  | Omit<Extract<DriveResult, { readonly kind: 'failed' }>, 'syntheticDecisions'>;
+  | Omit<Extract<DriveResult, { readonly kind: 'completed' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
+  | Omit<Extract<DriveResult, { readonly kind: 'stochastic' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
+  | Omit<Extract<DriveResult, { readonly kind: 'depthCap' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>
+  | Omit<Extract<DriveResult, { readonly kind: 'failed' }>, 'syntheticDecisions' | 'completionPolicyFallbackCount'>;
 
 type ChooseOneMicroturn = MicroturnState & {
   readonly kind: 'chooseOne';
@@ -510,22 +521,39 @@ const pickInnerDecision = (
   state: GameState,
   def: GameDef,
   microturn: ReturnType<typeof publishMicroturn>,
-  policy: AgentPreviewCompletionPolicy,
+  policy: AgentPreviewAuthoredCompletionPolicy,
+  fallbackPolicy: AgentPreviewFallbackCompletionPolicy,
   input: CreatePolicyPreviewRuntimeInput,
-): Decision | undefined => {
+): { readonly decision: Decision | undefined; readonly usedFallback: boolean } => {
   if (microturn.kind === 'chooseOne') {
     const chooseOne = microturn as ChooseOneMicroturn;
-    return policy === 'policyGuided'
-      ? pickPolicyGuidedChooseOneDecision(state, def, chooseOne, input) ?? pickGreedyChooseOneDecision(chooseOne)
-      : pickGreedyChooseOneDecision(chooseOne);
+    if (policy === 'policyGuided') {
+      const guided = pickPolicyGuidedChooseOneDecision(state, def, chooseOne, input);
+      if (guided !== undefined) {
+        return { decision: guided, usedFallback: false };
+      }
+      if (fallbackPolicy === 'fail') {
+        return { decision: undefined, usedFallback: true };
+      }
+      return { decision: pickGreedyChooseOneDecision(chooseOne), usedFallback: true };
+    }
+    return { decision: pickGreedyChooseOneDecision(chooseOne), usedFallback: false };
   }
   if (microturn.kind === 'chooseNStep') {
     const chooseN = microturn as ChooseNStepMicroturn;
-    return policy === 'policyGuided'
-      ? pickPolicyGuidedChooseNStepDecision(state, def, chooseN, input) ?? pickGreedyChooseNStepDecision(chooseN)
-      : pickGreedyChooseNStepDecision(chooseN);
+    if (policy === 'policyGuided') {
+      const guided = pickPolicyGuidedChooseNStepDecision(state, def, chooseN, input);
+      if (guided !== undefined) {
+        return { decision: guided, usedFallback: false };
+      }
+      if (fallbackPolicy === 'fail') {
+        return { decision: undefined, usedFallback: true };
+      }
+      return { decision: pickGreedyChooseNStepDecision(chooseN), usedFallback: true };
+    }
+    return { decision: pickGreedyChooseNStepDecision(chooseN), usedFallback: false };
   }
-  return undefined;
+  return { decision: undefined, usedFallback: false };
 };
 
 const decisionTraceKey = (decision: Decision): string => {
@@ -578,6 +606,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   let disposed = false;
   const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const completionPolicy = input.completionPolicy ?? 'greedy';
+  const fallbackCompletionPolicy = input.fallbackCompletionPolicy ?? 'greedy';
   const completionDepthCap = input.completionDepthCap ?? K_PREVIEW_DEPTH;
   // origin is computed against `input.state`, which is invariant across all
   // candidates in this runtime. Cache lazily so each driveSyntheticCompletion
@@ -623,6 +652,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: 'gated',
         failureReason: 'gated',
         syntheticDecisions: [],
+        completionPolicyFallbackCount: 0,
       });
     },
     resolveSurface(candidate, ref, seatContext) {
@@ -727,6 +757,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         ? undefined
         : { depth: outcome.driveDepth, policy: outcome.completionPolicy };
     },
+    getCompletionPolicyFallbackCount(candidate) {
+      if (disposed) {
+        return 0;
+      }
+      return getPreviewOutcome(candidate).completionPolicyFallbackCount ?? 0;
+    },
     getPreviewDrive(candidate) {
       if (disposed) {
         return undefined;
@@ -769,14 +805,25 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
     if (disposed) {
-      return { kind: 'unknown', reason: 'failed', failureReason: 'previewRuntimeDisposed', syntheticDecisions: [] };
+      return {
+        kind: 'unknown',
+        reason: 'failed',
+        failureReason: 'previewRuntimeDisposed',
+        syntheticDecisions: [],
+        completionPolicyFallbackCount: 0,
+      };
     }
     const cached = cache.get(candidate.stableMoveKey);
     if (cached !== undefined) {
       return cached;
     }
     if (input.previewMode === 'disabled') {
-      const disabledOutcome: PreviewOutcome = { kind: 'unknown', reason: 'failed', syntheticDecisions: [] };
+      const disabledOutcome: PreviewOutcome = {
+        kind: 'unknown',
+        reason: 'failed',
+        syntheticDecisions: [],
+        completionPolicyFallbackCount: 0,
+      };
       cache.set(candidate.stableMoveKey, disabledOutcome);
       return disabledOutcome;
     }
@@ -807,6 +854,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: 'unresolved',
         ...(classification.failureReason === undefined ? {} : { failureReason: classification.failureReason }),
         syntheticDecisions: [],
+        completionPolicyFallbackCount: 0,
       };
     }
 
@@ -815,9 +863,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
   function driveSyntheticCompletion(trustedMove: TrustedExecutableMove): DriveResult {
     const syntheticDecisions: SyntheticDecisionTraceEntry[] = [];
+    let completionPolicyFallbackCount = 0;
     const finish = (result: DriveResultWithoutSynthetic): DriveResult => emitExit({
       ...result,
       syntheticDecisions: [...syntheticDecisions],
+      completionPolicyFallbackCount,
     } as DriveResult);
     const emitExit = (result: DriveResult): DriveResult => {
       if (driveExitSink !== undefined) {
@@ -973,7 +1023,17 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         }
 
         const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
-        const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
+        const { decision, usedFallback } = pickInnerDecision(
+          state,
+          input.def,
+          microturn,
+          completionPolicy,
+          fallbackCompletionPolicy,
+          input,
+        );
+        if (usedFallback) {
+          completionPolicyFallbackCount += 1;
+        }
         if (decision === undefined) {
           return finish({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
         }
@@ -986,10 +1046,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
             microturnKind: microturn.kind,
             decisionKey: decisionTraceKey(decision),
             selectedOptionStableKey: selectedOptionStableKey(decision),
-            selectionReason: 'greedyAlphabetical',
+            selectionReason: usedFallback
+              ? 'fallback'
+              : completionPolicy === 'policyGuided'
+                ? 'microturnPolicy'
+                : 'greedyAlphabetical',
             score: 0,
             scoreContributions: [],
-            completionPolicy,
+            completionPolicy: usedFallback ? 'fallback' : completionPolicy,
           });
         }
         const prevState = state;
@@ -1016,6 +1080,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         ...(result.depth === undefined ? {} : { driveDepth: result.depth, completionPolicy }),
         ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
         syntheticDecisions: result.syntheticDecisions,
+        completionPolicyFallbackCount: result.completionPolicyFallbackCount,
       };
     }
     if (result.kind === 'depthCap') {
@@ -1026,6 +1091,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         driveDepth: result.depth,
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
+        completionPolicyFallbackCount: result.completionPolicyFallbackCount,
       };
     }
 
@@ -1036,6 +1102,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         driveDepth: result.depth,
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
+        completionPolicyFallbackCount: result.completionPolicyFallbackCount,
       };
     }
 
@@ -1047,6 +1114,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         driveDepth: result.depth,
         completionPolicy,
         syntheticDecisions: result.syntheticDecisions,
+        completionPolicyFallbackCount: result.completionPolicyFallbackCount,
       };
     }
 
@@ -1063,6 +1131,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       driveDepth: result.depth,
       completionPolicy,
       syntheticDecisions: result.syntheticDecisions,
+      completionPolicyFallbackCount: result.completionPolicyFallbackCount,
       hiddenSamplingZones,
       metricCache: new Map<string, number>(),
       victorySurface: null,

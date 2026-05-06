@@ -662,6 +662,7 @@ export interface GameSpecAgentProfileDef {
   readonly preview?: {
     readonly mode?: string;
     readonly completion?: string;
+    readonly fallbackCompletionPolicy?: string;
     readonly completionDepthCap?: number;
     readonly budget?: {
       readonly strategy?: string;

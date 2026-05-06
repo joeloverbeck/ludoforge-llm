@@ -443,6 +443,7 @@ describe('json schema artifacts', () => {
     const previewUsageWithoutBreakdown = {
       mode: fixture.agentDecision.previewUsage.mode,
       evaluatedCandidateCount: fixture.agentDecision.previewUsage.evaluatedCandidateCount,
+      completionPolicyFallbackCount: fixture.agentDecision.previewUsage.completionPolicyFallbackCount ?? 0,
       refIds: fixture.agentDecision.previewUsage.refIds,
       unknownRefs: fixture.agentDecision.previewUsage.unknownRefs,
       readyRefStats: fixture.agentDecision.previewUsage.readyRefStats,

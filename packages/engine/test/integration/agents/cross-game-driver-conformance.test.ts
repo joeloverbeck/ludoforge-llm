@@ -9,7 +9,7 @@ import {
   enumerateLegalMoves,
   initialState,
   type AgentPolicyCatalog,
-  type AgentPreviewCompletionPolicy,
+  type AgentPreviewAuthoredCompletionPolicy,
   type ClassifiedMove,
   type CompiledAgentProfile,
   type GameDef,
@@ -120,7 +120,7 @@ function profileDeps(def: GameDef, seatId: string): {
 
 function runPreview(
   input: ProductionCandidate,
-  policy: AgentPreviewCompletionPolicy,
+  policy: AgentPreviewAuthoredCompletionPolicy,
   completionDepthCap: number,
 ): PreviewRun {
   const runtime = createPolicyPreviewRuntime({

@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs only
-**Deps**: `tickets/159POLGUICOM-002.md`
+**Deps**: `archive/tickets/159POLGUICOM-002.md`
 
 ## Problem
 

@@ -254,7 +254,7 @@ describe('FITL 1968 NVA-first event-card production spec', () => {
       var: 'trail',
       delta: 1,
     });
-    assert.deepEqual((card?.shaded?.effects?.[1] as { let?: unknown })?.let, {
+    assert.deepEqual(stripEffectFootprints((card?.shaded?.effects?.[1] as { let?: unknown })?.let), {
       bind: '$trailValue',
       value: {
         _t: 2,

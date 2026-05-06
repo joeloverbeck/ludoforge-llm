@@ -12,16 +12,16 @@
 // and the kernel's drive over a move applies these fields in ways that change
 // post-state turn-flow tracking.
 //
-// Empirical evidence (FITL, seed 42, maxTurns 10, all four baseline profiles
-// concurrent, `verifyIncrementalHash: true`):
+// Original empirical evidence (FITL, seed 42, maxTurns 10, all four baseline
+// profiles concurrent, `verifyIncrementalHash: true`, drive-result capture):
 //   - 617 total drives across the corpus
 //   - 564 distinct fingerprints (with the proposed shape)
 //   - 48 fingerprint partitions with >1 captured drive
-//   - **19 of those 48 partitions contain at least one pair of drives whose
-//     post-state stateHashes differ** — i.e., the fingerprint says they
-//     should produce identical DriveResults, but they don't.
+//   - **19 of those 48 partitions contained at least one pair of drives whose
+//     post-state stateHashes differed** — i.e., the fingerprint said they
+//     should produce identical DriveResults, but they didn't.
 //
-// Sample violations from the FITL run:
+// Sample violations from the original FITL run:
 //   fingerprint=rally|{}|5578f9412c34b9ef
 //     drive A: completed depth=3 stateHash=6d649c9bfd8478d1
 //     drive B: completed depth=3 stateHash=2d2d88bc48f3261f
@@ -45,30 +45,52 @@
 //      cache keyed by anything ≥ stableMoveKey-strong cannot collapse
 //      anything beyond what the existing cache already collapses.
 //   3. The would-be cross-candidate hit rate at the natural fingerprint
-//      shape is 8.59% — already below POLPREVDRIVE-005's 25% perf gate.
-//      Even if all 48 collapsible partitions had been sound (they're not),
-//      the implementation overhead would not justify the change.
+//      shape was 8.59% on the original corpus — already below
+//      POLPREVDRIVE-005's 25% perf gate. Even if all 48 collapsible
+//      partitions had been sound (they weren't), the implementation
+//      overhead would not justify the change.
 //
 // This test is the permanent gate evidence per POLPREVDRIVE-005 §1
 // ("If this test cannot be made to pass [as the identity oracle], the
 // ticket is closed without a code change, and the gate test stays as a
-// permanent record of why the dedupe is not currently sound"). It asserts
-// the unsoundness empirically: at least one fingerprint partition with
-// divergent DriveResults must be observed on the corpus. If a future
-// kernel change accidentally makes the fingerprint sound (e.g., by
-// removing the actionClass/freeOperation discrimination), the assertion
-// will fail and POLPREVDRIVE-005 should be reassessed.
+// permanent record of why the dedupe is not currently sound").
+//
+// Distilled assertion (architectural form, replaces the corpus-witness
+// observation above):
+//
+//   On the FITL corpus, there exists at least one reachable state whose
+//   `legalMoves(state)` enumeration contains a `(actionId, canonicalParamsJSON)`
+//   group with two or more distinct `toMoveIdentityKey` results.
+//
+// This is a strictly structural property of the kernel's option-matrix
+// expansion (`legal-moves.ts:tryPushOptionMatrixFilteredMove`): when two
+// option-matrix variants of the same `(actionId, params)` overlay are
+// simultaneously legal at a state, they share the proposed fingerprint
+// `(actionId, paramsJSON, sourceStateHash)` but produce distinct
+// `stableMoveKey`s. Any cross-candidate cache keyed at fingerprint
+// granularity would alias these into a single entry — unsound.
+//
+// The distilled form does not depend on whether the preview-budget allocator
+// elects to drive both variants. As long as the kernel publishes both as
+// legal at any one state in the corpus, the test passes. If a future kernel
+// change collapses `actionClass`/`freeOperation` into `params` (or otherwise
+// removes the option-matrix discrimination), the assertion fails and
+// POLPREVDRIVE-005 should be reassessed before re-opening the cache
+// implementation.
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { PolicyAgent } from '../../../src/agents/index.js';
-import { __internal_for_tests as policyPreviewInternals, type DriveResultCapture } from '../../../src/agents/policy-preview.js';
 import {
   assertValidatedGameDef,
   createGameDefRuntime,
+  legalMoves,
   type Agent,
+  type AgentMicroturnDecisionInput,
+  type AgentMicroturnDecisionResult,
 } from '../../../src/kernel/index.js';
+import { toMoveIdentityKey } from '../../../src/kernel/move-identity.js';
 import { runGame } from '../../../src/sim/index.js';
 import { getFitlProductionFixture } from '../../helpers/production-spec-helpers.js';
 
@@ -80,132 +102,128 @@ const CORPUS = {
   playerCount: 4,
 } as const;
 
-interface DriveResultIdentity {
-  readonly resultKind: DriveResultCapture['resultKind'];
-  readonly resultDepth: number | undefined;
-  readonly resultStateHash: string | undefined;
-  readonly resultReason: string | undefined;
-  readonly resultFailureReason: string | undefined;
+interface FingerprintCollision {
+  readonly stateHash: string;
+  readonly actionId: string;
+  readonly paramsJSON: string;
+  readonly stableMoveKeys: readonly string[];
 }
 
 describe('POLPREVDRIVE-005 — drive fingerprint identity property', () => {
-  it('records that fingerprint (actionId, paramsJSON, sourceStateHash) is unsound on the FITL replay corpus (POLPREVDRIVE-005 closed without implementation)', () => {
+  it('proves fingerprint=(actionId, paramsJSON, sourceStateHash) is structurally weaker than stableMoveKey on the FITL legal-moves corpus (POLPREVDRIVE-005 closed without implementation)', () => {
     const def = assertValidatedGameDef(getFitlProductionFixture().gameDef);
     const runtime = createGameDefRuntime(def);
-    const agents: Agent[] = FITL_BASELINE_PROFILES.map((profileId) =>
-      new PolicyAgent({ profileId, traceLevel: 'summary' }),
-    );
 
-    const captures: DriveResultCapture[] = [];
-    policyPreviewInternals.setDriveResultSink((capture) => {
-      captures.push(capture);
-    });
+    let totalStatesObserved = 0;
+    let totalLegalMoveEnumerations = 0;
+    let collisionCount = 0;
+    let firstCollision: FingerprintCollision | undefined;
 
-    try {
-      runGame(
-        def,
-        CORPUS.seed,
-        agents,
-        CORPUS.maxTurns,
-        CORPUS.playerCount,
-        {
-          kernel: { verifyIncrementalHash: true },
-          skipDeltas: true,
-          traceRetention: 'finalStateOnly',
-        },
-        runtime,
-      );
-    } finally {
-      policyPreviewInternals.setDriveResultSink(undefined);
-    }
-
-    assert.ok(
-      captures.length > 0,
-      'Expected at least one driveSyntheticCompletion capture on the FITL corpus.',
-    );
-
-    const partitions = new Map<string, DriveResultCapture[]>();
-    for (const capture of captures) {
-      const fingerprint = `${capture.actionId}|${capture.paramsJSON}|${capture.sourceStateHash.toString(16)}`;
-      let group = partitions.get(fingerprint);
-      if (group === undefined) {
-        group = [];
-        partitions.set(fingerprint, group);
+    const observe = (input: AgentMicroturnDecisionInput): void => {
+      totalStatesObserved += 1;
+      const moves = legalMoves(input.def, input.state, undefined, input.runtime);
+      if (moves.length === 0) {
+        return;
       }
-      group.push(capture);
-    }
+      totalLegalMoveEnumerations += 1;
 
-    let collapsibleGroupCount = 0;
-    let violatingGroupCount = 0;
-    let firstViolationFingerprint: string | undefined;
-    let firstViolationFirst: DriveResultIdentity | undefined;
-    let firstViolationOther: DriveResultIdentity | undefined;
-
-    for (const [fingerprint, group] of partitions) {
-      if (group.length <= 1) {
-        continue;
+      const partitions = new Map<string, Map<string, true>>();
+      for (const move of moves) {
+        const fingerprint = `${String(move.actionId)}|${stableStringify(move.params)}`;
+        let stableMoveKeysInGroup = partitions.get(fingerprint);
+        if (stableMoveKeysInGroup === undefined) {
+          stableMoveKeysInGroup = new Map();
+          partitions.set(fingerprint, stableMoveKeysInGroup);
+        }
+        const stableMoveKey = toMoveIdentityKey(input.def, move);
+        stableMoveKeysInGroup.set(stableMoveKey, true);
       }
-      collapsibleGroupCount += 1;
-      const baseline = identityOf(group[0]!);
-      let groupHasViolation = false;
-      for (let index = 1; index < group.length; index += 1) {
-        const other = identityOf(group[index]!);
-        if (
-          other.resultKind !== baseline.resultKind
-          || other.resultDepth !== baseline.resultDepth
-          || other.resultStateHash !== baseline.resultStateHash
-          || other.resultReason !== baseline.resultReason
-          || other.resultFailureReason !== baseline.resultFailureReason
-        ) {
-          if (firstViolationFingerprint === undefined) {
-            firstViolationFingerprint = fingerprint;
-            firstViolationFirst = baseline;
-            firstViolationOther = other;
-          }
-          groupHasViolation = true;
+
+      for (const [fingerprint, stableMoveKeysInGroup] of partitions) {
+        if (stableMoveKeysInGroup.size <= 1) {
+          continue;
+        }
+        collisionCount += 1;
+        if (firstCollision === undefined) {
+          const separatorIndex = fingerprint.indexOf('|');
+          firstCollision = {
+            stateHash: input.state.stateHash.toString(16),
+            actionId: fingerprint.slice(0, separatorIndex),
+            paramsJSON: fingerprint.slice(separatorIndex + 1),
+            stableMoveKeys: [...stableMoveKeysInGroup.keys()],
+          };
         }
       }
-      if (groupHasViolation) {
-        violatingGroupCount += 1;
-      }
-    }
+    };
 
-    const totalDrives = captures.length;
-    const distinctFingerprints = partitions.size;
-    const wouldBeCacheHits = totalDrives - distinctFingerprints;
-    const hitRatePct = totalDrives === 0 ? 0 : (wouldBeCacheHits / totalDrives) * 100;
+    const agents: Agent[] = FITL_BASELINE_PROFILES.map((profileId) => {
+      const inner = new PolicyAgent({ profileId, traceLevel: 'summary' });
+      return wrapAgentWithLegalMoveObserver(inner, observe);
+    });
+
+    runGame(
+      def,
+      CORPUS.seed,
+      agents,
+      CORPUS.maxTurns,
+      CORPUS.playerCount,
+      {
+        kernel: { verifyIncrementalHash: true },
+        skipDeltas: true,
+        traceRetention: 'finalStateOnly',
+      },
+      runtime,
+    );
 
     process.stderr.write(
-      `[polprevdrive-005-record] totalDrives=${totalDrives} distinctFingerprints=${distinctFingerprints} ` +
-      `collapsibleGroups=${collapsibleGroupCount} violatingGroups=${violatingGroupCount} ` +
-      `wouldBeCacheHits=${wouldBeCacheHits} hitRatePct=${hitRatePct.toFixed(2)}\n`,
+      `[polprevdrive-005-record] statesObserved=${totalStatesObserved} ` +
+      `legalMoveEnumerations=${totalLegalMoveEnumerations} ` +
+      `fingerprintCollisions=${collisionCount}\n`,
     );
 
-    assert.ok(
-      violatingGroupCount > 0,
-      `Expected at least one fingerprint partition with divergent DriveResults on the FITL corpus, ` +
-      `proving that fingerprint=(actionId, paramsJSON, sourceStateHash) is not a sound identity oracle. ` +
-      `Found violatingGroups=${violatingGroupCount} of collapsibleGroups=${collapsibleGroupCount}. ` +
-      `If this assertion fails, the kernel may have changed in a way that affects move-identity discrimination ` +
-      `(actionClass/freeOperation overlay in legal-moves.ts:tryPushOptionMatrixFilteredMove); reassess POLPREVDRIVE-005 ` +
-      `before re-opening the cache implementation.`,
-    );
-
-    if (firstViolationFingerprint !== undefined) {
+    if (firstCollision !== undefined) {
       process.stderr.write(
-        `[polprevdrive-005-record] sample-violation fingerprint=${firstViolationFingerprint} ` +
-        `first=${JSON.stringify(firstViolationFirst)} other=${JSON.stringify(firstViolationOther)}\n`,
+        `[polprevdrive-005-record] sample-collision actionId=${firstCollision.actionId} ` +
+        `paramsJSON=${firstCollision.paramsJSON} ` +
+        `sourceStateHash=${firstCollision.stateHash} ` +
+        `stableMoveKeys=${JSON.stringify(firstCollision.stableMoveKeys)}\n`,
       );
     }
+
+    assert.ok(
+      collisionCount > 0,
+      `Expected at least one reachable state where legalMoves(state) contains a (actionId, canonicalParamsJSON) ` +
+      `group with two or more distinct stableMoveKeys, proving that fingerprint=(actionId, paramsJSON, sourceStateHash) ` +
+      `is strictly weaker than stableMoveKey and therefore unsound as a drive cache identity oracle. ` +
+      `Found 0 such collisions across ${totalLegalMoveEnumerations} legal-move enumerations on the FITL corpus. ` +
+      `If this assertion fails, the kernel may have collapsed actionClass/freeOperation into params, removing ` +
+      `the option-matrix discrimination in legal-moves.ts:tryPushOptionMatrixFilteredMove; reassess POLPREVDRIVE-005 ` +
+      `before re-opening the cache implementation.`,
+    );
   });
 });
 
-function identityOf(capture: DriveResultCapture): DriveResultIdentity {
+function wrapAgentWithLegalMoveObserver(
+  inner: Agent,
+  observe: (input: AgentMicroturnDecisionInput) => void,
+): Agent {
   return {
-    resultKind: capture.resultKind,
-    resultDepth: capture.resultDepth,
-    resultStateHash: capture.resultStateHash === undefined ? undefined : capture.resultStateHash.toString(16),
-    resultReason: capture.resultReason,
-    resultFailureReason: capture.resultFailureReason,
+    chooseDecision(input: AgentMicroturnDecisionInput): AgentMicroturnDecisionResult {
+      observe(input);
+      return inner.chooseDecision(input);
+    },
   };
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableStringify).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>)
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey))
+    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`);
+  return `{${entries.join(',')}}`;
 }

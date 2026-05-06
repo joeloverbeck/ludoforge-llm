@@ -131,6 +131,7 @@ export interface CreatePolicyPreviewRuntimeInput {
   readonly previewMode: AgentPreviewMode;
   readonly completionPolicy?: AgentPreviewCompletionPolicy;
   readonly completionDepthCap?: number;
+  readonly captureSyntheticDecisions?: boolean;
   readonly agentGuidedDeps?: {
     readonly catalog: AgentPolicyCatalog;
     readonly profile: CompiledAgentProfile;
@@ -149,6 +150,7 @@ export interface PolicyPreviewRuntime {
   getOutcome(candidate: PolicyPreviewCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyPreviewCandidate): string | undefined;
   getCompletionMetadata(candidate: PolicyPreviewCandidate): PolicyPreviewCompletionMetadata | undefined;
+  getPreviewDrive(candidate: PolicyPreviewCandidate): PolicyPreviewDriveTrace | undefined;
   getGrantedOperation(candidate: PolicyPreviewCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyPreviewCandidate): boolean;
   hasMaterializedOutcome(candidate: PolicyPreviewCandidate): boolean;
@@ -190,6 +192,28 @@ export interface PolicyPreviewCompletionMetadata {
   readonly policy: AgentPreviewCompletionPolicy;
 }
 
+export type SyntheticDecisionSelectionReason = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
+
+export interface SyntheticDecisionTraceEntry {
+  readonly depth: number;
+  readonly microturnKind: 'chooseOne' | 'chooseNStep';
+  readonly decisionKey: string;
+  readonly selectedOptionStableKey: string;
+  readonly selectionReason: SyntheticDecisionSelectionReason;
+  readonly score: number;
+  readonly scoreContributions: readonly {
+    readonly termId: string;
+    readonly contribution: number;
+  }[];
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+}
+
+export interface PolicyPreviewDriveTrace {
+  readonly depth: number;
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+  readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+}
+
 type PreviewOutcome =
   | {
       readonly kind: 'ready';
@@ -197,6 +221,7 @@ type PreviewOutcome =
       readonly trustedMove: TrustedExecutableMove;
       readonly driveDepth: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -209,6 +234,7 @@ type PreviewOutcome =
       readonly trustedMove: TrustedExecutableMove;
       readonly driveDepth: number;
       readonly completionPolicy: AgentPreviewCompletionPolicy;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
       readonly hiddenSamplingZones: readonly ZoneId[];
       readonly metricCache: Map<string, number>;
       victorySurface: PolicyVictorySurface | null;
@@ -221,6 +247,7 @@ type PreviewOutcome =
       readonly failureReason?: string;
       readonly driveDepth?: number;
       readonly completionPolicy?: AgentPreviewCompletionPolicy;
+      readonly syntheticDecisions?: readonly SyntheticDecisionTraceEntry[];
     };
 
 type PreviewCandidateClassification =
@@ -238,23 +265,33 @@ type DriveResult =
       readonly kind: 'completed';
       readonly state: GameState;
       readonly depth: number;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
     }
   | {
       readonly kind: 'stochastic';
       readonly state: GameState;
       readonly depth: number;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
     }
   | {
       readonly kind: 'depthCap';
       readonly state: GameState;
       readonly depth: number;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
     }
   | {
       readonly kind: 'failed';
       readonly reason: PolicyPreviewUnavailabilityReason;
       readonly depth?: number;
       readonly failureReason?: string;
+      readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
     };
+
+type DriveResultWithoutSynthetic =
+  | Omit<Extract<DriveResult, { readonly kind: 'completed' }>, 'syntheticDecisions'>
+  | Omit<Extract<DriveResult, { readonly kind: 'stochastic' }>, 'syntheticDecisions'>
+  | Omit<Extract<DriveResult, { readonly kind: 'depthCap' }>, 'syntheticDecisions'>
+  | Omit<Extract<DriveResult, { readonly kind: 'failed' }>, 'syntheticDecisions'>;
 
 type ChooseOneMicroturn = MicroturnState & {
   readonly kind: 'chooseOne';
@@ -491,6 +528,38 @@ const pickInnerDecision = (
   return undefined;
 };
 
+const decisionTraceKey = (decision: Decision): string => {
+  switch (decision.kind) {
+    case 'chooseOne':
+    case 'chooseNStep':
+    case 'stochasticResolve':
+      return String(decision.decisionKey);
+    case 'actionSelection':
+      return String(decision.actionId);
+    case 'outcomeGrantResolve':
+      return String(decision.grantId);
+    case 'turnRetirement':
+      return String(decision.retiringTurnId);
+  }
+};
+
+const selectedOptionStableKey = (decision: Decision): string => {
+  switch (decision.kind) {
+    case 'actionSelection':
+      return decision.move === undefined ? String(decision.actionId) : stableStringify(decision.move);
+    case 'chooseOne':
+      return `${decision.kind}:${String(decision.decisionKey)}:${stableStringify(decision.value)}`;
+    case 'chooseNStep':
+      return `${decision.kind}:${String(decision.decisionKey)}:${decision.command}:${stableStringify(decision.value ?? null)}`;
+    case 'stochasticResolve':
+      return `${decision.kind}:${String(decision.decisionKey)}:${stableStringify(decision.value)}`;
+    case 'outcomeGrantResolve':
+      return `${decision.kind}:${String(decision.grantId)}`;
+    case 'turnRetirement':
+      return `${decision.kind}:${String(decision.retiringTurnId)}`;
+  }
+};
+
 export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInput): PolicyPreviewRuntime {
   const deps = {
     ...defaultDependencies,
@@ -549,7 +618,12 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       if (disposed) {
         return;
       }
-      cache.set(candidate.stableMoveKey, { kind: 'unknown', reason: 'gated', failureReason: 'gated' });
+      cache.set(candidate.stableMoveKey, {
+        kind: 'unknown',
+        reason: 'gated',
+        failureReason: 'gated',
+        syntheticDecisions: [],
+      });
     },
     resolveSurface(candidate, ref, seatContext) {
       if (disposed) {
@@ -653,6 +727,19 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         ? undefined
         : { depth: outcome.driveDepth, policy: outcome.completionPolicy };
     },
+    getPreviewDrive(candidate) {
+      if (disposed) {
+        return undefined;
+      }
+      const outcome = getPreviewOutcome(candidate);
+      return outcome.driveDepth === undefined || outcome.completionPolicy === undefined
+        ? undefined
+        : {
+            depth: outcome.driveDepth,
+            completionPolicy: outcome.completionPolicy,
+            syntheticDecisions: outcome.syntheticDecisions ?? [],
+          };
+    },
     getGrantedOperation(candidate) {
       if (disposed) {
         return undefined;
@@ -682,14 +769,14 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
 
   function getPreviewOutcome(candidate: PolicyPreviewCandidate): PreviewOutcome {
     if (disposed) {
-      return { kind: 'unknown', reason: 'failed', failureReason: 'previewRuntimeDisposed' };
+      return { kind: 'unknown', reason: 'failed', failureReason: 'previewRuntimeDisposed', syntheticDecisions: [] };
     }
     const cached = cache.get(candidate.stableMoveKey);
     if (cached !== undefined) {
       return cached;
     }
     if (input.previewMode === 'disabled') {
-      const disabledOutcome: PreviewOutcome = { kind: 'unknown', reason: 'failed' };
+      const disabledOutcome: PreviewOutcome = { kind: 'unknown', reason: 'failed', syntheticDecisions: [] };
       cache.set(candidate.stableMoveKey, disabledOutcome);
       return disabledOutcome;
     }
@@ -719,6 +806,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         kind: 'unknown',
         reason: 'unresolved',
         ...(classification.failureReason === undefined ? {} : { failureReason: classification.failureReason }),
+        syntheticDecisions: [],
       };
     }
 
@@ -726,6 +814,11 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
   }
 
   function driveSyntheticCompletion(trustedMove: TrustedExecutableMove): DriveResult {
+    const syntheticDecisions: SyntheticDecisionTraceEntry[] = [];
+    const finish = (result: DriveResultWithoutSynthetic): DriveResult => emitExit({
+      ...result,
+      syntheticDecisions: [...syntheticDecisions],
+    } as DriveResult);
     const emitExit = (result: DriveResult): DriveResult => {
       if (driveExitSink !== undefined) {
         driveExitSink({
@@ -762,7 +855,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
     };
 
     if (trustedMove.sourceStateHash !== input.state.stateHash) {
-      return emitExit({
+      return finish({
         kind: 'failed',
         reason: 'failed',
         failureReason: 'sourceStateHashMismatch',
@@ -835,7 +928,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         // context kind/seatId/turnId.
         const top = state.decisionStack?.at(-1);
         if (top === undefined) {
-          return emitExit({ kind: 'completed', state: canonicalizeForExit(), depth });
+          return finish({ kind: 'completed', state: canonicalizeForExit(), depth });
         }
         const ctxKind = top.context.kind;
         const topSeatId = top.context.seatId;
@@ -846,18 +939,18 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           || topSeatId !== origin.seatId
           || top.turnId !== origin.turnId
         ) {
-          return emitExit({ kind: 'completed', state: canonicalizeForExit(), depth });
+          return finish({ kind: 'completed', state: canonicalizeForExit(), depth });
         }
         if (ctxKind === 'stochasticResolve') {
-          return emitExit({ kind: 'stochastic', state: canonicalizeForExit(), depth });
+          return finish({ kind: 'stochastic', state: canonicalizeForExit(), depth });
         }
         if (depth >= completionDepthCap) {
-          return emitExit({ kind: 'depthCap', state: canonicalizeForExit(), depth });
+          return finish({ kind: 'depthCap', state: canonicalizeForExit(), depth });
         }
 
         // Fast path for greedy chooseOne: let the kernel own the bounded inner
         // drive and canonicalize the final state once at exit.
-        if (ctxKind === 'chooseOne' && completionPolicy === 'greedy') {
+        if (ctxKind === 'chooseOne' && completionPolicy === 'greedy' && input.captureSyntheticDecisions !== true) {
           const result = applyPreviewDriveGreedyChooseOne(
             input.def,
             canonicalizeForExit(),
@@ -869,20 +962,35 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
           );
           const resultDepth = depth + result.depth;
           if (result.kind === 'failed') {
-            return emitExit({
+            return finish({
               kind: 'failed',
               reason: 'noPreviewDecision',
               depth: resultDepth,
               failureReason: result.failureReason ?? 'noPreviewDecision',
             });
           }
-          return emitExit({ kind: result.kind, state: result.state, depth: resultDepth });
+          return finish({ kind: result.kind, state: result.state, depth: resultDepth });
         }
 
         const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
         const decision = pickInnerDecision(state, input.def, microturn, completionPolicy, input);
         if (decision === undefined) {
-          return emitExit({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
+          return finish({ kind: 'failed', reason: 'noPreviewDecision', depth, failureReason: 'noPreviewDecision' });
+        }
+        if (
+          input.captureSyntheticDecisions === true
+          && (microturn.kind === 'chooseOne' || microturn.kind === 'chooseNStep')
+        ) {
+          syntheticDecisions.push({
+            depth: syntheticDecisions.length + 1,
+            microturnKind: microturn.kind,
+            decisionKey: decisionTraceKey(decision),
+            selectedOptionStableKey: selectedOptionStableKey(decision),
+            selectionReason: 'greedyAlphabetical',
+            score: 0,
+            scoreContributions: [],
+            completionPolicy,
+          });
         }
         const prevState = state;
         state = applyPublishedDecisionFromPreviewStateNoFinalHash(input.def, prevState, microturn, decision, { advanceToDecisionPoint: true }, input.runtime, refCache).state;
@@ -892,7 +1000,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         depth += 1;
       }
     } catch (error) {
-      return emitExit({
+      return finish({
         kind: 'failed',
         reason: 'failed',
         failureReason: truncatePreviewFailureReason(error),
@@ -907,6 +1015,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         reason: result.reason,
         ...(result.depth === undefined ? {} : { driveDepth: result.depth, completionPolicy }),
         ...(result.failureReason === undefined ? {} : { failureReason: result.failureReason }),
+        syntheticDecisions: result.syntheticDecisions,
       };
     }
     if (result.kind === 'depthCap') {
@@ -916,16 +1025,29 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
         failureReason: 'depthCap',
         driveDepth: result.depth,
         completionPolicy,
+        syntheticDecisions: result.syntheticDecisions,
       };
     }
 
     if (result.kind === 'stochastic' && input.previewMode === 'exactWorld') {
-      return { kind: 'unknown', reason: 'random', driveDepth: result.depth, completionPolicy };
+      return {
+        kind: 'unknown',
+        reason: 'random',
+        driveDepth: result.depth,
+        completionPolicy,
+        syntheticDecisions: result.syntheticDecisions,
+      };
     }
 
     const rngDiverged = !rngStatesEqual(result.state.rng, input.state.rng);
     if (rngDiverged && input.previewMode === 'exactWorld') {
-      return { kind: 'unknown', reason: 'random', driveDepth: result.depth, completionPolicy };
+      return {
+        kind: 'unknown',
+        reason: 'random',
+        driveDepth: result.depth,
+        completionPolicy,
+        syntheticDecisions: result.syntheticDecisions,
+      };
     }
 
     const stateHashKey = result.state.stateHash;
@@ -940,6 +1062,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       trustedMove,
       driveDepth: result.depth,
       completionPolicy,
+      syntheticDecisions: result.syntheticDecisions,
       hiddenSamplingZones,
       metricCache: new Map<string, number>(),
       victorySurface: null,

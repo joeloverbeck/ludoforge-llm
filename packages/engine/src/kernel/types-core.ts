@@ -1702,6 +1702,25 @@ export type PolicyPreviewUtilityTrace = 'none' | 'constant' | 'lowInformation' |
 
 export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated';
 
+export type SyntheticDecisionSelectionReasonTrace = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
+
+export interface SyntheticDecisionTraceEntry {
+  readonly depth: number;
+  readonly microturnKind: 'chooseOne' | 'chooseNStep';
+  readonly decisionKey: string;
+  readonly selectedOptionStableKey: string;
+  readonly selectionReason: SyntheticDecisionSelectionReasonTrace;
+  readonly score: number;
+  readonly scoreContributions: readonly AgentDecisionScoreContribution[];
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+}
+
+export interface PolicyPreviewDriveTrace {
+  readonly depth: number;
+  readonly completionPolicy: AgentPreviewCompletionPolicy;
+  readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+}
+
 export interface PolicyCandidateDecisionTrace {
   readonly actionId: string;
   readonly stableMoveKey: string;
@@ -1712,8 +1731,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
-  readonly previewDriveDepth?: number;
-  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
+  readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;

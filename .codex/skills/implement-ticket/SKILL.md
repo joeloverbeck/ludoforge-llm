@@ -120,6 +120,15 @@ Before the first lane you intend to treat as the **final** acceptance-proof run,
 
 If any answer is `no`, update the ticket and related artifacts first, then start the final acceptance-proof set.
 
+For ordinary non-measured tickets whose final lanes go green, use this compact green closeout order:
+
+1. Before final proof, make the active ticket truthful about scope, command substitutions, generated fallout, touched-file ownership, and the proof lanes you intend to cite, but leave the repo-local terminal status pending.
+2. Run the final proof lanes serially with stable generated outputs; if a later accepted lane rebuilds or cleans `dist/`, schemas, fixtures, or another consumed output tree, rerun the narrowest affected consumer proof.
+3. After all final lanes are green, classified, or explicitly substituted, apply the terminal status plus exact proof-result transcription as the final narrow ticket edit when practical.
+4. If that edit only records the just-run proof and does not change scope, acceptance criteria, command semantics, touched-file ownership, proof claims, follow-up ownership, or dependency classification, record the no-invalidation rationale in the ticket outcome or final closeout instead of rerunning broad lanes.
+5. Run `pnpm run check:ticket-deps` when terminal status, dependencies, successor ownership, or other ticket-graph facts changed or when the active ticket/family expects dependency integrity proof.
+6. Finish with an untracked-aware `git status --short` sweep and hand off to `$post-ticket-review` unless the user explicitly included archival in the implementation request.
+
 When the decisive proof lane itself determines the final classification, do not pretend the outcome can be fully written beforehand. Instead:
 
 1. Prewrite the intended outcome/handoff as `pending` or equivalent before the decisive lane, including the exact command and expected decision branches.
@@ -331,6 +340,15 @@ If the ticket is a mechanical refactor, gate/audit, investigation, groundwork, o
 For profiling or benchmark red-gate tickets, use a fast reference set unless reassessment triggers heavier guidance: `references/working-notes.md`, `references/ticket-type-triage.md`, `references/specialized-ticket-types.md` for gate/audit/profiling guidance, and `references/verification.md` for measured-gate and CPU-profile handling. This profiling fast path overrides the default non-bounded-ticket load of `references/implementation-general.md`; load `implementation-general.md` only when one of the heavier-guidance triggers below appears. Load `references/closeout-and-followup.md` before creating/updating any successor, dependent-ticket rewrite, spec ticket-list update, status transition, or other ticket-graph closeout artifact. Ticket-graph closeout alone does not require `implementation-general.md` when `closeout-and-followup.md` covers the handoff. Load broader references such as `references/implementation-general.md`, `references/triage-and-resolution.md`, `references/schema-and-migration.md`, or `references/verification-acceptance-proof.md` only when triggered by split ownership, nontrivial discrepancy, shared contract/schema fallout, noisy harness behavior, command-wrapper ambiguity, or post-proof invalidation.
 
 If the change touches schemas, contracts, goldens, or involves a migration, load `references/schema-and-migration.md`. Covers in-memory vs serialized decisions, post-migration sweeps, identifier consumer sweeps, interim shared-contract state for staged tickets, and historical benchmark worktree handling.
+
+For serialized trace/result shape migrations, use this compact checklist before the first broad proof lane:
+
+- update the authoritative source type or union and every direct writer of the field
+- update schema source and regenerate/check the generated schema artifact
+- search direct readers, hand-authored object literals, report/diagnostic consumers, fixtures, goldens, and exhaustiveness assumptions
+- prove any intended trace-tier boundary such as verbose-only emission or summary omission
+- add or update a focused replay/determinism witness when the field is serialized, ordered, or seed-sensitive
+- include at least one proof lane that consumes the generated output or public serialized contract, plus the package/workspace typecheck lane when downstream consumers can see the shape
 
 ## Verification
 

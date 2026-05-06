@@ -23,8 +23,11 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         unknownPreviewRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'ready',
-        previewDriveDepth: 3,
-        previewCompletionPolicy: 'greedy',
+        previewDrive: {
+          depth: 3,
+          completionPolicy: 'greedy',
+          syntheticDecisions: [],
+        },
       },
       {
         actionId: 'march',
@@ -37,8 +40,11 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         selectionReason: 'gated',
         previewOutcome: 'depthCap',
         previewFailureReason: 'depthCap',
-        previewDriveDepth: 2,
-        previewCompletionPolicy: 'agentGuided',
+        previewDrive: {
+          depth: 2,
+          completionPolicy: 'agentGuided',
+          syntheticDecisions: [],
+        },
       },
       {
         actionId: 'train',
@@ -87,13 +93,19 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
 }
 
 describe('policy diagnostics preview metadata', () => {
-  it('emits preview drive depth and completion policy on verbose candidates', () => {
+  it('emits nested preview drive metadata on verbose candidates', () => {
     const trace = buildPolicyAgentDecisionTrace(createPreviewMetadata(), 'verbose');
 
-    assert.equal(trace.candidates?.[0]?.previewDriveDepth, 3);
-    assert.equal(trace.candidates?.[0]?.previewCompletionPolicy, 'greedy');
-    assert.equal(trace.candidates?.[1]?.previewDriveDepth, 2);
-    assert.equal(trace.candidates?.[1]?.previewCompletionPolicy, 'agentGuided');
+    assert.deepEqual(trace.candidates?.[0]?.previewDrive, {
+      depth: 3,
+      completionPolicy: 'greedy',
+      syntheticDecisions: [],
+    });
+    assert.deepEqual(trace.candidates?.[1]?.previewDrive, {
+      depth: 2,
+      completionPolicy: 'agentGuided',
+      syntheticDecisions: [],
+    });
   });
 
   it('emits per-microturn gated count and optional top-flip signal', () => {

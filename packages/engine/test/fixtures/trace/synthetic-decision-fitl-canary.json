@@ -1,0 +1,32 @@
+[
+  {
+    "depth": 1,
+    "microturnKind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces:add:\"binh-dinh:none\"",
+    "selectionReason": "greedyAlphabetical",
+    "score": 0,
+    "scoreContributions": [],
+    "completionPolicy": "greedy"
+  },
+  {
+    "depth": 2,
+    "microturnKind": "chooseNStep",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces",
+    "selectedOptionStableKey": "chooseNStep:decision:doc.actionPipelines.9.stages[0].effects.0.if.else.0.chooseN::$targetSpaces:confirm:null",
+    "selectionReason": "greedyAlphabetical",
+    "score": 0,
+    "scoreContributions": [],
+    "completionPolicy": "greedy"
+  },
+  {
+    "depth": 3,
+    "microturnKind": "chooseOne",
+    "decisionKey": "decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.1.if.then.0.chooseOne::$withBaseChoice[0]",
+    "selectedOptionStableKey": "chooseOne:decision:doc.actionPipelines.9.stages[1].effects.0.forEach.effects.1.let.in.1.if.then.0.chooseOne::$withBaseChoice[0]:\"place-guerrillas\"",
+    "selectionReason": "greedyAlphabetical",
+    "score": 0,
+    "scoreContributions": [],
+    "completionPolicy": "greedy"
+  }
+]

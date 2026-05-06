@@ -141,7 +141,7 @@ This change is in the trace-emit path only; the chooser's selection logic does n
 
 1. New: golden trace test asserts `readyRefStats[refId]` matches a hand-computed expected stats object on a 5-decision FITL fixture covering ready-uniform, ready-differentiated, all-gated, and mixed cases.
 2. New: utility classifier returns `differentiating` for the `exp-002` trace's "DIFFERENTIATED decision" excerpt and `constant` for the "IDENTICAL margins decision" excerpt (both quoted in `reports/microturn-preview-architectural-gaps-2026-05-06.md` Appendix).
-3. New: synthetic-decision trace contains one entry per inner microturn taken; entry depth matches `previewDriveDepth`; ordering is depth-ascending.
+3. New: synthetic-decision trace contains one entry per inner microturn taken; entry depth is bounded by `previewDrive.depth`; ordering is depth-ascending.
 4. New: replay-identity test compiles + runs the same FITL fixture twice; `syntheticDecisions[]` arrays are byte-identical.
 5. New: inner-frontier `scoreContributions` test constructs a chooseOne with a single matched microturn-scope consideration and asserts contribution sum equals candidate score.
 6. New: schema-parity test asserts every emitted trace conforms to the updated `Trace.schema.json` (Ajv validation).
@@ -182,6 +182,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/156PREVOBSUTMET-001.md`](../archive/tickets/156PREVOBSUTMET-001.md) — Trace schema and type plumbing for preview observability (covers schema + types groundwork)
 - [`archive/tickets/156PREVOBSUTMET-002.md`](../archive/tickets/156PREVOBSUTMET-002.md) — readyRefStats aggregator and utility classifier (covers Phase A deliverables 1, 2)
 - [`archive/tickets/156PREVOBSUTMET-003.md`](../archive/tickets/156PREVOBSUTMET-003.md) — Per-candidate selectionReason field (covers Phase A deliverable 3)
-- [`tickets/156PREVOBSUTMET-004.md`](../tickets/156PREVOBSUTMET-004.md) — Synthetic-decision trace per preview drive (covers Phase B deliverable 4)
+- [`archive/tickets/156PREVOBSUTMET-004.md`](../archive/tickets/156PREVOBSUTMET-004.md) — Synthetic-decision trace per preview drive (covers Phase B deliverable 4)
 - [`tickets/156PREVOBSUTMET-005.md`](../tickets/156PREVOBSUTMET-005.md) — Inner-frontier scoreContributions parity (covers Phase C deliverable 5)
 - [`tickets/156PREVOBSUTMET-006.md`](../tickets/156PREVOBSUTMET-006.md) — Cookbook documentation for preview observability fields (covers cross-cutting docs)

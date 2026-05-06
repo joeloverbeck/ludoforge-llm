@@ -225,6 +225,7 @@ export class PolicyAgent implements Agent {
       ...(this.fallbackOnError === undefined ? {} : { fallbackOnError: this.fallbackOnError }),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
       ...(this.traceLevel === 'none' ? { diagnosticsMode: 'disabled' as const } : {}),
+      traceLevel: this.traceLevel,
     });
     logPolicyOomTrace(
       'actionSelection:evaluated',

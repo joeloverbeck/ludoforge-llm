@@ -1,6 +1,6 @@
 # 156PREVOBSUTMET-004: Synthetic-decision trace per preview drive
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-preview.ts` (driver loop), `policy-eval.ts` (trace propagation), new tests
@@ -78,6 +78,13 @@ The per-drive `syntheticDecisions` array attaches to the per-candidate `PolicyEv
 
 - `packages/engine/src/agents/policy-preview.ts` (modify — driver-loop capture)
 - `packages/engine/src/agents/policy-eval.ts` (modify — propagate syntheticDecisions onto candidate metadata)
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify — sync nested preview-drive metadata from preview runtime)
+- `packages/engine/src/agents/policy-runtime.ts` (modify — expose nested preview-drive metadata through runtime providers)
+- `packages/engine/src/agents/policy-wasm-score-routing.ts` (modify — preserve nested preview-drive metadata for WASM-preview rows)
+- `packages/engine/src/kernel/types-core.ts` (modify — serialized trace type migration)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — serialized trace schema source)
+- `packages/engine/schemas/Trace.schema.json` (modify — generated trace schema artifact)
+- `packages/engine/test/helpers/synthetic-decision-fixture.ts` (new — shared synthetic preview fixture)
 - `packages/engine/test/unit/agents/synthetic-decision-trace.test.ts` (new)
 - `packages/engine/test/unit/agents/synthetic-decision-replay-identity.test.ts` (new)
 - `packages/engine/test/integration/synthetic-decision-fitl-canary-golden.test.ts` (new)
@@ -124,3 +131,39 @@ The per-drive `syntheticDecisions` array attaches to the per-candidate `PolicyEv
 2. `pnpm -F @ludoforge/engine test:unit -- agents/synthetic-decision-replay-identity`
 3. `pnpm -F @ludoforge/engine test:integration -- synthetic-decision-fitl-canary-golden`
 4. `pnpm turbo lint typecheck test`
+
+## Live Implementation Notes (2026-05-06)
+
+The live repo uses compiled `dist/test/**/*.test.js` files for focused Node test execution. The focused acceptance commands above are therefore satisfied by:
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/synthetic-decision-trace.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/synthetic-decision-replay-identity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/synthetic-decision-fitl-canary-golden.test.js`
+
+Schema/source migration note: the nested `previewDrive` contract replaces the flat `previewDriveDepth` / `previewCompletionPolicy` trace fields across source, schema, and tests. The public summary trace still omits candidate metadata; synthetic decisions are exposed only through verbose candidate traces.
+
+Source-size note: `policy-preview.ts` and `policy-eval.ts` were already over repository file-size guidance before this ticket. The active change keeps edits surgical inside the existing preview-drive and metadata seams; extracting those modules is deferred because it would widen this serialized trace migration.
+
+## Outcome (2026-05-06)
+
+Implemented the verbose synthetic-decision trace on the preview-drive runtime path and migrated the serialized candidate trace shape to the single nested `previewDrive` contract. The runtime now captures deterministic synthetic decision entries for greedy preview completion, including depth, microturn kind, decision key, selected option stable key, selection reason, score placeholders, contribution placeholders, and completion policy. The nested preview-drive metadata is propagated through policy evaluation, runtime providers, WASM preview rows, kernel trace types, schema source, and the generated `Trace.schema.json` artifact.
+
+Added focused synthetic replay tests and a FITL canary golden fixture. The ticket's drafted focused commands were mapped to the live compiled-test entrypoints noted above.
+
+Verification passed:
+
+- `pnpm -F @ludoforge/engine build`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/synthetic-decision-trace.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/synthetic-decision-replay-identity.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/synthetic-decision-fitl-canary-golden.test.js`
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-diagnostics-preview.test.js`
+- `pnpm -F @ludoforge/engine run schema:artifacts`
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`
+- `pnpm run check:ticket-deps`
+
+This outcome block is post-proof ticket transcription only; it does not alter runtime behavior, generated artifacts, or acceptance coverage.

@@ -1987,6 +1987,27 @@ const PolicyPreviewReadyRefStatsTraceSchema = z
   })
   .strict();
 
+const SyntheticDecisionTraceEntrySchema = z
+  .object({
+    depth: IntegerSchema.positive(),
+    microturnKind: z.enum(['chooseOne', 'chooseNStep']),
+    decisionKey: StringSchema,
+    selectedOptionStableKey: StringSchema,
+    selectionReason: z.enum(['greedyAlphabetical', 'microturnPolicy', 'fallback']),
+    score: NumberSchema,
+    scoreContributions: z.array(AgentDecisionScoreContributionSchema),
+    completionPolicy: z.enum(['greedy', 'agentGuided']),
+  })
+  .strict();
+
+const PolicyPreviewDriveTraceSchema = z
+  .object({
+    depth: IntegerSchema.nonnegative(),
+    completionPolicy: z.enum(['greedy', 'agentGuided']),
+    syntheticDecisions: z.array(SyntheticDecisionTraceEntrySchema),
+  })
+  .strict();
+
 const PolicyCandidateDecisionTraceSchema = z
   .object({
     actionId: StringSchema,
@@ -2008,8 +2029,7 @@ const PolicyCandidateDecisionTraceSchema = z
       z.literal('noPreviewDecision'),
       z.literal('gated'),
     ]).optional(),
-    previewDriveDepth: IntegerSchema.nonnegative().optional(),
-    previewCompletionPolicy: z.enum(['greedy', 'agentGuided']).optional(),
+    previewDrive: PolicyPreviewDriveTraceSchema.optional(),
     grantedOperationSimulated: BooleanSchema.optional(),
     grantedOperationMove: z.object({
       actionId: StringSchema,

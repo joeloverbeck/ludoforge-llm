@@ -16,7 +16,6 @@ import {
 } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
-  AgentPreviewCompletionPolicy,
   AttributeValue,
   AgentParameterValue,
   AgentPolicyCatalog,
@@ -44,6 +43,7 @@ import {
 import type {
   Phase1ActionPreviewEntry,
   PolicyPreviewDependencies,
+  PolicyPreviewDriveTrace,
   PolicyPreviewGrantedOperation,
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
@@ -83,8 +83,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
-  previewDriveDepth?: number;
-  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
+  previewDrive?: PolicyPreviewDriveTrace;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
@@ -101,6 +100,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly runtime?: GameDefRuntime;
   readonly encodedStateLayout?: EncodedStateLayout;
   readonly encodedState?: EncodedState;
+  readonly traceLevel?: 'none' | 'summary' | 'verbose';
   readonly completion?: {
     readonly request: ChoicePendingRequest;
     readonly optionValue: MoveParamValue;
@@ -282,6 +282,7 @@ export class PolicyEvaluationContext {
       ...(input.previewDependencies === undefined ? {} : { previewDependencies: input.previewDependencies }),
       runtimeError: (code, message, detail) => this.runtimeError(code, message, detail),
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
       encodedStateLayout: this.encodedStateLayout,
       ...(this.encodedState === undefined ? {} : { encodedState: this.encodedState }),
       ...(input.completion === undefined ? {} : { completion: input.completion }),
@@ -385,8 +386,7 @@ export class PolicyEvaluationContext {
     this.runtimeProviders.previewSurface.markGated(candidate);
     candidate.previewOutcome = 'gated';
     candidate.previewFailureReason = 'gated';
-    delete candidate.previewDriveDepth;
-    delete candidate.previewCompletionPolicy;
+    delete candidate.previewDrive;
   }
 
   hasMaterializedPreview(candidate: PolicyEvaluationCandidate): boolean {
@@ -1518,11 +1518,10 @@ export class PolicyEvaluationContext {
         candidate.previewFailureReason = previewFailureReason;
       }
     }
-    if (candidate.previewDriveDepth === undefined || candidate.previewCompletionPolicy === undefined) {
-      const completionMetadata = this.runtimeProviders.previewSurface.getCompletionMetadata(candidate);
-      if (completionMetadata !== undefined) {
-        candidate.previewDriveDepth = completionMetadata.depth;
-        candidate.previewCompletionPolicy = completionMetadata.policy;
+    if (candidate.previewDrive === undefined) {
+      const previewDrive = this.runtimeProviders.previewSurface.getPreviewDrive(candidate);
+      if (previewDrive !== undefined) {
+        candidate.previewDrive = previewDrive;
       }
     }
   }

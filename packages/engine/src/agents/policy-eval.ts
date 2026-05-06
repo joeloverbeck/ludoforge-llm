@@ -5,7 +5,6 @@ import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
   AgentPreviewMode,
-  AgentPreviewCompletionPolicy,
   AgentSelectionMode,
   AgentPolicyCatalog,
   CompiledPolicyConsideration,
@@ -24,6 +23,7 @@ import type {
   Phase1ActionPreviewEntry,
   PolicyPreviewDependencies,
   PolicyPreviewGrantedOperation,
+  PolicyPreviewDriveTrace,
   PolicyPreviewTraceOutcome,
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
@@ -123,8 +123,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
-  readonly previewDriveDepth?: number;
-  readonly previewCompletionPolicy?: AgentPreviewCompletionPolicy;
+  readonly previewDrive?: PolicyPreviewDriveTrace;
   readonly grantedOperationSimulated?: boolean;
   readonly grantedOperationMove?: {
     readonly actionId: string;
@@ -208,6 +207,7 @@ export interface EvaluatePolicyMoveInput {
   readonly selectionGrouping?: 'none' | 'actionId';
   readonly encodedStateMode?: 'enabled' | 'disabled';
   readonly diagnosticsMode?: 'enabled' | 'disabled';
+  readonly traceLevel?: 'none' | 'summary' | 'verbose';
 }
 
 function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
@@ -260,8 +260,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   readonly scoreContributions: { readonly termId: string; readonly contribution: number }[];
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
-  previewDriveDepth?: number;
-  previewCompletionPolicy?: AgentPreviewCompletionPolicy;
+  previewDrive?: PolicyPreviewDriveTrace;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
 }
@@ -524,6 +523,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
         previewDependencies,
         ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
         ...(encodedView === undefined ? {} : { encodedStateLayout: encodedView.layout, encodedState: encodedView.encoded }),
+        ...(input.traceLevel === undefined ? {} : { traceLevel: input.traceLevel }),
       }, candidates);
       evaluationForDispose = evaluation;
       let activeCandidates = [...candidates];
@@ -1007,8 +1007,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .map(([refId, reason]) => ({ refId, reason })),
     selectionReason: candidate.previewOutcome === 'gated' ? 'gated' : 'prior',
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
-    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
-    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
+    ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
     ...(grantedOperationMetadata ?? {}),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
   };
@@ -1032,8 +1031,7 @@ function scoreCandidateForGateFlipProbe(
     score: candidate.score,
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
-    ...(candidate.previewDriveDepth === undefined ? {} : { previewDriveDepth: candidate.previewDriveDepth }),
-    ...(candidate.previewCompletionPolicy === undefined ? {} : { previewCompletionPolicy: candidate.previewCompletionPolicy }),
+    ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
     ...(candidate.grantedOperation === undefined ? {} : { grantedOperation: candidate.grantedOperation }),
   };
   return considerationIds.reduce((total, considerationId) => (

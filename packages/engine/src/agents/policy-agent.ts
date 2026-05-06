@@ -144,6 +144,7 @@ type GuidedChoiceMatch =
 const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
   mode: 'disabled',
   evaluatedCandidateCount: 0,
+  completionPolicyFallbackCount: 0,
   refIds: [],
   unknownRefs: [],
   readyRefStats: {},

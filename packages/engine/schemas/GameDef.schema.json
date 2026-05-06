@@ -2263,7 +2263,14 @@
                     "type": "string",
                     "enum": [
                       "greedy",
-                      "agentGuided"
+                      "policyGuided"
+                    ]
+                  },
+                  "fallbackCompletionPolicy": {
+                    "type": "string",
+                    "enum": [
+                      "greedy",
+                      "fail"
                     ]
                   },
                   "completionDepthCap": {

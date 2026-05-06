@@ -85,6 +85,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
 
@@ -1536,6 +1537,10 @@ export class PolicyEvaluationContext {
       if (previewDrive !== undefined) {
         candidate.previewDrive = previewDrive;
       }
+    }
+    if (candidate.completionPolicyFallbackCount === undefined) {
+      candidate.completionPolicyFallbackCount =
+        this.runtimeProviders.previewSurface.getCompletionPolicyFallbackCount(candidate);
     }
   }
 

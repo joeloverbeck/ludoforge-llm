@@ -79,6 +79,7 @@ export interface PolicyPreviewSurfaceProvider {
   getOutcome(candidate: PolicyRuntimeCandidate): PolicyPreviewTraceOutcome;
   getFailureReason(candidate: PolicyRuntimeCandidate): string | undefined;
   getCompletionMetadata(candidate: PolicyRuntimeCandidate): PolicyPreviewCompletionMetadata | undefined;
+  getCompletionPolicyFallbackCount(candidate: PolicyRuntimeCandidate): number;
   getPreviewDrive(candidate: PolicyRuntimeCandidate): PolicyPreviewDriveTrace | undefined;
   getGrantedOperation(candidate: PolicyRuntimeCandidate): PolicyPreviewGrantedOperation | undefined;
   hasPreviewData(candidate: PolicyRuntimeCandidate): boolean;
@@ -189,10 +190,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     ...(input.phase1ActionPreviewIndex === undefined ? {} : { phase1ActionPreviewIndex: input.phase1ActionPreviewIndex }),
     previewMode: activeProfile?.preview.mode ?? 'exactWorld',
     completionPolicy: activeProfile?.preview.completion ?? 'greedy',
+    fallbackCompletionPolicy: activeProfile?.preview.fallbackCompletionPolicy ?? 'greedy',
     completionDepthCap: activeProfile?.preview.completionDepthCap ?? K_PREVIEW_DEPTH,
     captureSyntheticDecisions: input.traceLevel === 'verbose',
     ...(profileHasMicroturnConsiderations
-      ? { agentGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
+      ? { policyGuidedDeps: { catalog: input.catalog, profile: activeProfile! } }
       : {}),
     ...(input.previewDependencies === undefined ? {} : { dependencies: input.previewDependencies }),
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
@@ -377,6 +379,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       getCompletionMetadata(candidate) {
         return previewRuntime.getCompletionMetadata(candidate);
       },
+      getCompletionPolicyFallbackCount(candidate) {
+        return previewRuntime.getCompletionPolicyFallbackCount(candidate);
+      },
       getPreviewDrive(candidate) {
         return previewRuntime.getPreviewDrive(candidate);
       },
@@ -417,7 +422,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
 // Memoize: a profile's set of microturn-scoped considerations is fixed across
 // a benchmark run. Per-call recomputation otherwise iterates `profile.use.considerations`
 // inside every `createPolicyRuntimeProviders` call (~50 outer microturns + several
-// per-pick scoring contexts). When the result is empty the agentGuided picker
+// per-pick scoring contexts). When the result is empty the policyGuided picker
 // becomes a no-op — callers can short-circuit allocation of pending-request
 // objects entirely.
 const profileHasMicroturnCache = new WeakMap<CompiledAgentProfile, boolean>();

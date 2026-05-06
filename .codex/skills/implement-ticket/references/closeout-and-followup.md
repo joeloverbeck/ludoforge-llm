@@ -43,6 +43,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 - for completed active tickets, use the explicit repo-local terminal status already used by the ticket or series, such as `IMPLEMENTED` or `COMPLETED`; do not normalize to `COMPLETED` when the family uses a different terminal implementation status
+- when adding files, do not summarize the touched-file surface from `git diff --stat` alone. Pair it with `git status --short` or explicitly list untracked files, because new tests, fixtures, reports, and tickets may otherwise disappear from the closeout.
 
 ## Acceptance-Proof Invalidation
 
@@ -105,6 +106,14 @@ Plain `git diff -- <path>` does not show untracked draft-ticket or draft-spec co
 ## Touched-File Scope Sweep
 
 As part of the final acceptance sweep, explicitly compare `What to Change` / `Files to Touch` / other ticket-named artifacts against the final diff and untracked files before using `COMPLETED`. Remember that untracked new files may not appear in `git diff --name-only`; include them explicitly.
+
+Optional compact sweep recipe:
+
+1. Extract ticket-named paths from `What to Change`, `Files to Touch`, acceptance criteria, command blocks, and named witness/artifact bullets.
+2. Compare that list against `git diff --name-only` plus `git status --short`, not `git diff` alone, so untracked new tests, fixtures, reports, or draft tickets are visible.
+3. For each ticket-named path, record `done`, `verified-no-edit`, `rewritten in active ticket`, `blocked`, or `needs 1-3-1`.
+4. For each changed path not named by the ticket, classify it as `owned fallout`, `stale canonical drift`, or `unrelated churn`; update the active ticket closeout when the final diff intentionally includes it.
+5. If the sweep finds a named artifact still missing or an unexplained extra artifact, fix the code/ticket boundary and rerun the narrowest affected proof before terminal status.
 
 If that sweep finds ticket-named files that were intentionally left untouched because reassessment proved no live change was required, do not quietly leave the mismatch behind. Record the correction in the active ticket closeout so the final artifact explains why those paths remained unchanged.
 

@@ -92,6 +92,17 @@ For preparatory tickets landing shared helpers, contracts, or APIs ahead of call
 - If the ticket names files to inspect rather than modify, read and assess them; leave unchanged when evidence shows no edit is needed; state the no-change decision explicitly.
 - If a ticket names an authored data file as an optional surface tweak, verify whether compiled defaults already satisfy the contract before editing.
 
+## Compiler Diagnostic Tickets
+
+For CNL/compiler diagnostic tickets whose owned behavior is a new warning, error, or validation message:
+
+1. Locate the canonical diagnostic-code registry before adding the code. In this repo, generic diagnostic shape types may live separately from the string-code registry; use the live code owner rather than the ticket's guessed path when they differ, and record the correction in working notes or the active ticket outcome.
+2. Decide which pass owns the diagnostic: structural validator, compiler/lowerer, cross-validator, schema boundary, or runtime GameDef validator. Prefer the earliest pass that legitimately has all required static information and matches `docs/FOUNDATIONS.md` validation boundaries.
+3. Prove the diagnostic through the public compile or validate entrypoint that actually runs the owning pass. Avoid testing private helpers or exporting internals solely for the diagnostic unless the ticket explicitly owns that surface.
+4. For warning-tier diagnostics, assert both the diagnostic code/severity/message trigger and that no error diagnostic blocks compilation when the authored state is otherwise valid.
+5. Add suppression cases for each intended non-trigger boundary, especially corrected authoring, default/unset config, and sibling enum modes.
+6. If the diagnostic code is added without changing schemas, serialized trace/result shape, or generated artifacts, record `generated fallout: none`; if the diagnostic changes an exported union, schema source, or serialized result field, switch to shared-contract guidance before final proof.
+
 ## Investigation Ticket Reassessment Patterns
 
 For investigation tickets whose primary output is a checked-in measurement artifact, do one **minimal witness probe** before durable artifact generation whenever the ticket predicts a specific distribution, subset size, or diagnostic outcome. If that first probe contradicts the framing, stop for 1-3-1 before writing the durable fixture/report artifact; use a temp path or ephemeral output until the measurement seam is confirmed.

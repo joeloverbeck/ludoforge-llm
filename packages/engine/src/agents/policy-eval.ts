@@ -159,6 +159,7 @@ export interface PolicyEvaluationTieBreakStep {
 export interface PolicyEvaluationPreviewUsage {
   readonly mode: AgentPreviewMode;
   readonly evaluatedCandidateCount: number;
+  readonly completionPolicyFallbackCount: number;
   readonly refIds: readonly string[];
   readonly unknownRefs: readonly PolicyPreviewUnknownRef[];
   readonly readyRefStats: Readonly<Record<string, ReadyRefStats>>;
@@ -275,6 +276,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
   selectionReason?: SelectionReason;
@@ -1114,6 +1116,10 @@ function summarizePreviewUsage(
   return {
     mode,
     evaluatedCandidateCount: evaluatedCandidates.length,
+    completionPolicyFallbackCount: evaluatedCandidates.reduce(
+      (total, candidate) => total + (candidate.completionPolicyFallbackCount ?? 0),
+      0,
+    ),
     refIds: sortedRefIds,
     unknownRefs: [...unknownRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
@@ -1221,6 +1227,7 @@ function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage
   return {
     mode,
     evaluatedCandidateCount: 0,
+    completionPolicyFallbackCount: 0,
     refIds: [],
     unknownRefs: [],
     readyRefStats: {},

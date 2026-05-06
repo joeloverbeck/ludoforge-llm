@@ -436,6 +436,7 @@ agents:
       observer: currentPlayer
       preview:
         mode: exactWorld
+        topK: 10
       params:
         projectedMarginWeight: 300
         governWeight: 1000

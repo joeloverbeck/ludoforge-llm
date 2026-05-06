@@ -1,6 +1,6 @@
 # 160PEROPTPREV-002: Export `pickInnerDecision` from `policy-preview.ts`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-preview.ts`
@@ -72,3 +72,23 @@ The signature, body, and all internal calls remain identical.
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm turbo typecheck`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-06.
+
+- Landed boundary: `pickInnerDecision` is exported from `packages/engine/src/agents/policy-preview.ts` with no signature or body changes.
+- Touched-file scope: only `packages/engine/src/agents/policy-preview.ts` is expected to change for implementation.
+- Post-ticket review: no must-fix cleanup or follow-up ticket was warranted; active tickets 003-010 retain the remaining Spec 160 work.
+- Generated fallout: none; no schema, fixture, golden, or compiled JSON source changes.
+- Deferred sibling/spec scope: tickets 003-010 retain the broader Spec 160 schema, ref-family, inner-driver, trace, warning, golden, and documentation work.
+- Source file size ledger: `policy-preview.ts` was already over repository guidance at 1285 lines; this ticket adds no lines or logic, so extraction is not part of this boundary.
+- Runtime surface breadth: policy/agent-only export surface; runtime behavior is unchanged.
+- Final proof, serial order:
+  1. `pnpm -F @ludoforge/engine build` — passed.
+  2. `pnpm -F @ludoforge/engine test:unit` — passed, 5543 tests.
+  3. `pnpm -F @ludoforge/engine test` — passed, including `schema:artifacts:check` and 64/64 default files.
+  4. `pnpm turbo typecheck` — passed, 3/3 tasks.
+  5. `node -e "import('./packages/engine/dist/src/agents/policy-preview.js').then((m)=>{ if (typeof m.pickInnerDecision !== 'function') { throw new Error('pickInnerDecision export missing'); } console.log('pickInnerDecision export ok'); })"` — passed after the final Turbo-triggered engine rebuild.
+  6. `pnpm run check:ticket-deps` — passed for 9 active tickets and 2258 archived tickets.
+- No-invalidation: terminal status/proof/dependency-check transcription only; no scope, acceptance, command, touched-file, follow-up, dependency, source, test, schema, or artifact change after the final import smoke and dependency check.

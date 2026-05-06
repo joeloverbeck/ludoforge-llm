@@ -31,6 +31,8 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 
 Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 
+For tiny bounded local changes, keep the checkpoint complete but do not over-expand fields that are genuinely irrelevant. It is acceptable to group adjacent non-applicable ledgers into one explicit line, for example `not applicable: migration scripts, commit-body evidence, red gates, diagnostic metrics`, as long as the grouped line still covers every required field and any non-`not applicable` field is stated separately.
+
 If you resume from context compaction, interruption, or a long handoff summary, do not rely on a summary sentence that says the checkpoint happened unless the full ticket-named deliverables ledger is visible. Reconstruct the ledger from the active ticket's explicit `What to Change`, `Files to Touch`, named artifacts/tests, `git diff --name-only`, and `git status --short` before any further file edit or terminal closeout. Re-emit the reconstructed ledger when it changes the owned boundary, proof plan, or closeout status.
 
 If you realize after editing that this checkpoint was missed, emit a recovery checkpoint immediately. Mark it as late, list which boundary decisions and proof lanes were already chosen or run, and do not present it as satisfying the pre-edit stop requirement in later audit or closeout language.

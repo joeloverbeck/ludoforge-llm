@@ -517,7 +517,7 @@ const pickPolicyGuidedChooseNStepDecision = (
   return undefined;
 };
 
-const pickInnerDecision = (
+export const pickInnerDecision = (
   state: GameState,
   def: GameDef,
   microturn: ReturnType<typeof publishMicroturn>,

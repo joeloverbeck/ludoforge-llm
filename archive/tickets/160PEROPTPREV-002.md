@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-preview.ts`
-**Deps**: `specs/160-per-option-preview-inner-microturns.md`
+**Deps**: `archive/specs/160-per-option-preview-inner-microturns.md`
 
 ## Problem
 
@@ -76,6 +76,8 @@ The signature, body, and all internal calls remain identical.
 ## Outcome
 
 Completed on 2026-05-06.
+
+Outcome amended: 2026-05-07 — updated archived Spec 160 dependency path after spec archival.
 
 - Landed boundary: `pickInnerDecision` is exported from `packages/engine/src/agents/policy-preview.ts` with no signature or body changes.
 - Touched-file scope: only `packages/engine/src/agents/policy-preview.ts` is expected to change for implementation.

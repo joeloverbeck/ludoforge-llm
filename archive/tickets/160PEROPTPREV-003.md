@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `schemas/GameDef.schema.json`, `cnl/compile-agents.ts`, `kernel/types-core.ts`, `kernel/schemas-core.ts`
-**Deps**: `specs/160-per-option-preview-inner-microturns.md`
+**Deps**: `archive/specs/160-per-option-preview-inner-microturns.md`
 
 ## Problem
 
@@ -119,6 +119,8 @@ Register `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED` in the diagn
 ## Outcome
 
 Completed on 2026-05-06.
+
+Outcome amended: 2026-05-07 — updated archived Spec 160 dependency path after spec archival.
 
 - Landed `preview.inner` as an optional authored profile block with `chooseOne` / `chooseNStep` defaulting to `false` and `maxOptions` / `chooseNBeamWidth` / `depthCap` defaulting to `1` at lowering time.
 - Added `INNER_PREVIEW_HARD_CAP = 256` in `packages/engine/src/cnl/compile-agents.ts` and compile-time validation for `maxOptions * chooseNBeamWidth * depthCap`.

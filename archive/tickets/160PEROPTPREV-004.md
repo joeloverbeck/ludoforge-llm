@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — compiler ref lowering, compiled ref/schema contract, policy-bytecode feature registration, runtime default dispatch, generated `GameDef.schema.json`
-**Deps**: `specs/160-per-option-preview-inner-microturns.md`
+**Deps**: `archive/specs/160-per-option-preview-inner-microturns.md`
 
 ## Problem
 
@@ -103,6 +103,8 @@ Extend the compiled ref union and schema source, then regenerate `packages/engin
 ## Outcome
 
 Completed on 2026-05-06.
+
+Outcome amended: 2026-05-07 — updated archived Spec 160 dependency path after spec archival.
 
 - Landed boundary: the eight `preview.option.*` refs lower to a distinct compiled `previewOptionRef` family, are classified as microturn-scope refs, receive deterministic policy-bytecode feature-table encoding, and resolve from an optional per-option preview map when present. With no driver map, runtime resolution returns the existing unresolved/undefined default; ticket 005 remains the owner of driver population, hidden-info routing, and delta semantics.
 - Ticket corrections applied: `policy-expr.ts` dispatch -> live compiler/runtime dispatch in `compile-agents.ts` and `policy-evaluation-core.ts`; generated schema enum -> source schema/type contract plus regenerated `GameDef.schema.json`.

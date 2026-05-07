@@ -246,6 +246,96 @@ preferPatronageMode:
         - patronage
 ```
 
+## Inner Preview
+
+Spec 160 adds opt-in preview for inner `chooseOne` and `chooseNStep` microturns. This is the microturn-level analog of action-selection preview: instead of asking "what state would this action-selection candidate reach?", the profile can ask "what state would this currently published option reach?".
+
+This surface exists to keep authored policy data aligned with Foundation 10 and Foundation 19. The driver is bounded, and it scores the same atomic microturn options the kernel publishes.
+
+### `preview.inner` Configuration
+
+`preview.inner` is a profile-level block under `preview`:
+
+```yaml
+preview:
+  mode: exactWorld
+  completion: policyGuided
+  fallbackCompletionPolicy: fail
+  inner:
+    chooseOne: true
+    chooseNStep: false
+    maxOptions: 8
+    chooseNBeamWidth: 1
+    depthCap: 4
+```
+
+Fields:
+
+| Field | Meaning |
+| --- | --- |
+| `chooseOne` | Enables one per-option preview drive for each legal `chooseOne` option. Defaults to `false`. |
+| `chooseNStep` | Enables bounded beam preview for `chooseNStep` frontiers. Defaults to `false`. |
+| `maxOptions` | Maximum options considered at each inner frontier. Defaults to `1` when the block is lowered. |
+| `chooseNBeamWidth` | Beam width for `chooseNStep` preview. Defaults to `1`. |
+| `depthCap` | Maximum synthetic microturn depth for each per-option drive. Defaults to `1`. |
+
+The compiler enforces `maxOptions * chooseNBeamWidth * depthCap <= 256` (`INNER_PREVIEW_HARD_CAP`). For a simple `chooseOne`, cost is bounded by `maxOptions * depthCap`. For `chooseNStep`, cost is bounded by the full triple product.
+
+When `chooseOne: true` is authored but no `scopes: [microturn]` consideration references a `preview.option.*` ref, the compiler emits a warning. The driver would run in that configuration, but it would not contribute a scoring signal.
+
+### `preview.option.*` Refs
+
+Use these from microturn-scoped considerations. They are registered in this order:
+
+| Ref | Meaning |
+| --- | --- |
+| `preview.option.victory.currentMargin.self` | Projected own victory margin after the option. |
+| `preview.option.victory.currentRank.self` | Projected own rank after the option. |
+| `preview.option.delta.victory.currentMargin.self` | Projected margin change for this option, computed as post-option minus pre-option. |
+| `preview.option.var.global.<id>` | Projected global variable value after the option. |
+| `preview.option.var.player.self.<id>` | Projected acting-seat variable value after the option. |
+| `preview.option.metric.<id>` | Projected derived metric value after the option. |
+| `preview.option.outcome` | Per-option preview outcome, such as `ready`, `hidden`, or `depthCap`. |
+| `preview.option.driveDepth` | Synthetic microturn depth reached by the per-option drive. |
+
+Always handle non-ready outcomes explicitly. If a ref would touch a hidden surface for the acting observer, inner preview reports that through the existing hidden preview outcome and increments the hidden outcome breakdown. That preserves Foundation 4: policy data can react to hidden-safe status, but it does not inspect the hidden value.
+
+### Govern-Mode Example
+
+This diagnostic profile shape opts into per-option preview for an inner govern-mode `chooseOne`. The `preferOptionProjectedMargin` consideration scores each option by its projected margin delta, so the agent can prefer a higher-margin option such as `patronage` over a greedy alphabetical choice such as `aid` when the projection supports it.
+
+```yaml
+agents:
+  library:
+    considerations:
+      preferOptionProjectedMargin:
+        scopes: [microturn]
+        costClass: preview
+        weight: 300
+        value:
+          ref: preview.option.delta.victory.currentMargin.self
+
+  profiles:
+    arvn-inner-preview:
+      extends: arvn-evolved
+      observer: currentPlayer
+      preview:
+        mode: exactWorld
+        completion: policyGuided
+        fallbackCompletionPolicy: fail
+        inner:
+          chooseOne: true
+          chooseNStep: false
+          maxOptions: 8
+          chooseNBeamWidth: 1
+          depthCap: 4
+      use:
+        considerations:
+          - preferOptionProjectedMargin
+```
+
+Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` to confirm the per-option values differ. In the verbose inner-frontier trace, the selected option should show a positive `scoreContributions[]` entry for `preferOptionProjectedMargin` when this term is the reason the option wins.
+
 ### Gap Diagnosis Quick Map
 
 | Symptom | Trace field to inspect |

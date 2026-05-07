@@ -1,7 +1,7 @@
 # Spec 160: Per-Option Preview at Inner Microturns
 
-**Status**: DRAFT
-**Priority**: P1 (closes Gap 4 from `reports/microturn-preview-architectural-gaps-2026-05-06.md` — inner `chooseOne` / `chooseNStep` microturns currently have no per-option preview signal; the only differentiation path is microturn-scope considerations on static features. With per-option preview, an operator can author "prefer the option whose projected margin is higher" directly.)
+**Status**: COMPLETED
+**Priority**: P1 (closes Gap 4 from `archive/reports/microturn-preview-architectural-gaps-2026-05-06.md` — inner `chooseOne` / `chooseNStep` microturns currently have no per-option preview signal; the only differentiation path is microturn-scope considerations on static features. With per-option preview, an operator can author "prefer the option whose projected margin is higher" directly.)
 **Complexity**: L (new evaluation context at inner microturns; per-option synthetic completion driver; chooseN beam preview with bounded triple product; hidden-information protection; new `preview.option.*` ref family; opt-in config; reuses Spec 146 draft state)
 **Dependencies**:
 - Spec 158 [microturn-policy-scope-and-refs] (archived) — `microturn.option.*` refs exist; this spec adds the `preview.option.*` family that's queryable from microturn-scope considerations.
@@ -15,8 +15,8 @@
 - Foundation 19 (Decision-Granularity Uniformity) — preview at inner microturns is the per-published-option analog of preview at action-selection; same protocol, finer granularity.
 
 **Source**:
-- `reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 4 (inner microturns `previewUsage.mode: "disabled"` everywhere).
-- `reports/preview-policy-corrections.md` §5 (split-move literature), §"Recommendation G" (preview only for published options), §"Recommendation 5" (per-option preview for inner microturns), Phase 5 of recommended sequence.
+- `archive/reports/microturn-preview-architectural-gaps-2026-05-06.md` Gap 4 (inner microturns `previewUsage.mode: "disabled"` everywhere).
+- `archive/reports/preview-policy-corrections.md` §5 (split-move literature), §"Recommendation G" (preview only for published options), §"Recommendation 5" (per-option preview for inner microturns), Phase 5 of recommended sequence.
 - Code anchors:
   - `packages/engine/src/agents/policy-agent.ts:122` — `previewUsage: emptyPreviewUsage()` hardcoded inside `chooseStructuralFrontierDecision`, the inner-microturn path reached via `chooseFrontierDecision`.
   - `packages/engine/src/agents/policy-agent.ts:144-164` — module-private `emptyPreviewUsage()` (no-arg) shape.
@@ -37,8 +37,8 @@ The Claude report's Gap 4 recognizes the structural decision: Spec 145 explicitl
 
 **Prior art surveyed.**
 
-- **Split-move literature in General Game Playing (`reports/preview-policy-corrections.md` §5).** Decisions composed of several lower-level decisions can be searched at any granularity. Per-option preview is the LudoForge analog: at a chooseOne, evaluate each option as if it were chosen, then complete the rest of the compound turn.
-- **TAG / OpenSpiel forward-model rollouts at sub-decision granularity (`reports/preview-policy-corrections.md` §7).** Both frameworks let agents probe "what happens if I make this lower-level choice?" by applying the choice to a draft state and continuing. The shape this spec adopts is exactly the same: apply option to draft, continue with `policyGuided` to depth cap, resolve refs.
+- **Split-move literature in General Game Playing (`archive/reports/preview-policy-corrections.md` §5).** Decisions composed of several lower-level decisions can be searched at any granularity. Per-option preview is the LudoForge analog: at a chooseOne, evaluate each option as if it were chosen, then complete the rest of the compound turn.
+- **TAG / OpenSpiel forward-model rollouts at sub-decision granularity (`archive/reports/preview-policy-corrections.md` §7).** Both frameworks let agents probe "what happens if I make this lower-level choice?" by applying the choice to a draft state and continuing. The shape this spec adopts is exactly the same: apply option to draft, continue with `policyGuided` to depth cap, resolve refs.
 - **Spec 146 [scoped-draft-state-for-preview-drive] (archived).** Already provides bounded copy-on-write draft state per preview drive via `createMutableState` (`packages/engine/src/kernel/state-draft.ts:52`). Each per-option preview drive obtains an independent draft (per-call isolation, not stacked scopes); when the agent is at an inner microturn already, the per-option drive runs against the current authoritative state with no parent-scope coupling.
 - **`preview.victory.currentMargin.self` (existing).** The action-selection-level family. `preview.option.victory.currentMargin.self` is the analog at inner-microturn granularity. The naming convention is consistent.
 
@@ -255,4 +255,13 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/160PEROPTPREV-007.md`](../archive/tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
 - [`archive/tickets/160PEROPTPREV-008.md`](../archive/tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)
 - [`archive/tickets/160PEROPTPREV-009.md`](../archive/tickets/160PEROPTPREV-009.md) — FITL canary golden test for inner preview (covers AC #6)
-- [`tickets/160PEROPTPREV-010.md`](../tickets/160PEROPTPREV-010.md) — Cookbook documentation for `preview.inner` and `preview.option.*` (covers cookbook deliverable)
+- [`archive/tickets/160PEROPTPREV-010.md`](../archive/tickets/160PEROPTPREV-010.md) — Cookbook documentation for `preview.inner` and `preview.option.*` (covers cookbook deliverable)
+
+## Outcome
+
+Completed on 2026-05-07.
+
+- Implemented through archived ticket series `160PEROPTPREV-001` through `160PEROPTPREV-010`.
+- Landed `preview.inner` config, bounded per-option `chooseOne` preview, bounded `chooseNStep` beam preview, hidden-info routing, trace integration, compile-time warning coverage, FITL canary golden coverage, and cookbook documentation.
+- Ticket 010 closeout verified the final docs handoff with content checks, `pnpm -F @ludoforge/engine build`, `node --test dist/test/integration/policy-preview-inner-fitl-canary-golden.test.js`, `pnpm turbo lint`, `pnpm turbo test`, and `pnpm run check:ticket-deps`.
+- Deviations from the draft: the cookbook closeout used the existing diagnostic FITL profile and golden test as the manual validation seam rather than introducing production FITL profile changes, which remained out of scope.

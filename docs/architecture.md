@@ -112,7 +112,7 @@ These are the concrete members behind Spec 143's starter-table row "GameDefRunti
 - Lifecycle start: `createZobristTable(...)` allocates `keyCache`; every forked run gets a fresh `new Map()` from `forkGameDefRuntimeForRun(...)`
 - Lifecycle end: explicit reset at the run boundary in `forkGameDefRuntimeForRun(...)`; otherwise ends when the forked runtime is dropped
 - Canonical identity status: compact. Keys are encoded Zobrist features, not oversized serialized replay payloads
-- Heap-snapshot evidence: direct top-N match in [reports/spec-143-heap-snapshot.md](/home/joeloverbeck/projects/ludoforge-llm/reports/spec-143-heap-snapshot.md) with representative retained size growth from `1.11 MiB` at turn `0` to `1.97 MiB` at turn `3`
+- Heap-snapshot evidence: direct top-N match in [archive/reports/spec-143-heap-snapshot.md](/home/joeloverbeck/projects/ludoforge-llm/archive/reports/spec-143-heap-snapshot.md) with representative retained size growth from `1.11 MiB` at turn `0` to `1.97 MiB` at turn `3`
 
 This remains the first clearly runtime-owned growing top-N retainer in the 001 capture. The audit confirms the intended class and the existing run-boundary reset owner.
 

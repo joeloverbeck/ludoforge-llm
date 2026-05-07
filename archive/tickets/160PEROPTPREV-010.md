@@ -1,6 +1,6 @@
 # 160PEROPTPREV-010: Cookbook documentation for `preview.inner` and `preview.option.*`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs-only
@@ -90,3 +90,24 @@ Show a govern-mode chooseOne profile snippet with:
 
 1. `pnpm turbo lint`
 2. Manual: copy the worked-example snippet into a test diagnostic profile and confirm it compiles + triggers the driver.
+
+## Outcome
+
+Completed on 2026-05-07.
+
+- Landed docs-only cookbook coverage in `docs/agent-dsl-cookbook.md`.
+- Added a `preview.inner` configuration section covering `chooseOne`, `chooseNStep`, `maxOptions`, `chooseNBeamWidth`, `depthCap`, the `maxOptions * chooseNBeamWidth * depthCap <= 256` hard cap, and the warning for `chooseOne: true` without a microturn `preview.option.*` consideration.
+- Added a `preview.option.*` reference table in the same order as `PREVIEW_OPTION_REF_KIND_CODE` in `packages/engine/src/cnl/policy-bytecode/feature-table.ts`.
+- Added a govern-mode `preferOptionProjectedMargin` worked example using `preview.option.delta.victory.currentMargin.self`.
+- Boundary corrections: hidden-info wording follows the live implementation's existing hidden preview outcome and hidden outcome breakdown; no schema/code/profile migration is owned by this docs-only ticket.
+- Manual validation plan: use the existing Spec 160 diagnostic FITL profile and golden test, which already compile the `preferOptionProjectedMargin` diagnostic profile and prove the inner-preview driver is active.
+- Verification:
+  - `rg -n 'Spec 160|Foundation 10|Foundation 19|preview\.option\.victory\.currentMargin\.self|preview\.option\.victory\.currentRank\.self|preview\.option\.delta\.victory\.currentMargin\.self|preview\.option\.var\.global\.<id>|preview\.option\.var\.player\.self\.<id>|preview\.option\.metric\.<id>|preview\.option\.outcome|preview\.option\.driveDepth|preferOptionProjectedMargin' docs/agent-dsl-cookbook.md` — passed; all required cookbook anchors present.
+  - `git diff --check` — passed.
+  - `pnpm -F @ludoforge/engine build` — passed.
+  - `node --test dist/test/integration/policy-preview-inner-fitl-canary-golden.test.js` from `packages/engine` — passed; 1 test.
+  - `pnpm turbo lint` — passed; 2 tasks successful.
+  - `pnpm turbo test` — passed; 5 tasks successful.
+  - `pnpm run check:ticket-deps` — passed; 1 active ticket and 2266 archived tickets checked.
+- No-invalidation: terminal status/proof transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the final proof lanes.
+- No-invalidation after dependency-check transcription: checker-result transcription only; no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification changed.

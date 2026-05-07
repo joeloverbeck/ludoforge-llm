@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-eval.ts`, `agents/policy-agent.ts`
-**Deps**: `specs/160-per-option-preview-inner-microturns.md`
+**Deps**: `archive/specs/160-per-option-preview-inner-microturns.md`
 
 ## Problem
 
@@ -114,6 +114,8 @@ No-invalidation: the terminal status/proof transcription records the already-run
 ## Outcome
 
 Completed on 2026-05-06.
+
+Outcome amended: 2026-05-07 — updated archived Spec 160 dependency path after spec archival.
 
 - Added `'beamPruned'` to the canonical policy-candidate selection-reason enum and synchronized the trace type, Zod schema, and generated JSON Schema mirror.
 - Exported the canonical `emptyPreviewUsage(mode)` helper from `policy-eval` and removed the duplicated local helper in `policy-agent`.

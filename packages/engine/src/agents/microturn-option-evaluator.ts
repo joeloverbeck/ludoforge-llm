@@ -47,7 +47,7 @@ const scoreContributionsKeyForChooseNStepAdd = (
 const sumContributions = (contributions: readonly CompletionScoreContribution[]): number =>
   contributions.reduce((total, contribution) => total + contribution.contribution, 0);
 
-const microturnConsiderationIdsForProfile = (
+export const microturnConsiderationIdsForProfile = (
   catalog: AgentPolicyCatalog,
   profile: CompiledAgentProfile,
 ): readonly string[] => {

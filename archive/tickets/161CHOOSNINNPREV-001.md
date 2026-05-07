@@ -89,6 +89,8 @@ The new file imports from `./policy-preview-inner.ts` (for `InnerPreviewBaseInpu
 
 ## Outcome
 
+Outcome amended: 2026-05-07
+
 Completed on 2026-05-07. The implemented slice relocates the existing chooseNStep beam driver into `packages/engine/src/agents/policy-preview-inner-choosenstep.ts`, exports `InnerPreviewBaseInput` plus the shared internal ref/outcome helpers required by that sibling, and updates the existing beam-driver unit test to import the relocated module directly.
 
 Touched-file scope matches the ticket's `Files to Touch` list. Generated fallout is limited to transient `dist/` output from the build/test lanes; no schema, golden, or compiled JSON artifacts are owned by this refactor.
@@ -102,7 +104,7 @@ Acceptance proof:
 5. `pnpm -F @ludoforge/engine test` — passed, including `schema:artifacts:check` and default lane summary `65/65 files passed`.
 6. Structural probes passed: `policy-preview-inner.ts` is 508 lines; `policy-preview-inner-choosenstep.ts` is 287 lines; no chooseNStep beam driver/type/helper exports remain in `policy-preview-inner.ts`.
 
-Sibling/deferred scope: untracked same-series drafts `tickets/161CHOOSNINNPREV-002.md`, `003.md`, and `004.md` exist and remain `PENDING`; they own the new per-root-option driver, runtime adapter/interface, and dispatch/integration work that this ticket explicitly excludes.
+Sibling/deferred scope: `archive/tickets/161CHOOSNINNPREV-002.md` now owns the completed per-root-option driver; active tickets `tickets/161CHOOSNINNPREV-003.md` and `tickets/161CHOOSNINNPREV-004.md` remain `PENDING` and own the runtime adapter/interface and dispatch/integration work that this ticket explicitly excludes.
 
 Ticket graph integrity: `pnpm run check:ticket-deps` passed for 13 active tickets and 2267 archived tickets.
 

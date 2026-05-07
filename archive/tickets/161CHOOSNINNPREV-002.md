@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-002: `runChooseNStepInnerPreview` per-root-option driver
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/`
@@ -128,3 +128,32 @@ Sum of `1` (forced root ADD) plus the continuation `evaluatedCandidateCount` (or
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-07. The implemented slice adds `runChooseNStepInnerPreview` to `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` and adds the focused architectural unit test `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.ts`.
+
+Touched-file scope:
+
+- `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` — done; adds the per-root ADD driver, exported result/input interfaces, deterministic stable-key ordering, continuation beam delegation with `depthCap - 1`, completion-drive fallback for confirm-only/advanced continuations, outcome/ref resolution, and `evaluatedCandidateCount` bookkeeping.
+- `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.ts` — done; covers one result per ADD, no CONFIRM entry, lexicographic stable-key order, independent draft outcomes through post-confirm global score refs, and the squared-cost upper-bound assertion.
+- `specs/161-choosenstep-inner-preview-integration.md` — owned closeout fallout; Phase A MVP checkbox updated because ticket 001 already completed extraction and this ticket completes the driver/test half.
+
+Deferred sibling scope remains unchanged: runtime adapter/interface (`tickets/161CHOOSNINNPREV-003.md`), dispatch/differentiation/key parity (`tickets/161CHOOSNINNPREV-004.md`), warning parity (`tickets/161CHOOSNINNPREV-005.md`), cost formula/diagnostic rename (`tickets/161CHOOSNINNPREV-006.md`), and later Phase D proof/doc/manual validation tickets stay active.
+
+Generated fallout: transient `packages/engine/dist/` output only; no schema, golden, or compiled JSON artifact is owned by this ticket.
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.js | split into serial build plus focused compiled test | build passed; focused compiled test passed after the later typecheck build refreshed dist`
+- `Test Plan | pnpm turbo typecheck | run literally | passed`
+- `Test Plan | pnpm turbo lint | run literally | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test | run literally | passed; default lane summary `65/65 files passed``
+
+Additional acceptance sweep:
+
+- File size: `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` is 591 lines and the new unit test is 277 lines; both are under the repo cap.
+- Runtime surface breadth: shared agent preview internals only. Production chooseNStep adapter/dispatch remains deferred to tickets 003 and 004, so this driver is not yet production-routed by `PolicyAgent`.
+- Output sequencing: final `dist` consumer proof was rerun after `pnpm turbo typecheck` rebuilt `packages/engine/dist`.
+- Ticket graph integrity: `pnpm run check:ticket-deps` passed for 12 active tickets and 2268 archived tickets.
+- Late-edit proof validity: terminal status/proof transcription plus dependency-check result transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the green lanes.

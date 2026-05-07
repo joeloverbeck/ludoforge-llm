@@ -138,6 +138,18 @@ When the ticket lands successfully but the live investigation disproves part of 
 
 - `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
 
+## Split Phase Completion
+
+When a spec phase or checklist item is satisfied by the combination of an already-landed predecessor plus the current ticket, record the basis before marking the phase complete:
+
+- predecessor ticket/path and durable state
+- current ticket-owned remaining slice
+- why the combined work satisfies the spec item
+- deferred sibling owner, or `none`
+- proof lane that covers the current slice and any already-landed predecessor assumption you relied on
+
+Do not mark a phase complete merely because the current ticket landed if a named predecessor or sibling condition is still unresolved.
+
 ## Draft Ticket Closeout Order
 
 For active draft tickets that are likely to change durable status in the same turn, use this compact closeout order before the final proof run:
@@ -184,6 +196,7 @@ When all final proof lanes are already green/classified and the only remaining c
 2. Record the no-invalidation rationale in the ticket outcome, for example `terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
 3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
+   - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
 5. Run the final untracked-aware `git status --short` sweep before the user handoff.
 
 ## Dependency Integrity Pass

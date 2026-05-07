@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/`
-**Deps**: `tickets/161CHOOSNINNPREV-002.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-002.md`
 
 ## Problem
 

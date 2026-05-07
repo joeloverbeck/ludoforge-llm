@@ -38,7 +38,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 5. **Set persistent working directory**: After setup, run `cd $WT` as a standalone Bash command to anchor the session's working directory in the worktree. All subsequent Bash commands will execute from the worktree root. Do NOT rely solely on `cd $WT &&` chains — if any later command uses `cd` to another directory, the working directory drifts silently. Verify with `pwd` before the baseline harness run.
 
 6. **Copy runtime files**: Copy ALL non-tracked files from the source campaign folder to the worktree campaign folder. Use `ls` to enumerate, then copy any that don't exist in the worktree. Common runtime files include `results.tsv`, `seed-tier.txt`, `checkpoints.jsonl`, `lessons.jsonl`, `last-trace.json`, and `traces/`. These are gitignored and won't be created by `git worktree add`. **`musings.md` is conditional**: it may be tracked or gitignored depending on the campaign — verify with `git check-ignore campaigns/<campaign>/musings.md` and copy only if gitignored. If tracked, the worktree already has the canonical version from `git worktree add`; copying from main would either be a no-op or could mask a deliberate truncation the user committed to main.
-   - **Project-wide build artifacts**: if the engine test suite or harness depends on compiled binaries (e.g., `packages/*/target/`, `dist/`, `build/`) that are gitignored, copy these from the source repo too. Failed test runs after `git worktree add` are often caused by missing build outputs, not source code differences. Quick probe: run `git status --ignored` in the source repo to enumerate gitignored build artifacts, then mirror the relevant ones (typically the compiled outputs the test gate loads) into the worktree.
+   - **Project-wide build artifacts (auto-mirror)**: if the engine test suite or harness depends on compiled binaries that are gitignored, mirror them from the source repo to avoid a fail-then-mirror cycle. Auto-mirror these well-known paths if they exist in the source: `packages/*/target/` (Rust / Cargo / wasm-pack output), `packages/engine/dist/` (TypeScript build output), `packages/runner/dist/`. Use `cp -r <src> <dst>` if `<src>` exists and `<dst>` does not. For other gitignored build outputs not in this list, run `git status --ignored` in the source repo to enumerate, then mirror the relevant ones (typically the compiled outputs the test gate loads). Failed test runs after `git worktree add` with `ENOENT` errors for paths under `packages/*/target/` or `dist/` are the diagnostic signal — see Phase 1 Baseline Failure Protocol step 3 for the symptom-to-fix mapping.
 
 ## Phase 0 — Setup
 
@@ -61,7 +61,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 
 #### State Initialization
 
-10. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND this is a new worktree (not resuming), clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`.
+10. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND musings.md does not contain a `**STRATEGY SHIFT**:` or `**CONTINUATION**:` marker, clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`. This applies on a fresh worktree creation OR after STALE BASELINE recovery in step 3, since both produce the same logical "fresh restart" state.
 11. Initialize strategy state: `strategy = "normal"`, `consecutive_rejects = 0`, `total_accepts = 0`.
 12. Read `campaigns/lessons-global.jsonl` if it exists — inject relevant global lessons into context. When applying global lessons from a different campaign (different `campaign` field), treat them as **hypotheses to verify**, not established facts. Cross-campaign lessons may be stale due to engine changes, different game mechanics, or different optimization targets. Note in musings which global lessons are being applied and flag any that come from campaigns targeting a different faction, game, or metric.
 13. Read `$WT/campaigns/<campaign>/lessons.jsonl` if resuming — prune lessons with `decay_weight < 0.3`. For lessons lacking a `type` field (backward compatibility), treat as `finding` (if `polarity: positive`) or `negative` (if `polarity: negative`).
@@ -105,13 +105,15 @@ bash campaigns/<campaign>/harness.sh
 
 Apply this preflight at every harness call site: Phase 1 baseline (step 1 above), Step 4 EXECUTE in `references/harness-execution.md`, ceiling-baseline runs after a tier promotion or phase transition, post-meta-review trial runs. The paren-subshell form `(cd "$WT" && bash campaigns/<campaign>/harness.sh)` is a stricter inline equivalent that scopes the `cd` to a child shell and never leaks cwd back to the parent — useful for one-off harness probes from inside a longer diagnostic sequence.
 
+**Background launch**: harness runs are typically multi-minute. Launch them with `run_in_background: true` to avoid blocking the conversation; the runtime delivers a background-task-completion notification when the command finishes. Do NOT schedule a wakeup or sleep-poll while waiting — polling burns context budget for no benefit.
+
 ### Baseline Failure Protocol
 
 If the baseline harness fails (non-zero exit), this is a **campaign-blocking issue**, not an experiment failure. Do NOT apply workarounds to make the harness pass.
 
 1. **Investigate the root cause.** Follow the same diagnostic approach as the Human Investigation Interrupt protocol — read error output, trace logs, and reproduce minimally.
-2. **If the root cause is in the game spec or engine** (not the campaign configuration): escalate as an engine limitation. Create a spec in the main repo root (not the worktree) documenting the bug with reproduction steps. Then trigger degenerate campaign completion — the campaign cannot proceed until the bug is fixed.
-3. **If the root cause is in the campaign configuration** (wrong seed count, missing files, incorrect profile name, harness misconfiguration): fix the configuration and retry the baseline. This does not count as an experiment.
+2. **If the root cause is in the game spec or engine** (not the campaign configuration): escalate as an engine limitation. Create a spec or report in the main repo root (not the worktree) documenting the bug with reproduction steps — use a spec when there's a clear single fix, or a report when the limitation spans multiple gaps that need external research (per the criteria in Human Investigation Interrupt step 5). Then trigger degenerate campaign completion — the campaign cannot proceed until the bug is fixed.
+3. **If the root cause is in the campaign configuration** (wrong seed count, missing files, incorrect profile name, harness misconfiguration, missing build artifacts): fix the configuration and retry the baseline. This does not count as an experiment. **Common case**: an `ENOENT` error during the test gate for a path under `packages/*/target/` (Rust/wasm) or `dist/` (TypeScript) is a missing-build-artifact symptom — mirror the path from the source repo (per Worktree Requirement step 6's auto-mirror list) and retry.
 4. **Never mask a failing baseline with a workaround** (e.g., remapping error codes, suppressing exceptions, loosening assertions). A workaround produces unreliable metrics that invalidate all subsequent experiments.
 
 ## Phase 2 — Improvement Loop
@@ -130,6 +132,23 @@ If program.md defines fixture sync or tiered mutability, load `references/advanc
   - Force the next hypothesis to directly target the declared objective.
 - Prevents condition drift in long-running loops.
 - **Iteration cap**: If `MAX_ITERATIONS` is set (not `unlimited`) and `experiment_count >= MAX_ITERATIONS`, append to musings: `**ITERATION CAP**: Reached MAX_ITERATIONS (${MAX_ITERATIONS}). Exiting loop gracefully.` Exit the loop and proceed to "After Campaign Completes."
+
+### Step 0.5: USER PREAMBLE HONORING
+
+If the invocation includes preamble directives that constrain or modify the autonomy directive (custom halt conditions such as "stop and report if you discover architectural gaps", prioritized hypotheses, file-avoidance, verification requirements, lesson-staleness flags), parse and honor them — they take precedence over the default "Run this loop INDEFINITELY... Never stop. Never ask permission." stance for this campaign only.
+
+On the first iteration only:
+1. Identify each directive in the preamble. Quote it verbatim in musings under a `**USER DIRECTIVES**:` heading on the first ANCHOR entry.
+2. Map each halt-style directive to the closest existing trigger so the loop's procedural machinery applies:
+   - "halt and report if X is discovered" → Step 1g (Ceiling Detection) handoff with the discovery as the ceiling cause; OR Step 7.7 (Architectural-Gap Halt) if the discovery is engine-ignores-flag-shaped.
+   - "investigate before continuing" / "stop on Y" → Human Investigation Interrupt protocol.
+   - "verify Z with proof" → DIAGNOSE (Step 1b) requirement; treat as a precondition before forming experiment hypotheses.
+3. Map each constraint-style directive (avoid file Y, prefer hypothesis class X, treat lesson L as stale) to the relevant skill section:
+   - File-avoidance → Step 3 IMPLEMENT scope check (extend the immutable list with the user's avoided files for this campaign).
+   - Prioritized hypothesis → Step 2 HYPOTHESIZE (treat as a top-priority root cause to seed, ahead of UCB1 selection on the first iteration).
+   - Lesson-staleness flag → Step 12 of Phase 0 (treat the flagged lessons as hypotheses to verify with trace evidence rather than established facts) and persist a `type: negative` lesson if verified stale.
+
+Document each mapping inline in the first ANCHOR musings entry so subsequent iterations can find them. On every ANCHOR after the first, re-check whether any directive has triggered (e.g., the experiment surfaced the architectural gap the user asked about) and act accordingly.
 
 ### Step 1a: REFRESH (Correctness)
 
@@ -270,13 +289,36 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 ```
 The judgment is the agent's mechanistic audit of WHY the gain is so large. If no plausible mechanism explains the magnitude, re-classify as REJECT and roll back per Step 6.
 
-**V8 JIT deopt pattern detection**: If 3+ consecutive rejects show measured regressions (not within-noise, but slowdowns >1%) with root causes attributable to V8 JIT deoptimization (object shape changes, closure body modifications, hidden class mutations, WeakMap/caching overhead in kernel execution paths), flag as `**V8 JIT CEILING**` in musings. Skip directly to ceiling report with architectural spec creation (Option D in Step 1g). Further micro-optimization experiments are provably futile — the architecture must change. This pattern is distinct from a normal plateau (where experiments are within noise) — V8 deopt regressions are ACTIVE performance degradation, not just failure to improve.
+**V8 JIT deopt pattern detection**: If 3+ consecutive rejects show measured regressions (not within-noise, but slowdowns >1%) with root causes attributable to V8 JIT deoptimization (object shape changes, closure body modifications, hidden class mutations, WeakMap/caching overhead in kernel execution paths), flag as `**V8 JIT CEILING**` in musings. Skip directly to ceiling report with architectural spec or report creation (Option D in Step 1g). Further micro-optimization experiments are provably futile — the architecture must change. This pattern is distinct from a normal plateau (where experiments are within noise) — V8 deopt regressions are ACTIVE performance degradation, not just failure to improve.
 
 **Zero-effect detection**: If the evolved system's trace is functionally identical to the previous experiment, flag as `**ZERO-EFFECT**` in the musings entry. For agent evolution campaigns, compare the evolved seat's move sequence (actionIds in order) and final margin from the trace files. Byte-level trace comparison is too strict (timestamps, intermediate scores may differ); compare the decision-relevant fields only. For non-agent campaigns, compare the primary metric output and any trace summary the harness produces. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
 
 ### Step 7.6: EXTRACT LESSON
 
 Load `references/lesson-management.md`. Execute the curation gate and lesson extraction as described there.
+
+### Step 7.7: ARCHITECTURAL-GAP HALT
+
+Trigger this step before Step 8 (REPEAT) when the just-completed experiment surfaces an engine/runtime/DSL gap rather than a campaign-mutable-surface limitation. This is the agent-initiated counterpart to the Human Investigation Interrupt's engine-limitation discovery (step 5 of that protocol) and to Step 1g's Ceiling Detection — but it can fire after a single experiment, without waiting for `CEILING_THRESHOLD` non-accepts, when the evidence is definitive.
+
+**Trigger conditions** (any one is sufficient):
+1. The experiment's REJECT is caused by the engine *ignoring* a config flag the compiler validated (compile accepts → runtime no-ops). Diagnostic: a YAML opt-in produced no behavioral change, AND a trace inspection plus a grep across `packages/<pkg>/src/` shows the relevant runtime code path is missing or returns early.
+2. An experiment's trace reveals a documented capability (cookbook-listed, spec-promised, or referenced in another integration) that is non-functional under default settings — i.e., the docs and the runtime disagree.
+3. A user-preamble directive (Step 0.5) explicitly mapped a discovery class to "halt and report" and the experiment matches that class.
+
+**On trigger**:
+1. Classify the just-completed experiment per the normal Step 7 LOG status (typically `REJECT`, occasionally `CRASH`); the architectural-gap halt does NOT change the experiment's classification — it is an additional pause-and-report decision after the experiment is logged.
+2. Write a report (`reports/<topic>-<date>.md`) or spec (`specs/<NNN>-<name>.md`) in the main repo root (not the worktree). Use the same spec-vs-report criterion from Human Investigation Interrupt step 5 (single clear fix → spec; multi-gap research → report). The artifact MUST include:
+   - **Symptom** — the YAML opt-in / config / docs claim that should have worked, and the trace evidence of the no-op or divergence (per-decision excerpts, not just summaries).
+   - **Source-code citations** — file paths and line numbers for the missing wiring, the unused implementation, the validated-but-ignored config field. Run grep to confirm zero non-test callers if you suspect dead-end code.
+   - **Ticket archaeology** — if the gap traces to a deferred ticket (Out-of-Scope notes that say "follows the same pattern" but never landed), cite the ticket file path and the deferral text.
+   - **Adjacent concerns** — anything else surfaced during the audit that is suspicious but not the primary gap (e.g., a fallback semantic that may also be misbehaving). Flag uncertainty explicitly.
+   - **Proposed fix** — concrete implementation plan with alternatives compared. Cite the foundations the fix must respect.
+3. Append to musings: `**ARCHITECTURAL-GAP HALT**: <one-line summary>. See <report or spec path>. Halting at exp-NNN.`
+4. Append to results.tsv: `arch-gap-NNN	<best_metric>	0	architectural-gap	REJECT	architectural gap discovered at exp-NNN; see <artifact path>` (this is a marker row similar to ceiling-NNN, not a new experiment).
+5. **Pause for human input**: Present the artifact to the user with the same options as Step 1g Ceiling Detection (continue with workaround, halt the campaign, or pursue the spec/report). Do NOT proceed to Step 8 (REPEAT) until the human directs.
+
+If the trigger conditions do NOT apply, skip this step and proceed to Step 8 (REPEAT) normally.
 
 ### Step 8: REPEAT
 
@@ -309,7 +351,7 @@ Go back to Step 1. Do NOT stop.
 When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 
 **Degenerate campaign** (zero accepted experiments — only infrastructure commits or early halt due to a discovered bug/limitation): simplify the completion flow:
-1. Create specs if engine limitations were discovered (in the main repo root, not the worktree).
+1. Create specs or reports if engine limitations were discovered (in the main repo root, not the worktree). Use the spec/report criterion from Human Investigation Interrupt step 5.
 2. Copy gitignored runtime files back to the source campaign folder (see step 4 below). The musings.md from a degenerate campaign contains diagnostic history (investigation notes, baseline analysis, root cause findings) that may be valuable when the campaign is restarted after the blocking issue is resolved — preserve it. **If `musings.md` is tracked in this campaign**, do not blindly overwrite the main repo's committed version; either skip the copy or merge intentionally (the main repo's tracked musings may have been deliberately edited or truncated by the user).
 3. **Pre-merge check**: Verify the branch has commits worth keeping: `git diff main...improve/<campaign> --stat`. If no meaningful diff remains (all changes were reverted in the working tree, or only invalid/diagnostic commits exist), skip the squash-merge and proceed directly to step 5.
 4. If the branch has useful infrastructure commits: switch to the main repo root and squash-merge. Commit with a summary noting the campaign was halted due to `<reason>` and listing infrastructure changes. Skip lesson promotion and metric impact summary.
@@ -329,7 +371,23 @@ This sequence crosses between the worktree and the main repo. Each step is annot
    git commit -m "chore: promote global lessons from <campaign>"
    ```
    This file persists across campaigns — without this commit, lessons are lost when the worktree is removed. The squash-merge in step 5 picks up this commit; landing it on main directly bypasses that path and leaves the worktree branch missing the promotion.
-4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history. **For `musings.md`**: check whether it is tracked in your campaign first (`git check-ignore campaigns/<campaign>/musings.md`); if tracked, do NOT overwrite the main repo's committed version — the worktree's session-extended musings should either be discarded or appended only to the gitignored campaign-folder copy if one exists. The main repo's musings.md may have been deliberately truncated or edited by the user during a Human Investigation Interrupt and a blind copy would silently revert that. *(no cwd change required; uses absolute paths)*
+4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history.
+
+   **For `musings.md`**: check whether it is tracked in your campaign first (`git check-ignore campaigns/<campaign>/musings.md`).
+
+   - *If gitignored*: the worktree's session-extended musings can be copied back to the main repo's gitignored campaign-folder copy (this preserves diagnostic history for future campaign resumption without any tracking concerns).
+   - *If tracked* (the campaign's musings.md is committed to git): do NOT overwrite the main repo's committed version on disk — the worktree's session-extended musings should either be discarded or appended only to the gitignored campaign-folder copy if one exists. The main repo's musings.md may have been deliberately truncated or edited by the user during a Human Investigation Interrupt and a blind copy would silently revert that.
+
+     **Worktree-branch commit decision (tracked-musings only)**: do NOT commit session-extensions to the worktree branch either — the squash-merge would land them in main and pollute the user's clean musings header. Before the squash-merge, extract any substantive findings (architectural insights, multi-experiment narratives, validation evidence not already captured by RECORD LEARNING) into one of the durable channels:
+     - `campaigns/lessons-global.jsonl` (typed lessons — `finding`, `architectural`, `negative`, etc., per `references/lesson-management.md`).
+     - The report or spec being written (project-level artifacts; see steps 7-8).
+     - The squash-merge commit message itself (when the finding is short enough to inline).
+
+     Then `git checkout -- campaigns/<campaign>/musings.md` in the worktree to revert before the squash-merge file-set preview.
+
+     **Confirm before squash-merge**: substantive findings preserved outside musings.md? If yes, proceed. If no, route them through one of the durable channels first, then revert.
+
+   *(no cwd change required; uses absolute paths)*
 5. Switch to the main repo root (NOT the worktree) and squash-merge. **Preview the squash-merge file set first** with a merge-base diff — confirm only the intended files appear. If `main` has commits since the worktree was created (a parallel commit from the user, e.g., a report or spec written directly to main while the loop was running), the squash-merge applies only the worktree branch's diff vs the merge-base, but the human reviewer should still verify the file list matches expectations before committing. The bidirectional `git diff main improve/<campaign>` mixes both directions and is misleading here — always use the explicit merge-base form.
    ```bash
    cd <main-repo-root> && pwd  # verify cwd is main, not worktree
@@ -337,8 +395,8 @@ This sequence crosses between the worktree and the main repo. Each step is annot
    git merge --squash improve/<campaign>
    ```
 6. If `sync-fixtures.sh` exists, run it after the squash-merge (before committing) to ensure fixtures match the merged state. After running sync-fixtures.sh, stage any newly modified fixtures with `git add` (e.g., `git add packages/engine/test/fixtures/` or the campaign's relevant fixture path) — the squash-merge file set may not include all fixtures that sync-fixtures regenerates from the merged profile state, especially when the merged profile change cascades across multiple golden fixtures. Verify with a quick build+test. *(cwd: main repo root)*
-7. **Spec timing branch**: if the user has directed pre-merge spec creation (timing option (b) in step 8 below), execute step 8's spec creation BEFORE this commit step, and reference the new spec file paths (or their commit hashes if committed separately) in the squash-merge message. Otherwise commit the squash-merge first and create specs as a separate post-merge commit per timing option (c). Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes, (e) any pre-merge specs referenced. The detailed experiment history lives in musings.md and results.tsv (typically gitignored — `musings.md` may be tracked depending on campaign setup). *(cwd: main repo root)*
-8. **Spec triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. Spec creation can happen at any of three points: (a) during a Human Investigation Interrupt, (b) between user-directed campaign halt and squash-merge (e.g., user says "write the spec, then squash-merge"), or (c) post-merge as a follow-up. In all three cases, specs are project-level artifacts — create them in the main repo root (not the worktree) as a separate commit; the squash-merge does not include them. If specs already exist when reaching this step, reference them in the squash-merge commit message but skip creation. *(cwd: main repo root)*
+7. **Spec/report timing branch**: if the user has directed pre-merge spec or report creation (timing option (b) in step 8 below), execute step 8's artifact creation BEFORE this commit step, and reference the new spec/report file paths (or their commit hashes if committed separately) in the squash-merge message. Otherwise commit the squash-merge first and create the spec or report as a separate post-merge commit per timing option (c). Commit the squash-merge with a summary message listing: (a) key infrastructure fixes, (b) policy/mutable file changes with metric impact, (c) lesson count promoted, (d) test changes, (e) any pre-merge specs or reports referenced. The detailed experiment history lives in musings.md and results.tsv (typically gitignored — `musings.md` may be tracked depending on campaign setup). *(cwd: main repo root)*
+8. **Spec/report triage**: Review the ceiling report and musings for engine limitations, DSL gaps, or infrastructure needs discovered during the campaign. Decide between a spec (`specs/<NNN>-<name>.md` — clear single fix, project ready to commit to it) or a report (`reports/<topic>-<date>.md` — limitation spans multiple gaps that need external research before settling on specs); see Human Investigation Interrupt step 5 for the same criterion. Spec/report creation can happen at any of three points: (a) during a Human Investigation Interrupt, (b) between user-directed campaign halt and squash-merge (e.g., user says "write the report, then squash-merge"), or (c) post-merge as a follow-up. In all three cases, specs and reports are project-level artifacts — create them in the main repo root (not the worktree) as a separate commit; the squash-merge does not include them. If a spec or report already exists when reaching this step, reference it in the squash-merge commit message but skip creation. *(cwd: main repo root)*
 9. Remove the worktree and delete the branch *(cwd: main repo root)*:
    ```bash
    git worktree remove --force .claude/worktrees/improve-<campaign>
@@ -377,4 +435,4 @@ These rules are unique to this section; all other constraints are defined inline
 
 - **Never weaken assertions** — the tests must remain equally rigorous.
 - **Never add dependencies** — optimize with what's available.
-- **Profile-coupled tests**: If a test fails because the evolved profile changed the game trajectory (not because the code is broken), this is a profile-coupling issue, not a code bug. Fix the test to be resilient to profile evolution: use search-based witnesses instead of hardcoded seed/ply pairs, use regex matching for consideration term names instead of exact string lists, and widen search bounds for witness finding. Commit test decoupling as `infra:` independent of the experiment. Does NOT count toward the 3-retry CRASH limit.
+- **Profile-coupled tests**: If a test fails because the evolved profile changed the game trajectory (not because the code is broken), this is a profile-coupling issue, not a code bug. Fix the test to be resilient to profile evolution: (a) use search-based witnesses instead of hardcoded seed/ply pairs, (b) use regex matching for consideration term names instead of exact string lists, (c) widen search bounds for witness finding, (d) deduplicate when programmatically extending a base profile's lists (e.g., `use.considerations`, `plan.considerations`) — the base may already contain the term being added by a campaign experiment, so guard with `baseProfile.use.considerations.includes(CONSIDERATION_ID) ? base : [...base, ID]`. Commit test decoupling as `infra:` independent of the experiment. Does NOT count toward the 3-retry CRASH limit.

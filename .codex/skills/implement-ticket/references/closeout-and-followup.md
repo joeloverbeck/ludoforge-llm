@@ -154,6 +154,17 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
 
+### Bounded Draft Refactor Terminal Closeout
+
+For a small bounded refactor on an active untracked draft ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
+
+1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, and exact final lanes.
+2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers.
+3. Apply a status-only terminal patch plus exact proof transcription after all lanes are green or classified.
+4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
+5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and finish with untracked-aware `git status --short`.
+6. In the final handoff, state that `post-ticket-review` has or has not run and name the next review/archive workflow when it has not.
+
 ## Resume at Terminal Closeout
 
 When resuming after context compaction, interruption, or a handoff and the remaining work appears limited to terminal closeout, use this compact sequence before any closeout edit:

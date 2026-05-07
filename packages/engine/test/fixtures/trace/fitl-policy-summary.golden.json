@@ -48,8 +48,17 @@
           "reason": "gated"
         }
       ],
-      "readyRefStats": {},
-      "utility": "none",
+      "readyRefStats": {
+        "victoryCurrentMargin.currentMargin.self": {
+          "readyCount": 3,
+          "distinctValueCount": 1,
+          "min": -12,
+          "max": -12,
+          "range": 0,
+          "allReadyValuesEqual": true
+        }
+      },
+      "utility": "constant",
       "widenedBecauseUniform": false,
       "outcomeBreakdown": {
         "ready": 3,

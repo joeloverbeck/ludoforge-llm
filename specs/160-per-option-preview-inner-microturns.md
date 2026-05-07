@@ -252,7 +252,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/160PEROPTPREV-004.md`](../archive/tickets/160PEROPTPREV-004.md) — `preview.option.*` ref family + dispatch (covers §4)
 - [`archive/tickets/160PEROPTPREV-005.md`](../archive/tickets/160PEROPTPREV-005.md) — `chooseOne` per-option preview driver + hidden-info routing (covers §2 + §5)
 - [`archive/tickets/160PEROPTPREV-006.md`](../archive/tickets/160PEROPTPREV-006.md) — `chooseNStep` beam preview driver (covers §3)
-- [`tickets/160PEROPTPREV-007.md`](../tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
+- [`archive/tickets/160PEROPTPREV-007.md`](../archive/tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
 - [`tickets/160PEROPTPREV-008.md`](../tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)
 - [`tickets/160PEROPTPREV-009.md`](../tickets/160PEROPTPREV-009.md) — FITL canary golden test for inner preview (covers AC #6)
 - [`tickets/160PEROPTPREV-010.md`](../tickets/160PEROPTPREV-010.md) — Cookbook documentation for `preview.inner` and `preview.option.*` (covers cookbook deliverable)

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — test-only
-**Deps**: `archive/tickets/160PEROPTPREV-005.md`, `archive/tickets/160PEROPTPREV-006.md`, `tickets/160PEROPTPREV-007.md`
+**Deps**: `archive/tickets/160PEROPTPREV-005.md`, `archive/tickets/160PEROPTPREV-006.md`, `archive/tickets/160PEROPTPREV-007.md`
 
 ## Problem
 

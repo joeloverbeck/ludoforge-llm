@@ -27,6 +27,8 @@ import type {
   GameState,
   MoveParamScalar,
   PolicyPreviewOutcomeBreakdownTrace,
+  PolicyPreviewDriveTrace,
+  SyntheticDecisionTraceEntry,
 } from '../kernel/types.js';
 import {
   buildPolicyVictorySurface,
@@ -84,6 +86,8 @@ export interface ChooseOneInnerPreviewResult {
   readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
   readonly driveDepth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
+  readonly previewDrive: PolicyPreviewDriveTrace;
+  readonly completionPolicyFallbackCount: number;
 }
 
 export interface ChooseOneInnerPreviewRun {
@@ -131,7 +135,7 @@ const chooseNStepStableMoveKey = (
   decision: ChooseNStepDecision,
 ): string => `${decision.kind}:${String(decision.decisionKey)}:${decision.command}:${JSON.stringify(decision.value ?? null)}`;
 
-const previewOptionRefKey = (ref: PreviewOptionRef): string => {
+export const previewOptionRefKey = (ref: PreviewOptionRef): string => {
   switch (ref.refKind) {
     case 'victoryCurrentMarginSelf':
       return 'preview.option.victory.currentMargin.self';
@@ -236,7 +240,42 @@ interface DriveResult {
   readonly state: GameState;
   readonly depth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
+  readonly completionPolicy: PolicyPreviewDriveTrace['completionPolicy'];
+  readonly syntheticDecisions: readonly SyntheticDecisionTraceEntry[];
+  readonly completionPolicyFallbackCount: number;
 }
+
+const decisionTraceKey = (decision: Decision): string => {
+  switch (decision.kind) {
+    case 'chooseOne':
+    case 'chooseNStep':
+    case 'stochasticResolve':
+      return String(decision.decisionKey);
+    case 'actionSelection':
+      return String(decision.actionId);
+    case 'outcomeGrantResolve':
+      return String(decision.grantId);
+    case 'turnRetirement':
+      return String(decision.retiringTurnId);
+  }
+};
+
+const selectedOptionStableKey = (decision: Decision): string => {
+  switch (decision.kind) {
+    case 'actionSelection':
+      return decision.move === undefined ? String(decision.actionId) : JSON.stringify(decision.move);
+    case 'chooseOne':
+      return `${decision.kind}:${String(decision.decisionKey)}:${JSON.stringify(decision.value)}`;
+    case 'chooseNStep':
+      return `${decision.kind}:${String(decision.decisionKey)}:${decision.command}:${JSON.stringify(decision.value ?? null)}`;
+    case 'stochasticResolve':
+      return `${decision.kind}:${String(decision.decisionKey)}:${JSON.stringify(decision.value)}`;
+    case 'outcomeGrantResolve':
+      return `${decision.kind}:${String(decision.grantId)}`;
+    case 'turnRetirement':
+      return `${decision.kind}:${String(decision.retiringTurnId)}`;
+  }
+};
 
 const targetVisibilityContext = (
   def: GameDef,
@@ -324,6 +363,20 @@ const driveOption = (
   const depthCap = input.depthCap ?? input.profile.preview.inner?.depthCap ?? input.profile.preview.completionDepthCap ?? 1;
   const completionPolicy = input.completionPolicy ?? input.profile.preview.completion ?? 'policyGuided';
   const fallbackCompletionPolicy = input.fallbackCompletionPolicy ?? input.profile.preview.fallbackCompletionPolicy ?? 'greedy';
+  const syntheticDecisions: SyntheticDecisionTraceEntry[] = [];
+  let completionPolicyFallbackCount = 0;
+  const finish = (
+    state: GameState,
+    depth: number,
+    outcome: PolicyPreviewTraceOutcome,
+  ): DriveResult => ({
+    state,
+    depth,
+    outcome,
+    completionPolicy,
+    syntheticDecisions: [...syntheticDecisions],
+    completionPolicyFallbackCount,
+  });
   let state = applyPublishedDecision(
     input.def,
     freezeState(createMutableState(input.state)),
@@ -343,15 +396,15 @@ const driveOption = (
       || microturn.seatId !== input.microturn.seatId
       || microturn.turnId !== input.microturn.turnId
     ) {
-      return { state, depth, outcome: 'ready' };
+      return finish(state, depth, 'ready');
     }
     if (microturn.kind === 'stochasticResolve') {
-      return { state, depth, outcome: 'stochastic' };
+      return finish(state, depth, 'stochastic');
     }
     if (depth >= depthCap) {
-      return { state, depth, outcome: 'depthCap' };
+      return finish(state, depth, 'depthCap');
     }
-    const { decision: nextDecision } = pickInnerDecision(
+    const nextDecisionResult = pickInnerDecision(
       state,
       input.def,
       microturn,
@@ -374,8 +427,28 @@ const driveOption = (
         },
       },
     );
+    const nextDecision = nextDecisionResult.decision;
+    if (nextDecisionResult.usedFallback) {
+      completionPolicyFallbackCount += 1;
+    }
     if (nextDecision === undefined) {
-      return { state, depth, outcome: 'noPreviewDecision' };
+      return finish(state, depth, 'noPreviewDecision');
+    }
+    if (microturn.kind === 'chooseOne' || microturn.kind === 'chooseNStep') {
+      syntheticDecisions.push({
+        depth: syntheticDecisions.length + 1,
+        microturnKind: microturn.kind,
+        decisionKey: decisionTraceKey(nextDecision),
+        selectedOptionStableKey: selectedOptionStableKey(nextDecision),
+        selectionReason: nextDecisionResult.usedFallback
+          ? 'fallback'
+          : completionPolicy === 'policyGuided'
+            ? 'microturnPolicy'
+            : 'greedyAlphabetical',
+        score: 0,
+        scoreContributions: [],
+        completionPolicy: nextDecisionResult.usedFallback ? 'greedy' : completionPolicy,
+      });
     }
     state = applyPublishedDecision(
       input.def,
@@ -521,6 +594,9 @@ const resolveBeamResult = (
     state: partial.state,
     depth: partial.partialSelection.length,
     outcome: outcomeForBeamState(input, partial.state),
+    completionPolicy: input.completionPolicy ?? input.profile.preview.completion ?? 'policyGuided',
+    syntheticDecisions: [],
+    completionPolicyFallbackCount: 0,
   };
   const resolved = resolveRefs(input, drive, surfaceContext, seatResolutionIndex);
   const outcome = resolved.hidden ? 'hidden' : drive.outcome;
@@ -570,6 +646,12 @@ export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): 
         resolvedRefs: withOutcome,
         driveDepth: drive.depth,
         outcome,
+        previewDrive: {
+          depth: drive.depth,
+          completionPolicy: drive.completionPolicy,
+          syntheticDecisions: drive.syntheticDecisions,
+        },
+        completionPolicyFallbackCount: drive.completionPolicyFallbackCount,
       };
     });
   const outcomeBreakdown = emptyOutcomeBreakdown();

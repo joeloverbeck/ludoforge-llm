@@ -25,6 +25,7 @@ Minimal checkpoint shape:
 - `verification substitutions`: any ticket-command or proof-shape corrections
 - `reference guidance loaded`: triggered reference files loaded for this ticket, or `not loaded + why` when a normally triggered reference is intentionally skipped
 - `acceptance-proof lanes`: final lanes you intend to cite
+- `ticket graph/status integrity lane`: if terminal status, dependency edges, active/archive classification, sibling ownership, or successor/follow-up files may change, plan the repo's narrow ticket-dependency or markdown-integrity check now; use `not applicable` only when no graph/status edge changes or no such checker exists
 - `output contention / sequencing`: classify planned proof lanes that consume or rewrite `dist`, schemas, goldens, compiled JSON, or other generated trees as `parallel-safe` or `serial-only`; name any build/regeneration prerequisite and rerun needed if a later lane cleans the consumed output
 - `terminal status plan`: when the ticket status may become terminal; use the repo-local terminal wording already used by the ticket/series (for example `IMPLEMENTED`, `COMPLETED`, or an explicit exception status), and keep that terminal status pending until final lanes are green, classified, or explicitly substituted
 - `ticket-named deliverables ledger`: for tracked or active draft tickets with explicit `What to Change`, `Files to Touch`, artifacts, or named witness files, classify each concrete item before coding as `planned`, `already satisfied / verified-no-edit`, `needs rewrite`, `blocked`, or `needs 1-3-1`

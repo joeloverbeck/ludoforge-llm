@@ -1,9 +1,9 @@
 # 160PEROPTPREV-007: Trace integration + replay-identity + no-op-default tests
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `agents/policy-agent.ts`
+**Engine Changes**: Yes — `agents/policy-agent.ts`, `agents/policy-agent-inner-preview.ts`, `agents/policy-preview-inner.ts`
 **Deps**: `archive/tickets/160PEROPTPREV-001.md`, `archive/tickets/160PEROPTPREV-003.md`, `archive/tickets/160PEROPTPREV-005.md`
 
 ## Problem
@@ -19,6 +19,13 @@ This ticket lands the integration plus two determinism tests: replay-identity (t
 3. Ticket 005 has exposed an entry point on `policy-preview-inner.ts` callable from the agent.
 4. Action-selection's `previewUsage` schema is generic (Spec 156); reusing the same shape at inner microturns requires no schema work — only payload population.
 5. Synthetic-decision trace today carries action-selection drives; per-option drives use the same shape with an inner-microturn marker.
+
+## Implementation Reassessment (2026-05-07)
+
+- Live prerequisite check: tickets 001/003/005/006 are archived and the chooseOne driver/ref/config substrate is present.
+- Boundary correction: trace propagation requires a small extension to `packages/engine/src/agents/policy-preview-inner.ts` so the driver returns per-option `previewDrive` and fallback-count data; `packages/engine/src/agents/policy-agent-inner-preview.ts` is an owned helper extraction to keep `policy-agent.ts` below the 800-line cap after adding previewUsage summarization.
+- Test fixture correction: the no-op default baseline is generated from the same synthetic fixture with explicit `preview.inner.chooseOne: false`, matching the ticket's allowed "generated from a flag-disabled run" shape.
+- Deferred sibling scope: compile-time warning remains ticket 008; FITL canary golden remains ticket 009; cookbook documentation remains ticket 010.
 
 ## Architecture Check
 
@@ -50,6 +57,9 @@ Per-option drives produce synthetic-decision trace entries that propagate up alo
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-agent.ts` (modify — `chooseFrontierDecision` populates `previewUsage` when inner preview is enabled; uses consolidated `emptyPreviewUsage` from ticket 001)
+- `packages/engine/src/agents/policy-agent-inner-preview.ts` (new — agent-local collection/summarization helper for chooseOne inner preview trace data)
+- `packages/engine/src/agents/policy-preview-inner.ts` (modify — owned trace-propagation fallout; exposes preview-option ref keys and per-option preview-drive metadata)
+- `packages/engine/test/helpers/spec-160-inner-preview-fixture.ts` (new — shared synthetic fixture for the two determinism witnesses)
 - `packages/engine/test/determinism/spec-160-inner-preview-replay-identity.test.ts` (new)
 - `packages/engine/test/determinism/spec-160-inner-preview-no-op-default.test.ts` (new)
 
@@ -87,3 +97,19 @@ Per-option drives produce synthetic-decision trace entries that propagate up alo
 2. `pnpm -F @ludoforge/engine test:determinism`
 3. `pnpm turbo typecheck`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome (2026-05-07)
+
+- Landed boundary: `PolicyAgent.chooseFrontierDecision` now runs the chooseOne inner-preview driver when `preview.inner.chooseOne` is enabled, passes per-option resolved refs into the microturn scorer, and records inner `previewUsage` with mode, evaluated candidate count, ref ids, ready-ref stats, utility, outcome breakdown, and fallback counts.
+- Trace propagation: per-option chooseOne driver results now carry `previewDrive.syntheticDecisions` using the existing action-selection trace shape, and verbose policy traces attach those drives to the corresponding inner candidates.
+- Default-off invariant: the default/explicit-off path still uses `emptyPreviewUsage('disabled')`; no driver metadata is attached.
+- Schema/artifact fallout: none expected; the existing `previewUsage` schema shape is reused without source schema changes.
+- Source file size ledger: `policy-agent.ts` was already above the typical 200-400 line band and remains under the 800-line cap after extraction; `policy-preview-inner.ts` remains under the 800-line cap but above typical, with extraction deferred because the added fields belong to the existing driver result seam. Residual owner: none unless future Spec 160 work grows either file further.
+- Verification:
+  - `pnpm -F @ludoforge/engine build` — passed.
+  - `pnpm -F @ludoforge/engine test:determinism` — passed, 20/20 files.
+  - `pnpm turbo typecheck` — passed, 3/3 tasks.
+  - `pnpm -F @ludoforge/engine test` — passed, schema artifact check plus default lane, 64/64 files; unit glob reported 5555 passing tests.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/determinism/spec-160-inner-preview-replay-identity.test.js dist/test/determinism/spec-160-inner-preview-no-op-default.test.js dist/test/unit/agents/policy-preview-inner-chooseone.test.js dist/test/unit/agents/policy-preview-inner-hidden-info.test.js dist/test/unit/agents/policy-preview-inner-choosen-beam.test.js` — passed after the final broad output-producing lane, 5 suites / 6 tests.
+- Post-review readiness: status/header wording was normalized for archival; no runtime, test, schema, acceptance, command, dependency, or touched-file boundary changed.
+- Proof validity: after the final proof commands, only terminal status, header wording, and proof ledger text were edited; no implementation, scope, acceptance, command, dependency, or touched-file changes were made that invalidate the proof.

@@ -154,6 +154,17 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
 
+## Resume at Terminal Closeout
+
+When resuming after context compaction, interruption, or a handoff and the remaining work appears limited to terminal closeout, use this compact sequence before any closeout edit:
+
+1. Reopen the active ticket and confirm the visible handoff preserves the full deliverables ledger, final diff, untracked files, and proof-lane status. If not, reconstruct them from the ticket plus `git status --short`.
+2. Confirm the terminal status is already supported by green, classified, or explicitly substituted final lanes, and that no source, test, fixture, schema, generated artifact, dependency, scope, acceptance, or touched-file edit remains expected.
+3. Patch terminal status and proof transcription only when that edit changes no scope, acceptance criteria, command semantics, touched-file ownership, proof claims, follow-up ownership, or dependency classification. Record the no-invalidation rationale in the ticket outcome.
+4. If terminal status, dependency edges, successor/follow-up ownership, sibling status, or active/archive classification changed, run the repo's narrow dependency or markdown-integrity checker immediately after the patch, or record why no checker exists.
+5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files.
+6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
+
 ## Dependency Integrity Pass
 
 If the session creates a new prerequisite/follow-up ticket, rewires deps across the active series, changes terminal status, or changes active/archive classification, treat dependency validation as immediate, not optional:

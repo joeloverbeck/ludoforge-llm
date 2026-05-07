@@ -1,6 +1,6 @@
 # 160PEROPTPREV-008: Compile-time warning for opt-in without `preview.option.*` consideration
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `cnl/validate-agents.ts`
@@ -15,7 +15,7 @@ This ticket adds the warning emission. The check is purely static (compiler-side
 ## Assumption Reassessment (2026-05-06)
 
 1. Ticket 003 has compiled `preview.inner.chooseOne` so the validator can read `compiledProfile.preview.inner?.chooseOne`.
-2. Ticket 004 has registered the `preview.option.*` ref kinds; the validator scans considerations for `feature` strings starting with `preview.option.`.
+2. Ticket 004 has registered the `preview.option.*` ref kinds; the validator scans referenced considerations for policy-expression refs starting with `preview.option.`.
 3. The warning-emission API at `validate-agents.ts:158-164` uses a `Diagnostic` object with `{ severity: 'warning', code, path, message, suggestion }`.
 
 ## Architecture Check
@@ -31,7 +31,7 @@ This ticket adds the warning emission. The check is purely static (compiler-side
 Inside the per-profile validation pass in `packages/engine/src/cnl/validate-agents.ts`:
 
 - Check `compiledProfile.preview.inner?.chooseOne === true`.
-- Scan `profile.use.considerations` for any consideration whose `feature` ref string starts with `preview.option.` AND whose `scopes` includes `microturn`.
+- Scan `profile.use.considerations` for any referenced consideration whose policy expression contains a `preview.option.*` ref AND whose `scopes` includes `microturn`.
 - If `chooseOne === true` AND no matching consideration is found, push a warning diagnostic:
 
 ```ts
@@ -92,3 +92,27 @@ Extend `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` (created by
 1. `pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/compile-preview-inner.test.js`
 2. `pnpm turbo typecheck`
 3. `pnpm -F @ludoforge/engine test`
+
+## Outcome (2026-05-07)
+
+Implemented.
+
+- Added `CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION` to the compiler diagnostic code registry.
+- Added the static validator warning in `packages/engine/src/cnl/validate-agents.ts`. The live authored contract stores `preview.option.*` usage as policy-expression refs inside referenced considerations, not as a standalone `feature` field, so the validator scans the profile's referenced microturn-scope considerations for `ref` or legacy-shaped `feature` entries beginning with `preview.option.`.
+- Extended `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` with the three ticket-owned warning cases: opt-in with no matching ref warns, opt-in with a microturn `preview.option.*` consideration does not warn, and default/disabled `chooseOne` does not warn.
+- Corrected the active Spec 160 prose and deferred cookbook ticket wording from the stale `feature: preview.option...` example to the live policy-expression ref shape.
+
+Schema/artifact fallout: none; this adds a diagnostic code and validator logic only.
+
+Touched-file scope: all ticket-named files were touched. `specs/160-per-option-preview-inner-microturns.md` and `tickets/160PEROPTPREV-010.md` received owned series-prose corrections for the same stale authoring noun; no sibling boundary changed. `packages/engine/src/cnl/validate-agents.ts` was already above the repository's typical 400-line guidance and grew to 506 lines; extraction was considered, but the added helpers are tightly scoped to the existing profile-validation pass and splitting them would widen this small compiler-warning ticket. No separate extraction ticket is justified.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test dist/test/unit/cnl/compile-preview-inner.test.js` from `packages/engine/` — passed.
+3. `pnpm turbo typecheck` — passed.
+4. `pnpm -F @ludoforge/engine test` — passed.
+
+Post-review cleanup: moved this outcome block to the bottom of the ticket to match `docs/archival-workflow.md`; no implementation behavior changed.
+
+No-invalidation: this outcome/status transcription, same-contract prose correction, and post-review outcome-block relocation changed no code, acceptance criteria, command semantics, dependency ownership, or follow-up boundary after the green proof lanes.

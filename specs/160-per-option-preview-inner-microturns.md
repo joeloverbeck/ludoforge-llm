@@ -78,7 +78,7 @@ Eight new refs in the `preview.option.*` family. Inner-microturn `previewUsage` 
 
 | Phase | Deliverable | Acceptance Criterion | Effort |
 |-------|-------------|----------------------|--------|
-| Phase A | `preview.inner.chooseOne` + `preview.option.*` refs | A microturn-scope consideration `preferOptionProjectedMargin: { weight: 300, feature: preview.option.delta.victory.currentMargin.self }` flips a govern-mode chooseOne from `aid` to the option whose projected margin delta is higher; per-option preview drives are bounded by `maxOptions × depthCap` per microturn; hidden-info fixture returns `unknownHidden` correctly. | M |
+| Phase A | `preview.inner.chooseOne` + `preview.option.*` refs | A microturn-scope consideration such as `preferOptionProjectedMargin: { scopes: [microturn], weight: 300, value: { ref: preview.option.delta.victory.currentMargin.self } }` flips a govern-mode chooseOne from `aid` to the option whose projected margin delta is higher; per-option preview drives are bounded by `maxOptions × depthCap` per microturn; hidden-info fixture returns `unknownHidden` correctly. | M |
 | Phase B | `preview.inner.chooseNStep` + beam preview | A chooseN with 8 legal options and `beamWidth: 2, depthCap: 3` evaluates at most `8 × 2 × 3 = 48` per-option synthetic preview drives (beam candidates × steps); beam pruning trace records pruned partial selections with reason; replay produces byte-identical beam state. | M |
 | Phase C | Trace integration parity | Inner-microturn trace shape matches action-selection (mode, outcomeBreakdown, readyRefStats, utility); synthetic-decision trace propagates per-option drives; replay-identity test holds. | S |
 
@@ -253,6 +253,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-06:
 - [`archive/tickets/160PEROPTPREV-005.md`](../archive/tickets/160PEROPTPREV-005.md) — `chooseOne` per-option preview driver + hidden-info routing (covers §2 + §5)
 - [`archive/tickets/160PEROPTPREV-006.md`](../archive/tickets/160PEROPTPREV-006.md) — `chooseNStep` beam preview driver (covers §3)
 - [`archive/tickets/160PEROPTPREV-007.md`](../archive/tickets/160PEROPTPREV-007.md) — Trace integration + replay-identity + no-op-default tests (covers §6)
-- [`tickets/160PEROPTPREV-008.md`](../tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)
+- [`archive/tickets/160PEROPTPREV-008.md`](../archive/tickets/160PEROPTPREV-008.md) — Compile-time warning for opt-in without `preview.option.*` consideration (covers §7)
 - [`tickets/160PEROPTPREV-009.md`](../tickets/160PEROPTPREV-009.md) — FITL canary golden test for inner preview (covers AC #6)
 - [`tickets/160PEROPTPREV-010.md`](../tickets/160PEROPTPREV-010.md) — Cookbook documentation for `preview.inner` and `preview.option.*` (covers cookbook deliverable)

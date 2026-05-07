@@ -54,7 +54,7 @@ Note hidden-info handling: refs touching hidden surfaces surface as `previewOutc
 Show a govern-mode chooseOne profile snippet with:
 
 - `preview.inner.chooseOne: true`
-- A microturn-scope consideration `preferOptionProjectedMargin` with `weight: 300` and `feature: preview.option.delta.victory.currentMargin.self`
+- A microturn-scope consideration `preferOptionProjectedMargin` with `weight: 300` and a `value` policy expression referencing `preview.option.delta.victory.currentMargin.self`
 - Brief commentary explaining how this flips the agent from greedy alphabetical (`aid`) to the option whose projected margin delta is highest.
 
 ## Files to Touch

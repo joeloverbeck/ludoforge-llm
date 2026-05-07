@@ -120,6 +120,7 @@ function validateProfiles(
     validateProfileParams(profileDef.params, `${profilePath}.params`, diagnostics);
     validateProfileUse(profileDef.use, `${profilePath}.use`, library, diagnostics);
     validatePolicyGuidedMicroturnConsiderations(profileId, profileDef, profilePath, library, diagnostics);
+    validateInnerPreviewOptionConsiderations(profileId, profileDef, profilePath, library, diagnostics);
   }
 }
 
@@ -162,6 +163,71 @@ function validatePolicyGuidedMicroturnConsiderations(
     message: `Profile "${profileId}" declares preview.completion: policyGuided but has no scopes: [microturn] considerations; completion will always fall back to ${fallbackPolicy}.`,
     suggestion: 'Add at least one consideration with scopes: [microturn] to the profile, or set preview.completion to greedy.',
   });
+}
+
+function validateInnerPreviewOptionConsiderations(
+  profileId: string,
+  profileDef: Record<string, unknown>,
+  profilePath: string,
+  library: AgentLibraryBucketMap | undefined,
+  diagnostics: Diagnostic[],
+): void {
+  const preview = profileDef.preview;
+  const inner = isRecord(preview) ? preview.inner : undefined;
+  if (!isRecord(inner) || inner.chooseOne !== true) {
+    return;
+  }
+
+  if (hasPreviewOptionMicroturnConsideration(profileDef.use, library)) {
+    return;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION,
+    path: `${profilePath}.preview.inner.chooseOne`,
+    severity: 'warning',
+    message: `Profile "${profileId}" has preview.inner.chooseOne enabled but no microturn-scope consideration references preview.option.* refs; the per-option preview drive will run but produce no scoring signal.`,
+    suggestion: 'Add a microturn-scope consideration that references preview.option.delta.victory.currentMargin.self or another preview.option.* ref, or disable preview.inner.chooseOne.',
+  });
+}
+
+function hasPreviewOptionMicroturnConsideration(
+  use: unknown,
+  library: AgentLibraryBucketMap | undefined,
+): boolean {
+  const considerationIds = isRecord(use) && Array.isArray(use.considerations)
+    ? use.considerations
+    : [];
+  return considerationIds.some((considerationId) => {
+    if (!isNonEmptyString(considerationId)) {
+      return false;
+    }
+    const consideration = library?.considerations?.[considerationId];
+    return isRecord(consideration)
+      && Array.isArray(consideration.scopes)
+      && consideration.scopes.includes('microturn')
+      && containsPreviewOptionRef(consideration);
+  });
+}
+
+function containsPreviewOptionRef(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return value.some((entry) => containsPreviewOptionRef(entry));
+  }
+  if (!isRecord(value)) {
+    return false;
+  }
+  for (const [key, entry] of Object.entries(value)) {
+    if ((key === 'ref' || key === 'feature')
+      && typeof entry === 'string'
+      && entry.startsWith('preview.option.')) {
+      return true;
+    }
+    if (containsPreviewOptionRef(entry)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function validateProfileObserverRef(

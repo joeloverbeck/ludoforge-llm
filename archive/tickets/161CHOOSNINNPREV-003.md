@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-003: Shared `PolicyAgentInnerPreview` interface + chooseNStep adapter
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/`
@@ -25,6 +25,10 @@ This ticket introduces `PolicyAgentInnerPreview` as the shared structural interf
 2. F#14 — clean refactor: `PolicyAgentChooseOneInnerPreview` collapses into `PolicyAgentInnerPreview` (no alias). All consumers update in this same ticket.
 3. F#19 — chooseNStep per-option preview is the per-published-decision analog of chooseOne per-option preview; the shared adapter shape encodes this uniformity.
 4. Engine-agnostic — adapter changes touch no game-specific identifiers. F#1 honored.
+
+## Boundary Correction (2026-05-07)
+
+Live reassessment found that removing `PolicyAgentChooseOneInnerPreview` without an alias requires the existing `policy-agent.ts` consumer type to rename to `PolicyAgentInnerPreview`. That is a Foundation 14 no-alias cleanup, not the Ticket 004 dispatch behavior. This ticket therefore owns the minimal type-only `policy-agent.ts` import/signature update; Ticket 004 still owns kind-dispatched construction at `chooseFrontierDecision` plus differentiation/key-parity integration tests.
 
 ## What to Change
 
@@ -83,11 +87,13 @@ Per F#14, no alias. Remove the symbol; consumers downstream (Ticket 004 updates 
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-agent-inner-preview.ts` (modify — replace `PolicyAgentChooseOneInnerPreview` with shared `PolicyAgentInnerPreview`; refactor helpers; add chooseNStep adapter)
+- `packages/engine/src/agents/policy-agent.ts` (modify — type-only consumer rename from `PolicyAgentChooseOneInnerPreview` to `PolicyAgentInnerPreview`; no dispatch behavior change)
+- `packages/engine/test/unit/agents/policy-agent-inner-preview.test.ts` (new — focused adapter guard and keyed ADD-map proof)
 
 ## Out of Scope
 
 - Dispatch update at `policy-agent.ts:266` — Ticket 004 (consumes the new interface).
-- `chooseStructuralFrontierDecision` parameter type update — Ticket 004.
+- `chooseStructuralFrontierDecision` behavior update — Ticket 004. Its parameter type is renamed here only because the old interface is removed with no alias.
 - Differentiation and key-parity tests — Ticket 004.
 
 ## Acceptance Criteria
@@ -117,3 +123,34 @@ Per F#14, no alias. Remove the symbol; consumers downstream (Ticket 004 updates 
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-07. Landed slice:
+
+- `packages/engine/src/agents/policy-agent-inner-preview.ts` replaces the chooseOne-only adapter interface with shared `PolicyAgentInnerPreview`, refactors usage/stat helpers over `ChooseOneInnerPreviewRun | ChooseNStepInnerPreviewRun`, preserves chooseOne behavior, and adds `createPolicyAgentChooseNStepInnerPreview` with null/kind/flag guards.
+- `packages/engine/src/agents/policy-agent.ts` performs only the compile-required consumer type rename to `PolicyAgentInnerPreview`; `chooseFrontierDecision` still calls the chooseOne adapter unconditionally and remains Ticket 004's behavior owner.
+- `packages/engine/test/unit/agents/policy-agent-inner-preview.test.ts` proves the chooseNStep adapter returns `undefined` when disabled, returns `undefined` on non-chooseNStep microturns, exposes no wrapper discriminator, and populates one `byOptionKey`/`refsByOptionKey` entry per legal ADD when opted in.
+
+Touched-file correction: `policy-agent.ts` and the new focused adapter test are owned fallout from the Foundation 14 no-alias cleanup.
+
+Generated fallout: transient `packages/engine/dist/` only; no schema, golden, or compiled JSON artifact is owned by this ticket.
+
+Deferred sibling scope: Ticket 004 still owns kind dispatch, production behavior integration, differentiation convergence witness, and key-parity invariant. Tickets 005+ retain compiler warning, cost, hidden-info, replay/no-op, golden, audit, cookbook, and manual validation surfaces.
+
+File-size sweep: `policy-agent-inner-preview.ts` is 224 lines, `policy-agent.ts` remains 477 lines, and the new focused test is 291 lines; all are under the repo cap.
+
+Runtime surface breadth: shared agent preview internals only. Production chooseNStep dispatch remains deferred to Ticket 004, so this adapter is not yet routed by `PolicyAgent`.
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/unit/agents/policy-agent-inner-preview.test.js | run as serial build plus focused compiled test | build passed; focused compiled test passed`
+- `Test Plan | pnpm turbo typecheck | run literally | passed`
+- `Test Plan | pnpm turbo lint | run literally | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test | run literally | passed; default lane summary 65/65 files passed`
+
+Output sequencing: final `dist` consumer proof was rerun after the final engine build, so the focused compiled adapter test consumed fresh output.
+
+Ticket graph integrity: `pnpm run check:ticket-deps` passed for 11 active tickets and 2269 archived tickets.
+
+Late-edit proof validity: terminal status/proof and checker-result transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the green lanes.

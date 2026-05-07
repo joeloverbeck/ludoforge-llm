@@ -3,22 +3,29 @@ import type {
   CompiledAgentPolicyRef,
   CompiledPolicyExpr,
 } from '../kernel/types.js';
-import type { ChooseOneContext } from '../kernel/microturn/types.js';
+import type { ChooseNStepContext, ChooseOneContext } from '../kernel/microturn/types.js';
 import type { PolicyValue } from './policy-surface.js';
 import {
   previewOptionRefKey,
   runChooseOneInnerPreview,
   type ChooseOneInnerPreviewRun,
 } from './policy-preview-inner.js';
+import {
+  runChooseNStepInnerPreview,
+  type ChooseNStepInnerPreviewRun,
+} from './policy-preview-inner-choosenstep.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import type { PolicyEvaluationMetadata, ReadyRefStats } from './policy-eval.js';
 import type { ResolvedPolicyProfile } from './policy-profile-resolution.js';
 
-export interface PolicyAgentChooseOneInnerPreview {
-  readonly run: ChooseOneInnerPreviewRun;
+type PolicyAgentInnerPreviewRun = ChooseOneInnerPreviewRun | ChooseNStepInnerPreviewRun;
+type PolicyAgentInnerPreviewOption = PolicyAgentInnerPreviewRun['options'][number];
+
+export interface PolicyAgentInnerPreview {
+  readonly run: PolicyAgentInnerPreviewRun;
   readonly refIds: readonly string[];
   readonly usage: PolicyEvaluationMetadata['previewUsage'];
-  readonly byOptionKey: ReadonlyMap<string, ChooseOneInnerPreviewRun['options'][number]>;
+  readonly byOptionKey: ReadonlyMap<string, PolicyAgentInnerPreviewOption>;
   readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>;
 }
 
@@ -72,7 +79,7 @@ const collectMicroturnPreviewOptionRefs = (
 };
 
 const summarizeReadyRefStats = (
-  run: ChooseOneInnerPreviewRun,
+  run: PolicyAgentInnerPreviewRun,
   refIds: readonly string[],
 ): Readonly<Record<string, ReadyRefStats>> => {
   const stats: Record<string, ReadyRefStats> = {};
@@ -124,13 +131,13 @@ const summarizeReadyRefStats = (
 
 const summarizeUsage = (
   mode: ResolvedPolicyProfile['profile']['preview']['mode'],
-  run: ChooseOneInnerPreviewRun,
+  run: PolicyAgentInnerPreviewRun,
   refIds: readonly string[],
 ): PolicyEvaluationMetadata['previewUsage'] => {
   const readyRefStats = summarizeReadyRefStats(run, refIds);
   return {
     mode,
-    evaluatedCandidateCount: run.options.length,
+    evaluatedCandidateCount: 'evaluatedCandidateCount' in run ? run.evaluatedCandidateCount : run.options.length,
     completionPolicyFallbackCount: run.options.reduce(
       (total, option) => total + option.completionPolicyFallbackCount,
       0,
@@ -147,7 +154,7 @@ const summarizeUsage = (
 export function createPolicyAgentChooseOneInnerPreview(
   input: AgentMicroturnDecisionInput,
   resolvedProfile: ResolvedPolicyProfile | null,
-): PolicyAgentChooseOneInnerPreview | undefined {
+): PolicyAgentInnerPreview | undefined {
   if (
     resolvedProfile === null
     || input.microturn.kind !== 'chooseOne'
@@ -163,6 +170,42 @@ export function createPolicyAgentChooseOneInnerPreview(
     microturn: input.microturn as AgentMicroturnDecisionInput['microturn'] & {
       readonly kind: 'chooseOne';
       readonly decisionContext: ChooseOneContext;
+    },
+    playerId: input.state.activePlayer,
+    seatId: resolvedProfile.seatId,
+    catalog: resolvedProfile.catalog,
+    profile: resolvedProfile.profile,
+    refs,
+    ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+  });
+  return {
+    run,
+    refIds,
+    usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds),
+    byOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option])),
+    refsByOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
+  };
+}
+
+export function createPolicyAgentChooseNStepInnerPreview(
+  input: AgentMicroturnDecisionInput,
+  resolvedProfile: ResolvedPolicyProfile | null,
+): PolicyAgentInnerPreview | undefined {
+  if (
+    resolvedProfile === null
+    || input.microturn.kind !== 'chooseNStep'
+    || resolvedProfile.profile.preview.inner?.chooseNStep !== true
+  ) {
+    return undefined;
+  }
+  const refs = collectMicroturnPreviewOptionRefs(resolvedProfile);
+  const refIds = refs.map((ref) => previewOptionRefKey(ref));
+  const run = runChooseNStepInnerPreview({
+    def: input.def,
+    state: input.state,
+    microturn: input.microturn as AgentMicroturnDecisionInput['microturn'] & {
+      readonly kind: 'chooseNStep';
+      readonly decisionContext: ChooseNStepContext;
     },
     playerId: input.state.activePlayer,
     seatId: resolvedProfile.seatId,

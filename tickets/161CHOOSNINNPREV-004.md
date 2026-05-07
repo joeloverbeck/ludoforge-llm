@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/`
-**Deps**: `tickets/161CHOOSNINNPREV-003.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-003.md`
 
 ## Problem
 
@@ -15,7 +15,7 @@ This ticket also lands the two end-to-end behavioral tests for the integration: 
 ## Assumption Reassessment (2026-05-07)
 
 1. The unconditional call at `policy-agent.ts:266` is `const innerPreview = createPolicyAgentChooseOneInnerPreview(input, resolvedProfile);`. For chooseNStep microturns it returns `undefined` (kind guard at the adapter), so no current behavior changes for chooseNStep-disabled profiles.
-2. `chooseStructuralFrontierDecision` is defined at `policy-agent.ts:106` and called at line 317; its `innerPreview` parameter currently types as `PolicyAgentChooseOneInnerPreview | undefined`.
+2. `chooseStructuralFrontierDecision` is defined at `policy-agent.ts:106` and called at line 317; Ticket 003 renamed its `innerPreview` parameter to the shared `PolicyAgentInnerPreview | undefined` type as Foundation 14 no-alias fallout. This ticket owns the dispatch behavior that will first pass a chooseNStep adapter result into that shared parameter.
 3. `frontierDecisionKey` at `policy-agent.ts:162` produces `chooseNStep:<decisionKey>:<command>:<JSON(value ?? null)>`; for ADD decisions (`command === 'add'`), this matches the per-option `stableMoveKey` and `scoreContributionsKeyForChooseNStepAdd` outputs. The `previewByOptionKey.get(frontierDecisionKey(...))` lookup at line 290 succeeds without normalization.
 4. Ticket 003 has replaced `PolicyAgentChooseOneInnerPreview` with the shared structural interface `PolicyAgentInnerPreview`.
 5. Downstream metadata-construction code (lines 277–305) reads `byOptionKey`, `refIds`, and `usage` — all present on the shared interface.
@@ -50,9 +50,9 @@ const innerPreview =
 
 Add the import for `createPolicyAgentChooseNStepInnerPreview` from `./policy-agent-inner-preview.js`.
 
-### 2. `chooseStructuralFrontierDecision` parameter type — `policy-agent.ts:106`
+### 2. Shared-parameter consumption — `policy-agent.ts:106`
 
-Update the function signature to accept `PolicyAgentInnerPreview | undefined` instead of `PolicyAgentChooseOneInnerPreview | undefined`. The body already accesses only the shared fields (`byOptionKey`, `refIds`, `usage`); no functional change.
+Verify `chooseStructuralFrontierDecision` already accepts `PolicyAgentInnerPreview | undefined` from Ticket 003. The body accesses only shared fields (`byOptionKey`, `refIds`, `usage`); this ticket's behavioral change is to kind-dispatch construction so chooseNStep adapter output can reach that existing shared parameter.
 
 ### 3. Downstream metadata construction (lines 277–305)
 
@@ -72,7 +72,7 @@ Asserts: for a fixture of representative chooseNStep ADD decisions, `frontierDec
 
 ## Files to Touch
 
-- `packages/engine/src/agents/policy-agent.ts` (modify — kind-dispatched `innerPreview`; update `chooseStructuralFrontierDecision` parameter type)
+- `packages/engine/src/agents/policy-agent.ts` (modify — kind-dispatched `innerPreview`; verify existing shared-parameter consumption)
 - `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-differentiation.test.ts` (new — `convergence-witness`)
 - `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-key-parity.test.ts` (new — `architectural-invariant`)
 

@@ -20,7 +20,7 @@ import {
 import type { CompletionScoreContribution } from './microturn-option-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
-import { createPolicyAgentChooseOneInnerPreview, type PolicyAgentChooseOneInnerPreview } from './policy-agent-inner-preview.js';
+import { createPolicyAgentChooseOneInnerPreview, type PolicyAgentInnerPreview } from './policy-agent-inner-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 
 export interface PolicyAgentConfig {
@@ -108,7 +108,7 @@ const chooseStructuralFrontierDecision = (
   resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
   profileIdOverride: string | undefined,
   traceLevel: PolicyDecisionTraceLevel,
-  innerPreview?: PolicyAgentChooseOneInnerPreview,
+  innerPreview?: PolicyAgentInnerPreview,
 ): AgentMicroturnDecisionResult => {
   const previewByOptionKey = innerPreview?.byOptionKey;
   const innerPreviewRefIds = innerPreview?.refIds ?? [];

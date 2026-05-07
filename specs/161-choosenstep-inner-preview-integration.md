@@ -375,7 +375,7 @@ Decomposition outline (informational; finalized by `/spec-to-tickets`):
 2. `runChooseNStepInnerPreview` driver: per-root-option forced continuation beam; lexicographic iteration; outcome resolution; `evaluatedCandidateCount` bookkeeping; new unit test for per-root-option iteration and draft-state isolation.
 3. Common adapter shape: factor `summarizeUsage` and the shared structural `PolicyAgentInnerPreview` interface to cover both chooseOne and chooseNStep adapters.
 4. `createPolicyAgentChooseNStepInnerPreview` adapter.
-5. `chooseFrontierDecision` dispatch: kind-dispatched `innerPreview` construction; downstream metadata-construction code consumes common shape; `chooseStructuralFrontierDecision` parameter type updated.
+5. `chooseFrontierDecision` dispatch: kind-dispatched `innerPreview` construction; downstream metadata-construction code consumes the common shape. The `chooseStructuralFrontierDecision` parameter type rename lands in ticket 003 as Foundation 14 no-alias fallout; ticket 004 verifies and uses that shared parameter when dispatching chooseNStep preview.
 6. Compiler cost-formula update: squared-cost formula when `chooseNStep: true`; new unit test for cost validation.
 7. Diagnostic code rename: `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED` → `CNL_COMPILER_AGENT_PREVIEW_INNER_COST_EXCEEDS_HARD_CAP`; update `compiler-diagnostic-codes.ts:261`, `compile-agents.ts:1020`, and `test/unit/cnl/compile-preview-inner.test.ts:97`. (Bundle with ticket 6 if scope is small enough; split if test-suite migration is non-trivial.)
 8. Compile-time warning parity: extend `validateInnerPreviewOptionConsiderations` to chooseNStep; new unit test for warning parity.
@@ -404,7 +404,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 
 - [`archive/tickets/161CHOOSNINNPREV-001.md`](../archive/tickets/161CHOOSNINNPREV-001.md) — Sibling-file extraction: relocate chooseNStep beam driver (covers Phase A extraction)
 - [`archive/tickets/161CHOOSNINNPREV-002.md`](../archive/tickets/161CHOOSNINNPREV-002.md) — `runChooseNStepInnerPreview` per-root-option driver (covers Phase A driver)
-- [`tickets/161CHOOSNINNPREV-003.md`](../tickets/161CHOOSNINNPREV-003.md) — Shared `PolicyAgentInnerPreview` interface + chooseNStep adapter (covers Phase B adapter)
+- [`archive/tickets/161CHOOSNINNPREV-003.md`](../archive/tickets/161CHOOSNINNPREV-003.md) — Shared `PolicyAgentInnerPreview` interface + chooseNStep adapter (covers Phase B adapter)
 - [`tickets/161CHOOSNINNPREV-004.md`](../tickets/161CHOOSNINNPREV-004.md) — `chooseFrontierDecision` kind-dispatch + integration tests (covers Phase B dispatch + differentiation/key-parity)
 - [`tickets/161CHOOSNINNPREV-005.md`](../tickets/161CHOOSNINNPREV-005.md) — Compile-time warning parity for `preview.inner.chooseNStep` (covers Phase B warning)
 - [`tickets/161CHOOSNINNPREV-006.md`](../tickets/161CHOOSNINNPREV-006.md) — Squared-cost formula + `COST_EXCEEDS_HARD_CAP` diagnostic rename (covers Phase C)

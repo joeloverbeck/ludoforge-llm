@@ -3,6 +3,7 @@ import {
   AGENT_POLICY_CANDIDATE_INTRINSICS,
   AGENT_POLICY_MICROTURN_INTRINSICS,
   AGENT_POLICY_MICROTURN_OPTION_INTRINSICS,
+  AGENT_POLICY_PREVIEW_OPTION_REF_KINDS,
   AGENT_POLICY_ZONE_AGG_SOURCES,
   AGENT_POLICY_ZONE_FILTER_OPS,
   AGENT_POLICY_ZONE_SCOPES,
@@ -696,6 +697,11 @@ const CompiledAgentPolicyRefSchema = z.union([
     intrinsic: z.enum(AGENT_POLICY_MICROTURN_OPTION_INTRINSICS),
   }).strict(),
   z.object({
+    kind: z.literal('previewOptionRef'),
+    refKind: z.enum(AGENT_POLICY_PREVIEW_OPTION_REF_KINDS),
+    id: StringSchema.optional(),
+  }).strict(),
+  z.object({
     kind: z.literal('seatIntrinsic'),
     intrinsic: z.union([z.literal('self'), z.literal('active')]),
   }).strict(),
@@ -1162,6 +1168,16 @@ const CompiledAgentProfileSchema = z
             widenOnUniformProjection: z.boolean().optional(),
             widenCap: IntegerSchema.nonnegative().optional(),
             widenStep: z.number().int().positive().optional(),
+          })
+          .strict()
+          .optional(),
+        inner: z
+          .object({
+            chooseOne: z.boolean(),
+            chooseNStep: z.boolean(),
+            maxOptions: z.number().int().positive(),
+            chooseNBeamWidth: z.number().int().positive(),
+            depthCap: z.number().int().positive(),
           })
           .strict()
           .optional(),
@@ -2050,7 +2066,7 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
-    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated']),
+    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated', 'beamPruned']),
     previewOutcome: z.union([
       z.literal('ready'),
       z.literal('stochastic'),

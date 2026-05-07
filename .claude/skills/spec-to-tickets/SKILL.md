@@ -23,6 +23,10 @@ If either argument is missing, ask the user to provide it before proceeding.
 
 If working inside a worktree (e.g., `.claude/worktrees/<name>/`), **all file paths in this skill** — reads, writes, globs, greps — must be prefixed with the worktree root. The default working directory is the main repo root; paths without an explicit worktree prefix will silently operate on main, not the worktree. This applies to every path reference below — `tickets/`, `docs/`, spec paths, and output files.
 
+## Auto Mode
+
+This skill recognizes auto-mode behavior when the user has signaled willingness to skip confirmation gates — typical phrasings include "work without stopping for clarifying questions", "make the reasonable call and continue", or an explicit `--auto` flag if surfaced by the harness. In auto mode, all "Wait for approval" and "present the summary, then wait" gates are bypassed; the user can redirect in a later turn if needed.
+
 ## Process
 
 Follow these steps in order. Do not skip any step.
@@ -46,14 +50,14 @@ If the spec was reassessed in this same session (e.g., via `/reassess-spec`), th
 
 - **Validate** that file paths mentioned in the spec exist in the codebase (use Grep, Glob, or bash equivalents as available).
 - **Grep** for types, functions, and modules the spec references — confirm they are real and current
-- **Glob** for `tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist, warn the user and ask whether to overwrite, continue numbering from the next available number, or abort
+- **Glob** for `tickets/<NAMESPACE>-*.md` AND `archive/tickets/<NAMESPACE>-*.md` — if any files with this namespace already exist (active or archived), warn the user and ask whether to overwrite, continue numbering from the next available number, or abort. Archived collisions should typically lead to a different namespace, since history reuse confuses traceability
 - **Dependency path resolution** (this sub-step only): For each spec dependency listed in the target spec's **Dependencies** field, verify whether it lives in `specs/` or `archive/specs/` and record the correct path for use in ticket Deps fields. If the Dependencies field indicates no dependencies (e.g., `None`, `None (...)`, or equivalent), skip this sub-step — the other validation sub-steps (file paths, types, namespace collision) still apply
 - **Flag** any stale assumptions, missing files, or renamed entities
 - If you find discrepancies, present them to the user before proceeding
 
 ### Step 3: Decompose the Spec
 
-Analyze the spec and identify discrete work units. If the spec includes a Ticket Decomposition Guidance section (or equivalent), use it as the starting point for decomposition. Validate that the spec's suggested breakdown produces reviewable diffs and has correct dependency ordering, but do not ignore it in favor of a from-scratch decomposition. If the spec has no Decomposition Guidance section (common for scope-collapsed specs from `/reassess-spec`, where the reframe typically replaces earlier decomposition hints), use the Design (D*) and Testing Strategy (T*) sections as the primary decomposition anchors — each design section typically maps to one ticket, and each test attaches to the ticket introducing its subject.
+Analyze the spec and identify discrete work units. If the spec includes a `## Follow-On Tickets` section (canonical reassess-spec output) or a `## Ticket Decomposition Guidance` section (legacy name still used by older specs), use it as the starting point for decomposition. Validate that the spec's suggested breakdown produces reviewable diffs and has correct dependency ordering, but do not ignore it in favor of a from-scratch decomposition. If the spec has no Decomposition Guidance section (common for scope-collapsed specs from `/reassess-spec`, where the reframe typically replaces earlier decomposition hints), use the Design (D*) and Testing Strategy (T*) sections as the primary decomposition anchors — each design section typically maps to one ticket, and each test attaches to the ticket introducing its subject.
 
 - Each ticket must represent a **reviewable diff** — small enough for comfortable manual review
 - **Foundation 14 exception**: For type replacement or interface change tickets required to be atomic by Foundation 14 (No Backwards Compatibility), a Large effort rating is acceptable even when the diff exceeds normal review size, provided the change is mechanically uniform (e.g., replacing a branded type across all consumers). Note the mechanical uniformity in the ticket's Architecture Check to explain why the large diff is still reviewable.
@@ -133,7 +137,7 @@ Run `pnpm run check:ticket-deps` to validate all ticket `Deps` paths. If validat
 
 After writing all files, list:
 - All ticket files created
-- The dependency graph (which tickets block which) — default to a flat "A → B" list grouped by wave, or an ASCII tree for hierarchical chains; Mermaid is optional. Avoid prose-only descriptions — the user consumes this to plan implementation sessions, and consistent structure across `/spec-to-tickets` runs improves cross-spec comparison
+- The dependency graph (which tickets block which) — default to a flat "A → B" list (where A blocks B — the arrow points from dependency to dependent) grouped by wave, or an ASCII tree for hierarchical chains; Mermaid is optional. Avoid prose-only descriptions — the user consumes this to plan implementation sessions, and consistent structure across `/spec-to-tickets` runs improves cross-spec comparison
 - Suggested implementation order
 - Reminder: use `/implement-ticket tickets/<NAMESPACE>-<NNN>.md` to implement each ticket
 - **Post-write diagnostic handling**: If editor diagnostics surface in files *outside* your written tickets' `Files to Touch` lists (common after the parallel Write phase in Step 5 — typecheckers re-index the workspace and flag orphan artifacts from prior work), treat them as pre-existing branch state. Call them out in the final summary with a one-liner (e.g., "Pre-existing diagnostics in X, Y, Z — orphan artifacts from prior work, not introduced by this decomposition"). Do NOT modify those files — they are out of scope for ticket authoring, and silent cleanup would violate the "Leave files for user review" guardrail below. If the user wants them addressed, they can request a follow-up cleanup ticket or resolve them during `/implement-ticket` sessions for the tickets that naturally absorb them (e.g., a ticket whose `Files to Touch` intersects the orphan set).

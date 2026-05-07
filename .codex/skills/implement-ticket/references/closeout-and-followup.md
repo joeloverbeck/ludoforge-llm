@@ -30,7 +30,9 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
+- when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
+- when the touched oversized file is an established canonical table, lowerer, schema mirror, diagnostic registry, or comparable shared contract hub, a surgical adjacent addition may be the least risky ticket-sized change. Still record `preexisting oversize + active growth`, why extraction would widen or obscure the ticket seam, whether a narrow helper was considered, and the residual owner (`none` if no separate extraction ticket is justified).
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
@@ -43,6 +45,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
 - for completed active tickets, use the explicit repo-local terminal status already used by the ticket or series, such as `IMPLEMENTED` or `COMPLETED`; do not normalize to `COMPLETED` when the family uses a different terminal implementation status
+- when the active ticket is still `PENDING` and the terminal wording is not obvious from the ticket itself, inspect the nearest completed sibling ticket, series spec ticket list, or established family convention before choosing the terminal label. Record the rationale briefly when the series mixes terminal states or exception statuses.
 - when adding files, do not summarize the touched-file surface from `git diff --stat` alone. Pair it with `git status --short` or explicitly list untracked files, because new tests, fixtures, reports, and tickets may otherwise disappear from the closeout.
 
 ## Acceptance-Proof Invalidation
@@ -150,6 +153,27 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 1. Run a cheap self-reference check for the corrected literal/path when proportionate (for example `rg` on the active ticket for the old ticket id/path).
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
+
+## Resume at Terminal Closeout
+
+When resuming after context compaction, interruption, or a handoff and the remaining work appears limited to terminal closeout, use this compact sequence before any closeout edit:
+
+1. Reopen the active ticket and confirm the visible handoff preserves the full deliverables ledger, final diff, untracked files, and proof-lane status. If not, reconstruct them from the ticket plus `git status --short`.
+2. Confirm the terminal status is already supported by green, classified, or explicitly substituted final lanes, and that no source, test, fixture, schema, generated artifact, dependency, scope, acceptance, or touched-file edit remains expected.
+3. Patch terminal status and proof transcription only when that edit changes no scope, acceptance criteria, command semantics, touched-file ownership, proof claims, follow-up ownership, or dependency classification. Record the no-invalidation rationale in the ticket outcome.
+4. If terminal status, dependency edges, successor/follow-up ownership, sibling status, or active/archive classification changed, run the repo's narrow dependency or markdown-integrity checker immediately after the patch, or record why no checker exists.
+5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files.
+6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
+
+### Status-Only Terminal Patch Sequence
+
+When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
+
+1. Patch the terminal status and exact proof transcription only; do not change scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, or dependency classification in the same edit.
+2. Record the no-invalidation rationale in the ticket outcome, for example `terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
+3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
+4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
+5. Run the final untracked-aware `git status --short` sweep before the user handoff.
 
 ## Dependency Integrity Pass
 

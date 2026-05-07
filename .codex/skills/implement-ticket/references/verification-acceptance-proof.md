@@ -107,6 +107,8 @@ Active ticket/spec/report metadata can be proof-affecting even when no runtime c
 
 After green/classified final lanes, a terminal status update plus exact transcription of those just-run proof results can be a clerical closeout edit when it changes no scope, acceptance boundary, command semantics, touched-file ownership, proof claim, or follow-up/dependency classification. Record that no-invalidation decision in the ticket outcome or final closeout; otherwise rerun the narrowest affected proof lane.
 
+If an accidental post-proof cleanup edit is made and then reverted, do not assume the prior proof survived by intent alone. Prove exact restore first: compare the affected paths against the proved source shape with `git diff` / `git status --short` or an equivalent saved baseline, confirm no residual source/test/ticket artifact from the attempted edit remains, and record either `exact restore; no proof invalidation` or rerun the narrowest affected proof lane. If exact restore cannot be shown cheaply, treat the post-proof edit as proof-affecting.
+
 For expensive evidence or measurement tickets, distinguish **transcription edits** from **acceptance-story edits** before rerunning long lanes:
 
 1. if the post-proof edit only records already-run metrics, command outputs, durations, or a verdict already proven by the final lane, reread the edited artifact for consistency and run cheap hygiene checks such as `git diff --check`; a full empirical rerun is not required solely because the evidence was transcribed after the lane

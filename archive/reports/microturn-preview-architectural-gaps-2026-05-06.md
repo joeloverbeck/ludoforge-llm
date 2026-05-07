@@ -48,7 +48,7 @@ When the campaign was restarted on 2026-05-06, the user asked the loop to test p
 - `packages/engine/src/agents/policy-agent.ts` — chooseFrontierDecision (inner-microturn path)
 - `packages/engine/src/cnl/compile-agents.ts` (lines 772–950) — preview config validation
 - `archive/specs/145-bounded-synthetic-completion-preview.md` — design spec
-- `reports/polprevdrive-001-investigation.md` — POLPREVDRIVE-001 investigation (perf cost of the new driver)
+- `archive/reports/polprevdrive-001-investigation.md` — POLPREVDRIVE-001 investigation (perf cost of the new driver)
 - `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json` (baseline + exp-002 versions)
 
 ---

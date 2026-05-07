@@ -13,12 +13,15 @@ import { buildMicroturnChooseCallback, selectBestMicroturnChooseOneValue } from 
 import { pickRandom } from './agent-move-selection.js';
 import { buildPolicyAgentDecisionTrace, type PolicyDecisionTraceLevel } from './policy-diagnostics.js';
 import {
+  emptyPreviewUsage,
   evaluatePolicyMove,
   type PolicyEvaluationMetadata,
 } from './policy-eval.js';
 import type { CompletionScoreContribution } from './microturn-option-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
+import { createPolicyAgentChooseOneInnerPreview, type PolicyAgentChooseOneInnerPreview } from './policy-agent-inner-preview.js';
+import type { PolicyValue } from './policy-surface.js';
 
 export interface PolicyAgentConfig {
   readonly profileId?: string;
@@ -32,6 +35,9 @@ interface FrontierCandidate {
   readonly stableMoveKey: string;
   readonly score: number;
   readonly progressBias: number;
+  readonly previewRefIds?: readonly string[];
+  readonly previewOutcome?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewOutcome']>;
+  readonly previewDrive?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewDrive']>;
 }
 
 const POLICY_TRACE_INTERVAL = 25;
@@ -72,9 +78,11 @@ const traceCandidatesForFrontier = (
       score: candidate.score,
       prunedBy: [],
       scoreContributions: [...(scoreContributionsByOption?.get(candidate.stableMoveKey) ?? [])],
-      previewRefIds: [],
+      previewRefIds: [...(candidate.previewRefIds ?? [])],
       unknownPreviewRefs: [],
       selectionReason: 'gated',
+      ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
+      ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
     }))
   : [];
 
@@ -100,12 +108,22 @@ const chooseStructuralFrontierDecision = (
   resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
   profileIdOverride: string | undefined,
   traceLevel: PolicyDecisionTraceLevel,
+  innerPreview?: PolicyAgentChooseOneInnerPreview,
 ): AgentMicroturnDecisionResult => {
+  const previewByOptionKey = innerPreview?.byOptionKey;
+  const innerPreviewRefIds = innerPreview?.refIds ?? [];
   const frontier = input.microturn.legalActions.map<FrontierCandidate>((decision) => ({
     decision,
     stableMoveKey: frontierDecisionKey(input.def, decision),
     score: chooseNStepProgressBias(input, decision),
     progressBias: chooseNStepProgressBias(input, decision),
+    ...(previewByOptionKey?.get(frontierDecisionKey(input.def, decision)) === undefined
+      ? {}
+      : {
+          previewRefIds: innerPreviewRefIds,
+          previewOutcome: previewByOptionKey.get(frontierDecisionKey(input.def, decision))!.outcome,
+          previewDrive: previewByOptionKey.get(frontierDecisionKey(input.def, decision))!.previewDrive,
+        }),
   }));
   const bestProgressBias = Math.max(...frontier.map((candidate) => candidate.progressBias));
   const bestCandidates = frontier.filter((candidate) => candidate.progressBias === bestProgressBias);
@@ -119,7 +137,7 @@ const chooseStructuralFrontierDecision = (
     candidates: traceCandidatesForFrontier(traceLevel, frontier),
     pruningSteps: [],
     tieBreakChain: [],
-    previewUsage: emptyPreviewUsage(),
+    previewUsage: innerPreview?.usage ?? emptyPreviewUsage('disabled'),
     selectedStableMoveKey: selected.stableMoveKey,
     finalScore: selected.score,
     usedFallback: false,
@@ -140,28 +158,6 @@ type GuidedChoiceMatch =
       readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
     }
   | null;
-
-const emptyPreviewUsage = (): PolicyEvaluationMetadata['previewUsage'] => ({
-  mode: 'disabled',
-  evaluatedCandidateCount: 0,
-  completionPolicyFallbackCount: 0,
-  refIds: [],
-  unknownRefs: [],
-  readyRefStats: {},
-  utility: 'none',
-  widenedBecauseUniform: false,
-  outcomeBreakdown: {
-    ready: 0,
-    stochastic: 0,
-    unknownRandom: 0,
-    unknownHidden: 0,
-    unknownUnresolved: 0,
-    unknownDepthCap: 0,
-    unknownNoPreviewDecision: 0,
-    unknownGated: 0,
-    unknownFailed: 0,
-  },
-});
 
 const frontierDecisionKey = (def: AgentMicroturnDecisionInput['def'], decision: Decision): string => {
   switch (decision.kind) {
@@ -267,9 +263,16 @@ export class PolicyAgent implements Agent {
     input: AgentMicroturnDecisionInput,
   ): AgentMicroturnDecisionResult {
     const resolvedProfile = resolveEffectivePolicyProfile(input.def, input.state.activePlayer, this.profileId);
+    const innerPreview = createPolicyAgentChooseOneInnerPreview(input, resolvedProfile);
+    const innerPreviewByOptionKey = innerPreview?.byOptionKey;
+    const innerPreviewRefIds = innerPreview?.refIds ?? [];
     const guidedChoice = this.disableGuidedChooser
       ? null
-      : this.matchGuidedCompletionDecision(input, resolvedProfile);
+      : this.matchGuidedCompletionDecision(
+          input,
+          resolvedProfile,
+          innerPreview?.refsByOptionKey,
+        );
     if (guidedChoice !== null) {
       const metadata: PolicyEvaluationMetadata = {
         seatId: resolvedProfile?.seatId ?? null,
@@ -284,14 +287,20 @@ export class PolicyAgent implements Agent {
               score: decision === guidedChoice.matchedDecision ? guidedChoice.score : 0,
               prunedBy: [],
               scoreContributions: [...(guidedChoice.scoreContributionsByOption.get(frontierDecisionKey(input.def, decision)) ?? [])],
-              previewRefIds: [],
+              previewRefIds: [...(innerPreviewByOptionKey?.get(frontierDecisionKey(input.def, decision)) === undefined ? [] : innerPreviewRefIds)],
               unknownPreviewRefs: [],
               selectionReason: 'gated',
+              ...(innerPreviewByOptionKey?.get(frontierDecisionKey(input.def, decision)) === undefined
+                ? {}
+                : {
+                    previewOutcome: innerPreviewByOptionKey.get(frontierDecisionKey(input.def, decision))!.outcome,
+                    previewDrive: innerPreviewByOptionKey.get(frontierDecisionKey(input.def, decision))!.previewDrive,
+                  }),
             }))
           : [],
         pruningSteps: [],
         tieBreakChain: [],
-        previewUsage: emptyPreviewUsage(),
+        previewUsage: innerPreview?.usage ?? emptyPreviewUsage('disabled'),
         selectedStableMoveKey: frontierDecisionKey(input.def, guidedChoice.matchedDecision),
         finalScore: guidedChoice.score,
         usedFallback: false,
@@ -305,12 +314,19 @@ export class PolicyAgent implements Agent {
       };
     }
 
-    return chooseStructuralFrontierDecision(input, resolvedProfile, this.profileId, this.traceLevel);
+    return chooseStructuralFrontierDecision(
+      input,
+      resolvedProfile,
+      this.profileId,
+      this.traceLevel,
+      innerPreview,
+    );
   }
 
   private matchGuidedCompletionDecision(
     input: AgentMicroturnDecisionInput,
     resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
+    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>,
   ): GuidedChoiceMatch {
     if (resolvedProfile === null) {
       return null;
@@ -327,6 +343,7 @@ export class PolicyAgent implements Agent {
       seatId: resolvedProfile.seatId,
       profile: resolvedProfile.profile,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(previewOptionResolvedRefsByOptionKey === undefined ? {} : { previewOptionResolvedRefsByOptionKey }),
     });
     if (choose === undefined) {
       return null;
@@ -335,7 +352,7 @@ export class PolicyAgent implements Agent {
     if (input.microturn.kind === 'chooseOne') {
       return this.matchGuidedChooseOneDecision(input as AgentMicroturnDecisionInput & {
         readonly microturn: AgentMicroturnDecisionInput['microturn'] & { readonly kind: 'chooseOne' };
-      }, choose, resolvedProfile);
+      }, choose, resolvedProfile, previewOptionResolvedRefsByOptionKey);
     }
     return this.matchGuidedChooseNStepDecision(input as AgentMicroturnDecisionInput & {
       readonly microturn: AgentMicroturnDecisionInput['microturn'] & { readonly kind: 'chooseNStep' };
@@ -348,6 +365,7 @@ export class PolicyAgent implements Agent {
     },
     choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildMicroturnChooseCallback>>>,
     resolvedProfile: NonNullable<ReturnType<typeof resolveEffectivePolicyProfile>>,
+    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>,
   ): GuidedChoiceMatch {
     const context = input.microturn.decisionContext as ChooseOneContext;
     const request: ChoicePendingChooseOneRequest = {
@@ -367,6 +385,7 @@ export class PolicyAgent implements Agent {
       seatId: resolvedProfile.seatId,
       profile: resolvedProfile.profile,
       ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      ...(previewOptionResolvedRefsByOptionKey === undefined ? {} : { previewOptionResolvedRefsByOptionKey }),
     }, request, { requirePositiveScore: false });
     const fallbackSelection = preferredSelection ?? choose(request);
     if (fallbackSelection === undefined || Array.isArray(fallbackSelection.value)) {

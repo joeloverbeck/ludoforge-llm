@@ -359,6 +359,9 @@ function surfaceForPolicyRef(ref: CompiledAgentPolicyRef): EffectFootprintSurfac
   if (ref.kind === 'library' && ref.refKind === 'previewStateFeature') {
     return { ...emptySurface(), variables: 'unknown', tokens: 'unknown', zones: 'unknown', scores: 'unknown' };
   }
+  if (ref.kind === 'previewOptionRef') {
+    return { ...emptySurface(), variables: 'unknown', tokens: 'unknown', zones: 'unknown', scores: 'unknown' };
+  }
   return emptySurface();
 }
 

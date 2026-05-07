@@ -1,0 +1,72 @@
+{
+  "seed": 1001,
+  "replayedDecisionCount": 6,
+  "profileId": "policy-preview-inner-fitl-canary",
+  "selectedStableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"patronage\"",
+  "previewUsage": {
+    "mode": "exactWorld",
+    "evaluatedCandidateCount": 2,
+    "completionPolicyFallbackCount": 0,
+    "refIds": [
+      "preview.option.delta.victory.currentMargin.self"
+    ],
+    "unknownRefs": [],
+    "readyRefStats": {
+      "preview.option.delta.victory.currentMargin.self": {
+        "readyCount": 2,
+        "distinctValueCount": 2,
+        "min": 0,
+        "max": 1,
+        "range": 1,
+        "allReadyValuesEqual": false
+      }
+    },
+    "utility": "differentiating",
+    "widenedBecauseUniform": false,
+    "outcomeBreakdown": {
+      "ready": 2,
+      "stochastic": 0,
+      "unknownRandom": 0,
+      "unknownHidden": 0,
+      "unknownUnresolved": 0,
+      "unknownDepthCap": 0,
+      "unknownNoPreviewDecision": 0,
+      "unknownGated": 0,
+      "unknownFailed": 0
+    }
+  },
+  "candidates": [
+    {
+      "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"aid\"",
+      "score": 0,
+      "scoreContributions": [
+        {
+          "termId": "preferOptionProjectedMargin",
+          "contribution": 0
+        }
+      ],
+      "previewOutcome": "ready",
+      "previewDrive": {
+        "depth": 1,
+        "completionPolicy": "policyGuided",
+        "syntheticDecisions": []
+      }
+    },
+    {
+      "stableMoveKey": "chooseOne:decision:doc.actionPipelines.20.stages[1].effects.1.forEach.effects.0.chooseOne::$governMode@an-loc:none[0]:\"patronage\"",
+      "score": 300,
+      "scoreContributions": [
+        {
+          "termId": "preferOptionProjectedMargin",
+          "contribution": 300
+        }
+      ],
+      "previewOutcome": "ready",
+      "previewDrive": {
+        "depth": 1,
+        "completionPolicy": "policyGuided",
+        "syntheticDecisions": []
+      }
+    }
+  ]
+}

@@ -672,6 +672,13 @@ export interface GameSpecAgentProfileDef {
       readonly widenCap?: number;
       readonly widenStep?: number;
     };
+    readonly inner?: {
+      readonly chooseOne?: boolean;
+      readonly chooseNStep?: boolean;
+      readonly maxOptions?: number;
+      readonly chooseNBeamWidth?: number;
+      readonly depthCap?: number;
+    };
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;
   };

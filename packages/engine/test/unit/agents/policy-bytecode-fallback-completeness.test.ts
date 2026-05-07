@@ -82,6 +82,9 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
     expr: { kind: 'ref', ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'value' } },
     allowUnsupported: true,
   },
+  previewOptionRef: {
+    expr: { kind: 'ref', ref: { kind: 'previewOptionRef', refKind: 'driveDepth' } },
+  },
   candidateFeature: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'candidateFeature', id: 'mobility' } } },
   stateFeature: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'stateFeature', id: 'tempo' } } },
   candidateAggregate: { expr: { kind: 'ref', ref: { kind: 'library', refKind: 'aggregate', id: 'pressure' } } },
@@ -255,6 +258,8 @@ function fallbackValue(ref: FeatureRef): number | string | boolean | readonly st
       return 17;
     case 'candidateAggregate':
       return 19;
+    case 'previewOptionRef':
+      return 21;
     case 'dynamicRef':
       return 23;
     case 'dynamicSurface':
@@ -327,6 +332,9 @@ describe('policy bytecode fallback completeness', () => {
           trustedMoveIndex: new Map(),
           encodedStateLayout: layout,
           encodedState: encoded,
+          previewOption: {
+            resolvedRefs: new Map([['preview.option.driveDepth', 21]]),
+          },
         },
         [candidate],
       );

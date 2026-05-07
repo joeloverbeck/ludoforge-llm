@@ -54,6 +54,19 @@ export const AGENT_POLICY_MICROTURN_OPTION_INTRINSICS = [
 
 export type AgentPolicyMicroturnOptionIntrinsic = typeof AGENT_POLICY_MICROTURN_OPTION_INTRINSICS[number];
 
+export const AGENT_POLICY_PREVIEW_OPTION_REF_KINDS = [
+  'victoryCurrentMarginSelf',
+  'victoryCurrentRankSelf',
+  'deltaVictoryCurrentMarginSelf',
+  'globalVar',
+  'perPlayerVarSelf',
+  'derivedMetric',
+  'outcome',
+  'driveDepth',
+] as const;
+
+export type AgentPolicyPreviewOptionRefKind = typeof AGENT_POLICY_PREVIEW_OPTION_REF_KINDS[number];
+
 export const AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS = ['self', 'active', 'none'] as const;
 
 export type AgentPolicyZoneTokenAggOwnerKeyword = typeof AGENT_POLICY_ZONE_TOKEN_AGG_OWNER_KEYWORDS[number];

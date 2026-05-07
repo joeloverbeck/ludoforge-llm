@@ -61,6 +61,7 @@ import type {
   AgentPolicyCandidateIntrinsic,
   AgentPolicyMicroturnIntrinsic,
   AgentPolicyMicroturnOptionIntrinsic,
+  AgentPolicyPreviewOptionRefKind,
   AgentPolicyZoneAggSource,
   AgentPolicyZoneFilterOp,
   AgentPolicyZoneScope,
@@ -406,6 +407,11 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'microturnOptionIntrinsic';
       readonly intrinsic: AgentPolicyMicroturnOptionIntrinsic;
+    }
+  | {
+      readonly kind: 'previewOptionRef';
+      readonly refKind: AgentPolicyPreviewOptionRefKind;
+      readonly id?: string;
     }
   | {
       readonly kind: 'seatIntrinsic';
@@ -853,12 +859,21 @@ export interface CompiledAgentPreviewBudgetConfig {
   readonly widenStep?: number;
 }
 
+export interface CompiledAgentPreviewInnerConfig {
+  readonly chooseOne: boolean;
+  readonly chooseNStep: boolean;
+  readonly maxOptions: number;
+  readonly chooseNBeamWidth: number;
+  readonly depthCap: number;
+}
+
 export interface CompiledAgentPreviewConfig {
   readonly mode: AgentPreviewMode;
   readonly completion?: AgentPreviewAuthoredCompletionPolicy;
   readonly fallbackCompletionPolicy?: AgentPreviewFallbackCompletionPolicy;
   readonly completionDepthCap?: number;
   readonly budget?: CompiledAgentPreviewBudgetConfig;
+  readonly inner?: CompiledAgentPreviewInnerConfig;
   readonly phase1?: boolean;
   readonly phase1CompletionsPerAction?: number;
 }
@@ -1716,7 +1731,7 @@ export interface PolicyPreviewReadyRefStatsTrace {
 
 export type PolicyPreviewUtilityTrace = 'none' | 'constant' | 'lowInformation' | 'differentiating';
 
-export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated';
+export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated' | 'beamPruned';
 
 export type SyntheticDecisionSelectionReasonTrace = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
 

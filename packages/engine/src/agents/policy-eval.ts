@@ -92,7 +92,7 @@ export interface PolicyPreviewUnknownRef {
 export const PREVIEW_UTILITY_VALUES = ['none', 'constant', 'lowInformation', 'differentiating'] as const;
 export type PreviewUtility = typeof PREVIEW_UTILITY_VALUES[number];
 
-export const SELECTION_REASONS = ['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated'] as const;
+export const SELECTION_REASONS = ['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated', 'beamPruned'] as const;
 export type SelectionReason = typeof SELECTION_REASONS[number];
 
 export interface ReadyRefStats {
@@ -1223,7 +1223,7 @@ function summarizeReadyRefStats(
   return stats;
 }
 
-function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {
+export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPreviewUsage {
   return {
     mode,
     evaluatedCandidateCount: 0,

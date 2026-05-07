@@ -165,6 +165,16 @@ When resuming after context compaction, interruption, or a handoff and the remai
 5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files.
 6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
 
+### Status-Only Terminal Patch Sequence
+
+When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
+
+1. Patch the terminal status and exact proof transcription only; do not change scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, or dependency classification in the same edit.
+2. Record the no-invalidation rationale in the ticket outcome, for example `terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
+3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
+4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
+5. Run the final untracked-aware `git status --short` sweep before the user handoff.
+
 ## Dependency Integrity Pass
 
 If the session creates a new prerequisite/follow-up ticket, rewires deps across the active series, changes terminal status, or changes active/archive classification, treat dependency validation as immediate, not optional:

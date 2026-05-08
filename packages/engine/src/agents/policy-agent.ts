@@ -20,7 +20,11 @@ import {
 import type { CompletionScoreContribution } from './microturn-option-eval.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
-import { createPolicyAgentChooseOneInnerPreview, type PolicyAgentInnerPreview } from './policy-agent-inner-preview.js';
+import {
+  createPolicyAgentChooseNStepInnerPreview,
+  createPolicyAgentChooseOneInnerPreview,
+  type PolicyAgentInnerPreview,
+} from './policy-agent-inner-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 
 export interface PolicyAgentConfig {
@@ -263,7 +267,11 @@ export class PolicyAgent implements Agent {
     input: AgentMicroturnDecisionInput,
   ): AgentMicroturnDecisionResult {
     const resolvedProfile = resolveEffectivePolicyProfile(input.def, input.state.activePlayer, this.profileId);
-    const innerPreview = createPolicyAgentChooseOneInnerPreview(input, resolvedProfile);
+    const innerPreview = input.microturn.kind === 'chooseOne'
+      ? createPolicyAgentChooseOneInnerPreview(input, resolvedProfile)
+      : input.microturn.kind === 'chooseNStep'
+        ? createPolicyAgentChooseNStepInnerPreview(input, resolvedProfile)
+        : undefined;
     const innerPreviewByOptionKey = innerPreview?.byOptionKey;
     const innerPreviewRefIds = innerPreview?.refIds ?? [];
     const guidedChoice = this.disableGuidedChooser

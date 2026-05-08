@@ -405,7 +405,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 - [`archive/tickets/161CHOOSNINNPREV-001.md`](../archive/tickets/161CHOOSNINNPREV-001.md) — Sibling-file extraction: relocate chooseNStep beam driver (covers Phase A extraction)
 - [`archive/tickets/161CHOOSNINNPREV-002.md`](../archive/tickets/161CHOOSNINNPREV-002.md) — `runChooseNStepInnerPreview` per-root-option driver (covers Phase A driver)
 - [`archive/tickets/161CHOOSNINNPREV-003.md`](../archive/tickets/161CHOOSNINNPREV-003.md) — Shared `PolicyAgentInnerPreview` interface + chooseNStep adapter (covers Phase B adapter)
-- [`tickets/161CHOOSNINNPREV-004.md`](../tickets/161CHOOSNINNPREV-004.md) — `chooseFrontierDecision` kind-dispatch + integration tests (covers Phase B dispatch + differentiation/key-parity)
+- [`archive/tickets/161CHOOSNINNPREV-004.md`](../archive/tickets/161CHOOSNINNPREV-004.md) — `chooseFrontierDecision` kind-dispatch + integration tests (covers Phase B dispatch + differentiation/key-parity)
 - [`tickets/161CHOOSNINNPREV-005.md`](../tickets/161CHOOSNINNPREV-005.md) — Compile-time warning parity for `preview.inner.chooseNStep` (covers Phase B warning)
 - [`tickets/161CHOOSNINNPREV-006.md`](../tickets/161CHOOSNINNPREV-006.md) — Squared-cost formula + `COST_EXCEEDS_HARD_CAP` diagnostic rename (covers Phase C)
 - [`tickets/161CHOOSNINNPREV-007.md`](../tickets/161CHOOSNINNPREV-007.md) — Hidden-info propagation test at chooseNStep continuation (covers Phase D F#4)

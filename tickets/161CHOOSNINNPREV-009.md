@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes (test + snapshot fixture) — `packages/engine/test/determinism/`
-**Deps**: `tickets/161CHOOSNINNPREV-004.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-004.md`
 
 ## Problem
 

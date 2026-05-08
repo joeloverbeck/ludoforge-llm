@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes (test + golden fixture) — `packages/engine/test/integration/`
-**Deps**: `tickets/161CHOOSNINNPREV-004.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-004.md`
 
 ## Problem
 

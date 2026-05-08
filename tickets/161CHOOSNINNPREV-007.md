@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes (test only) — `packages/engine/test/unit/agents/`
-**Deps**: `tickets/161CHOOSNINNPREV-004.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-004.md`
 
 ## Problem
 

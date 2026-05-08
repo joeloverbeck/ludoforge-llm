@@ -4,7 +4,7 @@
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs only
-**Deps**: `tickets/161CHOOSNINNPREV-004.md`
+**Deps**: `archive/tickets/161CHOOSNINNPREV-004.md`
 
 ## Problem
 

@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-008: chooseNStep inner-preview replay-identity test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes (test only) — `packages/engine/test/determinism/`
@@ -73,3 +73,22 @@ Use a profile that opts into `preview.inner.chooseNStep: true` so the new code p
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
 5. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-08. The owned test-only slice adds `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-replay-identity.test.ts` and reuses the existing Spec 161 constructed chooseNStep fixture through the public `PolicyAgent` decision path. The test asserts byte-identical canonical serialized final state, `previewUsage`, synthetic-decision arrays, stable candidate-key order across runs, stable lexicographic legal ADD keys, stable `evaluatedCandidateCount`, and the expected `chooseNStep:<decisionKey>:add:<JSON(value)>` key shape.
+
+Touched-file scope: only the ticket-named determinism test is added; no production source, schema artifact, golden fixture, or generated artifact is owned by this ticket. Sibling scope remains deferred to `tickets/161CHOOSNINNPREV-009.md` through `tickets/161CHOOSNINNPREV-013.md`.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/determinism/spec-161-choosenstep-inner-preview-replay-identity.test.js` — passed before broad lanes and reran passed after broad lanes rebuilt/consumed `dist`; repo-root spelling of the ticket's focused `dist/...` command.
+3. `pnpm -F @ludoforge/engine test:determinism` — passed, 21/21 files.
+4. `pnpm turbo typecheck` — passed, 3/3 tasks.
+5. `pnpm turbo lint` — passed, 2/2 tasks.
+6. `pnpm -F @ludoforge/engine test` — passed, 65/65 default-lane files after schema artifact check.
+
+Late-edit proof validity: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.
+
+Ticket dependency integrity: `pnpm run check:ticket-deps` passed for 6 active tickets and 2274 archived tickets. No-invalidation: checker-result transcription only; no ticket graph, scope, acceptance, command, touched-file, follow-up, or dependency change.

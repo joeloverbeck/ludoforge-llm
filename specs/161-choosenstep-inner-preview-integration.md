@@ -409,7 +409,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 - [`archive/tickets/161CHOOSNINNPREV-005.md`](../archive/tickets/161CHOOSNINNPREV-005.md) — Compile-time warning parity for `preview.inner.chooseNStep` (covers Phase B warning)
 - [`archive/tickets/161CHOOSNINNPREV-006.md`](../archive/tickets/161CHOOSNINNPREV-006.md) — Squared-cost formula + `COST_EXCEEDS_HARD_CAP` diagnostic rename (covers Phase C)
 - [`archive/tickets/161CHOOSNINNPREV-007.md`](../archive/tickets/161CHOOSNINNPREV-007.md) — Hidden-info propagation test at chooseNStep continuation (covers Phase D F#4)
-- [`tickets/161CHOOSNINNPREV-008.md`](../tickets/161CHOOSNINNPREV-008.md) — chooseNStep inner-preview replay-identity test (covers Phase D F#8)
+- [`archive/tickets/161CHOOSNINNPREV-008.md`](../archive/tickets/161CHOOSNINNPREV-008.md) — chooseNStep inner-preview replay-identity test (covers Phase D F#8)
 - [`tickets/161CHOOSNINNPREV-009.md`](../tickets/161CHOOSNINNPREV-009.md) — chooseNStep inner-preview default-off invariant test (covers Phase D no-op-default)
 - [`tickets/161CHOOSNINNPREV-010.md`](../tickets/161CHOOSNINNPREV-010.md) — FITL chooseNStep canary golden trace (covers Phase D golden)
 - [`tickets/161CHOOSNINNPREV-011.md`](../tickets/161CHOOSNINNPREV-011.md) — `preview.inner` config runtime-coverage structural audit (covers Phase D structural audit + new `architecture/` directory)

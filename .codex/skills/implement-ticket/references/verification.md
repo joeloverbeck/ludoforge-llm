@@ -37,6 +37,8 @@ Before running broader checks, identify whether any ticket-relevant commands cle
 
 For bugfix tickets, the red step can come from an existing failing proof lane. If the ticket already names a failing test or reproducer that cleanly proves the bug, rerun that lane first and treat it as the red proof unless the bug needs a narrower or more direct witness. If the repo already contains a nearby passing or semantically adjacent regression that exercises the same seam, prefer adapting that witness before authoring a brand-new fixture from scratch.
 
+For newly authored tests, separate test-authoring setup failures from the intended product red witness. A TypeScript compile error, missing import, bad fixture helper type, or absent marker in the new test must be fixed before counting the behavioral red step. Record those setup failures separately when useful, then capture the first assertion/runtime failure that actually proves the ticket-owned bug or invariant gap.
+
 For new scripts that scan, validate, warm, provision, or summarize generated assets/build output, first classify the script as a `scanner/guard` or a `producer/warm/provisioner` before treating it as final proof.
 
 For scanners/guards, run a compact scanner preflight:

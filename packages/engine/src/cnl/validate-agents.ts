@@ -174,7 +174,18 @@ function validateInnerPreviewOptionConsiderations(
 ): void {
   const preview = profileDef.preview;
   const inner = isRecord(preview) ? preview.inner : undefined;
-  if (!isRecord(inner) || inner.chooseOne !== true) {
+  if (!isRecord(inner)) {
+    return;
+  }
+
+  const flagsRequiringConsideration: Array<'chooseOne' | 'chooseNStep'> = [];
+  if (inner.chooseOne === true) {
+    flagsRequiringConsideration.push('chooseOne');
+  }
+  if (inner.chooseNStep === true) {
+    flagsRequiringConsideration.push('chooseNStep');
+  }
+  if (flagsRequiringConsideration.length === 0) {
     return;
   }
 
@@ -182,13 +193,15 @@ function validateInnerPreviewOptionConsiderations(
     return;
   }
 
-  diagnostics.push({
-    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION,
-    path: `${profilePath}.preview.inner.chooseOne`,
-    severity: 'warning',
-    message: `Profile "${profileId}" has preview.inner.chooseOne enabled but no microturn-scope consideration references preview.option.* refs; the per-option preview drive will run but produce no scoring signal.`,
-    suggestion: 'Add a microturn-scope consideration that references preview.option.delta.victory.currentMargin.self or another preview.option.* ref, or disable preview.inner.chooseOne.',
-  });
+  for (const flag of flagsRequiringConsideration) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION,
+      path: `${profilePath}.preview.inner.${flag}`,
+      severity: 'warning',
+      message: `Profile "${profileId}" has preview.inner.${flag} enabled but no microturn-scope consideration references preview.option.* refs; the per-option preview drive will run but produce no scoring signal.`,
+      suggestion: `Add a microturn-scope consideration that references preview.option.delta.victory.currentMargin.self or another preview.option.* ref, or disable preview.inner.${flag}.`,
+    });
+  }
 }
 
 function hasPreviewOptionMicroturnConsideration(

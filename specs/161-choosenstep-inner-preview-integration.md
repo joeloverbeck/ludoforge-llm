@@ -392,7 +392,7 @@ Decomposition outline (informational; finalized by `/spec-to-tickets`):
 ## MVP Checklist
 
 - [x] Phase A: chooseNStep beam types and driver extracted to sibling file; `runChooseNStepInnerPreview` exists and passes per-root-option iteration tests.
-- [ ] Phase B: `createPolicyAgentChooseNStepInnerPreview` exists; `chooseFrontierDecision` dispatches by kind; warning parity lands.
+- [x] Phase B: `createPolicyAgentChooseNStepInnerPreview` exists; `chooseFrontierDecision` dispatches by kind; warning parity lands.
 - [ ] Phase C: Squared-cost formula validated at compile time; ARVN-like settings compile; over-budget settings fail.
 - [ ] Phase D: All listed tests pass; default-off byte-identical invariant holds; structural audit test passes.
 - [ ] Cookbook updated.
@@ -406,7 +406,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 - [`archive/tickets/161CHOOSNINNPREV-002.md`](../archive/tickets/161CHOOSNINNPREV-002.md) — `runChooseNStepInnerPreview` per-root-option driver (covers Phase A driver)
 - [`archive/tickets/161CHOOSNINNPREV-003.md`](../archive/tickets/161CHOOSNINNPREV-003.md) — Shared `PolicyAgentInnerPreview` interface + chooseNStep adapter (covers Phase B adapter)
 - [`archive/tickets/161CHOOSNINNPREV-004.md`](../archive/tickets/161CHOOSNINNPREV-004.md) — `chooseFrontierDecision` kind-dispatch + integration tests (covers Phase B dispatch + differentiation/key-parity)
-- [`tickets/161CHOOSNINNPREV-005.md`](../tickets/161CHOOSNINNPREV-005.md) — Compile-time warning parity for `preview.inner.chooseNStep` (covers Phase B warning)
+- [`archive/tickets/161CHOOSNINNPREV-005.md`](../archive/tickets/161CHOOSNINNPREV-005.md) — Compile-time warning parity for `preview.inner.chooseNStep` (covers Phase B warning)
 - [`tickets/161CHOOSNINNPREV-006.md`](../tickets/161CHOOSNINNPREV-006.md) — Squared-cost formula + `COST_EXCEEDS_HARD_CAP` diagnostic rename (covers Phase C)
 - [`tickets/161CHOOSNINNPREV-007.md`](../tickets/161CHOOSNINNPREV-007.md) — Hidden-info propagation test at chooseNStep continuation (covers Phase D F#4)
 - [`tickets/161CHOOSNINNPREV-008.md`](../tickets/161CHOOSNINNPREV-008.md) — chooseNStep inner-preview replay-identity test (covers Phase D F#8)

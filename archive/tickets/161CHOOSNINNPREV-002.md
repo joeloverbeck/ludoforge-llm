@@ -131,6 +131,8 @@ Sum of `1` (forced root ADD) plus the continuation `evaluatedCandidateCount` (or
 
 ## Outcome
 
+Outcome amended: 2026-05-08 — archive-path repair only.
+
 Completed on 2026-05-07. The implemented slice adds `runChooseNStepInnerPreview` to `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` and adds the focused architectural unit test `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.ts`.
 
 Touched-file scope:
@@ -139,7 +141,7 @@ Touched-file scope:
 - `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.ts` — done; covers one result per ADD, no CONFIRM entry, lexicographic stable-key order, independent draft outcomes through post-confirm global score refs, and the squared-cost upper-bound assertion.
 - `specs/161-choosenstep-inner-preview-integration.md` — owned closeout fallout; Phase A MVP checkbox updated because ticket 001 already completed extraction and this ticket completes the driver/test half.
 
-Deferred sibling scope remains unchanged: runtime adapter/interface (`archive/tickets/161CHOOSNINNPREV-003.md`), dispatch/differentiation/key parity (`tickets/161CHOOSNINNPREV-004.md`), warning parity (`tickets/161CHOOSNINNPREV-005.md`), cost formula/diagnostic rename (`tickets/161CHOOSNINNPREV-006.md`), and later Phase D proof/doc/manual validation tickets stay active.
+Deferred sibling scope remains unchanged: runtime adapter/interface (`archive/tickets/161CHOOSNINNPREV-003.md`), dispatch/differentiation/key parity (`archive/tickets/161CHOOSNINNPREV-004.md`), warning parity (`archive/tickets/161CHOOSNINNPREV-005.md`), cost formula/diagnostic rename (`tickets/161CHOOSNINNPREV-006.md`), and later Phase D proof/doc/manual validation tickets stay active.
 
 Generated fallout: transient `packages/engine/dist/` output only; no schema, golden, or compiled JSON artifact is owned by this ticket.
 

@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-005: Compile-time warning parity for `preview.inner.chooseNStep`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/cnl/`
@@ -97,3 +97,33 @@ A profile with both flags enabled and no consideration emits two diagnostics (on
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-08. Landed slice:
+
+- `packages/engine/src/cnl/validate-agents.ts` now collects both `preview.inner.chooseOne` and `preview.inner.chooseNStep` opt-in flags and emits one reused `CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION` warning per enabled flag when no microturn-scope consideration references `preview.option.*`.
+- `packages/engine/test/unit/cnl/validate-preview-inner-warning-parity.test.ts` is the ticket-named architectural-invariant witness. It proves chooseOne-only, chooseNStep-only, both-flags, and preview-option-consideration suppression cases through `compileGameSpecToGameDef`.
+
+Generated fallout: transient `packages/engine/dist/` only; no schema, golden, or compiled JSON artifact is owned by this ticket.
+
+Deferred sibling scope: squared-cost formula and diagnostic rename remain with `tickets/161CHOOSNINNPREV-006.md`; hidden-info, replay/no-op, FITL canary, structural audit, cookbook, and manual validation remain with Tickets 007-013.
+
+File-size sweep: `packages/engine/src/cnl/validate-agents.ts` is 519 lines after the validator edit; `packages/engine/test/unit/cnl/validate-preview-inner-warning-parity.test.ts` is 128 lines. Both are below the repo cap.
+
+Runtime surface breadth: compiler/CNL validation only; no kernel/runtime behavior change.
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/validate-preview-inner-warning-parity.test.js | split into serial build plus repo-root-equivalent focused compiled test | passed as pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/validate-preview-inner-warning-parity.test.js; reran final focused witness after typecheck rebuilt dist`
+- `Test Plan | pnpm turbo typecheck | run literally | passed`
+- `Test Plan | pnpm turbo lint | run literally | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test | run literally | passed; default lane summary 65/65 files passed`
+
+Initial red witness: after the new test was added, the focused compiled test failed because `chooseNStep` emitted no warning while `chooseOne` did. The first attempted root-relative `node --test dist/...` path was command-shape drift; the package output lives under `packages/engine/dist/` when invoked from the repo root.
+
+Output sequencing: final proof ran the build-producing focused lane first, then `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm -F @ludoforge/engine test` serially. Because `pnpm turbo typecheck` rebuilt engine `dist`, the focused compiled witness was rerun afterward against the settled output.
+
+Terminal closeout no-invalidation: terminal status/proof transcription only; no scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, dependency classification, source code, or test behavior changed.
+
+Ticket graph integrity: `pnpm run check:ticket-deps` passed for 9 active tickets and 2271 archived tickets.

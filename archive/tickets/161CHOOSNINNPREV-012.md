@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-012: Cookbook `chooseNStep` per-option preview worked example
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — docs only
@@ -70,3 +70,30 @@ None — documentation-only.
 1. Manual review of `docs/agent-dsl-cookbook.md` — confirm worked example is complete, accurate, and reuses the existing `preferOptionProjectedMargin` consideration.
 2. `pnpm turbo lint` (verify no markdown-lint or doc-lint regressions).
 3. `pnpm -F @ludoforge/engine test`.
+
+## Outcome
+
+Completed on 2026-05-08. Landed slice:
+
+- Updated `docs/agent-dsl-cookbook.md` so the inner-preview overview names Spec 161 as the chooseNStep completion owner instead of presenting the surface as Spec 160-only.
+- Corrected the cost-formula prose: `chooseNStep: true` now documents the squared validation bound `maxOptions * (1 + chooseNBeamWidth * maxOptions * max(0, depthCap - 1))`, while `chooseOne` keeps the existing hard-cap validation wording.
+- Extended warning prose so the compiler warning applies to both `chooseOne: true` and `chooseNStep: true` when no microturn-scoped `preview.option.*` consideration exists.
+- Added a target-selection `chooseNStep` worked example that reuses `preferOptionProjectedMargin`, sets `preview.inner.chooseNStep: true`, states that the same microturn-scoped consideration differentiates ADD options at both decision kinds, and explicitly warns that CONFIRM is not per-option-scored.
+
+Touched-file scope: `docs/agent-dsl-cookbook.md` plus this ticket closeout and `specs/161-choosenstep-inner-preview-integration.md` checklist parity. No source-code, schema, golden, generated artifact, ARVN profile, campaign log, or harness-output change is owned by this ticket.
+
+Deferred sibling scope: manual ARVN harness validation remains with `tickets/161CHOOSNINNPREV-013.md`; no sibling scope was absorbed.
+
+Generated/schema fallout: none expected; documentation-only change.
+
+Runtime surface breadth: documentation-only; describes the existing policy/agent runtime behavior without changing runtime code.
+
+Command ledger:
+
+- `Commands | manual review of docs/agent-dsl-cookbook.md | run directly | final cookbook diff contains the chooseNStep worked example, Spec 161 cross-reference, ADD-not-CONFIRM guidance, and squared-cost formula`
+- `Commands | pnpm turbo lint | run literally | passed; 2/2 tasks successful`
+- `Commands | pnpm -F @ludoforge/engine test | run literally | passed; schema artifact check plus 67/67 default files passed`
+- `Terminal status | pnpm run check:ticket-deps | run literally after marking COMPLETED | passed for 2 active tickets and 2278 archived tickets`
+
+Late-edit proof validity: terminal status/proof transcription only after final lanes passed; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed.
+Checker-result transcription did not change ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.

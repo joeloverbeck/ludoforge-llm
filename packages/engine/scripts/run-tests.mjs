@@ -21,6 +21,7 @@ const laneConfigs = {
     execution: 'sequential',
     patterns: [
       'dist/test/unit/**/*.test.js',
+      'dist/test/architecture/**/*.test.js',
       ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
     ],
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,

@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-011: `preview.inner` config runtime-coverage structural audit
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes (test + new directory) — `packages/engine/test/architecture/`
@@ -49,7 +49,7 @@ If any field has zero non-test consumers and is not in the allowlist, the test f
 
 ### 3. Test discovery
 
-Verify the engine `test:unit` script's glob covers `packages/engine/test/architecture/**/*.test.{ts,mts}`. If it does not (the existing `node --test "dist/test/unit/**/*.test.js"` pattern only covers `unit/`), add a separate script or extend the discovery glob — surface via the 1-3-1 rule rather than silently making the audit unreachable.
+Verified during implementation: the engine `test:unit` script and default `pnpm -F @ludoforge/engine test` lane did not cover `packages/engine/test/architecture/**/*.test.ts`. User confirmed the Foundations-aligned option to extend existing discovery. Update both `test:unit` and the default `scripts/run-tests.mjs` lane to include `dist/test/architecture/**/*.test.js`, and update the existing lane-taxonomy guard so the new cross-subsystem audit directory remains in the default blocking engine proof surface.
 
 ### 4. CLAUDE.md / docs reference (informational)
 
@@ -60,6 +60,8 @@ Optionally note the new convention in `.claude/rules/testing.md` or `docs/testin
 - `packages/engine/test/architecture/` (new directory)
 - `packages/engine/test/architecture/preview-inner-config-runtime-coverage.test.ts` (new — `architectural-invariant`)
 - `packages/engine/package.json` (modify if test discovery does not cover the new directory by default — verify and decide during implementation)
+- `packages/engine/scripts/run-tests.mjs` (modify — include architecture audits in the default engine lane)
+- `packages/engine/test/unit/lint/engine-test-lane-taxonomy-policy.test.ts` (modify — lock the new discovery contract)
 
 ## Out of Scope
 
@@ -87,7 +89,37 @@ Optionally note the new convention in `.claude/rules/testing.md` or `docs/testin
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test dist/test/architecture/preview-inner-config-runtime-coverage.test.js`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/preview-inner-config-runtime-coverage.test.js`
 2. `pnpm turbo typecheck`
 3. `pnpm turbo lint`
 4. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-08. Landed slice:
+
+- Added `packages/engine/test/architecture/preview-inner-config-runtime-coverage.test.ts`, an `architectural-invariant` structural audit that keeps the maintained `CompiledAgentPreviewInnerConfig` field inventory aligned with the compiled type, requires each field to have a runtime consumer, compiler diagnostic coverage, or explicit trace-only allowlist entry, and includes a constructed negative case for an orphaned fictitious field.
+- Extended engine test discovery so `dist/test/architecture/**/*.test.js` runs in both `test:unit` and the default `pnpm -F @ludoforge/engine test` lane.
+- Updated `packages/engine/test/unit/lint/engine-test-lane-taxonomy-policy.test.ts` to preserve that default-lane discovery contract.
+
+Ticket corrections applied:
+
+- `node --test dist/test/architecture/...` is root-invalid after a package-filtered build; the root-valid focused command is `node --test packages/engine/dist/test/architecture/preview-inner-config-runtime-coverage.test.js`.
+- `packages/engine/scripts/run-tests.mjs` and the lane-taxonomy guard are owned discovery fallout from the confirmed Option 1; they are added to the touched-file scope.
+
+Generated/schema fallout: none expected; no schema or JSON artifact shape changed.
+
+Deferred sibling/spec scope: cookbook work remains `tickets/161CHOOSNINNPREV-012.md`; manual ARVN validation remains `tickets/161CHOOSNINNPREV-013.md`; no sibling scope was absorbed.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/architecture/preview-inner-config-runtime-coverage.test.js` — passed.
+3. `node --test packages/engine/dist/test/unit/lint/engine-test-lane-taxonomy-policy.test.js packages/engine/dist/test/unit/run-tests-script.test.js` — passed.
+4. `pnpm turbo typecheck` — passed.
+5. `pnpm turbo lint` — passed.
+6. `pnpm -F @ludoforge/engine test` — passed; default lane included `dist/test/architecture/**/*.test.js`, and the architecture audit segment passed.
+7. `pnpm run check:ticket-deps` — passed for 3 active tickets and 2277 archived tickets.
+
+Late-edit proof validity: terminal status/proof transcription only after final lanes passed; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed.
+Checker-result transcription did not change ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.

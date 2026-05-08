@@ -394,7 +394,7 @@ Decomposition outline (informational; finalized by `/spec-to-tickets`):
 - [x] Phase A: chooseNStep beam types and driver extracted to sibling file; `runChooseNStepInnerPreview` exists and passes per-root-option iteration tests.
 - [x] Phase B: `createPolicyAgentChooseNStepInnerPreview` exists; `chooseFrontierDecision` dispatches by kind; warning parity lands.
 - [x] Phase C: Squared-cost formula validated at compile time; ARVN-like settings compile; over-budget settings fail.
-- [ ] Phase D: All listed tests pass; default-off byte-identical invariant holds; structural audit test passes.
+- [x] Phase D: All listed tests pass; default-off byte-identical invariant holds; structural audit test passes.
 - [ ] Cookbook updated.
 - [ ] Manual ARVN harness re-run shows `previewUsage.mode !== 'disabled'` at chooseNStep microturns and ties broken.
 
@@ -412,6 +412,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 - [`archive/tickets/161CHOOSNINNPREV-008.md`](../archive/tickets/161CHOOSNINNPREV-008.md) — chooseNStep inner-preview replay-identity test (covers Phase D F#8)
 - [`archive/tickets/161CHOOSNINNPREV-009.md`](../archive/tickets/161CHOOSNINNPREV-009.md) — chooseNStep inner-preview default-off invariant test (covers Phase D no-op-default)
 - [`archive/tickets/161CHOOSNINNPREV-010.md`](../archive/tickets/161CHOOSNINNPREV-010.md) — FITL chooseNStep canary golden trace (covers Phase D golden)
-- [`tickets/161CHOOSNINNPREV-011.md`](../tickets/161CHOOSNINNPREV-011.md) — `preview.inner` config runtime-coverage structural audit (covers Phase D structural audit + new `architecture/` directory)
+- [`archive/tickets/161CHOOSNINNPREV-011.md`](../archive/tickets/161CHOOSNINNPREV-011.md) — `preview.inner` config runtime-coverage structural audit (covers Phase D structural audit + new `architecture/` directory)
 - [`tickets/161CHOOSNINNPREV-012.md`](../tickets/161CHOOSNINNPREV-012.md) — Cookbook `chooseNStep` per-option preview worked example (covers Phase D docs)
 - [`tickets/161CHOOSNINNPREV-013.md`](../tickets/161CHOOSNINNPREV-013.md) — Manual validation: ARVN harness re-run with `chooseNStep: true` (covers Phase D campaign validation)

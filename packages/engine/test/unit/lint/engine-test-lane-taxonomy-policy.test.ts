@@ -17,6 +17,10 @@ describe('engine test lane taxonomy policy', () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as EnginePackageJson;
 
     assert.equal(packageJson.scripts?.test, 'pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default');
+    assert.equal(
+      packageJson.scripts?.['test:unit'],
+      'node --test "dist/test/unit/**/*.test.js" "dist/test/architecture/**/*.test.js"',
+    );
     assert.equal(packageJson.scripts?.['test:e2e'], 'node scripts/run-tests.mjs --lane e2e');
     assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
     assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all');
@@ -43,6 +47,25 @@ describe('engine test lane taxonomy policy', () => {
       'node scripts/run-tests.mjs --lane integration:slow-parity',
     );
     assert.equal(packageJson.scripts?.['test:policy-profile-quality'], 'node scripts/run-policy-profile-quality-tests.mjs');
+  });
+
+  it('keeps cross-subsystem architecture audits in the default blocking lane', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
+      readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
+        readonly patterns: readonly string[];
+      };
+    };
+
+    const defaultPlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+
+    assert.equal(
+      defaultPlan.patterns.includes('dist/test/architecture/**/*.test.js'),
+      true,
+      'test/architecture audits must run in the default blocking engine lane',
+    );
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {

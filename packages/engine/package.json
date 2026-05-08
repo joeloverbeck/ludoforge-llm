@@ -37,7 +37,7 @@
     "schema:artifacts": "node scripts/run-with-dist-lock.mjs \"node scripts/schema-artifacts.mjs\"",
     "cache:gamedef:warm": "node scripts/warm-gamedef-cache.mjs",
     "schema:artifacts:check": "node scripts/schema-artifacts.mjs --check",
-    "test:unit": "node --test \"dist/test/unit/**/*.test.js\"",
+    "test:unit": "node --test \"dist/test/unit/**/*.test.js\" \"dist/test/architecture/**/*.test.js\"",
     "test:integration": "node scripts/run-tests.mjs --lane integration",
     "test:integration:core": "node scripts/run-tests.mjs --lane integration:core",
     "test:integration:game-packages": "node scripts/run-tests.mjs --lane integration:game-packages",
@@ -61,7 +61,7 @@
     "test:policy-profile-quality": "node scripts/run-policy-profile-quality-tests.mjs",
     "measure:preview-hard-target": "node scripts/measure-preview-pipeline-hard-target.mjs",
     "test": "pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default",
-    "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/performance/**/*.test.js\" \"dist/test/memory/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
+    "test:all": "node scripts/run-tests.mjs \"dist/test/unit/**/*.test.js\" \"dist/test/architecture/**/*.test.js\" \"dist/test/integration/**/*.test.js\" \"dist/test/performance/**/*.test.js\" \"dist/test/memory/**/*.test.js\" \"dist/test/e2e/**/*.test.js\""
   },
   "dependencies": {
     "yaml": "^2.8.4",

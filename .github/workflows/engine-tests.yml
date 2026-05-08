@@ -44,8 +44,12 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
       - run: pnpm guard:worktree-pointers
       - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine-wasm build
       - run: pnpm -F @ludoforge/engine build
       - name: Warm GameDef cache
         run: pnpm -F @ludoforge/engine cache:gamedef:warm
@@ -54,6 +58,13 @@ jobs:
         with:
           name: engine-dist
           path: packages/engine/dist
+          retention-days: 1
+          if-no-files-found: error
+      - name: Upload engine-wasm artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-wasm-dist
+          path: packages/engine-wasm/policy-vm/target/wasm32-unknown-unknown/release/ludoforge_policy_vm.wasm
           retention-days: 1
           if-no-files-found: error
 
@@ -90,5 +101,10 @@ jobs:
         with:
           name: engine-dist
           path: packages/engine/dist
+      - name: Download engine-wasm artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: engine-wasm-dist
+          path: packages/engine-wasm/policy-vm/target/wasm32-unknown-unknown/release
       - name: Run engine ${{ matrix.lane.id }}
         run: pnpm -F @ludoforge/engine ${{ matrix.lane.script }}

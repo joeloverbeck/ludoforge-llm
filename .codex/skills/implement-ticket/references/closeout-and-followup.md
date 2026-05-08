@@ -127,7 +127,7 @@ If that sweep finds additional live-diff files or generated artifacts that were 
 
 When a ticket that initially looked code-only widens during live reassessment into authored game data, policy catalogs, or other rule-authoritative assets, do not leave that ownership change implicit. Update `Files to Touch` / `What to Change` before final proof so the closeout truthfully records the mixed code-plus-authored-data boundary.
 
-When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
+When a ticket requires checked-in logs, transcripts, or other generated artifact files, confirm the Phase 1 tracked/ignored delivery-path check is still true before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule or recording the approved ticket/report transcription path) before closeout.
 
 ## Correction Ledger Pattern
 

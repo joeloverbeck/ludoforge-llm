@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/`
-**Deps**: `specs/161-choosenstep-inner-preview-integration.md`
+**Deps**: `archive/specs/161-choosenstep-inner-preview-integration.md`
 
 ## Problem
 

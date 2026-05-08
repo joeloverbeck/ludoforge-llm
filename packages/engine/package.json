@@ -40,6 +40,7 @@
     "test:unit": "node --test \"dist/test/unit/**/*.test.js\" \"dist/test/architecture/**/*.test.js\"",
     "test:integration": "node scripts/run-tests.mjs --lane integration",
     "test:integration:core": "node scripts/run-tests.mjs --lane integration:core",
+    "test:integration:policy-canaries": "node scripts/run-tests.mjs --lane integration:policy-canaries",
     "test:integration:game-packages": "node scripts/run-tests.mjs --lane integration:game-packages",
     "test:integration:fitl-events": "node scripts/run-tests.mjs --lane integration:fitl-events",
     "test:integration:fitl-events:shard-a": "node scripts/run-tests.mjs --lane integration:fitl-events-shard-a",

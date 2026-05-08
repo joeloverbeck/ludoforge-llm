@@ -452,7 +452,7 @@ agents:
           minPerGroup: 1
         inner:
           chooseOne: true
-          chooseNStep: false
+          chooseNStep: true
           maxOptions: 8
           chooseNBeamWidth: 1
           depthCap: 4

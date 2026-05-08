@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-013: Manual validation: ARVN harness re-run with `chooseNStep: true`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: LOW
 **Effort**: Small
 **Engine Changes**: None — campaign + game-data only
@@ -18,6 +18,7 @@ This ticket updates the ARVN profile, re-runs the harness, and captures the trac
 2. The ARVN profile already opts into `preview.inner.chooseOne: true` and includes the `preferOptionProjectedMargin` microturn-scope consideration (commit `3695b1731`).
 3. `campaigns/fitl-arvn-agent-evolution/harness.sh` runs the canonical campaign harness; outputs land in `run.log.tournament-full`, `last-trace.json`, `results.tsv`, and `traces/` per the existing campaign layout.
 4. After Ticket 006, the ARVN profile's `maxOptions × (1 + chooseNBeamWidth × maxOptions × max(0, depthCap − 1))` must fit under 256. With current values `8 × 1 × 4` = squared 200, this passes.
+5. Delivery-path correction approved during implementation: the campaign evidence files named below are ignored working outputs (`lessons.jsonl`, `results.tsv`, `run.log.*`, `last-trace.json`, `traces/`). The durable evidence for this no-commit implementation session is transcribed into this ticket and the Spec 161 checklist instead of checking in ignored campaign byproducts. The canonical harness currently writes `run.log.runner` and `traces/trace-1000.json` by default (`TRACE_ALL=true`), so those live output names replace the older `run.log.tournament-full` / `last-trace.json` examples for proof inspection.
 
 ## Architecture Check
 
@@ -55,6 +56,8 @@ Append a note to `campaigns/fitl-arvn-agent-evolution/lessons.jsonl` (or the cam
 - `campaigns/fitl-arvn-agent-evolution/results.tsv` (modify — new row(s) from re-run)
 - `campaigns/fitl-arvn-agent-evolution/run.log.tournament-full` and analogous run-log files (modify — replaced by re-run output)
 
+Durable evidence note: the campaign log/result/run-output files above are ignored local campaign byproducts in this repository. This ticket's `Outcome` section is the checked-in evidence ledger for the harness re-run.
+
 ## Out of Scope
 
 - Engine source changes — none.
@@ -85,6 +88,40 @@ None — campaign-level manual validation. Regression coverage is provided by Ti
 
 1. `pnpm turbo build` (verifies the profile compiles cleanly under the squared-cost formula).
 2. `bash campaigns/fitl-arvn-agent-evolution/harness.sh`.
-3. Inspect `campaigns/fitl-arvn-agent-evolution/run.log.tournament-full` — confirm `previewUsage.mode: exactWorld` at chooseNStep microturns.
-4. Inspect `last-trace.json` for `frontierDecisionKey` ordering and tied-decision resolution evidence.
+3. Inspect `campaigns/fitl-arvn-agent-evolution/run.log.runner` and `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json` — confirm `previewUsage.mode: exactWorld` at chooseNStep microturns.
+4. Inspect `traces/trace-1000.json` for `frontierDecisionKey` ordering and tied-decision resolution evidence.
 5. `pnpm -F @ludoforge/engine test` (regression check).
+
+## Outcome
+
+Completed on 2026-05-08. Landed slice:
+
+- `data/games/fire-in-the-lake/92-agents.md` now sets `arvn-evolved.preview.inner.chooseNStep: true` alongside the existing `chooseOne: true`.
+- The ARVN profile still fits the Ticket 006 squared-cost bound: `maxOptions 8 × (1 + chooseNBeamWidth 1 × maxOptions 8 × max(0, depthCap 4 - 1)) = 200`, below `INNER_PREVIEW_HARD_CAP 256`.
+- The canonical campaign harness was rerun for seed tier 1 / seed 1000 with `arvn-evolved` on the ARVN seat. It completed with `compositeScore=-6`, `avgMargin=-6`, `winRate=0`, `wins=0`, `completed=1`, `truncated=0`, `errors=0`.
+- No implementation commit exists yet in this no-commit session; the harness rerun used working-tree changes based on `4749b5cbbe316e08e10e0dacc05cdbaa354d0603`.
+- Durable evidence is transcribed here because campaign run outputs are intentionally ignored local byproducts. The final harness run wrote `campaigns/fitl-arvn-agent-evolution/run.log.runner` and `campaigns/fitl-arvn-agent-evolution/traces/trace-1000.json`.
+
+Manual validation evidence from `traces/trace-1000.json`:
+
+- ARVN had 12 chooseNStep decisions; all 12 reported `previewUsage.mode: exactWorld`.
+- Utility classification across those chooseNStep decisions: `none=6`, `constant=5`, `differentiating=1`.
+- Six chooseNStep decisions produced ready values for `preview.option.delta.victory.currentMargin.self`.
+- One chooseNStep decision differentiated projected-margin values: decision 9 had `readyCount=26`, `distinctValueCount=2`, `min=0`, `max=2`, `range=2`, `utility=differentiating`.
+- That differentiating decision selected `chooseNStep:decision:doc.actionPipelines.1.stages[0].effects.0.if.then.0.chooseN::$targetSpaces:add:"hue:none"` with `preferOptionProjectedMargin` contribution `600`; the next inspected options had contribution `0`. This satisfies the campaign target of at least one observed chooseNStep tie broken by projected-margin signal.
+- Compared with the ticket's pre-change observation (`avgMargin=-8` after exp-001/003 and chooseNStep mode disabled), the rerun produced `avgMargin=-6`.
+
+Command ledger:
+
+- `Test Plan | pnpm turbo build | run literally before harness | passed`
+- `Test Plan | bash campaigns/fitl-arvn-agent-evolution/harness.sh | first sandboxed attempts failed at the redirected engine gate with spawnSync /bin/sh EPERM in walker-deletion-enforcement; final unsandboxed rerun passed build, engine regression gate, and tournament`
+- `Test Plan | inspect run.log.tournament-full / last-trace.json | substituted with live harness outputs run.log.runner and traces/trace-1000.json per approved delivery-path correction | inspected and transcribed above`
+- `Test Plan | pnpm -F @ludoforge/engine test | run directly after the sandboxed harness failure and also inside the final unsandboxed harness gate | direct run passed 67/67 files; final harness gate passed`
+
+Generated / ignored-output fallout: campaign logs, traces, and result scratch files only; they remain ignored by repository policy. No schema, golden, compiled JSON, or engine source artifact is owned by this ticket.
+
+Runtime surface breadth: campaign/game-data profile change only. The exercised runtime behavior is existing policy/agent chooseNStep preview integration from Tickets 001-012; no engine code changed here.
+
+Ticket graph integrity: `pnpm run check:ticket-deps` passed for 1 active ticket and 2279 archived tickets.
+
+Late-edit proof validity: terminal status and proof transcription only after the final harness evidence; no code, profile data, command semantics, acceptance boundary, touched-file ownership, or dependency ownership changed.

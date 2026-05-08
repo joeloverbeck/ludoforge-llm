@@ -23,7 +23,7 @@ For long-running suites or flaky terminal sessions, prefer capturing authoritati
 
 ## Trace-Heavy Ticket Evidence
 
-Use this when the ticket's acceptance depends on saved traces, decision-gap inspection, harness summaries, or campaign metrics:
+Use this when the ticket's acceptance depends on saved traces, decision-gap inspection, harness summaries, campaign metrics, or manual validation evidence:
 
 1. Confirm which command writes the authoritative trace/report artifact and where it lands.
 2. Confirm whether the existing artifact exposes the literal acceptance field or only an adjacent proxy.
@@ -33,6 +33,18 @@ Use this when the ticket's acceptance depends on saved traces, decision-gap insp
    - `indirect`: the artifact proves the change through compiled structure, goldens, score gaps, or adjacent observable behavior
    - `insufficient`: the artifact does not expose enough to support the claim
 5. If evidence remains `indirect`, state that explicitly in working notes and closeout instead of overstating certainty.
+
+For campaign manual-validation tickets, keep a compact worksheet in the ticket/report/closeout so raw ignored artifacts do not become the only durable proof:
+
+- `profile change`: changed profile, agent, seed setup, or harness option
+- `command`: exact command and any environment variables
+- `seed/window`: seed range, turn window, decision window, or trace slice inspected
+- `output paths`: logs, traces, summaries, metrics, reports, and whether each path is checked in or ignored
+- `metric result`: metric name, before/after or threshold result, and verdict
+- `trace invariant`: exact trace field/event/decision-gap invariant inspected
+- `representative excerpt`: short excerpt or normalized row that proves the invariant without copying the whole artifact
+- `durable evidence location`: ticket outcome, checked-in report, commit body, or archived artifact path
+- `residual risk`: uninspected seeds/windows, noisy harness limits, or broader campaign claims left to another owner
 
 ## Generated Artifact Isolation Checklist
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/`
-**Deps**: `specs/161-choosenstep-inner-preview-integration.md`
+**Deps**: `archive/specs/161-choosenstep-inner-preview-integration.md`
 
 ## Problem
 

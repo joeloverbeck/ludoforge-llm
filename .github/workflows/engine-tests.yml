@@ -68,6 +68,7 @@ jobs:
           - { id: fitl-events-shard-a, script: 'test:integration:fitl-events:shard-a', timeout: 30 }
           - { id: fitl-events-shard-b, script: 'test:integration:fitl-events:shard-b', timeout: 30 }
           - { id: fitl-events-shard-c, script: 'test:integration:fitl-events:shard-c', timeout: 30 }
+          - { id: policy-canaries,     script: 'test:integration:policy-canaries',    timeout: 30 }
           - { id: fitl-rules,          script: 'test:integration:fitl-rules',          timeout: 30 }
           - { id: texas-cross-game,    script: 'test:integration:texas-cross-game',    timeout: 30 }
           - { id: slow-parity-shard-a, script: 'test:integration:slow-parity:shard-a', timeout: 30 }

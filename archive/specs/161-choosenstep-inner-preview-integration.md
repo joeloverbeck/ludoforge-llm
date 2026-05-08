@@ -1,6 +1,6 @@
 # Spec 161: chooseNStep Inner Preview Integration
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: P2 (closes the architectural gap surfaced by `reports/preview-inner-choosenstep-architectural-gap-2026-05-07.md`. Spec 160 landed `chooseOne` per-option preview but explicitly deferred the `chooseNStep` agent-runtime integration; the documented `preview.inner.chooseNStep: true` flag is currently a silent no-op with no compile-time warning, no trace evidence, and no behavioral effect.)
 **Complexity**: M (new per-root-option preview driver wrapping the existing beam driver, runtime adapter parity with `chooseOne`, compiler validation update for the squared-cost formula, sibling-file extraction to respect the 800-line cap. No new ref family, no kernel-level changes.)
 **Dependencies**:
@@ -396,7 +396,7 @@ Decomposition outline (informational; finalized by `/spec-to-tickets`):
 - [x] Phase C: Squared-cost formula validated at compile time; ARVN-like settings compile; over-budget settings fail.
 - [x] Phase D: All listed tests pass; default-off byte-identical invariant holds; structural audit test passes.
 - [x] Cookbook updated.
-- [ ] Manual ARVN harness re-run shows `previewUsage.mode !== 'disabled'` at chooseNStep microturns and ties broken.
+- [x] Manual ARVN harness re-run shows `previewUsage.mode !== 'disabled'` at chooseNStep microturns and ties broken.
 
 ## Tickets
 
@@ -414,4 +414,14 @@ Decomposed via `/spec-to-tickets` on 2026-05-07:
 - [`archive/tickets/161CHOOSNINNPREV-010.md`](../archive/tickets/161CHOOSNINNPREV-010.md) — FITL chooseNStep canary golden trace (covers Phase D golden)
 - [`archive/tickets/161CHOOSNINNPREV-011.md`](../archive/tickets/161CHOOSNINNPREV-011.md) — `preview.inner` config runtime-coverage structural audit (covers Phase D structural audit + new `architecture/` directory)
 - [`archive/tickets/161CHOOSNINNPREV-012.md`](../archive/tickets/161CHOOSNINNPREV-012.md) — Cookbook `chooseNStep` per-option preview worked example (covers Phase D docs)
-- [`tickets/161CHOOSNINNPREV-013.md`](../tickets/161CHOOSNINNPREV-013.md) — Manual validation: ARVN harness re-run with `chooseNStep: true` (covers Phase D campaign validation)
+- [`archive/tickets/161CHOOSNINNPREV-013.md`](../archive/tickets/161CHOOSNINNPREV-013.md) — Manual validation: ARVN harness re-run with `chooseNStep: true` (covers Phase D campaign validation)
+
+## Outcome
+
+Completed on 2026-05-08.
+
+- Spec 161's runtime, compiler, warning, test, documentation, and manual campaign-validation slices are complete.
+- All follow-on tickets `161CHOOSNINNPREV-001` through `161CHOOSNINNPREV-013` are archived and linked above.
+- The final campaign validation enabled `arvn-evolved.preview.inner.chooseNStep: true`, reran the ARVN harness for seed 1000, and recorded trace evidence in `archive/tickets/161CHOOSNINNPREV-013.md`: all 12 ARVN chooseNStep decisions reported `previewUsage.mode: exactWorld`, with one differentiating projected-margin chooseNStep decision satisfying the manual validation target.
+- No additional active follow-up ticket remains for this spec family.
+- Final archival verification: `pnpm run check:ticket-deps` passed after the spec archive for 0 active tickets and 2280 archived tickets.

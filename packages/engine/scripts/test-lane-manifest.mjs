@@ -52,6 +52,14 @@ export const SLOW_INTEGRATION_TESTS = [
   'spec-140-profile-migration.test.ts',
 ];
 
+// Policy-runtime and preview canaries that are too expensive for the
+// default/local feedback lane but remain blocking architectural/golden
+// coverage in engine-tests.yml.
+export const POLICY_CANARY_INTEGRATION_TESTS = [
+  'policy-bytecode-equivalence.test.ts',
+  'policy-preview-inner-choosenstep-fitl-canary-golden.test.ts',
+];
+
 // Shard assignment for slow-parity. Hand-balanced from observed CI durations
 // to keep each shard well under the 30-min lane timeout.
 // shard-a ~12.5m, shard-b ~16m, shard-c ~6-12m.
@@ -108,6 +116,12 @@ export function isSlowIntegrationTest(sourcePath) {
   return SLOW_INTEGRATION_TESTS.includes(baseName);
 }
 
+export function isPolicyCanaryIntegrationTest(sourcePath) {
+  const normalized = sourcePath.replaceAll('\\', '/');
+  const baseName = normalized.split('/').at(-1) ?? normalized;
+  return POLICY_CANARY_INTEGRATION_TESTS.includes(baseName);
+}
+
 export function isGamePackageIntegrationTest(sourcePath) {
   const normalized = sourcePath.replaceAll('\\', '/');
   const baseName = normalized.split('/').at(-1) ?? normalized;
@@ -133,8 +147,11 @@ export function listIntegrationTestsForLane(lane) {
       return ALL_INTEGRATION_TESTS.filter(
         (sourcePath) =>
           (!isGamePackageIntegrationTest(sourcePath) || gamePackageSmokeTests.has(sourcePath)) &&
-          !isSlowIntegrationTest(sourcePath),
+          !isSlowIntegrationTest(sourcePath) &&
+          !isPolicyCanaryIntegrationTest(sourcePath),
       );
+    case 'integration:policy-canaries':
+      return ALL_INTEGRATION_TESTS.filter((sourcePath) => isPolicyCanaryIntegrationTest(sourcePath));
     case 'integration:slow-parity':
       return ALL_INTEGRATION_TESTS.filter((sourcePath) => isSlowIntegrationTest(sourcePath));
     case 'integration:slow-parity-shard-a':

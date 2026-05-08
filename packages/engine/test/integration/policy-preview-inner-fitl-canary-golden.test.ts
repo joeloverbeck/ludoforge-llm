@@ -147,6 +147,13 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
     },
   };
 
+  const baseUseConsiderations = baseProfile.use.considerations.includes(CONSIDERATION_ID)
+    ? baseProfile.use.considerations
+    : [...baseProfile.use.considerations, CONSIDERATION_ID];
+  const basePlanConsiderations = baseProfile.plan.considerations.includes(CONSIDERATION_ID)
+    ? baseProfile.plan.considerations
+    : [...baseProfile.plan.considerations, CONSIDERATION_ID];
+
   const updatedAgents: AgentPolicyCatalog = {
     ...agents,
     compiled: {
@@ -181,11 +188,11 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
         preview: diagnosticPreview,
         use: {
           ...baseProfile.use,
-          considerations: [...baseProfile.use.considerations, CONSIDERATION_ID],
+          considerations: baseUseConsiderations,
         },
         plan: {
           ...baseProfile.plan,
-          considerations: [...baseProfile.plan.considerations, CONSIDERATION_ID],
+          considerations: basePlanConsiderations,
         },
       },
     },

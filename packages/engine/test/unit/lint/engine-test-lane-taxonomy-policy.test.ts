@@ -17,11 +17,19 @@ describe('engine test lane taxonomy policy', () => {
     const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8')) as EnginePackageJson;
 
     assert.equal(packageJson.scripts?.test, 'pnpm run schema:artifacts:check && node scripts/run-tests.mjs --lane default');
+    assert.equal(
+      packageJson.scripts?.['test:unit'],
+      'node --test "dist/test/unit/**/*.test.js" "dist/test/architecture/**/*.test.js"',
+    );
     assert.equal(packageJson.scripts?.['test:e2e'], 'node scripts/run-tests.mjs --lane e2e');
     assert.equal(packageJson.scripts?.['test:e2e:slow'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:slow');
     assert.equal(packageJson.scripts?.['test:e2e:all'], 'RUN_SLOW_E2E=1 node scripts/run-tests.mjs --lane e2e:all');
     assert.equal(packageJson.scripts?.['test:integration'], 'node scripts/run-tests.mjs --lane integration');
     assert.equal(packageJson.scripts?.['test:integration:core'], 'node scripts/run-tests.mjs --lane integration:core');
+    assert.equal(
+      packageJson.scripts?.['test:integration:policy-canaries'],
+      'node scripts/run-tests.mjs --lane integration:policy-canaries',
+    );
     assert.equal(
       packageJson.scripts?.['test:integration:game-packages'],
       'node scripts/run-tests.mjs --lane integration:game-packages',
@@ -43,6 +51,25 @@ describe('engine test lane taxonomy policy', () => {
       'node scripts/run-tests.mjs --lane integration:slow-parity',
     );
     assert.equal(packageJson.scripts?.['test:policy-profile-quality'], 'node scripts/run-policy-profile-quality-tests.mjs');
+  });
+
+  it('keeps cross-subsystem architecture audits in the default blocking lane', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
+      readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
+        readonly patterns: readonly string[];
+      };
+    };
+
+    const defaultPlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+
+    assert.equal(
+      defaultPlan.patterns.includes('dist/test/architecture/**/*.test.js'),
+      true,
+      'test/architecture audits must run in the default blocking engine lane',
+    );
   });
 
   it('classifies game-package integration tests explicitly and keeps smoke/core coverage disjoint from the dedicated lane', async () => {
@@ -121,6 +148,43 @@ describe('engine test lane taxonomy policy', () => {
 
     const totalCount = fitlEventsLane.length + fitlRulesLane.length + texasCrossGameLane.length;
     assert.equal(totalCount, gamePackagesLane.length, 'sub-lanes must not overlap');
+  });
+
+  it('keeps expensive policy canaries out of default and inside a dedicated blocking CI lane', async () => {
+    const thisDir = dirname(fileURLToPath(import.meta.url));
+    const repoRoot = dirname(findRepoRootFile(thisDir, 'pnpm-workspace.yaml'));
+    const manifestPath = resolve(repoRoot, 'packages/engine/scripts/test-lane-manifest.mjs');
+    const runTestsPath = resolve(repoRoot, 'packages/engine/scripts/run-tests.mjs');
+    const manifest = (await import(pathToFileURL(manifestPath).href)) as {
+      readonly POLICY_CANARY_INTEGRATION_TESTS: readonly string[];
+      readonly isPolicyCanaryIntegrationTest: (sourcePath: string) => boolean;
+      readonly listIntegrationTestsForLane: (lane: string) => readonly string[];
+      readonly toDistTestPath: (sourcePath: string) => string;
+    };
+    const runTests = (await import(pathToFileURL(runTestsPath).href)) as {
+      readonly buildExecutionPlan: (argv: readonly string[], env?: NodeJS.ProcessEnv) => {
+        readonly patterns: readonly string[];
+      };
+    };
+
+    const fullIntegrationLane = manifest.listIntegrationTestsForLane('integration');
+    const policyCanarySourcePaths = manifest.POLICY_CANARY_INTEGRATION_TESTS.map((name) => `test/integration/${name}`);
+    const policyCanaryLane = manifest.listIntegrationTestsForLane('integration:policy-canaries');
+    const coreLane = manifest.listIntegrationTestsForLane('integration:core');
+    const defaultPlan = runTests.buildExecutionPlan(['--lane', 'default'], {});
+    const policyCanaryPlan = runTests.buildExecutionPlan(['--lane', 'integration:policy-canaries'], {});
+
+    assert.deepEqual(new Set(policyCanaryLane), new Set(policyCanarySourcePaths));
+
+    for (const sourcePath of policyCanarySourcePaths) {
+      const distPath = manifest.toDistTestPath(sourcePath);
+      assert.equal(existsSync(resolve(repoRoot, 'packages/engine', sourcePath)), true, `${sourcePath} must exist on disk`);
+      assert.equal(manifest.isPolicyCanaryIntegrationTest(sourcePath), true, `${sourcePath} must classify as a policy canary`);
+      assert.equal(fullIntegrationLane.includes(sourcePath), true, `${sourcePath} must remain in the aggregate integration lane`);
+      assert.equal(coreLane.includes(sourcePath), false, `${sourcePath} must not run in integration:core (default lane)`);
+      assert.equal(defaultPlan.patterns.includes(distPath), false, `${distPath} must stay out of the default lane plan`);
+      assert.equal(policyCanaryPlan.patterns.includes(distPath), true, `${distPath} must appear in the policy-canaries lane plan`);
+    }
   });
 
   it('keeps slow runGame parity tests out of the default lane and inside the dedicated slow-parity lane', async () => {

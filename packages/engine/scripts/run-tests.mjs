@@ -21,6 +21,7 @@ const laneConfigs = {
     execution: 'sequential',
     patterns: [
       'dist/test/unit/**/*.test.js',
+      'dist/test/architecture/**/*.test.js',
       ...listIntegrationTestsForLane('integration:core').map(toDistTestPath),
     ],
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
@@ -34,6 +35,11 @@ const laneConfigs = {
     timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
   },
   'integration:core': { execution: 'batched', patterns: listIntegrationTestsForLane('integration:core').map(toDistTestPath) },
+  'integration:policy-canaries': {
+    execution: 'sequential',
+    patterns: listIntegrationTestsForLane('integration:policy-canaries').map(toDistTestPath),
+    timeoutMs: DEFAULT_HEAVY_INTEGRATION_TIMEOUT_MS,
+  },
   'integration:game-packages': {
     execution: 'sequential',
     patterns: listIntegrationTestsForLane('integration:game-packages').map(toDistTestPath),

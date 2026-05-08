@@ -1014,14 +1014,18 @@ function lowerPreviewInnerConfig(
     return undefined;
   }
 
-  const triple = loweredMaxOptions * loweredChooseNBeamWidth * loweredDepthCap;
-  if (!Number.isSafeInteger(triple) || triple > INNER_PREVIEW_HARD_CAP) {
+  const cost = chooseNStep === true
+    ? loweredMaxOptions * (1 + loweredChooseNBeamWidth * loweredMaxOptions * Math.max(0, loweredDepthCap - 1))
+    : loweredMaxOptions * loweredChooseNBeamWidth * loweredDepthCap;
+  if (!Number.isSafeInteger(cost) || cost > INNER_PREVIEW_HARD_CAP) {
     diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED,
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_COST_EXCEEDS_HARD_CAP,
       path: `${path}.inner`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.inner cost ${triple} exceeds INNER_PREVIEW_HARD_CAP ${INNER_PREVIEW_HARD_CAP}.`,
-      suggestion: `Set maxOptions * chooseNBeamWidth * depthCap to ${INNER_PREVIEW_HARD_CAP} or less.`,
+      message: `Profile "${profileId}" preview.inner cost ${cost} exceeds INNER_PREVIEW_HARD_CAP ${INNER_PREVIEW_HARD_CAP}.`,
+      suggestion: chooseNStep === true
+        ? 'When chooseNStep is enabled, the per-root-option forced continuation beam costs maxOptions * (1 + chooseNBeamWidth * maxOptions * max(0, depthCap - 1)). Reduce maxOptions, chooseNBeamWidth, or depthCap.'
+        : `Set maxOptions * chooseNBeamWidth * depthCap to ${INNER_PREVIEW_HARD_CAP} or less.`,
     });
     return undefined;
   }

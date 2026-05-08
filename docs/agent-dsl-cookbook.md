@@ -248,7 +248,7 @@ preferPatronageMode:
 
 ## Inner Preview
 
-Spec 160 adds opt-in preview for inner `chooseOne` and `chooseNStep` microturns. This is the microturn-level analog of action-selection preview: instead of asking "what state would this action-selection candidate reach?", the profile can ask "what state would this currently published option reach?".
+Specs 160 and 161 add opt-in preview for inner `chooseOne` and `chooseNStep` microturns. This is the microturn-level analog of action-selection preview: instead of asking "what state would this action-selection candidate reach?", the profile can ask "what state would this currently published option reach?".
 
 This surface exists to keep authored policy data aligned with Foundation 10 and Foundation 19. The driver is bounded, and it scores the same atomic microturn options the kernel publishes.
 
@@ -279,9 +279,9 @@ Fields:
 | `chooseNBeamWidth` | Beam width for `chooseNStep` preview. Defaults to `1`. |
 | `depthCap` | Maximum synthetic microturn depth for each per-option drive. Defaults to `1`. |
 
-The compiler enforces `maxOptions * chooseNBeamWidth * depthCap <= 256` (`INNER_PREVIEW_HARD_CAP`). For a simple `chooseOne`, cost is bounded by `maxOptions * depthCap`. For `chooseNStep`, cost is bounded by the full triple product.
+The compiler enforces `INNER_PREVIEW_HARD_CAP = 256`. For `chooseOne`, cost is bounded by `maxOptions * chooseNBeamWidth * depthCap`. When `chooseNStep: true` is enabled, validation uses the per-root-option forced-continuation bound `maxOptions * (1 + chooseNBeamWidth * maxOptions * max(0, depthCap - 1))`.
 
-When `chooseOne: true` is authored but no `scopes: [microturn]` consideration references a `preview.option.*` ref, the compiler emits a warning. The driver would run in that configuration, but it would not contribute a scoring signal.
+When `chooseOne: true` or `chooseNStep: true` is authored but no `scopes: [microturn]` consideration references a `preview.option.*` ref, the compiler emits a warning. The driver would run in that configuration, but it would not contribute a scoring signal.
 
 ### `preview.option.*` Refs
 
@@ -300,7 +300,7 @@ Use these from microturn-scoped considerations. They are registered in this orde
 
 Always handle non-ready outcomes explicitly. If a ref would touch a hidden surface for the acting observer, inner preview reports that through the existing hidden preview outcome and increments the hidden outcome breakdown. That preserves Foundation 4: policy data can react to hidden-safe status, but it does not inspect the hidden value.
 
-### Govern-Mode Example
+### Govern-Mode `chooseOne` Example
 
 This diagnostic profile shape opts into per-option preview for an inner govern-mode `chooseOne`. The `preferOptionProjectedMargin` consideration scores each option by its projected margin delta, so the agent can prefer a higher-margin option such as `patronage` over a greedy alphabetical choice such as `aid` when the projection supports it.
 
@@ -335,6 +335,44 @@ agents:
 ```
 
 Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` to confirm the per-option values differ. In the verbose inner-frontier trace, the selected option should show a positive `scoreContributions[]` entry for `preferOptionProjectedMargin` when this term is the reason the option wins.
+
+### Target-Selection `chooseNStep` Example
+
+For `chooseNStep`, use the same microturn-scoped consideration. Spec 161 makes the per-option projected refs available for each legal ADD option, so the consideration differentiates the currently published add choices the same way it differentiates `chooseOne` options.
+
+```yaml
+agents:
+  library:
+    considerations:
+      preferOptionProjectedMargin:
+        scopes: [microturn]
+        costClass: preview
+        weight: 300
+        value:
+          ref: preview.option.delta.victory.currentMargin.self
+
+  profiles:
+    arvn-inner-preview:
+      extends: arvn-evolved
+      observer: currentPlayer
+      preview:
+        mode: exactWorld
+        completion: policyGuided
+        fallbackCompletionPolicy: fail
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          chooseNBeamWidth: 1
+          depthCap: 4
+      use:
+        considerations:
+          - preferOptionProjectedMargin
+```
+
+At a `chooseNStep` microturn, this scores ADD options only. CONFIRM is not a per-option-scored option; the `min`/`max` cardinality of the chooseN drives set-completion logic. Author considerations for the ADD choices whose `microturn.option.value` is being selected, not for CONFIRM.
+
+The example's `chooseNStep` validation cost is `8 * (1 + 1 * 8 * max(0, 4 - 1)) = 200`, which fits under the 256 hard cap. Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` and inner-frontier `scoreContributions[]` to confirm that projected margin deltas are differentiating the ADD options.
 
 ### Gap Diagnosis Quick Map
 

@@ -36,6 +36,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
+- when the active ticket corresponds to a parent spec checklist, MVP item, phase row, or other explicit completion marker, update that marker before final proof and include it in the touched-file/proof ledger. If this changes status, ticket-list parity, dependency ownership, or active/archive classification, run the repo's dependency or markdown-integrity checker before closeout.
 - reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run.
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
@@ -55,6 +56,8 @@ Acceptance-proof runs are invalidated by later edits to the proved surface or ac
 Purely clerical ticket/spec edits, such as typo fixes or appending evidence that does not alter status, scope, command coverage, or proof claims, may preserve earlier proof only when you record an explicit no-invalidation decision in the ticket outcome or final closeout. If there is any doubt whether the edit changes the acceptance story, treat it as proof-affecting and rerun the affected lane.
 
 Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
+
+After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
@@ -124,7 +127,7 @@ If that sweep finds additional live-diff files or generated artifacts that were 
 
 When a ticket that initially looked code-only widens during live reassessment into authored game data, policy catalogs, or other rule-authoritative assets, do not leave that ownership change implicit. Update `Files to Touch` / `What to Change` before final proof so the closeout truthfully records the mixed code-plus-authored-data boundary.
 
-When a ticket requires checked-in logs, transcripts, or other generated artifact files, verify that those artifacts are not hidden by `.gitignore` or other ignore rules before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule) before closeout.
+When a ticket requires checked-in logs, transcripts, or other generated artifact files, confirm the Phase 1 tracked/ignored delivery-path check is still true before the final proof pass. Treat ignored-but-required artifacts as acceptance drift and fix the delivery path (for example by narrowing the ignore rule or recording the approved ticket/report transcription path) before closeout.
 
 ## Correction Ledger Pattern
 
@@ -137,6 +140,18 @@ Use this for concrete live-contract fixes such as helper signatures, export-surf
 When the ticket lands successfully but the live investigation disproves part of the draft framing, still close the ticket truthfully if the owned evidence artifact was produced. In that case, keep the correction ledger explicit rather than quietly preserving the stale hypothesis. Typical shape:
 
 - `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
+
+## Split Phase Completion
+
+When a spec phase or checklist item is satisfied by the combination of an already-landed predecessor plus the current ticket, record the basis before marking the phase complete:
+
+- predecessor ticket/path and durable state
+- current ticket-owned remaining slice
+- why the combined work satisfies the spec item
+- deferred sibling owner, or `none`
+- proof lane that covers the current slice and any already-landed predecessor assumption you relied on
+
+Do not mark a phase complete merely because the current ticket landed if a named predecessor or sibling condition is still unresolved.
 
 ## Draft Ticket Closeout Order
 
@@ -153,6 +168,28 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 1. Run a cheap self-reference check for the corrected literal/path when proportionate (for example `rg` on the active ticket for the old ticket id/path).
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
+
+### Bounded Tracked Refactor Terminal Closeout
+
+For a small bounded refactor on an active tracked ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
+
+1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, file-size or other final-sweep ledgers, and exact final lanes.
+2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers and with focused generated-output consumers rerun after any later lane rebuilds the consumed output.
+3. Apply a terminal status/proof transcription patch only after all final lanes are green or classified. Keep this patch to status and exact proof results when practical.
+4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
+5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and finish with untracked-aware `git status --short`.
+6. In the final handoff, state that `post-ticket-review` has or has not run and name the next review/archive workflow when it has not.
+
+### Bounded Draft Refactor Terminal Closeout
+
+For a small bounded refactor on an active untracked draft ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
+
+1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, and exact final lanes.
+2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers.
+3. Apply a status-only terminal patch plus exact proof transcription after all lanes are green or classified.
+4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
+5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and finish with untracked-aware `git status --short`.
+6. In the final handoff, state that `post-ticket-review` has or has not run and name the next review/archive workflow when it has not.
 
 ## Resume at Terminal Closeout
 
@@ -173,6 +210,7 @@ When all final proof lanes are already green/classified and the only remaining c
 2. Record the no-invalidation rationale in the ticket outcome, for example `terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
 3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
+   - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
 5. Run the final untracked-aware `git status --short` sweep before the user handoff.
 
 ## Dependency Integrity Pass

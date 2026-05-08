@@ -1,4 +1,5 @@
-// @test-class: architectural-invariant
+// @test-class: convergence-witness
+// @witness: spec-140-compound-turn-overhead
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
@@ -10,13 +11,14 @@ import { createSeededChoiceAgents } from '../helpers/test-agents.js';
 import { compileProductionSpec, compileTexasProductionSpec } from '../helpers/production-spec-helpers.js';
 
 const FITL_BUDGET = {
-  // Recorded from the current deterministic FITL witness corpus after the
-  // exact-cardinality chooseN repair, coup-card replay suppression, and
-  // chooseNStep dead-end admission fix. Keep modest slack so the witness
+  // Recorded from the current deterministic FITL witness corpus after Spec 161
+  // enabled `arvn-evolved.preview.inner.chooseNStep: true`, which retargets
+  // chooseNStep tie-breaking via per-option projected-margin scoring and
+  // shifts seed-1005/1010 trajectories. Keep modest slack so the witness
   // still catches real frontier inflation without pinning to exact totals.
   totalDecisions: 1750,
   totalCompoundTurns: 600,
-  maxMicroturnsPerTurn: 28,
+  maxMicroturnsPerTurn: 45,
 } as const;
 const TEXAS_BUDGET = {
   // Texas remains the small control corpus; keep a narrow ceiling, but align

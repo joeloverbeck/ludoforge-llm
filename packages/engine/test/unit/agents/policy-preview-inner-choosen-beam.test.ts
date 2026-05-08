@@ -2,7 +2,7 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { runChooseNStepBeamPreview } from '../../../src/agents/policy-preview-inner.js';
+import { runChooseNStepBeamPreview } from '../../../src/agents/policy-preview-inner-choosenstep.js';
 import {
   applyDecision,
   asActionId,

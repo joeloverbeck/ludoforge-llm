@@ -1,0 +1,92 @@
+{
+  "seed": 1,
+  "maxTurns": 10,
+  "playerCount": 4,
+  "decisionIndex": 27,
+  "profileId": "policy-preview-inner-choosenstep-fitl-canary",
+  "decision": {
+    "kind": "chooseNStep",
+    "decisionKey": "decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable",
+    "command": "add",
+    "value": "tok_us-troops_29"
+  },
+  "selectedStableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_29\"",
+  "previewUsage": {
+    "mode": "exactWorld",
+    "evaluatedCandidateCount": 22,
+    "completionPolicyFallbackCount": 11,
+    "refIds": [
+      "preview.option.delta.victory.currentMargin.self"
+    ],
+    "unknownRefs": [],
+    "readyRefStats": {
+      "preview.option.delta.victory.currentMargin.self": {
+        "readyCount": 11,
+        "distinctValueCount": 2,
+        "min": 3,
+        "max": 4,
+        "range": 1,
+        "allReadyValuesEqual": false
+      }
+    },
+    "utility": "differentiating",
+    "widenedBecauseUniform": false,
+    "outcomeBreakdown": {
+      "ready": 11,
+      "stochastic": 0,
+      "unknownRandom": 0,
+      "unknownHidden": 0,
+      "unknownUnresolved": 0,
+      "unknownDepthCap": 0,
+      "unknownNoPreviewDecision": 0,
+      "unknownGated": 0,
+      "unknownFailed": 0
+    }
+  },
+  "options": [
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_138\"",
+      "projectedMarginValue": 3
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_39\"",
+      "projectedMarginValue": 3
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_29\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_28\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_32\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_31\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_47\"",
+      "projectedMarginValue": 3
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-bases_46\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-irregulars_34\"",
+      "projectedMarginValue": 3
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-troops_1\"",
+      "projectedMarginValue": 4
+    },
+    {
+      "stableMoveKey": "chooseNStep:decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable:add:\"tok_us-bases_0\"",
+      "projectedMarginValue": 4
+    }
+  ]
+}

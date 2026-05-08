@@ -12,10 +12,12 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 - `draft/untracked status`: active ticket, referenced specs, and sibling drafts when relevant
 - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
 - `authoritative boundary`: the final owned implementation slice after reassessment
+- `proof noun alignment`: the ticket's claimed invariant noun, the required observable fields/values, and whether the proposed witness proves behavior rather than only invocation, plumbing, or reachability
 - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`; if editing `schemas-core.ts`, serialized trace/result unions, generated-schema-bearing types, or other compiled public schema surfaces, default to `schema artifacts likely` until `schema:artifacts:check` proves otherwise
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
 - `reference guidance loaded`: triggered references actually loaded for the current ticket, such as `working-notes`, `schema-and-migration`, `verification`, or `verification-acceptance-proof`; if a normally triggered reference is skipped, record `not loaded + why`
 - `acceptance-proof lanes`: the final verification gates required before the ticket can close, distinct from intermediate green lanes
+- `ticket graph/status integrity lane`: if terminal status, dependency edges, active/archive classification, sibling ownership, successor/follow-up files, or other ticket-graph facts may change, plan the repo's narrow ticket-dependency or markdown-integrity check now; use `not applicable` only when no graph/status edge changes or no such checker exists
 - `output contention / sequencing`: classify each planned proof lane that consumes or rewrites `dist`, schemas, goldens, compiled JSON, or another generated tree as `parallel-safe` or `serial-only`; record the producer step and any rerun required if a later lane cleans/rebuilds that output
 - `terminal status plan`: when the ticket status may become terminal; keep the repo-local terminal status, such as `IMPLEMENTED` or `COMPLETED`, pending until final lanes are green, classified, or explicitly substituted
 - `ticket-named deliverables ledger`: for tracked or active draft tickets with explicit `What to Change`, `Files to Touch`, artifacts, or named witness files, classify each concrete item as `planned`, `already satisfied / verified-no-edit`, `needs rewrite`, `blocked`, or `needs 1-3-1` before coding
@@ -24,6 +26,7 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 - `commit-body / durable evidence deliverables`: commit-body evidence, seed rationale, failure output, re-bless lines, or other ledgers the ticket requires; for no-commit sessions, plan the checked-in ticket/report/final-closeout location that will carry the evidence, or stop for `1-3-1` if the commit body itself is semantically required
 - `red-gate materiality ledger`: for benchmark/measured-gate tickets, record `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`; use `not applicable` for non-measured tickets
 - `diagnostic metric gates`: for architecture, migration, proof, or non-benchmark tickets that embed a numeric/percentage canary, classify each metric as `terminal acceptance`, `diagnostic evidence`, or `successor input`; if that changes an explicit deliverable or terminal gate, stop for `1-3-1` unless already authorized
+- `authorization ledger`: when a user approves a 1-3-1 option or other boundary reset, record the option label, confirmation, and durable repo location where that approval is reflected
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant; when naming a sibling as owner, record whether that sibling was opened and confirmed, or why the active spec is sufficient
 - `source file size risk`: optional; include when a named source file is already near/over repo guidance and active work will add logic there, or when the ticket creates a substantial new source file likely to carry most of the implementation. Use `extract now`, `defer with rationale`, or `1-3-1 needed`. For profiling/investigation tickets, update this field when profiling selects an unlisted implementation file that may be near/over guidance.
@@ -47,5 +50,6 @@ When a ticket goes through repeated 1-3-1 boundary resets in the same session, p
 - `previous boundary`
 - `new evidence`
 - `new authoritative boundary`
+- `user authorization`: approved option label and confirmation, plus where the active ticket/spec records it
 - `invalidated proof lanes`
 - `new acceptance-proof lanes`

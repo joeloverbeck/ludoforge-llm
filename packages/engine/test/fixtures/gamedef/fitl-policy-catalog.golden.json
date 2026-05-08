@@ -1406,6 +1406,19 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "preferOptionProjectedMargin": {
+        "scopes": [
+          "microturn"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "tieBreakers": {
@@ -3611,6 +3624,48 @@
           "mayTouchVariables": [],
           "mayTouchScores": []
         }
+      },
+      "preferOptionProjectedMargin": {
+        "scopes": [
+          "microturn"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": 300
+        },
+        "value": {
+          "kind": "ref",
+          "ref": {
+            "kind": "previewOptionRef",
+            "refKind": "deltaVictoryCurrentMarginSelf"
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
+        }
       }
     },
     "tieBreakers": {
@@ -3747,7 +3802,8 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow"
+          "trainWhenControlLow",
+          "preferOptionProjectedMargin"
         ],
         "tieBreakers": [
           "stableMoveKey"
@@ -3759,6 +3815,13 @@
           "strategy": "balancedCoverage",
           "fullCandidateCap": 10,
           "minPerGroup": 1
+        },
+        "inner": {
+          "chooseOne": true,
+          "chooseNStep": false,
+          "maxOptions": 8,
+          "chooseNBeamWidth": 1,
+          "depthCap": 4
         },
         "phase1": false,
         "phase1CompletionsPerAction": 1
@@ -3786,10 +3849,11 @@
           "preferGovernWeighted",
           "preferTrainWeighted",
           "governWhenPatronageLow",
-          "trainWhenControlLow"
+          "trainWhenControlLow",
+          "preferOptionProjectedMargin"
         ]
       },
-      "fingerprint": "02e8a3fa0cae715132b146308e701842786853e1b823fc0691933fd2b5bebc20"
+      "fingerprint": "aa4d473fb89fc9fd87e83c4e045119f30529e2f2e11c71faf8144e15f21d9c2b"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -3909,5 +3973,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "5982af1a1c5e45a638c362488c42a78b499e089543cefff21cbe6a1a75f690fb"
+  "catalogFingerprint": "48df603ce30de41cc20b98bc23ca09d0735b060274c23e04a9a30f66205f3b6e"
 }

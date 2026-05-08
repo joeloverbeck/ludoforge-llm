@@ -390,6 +390,12 @@ agents:
                 - add:
                     - { ref: feature.vcBaseCount }
                     - { ref: feature.turnRound }
+      preferOptionProjectedMargin:
+        scopes: [microturn]
+        costClass: preview
+        weight: 300
+        value:
+          ref: preview.option.delta.victory.currentMargin.self
 
     tieBreakers:
       stableMoveKey:
@@ -444,6 +450,12 @@ agents:
           strategy: balancedCoverage
           fullCandidateCap: 10
           minPerGroup: 1
+        inner:
+          chooseOne: true
+          chooseNStep: true
+          maxOptions: 8
+          chooseNBeamWidth: 1
+          depthCap: 4
       params:
         projectedMarginWeight: 300
         governWeight: 1000
@@ -458,6 +470,7 @@ agents:
           - preferTrainWeighted
           - governWhenPatronageLow
           - trainWhenControlLow
+          - preferOptionProjectedMargin
         tieBreakers:
           - stableMoveKey
 

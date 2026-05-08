@@ -21,6 +21,7 @@ Minimal checkpoint shape:
 - `draft/untracked status`: active ticket/spec/sibling state that matters
 - `discrepancy class`: blocking vs nonblocking live mismatches
 - `authoritative boundary`: what this ticket now owns
+- `proof noun alignment`: the ticket's claimed invariant noun, the required observable fields/values, and whether the proposed witness proves behavior rather than only invocation, plumbing, or reachability
 - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`
 - `verification substitutions`: any ticket-command or proof-shape corrections
 - `reference guidance loaded`: triggered reference files loaded for this ticket, or `not loaded + why` when a normally triggered reference is intentionally skipped
@@ -34,6 +35,7 @@ Minimal checkpoint shape:
 - `commit-body / durable evidence deliverables`: commit-body evidence, seed rationale, failure output, re-bless lines, or other ledgers the ticket requires; for no-commit sessions, plan the checked-in ticket/report/final-closeout location that will carry the evidence, or stop for `1-3-1` if the commit body itself is semantically required
 - `red-gate materiality ledger`: for benchmark/measured-gate tickets, record `baseline`, `decisive final`, `target`, `delta`, `percent change`, `verdict`, and `terminal status allowed?`; use `not applicable` for non-measured tickets
 - `diagnostic metric gates`: for architecture, migration, proof, or non-benchmark tickets that embed a numeric/percentage canary, classify each metric as `terminal acceptance`, `diagnostic evidence`, or `successor input` before coding; if the classification changes an explicit deliverable or terminal gate, stop for `1-3-1` unless already authorized
+- `authorization ledger`: when a user approves a 1-3-1 option or other boundary reset, record the option label, confirmation, and durable repo location where that approval is reflected
 - `semantic corrections`: any stale draft expectation, example, or output-shape claim proven wrong by live evidence
 - `deferred sibling/spec scope`: broader spec or series work explicitly confirmed out of scope, when relevant; when naming a sibling as owner, record whether that sibling was opened and confirmed, or why the active spec is sufficient
 - `source file size risk`: optional but expected when a named source file is already near or over repo guidance and the ticket will add logic there, or when the ticket creates a substantial new source file likely to carry most of the implementation; record extract-now, defer-with-rationale, or stop-for-`1-3-1` before the risk becomes a final-proof surprise

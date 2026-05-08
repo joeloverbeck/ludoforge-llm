@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-010: FITL chooseNStep canary golden trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes (test + golden fixture) — `packages/engine/test/integration/`
@@ -35,14 +35,14 @@ Spec 161's per-root-option preview at chooseNStep is intended to differentiate o
 
 ### 2. Golden fixture
 
-Commit the golden trace alongside the test (e.g., `packages/engine/test/fixtures/fitl/spec-161-choosenstep-canary-golden.json` or analogous path matching the chooseOne precedent's location). Capture by running the canary scenario once with `chooseNStep: true` after Ticket 004 lands; serialize canonically.
+Commit the golden trace alongside the test at the chooseOne precedent's trace-fixture location: `packages/engine/test/fixtures/trace/spec-161-choosenstep-fitl-canary-golden.json`. Capture by running the canary scenario once with `chooseNStep: true` after Ticket 004 lands; serialize canonically.
 
 If the FITL canary's ply/seed combination produces no chooseNStep frontiers (unlikely, but possible), surface via the 1-3-1 rule — propose a different ply or scenario rather than skipping.
 
 ## Files to Touch
 
 - `packages/engine/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.ts` (new — `golden-trace`)
-- `packages/engine/test/fixtures/fitl/spec-161-choosenstep-canary-golden.json` (new — committed golden fixture; exact path matches chooseOne precedent's location)
+- `packages/engine/test/fixtures/trace/spec-161-choosenstep-fitl-canary-golden.json` (new — committed golden fixture; path matches chooseOne precedent's trace-fixture location)
 
 ## Out of Scope
 
@@ -77,3 +77,33 @@ If the FITL canary's ply/seed combination produces no chooseNStep frontiers (unl
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
 5. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completion date: 2026-05-08.
+
+Live reassessment found that the seed-1001 replay used by the existing chooseOne canary reaches ARVN chooseNStep frontiers, but those frontiers produce `readyCount: 0` and `distinctValueCount: 0` for `preview.option.delta.victory.currentMargin.self` because the broad target-space choices hit `unknownDepthCap`. That replay is therefore not the ticket's projected-margin golden witness.
+
+The implemented witness uses FITL seed 1, `maxTurns: 10`, `playerCount: 4`, and decision index 27. That frontier is a chooseNStep ADD for `decision:doc.eventDecks.0.cards.92.unshaded.effects.0.chooseN::$fulbrightPiecesToAvailable`; it produces `previewUsage.mode: "exactWorld"`, `readyCount: 11`, `distinctValueCount: 2`, `min: 3`, `max: 4`, and `utility: "differentiating"` for `preview.option.delta.victory.currentMargin.self`.
+
+The test uses an in-test ARVN-like opt-in profile cloned from `arvn-evolved`, with `preview.inner.chooseNStep: true`, the `preferOptionProjectedMargin` microturn consideration, and `fallbackCompletionPolicy: "greedy"` for continuation fallback. The greedy fallback is part of this diagnostic canary profile only; production ARVN profile opt-in remains out of scope for Ticket 013. This keeps the ticket aligned to F#16 by pinning actual differentiated projected-margin values rather than merely proving that chooseNStep preview was invoked.
+
+Touched-file scope: added `packages/engine/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.ts` and `packages/engine/test/fixtures/trace/spec-161-choosenstep-fitl-canary-golden.json`. The originally example `packages/engine/test/fixtures/fitl/...` path was corrected to the existing trace-fixture convention used by `policy-preview-inner-fitl-canary-golden.test.ts`.
+
+Generated fallout: committed golden JSON fixture only; no schema artifacts or generated schema changes are owned.
+
+Deferred sibling scope: structural audit, cookbook, and manual validation remain with Tickets 011-013.
+
+Runtime surface breadth: test/golden only; the proof exercises policy/agent runtime behavior without changing production runtime code.
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.js | split into serial build plus repo-root node --test packages/engine/dist/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.js | passed; final focused rerun passed in 41192 ms after build-producing lanes`
+- `Acceptance Criteria | existing FITL canary golden policy-preview-inner-fitl-canary-golden.test.ts continues to pass | focused repo-root node --test packages/engine/dist/test/integration/policy-preview-inner-fitl-canary-golden.test.js | passed; final focused rerun passed in 1019 ms after build-producing lanes`
+- `Test Plan | pnpm -F @ludoforge/engine test:integration | run literally | passed; 274/274 files passed`
+- `Test Plan | pnpm turbo typecheck | run literally | passed; 3/3 tasks successful`
+- `Test Plan | pnpm turbo lint | run literally | passed; 2/2 tasks successful`
+- `Test Plan | pnpm -F @ludoforge/engine test | run literally | passed; schema artifact check plus 66/66 default files passed`
+- `Terminal status | pnpm run check:ticket-deps | run literally after marking COMPLETED | passed for 4 active tickets and 2276 archived tickets`
+
+Output sequencing: proof was run serially because build, typecheck, engine test, and focused compiled tests consume or rewrite `packages/engine/dist`. The focused chooseNStep and chooseOne compiled goldens were rerun after the broad build-producing lanes.

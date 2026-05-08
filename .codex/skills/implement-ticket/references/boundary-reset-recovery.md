@@ -58,7 +58,7 @@ When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling ha
 
 1. Restate the approved active-ticket boundary and the specific deferred or sibling-owned surface.
 2. Update the active ticket, spec, and affected sibling tickets first when their current wording still claims the deferred surface.
-3. Emit a fresh working-notes checkpoint for the narrowed slice, including `deferred sibling/spec scope`, `verification substitutions`, and any changed final proof lanes.
+3. Emit a fresh working-notes checkpoint for the narrowed slice, including `proof noun alignment`, `authorization ledger`, `deferred sibling/spec scope`, `verification substitutions`, and any changed final proof lanes.
 4. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket before implementation.
 5. Only then resume coding and verification under the corrected boundary.
 

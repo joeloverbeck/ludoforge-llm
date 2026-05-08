@@ -56,6 +56,8 @@ Purely clerical ticket/spec edits, such as typo fixes or appending evidence that
 
 Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
 
+After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
+
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
 Suggested late-edit proof-validity ledger:

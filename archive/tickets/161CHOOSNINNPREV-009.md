@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-009: chooseNStep inner-preview default-off invariant test
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes (test + snapshot fixture) — `packages/engine/test/determinism/`
@@ -41,6 +41,7 @@ If a feasible procedure for capturing the pre-state baseline is unavailable at i
 
 - `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.ts` (new — `architectural-invariant`)
 - `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json` (new — committed baseline) OR a fixture path under `packages/engine/test/fixtures/` per existing convention
+- `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-fixture.ts` (test-helper fallout — adds an explicit omitted-flag fixture mode so the default-off test can prove the omitted `preview.inner.chooseNStep` case without duplicating the constructed chooseNStep fixture)
 
 ## Out of Scope
 
@@ -74,3 +75,30 @@ If a feasible procedure for capturing the pre-state baseline is unavailable at i
 3. `pnpm turbo typecheck`
 4. `pnpm turbo lint`
 5. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-08. The owned test-only slice adds `packages/engine/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.ts` and the committed baseline snapshot `packages/engine/test/determinism/spec-161-choosenstep-no-op-default.snapshot.json`. The snapshot is the simulated pre-Ticket-004/default-off dispatch path permitted by this ticket: the existing Spec 161 constructed chooseNStep fixture with `preview.inner.chooseNStep: false`, which produces disabled inner-preview usage, zero evaluated candidates, no candidate preview drives, and the same canonical serialized final state.
+
+Touched-file scope: the ticket-named determinism test and snapshot are added. `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-fixture.ts` has a small test-helper extension for an explicit `omitted` profile mode so the test can separately assert the omitted-flag acceptance criterion while reusing the established Spec 161 fixture. No production source, schema artifact, generated schema, or runtime behavior change is owned by this ticket.
+
+Command substitution ledger:
+
+1. Test Plan command `pnpm -F @ludoforge/engine build && node --test dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` — run as `pnpm -F @ludoforge/engine build` followed by repo-root `node --test packages/engine/dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js`.
+2. Test Plan command `pnpm -F @ludoforge/engine test:determinism` — run directly.
+3. Test Plan command `pnpm turbo typecheck` — run directly.
+4. Test Plan command `pnpm turbo lint` — run directly.
+5. Test Plan command `pnpm -F @ludoforge/engine test` — run directly.
+
+Verification:
+
+1. `pnpm -F @ludoforge/engine build` — passed.
+2. `node --test packages/engine/dist/test/determinism/spec-161-choosenstep-inner-preview-no-op-default.test.js` — passed after the final build-producing lane; repo-root spelling of the ticket's focused `dist/...` command.
+3. `pnpm -F @ludoforge/engine test:determinism` — passed, 22/22 files.
+4. `pnpm turbo typecheck` — passed, 3/3 tasks.
+5. `pnpm turbo lint` — passed, 2/2 tasks.
+6. `pnpm -F @ludoforge/engine test` — passed, including `schema:artifacts:check` and 65/65 default-lane files.
+
+Late-edit proof validity: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.
+
+Ticket dependency integrity: `pnpm run check:ticket-deps` passed for 5 active tickets and 2275 archived tickets. No-invalidation: checker-result transcription only; no ticket graph, scope, acceptance, command, touched-file, follow-up, or dependency change.

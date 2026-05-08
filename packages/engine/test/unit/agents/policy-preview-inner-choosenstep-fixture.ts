@@ -53,21 +53,28 @@ function microturnConsiderations(
   );
 }
 
-function createProfile(chooseNStep: boolean): CompiledAgentProfile {
+export type ChoosenStepPreviewFlag = boolean | 'omitted';
+
+function createProfile(chooseNStep: ChoosenStepPreviewFlag): CompiledAgentProfile {
   const considerations = ['preferProjectedMargin'];
+  const flagLabel = chooseNStep === 'omitted' ? 'omitted' : chooseNStep ? 'enabled' : 'disabled';
   return {
-    fingerprint: `${choosenStepPreviewWitnessId}-${chooseNStep ? 'enabled' : 'disabled'}`,
+    fingerprint: `${choosenStepPreviewWitnessId}-${flagLabel}`,
     params: {},
     preview: {
       mode: 'exactWorld',
       completion: 'policyGuided',
-      inner: {
-        chooseOne: false,
-        chooseNStep,
-        maxOptions: 4,
-        chooseNBeamWidth: 2,
-        depthCap: 3,
-      },
+      ...(chooseNStep === 'omitted'
+        ? {}
+        : {
+            inner: {
+              chooseOne: false,
+              chooseNStep,
+              maxOptions: 4,
+              chooseNBeamWidth: 2,
+              depthCap: 3,
+            },
+          }),
     },
     selection: { mode: 'argmax' },
     use: {
@@ -84,11 +91,12 @@ function createProfile(chooseNStep: boolean): CompiledAgentProfile {
   };
 }
 
-export function createChoosenStepPreviewCatalog(chooseNStep = true): AgentPolicyCatalog {
+export function createChoosenStepPreviewCatalog(chooseNStep: ChoosenStepPreviewFlag = true): AgentPolicyCatalog {
   const profile = createProfile(chooseNStep);
+  const flagLabel = chooseNStep === 'omitted' ? 'omitted' : chooseNStep ? 'enabled' : 'disabled';
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
-    catalogFingerprint: `${choosenStepPreviewWitnessId}-${chooseNStep ? 'enabled' : 'disabled'}`,
+    catalogFingerprint: `${choosenStepPreviewWitnessId}-${flagLabel}`,
     surfaceVisibility: {
       globalVars: {},
       globalMarkers: {},
@@ -196,7 +204,7 @@ export function createChoosenStepPreviewDef(catalog: AgentPolicyCatalog): GameDe
   });
 }
 
-export function createChoosenStepPreviewFixture(chooseNStep = true): {
+export function createChoosenStepPreviewFixture(chooseNStep: ChoosenStepPreviewFlag = true): {
   readonly catalog: AgentPolicyCatalog;
   readonly def: GameDef;
   readonly state: GameState;

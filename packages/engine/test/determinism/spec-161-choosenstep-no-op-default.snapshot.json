@@ -1,0 +1,301 @@
+{
+  "serializedFinalState": {
+    "globalVars": {
+      "score": 0
+    },
+    "perPlayerVars": {
+      "0": {},
+      "1": {}
+    },
+    "zoneVars": {},
+    "playerCount": 2,
+    "zones": {},
+    "nextTokenOrdinal": 0,
+    "currentPhase": "main",
+    "activePlayer": 0,
+    "turnCount": 0,
+    "rng": {
+      "algorithm": "pcg-dxsm-128",
+      "version": 1,
+      "state": [
+        "0x9e3779b97f4a7c15f39cc0605cedc894",
+        "0xda3e39cb94b95a99"
+      ]
+    },
+    "stateHash": "0x2e8772cca663d78d",
+    "actionUsage": {},
+    "markers": {},
+    "globalMarkers": {},
+    "decisionStack": [
+      {
+        "frameId": 0,
+        "parentFrameId": null,
+        "turnId": 0,
+        "context": {
+          "kind": "actionSelection",
+          "seatId": "us",
+          "eligibleActions": [
+            "draft-options"
+          ]
+        },
+        "continuationBindings": {
+          "$picks": [
+            "spare"
+          ]
+        },
+        "effectFrame": {
+          "programCounter": 0,
+          "boundedIterationCursors": {},
+          "localBindings": {},
+          "pendingTriggerQueue": [],
+          "decisionHistory": [
+            {
+              "seatId": "us",
+              "decisionContextKind": "actionSelection",
+              "decisionKey": null,
+              "decision": {
+                "kind": "actionSelection",
+                "actionId": "draft-options",
+                "move": {
+                  "actionId": "draft-options",
+                  "params": {}
+                }
+              },
+              "frameId": 0
+            },
+            {
+              "seatId": "us",
+              "decisionContextKind": "chooseNStep",
+              "decisionKey": "$picks",
+              "decision": {
+                "kind": "chooseNStep",
+                "decisionKey": "$picks",
+                "command": "add",
+                "value": "spare"
+              },
+              "frameId": 1
+            }
+          ]
+        }
+      },
+      {
+        "frameId": 1,
+        "parentFrameId": 0,
+        "turnId": 0,
+        "context": {
+          "kind": "chooseNStep",
+          "seatId": "us",
+          "decisionKey": "$picks",
+          "options": [
+            {
+              "value": "low",
+              "legality": "illegal",
+              "illegalReason": null,
+              "resolution": "exact"
+            },
+            {
+              "value": "high",
+              "legality": "illegal",
+              "illegalReason": null,
+              "resolution": "exact"
+            },
+            {
+              "value": "spare",
+              "legality": "illegal",
+              "illegalReason": null,
+              "resolution": "exact"
+            }
+          ],
+          "selectedSoFar": [
+            "spare"
+          ],
+          "cardinality": {
+            "min": 1,
+            "max": 1
+          },
+          "stepCommands": [
+            "add",
+            "remove",
+            "confirm"
+          ],
+          "templateHint": {
+            "normalizedDomain": [
+              "low",
+              "high",
+              "spare"
+            ],
+            "prioritizedTierEntries": null,
+            "qualifierMode": "none"
+          }
+        },
+        "effectFrame": {
+          "programCounter": 0,
+          "boundedIterationCursors": {},
+          "localBindings": {},
+          "pendingTriggerQueue": [],
+          "suspendedFrame": {
+            "state": {
+              "globalVars": {
+                "score": 0
+              },
+              "perPlayerVars": {
+                "0": {},
+                "1": {}
+              },
+              "zoneVars": {},
+              "playerCount": 2,
+              "zones": {},
+              "nextTokenOrdinal": 0,
+              "currentPhase": "main",
+              "activePlayer": 0,
+              "turnCount": 0,
+              "rng": {
+                "algorithm": "pcg-dxsm-128",
+                "version": 1,
+                "state": [
+                  "0x9e3779b97f4a7c15f39cc0605cedc894",
+                  "0xda3e39cb94b95a99"
+                ]
+              },
+              "stateHash": "0x5b652d9151c2b6a7",
+              "actionUsage": {},
+              "markers": {},
+              "globalMarkers": {},
+              "decisionStack": [],
+              "nextFrameId": 0,
+              "nextTurnId": 0,
+              "activeDeciderSeatId": "us",
+              "turnOrderState": {
+                "type": "roundRobin"
+              }
+            },
+            "rng": {
+              "state": {
+                "algorithm": "pcg-dxsm-128",
+                "version": 1,
+                "state": [
+                  "0x9e3779b97f4a7c15f39cc0605cedc894",
+                  "0xda3e39cb94b95a99"
+                ]
+              }
+            },
+            "actorPlayer": 0,
+            "bindings": {
+              "__freeOperation": false,
+              "__actionClass": "operation"
+            },
+            "leaf": {
+              "kind": "chooseN",
+              "decisionKey": "$picks",
+              "bind": "$picks",
+              "decisionScope": {
+                "iterationPath": "",
+                "counters": {
+                  "$picks": 1
+                }
+              },
+              "bindingOptions": [
+                {
+                  "comparable": "low",
+                  "binding": "low"
+                },
+                {
+                  "comparable": "high",
+                  "binding": "high"
+                },
+                {
+                  "comparable": "spare",
+                  "binding": "spare"
+                }
+              ]
+            },
+            "resumeStack": [
+              {
+                "kind": "sequence",
+                "effects": [
+                  {
+                    "_k": 28,
+                    "if": {
+                      "when": {
+                        "op": "in",
+                        "item": "high",
+                        "set": {
+                          "_t": 2,
+                          "ref": "binding",
+                          "name": "$picks"
+                        }
+                      },
+                      "then": [
+                        {
+                          "_k": 1,
+                          "addVar": {
+                            "scope": "global",
+                            "var": "score",
+                            "delta": 5
+                          }
+                        }
+                      ],
+                      "else": [
+                        {
+                          "_k": 1,
+                          "addVar": {
+                            "scope": "global",
+                            "var": "score",
+                            "delta": 1
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "nextFrameId": 2,
+    "nextTurnId": 0,
+    "activeDeciderSeatId": "us",
+    "turnOrderState": {
+      "type": "roundRobin"
+    }
+  },
+  "previewUsage": {
+    "mode": "disabled",
+    "evaluatedCandidateCount": 0,
+    "completionPolicyFallbackCount": 0,
+    "refIds": [],
+    "unknownRefs": [],
+    "readyRefStats": {},
+    "utility": "none",
+    "widenedBecauseUniform": false,
+    "outcomeBreakdown": {
+      "ready": 0,
+      "stochastic": 0,
+      "unknownRandom": 0,
+      "unknownHidden": 0,
+      "unknownUnresolved": 0,
+      "unknownDepthCap": 0,
+      "unknownNoPreviewDecision": 0,
+      "unknownGated": 0,
+      "unknownFailed": 0
+    }
+  },
+  "selectedStableMoveKey": "chooseNStep:$picks:add:\"spare\"",
+  "candidateStableKeys": [
+    "chooseNStep:$picks:add:\"low\"",
+    "chooseNStep:$picks:add:\"high\"",
+    "chooseNStep:$picks:add:\"spare\""
+  ],
+  "candidatePreviewDrives": [
+    null,
+    null,
+    null
+  ],
+  "legalAddKeys": [
+    "chooseNStep:$picks:add:\"high\"",
+    "chooseNStep:$picks:add:\"low\"",
+    "chooseNStep:$picks:add:\"spare\""
+  ]
+}

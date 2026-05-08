@@ -265,6 +265,14 @@ When a ticket otherwise looks bounded but changes a **serialized trace/result sh
 
 For closed trace/diagnostic enum extensions, treat source constants and trace-schema mirrors as one contract before coding. Use a compact mirror sweep: exported `as const` or source enum, kernel trace union/type mirror, Zod/schema source such as `schemas-core.ts`, generated JSON schema artifact, and the nearest schema-shape or trace-shape test. If the ticket draft claims "no consumer change required" but the mirror sweep finds one of these surfaces, record it as owned shared-contract fallout in working notes and the active ticket before final proof.
 
+For pure compiler or validator diagnostic-code renames, keep the Foundation 14 no-alias proof explicit without over-expanding into unrelated schema work:
+
+- rename the canonical code key and string value together
+- update the emission site, focused assertions, and any source/test fixtures that consume the literal
+- run a source/test sweep for the retired literal and require zero hits in owned mutable code and tests
+- classify remaining hits in active specs/tickets, archived tickets, reports, or docs as either `historical/explanatory allowed` or `active-contract drift to update`
+- record in the active ticket whether generated schema/artifact fallout is owned; if the diagnostic code is not part of a generated public schema, say so rather than regenerating by inertia
+
 If the ticket only changes **population of an existing serialized field** and does not change field name, required/optional status, enum values, property type, schema source, or generated artifact shape, classify it as `existing serialized-field population`. Still validate the serialized consumer path with focused tests and schema/artifact checks when nearby, but do not assume artifact regeneration is owned unless a generator or schema check reports drift.
 
 ### Bounded Local Refactor Fast Path

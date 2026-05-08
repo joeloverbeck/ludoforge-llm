@@ -100,6 +100,8 @@ A profile with both flags enabled and no consideration emits two diagnostics (on
 
 ## Outcome
 
+Outcome amended: 2026-05-08 — archive-path repair only.
+
 Completed on 2026-05-08. Landed slice:
 
 - `packages/engine/src/cnl/validate-agents.ts` now collects both `preview.inner.chooseOne` and `preview.inner.chooseNStep` opt-in flags and emits one reused `CNL_COMPILER_AGENT_PREVIEW_INNER_OPT_IN_NO_OPTION_CONSIDERATION` warning per enabled flag when no microturn-scope consideration references `preview.option.*`.
@@ -107,7 +109,7 @@ Completed on 2026-05-08. Landed slice:
 
 Generated fallout: transient `packages/engine/dist/` only; no schema, golden, or compiled JSON artifact is owned by this ticket.
 
-Deferred sibling scope: squared-cost formula and diagnostic rename remain with `tickets/161CHOOSNINNPREV-006.md`; hidden-info, replay/no-op, FITL canary, structural audit, cookbook, and manual validation remain with Tickets 007-013.
+Deferred sibling scope: squared-cost formula and diagnostic rename remain with `archive/tickets/161CHOOSNINNPREV-006.md`; hidden-info, replay/no-op, FITL canary, structural audit, cookbook, and manual validation remain with Tickets 007-013.
 
 File-size sweep: `packages/engine/src/cnl/validate-agents.ts` is 519 lines after the validator edit; `packages/engine/test/unit/cnl/validate-preview-inner-warning-parity.test.ts` is 128 lines. Both are below the repo cap.
 

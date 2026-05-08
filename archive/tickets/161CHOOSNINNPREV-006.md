@@ -1,6 +1,6 @@
 # 161CHOOSNINNPREV-006: Squared-cost formula + `COST_EXCEEDS_HARD_CAP` diagnostic rename
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/`
@@ -114,3 +114,39 @@ Update the diagnostic-code string assertion from `CNL_COMPILER_AGENT_PREVIEW_INN
 4. `pnpm turbo typecheck`
 5. `pnpm turbo lint`
 6. `pnpm -F @ludoforge/engine test`
+
+## Outcome
+
+Completed on 2026-05-08. Landed slice:
+
+- `packages/engine/src/cnl/compile-agents.ts` now computes `preview.inner` cost with the squared chooseNStep formula when `chooseNStep === true`, and keeps the existing triple-product formula for `chooseNStep === false` or omitted.
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts` replaces `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED` with `CNL_COMPILER_AGENT_PREVIEW_INNER_COST_EXCEEDS_HARD_CAP`; no source/test alias remains.
+- `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` now expects the renamed diagnostic for the existing overflow case.
+- `packages/engine/test/unit/cnl/compile-preview-inner-choosenstep-cost.test.ts` adds the ticket-owned architectural-invariant coverage for ARVN-like squared cost 200, chooseNStep squared overflow 392, chooseNStep-disabled triple-product compatibility, and renamed triple-product overflow diagnostics.
+
+Touched-file scope: exactly the four ticket-named files changed. The only additional live `CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED` hits after implementation are historical/explanatory prose in this active ticket, the owning spec, and archived ticket `archive/tickets/160PEROPTPREV-003.md`; no source or test reference remains.
+
+Generated fallout: transient `packages/engine/dist/` output only. No schema, golden, or compiled JSON source artifact is expected to change because the compiled `preview.inner` shape is unchanged.
+
+Deferred sibling scope: warning parity remains archived ticket `161CHOOSNINNPREV-005`; runtime dispatch/adapter, hidden-info, replay/default-off, FITL canary, structural audit, cookbook, and manual validation remain outside this ticket per Spec 161.
+
+File-size sweep: `packages/engine/src/cnl/compile-agents.ts` was already oversized at 3104 lines before this surgical lowerer edit and is 3108 lines after it. Extraction would widen the ticket and obscure the canonical lowerer seam; no separate extraction owner is justified by this four-line active growth. The new unit test is 141 lines.
+
+Runtime surface breadth: shared CNL compiler validation and diagnostics only; no kernel/runtime behavior or serialized schema shape changed.
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/compile-preview-inner-choosenstep-cost.test.js | split into serial build plus focused compiled test | build passed; focused compiled test passed after final broad lanes rebuilt dist`
+- `Test Plan | pnpm -F @ludoforge/engine build && node --test dist/test/unit/cnl/compile-preview-inner.test.js | split into serial build plus focused compiled test | build passed; focused compiled test passed after final broad lanes rebuilt dist`
+- `Test Plan | pnpm turbo schema:artifacts | run literally | passed; regenerated schema artifacts but left no tracked schema source diff`
+- `Test Plan | pnpm turbo typecheck | run literally | passed`
+- `Test Plan | pnpm turbo lint | run literally | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test | run literally | passed; default lane summary 65/65 files passed`
+
+Output sequencing: final proof ran serially. `pnpm turbo schema:artifacts` rebuilt `packages/engine/dist` after the first focused compiled tests, so both focused compiled CNL tests were rerun after the broad lanes against the final output.
+
+Final source/test diagnostic sweep: `rg -n 'CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED' packages/engine/src packages/engine/test` returned no matches; the old diagnostic name remains only in historical/explanatory ticket/spec prose.
+
+Ticket graph integrity: `pnpm run check:ticket-deps` passed for 8 active tickets and 2272 archived tickets.
+
+Late-edit proof validity: terminal status/proof transcription only; no scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, dependency classification, source code, or test behavior changed after the green lanes.

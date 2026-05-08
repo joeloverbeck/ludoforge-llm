@@ -166,6 +166,17 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 2. Run the narrowest repo integrity lane that validates ticket references or dependencies when available.
 3. Treat any stale reference left inside the ticket's own correction ledger or outcome block as acceptance-proof drift and fix it before final closeout.
 
+### Bounded Tracked Refactor Terminal Closeout
+
+For a small bounded refactor on an active tracked ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
+
+1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, file-size or other final-sweep ledgers, and exact final lanes.
+2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers and with focused generated-output consumers rerun after any later lane rebuilds the consumed output.
+3. Apply a terminal status/proof transcription patch only after all final lanes are green or classified. Keep this patch to status and exact proof results when practical.
+4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
+5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and finish with untracked-aware `git status --short`.
+6. In the final handoff, state that `post-ticket-review` has or has not run and name the next review/archive workflow when it has not.
+
 ### Bounded Draft Refactor Terminal Closeout
 
 For a small bounded refactor on an active untracked draft ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:

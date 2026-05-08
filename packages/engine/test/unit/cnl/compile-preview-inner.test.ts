@@ -94,7 +94,7 @@ describe('compile preview.inner', () => {
 
     assert.equal(
       result.diagnostics.some((diagnostic) => (
-        diagnostic.code === 'CNL_COMPILER_AGENT_PREVIEW_INNER_TRIPLE_PRODUCT_EXCEEDED'
+        diagnostic.code === 'CNL_COMPILER_AGENT_PREVIEW_INNER_COST_EXCEEDS_HARD_CAP'
         && diagnostic.path === 'doc.agents.profiles.baseline.preview.inner'
         && diagnostic.message.includes('512')
         && diagnostic.message.includes('256')

@@ -129,6 +129,37 @@ const summarizeReadyRefStats = (
   return stats;
 };
 
+const summarizeCoverage = (
+  run: PolicyAgentInnerPreviewRun,
+  refIds: readonly string[],
+): PolicyEvaluationMetadata['previewUsage']['coverage'] => {
+  let readyRootOptionCount = 0;
+  let unavailableRootOptionCount = 0;
+
+  for (const option of run.options) {
+    const hasReadyRef = refIds.some((refId) => option.resolvedRefs.get(refId)?.kind === 'ready');
+    if (hasReadyRef) {
+      readyRootOptionCount += 1;
+    } else if (refIds.length > 0) {
+      unavailableRootOptionCount += 1;
+    }
+  }
+
+  const allRootsUnavailable = refIds.length > 0
+    && run.options.length > 0
+    && readyRootOptionCount === 0
+    && unavailableRootOptionCount === run.options.length;
+
+  return {
+    requestedRefCount: refIds.length,
+    evaluatedRootOptionCount: run.options.length,
+    readyRootOptionCount,
+    unavailableRootOptionCount,
+    allRootsUnavailable,
+    selectedByTieBreakerBecausePreviewUnavailable: allRootsUnavailable,
+  };
+};
+
 const summarizeUsage = (
   mode: ResolvedPolicyProfile['profile']['preview']['mode'],
   run: PolicyAgentInnerPreviewRun,
@@ -148,6 +179,7 @@ const summarizeUsage = (
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform: false,
     outcomeBreakdown: run.outcomeBreakdown,
+    coverage: summarizeCoverage(run, refIds),
   };
 };
 

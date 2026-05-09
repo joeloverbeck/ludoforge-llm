@@ -1731,7 +1731,18 @@ export interface PolicyPreviewReadyRefStatsTrace {
 
 export type PolicyPreviewUtilityTrace = 'none' | 'constant' | 'lowInformation' | 'differentiating';
 
-export type PolicyCandidateSelectionReasonTrace = 'coverage' | 'prior' | 'shallowDelta' | 'widening' | 'cache' | 'gated' | 'beamPruned';
+export type PolicyCandidateSelectionReasonTrace =
+  | 'coverage'
+  | 'prior'
+  | 'shallowDelta'
+  | 'widening'
+  | 'cache'
+  | 'gated'
+  | 'beamPruned'
+  | 'scored'
+  | 'tiebreak'
+  | 'tiebreakAfterPreviewNoSignal'
+  | 'fallbackExplicit';
 
 export type SyntheticDecisionSelectionReasonTrace = 'greedyAlphabetical' | 'microturnPolicy' | 'fallback';
 
@@ -1794,6 +1805,30 @@ export interface PolicyPreviewUsageTrace {
   readonly utility: PolicyPreviewUtilityTrace;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown?: PolicyPreviewOutcomeBreakdownTrace;
+  readonly coverage: PolicyPreviewCoverageTrace;
+}
+
+export interface PolicyPreviewCoverageTrace {
+  readonly requestedRefCount: number;
+  readonly evaluatedRootOptionCount: number;
+  readonly readyRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly allRootsUnavailable: boolean;
+  readonly selectedByTieBreakerBecausePreviewUnavailable: boolean;
+}
+
+export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
+  readonly code: 'POLICY_PREVIEW_SIGNAL_UNAVAILABLE';
+  readonly profileId: string;
+  readonly seatId: string;
+  readonly decisionKind: 'chooseOne' | 'chooseNStep';
+  readonly decisionKey: string;
+  readonly requestedRefs: readonly string[];
+  readonly evaluatedRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnknownRefTrace['reason'], number>>;
+  readonly selectedStableMoveKey: string;
+  readonly selectionReason: 'tiebreakAfterPreviewNoSignal';
 }
 
 export interface PolicySelectionTrace {
@@ -1834,6 +1869,7 @@ export interface PolicyAgentDecisionTrace {
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;
+  readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisoryTrace[];
   readonly selection?: PolicySelectionTrace;
   readonly emergencyFallback: boolean;
   readonly failure: AgentDecisionFailureSummary | null;

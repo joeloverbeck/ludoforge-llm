@@ -95,7 +95,7 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 
 ### 5. New architectural-invariant tests
 
-`packages/engine/test/agents/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (T1 from spec §9.1):
+`packages/engine/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (T1 from spec §9.1):
 
 ```ts
 // @test-class: architectural-invariant
@@ -107,7 +107,7 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 - Assert: candidate score equals `chooseNStepProgressBias(input, decision)` (the only remaining score component).
 - Assert: `selectionReason` of the selected candidate is `tiebreakAfterPreviewNoSignal`.
 
-`packages/engine/test/agents/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (T2 from spec §9.1):
+`packages/engine/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (T2 from spec §9.1):
 
 ```ts
 // @test-class: architectural-invariant
@@ -123,8 +123,8 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify — `evaluateConsideration` branch on `hasPreviewRef`; `PolicyEvaluationCandidate.previewFallbackFired` field)
 - `packages/engine/src/agents/policy-agent.ts` (modify — `traceCandidatesForFrontier` populates `previewFallbackFired`; `fallbackExplicit` selectionReason classification)
 - `packages/engine/src/cnl/compile-agents.ts` (modify if `hasPreviewRef` field was not added in 004 — likely a small touch)
-- `packages/engine/test/agents/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (new, T1)
-- `packages/engine/test/agents/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (new, T2)
+- `packages/engine/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (new, T1)
+- `packages/engine/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (new, T2)
 
 ## Out of Scope
 
@@ -157,14 +157,14 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 
 ### New/Modified Tests
 
-1. `packages/engine/test/agents/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (new, T1) — silent-zero is impossible.
-2. `packages/engine/test/agents/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (new, T2) — explicit fallback is traced and classified.
+1. `packages/engine/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (new, T1) — silent-zero is impossible.
+2. `packages/engine/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (new, T2) — explicit fallback is traced and classified.
 3. If a FITL canary golden test asserts the old silent-zero behavior, update it with a re-bless note in the commit body.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test --test-name-pattern preview-integrity`
+2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.js dist/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.js`
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo test`
 5. `pnpm turbo typecheck`

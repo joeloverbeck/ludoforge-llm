@@ -2066,7 +2066,19 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
-    selectionReason: z.enum(['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated', 'beamPruned']),
+    selectionReason: z.enum([
+      'coverage',
+      'prior',
+      'shallowDelta',
+      'widening',
+      'cache',
+      'gated',
+      'beamPruned',
+      'scored',
+      'tiebreak',
+      'tiebreakAfterPreviewNoSignal',
+      'fallbackExplicit',
+    ]),
     previewOutcome: z.union([
       z.literal('ready'),
       z.literal('stochastic'),
@@ -2119,6 +2131,17 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewCoverageTraceSchema = z
+  .object({
+    requestedRefCount: IntegerSchema.nonnegative(),
+    evaluatedRootOptionCount: IntegerSchema.nonnegative(),
+    readyRootOptionCount: IntegerSchema.nonnegative(),
+    unavailableRootOptionCount: IntegerSchema.nonnegative(),
+    allRootsUnavailable: BooleanSchema,
+    selectedByTieBreakerBecausePreviewUnavailable: BooleanSchema,
+  })
+  .strict();
+
 const PolicyPreviewUsageTraceSchema = z
   .object({
     mode: z.enum(['exactWorld', 'tolerateStochastic', 'disabled']),
@@ -2130,6 +2153,31 @@ const PolicyPreviewUsageTraceSchema = z
     utility: z.enum(['none', 'constant', 'lowInformation', 'differentiating']),
     widenedBecauseUniform: BooleanSchema,
     outcomeBreakdown: PolicyPreviewOutcomeBreakdownTraceSchema.optional(),
+    coverage: PolicyPreviewCoverageTraceSchema,
+  })
+  .strict();
+
+const PolicyPreviewSignalUnavailableAdvisoryTraceSchema = z
+  .object({
+    code: z.literal('POLICY_PREVIEW_SIGNAL_UNAVAILABLE'),
+    profileId: StringSchema,
+    seatId: StringSchema,
+    decisionKind: z.enum(['chooseOne', 'chooseNStep']),
+    decisionKey: StringSchema,
+    requestedRefs: z.array(StringSchema),
+    evaluatedRootOptionCount: IntegerSchema.nonnegative(),
+    unavailableRootOptionCount: IntegerSchema.nonnegative(),
+    unavailabilityBreakdown: z.object({
+      random: IntegerSchema.nonnegative(),
+      hidden: IntegerSchema.nonnegative(),
+      unresolved: IntegerSchema.nonnegative(),
+      failed: IntegerSchema.nonnegative(),
+      depthCap: IntegerSchema.nonnegative(),
+      noPreviewDecision: IntegerSchema.nonnegative(),
+      gated: IntegerSchema.nonnegative(),
+    }).strict(),
+    selectedStableMoveKey: StringSchema,
+    selectionReason: z.literal('tiebreakAfterPreviewNoSignal'),
   })
   .strict();
 
@@ -2162,6 +2210,7 @@ const AgentDecisionTraceSchema = z
     pruningSteps: z.array(PolicyPruningStepTraceSchema),
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,
+    advisories: z.array(PolicyPreviewSignalUnavailableAdvisoryTraceSchema).optional(),
     selection: PolicySelectionTraceSchema.optional(),
     emergencyFallback: BooleanSchema,
     failure: AgentDecisionFailureSummarySchema.nullable(),

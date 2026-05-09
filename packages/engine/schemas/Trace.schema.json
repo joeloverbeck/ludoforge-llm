@@ -2126,6 +2126,58 @@
                       "unknownFailed"
                     ],
                     "additionalProperties": false
+                  },
+                  "coverage": {
+                    "type": "object",
+                    "properties": {
+                      "requestedRefCount": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "evaluatedRootOptionCount": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "readyRootOptionCount": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "unavailableRootOptionCount": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "allRootsUnavailable": {
+                        "$ref": "#/definitions/anon_def33f2f"
+                      },
+                      "selectedByTieBreakerBecausePreviewUnavailable": {
+                        "$ref": "#/definitions/anon_def33f2f"
+                      }
+                    },
+                    "required": [
+                      "requestedRefCount",
+                      "evaluatedRootOptionCount",
+                      "readyRootOptionCount",
+                      "unavailableRootOptionCount",
+                      "allRootsUnavailable",
+                      "selectedByTieBreakerBecausePreviewUnavailable"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -2136,9 +2188,152 @@
                   "unknownRefs",
                   "readyRefStats",
                   "utility",
-                  "widenedBecauseUniform"
+                  "widenedBecauseUniform",
+                  "coverage"
                 ],
                 "additionalProperties": false
+              },
+              "advisories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "const": "POLICY_PREVIEW_SIGNAL_UNAVAILABLE"
+                    },
+                    "profileId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "seatId": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "decisionKind": {
+                      "type": "string",
+                      "enum": [
+                        "chooseOne",
+                        "chooseNStep"
+                      ]
+                    },
+                    "decisionKey": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "requestedRefs": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      }
+                    },
+                    "evaluatedRootOptionCount": {
+                      "minimum": 0,
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_e7c99bd4"
+                        }
+                      ]
+                    },
+                    "unavailableRootOptionCount": {
+                      "minimum": 0,
+                      "allOf": [
+                        {
+                          "$ref": "#/definitions/anon_e7c99bd4"
+                        }
+                      ]
+                    },
+                    "unavailabilityBreakdown": {
+                      "type": "object",
+                      "properties": {
+                        "random": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "hidden": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "unresolved": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "failed": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "depthCap": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "noPreviewDecision": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        },
+                        "gated": {
+                          "minimum": 0,
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_e7c99bd4"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "random",
+                        "hidden",
+                        "unresolved",
+                        "failed",
+                        "depthCap",
+                        "noPreviewDecision",
+                        "gated"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "selectedStableMoveKey": {
+                      "$ref": "#/definitions/anon_4682db72"
+                    },
+                    "selectionReason": {
+                      "type": "string",
+                      "const": "tiebreakAfterPreviewNoSignal"
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "profileId",
+                    "seatId",
+                    "decisionKind",
+                    "decisionKey",
+                    "requestedRefs",
+                    "evaluatedRootOptionCount",
+                    "unavailableRootOptionCount",
+                    "unavailabilityBreakdown",
+                    "selectedStableMoveKey",
+                    "selectionReason"
+                  ],
+                  "additionalProperties": false
+                }
               },
               "selection": {
                 "type": "object",
@@ -2270,7 +2465,11 @@
                         "widening",
                         "cache",
                         "gated",
-                        "beamPruned"
+                        "beamPruned",
+                        "scored",
+                        "tiebreak",
+                        "tiebreakAfterPreviewNoSignal",
+                        "fallbackExplicit"
                       ]
                     },
                     "previewOutcome": {

@@ -37,7 +37,7 @@ Phase 3 also unblocks the `fitl-arvn-agent-evolution` campaign — per spec §12
 
 ### 1. Convergence-witness test
 
-Path: per `.claude/rules/testing.md`, `convergence-witness` tests for FITL profile-quality go under `packages/engine/test/policy-profile-quality/` (per the Appendix dual-stream guidance) — confirm the canonical directory exists; if not, place under `packages/engine/test/agents/preview-integrity/` with a clear file marker.
+Path: per `.claude/rules/testing.md`, `convergence-witness` tests for FITL profile-quality go under `packages/engine/test/policy-profile-quality/` (per the Appendix dual-stream guidance). The canonical directory exists in the live repo.
 
 `packages/engine/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.ts` (or alternate path per above):
 
@@ -78,7 +78,7 @@ If `packages/engine/test/policy-profile-quality/` does not yet exist, create it 
 
 ## Files to Touch
 
-- `packages/engine/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.ts` (new — or `packages/engine/test/agents/preview-integrity/spec-162-arvn-seed-1000-witness.test.ts` if the policy-profile-quality directory does not yet exist)
+- `packages/engine/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.ts` (new)
 - `docs/agent-dsl-cookbook.md` (modify — retract universal-capability framing, document `previewFallback`)
 
 ## Out of Scope

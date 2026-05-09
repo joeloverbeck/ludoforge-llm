@@ -92,7 +92,19 @@ export interface PolicyPreviewUnknownRef {
 export const PREVIEW_UTILITY_VALUES = ['none', 'constant', 'lowInformation', 'differentiating'] as const;
 export type PreviewUtility = typeof PREVIEW_UTILITY_VALUES[number];
 
-export const SELECTION_REASONS = ['coverage', 'prior', 'shallowDelta', 'widening', 'cache', 'gated', 'beamPruned'] as const;
+export const SELECTION_REASONS = [
+  'coverage',
+  'prior',
+  'shallowDelta',
+  'widening',
+  'cache',
+  'gated',
+  'beamPruned',
+  'scored',
+  'tiebreak',
+  'tiebreakAfterPreviewNoSignal',
+  'fallbackExplicit',
+] as const;
 export type SelectionReason = typeof SELECTION_REASONS[number];
 
 export interface ReadyRefStats {
@@ -166,6 +178,30 @@ export interface PolicyEvaluationPreviewUsage {
   readonly utility: PreviewUtility;
   readonly widenedBecauseUniform: boolean;
   readonly outcomeBreakdown: PolicyPreviewOutcomeBreakdownTrace;
+  readonly coverage: PolicyPreviewCoverage;
+}
+
+export interface PolicyPreviewCoverage {
+  readonly requestedRefCount: number;
+  readonly evaluatedRootOptionCount: number;
+  readonly readyRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly allRootsUnavailable: boolean;
+  readonly selectedByTieBreakerBecausePreviewUnavailable: boolean;
+}
+
+export interface PolicyPreviewSignalUnavailableAdvisory {
+  readonly code: 'POLICY_PREVIEW_SIGNAL_UNAVAILABLE';
+  readonly profileId: string;
+  readonly seatId: string;
+  readonly decisionKind: 'chooseOne' | 'chooseNStep';
+  readonly decisionKey: string;
+  readonly requestedRefs: readonly string[];
+  readonly evaluatedRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnavailabilityReason, number>>;
+  readonly selectedStableMoveKey: string;
+  readonly selectionReason: 'tiebreakAfterPreviewNoSignal';
 }
 
 export interface PolicyEvaluationSelectionTrace {
@@ -186,6 +222,7 @@ export interface PolicyEvaluationMetadata {
   readonly pruningSteps: readonly PolicyEvaluationPruningStep[];
   readonly tieBreakChain: readonly PolicyEvaluationTieBreakStep[];
   readonly previewUsage: PolicyEvaluationPreviewUsage;
+  readonly advisories?: readonly PolicyPreviewSignalUnavailableAdvisory[];
   readonly selection?: PolicyEvaluationSelectionTrace;
   readonly stateFeatures?: Readonly<Record<string, number | string | boolean>>;
   readonly selectedStableMoveKey: string | null;
@@ -1128,6 +1165,16 @@ function summarizePreviewUsage(
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform,
     outcomeBreakdown: summarizePreviewOutcomes(evaluatedCandidates),
+    coverage: {
+      requestedRefCount: sortedRefIds.length,
+      evaluatedRootOptionCount: evaluatedCandidates.length,
+      readyRootOptionCount: evaluatedCandidates.filter((candidate) => candidate.previewOutcome === 'ready').length,
+      unavailableRootOptionCount: evaluatedCandidates.filter((candidate) => candidate.previewOutcome !== 'ready').length,
+      allRootsUnavailable: sortedRefIds.length > 0
+        && evaluatedCandidates.length > 0
+        && evaluatedCandidates.every((candidate) => candidate.previewOutcome !== 'ready'),
+      selectedByTieBreakerBecausePreviewUnavailable: false,
+    },
   };
 }
 
@@ -1243,6 +1290,14 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
       unknownNoPreviewDecision: 0,
       unknownGated: 0,
       unknownFailed: 0,
+    },
+    coverage: {
+      requestedRefCount: 0,
+      evaluatedRootOptionCount: 0,
+      readyRootOptionCount: 0,
+      unavailableRootOptionCount: 0,
+      allRootsUnavailable: false,
+      selectedByTieBreakerBecausePreviewUnavailable: false,
     },
   };
 }

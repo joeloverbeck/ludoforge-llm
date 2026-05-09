@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `compile-agents.ts` plus FITL profile YAML migration
-**Deps**: `tickets/162PRESIGINT-003.md`
+**Deps**: `archive/tickets/162PRESIGINT-003.md`
 
 ## Problem
 
@@ -93,7 +93,7 @@ Add `previewFallback: { onUnavailable: 'noContribution' }` to the inline conside
 
 ### 5. New compiler tests
 
-`packages/engine/test/agents/preview-integrity/previewfallback-required-diagnostic.test.ts` (T6 from spec §9.3):
+`packages/engine/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.ts` (T6 from spec §9.3):
 
 ```ts
 // @test-class: architectural-invariant
@@ -105,7 +105,7 @@ Cases:
 - Consideration with `value.ref: preview.option.*`, `previewFallback: { onUnavailable: { constant: 0 } }`, and legacy `unknownAs: 7` → compiles cleanly. (Per spec §14 Open Question 2 and §5.2: `unknownAs` remains active for non-preview unknown values within the same consideration; the consideration may have both fields without conflict.)
 - Consideration with non-preview `value` (e.g., a state-feature ref) and no `previewFallback` → compiles cleanly. Diagnostic does not fire spuriously.
 
-`packages/engine/test/agents/preview-integrity/hard-cap-unchanged.test.ts` (T7 from spec §9.3):
+`packages/engine/test/architecture/preview-integrity/hard-cap-unchanged.test.ts` (T7 from spec §9.3):
 
 ```ts
 // @test-class: architectural-invariant
@@ -128,8 +128,8 @@ Cases:
 - `packages/engine/test/integration/policy-preview-inner-choosenstep-fitl-canary-golden.test.ts` (modify — inline fixture)
 - `packages/engine/test/unit/cnl/compile-preview-inner.test.ts` (modify — inline fixture if it builds compileable considerations)
 - `packages/engine/test/unit/cnl/validate-preview-inner-warning-parity.test.ts` (modify — inline fixture)
-- `packages/engine/test/agents/preview-integrity/previewfallback-required-diagnostic.test.ts` (new)
-- `packages/engine/test/agents/preview-integrity/hard-cap-unchanged.test.ts` (new)
+- `packages/engine/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.ts` (new)
+- `packages/engine/test/architecture/preview-integrity/hard-cap-unchanged.test.ts` (new)
 
 `Likely surface`: the test list above is bounded by the validated grep for `previewOptionRef` consumers; exact scope refines during implementation by re-running the grep against the tip of branch.
 
@@ -164,15 +164,15 @@ Cases:
 
 ### New/Modified Tests
 
-1. `packages/engine/test/agents/preview-integrity/previewfallback-required-diagnostic.test.ts` (new, T6) — diagnostic firing and non-firing cases.
-2. `packages/engine/test/agents/preview-integrity/hard-cap-unchanged.test.ts` (new, T7) — cap and formula preservation guard.
+1. `packages/engine/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.ts` (new, T6) — diagnostic firing and non-firing cases.
+2. `packages/engine/test/architecture/preview-integrity/hard-cap-unchanged.test.ts` (new, T7) — cap and formula preservation guard.
 3. Inline fixture migrations in 4 test files listed above.
 4. YAML fixture migrations in 2 FITL data files.
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test --test-name-pattern preview-integrity`
+2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.js dist/test/architecture/preview-integrity/hard-cap-unchanged.test.js`
 3. `pnpm -F @ludoforge/engine test` (full engine suite — verifies FITL canary goldens still pass)
 4. `pnpm turbo test` (full repo, includes determinism replay tests)
 5. `pnpm turbo schema:artifacts` (verifies any schema artifact regeneration if `previewFallback` adds to a public schema)

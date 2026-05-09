@@ -195,7 +195,7 @@ No changes to the kernel, compiler-kernel boundary, or visibility/observer machi
 
 ## 9. Test plan
 
-Test classification per `.claude/rules/testing.md`. All new tests live under `packages/engine/test/agents/preview-integrity/` (new directory).
+Test classification per `.claude/rules/testing.md`. Architectural-invariant tests live under `packages/engine/test/architecture/preview-integrity/`, which is part of the live default blocking engine lane. Convergence-witness tests live under `packages/engine/test/policy-profile-quality/` when they assert profile-quality trajectories rather than engine determinism.
 
 ### 9.1 architectural-invariant tests
 
@@ -294,7 +294,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 
 - [`archive/tickets/162PRESIGINT-001.md`](../archive/tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
 - [`archive/tickets/162PRESIGINT-002.md`](../archive/tickets/162PRESIGINT-002.md) — Per-ref `PreviewOptionRefStatus` shape + plumbing through inner-preview drivers (covers §5.1, Phase 1 plumbing)
-- [`tickets/162PRESIGINT-003.md`](../tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4)
-- [`tickets/162PRESIGINT-004.md`](../tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7)
-- [`tickets/162PRESIGINT-005.md`](../tickets/162PRESIGINT-005.md) — Runtime `evaluateConsideration` consumes `previewFallback`; `fallbackExplicit` selectionReason (covers §5.2, §7, Phase 2 runtime; T1, T2)
-- [`tickets/162PRESIGINT-006.md`](../tickets/162PRESIGINT-006.md) — ARVN seed 1000 convergence-witness + cookbook update (covers §9.2, Phase 3; T5)
+- [`archive/tickets/162PRESIGINT-003.md`](../archive/tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4 under `packages/engine/test/architecture/preview-integrity/`)
+- [`tickets/162PRESIGINT-004.md`](../tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7 under `packages/engine/test/architecture/preview-integrity/`)
+- [`tickets/162PRESIGINT-005.md`](../tickets/162PRESIGINT-005.md) — Runtime `evaluateConsideration` consumes `previewFallback`; `fallbackExplicit` selectionReason (covers §5.2, §7, Phase 2 runtime; T1, T2 under `packages/engine/test/architecture/preview-integrity/`)
+- [`tickets/162PRESIGINT-006.md`](../tickets/162PRESIGINT-006.md) — ARVN seed 1000 convergence-witness + cookbook update (covers §9.2, Phase 3; T5 under `packages/engine/test/policy-profile-quality/`)

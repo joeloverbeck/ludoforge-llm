@@ -1,9 +1,9 @@
 # 162PRESIGINT-003: chooseN frontier trace — unknownPreviewRefs, selectionReason union, coverage block, POLICY_PREVIEW_SIGNAL_UNAVAILABLE advisory
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `policy-agent.ts`, `policy-preview-inner.ts`, `policy-preview-inner-choosenstep.ts`
+**Engine Changes**: Yes — policy trace/advisory runtime, serialized trace types/schema, and trace fixtures/tests
 **Deps**: `archive/tickets/162PRESIGINT-002.md`
 
 ## Problem
@@ -106,7 +106,7 @@ Tests that read `previewUsage` may need to assert the new `coverage` block exist
 
 ### 7. New architectural-invariant tests
 
-Create `packages/engine/test/agents/preview-integrity/preview-coverage-rollup.test.ts` (T3 from spec §9.1):
+Create `packages/engine/test/architecture/preview-integrity/preview-coverage-rollup.test.ts` (T3 from spec §9.1):
 
 ```ts
 // @test-class: architectural-invariant
@@ -114,7 +114,7 @@ Create `packages/engine/test/agents/preview-integrity/preview-coverage-rollup.te
 
 - Construct a synthetic chooseN frontier where N root options drive and K resolve to `ready` refs. Run preview, read `previewUsage.coverage`. Assert `readyRootOptionCount === K`, `unavailableRootOptionCount === N - K`, `allRootsUnavailable === (K === 0)`, `selectedByTieBreakerBecausePreviewUnavailable === (K === 0 && requestedRefs.length > 0)`.
 
-Create `packages/engine/test/agents/preview-integrity/preview-advisory-deterministic-order.test.ts` (T4 from spec §9.1):
+Create `packages/engine/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.ts` (T4 from spec §9.1):
 
 ```ts
 // @test-class: architectural-invariant
@@ -128,8 +128,8 @@ Create `packages/engine/test/agents/preview-integrity/preview-advisory-determini
 - `packages/engine/src/agents/policy-preview-inner.ts` (modify — `previewUsage` extended with `coverage` block; rollup derivation)
 - `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` (modify — same `coverage` extension, rollup derivation)
 - `packages/engine/src/agents/policy-evaluation-core.ts` (modify if `CandidateSelectionReason` lives here; otherwise touch the trace-type module)
-- `packages/engine/test/agents/preview-integrity/preview-coverage-rollup.test.ts` (new)
-- `packages/engine/test/agents/preview-integrity/preview-advisory-deterministic-order.test.ts` (new)
+- `packages/engine/test/architecture/preview-integrity/preview-coverage-rollup.test.ts` (new)
+- `packages/engine/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.ts` (new)
 
 ## Out of Scope
 
@@ -162,14 +162,53 @@ Create `packages/engine/test/agents/preview-integrity/preview-advisory-determini
 
 ### New/Modified Tests
 
-1. `packages/engine/test/agents/preview-integrity/preview-coverage-rollup.test.ts` (new) — coverage rollup correctness across the per-ref status map, T3 from spec §9.1.
-2. `packages/engine/test/agents/preview-integrity/preview-advisory-deterministic-order.test.ts` (new) — replay-identity for advisory emission, T4 from spec §9.1.
+1. `packages/engine/test/architecture/preview-integrity/preview-coverage-rollup.test.ts` (new) — coverage rollup correctness across the per-ref status map, T3 from spec §9.1.
+2. `packages/engine/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.ts` (new) — replay-identity for advisory emission, T4 from spec §9.1.
 3. Possibly minor updates in `policy-preview-inner-fitl-canary-golden.test.ts` and `policy-preview-inner-choosenstep-fitl-canary-golden.test.ts` to assert presence of `coverage` block (depending on assertion strictness).
 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test --test-name-pattern preview-integrity`
+2. `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js`
 3. `pnpm -F @ludoforge/engine test` (full engine suite)
 4. `pnpm turbo test` (full repo)
 5. `pnpm turbo typecheck`
+
+## Ticket Corrections
+
+- Test witness path correction approved on 2026-05-09 after `docs/FOUNDATIONS.md` reassessment: the draft `packages/engine/test/agents/preview-integrity/...` path is not discovered by the live blocking engine lane. Because T3/T4 are `// @test-class: architectural-invariant` witnesses for Foundation #20, their live path is `packages/engine/test/architecture/preview-integrity/...`, which is already covered by `test/architecture/**/*.test.js`.
+- Focused command correction: the engine package does not expose a Jest-style `--test-name-pattern` proof lane. The focused witness is package build plus explicit compiled Node test files under `dist/test/architecture/preview-integrity/`.
+
+## Outcome
+
+Completed on 2026-05-09.
+
+- Landed the Phase 1 trace surface: chooseN frontier candidate traces now carry populated `unknownPreviewRefs`; `selectionReason` includes `scored`, `tiebreak`, `tiebreakAfterPreviewNoSignal`, and the reserved `fallbackExplicit`; `previewUsage.coverage` exposes requested/evaluated/ready/unavailable root-option rollups; and per-decision `advisories[]` emits deterministic `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` records when every requested preview-option ref is unavailable.
+- Advisory placement decision: per-decision `agentDecision.advisories[]`. This keeps the policy-quality advisory attached to the exact decision trace and avoids a new run-level stream for this Phase 1 trace-only ticket.
+- T3/T4 witness correction: the architectural-invariant tests are implemented under `packages/engine/test/architecture/preview-integrity/`, not the stale draft `test/agents` path. The fixture uses a generic hidden-preview unavailability case to prove the same unavailable-signal contract without relying on production game data or exact FITL depth-cap trajectory.
+- Touched-file scope correction: `packages/engine/src/agents/policy-agent-inner-preview.ts`, `packages/engine/src/agents/policy-diagnostics.ts`, `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/schemas/Trace.schema.json`, `packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json`, `packages/engine/test/fixtures/trace/policy-preview-inner-fitl-canary.json`, `packages/runner/test/trace/console-trace-subscriber.test.ts`, and nearby trace/schema tests are owned shared-contract fallout for the new serialized trace fields. `packages/engine/src/agents/policy-preview-inner.ts` and `packages/engine/src/agents/policy-preview-inner-choosenstep.ts` were verified-no-edit because 002 already emits the per-option status maps; this ticket derives coverage in the policy-agent adapter from those maps.
+- Generated fallout: `Trace.schema.json` regenerated; `GameDef.schema.json` and `EvalReport.schema.json` were rewritten by the generator but remained byte-identical and have no persisted diff.
+- Deferred sibling scope remains unchanged: 004 owns compiler `previewFallback` and fixture migration; 005 owns runtime fallback consumption and actual `fallbackExplicit` firing; 006 owns the ARVN seed-1000 convergence witness and cookbook update.
+- File-size ledger: `policy-agent.ts` was already above the repo's typical 200-400 line band and grew to 627 lines, still under the 800-line cap. Extracting the new trace helpers would require a new internal helper boundary around `FrontierCandidate` and microturn metadata; that would widen this ticket and obscure the local decision-trace seam, so extraction is deferred with no separate successor proposed. `policy-eval.ts`, `types-core.ts`, and `schemas-core.ts` are preexisting oversize shared contract hubs and received surgical type/schema additions only.
+- Runtime surface breadth: policy/agent-only runtime trace plus shared serialized trace schema/types; no kernel rule semantics, compiler YAML, production GameSpecDoc, or visual/config surface changed.
+- Command ledger before final proof:
+  - Test Plan 1/T3 and 2/T4: `pnpm -F @ludoforge/engine build && pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js` — focused repo-valid substitute for stale `--test-name-pattern`.
+  - Acceptance 3/4: covered by the new focused architecture witnesses plus focused trace/schema tests.
+  - Acceptance 5/6: package and Turbo lanes below exercise existing FITL canaries and replay/default suites. The package default lane exposed owned additive drift in `policy-preview-inner-fitl-canary.json`; the golden now records deterministic `previewUsage.coverage`.
+  - Acceptance 7: `pnpm -F @ludoforge/engine build`, `pnpm -F @ludoforge/engine test`, `pnpm turbo test`, and `pnpm turbo typecheck` completed as serial final lanes.
+  - Added shared-contract lane: `pnpm -F @ludoforge/engine run schema:artifacts:check`.
+- Verification so far:
+  - Red witness: `pnpm -F @ludoforge/engine build` initially failed on missing `coverage` and `advisories` fields.
+  - `pnpm -F @ludoforge/engine build` — pass after implementation.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js` — pass.
+  - `pnpm -F @ludoforge/engine run schema:artifacts:check` — failed before regenerating `Trace.schema.json`, then pass after regeneration.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — pass.
+- Final verification:
+  - `pnpm -F @ludoforge/engine run schema:artifacts:check` — pass.
+  - `pnpm -F @ludoforge/engine build` — pass.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — pass, 49 tests.
+  - `pnpm -F @ludoforge/engine test` — initially failed on `policy-preview-inner-fitl-canary-golden.test.js` because the additive deterministic `previewUsage.coverage` block changed the expected golden. After updating `policy-preview-inner-fitl-canary.json`, the focused canary rerun passed, and the full engine package test passed with `65/65 files passed`.
+  - `pnpm turbo typecheck` — initially failed in `packages/runner/test/trace/console-trace-subscriber.test.ts` because the runner consumer fixture constructed `previewUsage` without `coverage`. After adding the coverage block, rerun passed.
+  - `pnpm turbo test` — pass, 5/5 tasks.
+  - Final focused compiled refresh after Turbo rebuild: `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-coverage-rollup.test.js dist/test/architecture/preview-integrity/preview-advisory-deterministic-order.test.js dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — pass, 49 tests.
+- Late-edit note: after the final focused proof, the only ticket edit was status/proof transcription. No runtime, schema, or test source changed after the final focused compiled refresh.

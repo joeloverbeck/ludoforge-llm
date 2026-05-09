@@ -449,6 +449,7 @@ describe('json schema artifacts', () => {
       readyRefStats: fixture.agentDecision.previewUsage.readyRefStats,
       utility: fixture.agentDecision.previewUsage.utility,
       widenedBecauseUniform: fixture.agentDecision.previewUsage.widenedBecauseUniform,
+      coverage: fixture.agentDecision.previewUsage.coverage,
     };
     const serializedTrace = {
       ...baseSerializedTrace,

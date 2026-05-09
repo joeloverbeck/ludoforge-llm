@@ -43,6 +43,7 @@ export interface AnalyzePolicyExprContext {
   readonly referenceSeatIds?: readonly string[];
   readonly withinSeatAggExpr?: boolean;
   resolveRef(refPath: string, path: string): ResolvedPolicyRef | null;
+  resolveLookup?(expr: GameSpecPolicyExpr, path: string): PolicyExprAnalysis | null;
 }
 
 export interface PolicyExprAnalysis {
@@ -69,6 +70,7 @@ type KnownOperator =
   | 'in'
   | 'lt'
   | 'lte'
+  | 'lookup'
   | 'max'
   | 'min'
   | 'mul'
@@ -102,6 +104,7 @@ const KNOWN_OPERATORS = new Set<KnownOperator>([
   'in',
   'lt',
   'lte',
+  'lookup',
   'max',
   'min',
   'mul',
@@ -212,6 +215,18 @@ export function analyzePolicyExpr(
     case 'gt':
     case 'gte':
       return analyzeNumericComparisonOperator(operator, value, context, diagnostics, path);
+    case 'lookup':
+      if (context.resolveLookup === undefined) {
+        diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+          path,
+          severity: 'error',
+          message: 'lookup expressions are not supported in this policy expression context.',
+          suggestion: 'Use lookup only in agent consideration value expressions.',
+        });
+        return null;
+      }
+      return context.resolveLookup(value, path);
     case 'and':
     case 'or':
       return analyzeBooleanListOperator(operator, value, context, diagnostics, path, 2);
@@ -777,6 +792,19 @@ function withResolvedRef(
     valueType: resolved.type,
     costClass: resolved.costClass,
     dependencies,
+    isStaticallyZero: false,
+  };
+}
+
+export function withCompiledLookupRef(
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+  key: PolicyExprAnalysis,
+): PolicyExprAnalysis {
+  return {
+    expr: { kind: 'ref', ref },
+    valueType: 'unknown',
+    costClass: maxCostClass('state', key.costClass),
+    dependencies: key.dependencies,
     isStaticallyZero: false,
   };
 }

@@ -300,6 +300,43 @@ Use these from microturn-scoped considerations. They are registered in this orde
 
 Always handle non-ready outcomes explicitly. If a ref would touch a hidden surface for the acting observer, inner preview reports that through the existing hidden preview outcome and increments the hidden outcome breakdown. That preserves Foundation 4: policy data can react to hidden-safe status, but it does not inspect the hidden value.
 
+### Static State Lookups at chooseN Frontiers
+
+Use `lookup` when a microturn-scoped consideration needs to read a property from the current observer-projected state by key. Use `preview.option.*` when the consideration needs a projected value after the option is applied. Lookups are static, O(1), and bounded by a map probe plus a path walk; preview refs run the bounded inner-preview driver and are capped by `INNER_PREVIEW_HARD_CAP`.
+
+`lookup` supports four collections:
+
+| Collection | Key type | Visibility source |
+| --- | --- | --- |
+| `zones` | `ZoneId` | Zone observer projection. |
+| `tokens` | `TokenId` | Token visibility inherited through the containing zone projection. |
+| `players` | `PlayerId` | Per-player observer projection. |
+| `globals` | `string` | Global surface visibility. |
+
+Every consideration whose `value` is a lookup must declare `lookupFallback.onUnavailable`. Use `noContribution` when an unavailable lookup should omit the term from `scoreContributions[]`; use `{ constant: <integer> }` only when the profile intentionally converts unavailable state into an explicit contribution. Hidden state always resolves as `unavailable`; profiles cannot author an `onHidden` override. This keeps lookup refs aligned with Foundation 4 and Foundation 20.
+
+For a target-selection `chooseNStep`, read the current ADD option with `microturn.option.value` and use it as the lookup key. This example scores zone-target options by visible population:
+
+```yaml
+preferHighPopulationTarget:
+  scopes: [microturn]
+  costClass: state
+  weight: 50
+  value:
+    lookup:
+      surface: policyState
+      collection: zones
+      keyType: ZoneId
+      key:
+        ref: microturn.option.value
+      path: [properties, population]
+      onMissing: unavailable
+  lookupFallback:
+    onUnavailable: noContribution
+```
+
+Use verbose trace output to confirm the scoring path. Ready lookups appear as normal `scoreContributions[]` entries. Unavailable lookups appear in `unknownLookupRefs`; explicit fallback use appears in `lookupFallbackFired`. The canonical architecture fixture `canonicalCookbookProfile()` in `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts` exercises `zones`, `tokens`, `players`, and `globals` in one profile.
+
 ### Govern-Mode `chooseOne` Example
 
 This diagnostic profile shape opts into per-option preview for an inner govern-mode `chooseOne`. The `preferOptionProjectedMargin` consideration scores each option by its projected margin delta, so the agent can prefer a higher-margin option such as `patronage` over a greedy alphabetical choice such as `aid` when the projection supports it.

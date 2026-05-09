@@ -30,6 +30,7 @@ import type {
   CompiledSurfaceRef,
   GameDef,
   GameState,
+  LookupUnavailabilityReason,
   MoveParamValue,
   Token,
   TrustedExecutableMove,
@@ -76,6 +77,12 @@ export interface PolicyPreviewFallbackFired {
   readonly value?: number;
 }
 
+export interface PolicyLookupFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant';
+  readonly value?: number;
+}
+
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
 
@@ -89,10 +96,12 @@ export class PolicyRuntimeError extends Error {
 export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
+  readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
   previewFallbackFired?: PolicyPreviewFallbackFired;
+  lookupFallbackFired?: PolicyLookupFallbackFired;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
@@ -120,6 +129,10 @@ export interface CreatePolicyEvaluationContextInput {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
     readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
+  };
+  readonly lookupOption?: {
+    readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
+    readonly lookupFallbackFired?: { current?: PolicyLookupFallbackFired };
   };
 }
 
@@ -536,6 +549,30 @@ export class PolicyEvaluationContext {
         onContribution?.(fallback.value);
         return fallback.value;
       }
+      if (consideration.hasLookupRef === true) {
+        const fallback = consideration.lookupFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Lookup consideration "${considerationId}" did not declare lookupFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'noContribution') {
+          this.recordLookupFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          return 0;
+        }
+        this.recordLookupFallbackFired(candidate, {
+          termId: considerationId,
+          kind: 'constant',
+          value: fallback.value,
+        });
+        onContribution?.(fallback.value);
+        return fallback.value;
+      }
       const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
       return contribution;
@@ -563,6 +600,18 @@ export class PolicyEvaluationContext {
     }
     if (this.input.previewOption?.previewFallbackFired !== undefined) {
       this.input.previewOption.previewFallbackFired.current = fired;
+    }
+  }
+
+  private recordLookupFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyLookupFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.lookupFallbackFired = fired;
+    }
+    if (this.input.lookupOption?.lookupFallbackFired !== undefined) {
+      this.input.lookupOption.lookupFallbackFired.current = fired;
     }
   }
 
@@ -1179,6 +1228,8 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
         return this.resolvePreviewOptionRef(ref, candidate);
+      case 'lookup':
+        return this.resolveLookupRef(ref, candidate);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1257,6 +1308,21 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return status.value;
+  }
+
+  private resolveLookupRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const keyValue = this.evaluateCompiledExpr(ref.key, candidate);
+    const refId = lookupRefKey(ref);
+    const resolution = this.runtimeProviders.lookupSurface.resolveLookup(ref, keyValue, this.currentSeatContext);
+    if (resolution.kind === 'unavailable') {
+      candidate?.unknownLookupRefs.set(refId, resolution.reason);
+      this.input.lookupOption?.unknownLookupRefs?.set(refId, resolution.reason);
+      return undefined;
+    }
+    return resolution.value;
   }
 
   private resolveCompiledPolicyZoneId(
@@ -1697,4 +1763,14 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
     case 'driveDepth':
       return 'preview.option.driveDepth';
   }
+}
+
+function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {
+  return [
+    'lookup',
+    ref.collection,
+    ref.keyType,
+    stablePayloadCode(ref.key),
+    ref.path.join('.'),
+  ].join('.');
 }

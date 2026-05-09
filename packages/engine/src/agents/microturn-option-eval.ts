@@ -5,11 +5,12 @@ import type {
   ChoicePendingRequest,
   GameDef,
   GameState,
+  LookupUnavailabilityReason,
   MoveParamValue,
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { PolicyEvaluationContext, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import { PolicyEvaluationContext, type PolicyLookupFallbackFired, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
@@ -24,7 +25,9 @@ export interface CompletionOptionScore {
   readonly score: number;
   readonly scoreContributions: readonly CompletionScoreContribution[];
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
+  readonly unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
+  readonly lookupFallbackFired?: PolicyLookupFallbackFired;
 }
 
 export function scoreMicroturnOption(
@@ -72,12 +75,14 @@ export function scoreMicroturnOptionWithContributions(
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
-    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map() };
+    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map(), unknownLookupRefs: new Map() };
   }
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
   const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
+  const unknownLookupRefs = new Map<string, LookupUnavailabilityReason>();
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
+  const lookupFallbackFired: { current?: PolicyLookupFallbackFired } = {};
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -95,6 +100,7 @@ export function scoreMicroturnOptionWithContributions(
     ...(previewOptionResolvedRefs === undefined
       ? {}
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired } }),
+    lookupOption: { unknownLookupRefs, lookupFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -116,9 +122,17 @@ export function scoreMicroturnOptionWithContributions(
       score,
       scoreContributions,
       unknownPreviewRefs,
+      unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
+      ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
     };
   } finally {
     evaluation.dispose();
   }
+}
+
+function sortUnknownLookupRefs(
+  unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>,
+): ReadonlyMap<string, LookupUnavailabilityReason> {
+  return new Map([...unknownLookupRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
 }

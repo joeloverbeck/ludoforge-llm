@@ -12,6 +12,7 @@ import type {
   CompiledPreviewSurfaceRef,
   GameDef,
   GameState,
+  LookupRefStatus,
   MoveParamValue,
   Move,
   TrustedExecutableMove,
@@ -28,6 +29,7 @@ import {
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
 } from './policy-preview.js';
+import { resolveLookupViaSeatResolution } from './policy-lookup-surface.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
@@ -86,6 +88,14 @@ export interface PolicyPreviewSurfaceProvider {
   hasMaterializedOutcome(candidate: PolicyRuntimeCandidate): boolean;
 }
 
+export interface PolicyLookupSurfaceProvider {
+  resolveLookup(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+    keyValue: PolicyValue,
+    seatContext?: string,
+  ): LookupRefStatus;
+}
+
 export interface PolicyCompletionProvider {
   resolveMicroturnIntrinsic(
     intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'microturnIntrinsic' }>['intrinsic'],
@@ -100,6 +110,7 @@ export interface PolicyRuntimeProviders {
   readonly candidates: PolicyCandidateProvider;
   readonly currentSurface: PolicyCurrentSurfaceProvider;
   readonly previewSurface: PolicyPreviewSurfaceProvider;
+  readonly lookupSurface: PolicyLookupSurfaceProvider;
   readonly completion?: PolicyCompletionProvider;
   dispose(): void;
 }
@@ -179,6 +190,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
   const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
   const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
+  const observerName = activeProfile?.observerName ?? input.def.observers?.defaultObserverName;
+  const observerProfile = observerName === undefined ? undefined : input.def.observers?.observers[observerName];
   const profileHasMicroturnConsiderations = activeProfile !== undefined
     && hasMicroturnScopedConsideration(input.catalog, activeProfile);
   const previewRuntime = createPolicyPreviewRuntime({
@@ -393,6 +406,19 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       },
       hasMaterializedOutcome(candidate) {
         return previewRuntime.hasMaterializedOutcome(candidate);
+      },
+    },
+    lookupSurface: {
+      resolveLookup(ref, keyValue, seatContext) {
+        return resolveLookupViaSeatResolution({
+          def: input.def,
+          state: input.state,
+          actingSeatId: input.seatId,
+          actingPlayerIndex: Number(input.playerId),
+          seatResolutionIndex,
+          surfaceVisibility: input.catalog.surfaceVisibility,
+          ...(observerProfile === undefined ? {} : { observerProfile }),
+        }, ref, keyValue, seatContext);
       },
     },
     ...(input.completion === undefined

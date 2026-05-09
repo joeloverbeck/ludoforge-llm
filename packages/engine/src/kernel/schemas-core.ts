@@ -702,6 +702,32 @@ const CompiledAgentPolicyRefSchema = z.union([
     id: StringSchema.optional(),
   }).strict(),
   z.object({
+    kind: z.literal('lookup'),
+    surface: z.literal('policyState'),
+    collection: z.union([
+      z.literal('zones'),
+      z.literal('tokens'),
+      z.literal('players'),
+      z.literal('globals'),
+    ]),
+    keyType: z.union([
+      z.literal('ZoneId'),
+      z.literal('TokenId'),
+      z.literal('PlayerId'),
+      z.literal('string'),
+    ]),
+    key: z.lazy(() => CompiledPolicyExprSchema),
+    path: z.array(StringSchema).min(1),
+    onMissing: z.union([
+      z.literal('unavailable'),
+      z.object({
+        kind: z.literal('constant'),
+        value: z.union([IntegerSchema, StringSchema, BooleanSchema]),
+      }).strict(),
+    ]),
+    onHidden: z.literal('unavailable'),
+  }).strict(),
+  z.object({
     kind: z.literal('seatIntrinsic'),
     intrinsic: z.union([z.literal('self'), z.literal('active')]),
   }).strict(),
@@ -1020,6 +1046,14 @@ const AgentPreviewFallbackSchema = z
     ]),
   })
   .strict();
+const AgentLookupFallbackSchema = z
+  .object({
+    onUnavailable: z.union([
+      z.literal('noContribution'),
+      z.object({ kind: z.literal('constant'), value: IntegerSchema }).strict(),
+    ]),
+  })
+  .strict();
 
 const CompiledAgentConsiderationSchema = z
   .object({
@@ -1027,6 +1061,7 @@ const CompiledAgentConsiderationSchema = z
     costClass: AgentPolicyCostClassSchema,
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
+    lookupFallback: AgentLookupFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1041,8 +1076,10 @@ const CompiledPolicyConsiderationSchema = z
     weight: CompiledPolicyExprSchema,
     value: CompiledPolicyExprSchema,
     hasPreviewRef: BooleanSchema,
+    hasLookupRef: BooleanSchema,
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
+    lookupFallback: AgentLookupFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -2037,6 +2074,13 @@ const PolicyPreviewUnknownRefTraceSchema = z
   })
   .strict();
 
+const PolicyLookupUnknownRefTraceSchema = z
+  .object({
+    refId: StringSchema,
+    reason: z.enum(['hidden', 'missing', 'typeMismatch', 'unresolved']),
+  })
+  .strict();
+
 const PolicyPreviewReadyRefStatsTraceSchema = z
   .object({
     readyCount: IntegerSchema.nonnegative(),
@@ -2078,7 +2122,13 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    unknownLookupRefs: z.array(PolicyLookupUnknownRefTraceSchema),
     previewFallbackFired: z.object({
+      termId: StringSchema,
+      kind: z.enum(['noContribution', 'constant']),
+      value: NumberSchema.optional(),
+    }).strict().optional(),
+    lookupFallbackFired: z.object({
       termId: StringSchema,
       kind: z.enum(['noContribution', 'constant']),
       value: NumberSchema.optional(),

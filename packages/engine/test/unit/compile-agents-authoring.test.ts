@@ -363,6 +363,7 @@ describe('agents authoring surface', () => {
           weight: literal(1),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
           hasPreviewRef: false,
+          hasLookupRef: false,
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -867,6 +868,7 @@ describe('agents authoring surface', () => {
         literal(0),
       ),
       hasPreviewRef: false,
+      hasLookupRef: false,
       dependencies: {
         parameters: [],
         stateFeatures: [],
@@ -947,6 +949,7 @@ describe('agents authoring surface', () => {
         literal(0),
       ),
       hasPreviewRef: false,
+      hasLookupRef: false,
       dependencies: {
         parameters: [],
         stateFeatures: [],

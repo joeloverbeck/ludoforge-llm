@@ -396,6 +396,7 @@ describe('json schema artifacts', () => {
                 scoreContributions: [],
                 previewRefIds: ['victoryCurrentMargin.currentMargin.self'],
                 unknownPreviewRefs: [],
+                unknownLookupRefs: [],
                 selectionReason: 'gated',
                 previewOutcome: 'ready',
               },
@@ -409,6 +410,7 @@ describe('json schema artifacts', () => {
                 unknownPreviewRefs: [
                   { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'hidden' },
                 ],
+                unknownLookupRefs: [],
                 selectionReason: 'gated',
                 previewOutcome: 'hidden',
               },
@@ -422,6 +424,7 @@ describe('json schema artifacts', () => {
                 unknownPreviewRefs: [
                   { refId: 'victoryCurrentMargin.currentMargin.self', reason: 'unresolved' },
                 ],
+                unknownLookupRefs: [],
                 selectionReason: 'gated',
                 previewOutcome: 'unresolved',
                 previewFailureReason: 'structurallyUnsatisfiable',

@@ -182,6 +182,7 @@ Cases:
 ## Outcome
 
 Completed: 2026-05-09
+Outcome amended: 2026-05-09
 
 Completed the compiler-side atomic cut:
 
@@ -200,8 +201,8 @@ Ticket corrections applied:
 
 Deferred sibling/spec scope:
 
-- Runtime consumption of `previewFallback`, no-contribution scoring semantics, `previewFallbackFired`, and `fallbackExplicit` remain owned by `tickets/162PRESIGINT-005.md`.
-- ARVN seed 1000 convergence witness and cookbook documentation remain owned by `tickets/162PRESIGINT-006.md`.
+- Runtime consumption of `previewFallback`, no-contribution scoring semantics, `previewFallbackFired`, and `fallbackExplicit` remain owned by `archive/tickets/162PRESIGINT-005.md`.
+- ARVN seed 1000 convergence witness and cookbook documentation remain owned by `archive/tickets/162PRESIGINT-006.md`.
 
 Verification:
 

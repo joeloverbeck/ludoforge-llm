@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: `specs/162-preview-signal-integrity.md`
+**Deps**: `archive/specs/162-preview-signal-integrity.md`
 
 ## Problem
 

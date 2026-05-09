@@ -1,6 +1,6 @@
 # Spec 162 — Preview Signal Integrity
 
-**Status**: Draft
+**Status**: COMPLETED
 **Date**: 2026-05-09
 **Predecessors**: Spec 160 (per-option preview at inner microturns), Spec 161 (chooseNStep inner preview integration), Spec 156 (preview observability and utility metrics)
 **Follow-up specs**: Spec 163 (generic microturn state-feature lookups), Spec 164 (continued inner preview deepening)
@@ -292,9 +292,39 @@ For traceability, the deep-research document `reports/preview-signal-integrity.m
 
 Decomposed via `/spec-to-tickets` on 2026-05-09:
 
-- [`archive/tickets/162PRESIGINT-001.md`](../archive/tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
-- [`archive/tickets/162PRESIGINT-002.md`](../archive/tickets/162PRESIGINT-002.md) — Per-ref `PreviewOptionRefStatus` shape + plumbing through inner-preview drivers (covers §5.1, Phase 1 plumbing)
-- [`archive/tickets/162PRESIGINT-003.md`](../archive/tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4 under `packages/engine/test/architecture/preview-integrity/`)
-- [`archive/tickets/162PRESIGINT-004.md`](../archive/tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7 under `packages/engine/test/architecture/preview-integrity/`)
-- [`archive/tickets/162PRESIGINT-005.md`](../archive/tickets/162PRESIGINT-005.md) — Runtime `evaluateConsideration` consumes `previewFallback`; `fallbackExplicit` selectionReason (covers §5.2, §7, Phase 2 runtime; T1, T2 under `packages/engine/test/architecture/preview-integrity/`)
-- [`tickets/162PRESIGINT-006.md`](../tickets/162PRESIGINT-006.md) — ARVN seed 1000 convergence-witness + cookbook update (covers §9.2, Phase 3; T5 under `packages/engine/test/policy-profile-quality/`)
+- [`archive/tickets/162PRESIGINT-001.md`](../tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
+- [`archive/tickets/162PRESIGINT-002.md`](../tickets/162PRESIGINT-002.md) — Per-ref `PreviewOptionRefStatus` shape + plumbing through inner-preview drivers (covers §5.1, Phase 1 plumbing)
+- [`archive/tickets/162PRESIGINT-003.md`](../tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4 under `packages/engine/test/architecture/preview-integrity/`)
+- [`archive/tickets/162PRESIGINT-004.md`](../tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7 under `packages/engine/test/architecture/preview-integrity/`)
+- [`archive/tickets/162PRESIGINT-005.md`](../tickets/162PRESIGINT-005.md) — Runtime `evaluateConsideration` consumes `previewFallback`; `fallbackExplicit` selectionReason (covers §5.2, §7, Phase 2 runtime; T1, T2 under `packages/engine/test/architecture/preview-integrity/`)
+- [`archive/tickets/162PRESIGINT-006.md`](../tickets/162PRESIGINT-006.md) — ARVN seed 1000 convergence-witness + cookbook update (covers §9.2, Phase 3; T5 under `packages/engine/test/policy-profile-quality/`)
+
+## Outcome
+
+Completed on 2026-05-09.
+
+Spec 162 landed the preview-signal integrity contract end to end:
+
+- `docs/FOUNDATIONS.md` now includes Foundation #20 and the Appendix provenance line for Spec 162.
+- Inner-preview drivers now report requested preview-option refs as explicit ready/unavailable status entries instead of silently omitting unavailable refs.
+- ChooseN frontier traces now surface `unknownPreviewRefs`, preview coverage rollups, `tiebreakAfterPreviewNoSignal`, `fallbackExplicit`, and `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory evidence.
+- The compiler now requires explicit `previewFallback` authoring for preview-ref considerations and rejects the silent `unknownAs` fallback path with `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`.
+- Runtime scoring now treats unavailable preview refs as no contribution unless an explicit constant preview fallback is authored, and traces explicit fallback use.
+- The ARVN seed 1000 witness and cookbook update landed with the corrected boundary that depth-capped delta preview refs remain unavailable under Foundation #20.
+
+Deviations from the original plan:
+
+- The final Phase 3 ticket included a small runtime repair for depth-capped delta preview refs because the live witness proved the predecessor path could still produce a partial-state delta value. The repair stayed inside the Spec 162 integrity boundary and did not raise the preview cap, add new ref families, or change profile semantics.
+- Focused proof commands used repo-valid built Node invocations instead of stale `--test-name-pattern` forms.
+- `pnpm -F @ludoforge/engine test:policy-profile-quality` exposed unrelated pre-existing fixture drift in `fitl-march-dead-end-recovery.test.js`; the Spec 162 focused witness and default engine lane passed.
+
+Verification recorded across the completed ticket chain:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/*.test.js` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-preview-inner-depthcap-delta.test.js dist/test/architecture/preview-integrity/*.test.js dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, including the default engine lane summary `65/65 files passed`.
+- `pnpm turbo test` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm run check:ticket-deps` — passed before this spec archive handoff.

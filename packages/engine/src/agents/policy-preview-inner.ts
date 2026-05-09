@@ -455,6 +455,10 @@ export const resolveRefs = (
       continue;
     }
     if (ref.refKind === 'deltaVictoryCurrentMarginSelf') {
+      if (drive.outcome === 'depthCap') {
+        resolved.set(key, { kind: 'unavailable', reason: 'depthCap' });
+        continue;
+      }
       const pre = resolveVisibleSurface(input, input.state, surfaceRef, surfaceContext, seatResolutionIndex);
       if (pre.kind === 'hidden') {
         hidden = true;

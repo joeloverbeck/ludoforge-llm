@@ -292,7 +292,7 @@ For traceability, the deep-research document `reports/preview-signal-integrity.m
 
 Decomposed via `/spec-to-tickets` on 2026-05-09:
 
-- [`tickets/162PRESIGINT-001.md`](../tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
+- [`archive/tickets/162PRESIGINT-001.md`](../archive/tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
 - [`tickets/162PRESIGINT-002.md`](../tickets/162PRESIGINT-002.md) — Per-ref `PreviewOptionRefStatus` shape + plumbing through inner-preview drivers (covers §5.1, Phase 1 plumbing)
 - [`tickets/162PRESIGINT-003.md`](../tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4)
 - [`tickets/162PRESIGINT-004.md`](../tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7)

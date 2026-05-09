@@ -80,7 +80,7 @@ None — pure documentation.
 1. `pnpm turbo lint` (catches markdown lint regressions if present).
 2. Manual review: verify §20 placement (after §19, before `---`/Appendix) and Appendix amendment line.
 
-## Implementation Outcome
+## Outcome
 
 Completed on 2026-05-09.
 

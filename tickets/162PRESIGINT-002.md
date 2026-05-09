@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-preview-inner.ts`, `policy-preview-inner-choosenstep.ts`, `microturn-option-evaluator.ts`, `policy-evaluation-core.ts`
-**Deps**: `tickets/162PRESIGINT-001.md`
+**Deps**: `archive/tickets/162PRESIGINT-001.md`
 
 ## Problem
 

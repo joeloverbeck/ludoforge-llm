@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-evaluation-core.ts` (consideration-level fallback branch + `lookupFallbackFired` field); `kernel/types-core.ts` (trace export shape); `agents/policy-agent.ts` (frontier dispatch trace population)
-**Deps**: `archive/tickets/163GENLOOKUP-002.md`, `tickets/163GENLOOKUP-003.md`
+**Deps**: `archive/tickets/163GENLOOKUP-002.md`, `archive/tickets/163GENLOOKUP-003.md`
 
 ## Problem
 

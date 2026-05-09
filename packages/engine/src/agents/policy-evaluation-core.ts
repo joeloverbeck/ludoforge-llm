@@ -30,6 +30,7 @@ import type {
   CompiledSurfaceRef,
   GameDef,
   GameState,
+  LookupUnavailabilityReason,
   MoveParamValue,
   Token,
   TrustedExecutableMove,
@@ -89,6 +90,7 @@ export class PolicyRuntimeError extends Error {
 export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
+  readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
@@ -120,6 +122,9 @@ export interface CreatePolicyEvaluationContextInput {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
     readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
+  };
+  readonly lookupOption?: {
+    readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
   };
 }
 
@@ -1180,11 +1185,7 @@ export class PolicyEvaluationContext {
       case 'previewOptionRef':
         return this.resolvePreviewOptionRef(ref, candidate);
       case 'lookup':
-        throw this.runtimeError(
-          'RUNTIME_EVALUATION_ERROR',
-          'Lookup policy refs are not executable until the lookup resolver is wired.',
-          { collection: ref.collection },
-        );
+        return this.resolveLookupRef(ref, candidate);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1263,6 +1264,21 @@ export class PolicyEvaluationContext {
       return undefined;
     }
     return status.value;
+  }
+
+  private resolveLookupRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const keyValue = this.evaluateCompiledExpr(ref.key, candidate);
+    const refId = lookupRefKey(ref);
+    const resolution = this.runtimeProviders.lookupSurface.resolveLookup(ref, keyValue, this.currentSeatContext);
+    if (resolution.kind === 'unavailable') {
+      candidate?.unknownLookupRefs.set(refId, resolution.reason);
+      this.input.lookupOption?.unknownLookupRefs?.set(refId, resolution.reason);
+      return undefined;
+    }
+    return resolution.value;
   }
 
   private resolveCompiledPolicyZoneId(
@@ -1703,4 +1719,14 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
     case 'driveDepth':
       return 'preview.option.driveDepth';
   }
+}
+
+function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {
+  return [
+    'lookup',
+    ref.collection,
+    ref.keyType,
+    stablePayloadCode(ref.key),
+    ref.path.join('.'),
+  ].join('.');
 }

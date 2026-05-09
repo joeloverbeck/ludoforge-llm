@@ -1753,6 +1753,11 @@ export interface PolicyPreviewUnknownRefTrace {
   readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
 }
 
+export interface PolicyLookupUnknownRefTrace {
+  readonly refId: string;
+  readonly reason: LookupUnavailabilityReason;
+}
+
 export interface PolicyPreviewReadyRefStatsTrace {
   readonly readyCount: number;
   readonly distinctValueCount: number;
@@ -1804,6 +1809,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
+  readonly unknownLookupRefs: readonly PolicyLookupUnknownRefTrace[];
   readonly previewFallbackFired?: {
     readonly termId: string;
     readonly kind: 'noContribution' | 'constant';

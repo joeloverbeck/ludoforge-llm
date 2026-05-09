@@ -2456,6 +2456,31 @@
                         "$ref": "#/definitions/anon_a6408f6b"
                       }
                     },
+                    "unknownLookupRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "refId": {
+                            "$ref": "#/definitions/anon_4682db72"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "hidden",
+                              "missing",
+                              "typeMismatch",
+                              "unresolved"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "refId",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "previewFallbackFired": {
                       "type": "object",
                       "properties": {
@@ -2681,6 +2706,7 @@
                     "scoreContributions",
                     "previewRefIds",
                     "unknownPreviewRefs",
+                    "unknownLookupRefs",
                     "selectionReason"
                   ],
                   "additionalProperties": false

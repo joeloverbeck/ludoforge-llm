@@ -230,6 +230,7 @@ function createCandidate(): PolicyEvaluationCandidate {
     actionId: 'choose',
     previewRefIds: new Set(),
     unknownPreviewRefs: new Map(),
+    unknownLookupRefs: new Map(),
   };
 }
 

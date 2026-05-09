@@ -72,6 +72,7 @@ const createMetadata = (): PolicyEvaluationMetadata => ({
     scoreContributions: [],
     previewRefIds: [],
     unknownPreviewRefs: [],
+    unknownLookupRefs: [],
     selectionReason: 'gated',
   }],
   pruningSteps: [],

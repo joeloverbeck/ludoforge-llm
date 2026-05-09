@@ -114,11 +114,11 @@ preferHighPopulationTarget:
 
 The `unknownAs` field continues to apply only to non-preview, non-lookup unknown values within the same consideration — exactly the same scoping rule Spec 162 documented.
 
-**Trace surface**: per-candidate trace gains `unknownLookupRefs?: readonly string[]` (parallel to `unknownPreviewRefs`) and `lookupFallbackFired?: { termId: string; kind: 'noContribution' | 'constant'; value?: number }` (parallel to `previewFallbackFired`). Selection-reason classification gains no new variants — `tiebreakAfterPreviewNoSignal` and `fallbackExplicit` from Spec 162 already cover the cross-product of preview/lookup unavailability when both ref families are in play. The existing `tiebreakAfterPreviewNoSignal` variant name reads as preview-specific but is interpreted as "ref-no-signal" semantically once the lookup family is wired. This spec deliberately does not churn the trace surface for a cosmetic rename (Foundation #14); a future unification pass may consolidate the nomenclature.
+**Trace surface**: per-candidate trace gains `unknownLookupRefs: readonly { refId: string; reason: LookupUnavailabilityReason }[]` (parallel to `unknownPreviewRefs`) and Phase 3 adds `lookupFallbackFired?: { termId: string; kind: 'noContribution' | 'constant'; value?: number }` (parallel to `previewFallbackFired`). Selection-reason classification gains no new variants — `tiebreakAfterPreviewNoSignal` and `fallbackExplicit` from Spec 162 already cover the cross-product of preview/lookup unavailability when both ref families are in play. The existing `tiebreakAfterPreviewNoSignal` variant name reads as preview-specific but is interpreted as "ref-no-signal" semantically once the lookup family is wired. This spec deliberately does not churn the trace surface for a cosmetic rename (Foundation #14); a future unification pass may consolidate the nomenclature.
 
 ### 4.3 Observer routing
 
-The lookup resolver MUST consult the same `seatResolutionIndex` that the existing surface providers consult. There is one authoritative state; the lookup never reads it directly. Implementation: extend `PolicyRuntimeProviders` (`policy-runtime.ts:98-105`) with a `lookupSurface: PolicyLookupSurfaceProvider` field exposing `resolveLookup(candidate, ref, seatContext)`, mirroring the existing `previewSurface`/`currentSurface` slots; wire the provider inside `createPolicyRuntimeProviders` (`policy-runtime.ts:178`).
+The lookup resolver MUST consult the same `seatResolutionIndex` that the existing surface providers consult. There is one authoritative state; the lookup never reads it directly. Implementation: extend `PolicyRuntimeProviders` (`policy-runtime.ts:98-105`) with a `lookupSurface: PolicyLookupSurfaceProvider` field exposing `resolveLookup(ref, keyValue, seatContext)`. `PolicyEvaluationCore` evaluates `ref.key` first because the main `microturn.option.value` use case is resolved through completion context, not a move candidate; the provider owns only observer-routed collection/path resolution. Wire the provider inside `createPolicyRuntimeProviders` (`policy-runtime.ts:178`).
 
 Hidden-state semantics are uniform across both visibility tables: any property the seat does not own visibility for returns `unavailable` with reason `hidden`. Each `collection` routes through the appropriate existing table:
 
@@ -156,13 +156,13 @@ Files touched (anchors verified):
 
 - `packages/engine/src/kernel/types-core.ts` — extend `CompiledAgentPolicyRef` union (`:393-443`), add `CompiledAgentLookupRef`, `LookupUnavailabilityReason`, `LookupRefStatus`. Add `lookupFallback` to compiled consideration shape (parallel to existing `previewFallback` declared around `:628`/`:823`; lowering plumbed in `compile-agents.ts:196`).
 
-- `packages/engine/src/agents/policy-runtime.ts` — extend `PolicyRuntimeProviders` (`:98-105`) with a `lookupSurface: PolicyLookupSurfaceProvider` slot; declare `PolicyLookupSurfaceProvider` (analogous to `PolicyPreviewSurfaceProvider` at `:71-87`); wire the lookup provider inside `createPolicyRuntimeProviders` (`:178`+).
+- `packages/engine/src/agents/policy-runtime.ts` — extend `PolicyRuntimeProviders` (`:98-105`) with a `lookupSurface: PolicyLookupSurfaceProvider` slot; declare `PolicyLookupSurfaceProvider` near `PolicyPreviewSurfaceProvider`; wire the lookup provider inside `createPolicyRuntimeProviders` (`:178`+). Unlike preview, the lookup provider accepts an already-evaluated key value so expression evaluation stays in `PolicyEvaluationCore`.
 
-- `packages/engine/src/agents/policy-evaluation-core.ts` — add `resolveLookupRef(candidate, ref)` method (mirroring `resolveSurfaceRef` at `:1510-1542`); route through `runtimeProviders.lookupSurface`; register unavailability into a per-candidate `unknownLookupRefs` map (parallel to the existing `unknownPreviewRefs` field declared at `:91` and registered at `:1529`). Add a new branch in `evaluateConsideration` that consumes `lookupFallback` for lookup-ref considerations (mirror the existing `previewFallback` consumption at `:515-537`); the legacy `unknownAs ?? 0` path is unreachable for lookup-ref considerations because the compiler enforces `lookupFallback`.
+- `packages/engine/src/agents/policy-evaluation-core.ts` — add `resolveLookupRef(candidate, ref)` method (mirroring `resolveSurfaceRef` at `:1510-1542`); evaluate `ref.key`, route through `runtimeProviders.lookupSurface`, and register unavailability into a per-candidate `unknownLookupRefs` map when a real candidate exists (parallel to the existing `unknownPreviewRefs` field declared at `:91` and registered at `:1529`). The consideration-level `lookupFallback` branch is Phase 3 / `163GENLOOKUP-004`.
 
-- `packages/engine/src/agents/policy-agent.ts` — `traceCandidatesForFrontier` and the structural-frontier dispatch populate `unknownLookupRefs` and `lookupFallbackFired` from per-candidate tracking, mirroring the Spec 162 `unknownPreviewRefs` wiring at lines 74-91 and 280-310.
+- `packages/engine/src/agents/policy-agent.ts` — `traceCandidatesForFrontier` and the structural-frontier dispatch populate `unknownLookupRefs` from per-candidate tracking, mirroring the Spec 162 `unknownPreviewRefs` wiring at lines 74-91 and 280-310. `lookupFallbackFired` is Phase 3 / `163GENLOOKUP-004`.
 
-- New module `packages/engine/src/agents/policy-lookup-surface.ts` — implements `resolveLookup(candidate, ref, seatContext)` against the canonical state via the seat resolution index. Handles the four collections (`zones`, `tokens`, `players`, `globals`) and the visibility check, routing to `CompiledZoneVisibilityCatalog` for entity collections and `CompiledSurfaceCatalog` for `globals`.
+- New module `packages/engine/src/agents/policy-lookup-surface.ts` — implements `resolveLookup(ref, keyValue, seatContext)` against the canonical state via the seat resolution index. Handles the four collections (`zones`, `tokens`, `players`, `globals`) and the visibility check, routing to `CompiledZoneVisibilityCatalog` for entity collections and `CompiledSurfaceCatalog` for `globals`.
 
 No changes to the kernel, compiler-kernel boundary, or visibility tables themselves. Foundation #4's invariant (observer-routed projection) is reused, not reimplemented.
 
@@ -182,15 +182,15 @@ Test classification per `.claude/rules/testing.md`. Architectural-invariant test
 
 ### 8.1 architectural-invariant tests
 
-1. **`lookup-respects-observer-visibility.test.ts`** — Two-seat fixture where seat A can see a zone's `population` and seat B cannot. Same lookup ref, two seat contexts. Assert: seat A resolves `ready` with the actual value; seat B resolves `unavailable` with reason `hidden`. No path through the resolver returns seat B the authoritative value. This is the core Foundation #4 invariant for the lookup family.
+1. **`lookup-observer-visibility.test.ts`** — Two-seat fixture where seat A can see a zone's `population` and seat B cannot. Same lookup ref, two seat contexts. Assert: seat A resolves `ready` with the actual value; seat B resolves `unavailable` with reason `hidden`. No path through the resolver returns seat B the authoritative value. This is the core Foundation #4 invariant for the lookup family.
 
-2. **`lookup-unavailable-not-silently-zero.test.ts`** — Construct a microturn whose option-value ID does not name an existing zone in the current state. Assert: every candidate's contribution from the lookup consideration is omitted (no entry in `scoreContributions` for that termId), `unknownLookupRefs` lists the ref with reason `missing`. Mirror of Spec 162's `preview-unavailable-not-silently-zero` test for the lookup family.
+2. **Phase 3 / `163GENLOOKUP-004`: `lookup-unavailable-not-silently-zero.test.ts`** — Construct a microturn whose option-value ID does not name an existing zone in the current state. Assert: every candidate's contribution from the lookup consideration is omitted (no entry in `scoreContributions` for that termId), `unknownLookupRefs` lists the ref with reason `missing`. Mirror of Spec 162's `preview-unavailable-not-silently-zero` test for the lookup family.
 
-3. **`lookup-fallback-explicit-zero-traced.test.ts`** — Same harness with `lookupFallback.onUnavailable: { constant: 0 }`. Assert: contribution exists in `scoreContributions` with value 0, and `lookupFallbackFired` records the explicit fallback.
+3. **Phase 3 / `163GENLOOKUP-004`: `lookup-fallback-explicit-zero-traced.test.ts`** — Same harness with `lookupFallback.onUnavailable: { constant: 0 }`. Assert: contribution exists in `scoreContributions` with value 0, and `lookupFallbackFired` records the explicit fallback.
 
-4. **`lookup-keytype-mismatch.test.ts`** — Profile compiles a lookup with `keyType: ZoneId` whose `key` ref resolves to a `TokenId` at runtime. Assert: lookup returns `unavailable` with reason `typeMismatch`; consideration's contribution behavior matches the declared `lookupFallback`.
+4. **`lookup-keytype-mismatch.test.ts`** — Runtime resolver returns `unavailable` with reason `typeMismatch` when the resolved key exists in a different collection domain than the declared lookup collection/key type. Consideration fallback behavior remains Phase 3 / `163GENLOOKUP-004`.
 
-5. **`lookup-determinism.test.ts`** — Replay-twice harness across all four collection types. Assert: byte-identical trace serialization, identical `unknownLookupRefs` ordering, identical resolution values. Foundation #8 (Determinism) and #16 (Testing as Proof).
+5. **`lookup-dispatch-determinism.test.ts`** — Microturn option scoring dispatches lookup refs through resolved option keys, and unavailable lookup refs serialize in deterministic ref-id order. Foundation #8 (Determinism) and #16 (Testing as Proof).
 
 6. **`lookup-collection-coverage.test.ts`** — Each of the four collections (`zones`, `tokens`, `players`, `globals`) has at least one path-walk depth ≥ 2 (e.g., `[properties, population]` for zones, `[properties, owner]` for tokens) verified against a synthetic state. Asserts the path walker handles each collection's projection shape uniformly. Additionally asserts that `zones`/`tokens`/`players` lookups route visibility through observer-projected entity state (`CompiledZoneVisibilityCatalog`) while `globals` lookups route through `CompiledSurfaceCatalog` — both honor the seat context but consult different visibility tables.
 
@@ -273,7 +273,7 @@ Anticipated decomposition under namespace `163GENLOOKUP-*` (final breakdown prod
 - `163GENLOOKUP-001` — Phase 0: compiled types (`CompiledAgentLookupRef`, `LookupRefStatus`, `LookupUnavailabilityReason`, `lookupFallback` shape) + diagnostic codes registry update.
 - `163GENLOOKUP-002` — Phase 1: compiler lowering for the `lookup` value expression; required-fallback diagnostic; `onHidden`-override-rejected diagnostic; surface/collection/keyType validation.
 - `163GENLOOKUP-003` — Phase 2: runtime resolver (`policy-lookup-surface.ts`) + observer routing for all four collections; `PolicyRuntimeProviders` extension and factory wiring.
-- `163GENLOOKUP-004` — Phase 3: consideration integration in `policy-evaluation-core.ts` (`evaluateConsideration` branch + `resolveLookupRef`); trace surface (`unknownLookupRefs`, `lookupFallbackFired`) wired through `policy-agent.ts`.
+- `163GENLOOKUP-004` — Phase 3: consideration integration in `policy-evaluation-core.ts` (`evaluateConsideration` branch); `lookupFallbackFired` trace surface wired through `policy-agent.ts`.
 - `163GENLOOKUP-005` — Phase 4: cookbook recipe in `docs/agent-dsl-cookbook.md` ("Static state lookups at chooseN frontiers") + new fixture profile in `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts` (mirroring Spec 162's `preview-integrity-fixture.ts`) exercising the lookup family end-to-end.
 
 ## Tickets
@@ -282,6 +282,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 
 - [`archive/tickets/163GENLOOKUP-001.md`](../archive/tickets/163GENLOOKUP-001.md) — Compiled types + diagnostic codes registry for `lookup` ref family (covers Phase 0)
 - [`archive/tickets/163GENLOOKUP-002.md`](../archive/tickets/163GENLOOKUP-002.md) — Compiler lowering for `lookup` ref + compile-time diagnostics (covers Phase 1)
-- [`tickets/163GENLOOKUP-003.md`](../tickets/163GENLOOKUP-003.md) — Runtime resolver + dispatch + observer routing (covers Phase 2 + §8.1 #1, #5, #6, §8.1 #4)
+- [`archive/tickets/163GENLOOKUP-003.md`](../archive/tickets/163GENLOOKUP-003.md) — Runtime resolver + dispatch + observer routing (covers Phase 2 + §8.1 #1, #5, #6, §8.1 #4)
 - [`tickets/163GENLOOKUP-004.md`](../tickets/163GENLOOKUP-004.md) — Consideration integration + trace surface (covers Phase 3 + §8.1 #2, #3)
 - [`tickets/163GENLOOKUP-005.md`](../tickets/163GENLOOKUP-005.md) — Cookbook recipe + canonical fixture profile (covers Phase 4)

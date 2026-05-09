@@ -5,6 +5,7 @@ import type {
   ChoicePendingRequest,
   GameDef,
   GameState,
+  LookupUnavailabilityReason,
   MoveParamValue,
   TrustedExecutableMove,
 } from '../kernel/types.js';
@@ -24,6 +25,7 @@ export interface CompletionOptionScore {
   readonly score: number;
   readonly scoreContributions: readonly CompletionScoreContribution[];
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
+  readonly unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
 }
 
@@ -72,11 +74,12 @@ export function scoreMicroturnOptionWithContributions(
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
-    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map() };
+    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map(), unknownLookupRefs: new Map() };
   }
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
   const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
+  const unknownLookupRefs = new Map<string, LookupUnavailabilityReason>();
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
 
   const evaluation = new PolicyEvaluationContext({
@@ -95,6 +98,7 @@ export function scoreMicroturnOptionWithContributions(
     ...(previewOptionResolvedRefs === undefined
       ? {}
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired } }),
+    lookupOption: { unknownLookupRefs },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -116,9 +120,16 @@ export function scoreMicroturnOptionWithContributions(
       score,
       scoreContributions,
       unknownPreviewRefs,
+      unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
     };
   } finally {
     evaluation.dispose();
   }
+}
+
+function sortUnknownLookupRefs(
+  unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>,
+): ReadonlyMap<string, LookupUnavailabilityReason> {
+  return new Map([...unknownLookupRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
 }

@@ -21,6 +21,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'projectedSelfMargin', contribution: 8 }],
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [],
+        unknownLookupRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'ready',
         previewDrive: {
@@ -37,6 +38,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'projectedSelfMargin', contribution: 2 }],
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [{ refId: 'victory.currentMargin.self', reason: 'depthCap' }],
+        unknownLookupRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'depthCap',
         previewFailureReason: 'depthCap',
@@ -54,6 +56,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         scoreContributions: [{ termId: 'projectedSelfMargin', contribution: 1 }],
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [{ refId: 'victory.currentMargin.self', reason: 'gated' }],
+        unknownLookupRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'gated',
         previewFailureReason: 'gated',

@@ -54,6 +54,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly when?: AgentPolicyExpr;
     readonly weight: AgentPolicyExpr;
     readonly value: AgentPolicyExpr;
+    readonly hasPreviewRef?: boolean;
     readonly unknownAs?: number;
     readonly previewFallback?: AgentPreviewFallback;
     readonly clamp?: {
@@ -131,6 +132,7 @@ export function lowerAgentConsiderations(
       ...(when === null ? {} : { when }),
       weight,
       value,
+      hasPreviewRef: consideration.hasPreviewRef === true,
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),

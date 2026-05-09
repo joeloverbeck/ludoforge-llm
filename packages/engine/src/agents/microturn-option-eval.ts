@@ -9,7 +9,7 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { PolicyEvaluationContext } from './policy-evaluation-core.js';
+import { PolicyEvaluationContext, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
@@ -24,6 +24,7 @@ export interface CompletionOptionScore {
   readonly score: number;
   readonly scoreContributions: readonly CompletionScoreContribution[];
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
+  readonly previewFallbackFired?: PolicyPreviewFallbackFired;
 }
 
 export function scoreMicroturnOption(
@@ -76,6 +77,7 @@ export function scoreMicroturnOptionWithContributions(
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
   const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
+  const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -92,7 +94,7 @@ export function scoreMicroturnOptionWithContributions(
     },
     ...(previewOptionResolvedRefs === undefined
       ? {}
-      : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs } }),
+      : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired } }),
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -110,7 +112,12 @@ export function scoreMicroturnOptionWithContributions(
       ),
       0,
     );
-    return { score, scoreContributions, unknownPreviewRefs };
+    return {
+      score,
+      scoreContributions,
+      unknownPreviewRefs,
+      ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
+    };
   } finally {
     evaluation.dispose();
   }

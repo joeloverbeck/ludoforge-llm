@@ -122,6 +122,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
     const weight = lowerExpr(consideration.weight);
     const value = lowerExpr(consideration.value);
     if (weight !== undefined && value !== undefined) {
+      const hasPreviewRef = containsPreviewOptionRef(value);
       compiled.considerations = {
         ...compiled.considerations,
         [id]: {
@@ -129,6 +130,7 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
           ...(when === undefined ? {} : { when }),
           weight,
           value,
+          hasPreviewRef,
           readFootprint: unionFootprints([
             ...(when === undefined ? [] : [computePolicyExprReadFootprint(when)]),
             computePolicyExprReadFootprint(weight),
@@ -175,4 +177,20 @@ function compilePolicyCatalogExpressions(catalog: AgentPolicyCatalogFixture): Co
 
 function lowerExpr(expr: Parameters<typeof lowerAgentPolicyExpr>[0] | undefined): CompiledPolicyExpr | undefined {
   return expr === undefined ? undefined : lowerAgentPolicyExpr(expr) ?? undefined;
+}
+
+function containsPreviewOptionRef(value: unknown): boolean {
+  if (value === null || typeof value !== 'object') {
+    return false;
+  }
+  if (
+    (value as { readonly kind?: unknown }).kind === 'ref'
+    && (value as { readonly ref?: { readonly kind?: unknown } }).ref?.kind === 'previewOptionRef'
+  ) {
+    return true;
+  }
+  if (Array.isArray(value)) {
+    return value.some(containsPreviewOptionRef);
+  }
+  return Object.values(value).some(containsPreviewOptionRef);
 }

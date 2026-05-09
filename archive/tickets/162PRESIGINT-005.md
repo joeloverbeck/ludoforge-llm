@@ -1,6 +1,6 @@
 # 162PRESIGINT-005: Runtime evaluateConsideration consumes previewFallback; fallbackExplicit selectionReason fires
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-evaluation-core.ts`, `policy-agent.ts`
@@ -126,6 +126,12 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 - `packages/engine/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.ts` (new, T1)
 - `packages/engine/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.ts` (new, T2)
 
+### Touched-file corrections from implementation
+
+- `packages/engine/src/agents/microturn-option-eval.ts` and `packages/engine/src/agents/microturn-option-evaluator.ts` are owned fallout: microturn-option scoring is the live path that records score contributions for chooseOne/chooseNStep candidates, so `previewFallbackFired` must travel through that scoring result before `policy-agent.ts` can trace it.
+- `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and generated `packages/engine/schemas/{GameDef,Trace}.schema.json` are owned shared-contract fallout for the new compiled `hasPreviewRef` and serialized trace `previewFallbackFired` fields.
+- `packages/engine/test/architecture/preview-integrity/preview-integrity-fixture.ts`, `packages/engine/test/helpers/policy-catalog-fixtures.ts`, `packages/engine/test/unit/compile-agents-authoring.test.ts`, and `packages/engine/test/unit/schemas-top-level.test.ts` are owned test-helper/assertion fallout for the same contract.
+
 ## Out of Scope
 
 - ARVN seed 1000 convergence-witness regression test. Owned by 006.
@@ -168,3 +174,26 @@ The simpler form per spec §5.3: "fired when the selected candidate's score incl
 3. `pnpm -F @ludoforge/engine test`
 4. `pnpm turbo test`
 5. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed on 2026-05-09. Implementation landed the runtime fallback consumption path:
+
+- `evaluateConsideration` no longer falls through to `unknownAs ?? 0` for compiled preview-ref considerations when weight or value is unavailable. It consumes `previewFallback.onUnavailable`, omits the score contribution for `noContribution`, records a deterministic `previewFallbackFired` trace marker, and records explicit constant fallback contributions.
+- `compile-agents.ts` now emits `hasPreviewRef` on compiled considerations; the runtime branches only when that compiler-owned flag is true.
+- Frontier traces now include `previewFallbackFired`, including the structural no-signal path where guided scoring cannot select a positive option and the visible candidate score remains the chooseNStep progress bias.
+- `fallbackExplicit` now fires for the selected candidate when an explicit constant fallback fired.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after implementation and test expectation fallout. The ticket's combined build-plus-focused-test command was executed as split serial commands to keep the dist-producing step and dist-consuming focused proof explicit.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/preview-unavailable-not-silently-zero.test.js dist/test/architecture/preview-integrity/preview-fallback-explicit-zero-traced.test.js` — passed after the final root typecheck lane replayed the engine build task.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/*.test.js` — passed, covering T1, T2, predecessor T3/T4, and T6/T7.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` initially reported `GameDef.schema.json` and `Trace.schema.json` out of sync; `pnpm -F @ludoforge/engine run schema:artifacts` regenerated those owned artifacts; the follow-up check passed.
+- `pnpm -F @ludoforge/engine test` — passed, including the FITL inner-preview canary golden and replay/default engine lanes.
+- `pnpm turbo test` — passed (`5 successful, 5 total`; engine summary `65/65 files passed`).
+- `pnpm turbo typecheck` — passed (`3 successful, 3 total`).
+
+Schema/artifact fallout: `GameDef.schema.json` changed only to require the compiled `hasPreviewRef` field; `Trace.schema.json` changed only to allow optional candidate `previewFallbackFired`.
+
+File-size ledger: `policy-agent.ts` is 767 lines after this change, under the repository's 800-line cap. `policy-evaluation-core.ts`, `compile-agents.ts`, and `schemas-core.ts` were preexisting oversized canonical hubs and grew by small contract additions. Extraction was considered and deferred because the owned change is a narrow schema/runtime contract addition; no separate extraction owner is justified by this ticket.

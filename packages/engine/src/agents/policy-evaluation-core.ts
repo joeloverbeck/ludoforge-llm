@@ -70,6 +70,12 @@ export interface PolicyRuntimeFailure {
   readonly detail?: Readonly<Record<string, unknown>>;
 }
 
+export interface PolicyPreviewFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant';
+  readonly value?: number;
+}
+
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
 
@@ -86,6 +92,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  previewFallbackFired?: PolicyPreviewFallbackFired;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
@@ -112,6 +119,7 @@ export interface CreatePolicyEvaluationContextInput {
   readonly previewOption?: {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
+    readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
   };
 }
 
@@ -504,6 +512,30 @@ export class PolicyEvaluationContext {
     const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
     const value = this.evaluateCompiledExpr(consideration.value, candidate);
     if (typeof weight !== 'number' || typeof value !== 'number') {
+      if (consideration.hasPreviewRef === true) {
+        const fallback = consideration.previewFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Preview consideration "${considerationId}" did not declare previewFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'noContribution') {
+          this.recordPreviewFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          return 0;
+        }
+        this.recordPreviewFallbackFired(candidate, {
+          termId: considerationId,
+          kind: 'constant',
+          value: fallback.value,
+        });
+        onContribution?.(fallback.value);
+        return fallback.value;
+      }
       const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
       return contribution;
@@ -520,6 +552,18 @@ export class PolicyEvaluationContext {
     }
     onContribution?.(contribution);
     return contribution;
+  }
+
+  private recordPreviewFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyPreviewFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.previewFallbackFired = fired;
+    }
+    if (this.input.previewOption?.previewFallbackFired !== undefined) {
+      this.input.previewOption.previewFallbackFired.current = fired;
+    }
   }
 
   getActionEffectFootprint(actionId: string): import('../kernel/types.js').EffectFootprint | undefined {

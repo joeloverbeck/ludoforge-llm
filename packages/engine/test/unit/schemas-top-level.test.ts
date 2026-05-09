@@ -464,6 +464,7 @@ describe('top-level runtime schemas', () => {
                   { kind: 'literal', value: 0 },
                 ],
               },
+              hasPreviewRef: false,
               dependencies: {
                 parameters: [],
                 stateFeatures: [],

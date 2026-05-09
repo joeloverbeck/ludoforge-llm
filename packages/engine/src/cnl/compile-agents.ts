@@ -70,6 +70,7 @@ type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly when?: AgentPolicyExpr;
   readonly weight: AgentPolicyExpr;
   readonly value: AgentPolicyExpr;
+  readonly hasPreviewRef: boolean;
 };
 type AgentTieBreakerWithExpr = CompiledAgentTieBreaker & { readonly value?: AgentPolicyExpr };
 type StrategicConditionWithExpr = CompiledStrategicCondition & {
@@ -1871,6 +1872,7 @@ class AgentLibraryCompiler {
       ...(def.when === undefined ? {} : { when: when!.expr }),
       weight: weight.expr,
       value: value.expr,
+      hasPreviewRef: previewOptionRefIds.length > 0,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(previewFallback === undefined ? {} : { previewFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),

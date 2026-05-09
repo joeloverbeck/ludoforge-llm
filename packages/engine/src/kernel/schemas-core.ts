@@ -1040,6 +1040,7 @@ const CompiledPolicyConsiderationSchema = z
     when: CompiledPolicyExprSchema.optional(),
     weight: CompiledPolicyExprSchema,
     value: CompiledPolicyExprSchema,
+    hasPreviewRef: BooleanSchema,
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
@@ -2077,6 +2078,11 @@ const PolicyCandidateDecisionTraceSchema = z
     scoreContributions: z.array(AgentDecisionScoreContributionSchema),
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
+    previewFallbackFired: z.object({
+      termId: StringSchema,
+      kind: z.enum(['noContribution', 'constant']),
+      value: NumberSchema.optional(),
+    }).strict().optional(),
     selectionReason: z.enum([
       'coverage',
       'prior',

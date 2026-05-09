@@ -48,10 +48,12 @@ function microturnConsiderations(
   );
 }
 
-function createProfile(previewAvailable: boolean): CompiledAgentProfile {
+type PreviewFallbackMode = 'noContribution' | 'constantZero';
+
+function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackMode): CompiledAgentProfile {
   const considerations = ['preferProjectedMargin'];
   return {
-    fingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}`,
+    fingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}`,
     params: {},
     preview: {
       mode: 'exactWorld',
@@ -79,11 +81,11 @@ function createProfile(previewAvailable: boolean): CompiledAgentProfile {
   };
 }
 
-function createCatalog(previewAvailable: boolean): AgentPolicyCatalog {
-  const profile = createProfile(previewAvailable);
+function createCatalog(previewAvailable: boolean, fallbackMode: PreviewFallbackMode): AgentPolicyCatalog {
+  const profile = createProfile(previewAvailable, fallbackMode);
   return withCompiledPolicyCatalog({
     schemaVersion: 2,
-    catalogFingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}`,
+    catalogFingerprint: `preview-integrity-${previewAvailable ? 'ready' : 'unavailable'}-${fallbackMode}`,
     surfaceVisibility: {
       globalVars: {},
       globalMarkers: {},
@@ -117,7 +119,9 @@ function createCatalog(previewAvailable: boolean): AgentPolicyCatalog {
           when: literal(true),
           weight: literal(1),
           value: refExpr(previewDeltaRef),
-          previewFallback: { onUnavailable: 'noContribution' },
+          previewFallback: fallbackMode === 'constantZero'
+            ? { onUnavailable: { kind: 'constant', value: 0 } }
+            : { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       }),
@@ -211,12 +215,12 @@ function createInput(
   };
 }
 
-export function createPreviewIntegrityFixture(previewAvailable: boolean): {
+export function createPreviewIntegrityFixture(previewAvailable: boolean, fallbackMode: PreviewFallbackMode = 'noContribution'): {
   readonly catalog: AgentPolicyCatalog;
   readonly def: GameDef;
   readonly chooseNStepInput: AgentMicroturnDecisionInput & { readonly microturn: ChooseNStepMicroturn };
 } {
-  const catalog = createCatalog(previewAvailable);
+  const catalog = createCatalog(previewAvailable, fallbackMode);
   const def = createDef(catalog);
   const initial = initialState(def, 162, 2);
   const actionSelection = publishMicroturn(def, initial.state);
@@ -236,6 +240,12 @@ export function createPreviewIntegrityFixture(previewAvailable: boolean): {
 
 export function runPreviewIntegrityPolicyTrace(previewAvailable: boolean): PolicyAgentDecisionTrace {
   const fixture = createPreviewIntegrityFixture(previewAvailable);
+  return runPreviewIntegrityPolicyTraceForFixture(fixture);
+}
+
+export function runPreviewIntegrityPolicyTraceForFixture(
+  fixture: ReturnType<typeof createPreviewIntegrityFixture>,
+): PolicyAgentDecisionTrace {
   const agent = new PolicyAgent({
     profileId: 'baseline',
     traceLevel: 'verbose',

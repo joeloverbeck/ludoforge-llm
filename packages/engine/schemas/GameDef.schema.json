@@ -2067,6 +2067,9 @@
                   "value": {
                     "$ref": "#/definitions/anon_f566f236"
                   },
+                  "hasPreviewRef": {
+                    "$ref": "#/definitions/anon_def33f2f"
+                  },
                   "unknownAs": {
                     "allOf": [
                       {
@@ -2116,6 +2119,7 @@
                   "costClass",
                   "weight",
                   "value",
+                  "hasPreviewRef",
                   "dependencies"
                 ],
                 "additionalProperties": false

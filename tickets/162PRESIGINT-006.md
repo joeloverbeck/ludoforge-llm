@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: None — test fixture and documentation only
-**Deps**: `tickets/162PRESIGINT-005.md`
+**Deps**: `archive/tickets/162PRESIGINT-005.md`
 
 ## Problem
 

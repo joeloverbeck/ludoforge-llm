@@ -623,6 +623,7 @@ export interface CompiledPolicyConsideration {
   readonly when?: CompiledPolicyExpr;
   readonly weight: CompiledPolicyExpr;
   readonly value: CompiledPolicyExpr;
+  readonly hasPreviewRef?: boolean;
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly clamp?: {
@@ -1778,6 +1779,11 @@ export interface PolicyCandidateDecisionTrace {
   readonly scoreContributions: readonly AgentDecisionScoreContribution[];
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
+  readonly previewFallbackFired?: {
+    readonly termId: string;
+    readonly kind: 'noContribution' | 'constant';
+    readonly value?: number;
+  };
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;

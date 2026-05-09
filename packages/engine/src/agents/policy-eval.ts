@@ -29,7 +29,12 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import { type PolicyValue } from './policy-surface.js';
-import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
+import {
+  PolicyEvaluationContext,
+  type PolicyEvaluationCandidate,
+  type PolicyPreviewFallbackFired,
+  PolicyRuntimeError,
+} from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import { getInitializedPolicyWasmRuntime } from './policy-wasm-runtime.js';
@@ -144,6 +149,7 @@ export interface PolicyEvaluationCandidateMetadata {
   }[];
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
+  readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
   readonly previewDrive?: PolicyPreviewDriveTrace;
@@ -1079,6 +1085,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     unknownPreviewRefs: [...candidate.unknownPreviewRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
+    ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
     selectionReason: candidate.selectionReason ?? (candidate.previewOutcome === 'gated' ? 'gated' : 'prior'),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),

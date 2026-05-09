@@ -74,6 +74,7 @@ For each failing job, derive the local reproduction command. The workflow YAML i
 | `ci.yml` | `node-compat` (build only, Node 20) | `nvm use 20 && pnpm install --frozen-lockfile && pnpm turbo build` |
 | `engine-tests.yml` | `build`                                | `pnpm -F @ludoforge/engine build` |
 | `engine-tests.yml` | `test (fitl-events-shard-<id>)`        | `pnpm -F @ludoforge/engine test:integration:fitl-events:shard-<id>` |
+| `engine-tests.yml` | `test (policy-canaries)`               | `pnpm -F @ludoforge/engine test:integration:policy-canaries` |
 | `engine-tests.yml` | `test (fitl-rules)`                    | `pnpm -F @ludoforge/engine test:integration:fitl-rules` |
 | `engine-tests.yml` | `test (texas-cross-game)`              | `pnpm -F @ludoforge/engine test:integration:texas-cross-game` |
 | `engine-tests.yml` | `test (slow-parity-shard-<id>)`        | `pnpm -F @ludoforge/engine test:integration:slow-parity:shard-<id>` |
@@ -84,7 +85,7 @@ For each failing job, derive the local reproduction command. The workflow YAML i
 | `engine-determinism.yml` | `policy-profile-quality (<shard>)` | `pnpm -F @ludoforge/engine build && cd packages/engine && node scripts/run-tests.mjs --lane policy-profile-quality <shard test_paths from yaml>` (advisory; `continue-on-error: true`) |
 | `engine-determinism.yml` | `policy-profile-quality-report` | Aggregation job; failures usually downstream of shard failures — fix shards first, then re-evaluate. |
 
-**Unknown lanes**: read the relevant `.github/workflows/*.yml`, locate the job by name, and extract the run command from the matrix entry. Treat the YAML as the source of truth — never rely on stale skill-internal mappings.
+**Unknown lanes**: read the relevant `.github/workflows/*.yml`, locate the job by name, and extract the run command from the matrix entry. Treat the YAML as the source of truth — never rely on stale skill-internal mappings. Convention shortcut: GitHub Actions check names for `engine-tests.yml` matrix lanes embed the matrix params in parentheses as `test (<id>, <script>, <timeout>)` — the second param is the npm script, which often gives the local repro (`pnpm -F @ludoforge/engine <script>`) without opening the YAML. Validate against the YAML when in doubt.
 
 For determinism shards, the test paths for each shard are listed in `engine-determinism.yml` under `matrix.include`. Locate the shard by `shard_id` and copy the `test_paths` block verbatim.
 
@@ -283,7 +284,7 @@ Present:
 - Advisory lanes left untouched (if any).
 - Suspected flakes / network timeouts left for the user to decide on (if any).
 - FOUNDATIONS conflicts that halted the skill (if any) — these still need resolution.
-- New CI run URL (`gh pr checks <N>` or `gh run list --branch <head> --limit 1`).
+- New CI run URL — run `gh pr checks <N>` or `gh run list --branch <head> --limit 1` to fetch it, then present the URL itself in the summary (not the command).
 - Optional follow-up: if the affected lanes are heavy (>15 min CI duration), or verification was scoped per the environment-constrained rule in Step 6, end the reply with a one-line `/schedule` offer to recheck CI status in 30–60 min. Keep this soft — many fixes complete CI fast enough that a schedule isn't needed, and the offer should not delay closing the workflow.
 - Optional follow-up: if Step 10's architectural-gap scan flagged one or more patterns, end the reply with a one-line offer to draft the suggested spec (e.g., "Want me to draft `specs/<NNN>-<slug>.md` for the gap I flagged?"). The user often wants this immediately; the offer surfaces the path.
 

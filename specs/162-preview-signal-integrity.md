@@ -287,3 +287,14 @@ For traceability, the deep-research document `reports/preview-signal-integrity.m
 - **Cookbook update**: Scoped to retraction + `previewFallback` documentation; broader rewrite deferred.
 - **Compiler diagnostic name**: Adopted (`CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`).
 - **Trace schema additions**: Adopted with codebase-aligned field names; coverage block additive on the existing `previewUsage` shape rather than replacing `outcomeBreakdown`.
+
+## Tickets
+
+Decomposed via `/spec-to-tickets` on 2026-05-09:
+
+- [`tickets/162PRESIGINT-001.md`](../tickets/162PRESIGINT-001.md) — Foundation #20 — Preview Signal Integrity (FOUNDATIONS amendment) (covers §4, Phase 0)
+- [`tickets/162PRESIGINT-002.md`](../tickets/162PRESIGINT-002.md) — Per-ref `PreviewOptionRefStatus` shape + plumbing through inner-preview drivers (covers §5.1, Phase 1 plumbing)
+- [`tickets/162PRESIGINT-003.md`](../tickets/162PRESIGINT-003.md) — chooseN frontier trace: `unknownPreviewRefs`, `selectionReason` union, `coverage` block, `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory (covers §5.3, §5.4, Phase 1 trace surface; T3, T4)
+- [`tickets/162PRESIGINT-004.md`](../tickets/162PRESIGINT-004.md) — Compiler `previewFallback` + `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` diagnostic + fixture migration (atomic cut) (covers §6, §9.4, Phase 2 compiler; T6, T7)
+- [`tickets/162PRESIGINT-005.md`](../tickets/162PRESIGINT-005.md) — Runtime `evaluateConsideration` consumes `previewFallback`; `fallbackExplicit` selectionReason (covers §5.2, §7, Phase 2 runtime; T1, T2)
+- [`tickets/162PRESIGINT-006.md`](../tickets/162PRESIGINT-006.md) — ARVN seed 1000 convergence-witness + cookbook update (covers §9.2, Phase 3; T5)

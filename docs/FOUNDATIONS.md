@@ -128,6 +128,14 @@ Legality and constructibility are a single property exposed by the kernel. No cl
 
 Player agents and chance / kernel agents operate under the same microturn protocol; the only distinction is who decides. Player decisions require agent consultation; chance decisions resolve via the authoritative RNG; kernel-owned decisions (outcome grants, turn retirement) resolve via deterministic kernel rules. No compound shape is ever exposed as a legal action. No grammar layer in the kernel or runtime ever aggregates multiple kernel decisions into a single client-visible unit except for analytics-side summaries (`compoundTurns[]`), which are derived post-hoc from `decisions[]` and never authoritative.
 
+## 20. Preview Signal Integrity
+
+**Policy-preview output is advisory evidence with explicit provenance, not an implicit scalar.**
+
+Every preview-derived ref MUST expose its observer scope, resolution status, budget outcome, and fallback path. Ready, unknown, hidden, stochastic, unresolved, failed, depth-capped, and partial results are distinct semantic outcomes. Unavailable preview refs (any non-`ready` status) MUST NOT be silently coerced into numeric contributions; any consideration that converts an unavailable preview ref into a contribution MUST declare that fallback explicitly in profile YAML, and the chosen fallback MUST be visible in deterministic trace output. When all root-option drives at a microturn yield no usable signal for the requested refs, the runtime MUST mark the resulting selection as `tiebreakAfterPreviewNoSignal` and emit a `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory.
+
+Preview signal integrity is enforced at the engine layer; profile-quality witness claims about preview behavior live alongside other policy-quality regression signals (see Appendix). This Foundation operates jointly with Foundations #9 (replay), #10 (bounded computation), #15 (architectural completeness), and #16 (testing as proof): bounded preview remains bounded; the integrity guarantee is that bounded preview cannot pretend to be unbounded preview.
+
 ---
 
 ## Appendix: Determinism Proofs vs. Profile-Quality Witnesses
@@ -139,3 +147,5 @@ Convergence claims tied to a specific policy-profile variant are not engine inva
 The distinction is architectural, not rhetorical: mixing determinism proof with profile-quality witness claims reintroduces the dual-duty anti-pattern that Spec 136 and Spec 139 were written to eliminate. Spec 140 amended Foundations #5, #10, and #18, and added Foundation #19, to formalize the microturn-native decision protocol. Spec 139's certificate-carrying contract (the prior iteration of #18) is retired.
 
 Spec 144 amended Foundation #18 to distinguish the published-legality contract from the runtime-recovery safety net, and formalized the engine-agnostic `tags: [pass]` fallback convention.
+
+Spec 162 added Foundation #20 (Preview Signal Integrity) to formalize the contract that bounded preview output cannot masquerade as ready evidence.

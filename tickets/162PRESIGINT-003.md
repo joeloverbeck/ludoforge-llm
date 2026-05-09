@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-agent.ts`, `policy-preview-inner.ts`, `policy-preview-inner-choosenstep.ts`
-**Deps**: `tickets/162PRESIGINT-002.md`
+**Deps**: `archive/tickets/162PRESIGINT-002.md`
 
 ## Problem
 

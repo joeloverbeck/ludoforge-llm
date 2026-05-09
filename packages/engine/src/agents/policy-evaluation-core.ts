@@ -50,6 +50,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
@@ -109,7 +110,8 @@ export interface CreatePolicyEvaluationContextInput {
     readonly optionIndex?: number;
   };
   readonly previewOption?: {
-    readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+    readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
+    readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
   };
 }
 
@@ -1132,7 +1134,7 @@ export class PolicyEvaluationContext {
       case 'microturnOptionIntrinsic':
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
-        return this.resolvePreviewOptionRef(ref);
+        return this.resolvePreviewOptionRef(ref, candidate);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1190,13 +1192,27 @@ export class PolicyEvaluationContext {
     return value;
   }
 
-  private resolvePreviewOptionRef(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): PolicyValue {
+  private resolvePreviewOptionRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
     const resolvedRefs = this.input.previewOption?.resolvedRefs;
     if (resolvedRefs === undefined) {
       return undefined;
     }
     const key = previewOptionRefKey(ref);
-    return resolvedRefs.get(key);
+    const status = resolvedRefs.get(key);
+    if (status === undefined) {
+      candidate?.unknownPreviewRefs.set(key, 'noPreviewDecision');
+      this.input.previewOption?.unknownPreviewRefs?.set(key, 'noPreviewDecision');
+      return undefined;
+    }
+    if (status.kind === 'unavailable') {
+      candidate?.unknownPreviewRefs.set(key, status.reason);
+      this.input.previewOption?.unknownPreviewRefs?.set(key, status.reason);
+      return undefined;
+    }
+    return status.value;
   }
 
   private resolveCompiledPolicyZoneId(

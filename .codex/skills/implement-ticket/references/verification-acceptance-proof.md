@@ -26,6 +26,15 @@ When a broad workspace or package lane exits from cache after you added, deleted
 4. record any cache-hit substitution in the ticket outcome or final closeout when it affects a ticket-named acceptance command
 5. if you cannot prove the cached broad lane covered the changed surface, leave that lane as `not yet proven` rather than treating the cache hit as acceptance proof
 
+## Shared Contract Assertion Sweep
+
+Before broad proof for a shared contract migration whose new representation remains type-compatible with stale tests, do one cheap assertion sweep:
+
+1. grep source and tests for the old helper, field, serialized value, assertion literal, and any direct map/object reads that used to return the scalar shape
+2. classify hits as `producer updated`, `consumer updated`, `ready-only adapter preserved`, `assertion-only drift`, or `intentionally unchanged`
+3. rerun a focused test file for any `assertion-only drift` or newly updated consumer before the package/workspace lane
+4. if the broad lane later finds another changed-shape assertion, treat it as owned verification fallout: fix the focused repro first, update the touched-file/proof ledger when needed, then rerun broad proof
+
 ## Wrapper and Child Command Isolation
 
 When the raw child command for a witness passes but the **wrapper script or package test entrypoint** still fails, stop treating the test file as the only owner. Isolate the wrapper seam directly:

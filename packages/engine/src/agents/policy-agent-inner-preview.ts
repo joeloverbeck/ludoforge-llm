@@ -4,11 +4,11 @@ import type {
   CompiledPolicyExpr,
 } from '../kernel/types.js';
 import type { ChooseNStepContext, ChooseOneContext } from '../kernel/microturn/types.js';
-import type { PolicyValue } from './policy-surface.js';
 import {
   previewOptionRefKey,
   runChooseOneInnerPreview,
   type ChooseOneInnerPreviewRun,
+  type PreviewOptionRefStatus,
 } from './policy-preview-inner.js';
 import {
   runChooseNStepInnerPreview,
@@ -26,7 +26,7 @@ export interface PolicyAgentInnerPreview {
   readonly refIds: readonly string[];
   readonly usage: PolicyEvaluationMetadata['previewUsage'];
   readonly byOptionKey: ReadonlyMap<string, PolicyAgentInnerPreviewOption>;
-  readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>;
+  readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
 }
 
 const walkPolicyExpr = (
@@ -90,8 +90,8 @@ const summarizeReadyRefStats = (
         continue;
       }
       const value = option.resolvedRefs.get(refId);
-      if (typeof value === 'number') {
-        values.push(value);
+      if (value?.kind === 'ready' && typeof value.value === 'number') {
+        values.push(value.value);
       }
     }
     if (values.length === 0) {

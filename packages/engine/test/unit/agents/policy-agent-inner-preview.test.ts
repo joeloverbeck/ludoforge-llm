@@ -285,7 +285,11 @@ describe('policy agent inner preview adapter', () => {
     assert.deepEqual([...preview.byOptionKey.keys()], addKeys);
     assert.deepEqual(
       addKeys.map((key) => preview.refsByOptionKey.get(key)?.get('preview.option.delta.victory.currentMargin.self')),
-      [5, 1, 1],
+      [
+        { kind: 'ready', value: 5 },
+        { kind: 'ready', value: 1 },
+        { kind: 'ready', value: 1 },
+      ],
     );
   });
 });

@@ -233,4 +233,53 @@ describe('microturn option evaluator', () => {
     assert.equal(result.scoreContributions.find((entry) => entry.termId === 'remainingRequiredCount')?.contribution, 23);
     assert.equal(result.scoreContributions.find((entry) => entry.termId === 'remainingMaxCount')?.contribution, 29);
   });
+
+  it('records unavailable preview-option refs while preserving numeric fallback scoring', () => {
+    const state = initialState(def, 1, 2).state;
+    const previewCatalog: AgentPolicyCatalog = {
+      ...catalog,
+      compiled: {
+        ...catalog.compiled,
+        considerations: {
+          previewProjectedMargin: {
+            scopes: ['microturn'],
+            costClass: 'preview',
+            weight: literal(31),
+            value: refExpr({
+              kind: 'previewOptionRef',
+              refKind: 'deltaVictoryCurrentMarginSelf',
+            }),
+            unknownAs: 0,
+            dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
+          },
+        },
+      },
+    };
+
+    const result = scoreMicroturnOptionWithContributions(
+      state,
+      def,
+      previewCatalog,
+      state.activePlayer,
+      asSeatId('us'),
+      {},
+      createChooseNRequest(),
+      'right',
+      1,
+      ['previewProjectedMargin'],
+      undefined,
+      new Map([
+        [
+          'preview.option.delta.victory.currentMargin.self',
+          { kind: 'unavailable', reason: 'depthCap' },
+        ],
+      ]),
+    );
+
+    assert.equal(result.score, 0);
+    assert.deepEqual(result.scoreContributions, [{ termId: 'previewProjectedMargin', contribution: 0 }]);
+    assert.deepEqual([...result.unknownPreviewRefs.entries()], [
+      ['preview.option.delta.victory.currentMargin.self', 'depthCap'],
+    ]);
+  });
 });

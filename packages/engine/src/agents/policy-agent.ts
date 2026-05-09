@@ -25,7 +25,7 @@ import {
   createPolicyAgentChooseOneInnerPreview,
   type PolicyAgentInnerPreview,
 } from './policy-agent-inner-preview.js';
-import type { PolicyValue } from './policy-surface.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
 export interface PolicyAgentConfig {
   readonly profileId?: string;
@@ -334,7 +334,7 @@ export class PolicyAgent implements Agent {
   private matchGuidedCompletionDecision(
     input: AgentMicroturnDecisionInput,
     resolvedProfile: ReturnType<typeof resolveEffectivePolicyProfile>,
-    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>,
+    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>,
   ): GuidedChoiceMatch {
     if (resolvedProfile === null) {
       return null;
@@ -373,7 +373,7 @@ export class PolicyAgent implements Agent {
     },
     choose: (request: ChoicePendingRequest) => ReturnType<NonNullable<ReturnType<typeof buildMicroturnChooseCallback>>>,
     resolvedProfile: NonNullable<ReturnType<typeof resolveEffectivePolicyProfile>>,
-    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>,
+    previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>,
   ): GuidedChoiceMatch {
     const context = input.microturn.decisionContext as ChooseOneContext;
     const request: ChoicePendingChooseOneRequest = {

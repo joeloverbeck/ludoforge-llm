@@ -10,7 +10,8 @@ import type {
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { PolicyEvaluationContext } from './policy-evaluation-core.js';
-import type { PolicyValue } from './policy-surface.js';
+import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
 const EMPTY_TRUSTED_MOVE_INDEX: ReadonlyMap<string, TrustedExecutableMove> = new Map();
 
@@ -22,6 +23,7 @@ export interface CompletionScoreContribution {
 export interface CompletionOptionScore {
   readonly score: number;
   readonly scoreContributions: readonly CompletionScoreContribution[];
+  readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
 }
 
 export function scoreMicroturnOption(
@@ -36,7 +38,7 @@ export function scoreMicroturnOption(
   optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
-  previewOptionResolvedRefs?: ReadonlyMap<string, PolicyValue>,
+  previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
 ): number {
   return scoreMicroturnOptionWithContributions(
     state,
@@ -66,13 +68,14 @@ export function scoreMicroturnOptionWithContributions(
   optionIndex: number,
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
-  previewOptionResolvedRefs?: ReadonlyMap<string, PolicyValue>,
+  previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
-    return { score: 0, scoreContributions: [] };
+    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map() };
   }
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
+  const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -89,7 +92,7 @@ export function scoreMicroturnOptionWithContributions(
     },
     ...(previewOptionResolvedRefs === undefined
       ? {}
-      : { previewOption: { resolvedRefs: previewOptionResolvedRefs } }),
+      : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs } }),
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -107,7 +110,7 @@ export function scoreMicroturnOptionWithContributions(
       ),
       0,
     );
-    return { score, scoreContributions };
+    return { score, scoreContributions, unknownPreviewRefs };
   } finally {
     evaluation.dispose();
   }

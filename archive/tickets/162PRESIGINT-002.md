@@ -1,6 +1,6 @@
 # 162PRESIGINT-002: Per-ref PreviewOptionRefStatus shape + plumbing through inner-preview drivers
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-preview-inner.ts`, `policy-preview-inner-choosenstep.ts`, `microturn-option-evaluator.ts`, `policy-evaluation-core.ts`
@@ -151,3 +151,35 @@ Test fixtures that construct `previewOptionResolvedRefsByOptionKey` directly (e.
 2. `pnpm -F @ludoforge/engine test`
 3. `pnpm turbo test` (full suite, includes determinism replay tests)
 4. `pnpm turbo typecheck` (catches missed migration sites)
+
+## Outcome
+
+Completed on 2026-05-09.
+
+- Landed `PreviewOptionRefStatus` as the inner-preview resolved-ref handoff shape. Every requested preview-option ref now produces either `{ kind: 'ready', value }` or `{ kind: 'unavailable', reason }`; hidden, unresolved, and depth-cap failures no longer disappear from the per-option map.
+- Updated chooseOne, chooseNStep, and chooseNStep beam preview drivers to emit status entries, including `outcome` and `driveDepth` as ready drive-intrinsic refs.
+- Updated microturn option scoring to consume status maps and preserve unavailable preview refs in a per-option `unknownPreviewRefs` map while leaving numeric contribution behavior unchanged for this plumbing-only ticket.
+- Updated `policy-evaluation-core` so `resolvePreviewOptionRef` records unavailable and missing status entries into `PolicyEvaluationCandidate.unknownPreviewRefs` when a candidate exists, and into the microturn completion handoff map otherwise.
+- Touched-file scope correction: `packages/engine/src/agents/policy-agent-inner-preview.ts` and `packages/engine/src/agents/policy-agent.ts` were required owned fallout for the status-map type handoff, and `packages/engine/test/unit/agents/policy-agent-inner-preview.test.ts` was required assertion fallout after the package lane exposed the missed raw-value expectation. The named fixture builders `packages/engine/test/helpers/spec-160-inner-preview-fixture.ts` and `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-fixture.ts` were verified by grep as no-edit surfaces because they do not construct `previewOptionResolvedRefsByOptionKey` or `resolvedRefs` maps directly.
+- Deferred sibling scope remains unchanged: trace population, selection reasons, coverage, and advisories stay with `tickets/162PRESIGINT-003.md`; compiler `previewFallback` diagnostics and fixture YAML migration stay with `tickets/162PRESIGINT-004.md`; fallback-aware contribution semantics stay with `tickets/162PRESIGINT-005.md`.
+- Generated fallout: none. This ticket changes in-memory TypeScript/test helper shape only; no schema, golden, compiled JSON, or production GameSpecDoc artifact changed.
+- File-size ledger: `policy-evaluation-core.ts` was already over repo guidance before this ticket and received only a surgical resolver update; extracting from that file would widen the ticket and obscure the owned seam, so no extraction is retained or proposed here.
+- Runtime surface breadth: policy/agent-only in-memory preview/scoring plumbing; no kernel, compiler, or shared serialized trace/schema surface.
+- Command reconciliation before final proof:
+  - `pnpm -F @ludoforge/engine build` — direct package build lane.
+  - Focused compiled tests for the changed unit surfaces — direct focused witness before package/broad lanes.
+  - `pnpm -F @ludoforge/engine test` — direct package acceptance lane.
+  - `pnpm turbo test` — direct broad acceptance lane.
+  - `pnpm turbo typecheck` — direct broad typecheck lane.
+- Verification so far:
+  - `pnpm -F @ludoforge/engine build` — pass.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/microturn-option-evaluator.test.js dist/test/unit/agents/policy-preview-inner-hidden-info.test.js dist/test/unit/agents/policy-preview-inner-choosenstep-hidden-info.test.js dist/test/unit/agents/policy-preview-inner-chooseone.test.js dist/test/unit/agents/policy-preview-inner-choosenstep-per-option.test.js dist/test/unit/agents/policy-preview-inner-choosen-beam.test.js dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js` — pass.
+- Final verification:
+  - `pnpm -F @ludoforge/engine build` — pass after the final assertion update.
+  - `pnpm -F @ludoforge/engine test` — pass after the package lane exposed and the implementation fixed one changed-shape assertion in `policy-agent-inner-preview.test.ts`; final rerun reported 65/65 default files passed.
+  - `pnpm turbo typecheck` — pass; 3/3 tasks successful.
+  - `pnpm turbo test` — pass; 5/5 tasks successful.
+  - `pnpm run check:ticket-deps` — pass; ticket dependency integrity check passed for 5 active tickets and 2281 archived tickets.
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-agent-inner-preview.test.js` — pass after terminal closeout transcription.
+  - `git diff --check` — pass.
+- Late-edit proof validity: final code/test edits occurred before the package and Turbo final lanes. The terminal closeout patch records status, touched-file correction, exact proof results, and no scope, acceptance-command, sibling, dependency, or generated-fallout change beyond the already-proven touched-file ledger; the directly affected focused assertion lane reran after the closeout patch.

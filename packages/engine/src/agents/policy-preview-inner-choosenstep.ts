@@ -19,7 +19,6 @@ import type {
 } from '../kernel/types.js';
 import {
   buildPolicyVictorySurface,
-  type PolicyValue,
   type SurfaceResolutionContext,
 } from './policy-surface.js';
 import {
@@ -33,6 +32,7 @@ import {
   resolveRefs,
   type DriveResult,
   type InnerPreviewBaseInput,
+  type PreviewOptionRefStatus,
 } from './policy-preview-inner.js';
 import {
   microturnConsiderationIdsForProfile,
@@ -71,7 +71,7 @@ export interface ChooseNStepBeamResult {
   readonly partialSelectionStableKeys: readonly string[];
   readonly state: GameState;
   readonly score: number;
-  readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+  readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   readonly outcome: PolicyPreviewTraceOutcome;
 }
 
@@ -91,7 +91,7 @@ export interface RunChooseNStepInnerPreviewInput extends InnerPreviewBaseInput {
 export interface ChooseNStepInnerPreviewResult {
   readonly decision: ChooseNStepDecision;
   readonly stableMoveKey: string;
-  readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+  readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   readonly driveDepth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
   readonly previewDrive: PolicyPreviewDriveTrace;
@@ -264,7 +264,7 @@ const resolveBeamResult = (
   const withOutcome = new Map(resolved.refs);
   for (const ref of input.refs) {
     if (ref.refKind === 'outcome') {
-      withOutcome.set(previewOptionRefKey(ref), outcome);
+      withOutcome.set(previewOptionRefKey(ref), { kind: 'ready', value: outcome });
     }
   }
   return {
@@ -479,7 +479,7 @@ const resolvedInnerPreviewResult = (
   const withOutcome = new Map(resolved.refs);
   for (const ref of input.refs) {
     if (ref.refKind === 'outcome') {
-      withOutcome.set(previewOptionRefKey(ref), outcome);
+      withOutcome.set(previewOptionRefKey(ref), { kind: 'ready', value: outcome });
     }
   }
   return {

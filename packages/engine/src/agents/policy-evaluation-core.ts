@@ -50,6 +50,7 @@ import type {
   PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
@@ -69,6 +70,12 @@ export interface PolicyRuntimeFailure {
   readonly detail?: Readonly<Record<string, unknown>>;
 }
 
+export interface PolicyPreviewFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant';
+  readonly value?: number;
+}
+
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
 
@@ -85,6 +92,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
+  previewFallbackFired?: PolicyPreviewFallbackFired;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
@@ -109,7 +117,9 @@ export interface CreatePolicyEvaluationContextInput {
     readonly optionIndex?: number;
   };
   readonly previewOption?: {
-    readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+    readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
+    readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
+    readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
   };
 }
 
@@ -502,6 +512,30 @@ export class PolicyEvaluationContext {
     const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
     const value = this.evaluateCompiledExpr(consideration.value, candidate);
     if (typeof weight !== 'number' || typeof value !== 'number') {
+      if (consideration.hasPreviewRef === true) {
+        const fallback = consideration.previewFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Preview consideration "${considerationId}" did not declare previewFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'noContribution') {
+          this.recordPreviewFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          return 0;
+        }
+        this.recordPreviewFallbackFired(candidate, {
+          termId: considerationId,
+          kind: 'constant',
+          value: fallback.value,
+        });
+        onContribution?.(fallback.value);
+        return fallback.value;
+      }
       const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
       return contribution;
@@ -518,6 +552,18 @@ export class PolicyEvaluationContext {
     }
     onContribution?.(contribution);
     return contribution;
+  }
+
+  private recordPreviewFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyPreviewFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.previewFallbackFired = fired;
+    }
+    if (this.input.previewOption?.previewFallbackFired !== undefined) {
+      this.input.previewOption.previewFallbackFired.current = fired;
+    }
   }
 
   getActionEffectFootprint(actionId: string): import('../kernel/types.js').EffectFootprint | undefined {
@@ -1132,7 +1178,7 @@ export class PolicyEvaluationContext {
       case 'microturnOptionIntrinsic':
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
-        return this.resolvePreviewOptionRef(ref);
+        return this.resolvePreviewOptionRef(ref, candidate);
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);
@@ -1190,13 +1236,27 @@ export class PolicyEvaluationContext {
     return value;
   }
 
-  private resolvePreviewOptionRef(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): PolicyValue {
+  private resolvePreviewOptionRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
     const resolvedRefs = this.input.previewOption?.resolvedRefs;
     if (resolvedRefs === undefined) {
       return undefined;
     }
     const key = previewOptionRefKey(ref);
-    return resolvedRefs.get(key);
+    const status = resolvedRefs.get(key);
+    if (status === undefined) {
+      candidate?.unknownPreviewRefs.set(key, 'noPreviewDecision');
+      this.input.previewOption?.unknownPreviewRefs?.set(key, 'noPreviewDecision');
+      return undefined;
+    }
+    if (status.kind === 'unavailable') {
+      candidate?.unknownPreviewRefs.set(key, status.reason);
+      this.input.previewOption?.unknownPreviewRefs?.set(key, status.reason);
+      return undefined;
+    }
+    return status.value;
   }
 
   private resolveCompiledPolicyZoneId(

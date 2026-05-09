@@ -4,11 +4,11 @@ import type {
   CompiledPolicyExpr,
 } from '../kernel/types.js';
 import type { ChooseNStepContext, ChooseOneContext } from '../kernel/microturn/types.js';
-import type { PolicyValue } from './policy-surface.js';
 import {
   previewOptionRefKey,
   runChooseOneInnerPreview,
   type ChooseOneInnerPreviewRun,
+  type PreviewOptionRefStatus,
 } from './policy-preview-inner.js';
 import {
   runChooseNStepInnerPreview,
@@ -26,7 +26,7 @@ export interface PolicyAgentInnerPreview {
   readonly refIds: readonly string[];
   readonly usage: PolicyEvaluationMetadata['previewUsage'];
   readonly byOptionKey: ReadonlyMap<string, PolicyAgentInnerPreviewOption>;
-  readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>;
+  readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
 }
 
 const walkPolicyExpr = (
@@ -90,8 +90,8 @@ const summarizeReadyRefStats = (
         continue;
       }
       const value = option.resolvedRefs.get(refId);
-      if (typeof value === 'number') {
-        values.push(value);
+      if (value?.kind === 'ready' && typeof value.value === 'number') {
+        values.push(value.value);
       }
     }
     if (values.length === 0) {
@@ -129,6 +129,37 @@ const summarizeReadyRefStats = (
   return stats;
 };
 
+const summarizeCoverage = (
+  run: PolicyAgentInnerPreviewRun,
+  refIds: readonly string[],
+): PolicyEvaluationMetadata['previewUsage']['coverage'] => {
+  let readyRootOptionCount = 0;
+  let unavailableRootOptionCount = 0;
+
+  for (const option of run.options) {
+    const hasReadyRef = refIds.some((refId) => option.resolvedRefs.get(refId)?.kind === 'ready');
+    if (hasReadyRef) {
+      readyRootOptionCount += 1;
+    } else if (refIds.length > 0) {
+      unavailableRootOptionCount += 1;
+    }
+  }
+
+  const allRootsUnavailable = refIds.length > 0
+    && run.options.length > 0
+    && readyRootOptionCount === 0
+    && unavailableRootOptionCount === run.options.length;
+
+  return {
+    requestedRefCount: refIds.length,
+    evaluatedRootOptionCount: run.options.length,
+    readyRootOptionCount,
+    unavailableRootOptionCount,
+    allRootsUnavailable,
+    selectedByTieBreakerBecausePreviewUnavailable: allRootsUnavailable,
+  };
+};
+
 const summarizeUsage = (
   mode: ResolvedPolicyProfile['profile']['preview']['mode'],
   run: PolicyAgentInnerPreviewRun,
@@ -148,6 +179,7 @@ const summarizeUsage = (
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform: false,
     outcomeBreakdown: run.outcomeBreakdown,
+    coverage: summarizeCoverage(run, refIds),
   };
 };
 

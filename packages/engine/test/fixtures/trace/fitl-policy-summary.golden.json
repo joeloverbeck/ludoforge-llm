@@ -70,6 +70,14 @@
         "unknownNoPreviewDecision": 0,
         "unknownGated": 2,
         "unknownFailed": 0
+      },
+      "coverage": {
+        "requestedRefCount": 1,
+        "evaluatedRootOptionCount": 6,
+        "readyRootOptionCount": 3,
+        "unavailableRootOptionCount": 3,
+        "allRootsUnavailable": false,
+        "selectedByTieBreakerBecausePreviewUnavailable": false
       }
     },
     "selection": {

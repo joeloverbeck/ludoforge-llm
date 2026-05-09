@@ -333,7 +333,7 @@ describe('policy bytecode fallback completeness', () => {
           encodedStateLayout: layout,
           encodedState: encoded,
           previewOption: {
-            resolvedRefs: new Map([['preview.option.driveDepth', 21]]),
+            resolvedRefs: new Map([['preview.option.driveDepth', { kind: 'ready', value: 21 }]]),
           },
         },
         [candidate],

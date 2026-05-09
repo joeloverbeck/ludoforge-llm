@@ -9,6 +9,8 @@ Before the final closeout, and before applying terminal status, reconcile the ti
 3. if any command remains `not yet proven`, run it, rewrite the active ticket with a truthful proof substitution when authorized, or stop and explain why the ticket cannot truthfully close
 4. record any non-direct subsumption, split, or removal in the ticket outcome so the proof trail stays inspectable
 
+If the ticket itself explicitly authorizes an alternate witness shape, such as "read source text or compile boundary cases" or "run this exact lane or the nearest public-seam equivalent", choose the truthful witness during reassessment and record the selected alternative in the active ticket outcome or final closeout. Treat unauthorized witness substitutions under the normal deliverable-correction and 1-3-1 rules.
+
 When a named verification command exits cleanly but proves nothing substantive in the current environment (for example `0 tests`, `0 files`, or another empty execution summary), do not count it as acceptance proof by default:
 
 1. classify it as `repo-valid but non-proving` rather than green
@@ -25,6 +27,15 @@ When a broad workspace or package lane exits from cache after you added, deleted
 3. for new tests or source files, prefer a direct lint/typecheck/test command against the new file or the smallest package lane that definitely includes it
 4. record any cache-hit substitution in the ticket outcome or final closeout when it affects a ticket-named acceptance command
 5. if you cannot prove the cached broad lane covered the changed surface, leave that lane as `not yet proven` rather than treating the cache hit as acceptance proof
+
+## Shared Contract Assertion Sweep
+
+Before broad proof for a shared contract migration whose new representation remains type-compatible with stale tests, do one cheap assertion sweep:
+
+1. grep source and tests for the old helper, field, serialized value, assertion literal, and any direct map/object reads that used to return the scalar shape
+2. classify hits as `producer updated`, `consumer updated`, `ready-only adapter preserved`, `assertion-only drift`, or `intentionally unchanged`
+3. rerun a focused test file for any `assertion-only drift` or newly updated consumer before the package/workspace lane
+4. if the broad lane later finds another changed-shape assertion, treat it as owned verification fallout: fix the focused repro first, update the touched-file/proof ledger when needed, then rerun broad proof
 
 ## Wrapper and Child Command Isolation
 

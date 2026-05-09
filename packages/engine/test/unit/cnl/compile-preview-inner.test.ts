@@ -195,6 +195,7 @@ describe('compile preview.inner', () => {
         scopes: ['microturn'],
         weight: 1,
         value: { coalesce: [refExpr('preview.option.delta.victory.currentMargin.self'), 0] },
+        previewFallback: { onUnavailable: 'noContribution' },
       },
     }, ['projectedMargin']));
 

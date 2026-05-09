@@ -238,11 +238,11 @@ describe('chooseNStep inner preview hidden-info routing', () => {
     assert.equal(run.outcomeBreakdown.unknownHidden, 1);
 
     assert.equal(safe.outcome, 'ready');
-    assert.equal(safe.resolvedRefs.get('preview.option.victory.currentMargin.self'), 1);
-    assert.equal(safe.resolvedRefs.get('preview.option.outcome'), 'ready');
+    assert.deepEqual(safe.resolvedRefs.get('preview.option.victory.currentMargin.self'), { kind: 'ready', value: 1 });
+    assert.deepEqual(safe.resolvedRefs.get('preview.option.outcome'), { kind: 'ready', value: 'ready' });
 
     assert.equal(secret.outcome, 'hidden');
-    assert.equal(secret.resolvedRefs.has('preview.option.victory.currentMargin.self'), false);
-    assert.equal(secret.resolvedRefs.get('preview.option.outcome'), 'hidden');
+    assert.deepEqual(secret.resolvedRefs.get('preview.option.victory.currentMargin.self'), { kind: 'unavailable', reason: 'hidden' });
+    assert.deepEqual(secret.resolvedRefs.get('preview.option.outcome'), { kind: 'ready', value: 'hidden' });
   });
 });

@@ -111,6 +111,7 @@ function createCatalog(): AgentPolicyCatalog {
           when: literal(true),
           weight: literal(1),
           value: refExpr(previewDeltaRef),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       }),
@@ -233,10 +234,16 @@ describe('chooseOne inner preview driver', () => {
     assert.equal(run.outcomeBreakdown.ready, 2);
     assert.deepEqual(
       run.options.map((option) => [option.decision.value, option.resolvedRefs.get('preview.option.delta.victory.currentMargin.self')]),
-      [['low', 1], ['high', 5]],
+      [
+        ['low', { kind: 'ready', value: 1 }],
+        ['high', { kind: 'ready', value: 5 }],
+      ],
     );
     assert.deepEqual(run.options.map((option) => option.driveDepth), [2, 2]);
-    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), ['ready', 'ready']);
+    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), [
+      { kind: 'ready', value: 'ready' },
+      { kind: 'ready', value: 'ready' },
+    ]);
     assert.equal(state.globalVars.score, 0);
     assert.equal(publishMicroturn(def, state).kind, 'chooseOne');
   });

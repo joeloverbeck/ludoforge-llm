@@ -40,9 +40,14 @@ import {
 import {
   pickInnerDecision,
   type PolicyPreviewTraceOutcome,
+  type PolicyPreviewUnavailabilityReason,
 } from './policy-preview.js';
 
 type PreviewOptionRef = Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>;
+export type PreviewOptionRefStatus =
+  | { readonly kind: 'ready'; readonly value: PolicyValue }
+  | { readonly kind: 'unavailable'; readonly reason: PolicyPreviewUnavailabilityReason };
+
 type ChooseOneMicroturn = MicroturnState & {
   readonly kind: 'chooseOne';
   readonly decisionContext: ChooseOneContext;
@@ -69,7 +74,7 @@ export interface RunChooseOneInnerPreviewInput extends InnerPreviewBaseInput {
 export interface ChooseOneInnerPreviewResult {
   readonly decision: Extract<Decision, { readonly kind: 'chooseOne' }>;
   readonly stableMoveKey: string;
-  readonly resolvedRefs: ReadonlyMap<string, PolicyValue>;
+  readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   readonly driveDepth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
   readonly previewDrive: PolicyPreviewDriveTrace;
@@ -421,43 +426,53 @@ export const resolveRefs = (
   drive: DriveResult,
   surfaceContext: SurfaceResolutionContext,
   seatResolutionIndex: ReturnType<typeof buildSeatResolutionIndex>,
-): { readonly refs: ReadonlyMap<string, PolicyValue>; readonly hidden: boolean } => {
-  const resolved = new Map<string, PolicyValue>();
+): { readonly refs: ReadonlyMap<string, PreviewOptionRefStatus>; readonly hidden: boolean } => {
+  const resolved = new Map<string, PreviewOptionRefStatus>();
   let hidden = false;
   for (const ref of input.refs) {
     const key = previewOptionRefKey(ref);
     if (ref.refKind === 'outcome') {
-      resolved.set(key, drive.outcome);
+      resolved.set(key, { kind: 'ready', value: drive.outcome });
       continue;
     }
     if (ref.refKind === 'driveDepth') {
-      resolved.set(key, drive.depth);
+      resolved.set(key, { kind: 'ready', value: drive.depth });
       continue;
     }
     const surfaceRef = surfaceRefForPreviewOptionRef(ref);
     if (surfaceRef === undefined) {
+      resolved.set(key, { kind: 'unavailable', reason: 'unresolved' });
       continue;
     }
     const post = resolveVisibleSurface(input, drive.state, surfaceRef, surfaceContext, seatResolutionIndex);
     if (post.kind === 'hidden') {
       hidden = true;
+      resolved.set(key, { kind: 'unavailable', reason: 'hidden' });
       continue;
     }
     if (post.kind !== 'value') {
+      resolved.set(key, { kind: 'unavailable', reason: drive.outcome === 'depthCap' ? 'depthCap' : 'unresolved' });
       continue;
     }
     if (ref.refKind === 'deltaVictoryCurrentMarginSelf') {
+      if (drive.outcome === 'depthCap') {
+        resolved.set(key, { kind: 'unavailable', reason: 'depthCap' });
+        continue;
+      }
       const pre = resolveVisibleSurface(input, input.state, surfaceRef, surfaceContext, seatResolutionIndex);
       if (pre.kind === 'hidden') {
         hidden = true;
+        resolved.set(key, { kind: 'unavailable', reason: 'hidden' });
         continue;
       }
       if (pre.kind === 'value' && typeof post.value === 'number' && typeof pre.value === 'number') {
-        resolved.set(key, post.value - pre.value);
+        resolved.set(key, { kind: 'ready', value: post.value - pre.value });
+      } else {
+        resolved.set(key, { kind: 'unavailable', reason: 'unresolved' });
       }
       continue;
     }
-    resolved.set(key, post.value);
+    resolved.set(key, { kind: 'ready', value: post.value });
   }
   return { refs: resolved, hidden };
 };
@@ -483,7 +498,7 @@ export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): 
       const withOutcome = new Map(resolved.refs);
       for (const ref of input.refs) {
         if (ref.refKind === 'outcome') {
-          withOutcome.set(previewOptionRefKey(ref), outcome);
+          withOutcome.set(previewOptionRefKey(ref), { kind: 'ready', value: outcome });
         }
       }
       return {

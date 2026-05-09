@@ -314,6 +314,8 @@ agents:
         weight: 300
         value:
           ref: preview.option.delta.victory.currentMargin.self
+        previewFallback:
+          onUnavailable: noContribution
 
   profiles:
     arvn-inner-preview:
@@ -338,7 +340,7 @@ Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self
 
 ### Target-Selection `chooseNStep` Example
 
-For `chooseNStep`, use the same microturn-scoped consideration. Spec 161 makes the per-option projected refs available for each legal ADD option, so the consideration differentiates the currently published add choices the same way it differentiates `chooseOne` options.
+For `chooseNStep`, use the same microturn-scoped consideration. Spec 161 makes the per-option projected refs available for each legal ADD option. For shallow chooseNStep frontiers within `depthCap`, the consideration differentiates the currently published add choices the same way it differentiates `chooseOne` options. For deeply nested chooseNStep ladders that exit at `depthCap` before the requested ref can resolve, per-option preview is `unavailable` under Foundation #20. The consideration must declare `previewFallback.onUnavailable` so scoring under that unavailable case is explicit. See [Preview Signal Integrity](#preview-signal-integrity).
 
 ```yaml
 agents:
@@ -350,6 +352,8 @@ agents:
         weight: 300
         value:
           ref: preview.option.delta.victory.currentMargin.self
+        previewFallback:
+          onUnavailable: noContribution
 
   profiles:
     arvn-inner-preview:
@@ -372,7 +376,40 @@ agents:
 
 At a `chooseNStep` microturn, this scores ADD options only. CONFIRM is not a per-option-scored option; the `min`/`max` cardinality of the chooseN drives set-completion logic. Author considerations for the ADD choices whose `microturn.option.value` is being selected, not for CONFIRM.
 
-The example's `chooseNStep` validation cost is `8 * (1 + 1 * 8 * max(0, 4 - 1)) = 200`, which fits under the 256 hard cap. Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` and inner-frontier `scoreContributions[]` to confirm that projected margin deltas are differentiating the ADD options.
+The example's `chooseNStep` validation cost is `8 * (1 + 1 * 8 * max(0, 4 - 1)) = 200`, which fits under the 256 hard cap. Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` and inner-frontier `scoreContributions[]` to confirm when projected margin deltas are differentiating the ADD options. When all root-option drives are unavailable, the trace reports `selectionReason: tiebreakAfterPreviewNoSignal`, candidate `unknownPreviewRefs`, and a `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory instead of a silent zero contribution.
+
+### Preview Signal Integrity
+
+Every consideration whose `value` reads a `preview.option.*` ref must declare `previewFallback.onUnavailable`.
+
+Use `noContribution` when an unavailable preview ref should not affect the option score. The consideration is omitted from `scoreContributions[]`, and the trace records the unavailable ref and reason.
+
+```yaml
+preferOptionProjectedMargin:
+  scopes: [microturn]
+  costClass: preview
+  weight: 300
+  value:
+    ref: preview.option.delta.victory.currentMargin.self
+  previewFallback:
+    onUnavailable: noContribution
+```
+
+Use `{ constant: <integer> }` only when the profile intentionally converts an unavailable preview ref into an explicit numeric contribution. The trace records `previewFallbackFired`, and a selected candidate that used an explicit constant fallback reports `selectionReason: fallbackExplicit`.
+
+```yaml
+preferOptionProjectedMargin:
+  scopes: [microturn]
+  costClass: preview
+  weight: 300
+  value:
+    ref: preview.option.delta.victory.currentMargin.self
+  previewFallback:
+    onUnavailable:
+      constant: 0
+```
+
+The compiler rejects preview-ref considerations that omit this declaration with `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK`; add `previewFallback.onUnavailable` to fix the profile. The FITL `preferOptionProjectedMargin` recipe in `data/games/fire-in-the-lake/92-agents.md` uses `noContribution`.
 
 ### Gap Diagnosis Quick Map
 

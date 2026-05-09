@@ -264,8 +264,8 @@ describe('chooseNStep inner preview beam driver', () => {
       firstRun.beam.map((entry) => entry.partialSelection.map((decision) => decision.value)),
       [['G', 'H', 'F'], ['H', 'G', 'F']],
     );
-    assert.equal(firstRun.best?.resolvedRefs.get('preview.option.driveDepth'), 3);
-    assert.equal(firstRun.best?.resolvedRefs.get('preview.option.outcome'), 'depthCap');
+    assert.deepEqual(firstRun.best?.resolvedRefs.get('preview.option.driveDepth'), { kind: 'ready', value: 3 });
+    assert.deepEqual(firstRun.best?.resolvedRefs.get('preview.option.outcome'), { kind: 'ready', value: 'depthCap' });
     assert.deepEqual(
       JSON.stringify(summarizeBeamRun(firstRun)),
       JSON.stringify(summarizeBeamRun(secondRun)),

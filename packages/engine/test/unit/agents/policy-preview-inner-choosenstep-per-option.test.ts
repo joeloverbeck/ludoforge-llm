@@ -111,6 +111,7 @@ function createCatalog(depthCap = 3): AgentPolicyCatalog {
           when: literal(true),
           weight: literal(1),
           value: refExpr(previewDeltaRef),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       }),
@@ -235,9 +236,17 @@ describe('chooseNStep per-root-option inner preview driver', () => {
     );
     assert.deepEqual(
       run.options.map((option) => [option.decision.value, option.resolvedRefs.get('preview.option.delta.victory.currentMargin.self')]),
-      [['high', 5], ['low', 1], ['spare', 1]],
+      [
+        ['high', { kind: 'ready', value: 5 }],
+        ['low', { kind: 'ready', value: 1 }],
+        ['spare', { kind: 'ready', value: 1 }],
+      ],
     );
-    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), ['ready', 'ready', 'ready']);
+    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), [
+      { kind: 'ready', value: 'ready' },
+      { kind: 'ready', value: 'ready' },
+      { kind: 'ready', value: 'ready' },
+    ]);
     assert.deepEqual(run.options.map((option) => option.driveDepth), [2, 2, 2]);
     assert.equal(run.evaluatedCandidateCount, 6);
     assert.ok(run.evaluatedCandidateCount <= 4 * (1 + 2 * 4 * Math.max(0, 3 - 1)));

@@ -196,8 +196,14 @@ describe('chooseOne inner preview hidden-info routing', () => {
     assert.deepEqual(run.options.map((option) => option.outcome), ['hidden', 'hidden']);
     assert.deepEqual(
       run.options.map((option) => option.resolvedRefs.get('preview.option.victory.currentMargin.self')),
-      [undefined, undefined],
+      [
+        { kind: 'unavailable', reason: 'hidden' },
+        { kind: 'unavailable', reason: 'hidden' },
+      ],
     );
-    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), ['hidden', 'hidden']);
+    assert.deepEqual(run.options.map((option) => option.resolvedRefs.get('preview.option.outcome')), [
+      { kind: 'ready', value: 'hidden' },
+      { kind: 'ready', value: 'hidden' },
+    ]);
   });
 });

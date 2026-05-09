@@ -34,6 +34,7 @@ Follow these steps in order. Do not skip any step.
 1. **Resolve the PR**.
    - If `[PR_NUMBER]` was provided: `gh pr view <N> --json number,headRefName,headRepository,statusCheckRollup,isCrossRepository`.
    - If omitted: `gh pr view --json number,headRefName,headRepository,statusCheckRollup,isCrossRepository` (auto-detects from current branch). If this fails, abort and ask the user for a PR number.
+   - The `statusCheckRollup` field already lists every check's `name`, `conclusion`, and `detailsUrl` (which contains run/job IDs). Use it directly to skip the separate `gh pr checks` and `gh run list --branch` calls in step 1.4 — fall back to `gh run list` only when you need fields not in the rollup (e.g., to disambiguate cancelled-run causes via run-level metadata).
 
 2. **Verify HEAD matches the PR head branch**.
    - Compare `git rev-parse --abbrev-ref HEAD` with the PR's `headRefName`. If they differ, abort and ask the user to check out the PR branch first. The skill must NOT operate on the wrong branch.
@@ -48,6 +49,8 @@ Follow these steps in order. Do not skip any step.
 
 5. **Download failed logs**.
    - For each failed run/job: `gh run view <run-id> --log-failed > /tmp/ci-fix-<run-id>.log`. **For cancelled runs, `--log-failed` returns empty because no step failed before the runner was killed. Capture the full log via `gh run view <run-id> --log > /tmp/ci-fix-<run-id>-full.log` instead.** Cancelled runs are most often timeouts — see Step 3's timeout sub-classification.
+   - When a run contains a matrix of lanes and only some fail, prefer per-job downloads to avoid mixing unrelated failure logs: `gh run view --job <job-id> --log-failed > /tmp/ci-fix-<job-id>.log`. Find job IDs in the `jobs` field of `gh run list --json ...,jobs`, or in the `detailsUrl` of each `statusCheckRollup` entry.
+   - For logs >1000 lines, grep first to localize failure markers: `grep -nE 'FAIL|✖|not ok|##\[error\]|AssertionError' /tmp/ci-fix-<run-id>.log`. The matched line ranges bracket the section worth reading. Test runners often emit `Error:` strings as captured test output (e.g., recovery-fence test cases that print `Error: ticker exploded`), so grep on assertion-shape patterns rather than raw `Error:` to avoid noise.
    - Note: GitHub Actions truncates very long step names to `UNKNOWN STEP` in `--log` output (a common case for matrix jobs whose step names embed multi-line `test_paths` blocks). To isolate per-step progress when this happens, grep on the truncated check-name (column 1 of `gh run view --log`) instead of the step name.
    - For determinism / policy-profile-quality lanes that upload artifacts: `gh run download <run-id> -n <artifact-name> -D /tmp/ci-fix-artifacts/` to inspect shard-specific output (e.g., `policy-profile-quality-shard-<id>` artifacts).
 
@@ -212,7 +215,7 @@ For each approved cluster:
 - Edit the implicated files. Use immutable update patterns (project rule).
 - Never adapt a test to mask a bug — fix the code (CLAUDE.md TDD Bugfixing rule). However, when a test's expected value asserted the buggy output (e.g., a `deepEqual` snapshot of a misformed compiled artifact), updating the expectation to match the corrected output is required, not a violation. Distinguish: weakening a contract (forbidden) vs updating a snapshot of a now-fixed contract (correct).
 - For typecheck/build failures rooted in schema drift, update the related schema, types, and tests in the same change (CLAUDE.md "Schema synchronization" coding convention).
-- Do NOT edit `.github/workflows/*.yml` to silence a lane. If a workflow change is the right answer, surface it at gate 1 — it is out of scope for this skill's auto-fix.
+- Do NOT modify `.github/workflows/*.yml` as part of unilateral auto-fix. Two motives can require workflow YAML changes — *silencing a lane* (out of scope: never propose) and *fixing the workflow contract* (e.g., an unbuilt artifact a new test lane needs, a missing toolchain step, an under-budgeted timeout). The latter is in scope when surfaced as part of a cluster's proposed-fix at gate 1; once gate 1 approves, the workflow edit lands in Step 5 alongside the code edits.
 
 After edits, mark each cluster as `applied`.
 
@@ -221,7 +224,7 @@ After edits, mark each cluster as `applied`.
 For each non-advisory lane that was failing:
 
 1. Run the lane's local repro command (from the Step 2 lookup).
-2. For `determinism-shard` lanes, build first: `pnpm -F @ludoforge/engine build`.
+2. For any engine lane consuming `packages/engine/dist/` (effectively every `engine-tests.yml` and `engine-determinism.yml` lane), build first: `pnpm -F @ludoforge/engine build`. For lanes consuming the policy WASM module (`policy-canaries`, anything invoking `loadPolicyWasmRuntime`), build the wasm package too: `pnpm -F @ludoforge/engine-wasm build` (requires Rust toolchain with `wasm32-unknown-unknown` target).
 3. Confirm the lane PASSES.
 4. If it still fails:
    - Re-diagnose. Update the cluster's proposed fix.
@@ -323,7 +326,7 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **FOUNDATIONS hard halt**: if any proposed fix violates `docs/FOUNDATIONS.md`, halt at gate 1 with 1-3-1. Never silently accept a Foundations-violating fix. Before citing a Foundations principle by number (e.g., "Foundation 8") in a diagnosis or commit message, verify the number against the current `docs/FOUNDATIONS.md` — section numbering can shift when principles are added or removed.
 - **Codebase truth**: every implicated file path and function name validated against the actual codebase before being put in the diagnosis table.
 - **Workflow YAML is authoritative**: lane→command mapping derives from `.github/workflows/*.yml`. The reference table in Step 2 is convenience — when in doubt, read the YAML.
-- **No workflow edits**: do NOT modify `.github/workflows/*.yml` to silence a lane. If a workflow change is the right answer, surface it at gate 1; let the user decide. The skill's scope is "fix the code that the lane caught", not "rewrite the lane".
+- **No silencing-motive workflow edits**: never propose a `.github/workflows/*.yml` change whose motive is to silence a failing lane. Workflow changes whose motive is to fix a workflow-contract bug (missing artifact, missing toolchain step, under-budgeted timeout) are in scope when surfaced as a cluster's proposed-fix at gate 1; once approved they land in Step 5 with the code edits. Workflow refactors unrelated to a current failure go through normal review channels, not this skill.
 - **No tests adapted to bugs**: never weaken or skip a test to make buggy code pass. However, when a test's expected value asserted the buggy output (e.g., a `deepEqual` snapshot of a misformed compiled artifact), updating the expectation to match the corrected output is required, not a violation. Distinguish: weakening a contract (forbidden) vs updating a snapshot of a now-fixed contract (correct).
 - **No `main` push**: HEAD must not be `main` or `master` at push time.
 - **No force push, no `--no-verify`**: never use `--force`, `--force-with-lease`, `--no-verify`, `--no-gpg-sign`, or any other safety bypass unless the user explicitly requested it for this push.
@@ -335,7 +338,7 @@ Quick diagnostic angles per class. Not exhaustive — this is orientation for di
 - **Worktree discipline**: every command and path uses the worktree root if invoked inside a worktree.
 - **Two gates always**: gate 1 (pre-fix) and gate 2 (pre-push) are mandatory. Auto mode does not waive them — auto mode is "not a license to destroy".
 - **Files NOT touched**:
-  - `.github/workflows/*.yml` — never modified by auto-fix; modified only when the user explicitly approves a structural change (shard, timeout adjustment) at gate 1.
+  - `.github/workflows/*.yml` — never modified by auto-fix; modified only when the user explicitly approves a structural change at gate 1 (shard, timeout adjustment, missing artifact, missing toolchain step, etc.).
   - `main` branch — only the PR head branch is touched.
   - Any branch other than the PR head — verified before commit and before push.
 - **Single PR focus**: each invocation handles one PR. If the user wants to recover multiple PRs, run the skill per PR.

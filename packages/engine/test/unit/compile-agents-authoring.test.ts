@@ -362,6 +362,7 @@ describe('agents authoring surface', () => {
           costClass: 'candidate',
           weight: literal(1),
           value: opExpr('boolToNumber', refExpr({ kind: 'library', refKind: 'candidateFeature', id: 'isPass' })),
+          hasPreviewRef: false,
           dependencies: {
             parameters: [],
             stateFeatures: [],
@@ -865,6 +866,7 @@ describe('agents authoring surface', () => {
         literal(1),
         literal(0),
       ),
+      hasPreviewRef: false,
       dependencies: {
         parameters: [],
         stateFeatures: [],
@@ -944,6 +946,7 @@ describe('agents authoring surface', () => {
         },
         literal(0),
       ),
+      hasPreviewRef: false,
       dependencies: {
         parameters: [],
         stateFeatures: [],

@@ -15,7 +15,9 @@ import {
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from '../kernel/choice-option-policy.js';
 import { scoreMicroturnOptionWithContributions, type CompletionScoreContribution } from './microturn-option-eval.js';
-import type { PolicyValue } from './policy-surface.js';
+import type { PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
+import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
 export interface BuildMicroturnChooseCallbackInput {
   readonly state: GameState;
@@ -25,13 +27,15 @@ export interface BuildMicroturnChooseCallbackInput {
   readonly seatId: string;
   readonly profile: CompiledAgentProfile;
   readonly runtime?: GameDefRuntime;
-  readonly previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PolicyValue>>;
+  readonly previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
 }
 
 export interface MicroturnChoiceSelection {
   readonly value: MoveParamValue;
   readonly score: number;
   readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
+  readonly unknownPreviewRefsByOption: ReadonlyMap<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>;
+  readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
 }
 
 const scoreContributionsKeyForChooseOne = (
@@ -77,9 +81,15 @@ export function selectBestMicroturnChooseOneValue(
     return undefined;
   }
 
-  let bestSelection: Omit<MicroturnChoiceSelection, 'scoreContributionsByOption'> | undefined;
+  let bestSelection: Omit<
+    MicroturnChoiceSelection,
+    'scoreContributionsByOption' | 'unknownPreviewRefsByOption' | 'previewFallbackFiredByOption'
+  > | undefined;
   const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
+  const unknownPreviewRefsByOption = new Map<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>();
+  const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
   for (const [optionIndex, option] of selectableOptions.entries()) {
+    const optionKey = scoreContributionsKeyForChooseOne(request, option.value);
     const scored = scoreMicroturnOptionWithContributions(
       input.state,
       input.def,
@@ -92,9 +102,13 @@ export function selectBestMicroturnChooseOneValue(
       optionIndex,
       microturnConsiderationIds,
       input.runtime,
-      input.previewOptionResolvedRefsByOptionKey?.get(scoreContributionsKeyForChooseOne(request, option.value)),
+      input.previewOptionResolvedRefsByOptionKey?.get(optionKey),
     );
-    scoreContributionsByOption.set(scoreContributionsKeyForChooseOne(request, option.value), scored.scoreContributions);
+    scoreContributionsByOption.set(optionKey, scored.scoreContributions);
+    unknownPreviewRefsByOption.set(optionKey, scored.unknownPreviewRefs);
+    if (scored.previewFallbackFired !== undefined) {
+      previewFallbackFiredByOption.set(optionKey, scored.previewFallbackFired);
+    }
     const score = scored.score;
     if (bestSelection === undefined || score > bestSelection.score) {
       bestSelection = { value: option.value, score };
@@ -107,7 +121,7 @@ export function selectBestMicroturnChooseOneValue(
   if (options.requirePositiveScore === true && bestSelection.score <= 0) {
     return undefined;
   }
-  return { ...bestSelection, scoreContributionsByOption };
+  return { ...bestSelection, scoreContributionsByOption, unknownPreviewRefsByOption, previewFallbackFiredByOption };
 }
 
 export function buildMicroturnChooseCallback(
@@ -136,6 +150,8 @@ export function buildMicroturnChooseCallback(
       }
 
       const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
+      const unknownPreviewRefsByOption = new Map<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>();
+      const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
       const scoredValues = selectableValues.map((value, index) => ({
         value,
         index,
@@ -155,7 +171,12 @@ export function buildMicroturnChooseCallback(
         ),
       }));
       for (const entry of scoredValues) {
-        scoreContributionsByOption.set(scoreContributionsKeyForChooseNStepAdd(request, entry.value), entry.scored.scoreContributions);
+        const optionKey = scoreContributionsKeyForChooseNStepAdd(request, entry.value);
+        scoreContributionsByOption.set(optionKey, entry.scored.scoreContributions);
+        unknownPreviewRefsByOption.set(optionKey, entry.scored.unknownPreviewRefs);
+        if (entry.scored.previewFallbackFired !== undefined) {
+          previewFallbackFiredByOption.set(optionKey, entry.scored.previewFallbackFired);
+        }
       }
       const rankedValues = [...scoredValues].sort((left, right) => {
         if (right.scored.score !== left.scored.score) {
@@ -171,7 +192,7 @@ export function buildMicroturnChooseCallback(
           for (const value of selected) {
             score += sumContributions(scoreContributionsByOption.get(scoreContributionsKeyForChooseNStepAdd(request, value)) ?? []);
           }
-          return { value: selected, score, scoreContributionsByOption };
+          return { value: selected, score, scoreContributionsByOption, unknownPreviewRefsByOption, previewFallbackFiredByOption };
         }
         const supplement = rankedValues
           .filter((entry) => !selected.includes(entry.value as MoveParamScalar))
@@ -182,7 +203,7 @@ export function buildMicroturnChooseCallback(
         for (const item of value) {
           score += sumContributions(scoreContributionsByOption.get(scoreContributionsKeyForChooseNStepAdd(request, item)) ?? []);
         }
-        return { value, score, scoreContributionsByOption };
+        return { value, score, scoreContributionsByOption, unknownPreviewRefsByOption, previewFallbackFiredByOption };
       }
 
       return undefined;

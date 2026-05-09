@@ -93,6 +93,11 @@ type StrategicConditionWithExpr = CompiledStrategicCondition & {
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
 export const INNER_PREVIEW_HARD_CAP = 256;
+export type CapClass = 'standard256' | 'deep1024';
+export const CAP_CLASS_BUDGETS: Record<CapClass, number> = {
+  standard256: INNER_PREVIEW_HARD_CAP,
+  deep1024: 1024,
+};
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
 const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([

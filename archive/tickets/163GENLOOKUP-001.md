@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `kernel/types-core.ts` (compiled type surface), `cnl/compiler-diagnostic-codes.ts` (registry entries)
-**Deps**: `specs/163-generic-microturn-state-feature-lookups.md`
+**Deps**: `archive/specs/163-generic-microturn-state-feature-lookups.md`
 
 ## Problem
 

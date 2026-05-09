@@ -2,7 +2,13 @@
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
-import { literalExpr, lookupRef, resolveLookup } from './lookup-refs-fixture.js';
+import {
+  canonicalCookbookProfile,
+  literalExpr,
+  lookupRef,
+  resolveLookup,
+  scoreCanonicalCookbookProfile,
+} from './lookup-refs-fixture.js';
 
 describe('policy lookup refs collection coverage', () => {
   it('resolves zones, tokens, players, and globals through the generic lookup surface', () => {
@@ -22,5 +28,21 @@ describe('policy lookup refs collection coverage', () => {
       resolveLookup(lookupRef('globals', 'string', literalExpr('morale'), ['properties', 'value']), 'morale'),
       { kind: 'ready', value: 9 },
     );
+  });
+
+  it('exercises the canonical cookbook profile across all four lookup collections', () => {
+    const profile = canonicalCookbookProfile();
+    assert.deepEqual(profile.considerationIds, ['lookup0', 'lookup1', 'lookup2', 'lookup3']);
+    assert.deepEqual(profile.refs.map((ref) => ref.collection), ['zones', 'tokens', 'players', 'globals']);
+
+    const scored = scoreCanonicalCookbookProfile();
+    assert.deepEqual(scored.scoreContributions, [
+      { termId: 'lookup0', contribution: 4 },
+      { termId: 'lookup1', contribution: 3 },
+      { termId: 'lookup2', contribution: 5 },
+      { termId: 'lookup3', contribution: 9 },
+    ]);
+    assert.deepEqual([...scored.unknownLookupRefs.entries()], []);
+    assert.equal(scored.lookupFallbackFired, undefined);
   });
 });

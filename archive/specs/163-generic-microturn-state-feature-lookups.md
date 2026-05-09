@@ -1,6 +1,6 @@
 # Spec 163 — Generic Microturn State-Feature Lookups
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium
 **Complexity**: M
 **Date**: 2026-05-09
@@ -242,7 +242,7 @@ No existing fixture migration is needed (no fixture currently uses lookup refs),
 - `packages/engine/src/agents/policy-agent.ts:74-91, 280-310` — frontier dispatch trace population (extend for `unknownLookupRefs`, `lookupFallbackFired`)
 - `packages/engine/src/kernel/types-ast.ts:677` — `MoveParamScalar` (the typed identifier surface the resolver matches against `keyType`)
 - `packages/engine/src/kernel/branded.ts:3-9` — `PlayerId`, `ZoneId`, `TokenId`, `SeatId` brands (no `GlobalVarId` brand; `globals` keyType is raw `'string'`)
-- `docs/agent-dsl-cookbook.md` — new "Static state lookups at chooseN frontiers" section
+- `docs/agent-dsl-cookbook.md` — "Static State Lookups at chooseN Frontiers" section
 - `docs/FOUNDATIONS.md:131-137` — Foundation #20 (UNCHANGED; this spec extends its scope to a new ref family without amending the text)
 
 ## 11. Open questions
@@ -284,4 +284,14 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 - [`archive/tickets/163GENLOOKUP-002.md`](../archive/tickets/163GENLOOKUP-002.md) — Compiler lowering for `lookup` ref + compile-time diagnostics (covers Phase 1)
 - [`archive/tickets/163GENLOOKUP-003.md`](../archive/tickets/163GENLOOKUP-003.md) — Runtime resolver + dispatch + observer routing (covers Phase 2 + §8.1 #1, #5, #6, §8.1 #4)
 - [`archive/tickets/163GENLOOKUP-004.md`](../archive/tickets/163GENLOOKUP-004.md) — Consideration integration + trace surface (covers Phase 3 + §8.1 #2, #3)
-- [`tickets/163GENLOOKUP-005.md`](../tickets/163GENLOOKUP-005.md) — Cookbook recipe + canonical fixture profile (covers Phase 4)
+- [`archive/tickets/163GENLOOKUP-005.md`](../archive/tickets/163GENLOOKUP-005.md) — Cookbook recipe + canonical fixture profile (covers Phase 4)
+
+## Outcome
+
+Completed 2026-05-09.
+
+- Landed the generic `lookup.surface: policyState` ref family across the compiled policy type surface, compiler lowering/diagnostics, runtime resolver, observer-routed dispatch, consideration fallback handling, trace provenance, architecture tests, and author-facing cookbook material.
+- All phase tickets are archived: `163GENLOOKUP-001` through `163GENLOOKUP-005`.
+- The final Phase 4 closeout updated `docs/agent-dsl-cookbook.md` with "Static State Lookups at chooseN Frontiers" and added the canonical cookbook profile witness to `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts`.
+- Verification is recorded in the archived phase tickets. Final series dependency integrity before spec archival: `pnpm run check:ticket-deps` passed after `163GENLOOKUP-005` archival.
+- No remaining active ticket is owned by Spec 163; Spec 164 remains orthogonal preview-budget work.

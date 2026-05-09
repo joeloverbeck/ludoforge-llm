@@ -13,6 +13,7 @@ import {
   type AgentPolicyLiteral,
   type ChoicePendingChooseOneRequest,
   type CompiledAgentPolicyRef,
+  type CompiledAgentProfile,
   type CompiledPolicyConsideration,
   type CompiledPolicyExpr,
   type CompiledSurfaceCatalog,
@@ -118,6 +119,10 @@ const emptyDependencies = {
 };
 
 export const literalExpr = (value: AgentPolicyLiteral): CompiledPolicyExpr => ({ kind: 'literal', value });
+export const microturnOptionValueExpr: CompiledPolicyExpr = {
+  kind: 'ref',
+  ref: { kind: 'microturnOptionIntrinsic', intrinsic: 'value' },
+};
 
 export const lookupRef = (
   collection: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['collection'],
@@ -134,6 +139,101 @@ export const lookupRef = (
   onMissing: 'unavailable',
   onHidden: 'unavailable',
 });
+
+const createLookupConsiderations = (
+  refs: readonly Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>[],
+  lookupFallback: NonNullable<CompiledPolicyConsideration['lookupFallback']>,
+): Record<string, CompiledPolicyConsideration> => {
+  const considerations: Record<string, CompiledPolicyConsideration> = {};
+  refs.forEach((ref, index) => {
+    considerations[`lookup${index}`] = {
+      scopes: ['microturn'],
+      costClass: 'state',
+      weight: literalExpr(1),
+      value: { kind: 'ref', ref },
+      hasLookupRef: true,
+      lookupFallback,
+      dependencies: emptyDependencies,
+    };
+  });
+  return considerations;
+};
+
+const createLookupCatalog = (
+  considerations: Record<string, CompiledPolicyConsideration>,
+  profiles: AgentPolicyCatalog['profiles'] = {},
+  bindingsBySeat: AgentPolicyCatalog['bindingsBySeat'] = {},
+): AgentPolicyCatalog => ({
+  schemaVersion: 2,
+  catalogFingerprint: 'lookup-refs-fixture',
+  surfaceVisibility: lookupSurfaceVisibility,
+  parameterDefs: {},
+  candidateParamDefs: {},
+  library: {
+    stateFeatures: {},
+    candidateFeatures: {},
+    candidateAggregates: {},
+    pruningRules: {},
+    considerations: {},
+    tieBreakers: {},
+    strategicConditions: {},
+  },
+  compiled: {
+    stateFeatures: {},
+    candidateFeatures: {},
+    candidateAggregates: {},
+    pruningRules: {},
+    considerations,
+    tieBreakers: {},
+    strategicConditions: {},
+  },
+  profiles,
+  bindingsBySeat,
+});
+
+export function canonicalCookbookProfile(): {
+  readonly profileId: 'lookup-cookbook';
+  readonly considerationIds: readonly ['lookup0', 'lookup1', 'lookup2', 'lookup3'];
+  readonly refs: readonly Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>[];
+  readonly catalog: AgentPolicyCatalog;
+} {
+  const refs = [
+    lookupRef('zones', 'ZoneId', microturnOptionValueExpr, ['properties', 'population']),
+    lookupRef('tokens', 'TokenId', literalExpr('unit-public'), ['properties', 'strength']),
+    lookupRef('players', 'PlayerId', literalExpr(0), ['variables', 'influence']),
+    lookupRef('globals', 'string', literalExpr('morale'), ['properties', 'value']),
+  ] as const;
+  const considerationIds = ['lookup0', 'lookup1', 'lookup2', 'lookup3'] as const;
+  const profile: CompiledAgentProfile = {
+    fingerprint: 'lookup-cookbook',
+    observerName: 'currentPlayer',
+    params: {},
+    use: {
+      considerations: considerationIds,
+      pruningRules: [],
+      tieBreakers: [],
+    },
+    preview: { mode: 'disabled' },
+    selection: { mode: 'argmax' },
+    plan: {
+      stateFeatures: [],
+      candidateFeatures: [],
+      candidateAggregates: [],
+      considerations: considerationIds,
+    },
+  };
+
+  return {
+    profileId: 'lookup-cookbook',
+    considerationIds,
+    refs,
+    catalog: createLookupCatalog(
+      createLookupConsiderations(refs, { onUnavailable: 'noContribution' }),
+      { 'lookup-cookbook': profile },
+      { seatA: 'lookup-cookbook', seatB: 'lookup-cookbook' },
+    ),
+  };
+}
 
 export function resolveLookup(
   ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
@@ -157,46 +257,7 @@ export function scoreLookupOption(
   refs: readonly Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>[],
   lookupFallback: CompiledPolicyConsideration['lookupFallback'] = { onUnavailable: 'noContribution' },
 ): ReturnType<typeof scoreMicroturnOptionWithContributions> {
-  const considerations: Record<string, CompiledPolicyConsideration> = {};
-  refs.forEach((ref, index) => {
-    considerations[`lookup${index}`] = {
-      scopes: ['microturn'],
-      costClass: 'state',
-      weight: literalExpr(1),
-      value: { kind: 'ref', ref },
-      hasLookupRef: true,
-      lookupFallback,
-      dependencies: emptyDependencies,
-    };
-  });
-
-  const catalog: AgentPolicyCatalog = {
-    schemaVersion: 2,
-    catalogFingerprint: 'lookup-refs-fixture',
-    surfaceVisibility: lookupSurfaceVisibility,
-    parameterDefs: {},
-    candidateParamDefs: {},
-    library: {
-      stateFeatures: {},
-      candidateFeatures: {},
-      candidateAggregates: {},
-      pruningRules: {},
-      considerations: {},
-      tieBreakers: {},
-      strategicConditions: {},
-    },
-    compiled: {
-      stateFeatures: {},
-      candidateFeatures: {},
-      candidateAggregates: {},
-      pruningRules: {},
-      considerations,
-      tieBreakers: {},
-      strategicConditions: {},
-    },
-    profiles: {},
-    bindingsBySeat: {},
-  };
+  const considerations = createLookupConsiderations(refs, lookupFallback);
   const request: ChoicePendingChooseOneRequest = {
     kind: 'pending',
     complete: false,
@@ -210,7 +271,7 @@ export function scoreLookupOption(
   return scoreMicroturnOptionWithContributions(
     lookupState,
     lookupDef,
-    catalog,
+    createLookupCatalog(considerations),
     asPlayerId(0),
     'seatA',
     {},
@@ -218,5 +279,31 @@ export function scoreLookupOption(
     optionValue,
     0,
     Object.keys(considerations),
+  );
+}
+
+export function scoreCanonicalCookbookProfile(): ReturnType<typeof scoreMicroturnOptionWithContributions> {
+  const profile = canonicalCookbookProfile();
+  const request: ChoicePendingChooseOneRequest = {
+    kind: 'pending',
+    complete: false,
+    decisionKey: '$lookupTarget' as DecisionKey,
+    name: '$lookupTarget',
+    options: [{ value: 'public-zone:none', legality: 'legal', illegalReason: null }],
+    targetKinds: ['zone'],
+    type: 'chooseOne',
+  };
+
+  return scoreMicroturnOptionWithContributions(
+    lookupState,
+    lookupDef,
+    profile.catalog,
+    asPlayerId(0),
+    'seatA',
+    {},
+    request,
+    'public-zone:none',
+    0,
+    profile.considerationIds,
   );
 }

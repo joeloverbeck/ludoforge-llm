@@ -296,6 +296,8 @@ If the ticket only changes **population of an existing serialized field** and do
 
 When ticket triage confirms a bounded local refactor, load `references/bounded-local-refactor.md` for the lean 9-step path. Still emit the full working-notes checkpoint before coding and still perform the final acceptance sweep before closeout.
 
+Use the same fast path for compact docs-plus-fixture tickets when reassessment shows no behavior, schema, generated artifact, or golden fallout. Still classify explicit cookbook/manual-preview deliverables, canonical fixture/helper placement, new-vs-modified test expectations, and any package-build-to-`dist` proof ordering before coding. If the ticket asks for a GUI or rendered markdown preview but no repo checker or GUI workflow is available, record the non-GUI source-review substitution in the active ticket before final proof.
+
 ### Phase 1: Read and Understand
 
 1. Read `docs/FOUNDATIONS.md` before planning or coding.

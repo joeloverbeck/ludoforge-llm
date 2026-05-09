@@ -1,6 +1,6 @@
 # 163GENLOOKUP-005: Cookbook recipe + canonical fixture profile for `lookup` ref family
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None (engine-side); docs and test-fixture only.
@@ -99,3 +99,32 @@ Update Spec 163's §10 anchors block (`docs/agent-dsl-cookbook.md` line) to ment
 
 1. `pnpm turbo build && pnpm turbo test && pnpm turbo lint`
 2. Manual verification: render `docs/agent-dsl-cookbook.md` (e.g., via a markdown previewer) and confirm the new section reads cleanly and the YAML example is well-formatted.
+
+## Outcome
+
+Completed 2026-05-09.
+
+- Landed the cookbook section "Static State Lookups at chooseN Frontiers" in `docs/agent-dsl-cookbook.md`, adjacent to the inner-preview ref documentation. The section documents lookup-vs-preview usage, the four supported collections, required `lookupFallback.onUnavailable`, the hidden-state invariant, the `preferHighPopulationTarget` YAML recipe, and trace inspection through `unknownLookupRefs` and `lookupFallbackFired`.
+- Added `canonicalCookbookProfile()` and `scoreCanonicalCookbookProfile()` to `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts`. The canonical helper builds one microturn profile whose four lookup considerations exercise `zones`, `tokens`, `players`, and `globals` in one scoring pass.
+- Modified the existing `lookup-collection-coverage.test.ts` architecture test, rather than adding a new test file, so the no-new-tests boundary stays intact while the canonical helper is exercised end-to-end.
+- Updated Spec 163's implementer anchor for `docs/agent-dsl-cookbook.md` to name the landed section.
+- Generated fallout: none. No schema, golden, compiled GameDef, conformance corpus, production game data, or engine behavior change is owned by this ticket.
+- Touched-file scope: `docs/agent-dsl-cookbook.md`, `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts`, `packages/engine/test/architecture/lookup-refs/lookup-collection-coverage.test.ts`, `specs/163-generic-microturn-state-feature-lookups.md`, and this ticket. The existing fixture file was below the ticket's size threshold, so no sibling fixture file was needed.
+- Source-size ledger: `docs/agent-dsl-cookbook.md` was already above the repo's typical source-file guidance before this ticket; the update is a localized cookbook section and splitting the cookbook would widen the ticket. `lookup-refs-fixture.ts` remains below the repo's typical range after the canonical helper addition.
+- Command ledger:
+  - Acceptance Criteria | existing tests from tickets 003-004 exercise full lookup pipeline | focused through existing lookup collection architecture test | `node --test packages/engine/dist/test/architecture/lookup-refs/lookup-collection-coverage.test.js`
+  - `Acceptance Criteria | pnpm -F @ludoforge/engine test:e2e | run directly | passed`
+  - Acceptance Criteria | Markdown lint if project runs one | not run; no markdown lint/remark script found in package/workspace scripts | direct source inspection plus `pnpm turbo lint`
+  - `Test Plan | pnpm turbo build && pnpm turbo test && pnpm turbo lint | run directly as split serial commands | passed`
+  - `Test Plan | manual markdown preview | substituted by direct source inspection in this non-GUI session | passed by source review`
+- Final proof:
+  - `pnpm -F @ludoforge/engine build` — passed
+  - `node --test packages/engine/dist/test/architecture/lookup-refs/lookup-collection-coverage.test.js` — passed
+  - `pnpm -F @ludoforge/engine test:e2e` — passed
+  - `pnpm turbo build` — passed
+  - `pnpm turbo test` — passed
+  - `pnpm turbo lint` — passed
+  - post-`pnpm turbo test` focused lookup test rerun — passed
+  - direct source inspection of `docs/agent-dsl-cookbook.md` — passed
+  - `pnpm run check:ticket-deps` — passed
+- No-invalidation: terminal status/proof transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the final proof lanes.

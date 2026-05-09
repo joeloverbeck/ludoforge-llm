@@ -396,6 +396,8 @@ agents:
         weight: 300
         value:
           ref: preview.option.delta.victory.currentMargin.self
+        previewFallback:
+          onUnavailable: noContribution
 
     tieBreakers:
       stableMoveKey:

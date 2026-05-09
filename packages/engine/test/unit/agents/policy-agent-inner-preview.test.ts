@@ -115,6 +115,7 @@ function createCatalog(chooseNStep: boolean): AgentPolicyCatalog {
           when: literal(true),
           weight: literal(1),
           value: refExpr(previewDeltaRef),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       }),

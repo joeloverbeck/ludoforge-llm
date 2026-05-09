@@ -14,6 +14,8 @@ diagnosticAgents:
         weight: 300
         value:
           ref: preview.option.delta.victory.currentMargin.self
+        previewFallback:
+          onUnavailable: noContribution
 
   profiles:
     policy-preview-inner-fitl-canary:

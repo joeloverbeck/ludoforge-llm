@@ -165,6 +165,7 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
           costClass: 'preview',
           weight: literal(consideration.weight ?? 0),
           value: refExpr({ kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' }),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },

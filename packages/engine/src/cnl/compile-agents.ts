@@ -14,8 +14,10 @@ import type {
   AgentPolicyCatalog,
   AgentPolicyCostClass,
   AgentPolicyExpr,
+  AgentPreviewFallback,
   SurfaceVisibilityClass,
   AgentPolicyValueType,
+  CompiledAgentPolicyRef,
   CompiledAgentAggregate,
   CompiledAgentCandidateParamDef,
   CompiledAgentConsideration,
@@ -43,6 +45,7 @@ import type {
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
   GameSpecPolicySurfaceVisibilityDef,
+  GameSpecPreviewFallbackDef,
   GameSpecStateFeatureDef,
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
@@ -78,7 +81,7 @@ type StrategicConditionWithExpr = CompiledStrategicCondition & {
 };
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
-const INNER_PREVIEW_HARD_CAP = 256;
+export const INNER_PREVIEW_HARD_CAP = 256;
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
 const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
@@ -189,6 +192,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       ...(consideration.scopes === undefined ? {} : { scopes: consideration.scopes }),
       costClass: consideration.costClass,
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
+      ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
     };
@@ -1842,6 +1846,25 @@ class AgentLibraryCompiler {
       return null;
     }
 
+    const previewFallback = lowerPreviewFallback(considerationId, `${path}.previewFallback`, def.previewFallback, this.diagnostics);
+    if (previewFallback === null) {
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+
+    const previewOptionRefIds = collectPreviewOptionRefIds(value.expr);
+    if (previewOptionRefIds.length > 0 && previewFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK,
+        path: `${path}.previewFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" references ${previewOptionRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
+        suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+
     const compiled: AgentConsiderationWithExpr = {
       scopes,
       costClass: maxCostClass(maxCostClass(weight.costClass, value.costClass), when?.costClass ?? 'state'),
@@ -1849,6 +1872,7 @@ class AgentLibraryCompiler {
       weight: weight.expr,
       value: value.expr,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
+      ...(previewFallback === undefined ? {} : { previewFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
@@ -3011,6 +3035,116 @@ function normalizeConsiderationScopes(
   }
 
   return normalized.length === 0 ? null : normalized;
+}
+
+function lowerPreviewFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecPreviewFallbackDef | undefined,
+  diagnostics: Diagnostic[],
+): AgentPreviewFallback | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
+      path,
+      severity: 'error',
+      message: `Consideration "${considerationId}" previewFallback must be an object.`,
+      suggestion: 'Use previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
+    });
+    return null;
+  }
+
+  const { onUnavailable } = value;
+  if (onUnavailable === 'noContribution') {
+    return { onUnavailable: 'noContribution' };
+  }
+  if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
+    const { constant } = onUnavailable;
+    if (Number.isSafeInteger(constant)) {
+      return { onUnavailable: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
+      path: `${path}.onUnavailable.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" previewFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID,
+    path: `${path}.onUnavailable`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" previewFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
+    suggestion: 'Use previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
+  });
+  return null;
+}
+
+function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (current.ref.kind === 'previewOptionRef') {
+          ids.add(previewOptionRefKey(current.ref));
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): string {
+  switch (ref.refKind) {
+    case 'victoryCurrentMarginSelf':
+      return 'preview.option.victory.currentMargin.self';
+    case 'victoryCurrentRankSelf':
+      return 'preview.option.victory.currentRank.self';
+    case 'deltaVictoryCurrentMarginSelf':
+      return 'preview.option.delta.victory.currentMargin.self';
+    case 'globalVar':
+      return `preview.option.var.global.${ref.id ?? ''}`;
+    case 'perPlayerVarSelf':
+      return `preview.option.var.player.self.${ref.id ?? ''}`;
+    case 'derivedMetric':
+      return `preview.option.metric.${ref.id ?? ''}`;
+    case 'outcome':
+      return 'preview.option.outcome';
+    case 'driveDepth':
+      return 'preview.option.driveDepth';
+  }
 }
 
 function collectConsiderationRefKinds(

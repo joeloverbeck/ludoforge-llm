@@ -1,6 +1,6 @@
 # 162PRESIGINT-004: Compiler previewFallback + CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK diagnostic + fixture migration (atomic cut)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `compile-agents.ts` plus FITL profile YAML migration
@@ -178,3 +178,43 @@ Cases:
 5. `pnpm turbo schema:artifacts` (verifies any schema artifact regeneration if `previewFallback` adds to a public schema)
 6. `pnpm turbo lint`
 7. `pnpm turbo typecheck`
+
+## Outcome
+
+Completed: 2026-05-09
+
+Completed the compiler-side atomic cut:
+
+- Added the authored/compiled `previewFallback.onUnavailable` contract and lowered it into both the stripped library consideration and compiled policy consideration shapes.
+- Added `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` and `CNL_COMPILER_AGENT_PREVIEW_FALLBACK_INVALID`.
+- The diagnostic is unconditional for authored consideration `value` expressions that contain any `previewOptionRef` and omit `previewFallback`.
+- `previewFallback.onUnavailable: noContribution` compiles to `{ onUnavailable: 'noContribution' }`.
+- `previewFallback.onUnavailable: { constant: <integer> }` compiles to `{ onUnavailable: { kind: 'constant', value: <integer> } }`; non-integer constants are rejected.
+- Migrated FITL production/diagnostic agent YAML and repo-owned test fixtures that author or manually construct preview-option considerations.
+- Regenerated `packages/engine/schemas/GameDef.schema.json`; `Trace.schema.json` and `EvalReport.schema.json` were rewritten by the generator but remained byte-identical/no diff.
+
+Ticket corrections applied:
+
+- The initial decomposition note that grep found only the two FITL YAML files plus four inline fixtures was stale. Live grep also found CNL-authored preview-option test fixtures and shared compiled-catalog helpers; those were migrated as Foundation #14 atomic-cut fallout.
+- `packages/engine/src/cnl/compile-agents.ts` is a preexisting oversized compiler hub. This ticket made a surgical local addition there; extraction would widen the compiler refactor beyond the ticket seam. Residual extraction owner: none for this slice.
+
+Deferred sibling/spec scope:
+
+- Runtime consumption of `previewFallback`, no-contribution scoring semantics, `previewFallbackFired`, and `fallbackExplicit` remain owned by `tickets/162PRESIGINT-005.md`.
+- ARVN seed 1000 convergence witness and cookbook documentation remain owned by `tickets/162PRESIGINT-006.md`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — PASS.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.js dist/test/architecture/preview-integrity/hard-cap-unchanged.test.js` — PASS (`7` tests, `2` suites).
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — initially failed with `GameDef.schema.json` out of sync; `pnpm -F @ludoforge/engine run schema:artifacts` regenerated it; rerun PASS.
+- `pnpm -F @ludoforge/engine test` — PASS (`65/65 files passed`).
+- `pnpm turbo schema:artifacts` — PASS.
+- `pnpm turbo test` — PASS (`5` tasks successful; engine `65/65 files passed`).
+- `pnpm turbo lint` — PASS.
+- `pnpm turbo typecheck` — PASS.
+- Re-ran focused T6/T7 after final root checks: `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-integrity/previewfallback-required-diagnostic.test.js dist/test/architecture/preview-integrity/hard-cap-unchanged.test.js` — PASS (`7` tests, `2` suites).
+
+Terminal status/proof transcription touched only this ticket file after the code proof.
+
+- `pnpm run check:ticket-deps` — PASS (`3` active tickets, `2283` archived tickets).

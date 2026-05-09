@@ -9,6 +9,8 @@ Before the final closeout, and before applying terminal status, reconcile the ti
 3. if any command remains `not yet proven`, run it, rewrite the active ticket with a truthful proof substitution when authorized, or stop and explain why the ticket cannot truthfully close
 4. record any non-direct subsumption, split, or removal in the ticket outcome so the proof trail stays inspectable
 
+If the ticket itself explicitly authorizes an alternate witness shape, such as "read source text or compile boundary cases" or "run this exact lane or the nearest public-seam equivalent", choose the truthful witness during reassessment and record the selected alternative in the active ticket outcome or final closeout. Treat unauthorized witness substitutions under the normal deliverable-correction and 1-3-1 rules.
+
 When a named verification command exits cleanly but proves nothing substantive in the current environment (for example `0 tests`, `0 files`, or another empty execution summary), do not count it as acceptance proof by default:
 
 1. classify it as `repo-valid but non-proving` rather than green

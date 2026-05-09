@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-evaluation-core.ts`, `policy-agent.ts`
-**Deps**: `tickets/162PRESIGINT-004.md`
+**Deps**: `archive/tickets/162PRESIGINT-004.md`
 
 ## Problem
 

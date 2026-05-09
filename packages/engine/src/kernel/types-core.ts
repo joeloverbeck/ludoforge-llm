@@ -327,6 +327,11 @@ export type AgentPolicyValueType = 'number' | 'boolean' | 'id' | 'idList';
 export type AgentPolicyCostClass = 'state' | 'candidate' | 'preview';
 export type SurfaceVisibilityClass = 'public' | 'seatVisible' | 'hidden';
 export type AgentPolicyLiteral = number | boolean | string | null | readonly string[];
+export type AgentPreviewFallback = {
+  readonly onUnavailable:
+    | 'noContribution'
+    | { readonly kind: 'constant'; readonly value: number };
+};
 export type AgentPolicyOperator =
   | 'abs'
   | 'add'
@@ -619,6 +624,7 @@ export interface CompiledPolicyConsideration {
   readonly weight: CompiledPolicyExpr;
   readonly value: CompiledPolicyExpr;
   readonly unknownAs?: number;
+  readonly previewFallback?: AgentPreviewFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -813,6 +819,7 @@ export interface CompiledAgentConsideration {
   readonly scopes?: readonly ('move' | 'microturn')[];
   readonly costClass: AgentPolicyCostClass;
   readonly unknownAs?: number;
+  readonly previewFallback?: AgentPreviewFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;

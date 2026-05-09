@@ -1012,11 +1012,21 @@ const CompiledAgentPruningRuleSchema = z
   })
   .strict();
 
+const AgentPreviewFallbackSchema = z
+  .object({
+    onUnavailable: z.union([
+      z.literal('noContribution'),
+      z.object({ kind: z.literal('constant'), value: IntegerSchema }).strict(),
+    ]),
+  })
+  .strict();
+
 const CompiledAgentConsiderationSchema = z
   .object({
     scopes: z.array(z.union([z.literal('move'), z.literal('microturn')])).min(1).optional(),
     costClass: AgentPolicyCostClassSchema,
     unknownAs: NumberSchema.optional(),
+    previewFallback: AgentPreviewFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1031,6 +1041,7 @@ const CompiledPolicyConsiderationSchema = z
     weight: CompiledPolicyExprSchema,
     value: CompiledPolicyExprSchema,
     unknownAs: NumberSchema.optional(),
+    previewFallback: AgentPreviewFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),

@@ -155,13 +155,14 @@ Test fixtures that construct `previewOptionResolvedRefsByOptionKey` directly (e.
 ## Outcome
 
 Completed on 2026-05-09.
+Outcome amended: 2026-05-09.
 
 - Landed `PreviewOptionRefStatus` as the inner-preview resolved-ref handoff shape. Every requested preview-option ref now produces either `{ kind: 'ready', value }` or `{ kind: 'unavailable', reason }`; hidden, unresolved, and depth-cap failures no longer disappear from the per-option map.
 - Updated chooseOne, chooseNStep, and chooseNStep beam preview drivers to emit status entries, including `outcome` and `driveDepth` as ready drive-intrinsic refs.
 - Updated microturn option scoring to consume status maps and preserve unavailable preview refs in a per-option `unknownPreviewRefs` map while leaving numeric contribution behavior unchanged for this plumbing-only ticket.
 - Updated `policy-evaluation-core` so `resolvePreviewOptionRef` records unavailable and missing status entries into `PolicyEvaluationCandidate.unknownPreviewRefs` when a candidate exists, and into the microturn completion handoff map otherwise.
 - Touched-file scope correction: `packages/engine/src/agents/policy-agent-inner-preview.ts` and `packages/engine/src/agents/policy-agent.ts` were required owned fallout for the status-map type handoff, and `packages/engine/test/unit/agents/policy-agent-inner-preview.test.ts` was required assertion fallout after the package lane exposed the missed raw-value expectation. The named fixture builders `packages/engine/test/helpers/spec-160-inner-preview-fixture.ts` and `packages/engine/test/unit/agents/policy-preview-inner-choosenstep-fixture.ts` were verified by grep as no-edit surfaces because they do not construct `previewOptionResolvedRefsByOptionKey` or `resolvedRefs` maps directly.
-- Deferred sibling scope remains unchanged: trace population, selection reasons, coverage, and advisories stay with `tickets/162PRESIGINT-003.md`; compiler `previewFallback` diagnostics and fixture YAML migration stay with `tickets/162PRESIGINT-004.md`; fallback-aware contribution semantics stay with `tickets/162PRESIGINT-005.md`.
+- Deferred sibling scope remains unchanged: trace population, selection reasons, coverage, and advisories stay with `archive/tickets/162PRESIGINT-003.md`; compiler `previewFallback` diagnostics and fixture YAML migration stay with `archive/tickets/162PRESIGINT-004.md`; fallback-aware contribution semantics stay with `tickets/162PRESIGINT-005.md`.
 - Generated fallout: none. This ticket changes in-memory TypeScript/test helper shape only; no schema, golden, compiled JSON, or production GameSpecDoc artifact changed.
 - File-size ledger: `policy-evaluation-core.ts` was already over repo guidance before this ticket and received only a surgical resolver update; extracting from that file would widen the ticket and obscure the owned seam, so no extraction is retained or proposed here.
 - Runtime surface breadth: policy/agent-only in-memory preview/scoring plumbing; no kernel, compiler, or shared serialized trace/schema surface.

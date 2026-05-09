@@ -81,6 +81,7 @@ function withChooseNStepCanaryProfile(def: GameDef) {
           costClass: 'preview',
           weight: literal(PROJECTED_MARGIN_WEIGHT),
           value: refExpr({ kind: 'previewOptionRef', refKind: 'deltaVictoryCurrentMarginSelf' }),
+          previewFallback: { onUnavailable: 'noContribution' },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },

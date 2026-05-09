@@ -112,6 +112,7 @@ describe('preview.inner option warning parity', () => {
       scopes: ['microturn'],
       weight: 1,
       value: { coalesce: [refExpr('preview.option.delta.victory.currentMargin.self'), 0] },
+      previewFallback: { onUnavailable: 'noContribution' },
     };
 
     assert.deepEqual(

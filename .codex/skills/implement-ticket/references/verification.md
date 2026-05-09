@@ -143,6 +143,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 **Compiled-IR fixture drift**: For positive schema or contract tests covering compiled nodes, copy the shape from nearby live compiled examples, existing goldens, or current compiled fixtures rather than reconstructing from authored syntax or spec pseudocode.
 
+**Required compiled-field exact-shape fallout**: When a ticket adds a required compiled/runtime field, search for sibling fields and exact-shape assertions before relying on broad unit output alone. Mirror nearby field expectations intentionally, then rerun the likely compiler/schema exact-shape test files directly before escalating back to the broad package or workspace lane.
+
 **Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
 
 **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.

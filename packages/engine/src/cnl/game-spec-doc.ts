@@ -618,6 +618,12 @@ export interface GameSpecPreviewFallbackDef {
     | { readonly constant: number };
 }
 
+export interface GameSpecLookupFallbackDef {
+  readonly onUnavailable:
+    | 'noContribution'
+    | { readonly constant: number };
+}
+
 export interface GameSpecConsiderationDef {
   readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'microturn'
   readonly when?: GameSpecPolicyExpr;
@@ -625,6 +631,7 @@ export interface GameSpecConsiderationDef {
   readonly value: GameSpecPolicyExpr;
   readonly unknownAs?: number;
   readonly previewFallback?: GameSpecPreviewFallbackDef;
+  readonly lookupFallback?: GameSpecLookupFallbackDef;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;

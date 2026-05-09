@@ -1,6 +1,12 @@
 import { fingerprintPolicyIr } from '../agents/policy-ir-node-loader.js';
 import { parseAuthoredPolicySurfaceRef, parseStrategicConditionRef } from '../agents/policy-surface.js';
-import { analyzePolicyExpr, type AnalyzePolicyExprContext, type ResolvedPolicyRef } from '../agents/policy-expr.js';
+import {
+  analyzePolicyExpr,
+  withCompiledLookupRef,
+  type AnalyzePolicyExprContext,
+  type PolicyExprAnalysis,
+  type ResolvedPolicyRef,
+} from '../agents/policy-expr.js';
 import type { Diagnostic } from '../kernel/diagnostics.js';
 import {
   AGENT_POLICY_PROFILE_USE_BUCKETS,
@@ -11,6 +17,7 @@ import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
+  AgentLookupFallback,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
   AgentPolicyExpr,
@@ -44,13 +51,15 @@ import type {
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
+  GameSpecLookupFallbackDef,
+  GameSpecPolicyExpr,
   GameSpecPolicySurfaceVisibilityDef,
   GameSpecPreviewFallbackDef,
   GameSpecStateFeatureDef,
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
-import { lowerAgentConsiderations, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
+import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
 
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
@@ -71,6 +80,7 @@ type AgentConsiderationWithExpr = CompiledAgentConsideration & {
   readonly weight: AgentPolicyExpr;
   readonly value: AgentPolicyExpr;
   readonly hasPreviewRef: boolean;
+  readonly hasLookupRef: boolean;
 };
 type AgentTieBreakerWithExpr = CompiledAgentTieBreaker & { readonly value?: AgentPolicyExpr };
 type StrategicConditionWithExpr = CompiledStrategicCondition & {
@@ -1805,11 +1815,12 @@ class AgentLibraryCompiler {
     }
 
     const context = this.createExprContext('consideration');
+    const valueContext = this.createExprContext('consideration', true);
     const when = def.when === undefined
       ? null
       : analyzePolicyExpr(def.when, context, this.diagnostics, `${path}.when`);
     const weight = analyzePolicyExpr(def.weight, context, this.diagnostics, `${path}.weight`);
-    const value = analyzePolicyExpr(def.value, context, this.diagnostics, `${path}.value`);
+    const value = analyzePolicyExpr(def.value, valueContext, this.diagnostics, `${path}.value`);
     if (weight === null || value === null || (def.when !== undefined && when === null)) {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
@@ -1825,7 +1836,8 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
-    if (weight.valueType !== 'number' || value.valueType !== 'number') {
+    const lookupRefIds = collectLookupRefIds(value.expr);
+    if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
         path,
@@ -1853,6 +1865,11 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    const lookupFallback = lowerLookupFallback(considerationId, `${path}.lookupFallback`, def.lookupFallback, this.diagnostics);
+    if (lookupFallback === null) {
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
 
     const previewOptionRefIds = collectPreviewOptionRefIds(value.expr);
     if (previewOptionRefIds.length > 0 && previewFallback === undefined) {
@@ -1866,6 +1883,17 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    if (lookupRefIds.length > 0 && lookupFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_LOOKUP_REF_REQUIRES_EXPLICIT_FALLBACK,
+        path: `${path}.lookupFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" references a lookup ref but does not declare lookupFallback.onUnavailable.`,
+        suggestion: 'Add either lookupFallback: { onUnavailable: noContribution } or lookupFallback: { onUnavailable: { constant: 0 } }.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
 
     const compiled: AgentConsiderationWithExpr = {
       scopes,
@@ -1874,8 +1902,10 @@ class AgentLibraryCompiler {
       weight: weight.expr,
       value: value.expr,
       hasPreviewRef: previewOptionRefIds.length > 0,
+      hasLookupRef: lookupRefIds.length > 0,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(previewFallback === undefined ? {} : { previewFallback }),
+      ...(lookupFallback === undefined ? {} : { lookupFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
@@ -2066,12 +2096,136 @@ class AgentLibraryCompiler {
     }
   }
 
-  private createExprContext(scope: LibraryRefScope): AnalyzePolicyExprContext {
-    return {
+  private createExprContext(scope: LibraryRefScope, allowLookup = false): AnalyzePolicyExprContext {
+    const context: AnalyzePolicyExprContext = {
       parameterDefs: this.parameterDefs,
       ...(this.options.referenceSeatIds === undefined ? {} : { referenceSeatIds: this.options.referenceSeatIds }),
       resolveRef: (refPath: string, path: string) => this.resolveRef(scope, refPath, path),
+      ...(allowLookup ? {
+        resolveLookup: (expr: GameSpecPolicyExpr, path: string) => this.lowerLookupValue(scope, expr, path, context),
+      } : {}),
     };
+    return context;
+  }
+
+  private lowerLookupValue(
+    scope: LibraryRefScope,
+    expr: GameSpecPolicyExpr,
+    path: string,
+    context: AnalyzePolicyExprContext,
+  ): PolicyExprAnalysis | null {
+    if (scope !== 'consideration') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path,
+        severity: 'error',
+        message: 'lookup expressions are only supported in agent consideration values.',
+        suggestion: 'Move lookup refs into doc.agents.library.considerations.<id>.value.',
+      });
+      return null;
+    }
+    if (expr === null || typeof expr !== 'object' || Array.isArray(expr)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup`,
+        severity: 'error',
+        message: 'lookup must be an object with surface, collection, keyType, key, path, and onMissing fields.',
+        suggestion: 'Use lookup: { surface: policyState, collection, keyType, key, path, onMissing }.',
+      });
+      return null;
+    }
+
+    const obj = expr as Readonly<Record<string, unknown>>;
+    const surface = obj['surface'];
+    const collection = obj['collection'];
+    const keyType = obj['keyType'];
+    const keyExpr = obj['key'];
+    const pathExpr = obj['path'];
+    const onMissing = obj['onMissing'];
+    const onHidden = obj['onHidden'];
+
+    if (surface !== 'policyState') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup.surface`,
+        severity: 'error',
+        message: `lookup.surface must be policyState, got ${JSON.stringify(surface)}.`,
+        suggestion: 'Set lookup.surface to policyState.',
+      });
+      return null;
+    }
+    if (!isLookupCollection(collection)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup.collection`,
+        severity: 'error',
+        message: `lookup.collection must be zones, tokens, players, or globals, got ${JSON.stringify(collection)}.`,
+        suggestion: 'Set lookup.collection to one of zones, tokens, players, or globals.',
+      });
+      return null;
+    }
+    if (!isLookupKeyType(keyType)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup.keyType`,
+        severity: 'error',
+        message: `lookup.keyType must be ZoneId, TokenId, PlayerId, or string, got ${JSON.stringify(keyType)}.`,
+        suggestion: 'Use keyType: ZoneId, TokenId, PlayerId, or string.',
+      });
+      return null;
+    }
+
+    const key = analyzePolicyExpr(keyExpr as GameSpecPolicyExpr, context, this.diagnostics, `${path}.lookup.key`);
+    if (key === null) {
+      return null;
+    }
+    const loweredKey = lowerAgentPolicyExpr(key.expr);
+    if (loweredKey === null) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup.key`,
+        severity: 'error',
+        message: 'lookup.key could not be lowered to a compiled policy expression.',
+        suggestion: 'Use a compileable scalar policy expression for lookup.key.',
+      });
+      return null;
+    }
+    if (!Array.isArray(pathExpr) || pathExpr.length === 0 || !pathExpr.every((entry) => typeof entry === 'string' && entry.length > 0)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path: `${path}.lookup.path`,
+        severity: 'error',
+        message: 'lookup.path must be a non-empty array of non-empty strings.',
+        suggestion: 'Use a path such as [properties, population].',
+      });
+      return null;
+    }
+
+    const loweredOnMissing = lowerLookupMissingDisposition(onMissing, `${path}.lookup.onMissing`, this.diagnostics);
+    if (loweredOnMissing === null) {
+      return null;
+    }
+    if (onHidden !== undefined && onHidden !== 'unavailable') {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_LOOKUP_HIDDEN_OVERRIDE_REJECTED,
+        path: `${path}.lookup.onHidden`,
+        severity: 'error',
+        message: 'lookup.onHidden must be unavailable; hidden state cannot be overridden by profile authoring.',
+        suggestion: 'Remove lookup.onHidden or set it to unavailable.',
+      });
+      return null;
+    }
+
+    return withCompiledLookupRef({
+      kind: 'lookup',
+      surface,
+      collection,
+      keyType,
+      key: loweredKey,
+      path: pathExpr,
+      onMissing: loweredOnMissing,
+      onHidden: 'unavailable',
+    }, key);
   }
 
   private resolveRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
@@ -3089,6 +3243,79 @@ function lowerPreviewFallback(
   return null;
 }
 
+function lowerLookupFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecLookupFallbackDef | undefined,
+  diagnostics: Diagnostic[],
+): AgentLookupFallback | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Consideration "${considerationId}" lookupFallback must be an object.`,
+      suggestion: 'Use lookupFallback: { onUnavailable: noContribution } or lookupFallback: { onUnavailable: { constant: 0 } }.',
+    });
+    return null;
+  }
+
+  const { onUnavailable } = value;
+  if (onUnavailable === 'noContribution') {
+    return { onUnavailable: 'noContribution' };
+  }
+  if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
+    const { constant } = onUnavailable;
+    if (Number.isSafeInteger(constant)) {
+      return { onUnavailable: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.onUnavailable.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" lookupFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.onUnavailable`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" lookupFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
+    suggestion: 'Use lookupFallback: { onUnavailable: noContribution } or lookupFallback: { onUnavailable: { constant: 0 } }.',
+  });
+  return null;
+}
+
+function lowerLookupMissingDisposition(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['onMissing'] | null {
+  if (value === 'unavailable') {
+    return 'unavailable';
+  }
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Readonly<Record<string, unknown>>;
+    if (obj['kind'] === 'constant' && isLookupConstant(obj['value'])) {
+      return { kind: 'constant', value: obj['value'] };
+    }
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path,
+    severity: 'error',
+    message: 'lookup.onMissing must be unavailable or { kind: constant, value: <integer|string|boolean> }.',
+    suggestion: 'Use onMissing: unavailable or onMissing: { kind: constant, value: 0 }.',
+  });
+  return null;
+}
+
 function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
   const ids = new Set<string>();
   const visit = (current: AgentPolicyExpr): void => {
@@ -3127,6 +3354,61 @@ function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
   };
   visit(expr);
   return [...ids].sort();
+}
+
+function collectLookupRefIds(expr: AgentPolicyExpr): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (current.ref.kind === 'lookup') {
+          ids.add(`lookup.${current.ref.surface}.${current.ref.collection}.${current.ref.path.join('.')}`);
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function isLookupCollection(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['collection'] {
+  return value === 'zones' || value === 'tokens' || value === 'players' || value === 'globals';
+}
+
+function isLookupKeyType(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['keyType'] {
+  return value === 'ZoneId' || value === 'TokenId' || value === 'PlayerId' || value === 'string';
+}
+
+function isLookupConstant(value: unknown): value is number | string | boolean {
+  if (typeof value === 'number') {
+    return Number.isSafeInteger(value);
+  }
+  return typeof value === 'string' || typeof value === 'boolean';
 }
 
 function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'previewOptionRef' }>): string {

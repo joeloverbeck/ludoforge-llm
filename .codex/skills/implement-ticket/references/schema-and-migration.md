@@ -125,6 +125,8 @@ When the ticket introduces a shared contract surface but a downstream sibling st
 
 For staged additive discriminated-union variants or new ref/expression kinds:
 - sweep exhaustive consumers before coding: local `switch` statements, discriminated-union helpers, schema mirrors, feature-table/bytecode encoders, diagnostics, and any curated public schema/export surfaces
+- for authored policy-expression operator additions, include the shared expression analyzer/operator registry in that sweep before assuming lowering owns the first parse point; map `authored syntax entrypoint -> analyzer/operator registration -> allowed expression contexts -> runtime resolver or fail-closed path -> schema/generated mirror -> negative tests for forbidden contexts`
+- when an expression operator is only valid in a subset of policy contexts, add an explicit context gate rather than letting generic expression parsing make it available in weights, guards, scores, or other surfaces that the ticket does not own
 - classify each required consumer edit as `type acknowledgement / fail-closed`, `schema/generated-artifact mirror`, `identity/type-only fallout`, or `behavioral implementation`
 - when the current ticket explicitly defers real behavior to a sibling, prefer a fail-closed acknowledgement in exhaustive runtime consumers over a generic default branch; record the sibling as the behavioral owner before final proof
 - if adding the fail-closed acknowledgement changes an explicit ticket deliverable such as "no dispatch case", stop for `1-3-1` unless the user already authorized the boundary reset

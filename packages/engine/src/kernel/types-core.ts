@@ -646,6 +646,7 @@ export interface CompiledPolicyConsideration {
   readonly weight: CompiledPolicyExpr;
   readonly value: CompiledPolicyExpr;
   readonly hasPreviewRef?: boolean;
+  readonly hasLookupRef?: boolean;
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;

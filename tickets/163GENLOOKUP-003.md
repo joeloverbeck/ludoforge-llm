@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new module `agents/policy-lookup-surface.ts`; `agents/policy-runtime.ts` (provider plumbing); `agents/policy-evaluation-core.ts` (dispatch + `resolveLookupRef`); `kernel/types-core.ts` (trace-shape addition for `unknownLookupRefs`)
-**Deps**: `archive/tickets/163GENLOOKUP-001.md`
+**Deps**: `archive/tickets/163GENLOOKUP-001.md`, `archive/tickets/163GENLOOKUP-002.md`
 
 ## Problem
 

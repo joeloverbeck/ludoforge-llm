@@ -1076,6 +1076,7 @@ const CompiledPolicyConsiderationSchema = z
     weight: CompiledPolicyExprSchema,
     value: CompiledPolicyExprSchema,
     hasPreviewRef: BooleanSchema,
+    hasLookupRef: BooleanSchema,
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),

@@ -2077,6 +2077,9 @@
                   "hasPreviewRef": {
                     "$ref": "#/definitions/anon_def33f2f"
                   },
+                  "hasLookupRef": {
+                    "$ref": "#/definitions/anon_def33f2f"
+                  },
                   "unknownAs": {
                     "allOf": [
                       {
@@ -2134,6 +2137,7 @@
                   "weight",
                   "value",
                   "hasPreviewRef",
+                  "hasLookupRef",
                   "dependencies"
                 ],
                 "additionalProperties": false

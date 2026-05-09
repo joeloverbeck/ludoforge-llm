@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-evaluation-core.ts` (consideration-level fallback branch + `lookupFallbackFired` field); `kernel/types-core.ts` (trace export shape); `agents/policy-agent.ts` (frontier dispatch trace population)
-**Deps**: `tickets/163GENLOOKUP-002.md`, `tickets/163GENLOOKUP-003.md`
+**Deps**: `archive/tickets/163GENLOOKUP-002.md`, `tickets/163GENLOOKUP-003.md`
 
 ## Problem
 
@@ -14,8 +14,8 @@ With lowering (ticket 002) and the runtime resolver (ticket 003) in place, `eval
 
 1. `evaluateConsideration` consumes `previewFallback` at `policy-evaluation-core.ts:515-537` — a `consideration.hasPreviewRef === true` branch that:
    - throws if `previewFallback === undefined` (compiler should have rejected this; runtime check is defense-in-depth),
-   - returns `0` and records `lookupFallbackFired: { kind: 'noContribution' }` when `onUnavailable === 'noContribution'`,
-   - returns `fallback.value` and records `lookupFallbackFired: { kind: 'constant', value }` when `onUnavailable.kind === 'constant'`.
+   - returns `0` and records `previewFallbackFired: { kind: 'noContribution' }` when `onUnavailable === 'noContribution'`,
+   - returns `fallback.value` and records `previewFallbackFired: { kind: 'constant', value }` when `onUnavailable.kind === 'constant'`.
 2. The `recordPreviewFallbackFired` helper at `:557-571` populates `candidate.previewFallbackFired` and propagates to `input.previewOption?.previewFallbackFired`. The new `recordLookupFallbackFired` mirrors this exactly.
 3. The trace export shape declares `previewFallbackFired?: { termId; kind: 'noContribution' | 'constant'; value? }` at `kernel/types-core.ts:1782-1786`. Adding `lookupFallbackFired?` parallel slot.
 4. `policy-agent.ts:74-91, 280-310` houses the frontier dispatch trace population for `unknownPreviewRefs` and `previewFallbackFired`. Ticket 003 wired `unknownLookupRefs`; this ticket wires `lookupFallbackFired`.

@@ -45,3 +45,11 @@ Append to `$WT/campaigns/<campaign>/lessons.jsonl`.
 **Lesson decay**: Every 50 experiments, decrease `decay_weight` by 0.1 for all lessons in `lessons.jsonl`. Prune lessons with `decay_weight < 0.3`.
 
 **Global promotion**: Every 50 experiments (or on campaign completion), promote lessons with `confidence >= 0.8` AND `decay_weight >= 0.5` to `$WT/campaigns/lessons-global.jsonl`. Skip duplicates (same `lesson` text).
+
+## Lesson Correction (when a prior lesson is found factually wrong)
+
+If a lesson in `lessons.jsonl` or `campaigns/lessons-global.jsonl` turns out to be based on a misinterpretation, an obsolete engine state, or contradicted by later evidence:
+
+1. **For `lessons.jsonl`** (per-campaign, gitignored): delete the row directly. Per-campaign lessons are mutable and not promoted to global until the campaign completes; pruning factually-wrong rows is the simplest fix. Document the correction in musings under a `**LESSON CORRECTION**:` heading with the reasoning.
+2. **For `campaigns/lessons-global.jsonl`** (cross-campaign, tracked): do NOT delete the row. Append a `type: negative` correction lesson that explicitly references the prior lesson (by `source_exp` or quoted text) and explains why it's now obsolete. Future readers will see both the original and the correction; deletion would erase the historical record. This is the same pattern Step 0.5 USER PREAMBLE HONORING uses for stale-lesson flags from the user's preamble.
+3. If the wrong lesson was already promoted from `lessons.jsonl` to `lessons-global.jsonl` AND it's still present locally, apply both: delete locally, append a correction globally.

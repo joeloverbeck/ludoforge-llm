@@ -44,6 +44,8 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 
 **Single-run noise floor:** If `HARNESS_RUNS == 1`, noise floor cannot be computed. The agent relies on the `NOISE_TOLERANCE` config value (default 1%) as the assumed noise floor.
 
+**Trace artifact persistence**: most campaign harnesses write trace files (e.g., `campaigns/<campaign>/traces/trace-<seed>.json`, `last-trace.json`) per-run, OVERWRITING prior outputs. The skill does not preserve trace files across harness invocations. For cross-experiment trace comparisons (e.g., comparing baseline picks to post-experiment picks during DIAGNOSE), copy the relevant trace to a stable name (e.g., `traces/trace-baseline.json`) BEFORE running the next experiment. Re-running the baseline harness to regenerate a comparison trace is a fallback when the original was lost, but doubles harness wall-time cost.
+
 ## Step 4d: GOODHART CHECK
 
 After a successful harness run (non-crash, non-abort), apply these guards:

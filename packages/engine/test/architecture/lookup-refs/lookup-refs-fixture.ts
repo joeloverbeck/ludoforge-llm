@@ -155,6 +155,7 @@ export function resolveLookup(
 export function scoreLookupOption(
   optionValue: MoveParamValue,
   refs: readonly Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>[],
+  lookupFallback: CompiledPolicyConsideration['lookupFallback'] = { onUnavailable: 'noContribution' },
 ): ReturnType<typeof scoreMicroturnOptionWithContributions> {
   const considerations: Record<string, CompiledPolicyConsideration> = {};
   refs.forEach((ref, index) => {
@@ -164,6 +165,7 @@ export function scoreLookupOption(
       weight: literalExpr(1),
       value: { kind: 'ref', ref },
       hasLookupRef: true,
+      lookupFallback,
       dependencies: emptyDependencies,
     };
   });

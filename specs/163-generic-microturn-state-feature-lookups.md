@@ -283,5 +283,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 - [`archive/tickets/163GENLOOKUP-001.md`](../archive/tickets/163GENLOOKUP-001.md) — Compiled types + diagnostic codes registry for `lookup` ref family (covers Phase 0)
 - [`archive/tickets/163GENLOOKUP-002.md`](../archive/tickets/163GENLOOKUP-002.md) — Compiler lowering for `lookup` ref + compile-time diagnostics (covers Phase 1)
 - [`archive/tickets/163GENLOOKUP-003.md`](../archive/tickets/163GENLOOKUP-003.md) — Runtime resolver + dispatch + observer routing (covers Phase 2 + §8.1 #1, #5, #6, §8.1 #4)
-- [`tickets/163GENLOOKUP-004.md`](../tickets/163GENLOOKUP-004.md) — Consideration integration + trace surface (covers Phase 3 + §8.1 #2, #3)
+- [`archive/tickets/163GENLOOKUP-004.md`](../archive/tickets/163GENLOOKUP-004.md) — Consideration integration + trace surface (covers Phase 3 + §8.1 #2, #3)
 - [`tickets/163GENLOOKUP-005.md`](../tickets/163GENLOOKUP-005.md) — Cookbook recipe + canonical fixture profile (covers Phase 4)

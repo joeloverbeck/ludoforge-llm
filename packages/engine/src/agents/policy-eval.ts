@@ -33,6 +33,7 @@ import { type PolicyValue } from './policy-surface.js';
 import {
   PolicyEvaluationContext,
   type PolicyEvaluationCandidate,
+  type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
   PolicyRuntimeError,
 } from './policy-evaluation-core.js';
@@ -157,6 +158,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly unknownLookupRefs: readonly PolicyLookupUnknownRef[];
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
+  readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
   readonly previewDrive?: PolicyPreviewDriveTrace;
@@ -1097,6 +1099,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
+    ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
     selectionReason: candidate.selectionReason ?? (candidate.previewOutcome === 'gated' ? 'gated' : 'prior'),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),

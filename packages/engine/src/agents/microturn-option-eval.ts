@@ -10,7 +10,7 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { PolicyEvaluationContext, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import { PolicyEvaluationContext, type PolicyLookupFallbackFired, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 
@@ -27,6 +27,7 @@ export interface CompletionOptionScore {
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
+  readonly lookupFallbackFired?: PolicyLookupFallbackFired;
 }
 
 export function scoreMicroturnOption(
@@ -81,6 +82,7 @@ export function scoreMicroturnOptionWithContributions(
   const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
   const unknownLookupRefs = new Map<string, LookupUnavailabilityReason>();
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
+  const lookupFallbackFired: { current?: PolicyLookupFallbackFired } = {};
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -98,7 +100,7 @@ export function scoreMicroturnOptionWithContributions(
     ...(previewOptionResolvedRefs === undefined
       ? {}
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired } }),
-    lookupOption: { unknownLookupRefs },
+    lookupOption: { unknownLookupRefs, lookupFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -122,6 +124,7 @@ export function scoreMicroturnOptionWithContributions(
       unknownPreviewRefs,
       unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
+      ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
     };
   } finally {
     evaluation.dispose();

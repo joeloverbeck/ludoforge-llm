@@ -77,6 +77,12 @@ export interface PolicyPreviewFallbackFired {
   readonly value?: number;
 }
 
+export interface PolicyLookupFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant';
+  readonly value?: number;
+}
+
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
 
@@ -95,6 +101,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
   previewFallbackFired?: PolicyPreviewFallbackFired;
+  lookupFallbackFired?: PolicyLookupFallbackFired;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
@@ -125,6 +132,7 @@ export interface CreatePolicyEvaluationContextInput {
   };
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
+    readonly lookupFallbackFired?: { current?: PolicyLookupFallbackFired };
   };
 }
 
@@ -541,6 +549,30 @@ export class PolicyEvaluationContext {
         onContribution?.(fallback.value);
         return fallback.value;
       }
+      if (consideration.hasLookupRef === true) {
+        const fallback = consideration.lookupFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Lookup consideration "${considerationId}" did not declare lookupFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'noContribution') {
+          this.recordLookupFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          return 0;
+        }
+        this.recordLookupFallbackFired(candidate, {
+          termId: considerationId,
+          kind: 'constant',
+          value: fallback.value,
+        });
+        onContribution?.(fallback.value);
+        return fallback.value;
+      }
       const contribution = consideration.unknownAs ?? 0;
       onContribution?.(contribution);
       return contribution;
@@ -568,6 +600,18 @@ export class PolicyEvaluationContext {
     }
     if (this.input.previewOption?.previewFallbackFired !== undefined) {
       this.input.previewOption.previewFallbackFired.current = fired;
+    }
+  }
+
+  private recordLookupFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyLookupFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.lookupFallbackFired = fired;
+    }
+    if (this.input.lookupOption?.lookupFallbackFired !== undefined) {
+      this.input.lookupOption.lookupFallbackFired.current = fired;
     }
   }
 

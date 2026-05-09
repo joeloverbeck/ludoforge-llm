@@ -1815,6 +1815,11 @@ export interface PolicyCandidateDecisionTrace {
     readonly kind: 'noContribution' | 'constant';
     readonly value?: number;
   };
+  readonly lookupFallbackFired?: {
+    readonly termId: string;
+    readonly kind: 'noContribution' | 'constant';
+    readonly value?: number;
+  };
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;

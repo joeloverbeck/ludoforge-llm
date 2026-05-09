@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None (engine-side); docs and test-fixture only.
-**Deps**: `tickets/163GENLOOKUP-004.md`
+**Deps**: `archive/tickets/163GENLOOKUP-004.md`
 
 ## Problem
 

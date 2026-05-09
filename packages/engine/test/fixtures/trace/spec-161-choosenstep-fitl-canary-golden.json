@@ -41,6 +41,14 @@
       "unknownNoPreviewDecision": 0,
       "unknownGated": 0,
       "unknownFailed": 0
+    },
+    "coverage": {
+      "requestedRefCount": 1,
+      "evaluatedRootOptionCount": 11,
+      "readyRootOptionCount": 11,
+      "unavailableRootOptionCount": 0,
+      "allRootsUnavailable": false,
+      "selectedByTieBreakerBecausePreviewUnavailable": false
     }
   },
   "options": [

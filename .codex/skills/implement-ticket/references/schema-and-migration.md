@@ -123,6 +123,12 @@ When the ticket introduces a shared contract surface but a downstream sibling st
 - rewrite active draft acceptance text before completion if the original wording would misstate that interim contract
 - verify the interim shape with the narrowest build-safe proof lane instead of silently absorbing the downstream sibling's work
 
+For staged additive discriminated-union variants or new ref/expression kinds:
+- sweep exhaustive consumers before coding: local `switch` statements, discriminated-union helpers, schema mirrors, feature-table/bytecode encoders, diagnostics, and any curated public schema/export surfaces
+- classify each required consumer edit as `type acknowledgement / fail-closed`, `schema/generated-artifact mirror`, `identity/type-only fallout`, or `behavioral implementation`
+- when the current ticket explicitly defers real behavior to a sibling, prefer a fail-closed acknowledgement in exhaustive runtime consumers over a generic default branch; record the sibling as the behavioral owner before final proof
+- if adding the fail-closed acknowledgement changes an explicit ticket deliverable such as "no dispatch case", stop for `1-3-1` unless the user already authorized the boundary reset
+
 When the staged surface is a partially populated compiled or serialized artifact:
 - record which descriptor families, fields, or producers are supported by the current ticket and which are deliberately deferred to siblings
 - include a compact compiled-versus-skipped coverage summary in the ticket outcome, proof helper output, or another durable closeout surface when the skipped portion is material to the handoff

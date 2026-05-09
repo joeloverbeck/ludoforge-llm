@@ -1179,6 +1179,12 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.completion?.resolveMicroturnOptionIntrinsic(ref.intrinsic);
       case 'previewOptionRef':
         return this.resolvePreviewOptionRef(ref, candidate);
+      case 'lookup':
+        throw this.runtimeError(
+          'RUNTIME_EVALUATION_ERROR',
+          'Lookup policy refs are not executable until the lookup resolver is wired.',
+          { collection: ref.collection },
+        );
       case 'currentSurface':
       case 'previewSurface':
         return this.resolveSurfaceRef(ref, candidate);

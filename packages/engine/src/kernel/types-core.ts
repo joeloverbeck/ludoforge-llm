@@ -332,6 +332,11 @@ export type AgentPreviewFallback = {
     | 'noContribution'
     | { readonly kind: 'constant'; readonly value: number };
 };
+export type AgentLookupFallback = {
+  readonly onUnavailable:
+    | 'noContribution'
+    | { readonly kind: 'constant'; readonly value: number };
+};
 export type AgentPolicyOperator =
   | 'abs'
   | 'add'
@@ -390,6 +395,10 @@ export interface CompiledPreviewSurfaceRef extends CompiledSurfaceRefBase {
 export type CompiledSurfaceRef =
   | CompiledCurrentSurfaceRef
   | CompiledPreviewSurfaceRef;
+export type LookupUnavailabilityReason = 'hidden' | 'missing' | 'typeMismatch' | 'unresolved';
+export type LookupRefStatus =
+  | { readonly kind: 'ready'; readonly value: number | string | boolean }
+  | { readonly kind: 'unavailable'; readonly reason: LookupUnavailabilityReason };
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
@@ -417,6 +426,19 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'previewOptionRef';
       readonly refKind: AgentPolicyPreviewOptionRefKind;
       readonly id?: string;
+    }
+  | {
+      readonly kind: 'lookup';
+      readonly surface: 'policyState';
+      readonly collection: 'zones' | 'tokens' | 'players' | 'globals';
+      readonly keyType: 'ZoneId' | 'TokenId' | 'PlayerId' | 'string';
+      readonly key: CompiledPolicyExpr;
+      readonly path: readonly string[];
+      readonly onMissing: 'unavailable' | {
+        readonly kind: 'constant';
+        readonly value: number | string | boolean;
+      };
+      readonly onHidden: 'unavailable';
     }
   | {
       readonly kind: 'seatIntrinsic';
@@ -626,6 +648,7 @@ export interface CompiledPolicyConsideration {
   readonly hasPreviewRef?: boolean;
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
+  readonly lookupFallback?: AgentLookupFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -821,6 +844,7 @@ export interface CompiledAgentConsideration {
   readonly costClass: AgentPolicyCostClass;
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
+  readonly lookupFallback?: AgentLookupFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;

@@ -245,6 +245,8 @@ A 4th approach is justified only when it sits on an axis orthogonal to the prima
 
 **If the reference file already contains evaluated approaches** with tradeoffs and counter-evidence, present those as the approach options rather than generating new ones. The brainstorm's value in this case is validation and decision, not ideation. You may add a new approach if the reference file's options have a clear gap.
 
+**If the user's invocation directly specifies the artifacts to produce** (e.g., "draft specs 163 and 164", "rewrite this skill", "create these N tickets"), the approach-level question is foreclosed by the user's instruction. Step 3 collapses to a one-paragraph framing recap (what artifacts will be produced and why this scope) plus any cross-cutting decisions (e.g., write independently vs. merge, sequencing, scope partitioning). Do not synthesize alternative approaches the user has already eliminated. The Step 2 compound-move still applies; the gap-closer batches the cross-cutting decisions, not synthetic alternatives.
+
 **If triage produced a set of approved changes** (decision/triage → design transition), the approach options shift from "which changes" to "how to apply them" — e.g., incremental patches vs. structured rewrite vs. phased rollout. Present these implementation strategies as the approaches.
 
 **If implementation-related**: For each approach, note which FOUNDATIONS.md principles it aligns with or tensions it creates. Use format: `Foundations: F1 (aligns), F8 (tensions — [reason])`. Omit the line for an approach that is FOUNDATIONS-neutral relative to its alternatives — only tag when it surfaces a real differentiator (alignment unique to this approach, or a tension absent in the others). When all approaches are FOUNDATIONS-equivalent, defer per-approach tagging entirely and address FOUNDATIONS in the Step 4 design section.
@@ -401,6 +403,8 @@ Suggest a namespace for option 1 derived from the spec title at menu time. The e
 
 Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
 
+**Multi-spec output adaptation**: If the brainstorm produced 2+ specs in a single design pass (e.g., follow-up specs N+1 and N+2 from a predecessor that named both), expand option 1 into one decomposition option per spec (`Decompose Spec <N+1> into tickets (namespace <SUGGESTED-N+1>)`, `Decompose Spec <N+2> into tickets (namespace <SUGGESTED-N+2>)`, …) and renumber the remaining options. The namespace-derivation rule (uppercase-letter-chunks-of-first-3-to-4-meaningful-words) applies per-spec. Combine with Multi-phase spec adaptation below when a multi-spec output also has a phased earliest deliverable.
+
 **Multi-phase spec adaptation**: If the spec has a phased structure where the earliest phase is a tactical/standalone deliverable (e.g., a CI unblock paired with a multi-week architectural change), append an option: "Start Phase 0 immediately while reviewing the rest." This is appropriate when Phase 0's risk profile is unrelated to later phases AND Phase 0 is genuinely separable (small effort, no architectural dependencies on later phases). Pair this option with the restoration ticket required by the Step 3 "Tactical + strategic compound" rule — Phase 0 closes only when the strategic phases land.
 
 **If triage produced tickets directly** (`tickets/<PREFIX>-<NNN>.md`):
@@ -417,7 +421,7 @@ Recommend option 1 only when the lowest-numbered ticket is genuinely independent
 ```
 What would you like to do next?
 1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with each spec path and namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
-2. Run another missing-abstractions analysis on a different test suite
+2. Run a follow-up analysis pass (e.g., another missing-abstractions sweep on a different test suite, or a related triage in an adjacent area)
 3. Done for now — I'll review the artifacts later
 ```
 

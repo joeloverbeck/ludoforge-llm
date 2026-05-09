@@ -194,6 +194,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       costClass: consideration.costClass,
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
+      ...(consideration.lookupFallback === undefined ? {} : { lookupFallback: consideration.lookupFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
     };

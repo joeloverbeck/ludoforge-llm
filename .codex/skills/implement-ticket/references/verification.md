@@ -172,6 +172,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 - New lowered ref kinds or expression variants: assume `GameDef.schema.json` may drift even if edits are outside `schemas-core.ts`.
 - Runtime schema shape changes: expect `Trace.schema.json` or other serialized artifacts to drift even if the ticket only named TypeScript or Zod surfaces.
 - When a shared generator rewrites multiple artifacts, identify which encode the changed contract and summarize specifically.
+- If a generator-backed JSON schema diff is large because anonymous definition names, `$ref` targets, or definition ordering churned, do not hand-edit the generated artifact to minimize the diff. Classify it as `generator-produced expected artifact churn` only after the authoritative generator and artifact-check lane pass, and name which changed artifact actually encodes the ticket-owned contract.
 - If regeneration leaves no persisted diff, state explicitly that the surface was checked and remained in sync.
 - If an authoritative verification lane fails on schema sync or golden fallout, treat that failure as stronger evidence than a draft sibling's deferred ownership text. Absorb the minimum required artifact update, then rewrite sibling ownership to match.
 

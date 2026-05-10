@@ -400,6 +400,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 
 - [`archive/tickets/164CONTPREVDEP-001.md`](../archive/tickets/164CONTPREVDEP-001.md) — Foundation #10 amendment and cap-class registry (covers §4 + §7.5 + Phase 0)
 - [`archive/tickets/164CONTPREVDEP-002.md`](../archive/tickets/164CONTPREVDEP-002.md) — Compiler — strategy/capClass lowering, per-phase cost validation, diagnostics (covers §5.1 + §5.2 + §7 + Phase 1)
-- [`tickets/164CONTPREVDEP-003.md`](../tickets/164CONTPREVDEP-003.md) — Strategy dispatch wiring with `singlePass` byte-identical baseline (covers §8 dispatch + Phase 2)
+- [`archive/tickets/164CONTPREVDEP-003.md`](../archive/tickets/164CONTPREVDEP-003.md) — Strategy dispatch wiring with `singlePass` byte-identical baseline (covers §8 dispatch + Phase 2)
 - [`tickets/164CONTPREVDEP-004.md`](../tickets/164CONTPREVDEP-004.md) — Deep-pass driver, trigger evaluation, state handoff, per-phase coverage, ARVN witness (covers §5.3 + §5.4 + §5.5 + §5.6 + §10 + Phase 3)
 - [`tickets/164CONTPREVDEP-005.md`](../tickets/164CONTPREVDEP-005.md) — Cookbook update, benchmark sweep, e2e fixture profile (covers §15 docs + Phase 4)

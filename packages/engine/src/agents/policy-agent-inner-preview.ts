@@ -246,11 +246,16 @@ export function createPolicyAgentChooseNStepInnerPreview(
     refs,
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
+  const strategy = resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass';
+  const finalRun = strategy === 'continuedDeepening'
+    // Ticket 164CONTPREVDEP-004 replaces this no-op with the deep-pass driver.
+    ? run
+    : run;
   return {
-    run,
+    run: finalRun,
     refIds,
-    usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds),
-    byOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option])),
-    refsByOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
+    usage: summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds),
+    byOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option])),
+    refsByOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
   };
 }

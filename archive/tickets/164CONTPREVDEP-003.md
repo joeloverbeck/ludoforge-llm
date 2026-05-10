@@ -1,6 +1,6 @@
 # 164CONTPREVDEP-003: Strategy dispatch wiring with singlePass byte-identical baseline
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-agent-inner-preview.ts` (strategy dispatch insertion)
@@ -16,7 +16,7 @@ This is Phase 2 of the spec (§9 acceptance criterion: "`singlePass` profiles pr
 
 1. `createPolicyAgentChooseNStepInnerPreview` lives at `packages/engine/src/agents/policy-agent-inner-preview.ts:222-256` (verified). The single call site to `runChooseNStepInnerPreview` is at line 235.
 2. `chooseFrontierDecision` (`policy-agent.ts:543`) calls `createPolicyAgentChooseNStepInnerPreview` from the dispatch conditional at lines 547-551. Inserting the strategy branch one level deeper (inside the creator function) keeps `chooseFrontierDecision`'s shape unchanged.
-3. `resolvedProfile.profile.preview.inner?.strategy` is the access path after Ticket 002 lands; currently the field doesn't exist.
+3. `resolvedProfile.profile.preview.inner?.strategy` is the access path after Ticket 002 lands; live reassessment on 2026-05-10 confirms the Ticket 002 field now exists.
 
 ## Architecture Check
 
@@ -58,6 +58,58 @@ Acceptable shape: replay-twice in the same test, assert byte-identity. The point
 - Trigger evaluation (Ticket 004).
 - Per-phase coverage population (Ticket 004).
 - ARVN seed-1000 deep-recovery witness (Ticket 004).
+
+## Outcome
+
+Completed on 2026-05-10.
+
+What landed:
+
+- `createPolicyAgentChooseNStepInnerPreview` now reads `resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass'` after the broad `runChooseNStepInnerPreview` call.
+- The `continuedDeepening` dispatch branch is an explicit no-op insertion site for Ticket 004 and returns the broad run unchanged.
+- `singlePass` and `continuedDeepening` currently share the same broad-only result path; `chooseFrontierDecision` remains unchanged.
+- `policy-preview-inner-deepening.ts` was not introduced.
+- Added `packages/engine/test/architecture/preview-deepening/continued-deepening-singlepass-unchanged.test.ts`.
+
+Ticket corrections applied:
+
+- The assumption text that the `strategy` field did not yet exist is stale; Ticket 002 is archived and the field is present in the compiled profile type/lowering.
+- The new test uses a current-baseline replay-twice and broad-only comparison witness, as the ticket explicitly allowed when a pre-Ticket-002 historical baseline is not available in-repo.
+
+Generated fallout:
+
+- None expected. This ticket reads an existing compiled config field and does not change schemas, generated JSON, or golden fixtures.
+
+Deferred sibling/spec scope:
+
+- Ticket 004 owns the deep-pass driver, trigger evaluation, state handoff, per-phase coverage population, and ARVN deep-recovery witness.
+- Ticket 005 owns the cookbook update, benchmark sweep, and e2e fixture profile.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-agent-inner-preview.ts`: 256 -> 261 lines; below repo guidance.
+- `packages/engine/test/architecture/preview-deepening/continued-deepening-singlepass-unchanged.test.ts`: new 310-line self-contained architectural invariant test; below repo guidance.
+
+Verification plan:
+
+- PASS: `pnpm -F @ludoforge/engine build`
+- PASS: `node --test packages/engine/dist/test/architecture/preview-deepening/continued-deepening-singlepass-unchanged.test.js`
+- PASS: `node --test packages/engine/dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js`
+- PASS: `pnpm -F @ludoforge/engine test`
+- PASS: `pnpm turbo build`
+- PASS: `pnpm turbo test`
+- PASS: `pnpm turbo lint`
+- PASS: `pnpm turbo typecheck`
+- PASS: post-Turbo rerun `node --test packages/engine/dist/test/architecture/preview-deepening/continued-deepening-singlepass-unchanged.test.js`
+- PASS: post-Turbo rerun `node --test packages/engine/dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js`
+- PASS: `pnpm run check:ticket-deps` (`3 active tickets and 2293 archived tickets`)
+- PASS: `git diff --check`
+
+Late-edit invalidation check:
+
+- The terminal patch changed only status and proof transcription after all acceptance lanes were green. No scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, generated artifact, source, or test content changed; no code proof was invalidated.
+- The dependency-check result transcription is clerical; it changes no dependency edge, status, scope, acceptance criterion, command semantics, or touched-file ownership.
+- The `git diff --check` result transcription is clerical; it changes no code, generated artifact, proof command, dependency edge, or acceptance boundary.
 
 ## Acceptance Criteria
 

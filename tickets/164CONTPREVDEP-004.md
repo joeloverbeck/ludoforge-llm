@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — new module `policy-preview-inner-deepening.ts`, modifications to `policy-agent-inner-preview.ts`, `policy-preview-inner.ts`, `policy-eval.ts`, plus the advisory shape extension in `policy-evaluation-core.ts`
-**Deps**: `tickets/164CONTPREVDEP-003.md`
+**Deps**: `archive/tickets/164CONTPREVDEP-003.md`
 
 ## Problem
 

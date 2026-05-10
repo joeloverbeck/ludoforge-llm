@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Minimal — new test fixture profile only; doc/report changes
-**Deps**: `tickets/164CONTPREVDEP-004.md`
+**Deps**: `archive/tickets/164CONTPREVDEP-004.md`
 
 ## Problem
 

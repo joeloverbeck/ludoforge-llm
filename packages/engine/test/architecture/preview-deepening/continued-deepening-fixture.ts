@@ -1,11 +1,3 @@
-// @test-class: architectural-invariant
-
-import * as assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { describe, it } from 'node:test';
-
-import { createPolicyAgentChooseNStepInnerPreview } from '../../../src/agents/policy-agent-inner-preview.js';
 import {
   applyDecision,
   asActionId,
@@ -19,32 +11,26 @@ import {
   type AgentPolicyCatalog,
   type AgentPolicyExpr,
   type AgentPolicyLiteral,
+  type PolicyAgentDecisionTrace,
   type CompiledAgentPolicyRef,
   type CompiledAgentProfile,
   type GameDef,
 } from '../../../src/kernel/index.js';
 import type { ChooseNStepContext, MicroturnState } from '../../../src/kernel/microturn/types.js';
+import { createPolicyAgentChooseNStepInnerPreview } from '../../../src/agents/policy-agent-inner-preview.js';
+import { PolicyAgent } from '../../../src/agents/policy-agent.js';
 import { eff } from '../../helpers/effect-tag-helper.js';
 import {
   withCompiledPolicyCatalog,
   type AgentPolicyCatalogFixtureLibrary,
 } from '../../helpers/policy-catalog-fixtures.js';
 
-type ChooseNStepMicroturn = MicroturnState & {
+export type ChooseNStepMicroturn = MicroturnState & {
   readonly kind: 'chooseNStep';
   readonly decisionContext: ChooseNStepContext;
 };
 
-type SerializedPreview = {
-  readonly refIds: readonly string[];
-  readonly usage: unknown;
-  readonly options: readonly {
-    readonly stableMoveKey: string;
-    readonly outcome: string;
-    readonly completionPolicyFallbackCount: number;
-    readonly resolvedRefs: readonly [string, unknown][];
-  }[];
-};
+export type PreviewStrategy = NonNullable<CompiledAgentProfile['preview']['inner']>['strategy'];
 
 const phaseId = asPhaseId('main');
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
@@ -54,17 +40,6 @@ const previewDeltaRef: Extract<CompiledAgentPolicyRef, { readonly kind: 'preview
   refKind: 'deltaVictoryCurrentMarginSelf',
 };
 
-const resolveRepoRoot = (): string => {
-  let cursor = process.cwd();
-  for (let depth = 0; depth < 8; depth += 1) {
-    if (existsSync(join(cursor, 'pnpm-workspace.yaml'))) {
-      return cursor;
-    }
-    cursor = join(cursor, '..');
-  }
-  return process.cwd();
-};
-
 const microturnConsiderations = (
   definitions: Record<string, Omit<AgentPolicyCatalogFixtureLibrary['considerations'][string], 'scopes'>>,
 ): AgentPolicyCatalogFixtureLibrary['considerations'] =>
@@ -72,8 +47,8 @@ const microturnConsiderations = (
     Object.entries(definitions).map(([id, definition]) => [id, { scopes: ['microturn'], ...definition }]),
   );
 
-const createProfile = (
-  strategy: NonNullable<CompiledAgentProfile['preview']['inner']>['strategy'],
+export const createProfile = (
+  strategy: PreviewStrategy,
 ): CompiledAgentProfile => {
   const considerations = ['preferProjectedMargin'];
   return {
@@ -86,16 +61,16 @@ const createProfile = (
         chooseOne: false,
         chooseNStep: true,
         maxOptions: 4,
-        chooseNBeamWidth: 2,
-        depthCap: 3,
+        chooseNBeamWidth: 1,
+        depthCap: strategy === 'continuedDeepening' ? 1 : 3,
         strategy,
         capClass: strategy === 'continuedDeepening' ? 'deep1024' : 'standard256',
         ...(strategy === 'continuedDeepening'
           ? {
               continuedDeepening: {
-                broad: { depthCap: 3 },
+                broad: { depthCap: 1 },
                 deep: {
-                  depthCap: 4,
+                  depthCap: 3,
                   trigger: ['allRequestedRefsDepthCapped'],
                   rootPolicy: 'allRootsWithinCap',
                 },
@@ -119,8 +94,8 @@ const createProfile = (
   };
 };
 
-const createCatalog = (
-  strategy: NonNullable<CompiledAgentProfile['preview']['inner']>['strategy'],
+export const createCatalog = (
+  strategy: PreviewStrategy,
 ): AgentPolicyCatalog => {
   const profile = createProfile(strategy);
   return withCompiledPolicyCatalog({
@@ -176,9 +151,9 @@ const createCatalog = (
   });
 };
 
-const createDef = (catalog: AgentPolicyCatalog): GameDef =>
+export const createDef = (catalog: AgentPolicyCatalog): GameDef =>
   assertValidatedGameDef({
-    metadata: { id: 'continued-deepening-singlepass-unchanged', players: { min: 2, max: 2 } },
+    metadata: { id: 'continued-deepening-fixture', players: { min: 2, max: 2 } },
     seats: [{ id: 'us' }, { id: 'arvn' }],
     constants: {},
     globalVars: [{ name: 'score', type: 'int', init: 0, min: 0, max: 20 }],
@@ -213,7 +188,7 @@ const createDef = (catalog: AgentPolicyCatalog): GameDef =>
               internalDecisionId: 'decision:$picks',
               bind: '$picks',
               options: { query: 'enums', values: ['low', 'high', 'spare'] },
-              n: 1,
+              n: 2,
             },
           }) as ActionPipelineDef['stages'][number]['effects'][number],
           eff({
@@ -237,7 +212,7 @@ const createDef = (catalog: AgentPolicyCatalog): GameDef =>
     },
   });
 
-const createInput = (
+export const createInput = (
   def: GameDef,
   state: ReturnType<typeof initialState>['state'],
   microturn: MicroturnState,
@@ -248,18 +223,22 @@ const createInput = (
   rng: { state: state.rng },
 });
 
-const capturePreview = (
-  strategy: NonNullable<CompiledAgentProfile['preview']['inner']>['strategy'],
-): SerializedPreview => {
+export const capturePreview = (
+  strategy: PreviewStrategy,
+) => {
   const catalog = createCatalog(strategy);
   const def = createDef(catalog);
   const initial = initialState(def, 164, 2);
   const actionSelection = publishMicroturn(def, initial.state);
   const firstAction = actionSelection.legalActions[0];
-  assert.ok(firstAction !== undefined);
+  if (firstAction === undefined) {
+    throw new Error('fixture expected an initial legal action');
+  }
   const afterAction = applyDecision(def, initial.state, firstAction).state;
   const microturn = publishMicroturn(def, afterAction);
-  assert.equal(microturn.kind, 'chooseNStep');
+  if (microturn.kind !== 'chooseNStep') {
+    throw new Error(`fixture expected chooseNStep, got ${microturn.kind}`);
+  }
   const preview = createPolicyAgentChooseNStepInnerPreview(
     createInput(def, afterAction, microturn as ChooseNStepMicroturn),
     {
@@ -269,45 +248,38 @@ const capturePreview = (
       profile: catalog.profiles.baseline!,
     },
   );
-  assert.ok(preview !== undefined);
-  return {
-    refIds: preview.refIds,
-    usage: preview.usage,
-    options: preview.run.options.map((option) => ({
-      stableMoveKey: option.stableMoveKey,
-      outcome: option.outcome,
-      completionPolicyFallbackCount: option.completionPolicyFallbackCount,
-      resolvedRefs: [...option.resolvedRefs.entries()].sort(([left], [right]) => left.localeCompare(right)),
-    })),
-  };
+  if (preview === undefined) {
+    throw new Error('fixture expected inner preview');
+  }
+  return preview;
 };
 
-describe('continued deepening singlePass dispatch seam', () => {
-  it('keeps representative singlePass chooseNStep inner previews byte-identical across replays', () => {
-    assert.equal(
-      JSON.stringify(capturePreview('singlePass')),
-      JSON.stringify(capturePreview('singlePass')),
-    );
+export const runPolicyTrace = (
+  strategy: PreviewStrategy,
+  mutateCatalog?: (catalog: AgentPolicyCatalog) => void,
+): PolicyAgentDecisionTrace => {
+  const catalog = createCatalog(strategy);
+  mutateCatalog?.(catalog);
+  const def = createDef(catalog);
+  const initial = initialState(def, 164, 2);
+  const actionSelection = publishMicroturn(def, initial.state);
+  const firstAction = actionSelection.legalActions[0];
+  if (firstAction === undefined) {
+    throw new Error('fixture expected an initial legal action');
+  }
+  const afterAction = applyDecision(def, initial.state, firstAction).state;
+  const microturn = publishMicroturn(def, afterAction);
+  if (microturn.kind !== 'chooseNStep') {
+    throw new Error(`fixture expected chooseNStep, got ${microturn.kind}`);
+  }
+  const agent = new PolicyAgent({
+    profileId: 'baseline',
+    traceLevel: 'verbose',
+    disableGuidedChooser: true,
   });
-
-  it('keeps option results unchanged when continuedDeepening broad coverage does not fire a trigger', () => {
-    const continued = capturePreview('continuedDeepening');
-    const singlePass = capturePreview('singlePass');
-
-    assert.deepEqual(continued.options, singlePass.options);
-    assert.equal((continued.usage as { coverage: { strategy?: string } }).coverage.strategy, 'continuedDeepening');
-    assert.equal((continued.usage as { coverage: { broad?: unknown; deep?: unknown } }).coverage.broad !== undefined, true);
-    assert.equal((continued.usage as { coverage: { broad?: unknown; deep?: unknown } }).coverage.deep, undefined);
-  });
-
-  it('keeps the strategy dispatch insertion site explicit for Ticket 004', () => {
-    const source = readFileSync(
-      join(resolveRepoRoot(), 'packages/engine/src/agents/policy-agent-inner-preview.ts'),
-      'utf8',
-    );
-
-    assert.match(source, /resolvedProfile\.profile\.preview\.inner\?\.strategy\s*\?\?\s*'singlePass'/u);
-    assert.match(source, /strategy\s*===\s*'continuedDeepening'/u);
-    assert.match(source, /policy-preview-inner-deepening/u);
-  });
-});
+  const result = agent.chooseDecision(createInput(def, afterAction, microturn));
+  if (result.agentDecision === undefined) {
+    throw new Error('fixture expected policy trace');
+  }
+  return result.agentDecision;
+};

@@ -77,7 +77,9 @@
         "readyRootOptionCount": 3,
         "unavailableRootOptionCount": 3,
         "allRootsUnavailable": false,
-        "selectedByTieBreakerBecausePreviewUnavailable": false
+        "selectedByTieBreakerBecausePreviewUnavailable": false,
+        "strategy": "singlePass",
+        "capClass": "standard256"
       }
     },
     "selection": {

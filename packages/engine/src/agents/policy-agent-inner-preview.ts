@@ -14,12 +14,22 @@ import {
   runChooseNStepInnerPreview,
   type ChooseNStepInnerPreviewRun,
 } from './policy-preview-inner-choosenstep.js';
+import { runDeepPass } from './policy-preview-inner-deepening.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
-import type { PolicyEvaluationMetadata, ReadyRefStats } from './policy-eval.js';
+import type { PolicyEvaluationMetadata, PolicyPreviewPhaseCoverage, ReadyRefStats } from './policy-eval.js';
 import type { ResolvedPolicyProfile } from './policy-profile-resolution.js';
 
 type PolicyAgentInnerPreviewRun = ChooseOneInnerPreviewRun | ChooseNStepInnerPreviewRun;
 type PolicyAgentInnerPreviewOption = PolicyAgentInnerPreviewRun['options'][number];
+type PreviewStrategy = NonNullable<ResolvedPolicyProfile['profile']['preview']['inner']>['strategy'];
+type PreviewCapClass = NonNullable<ResolvedPolicyProfile['profile']['preview']['inner']>['capClass'];
+
+interface PhaseCoverageInput {
+  readonly strategy: PreviewStrategy;
+  readonly capClass: PreviewCapClass;
+  readonly broad?: PolicyPreviewPhaseCoverage;
+  readonly deep?: PolicyPreviewPhaseCoverage;
+}
 
 export interface PolicyAgentInnerPreview {
   readonly run: PolicyAgentInnerPreviewRun;
@@ -132,6 +142,7 @@ const summarizeReadyRefStats = (
 const summarizeCoverage = (
   run: PolicyAgentInnerPreviewRun,
   refIds: readonly string[],
+  phaseCoverage?: PhaseCoverageInput,
 ): PolicyEvaluationMetadata['previewUsage']['coverage'] => {
   let readyRootOptionCount = 0;
   let unavailableRootOptionCount = 0;
@@ -157,6 +168,33 @@ const summarizeCoverage = (
     unavailableRootOptionCount,
     allRootsUnavailable,
     selectedByTieBreakerBecausePreviewUnavailable: allRootsUnavailable,
+    strategy: phaseCoverage?.strategy ?? 'singlePass',
+    capClass: phaseCoverage?.capClass ?? 'standard256',
+    ...(phaseCoverage?.broad === undefined ? {} : { broad: phaseCoverage.broad }),
+    ...(phaseCoverage?.deep === undefined ? {} : { deep: phaseCoverage.deep }),
+  };
+};
+
+const summarizePhaseCoverage = (
+  run: PolicyAgentInnerPreviewRun,
+  refIds: readonly string[],
+  triggerFired?: PolicyPreviewPhaseCoverage['triggerFired'],
+): PolicyPreviewPhaseCoverage => {
+  let readyRootOptionCount = 0;
+  let unavailableRootOptionCount = 0;
+  for (const option of run.options) {
+    const hasReadyRef = refIds.some((refId) => option.resolvedRefs.get(refId)?.kind === 'ready');
+    if (hasReadyRef) {
+      readyRootOptionCount += 1;
+    } else if (refIds.length > 0) {
+      unavailableRootOptionCount += 1;
+    }
+  }
+  return {
+    evaluatedRootOptionCount: run.options.length,
+    readyRootOptionCount,
+    unavailableRootOptionCount,
+    ...(triggerFired === undefined ? {} : { triggerFired }),
   };
 };
 
@@ -164,6 +202,7 @@ const summarizeUsage = (
   mode: ResolvedPolicyProfile['profile']['preview']['mode'],
   run: PolicyAgentInnerPreviewRun,
   refIds: readonly string[],
+  phaseCoverage?: PhaseCoverageInput,
 ): PolicyEvaluationMetadata['previewUsage'] => {
   const readyRefStats = summarizeReadyRefStats(run, refIds);
   return {
@@ -179,7 +218,7 @@ const summarizeUsage = (
     utility: classifyPreviewUtility(readyRefStats),
     widenedBecauseUniform: false,
     outcomeBreakdown: run.outcomeBreakdown,
-    coverage: summarizeCoverage(run, refIds),
+    coverage: summarizeCoverage(run, refIds, phaseCoverage),
   };
 };
 
@@ -213,7 +252,10 @@ export function createPolicyAgentChooseOneInnerPreview(
   return {
     run,
     refIds,
-    usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds),
+    usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds, {
+      strategy: resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass',
+      capClass: resolvedProfile.profile.preview.inner?.capClass ?? 'standard256',
+    }),
     byOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
   };
@@ -247,14 +289,35 @@ export function createPolicyAgentChooseNStepInnerPreview(
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const strategy = resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass';
-  const finalRun = strategy === 'continuedDeepening'
-    // Ticket 164CONTPREVDEP-004 replaces this no-op with the deep-pass driver.
-    ? run
-    : run;
+  const deepening = strategy === 'continuedDeepening'
+    ? runDeepPass({
+        def: input.def,
+        state: input.state,
+        microturn: input.microturn as AgentMicroturnDecisionInput['microturn'] & {
+          readonly kind: 'chooseNStep';
+          readonly decisionContext: ChooseNStepContext;
+        },
+        playerId: input.state.activePlayer,
+        seatId: resolvedProfile.seatId,
+        catalog: resolvedProfile.catalog,
+        profile: resolvedProfile.profile,
+        refs,
+        ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
+      }, run, refIds)
+    : { run };
+  const finalRun = deepening.run;
+  const phaseCoverage = {
+    strategy,
+    capClass: resolvedProfile.profile.preview.inner?.capClass ?? 'standard256',
+    ...(strategy === 'continuedDeepening' ? { broad: summarizePhaseCoverage(run, refIds) } : {}),
+    ...(deepening.triggerFired === undefined
+      ? {}
+      : { deep: summarizePhaseCoverage(finalRun, refIds, deepening.triggerFired) }),
+  };
   return {
     run: finalRun,
     refIds,
-    usage: summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds),
+    usage: summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds, phaseCoverage),
     byOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
   };

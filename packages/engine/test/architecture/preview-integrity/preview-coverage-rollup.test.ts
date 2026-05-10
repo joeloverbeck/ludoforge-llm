@@ -25,6 +25,8 @@ describe('preview coverage rollup', () => {
       unavailableRootOptionCount: 0,
       allRootsUnavailable: false,
       selectedByTieBreakerBecausePreviewUnavailable: false,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     });
   });
 
@@ -40,6 +42,8 @@ describe('preview coverage rollup', () => {
       unavailableRootOptionCount: 3,
       allRootsUnavailable: true,
       selectedByTieBreakerBecausePreviewUnavailable: true,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     });
   });
 });

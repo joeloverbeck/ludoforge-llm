@@ -1881,6 +1881,17 @@ export interface PolicyPreviewCoverageTrace {
   readonly unavailableRootOptionCount: number;
   readonly allRootsUnavailable: boolean;
   readonly selectedByTieBreakerBecausePreviewUnavailable: boolean;
+  readonly strategy: AgentPreviewInnerStrategy;
+  readonly capClass: AgentPreviewInnerCapClass;
+  readonly broad?: PolicyPreviewPhaseCoverageTrace;
+  readonly deep?: PolicyPreviewPhaseCoverageTrace;
+}
+
+export interface PolicyPreviewPhaseCoverageTrace {
+  readonly evaluatedRootOptionCount: number;
+  readonly readyRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly triggerFired?: DeepTrigger;
 }
 
 export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
@@ -1892,7 +1903,9 @@ export interface PolicyPreviewSignalUnavailableAdvisoryTrace {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnknownRefTrace['reason'], number>>;
+  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnknownRefTrace['reason'], number> & {
+    readonly afterDeepPass?: number;
+  }>;
   readonly selectedStableMoveKey: string;
   readonly selectionReason: 'tiebreakAfterPreviewNoSignal';
 }

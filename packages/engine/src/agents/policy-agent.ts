@@ -170,8 +170,9 @@ const selectionReasonForFrontierCandidate = (
 
 const unavailabilityBreakdownFor = (
   frontier: readonly FrontierCandidate[],
+  previewUsage?: PolicyEvaluationMetadata['previewUsage'],
 ): Readonly<Record<PolicyPreviewUnavailabilityReason, number>> => {
-  const breakdown: Record<PolicyPreviewUnavailabilityReason, number> = {
+  const breakdown: Record<PolicyPreviewUnavailabilityReason, number> & { afterDeepPass?: number } = {
     random: 0,
     hidden: 0,
     unresolved: 0,
@@ -184,6 +185,9 @@ const unavailabilityBreakdownFor = (
     for (const reason of candidate.unknownPreviewRefs?.values() ?? []) {
       breakdown[reason] += 1;
     }
+  }
+  if (previewUsage?.coverage.deep !== undefined) {
+    breakdown.afterDeepPass = previewUsage.coverage.deep.unavailableRootOptionCount;
   }
   return breakdown;
 };
@@ -228,7 +232,7 @@ const buildSignalUnavailableAdvisory = (
     requestedRefs: [...metadata.previewUsage.refIds],
     evaluatedRootOptionCount: metadata.previewUsage.coverage.evaluatedRootOptionCount,
     unavailableRootOptionCount: metadata.previewUsage.coverage.unavailableRootOptionCount,
-    unavailabilityBreakdown: unavailabilityBreakdownFor(frontier),
+    unavailabilityBreakdown: unavailabilityBreakdownFor(frontier, metadata.previewUsage),
     selectedStableMoveKey: metadata.selectedStableMoveKey,
     selectionReason: 'tiebreakAfterPreviewNoSignal',
   };

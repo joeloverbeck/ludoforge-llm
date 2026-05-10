@@ -1,9 +1,9 @@
 # 164CONTPREVDEP-004: Deep-pass driver, trigger evaluation, state handoff, per-phase coverage, ARVN witness
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
-**Engine Changes**: Yes — new module `policy-preview-inner-deepening.ts`, modifications to `policy-agent-inner-preview.ts`, `policy-preview-inner.ts`, `policy-eval.ts`, plus the advisory shape extension in `policy-evaluation-core.ts`
+**Engine Changes**: Yes — new module `policy-preview-inner-deepening.ts`, modifications to `policy-agent-inner-preview.ts`, `policy-preview-inner-choosenstep.ts`, `policy-agent.ts`, `policy-eval.ts`, kernel trace/schema mirrors, generated Trace schema, and owned test/fixture fallout
 **Deps**: `archive/tickets/164CONTPREVDEP-003.md`
 
 ## Problem
@@ -167,7 +167,7 @@ The deep driver feeds `unavailable` statuses through the existing `unknownPrevie
 4. `packages/engine/test/architecture/preview-deepening/continued-deepening-state-handoff.test.ts` — architectural-invariant; bounded computation accounting.
 5. `packages/engine/test/architecture/preview-deepening/cap-class-recorded-in-artifact.test.ts` — architectural-invariant; F#10 amendment + F#13.
 6. `packages/engine/test/architecture/preview-deepening/per-phase-coverage-rollup.test.ts` — architectural-invariant; coverage shape.
-7. `packages/engine/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.ts` — convergence-witness; profile-specific deep-recovery rate. Headers: `// @test-class: convergence-witness`, `// @witness: spec-164-arvn-seed-1000-deep`.
+7. `packages/engine/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.ts` — convergence-witness; profile-specific deep-recovery rate. Headers: `// @test-class: convergence-witness`, `// @profile-variant: arvn-evolved`. The witness identity is pinned by `WITNESS_ID = 'spec-164-arvn-seed-1000-deep'` because the live policy-profile-quality marker rule rejects `@witness` headers in this directory.
 
 ### Commands
 
@@ -175,3 +175,83 @@ The deep driver feeds `unavailable` statuses through the existing `unknownPrevie
 2. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js`
 3. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js`
 4. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome
+
+Completed 2026-05-10.
+
+Outcome amended: 2026-05-10 — post-ticket-review archival normalized the top-level engine-change summary to match the landed files and moved active Spec 164 references to the archive path.
+
+What landed:
+
+- Added `packages/engine/src/agents/policy-preview-inner-deepening.ts`, which evaluates `allRequestedRefsDepthCapped` / `allReadyValuesUniform`, runs the deep continuation from each broad `DriveResult.state` checkpoint, and returns merged chooseNStep results.
+- `createPolicyAgentChooseNStepInnerPreview` now calls the deep driver for `strategy: continuedDeepening`; no-trigger continued-deepening runs keep the broad option results unchanged and record broad-only coverage.
+- `ChooseNStepInnerPreviewResult` now carries the in-memory post-drive `state` checkpoint required by the deep driver. This is not serialized trace state.
+- `PolicyPreviewCoverage` / `PolicyPreviewCoverageTrace` now record `strategy`, `capClass`, and optional `broad` / `deep` phase blocks.
+- `POLICY_PREVIEW_SIGNAL_UNAVAILABLE.unavailabilityBreakdown.afterDeepPass` is emitted when a deep phase ran and all roots remain unavailable.
+- Added the six Phase 3 architecture tests, a shared preview-deepening fixture helper, updated the Phase 2 singlePass seam test, and added `packages/engine/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.ts`.
+- ARVN seed 1000 deep-recovery witness pins `N = 4`: all four Spec 162 depth-capped chooseNStep decisions recover ready signal under `continuedDeepening + deep1024` with `Db=4`, `Dd=16`.
+
+Ticket corrections applied:
+
+- Advisory construction lives in `packages/engine/src/agents/policy-agent.ts`, not `policy-evaluation-core.ts`; `policy-agent.ts` is owned touched-file fallout for the `afterDeepPass` field.
+- Trace schema mirrors live in `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and generated `packages/engine/schemas/Trace.schema.json`; these are owned serialized-contract fallout.
+- `policy-preview-inner.ts` did not require a direct source edit because the live chooseNStep implementation already owned the checkpointing/resolution seam in `policy-preview-inner-choosenstep.ts`; the active change adds the checkpoint field there instead.
+- Added `packages/engine/test/architecture/preview-deepening/continued-deepening-fixture.ts` as shared test support; it is not itself a test lane.
+- User-approved option 2 marker correction: the ticket draft requested `// @witness: spec-164-arvn-seed-1000-deep`, but the live marker invariant requires policy-profile-quality convergence witnesses to use only `@profile-variant`. The test keeps the witness id in `WITNESS_ID` and omits the `@witness` header.
+- `packages/engine/test/fixtures/trace/fitl-policy-summary.golden.json` is owned schema fixture fallout because `previewUsage.coverage` now requires `strategy` and `capClass`.
+- `packages/engine/test/fixtures/trace/policy-preview-inner-fitl-canary.json`, `packages/engine/test/architecture/preview-integrity/preview-coverage-rollup.test.ts`, and `packages/runner/test/trace/console-trace-subscriber.test.ts` are owned trace-shape fallout for the same required coverage fields.
+
+Generated fallout:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts` wrote `GameDef.schema.json`, `Trace.schema.json`, and `EvalReport.schema.json`.
+- Persisted diff: `packages/engine/schemas/Trace.schema.json` only.
+- `GameDef.schema.json` and `EvalReport.schema.json` were byte-identical after generation.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` passed after regeneration.
+
+Deferred sibling/spec scope:
+
+- Ticket 005 still owns cookbook documentation, benchmark sweep, e2e fixture profile, and any production-profile default migration.
+- `topK` root policy and `partial.*` refs remain out of scope per Spec 164.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-agent-inner-preview.ts`: below repo guidance before and after; active growth owns dispatch-to-driver wiring and coverage summary.
+- `packages/engine/src/agents/policy-preview-inner-choosenstep.ts`: below repo guidance before and after; active growth is the in-memory checkpoint field/exported continuation helper.
+- `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/kernel/types-core.ts`, and `packages/engine/src/kernel/schemas-core.ts`: preexisting canonical hubs over repo guidance; active growth is limited to trace contract fields. Extraction would widen/obscure the shared schema seam; residual extraction owner: none.
+- `packages/engine/src/agents/policy-agent.ts`: below repo guidance before and after; active growth is the advisory `afterDeepPass` population.
+
+Runtime surface breadth:
+
+- Policy/agent runtime plus serialized trace contract. Kernel publication, legality, and game-specific data are unchanged.
+
+Command ledger and final proof plan:
+
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/architecture/preview-deepening/` -> split into package build plus `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-deepening/*.test.js`.
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js` -> split into package build plus package-local compiled test command.
+- `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js` -> split into package build plus package-local compiled test command.
+- `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck` -> run serially after focused lanes; because Turbo/build lanes may rewrite `dist`, rerun focused compiled-output witnesses afterward before terminal status.
+- `pnpm turbo test` was rerun after the runner-side trace fixture edit; engine test was cache-replayed from the same successful source state and runner tests executed with `test/trace/console-trace-subscriber.test.ts`.
+
+Verification:
+
+- PASS: `pnpm -F @ludoforge/engine build`
+- PASS: `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-deepening/*.test.js`
+- PASS: `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js`
+- PASS: `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js`
+- PASS: `pnpm -F @ludoforge/engine test`
+- PASS: `pnpm turbo build`
+- PASS: `pnpm turbo test`
+- PASS: `pnpm turbo lint`
+- PASS: `pnpm turbo typecheck` after adding `strategy` / `capClass` to the runner trace fixture.
+- PASS: `pnpm turbo schema:artifacts`
+- PASS: `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- PASS: `pnpm run check:ticket-deps`
+- PASS: `git diff --check`
+
+Late-edit proof validity:
+
+- After root/schema commands touched build artifacts, the focused compiled-output witnesses were rerun and passed:
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/preview-deepening/*.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/arvn-seed-1000-deep-recovery.test.js`
+  - `pnpm -F @ludoforge/engine exec node --test dist/test/policy-profile-quality/spec-162-arvn-seed-1000-witness.test.js`

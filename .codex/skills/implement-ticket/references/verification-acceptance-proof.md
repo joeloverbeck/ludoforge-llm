@@ -37,6 +37,13 @@ Before broad proof for a shared contract migration whose new representation rema
 3. rerun a focused test file for any `assertion-only drift` or newly updated consumer before the package/workspace lane
 4. if the broad lane later finds another changed-shape assertion, treat it as owned verification fallout: fix the focused repro first, update the touched-file/proof ledger when needed, then rerun broad proof
 
+For additive required trace/result fields, include an exact-shape literal sweep before broad proof:
+
+1. search for the changed interface/type name, the new required field names, nearby sibling field names, and representative serialized fixture paths
+2. include engine tests, runner/UI tests, report fixtures, golden trace files, checked-in JSON fixtures, and schema/trace-shape tests
+3. classify each hit as `producer updated`, `consumer updated`, `fixture/golden fallout`, `assertion-only drift`, or `intentionally unchanged`
+4. rerun the focused file for every updated assertion, fixture, or downstream consumer before citing a broad package/workspace lane
+
 ## Wrapper and Child Command Isolation
 
 When the raw child command for a witness passes but the **wrapper script or package test entrypoint** still fails, stop treating the test file as the only owner. Isolate the wrapper seam directly:

@@ -95,6 +95,8 @@ describe('createConsoleTraceSubscriber', () => {
             unavailableRootOptionCount: 0,
             allRootsUnavailable: false,
             selectedByTieBreakerBecausePreviewUnavailable: false,
+            strategy: 'singlePass',
+            capClass: 'standard256',
           },
         },
         emergencyFallback: false,

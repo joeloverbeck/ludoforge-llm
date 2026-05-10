@@ -1227,6 +1227,21 @@ const CompiledAgentProfileSchema = z
             maxOptions: z.number().int().positive(),
             chooseNBeamWidth: z.number().int().positive(),
             depthCap: z.number().int().positive(),
+            strategy: z.enum(['singlePass', 'continuedDeepening']),
+            capClass: z.enum(['standard256', 'deep1024']),
+            continuedDeepening: z
+              .object({
+                broad: z.object({ depthCap: z.number().int().positive() }).strict(),
+                deep: z
+                  .object({
+                    depthCap: z.number().int().positive(),
+                    trigger: z.array(z.enum(['allRequestedRefsDepthCapped', 'allReadyValuesUniform'])).nonempty(),
+                    rootPolicy: z.literal('allRootsWithinCap'),
+                  })
+                  .strict(),
+              })
+              .strict()
+              .optional(),
           })
           .strict()
           .optional(),

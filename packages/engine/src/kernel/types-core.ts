@@ -882,6 +882,9 @@ export type AgentPreviewAuthoredCompletionPolicy = 'greedy' | 'policyGuided';
 export type AgentPreviewCompletionPolicy = AgentPreviewAuthoredCompletionPolicy | 'fallback';
 export type AgentPreviewFallbackCompletionPolicy = 'greedy' | 'fail';
 export type AgentPreviewBudgetStrategy = 'balancedCoverage';
+export type AgentPreviewInnerStrategy = 'singlePass' | 'continuedDeepening';
+export type AgentPreviewInnerCapClass = 'standard256' | 'deep1024';
+export type DeepTrigger = 'allRequestedRefsDepthCapped' | 'allReadyValuesUniform';
 
 export interface CompiledAgentPreviewBudgetConfig {
   readonly strategy: AgentPreviewBudgetStrategy;
@@ -898,6 +901,20 @@ export interface CompiledAgentPreviewInnerConfig {
   readonly maxOptions: number;
   readonly chooseNBeamWidth: number;
   readonly depthCap: number;
+  readonly strategy: AgentPreviewInnerStrategy;
+  readonly capClass: AgentPreviewInnerCapClass;
+  readonly continuedDeepening?: ContinuedDeepeningConfig;
+}
+
+export interface ContinuedDeepeningConfig {
+  readonly broad: {
+    readonly depthCap: number;
+  };
+  readonly deep: {
+    readonly depthCap: number;
+    readonly trigger: readonly DeepTrigger[];
+    readonly rootPolicy: 'allRootsWithinCap';
+  };
 }
 
 export interface CompiledAgentPreviewConfig {

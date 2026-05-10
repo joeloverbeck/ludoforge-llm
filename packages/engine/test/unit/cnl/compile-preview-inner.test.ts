@@ -123,6 +123,8 @@ describe('compile preview.inner', () => {
       maxOptions: 4,
       chooseNBeamWidth: 4,
       depthCap: 4,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     });
   });
 
@@ -160,7 +162,15 @@ describe('compile preview.inner', () => {
               ...result.gameDef?.agents?.profiles.baseline,
               preview: {
                 ...result.gameDef?.agents?.profiles.baseline?.preview,
-                inner: { maxOptions: 0, chooseNBeamWidth: 1, depthCap: 1 },
+                inner: {
+                  chooseOne: false,
+                  chooseNStep: false,
+                  maxOptions: 0,
+                  chooseNBeamWidth: 1,
+                  depthCap: 1,
+                  strategy: 'singlePass',
+                  capClass: 'standard256',
+                },
               },
             },
           },

@@ -54,6 +54,8 @@ function createProfile(innerChooseOne: boolean | undefined): CompiledAgentProfil
               maxOptions: 4,
               chooseNBeamWidth: 1,
               depthCap: 4,
+              strategy: 'singlePass',
+              capClass: 'standard256',
             },
           }),
     },

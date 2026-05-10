@@ -62,6 +62,8 @@ function createProfile(considerations: readonly string[]): CompiledAgentProfile 
         maxOptions: 4,
         chooseNBeamWidth: 1,
         depthCap: 4,
+        strategy: 'singlePass',
+        capClass: 'standard256',
       },
     },
     selection: { mode: 'argmax' },

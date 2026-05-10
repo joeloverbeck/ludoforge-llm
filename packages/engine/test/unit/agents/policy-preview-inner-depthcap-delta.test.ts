@@ -31,6 +31,8 @@ describe('depth-capped preview delta refs', () => {
             maxOptions: profile.preview.inner?.maxOptions ?? 4,
             chooseNBeamWidth: profile.preview.inner?.chooseNBeamWidth ?? 1,
             depthCap: 0,
+            strategy: 'singlePass',
+            capClass: 'standard256',
           },
         },
       },

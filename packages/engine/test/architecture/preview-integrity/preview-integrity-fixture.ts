@@ -64,6 +64,8 @@ function createProfile(previewAvailable: boolean, fallbackMode: PreviewFallbackM
         maxOptions: 4,
         chooseNBeamWidth: 2,
         depthCap: 3,
+        strategy: 'singlePass',
+        capClass: 'standard256',
       },
     },
     selection: { mode: 'argmax' },

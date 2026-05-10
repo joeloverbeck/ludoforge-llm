@@ -8,6 +8,7 @@ import type {
   CompiledAgentPreviewBudgetConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
+  DeepTrigger,
   CompiledPolicyConsideration,
   CompiledPolicyTieBreaker,
   GameDef,
@@ -203,6 +204,13 @@ export interface PolicyPreviewCoverage {
   readonly unavailableRootOptionCount: number;
   readonly allRootsUnavailable: boolean;
   readonly selectedByTieBreakerBecausePreviewUnavailable: boolean;
+}
+
+export interface PolicyPreviewPhaseCoverage {
+  readonly evaluatedRootOptionCount: number;
+  readonly readyRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly triggerFired?: DeepTrigger;
 }
 
 export interface PolicyPreviewSignalUnavailableAdvisory {

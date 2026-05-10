@@ -1,6 +1,6 @@
 # 164CONTPREVDEP-002: Compiler — strategy/capClass lowering, per-phase cost validation, diagnostics
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `kernel/types-core.ts` (extend compiled config types), `cnl/compile-agents.ts` (extend lowering + cost validation), `cnl/compiler-diagnostic-codes.ts` (new diagnostic codes)
@@ -131,6 +131,62 @@ Run the engine build and a full test pass; inspect snapshot diffs for previewInn
 - Per-phase coverage population (Ticket 004 — type added here, runtime fields populated there).
 - Cookbook updates (Ticket 005).
 
+## Implementation Outcome
+
+Completed on 2026-05-10.
+
+What landed:
+
+- `CompiledAgentPreviewInnerConfig` now records `strategy`, `capClass`, and optional `continuedDeepening`; `ContinuedDeepeningConfig` and `DeepTrigger` were added to the compiled type surface.
+- `GameSpecAgentProfileDef.preview.inner` accepts the new authored fields, and `GameDef.schema.json` was regenerated so compiled `preview.inner` artifacts require `strategy` and `capClass`.
+- `lowerPreviewInnerConfig` now defaults `strategy: "singlePass"` and `capClass: "standard256"`, validates unknown `strategy`/`capClass`, validates `continuedDeepening`, enforces `depthCap === broad.depthCap`, and checks continued-deepening cost against `CAP_CLASS_BUDGETS`.
+- The existing single-pass cost formula remains the same expression shape for `singlePass`; only the budget lookup changed from the bare hard-cap constant to the selected cap class.
+- `PolicyPreviewPhaseCoverage` was added as a type-only runtime prep surface in `policy-eval.ts`; runtime coverage population remains Ticket 004.
+- Three ticket-named compiler tests were added under the live test directory `packages/engine/test/unit/cnl/` rather than the stale draft path `packages/engine/test/cnl/`.
+
+Ticket corrections applied:
+
+- `Files to Touch` omitted shared-contract fallout in `packages/engine/src/cnl/game-spec-doc.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/schemas/GameDef.schema.json`, and existing compiled-config fixtures/tests. Those edits are owned by the required compiled-artifact migration.
+- The diagnostic-code bullet said "three codes" but listed four; the four listed codes were added.
+- The draft `packages/engine/test/cnl/...` test path was corrected to the live `packages/engine/test/unit/cnl/...` path.
+- Compiled-JSON fixture regeneration resolved to `GameDef.schema.json` artifact regeneration plus manual compiled-runtime fixture updates; no separate pinned compiled-JSON golden diff was produced by the generator/test lanes.
+
+Generated fallout:
+
+- `packages/engine/schemas/GameDef.schema.json` changed; `Trace.schema.json` and `EvalReport.schema.json` were generated and remained byte-identical.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` initially reported `GameDef.schema.json` out of sync, then passed after `pnpm -F @ludoforge/engine run schema:artifacts`.
+
+Deferred sibling/spec scope:
+
+- Ticket 003 owns runtime strategy dispatch and `singlePass` trace byte-identity.
+- Ticket 004 owns the deep-pass driver, trigger evaluation, per-phase runtime coverage population, advisory fields, and ARVN convergence witness.
+- Ticket 005 owns cookbook, benchmark report, and end-to-end fixture profile.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/compile-agents.ts`: 3532 -> 3748 lines; preexisting over guidance. Active growth is localized to the canonical compiler lowering/diagnostic seam. Extraction would widen this Phase 1 ticket; residual owner: none.
+- `packages/engine/src/kernel/types-core.ts`: 2155 -> 2172 lines; preexisting over guidance. Active growth is localized to the canonical compiled type surface. Extraction would obscure the schema/type contract; residual owner: none.
+- `packages/engine/src/agents/policy-eval.ts`: 1443 -> 1451 lines; preexisting over guidance. Active growth is the Ticket 002 type-only coverage surface that Ticket 004 will populate; residual owner: none.
+- `packages/engine/src/kernel/schemas-core.ts`: 2571 -> 2586 lines; preexisting over guidance. Active growth mirrors the compiled `preview.inner` contract; extraction would split the schema/type lockstep; residual owner: none.
+
+Verification:
+
+- PASS: `pnpm -F @ludoforge/engine build`
+- PASS: `node --test packages/engine/dist/test/unit/cnl/continued-deepening-cost-rejection.test.js packages/engine/dist/test/unit/cnl/continued-deepening-depthcap-mismatch.test.js packages/engine/dist/test/unit/cnl/unknown-strategy-and-capclass-rejected.test.js`
+- PASS: `node --test packages/engine/dist/test/unit/cnl/compile-preview-inner.test.js packages/engine/dist/test/unit/cnl/compile-preview-inner-choosenstep-cost.test.js packages/engine/dist/test/architecture/preview-inner-config-runtime-coverage.test.js packages/engine/dist/test/unit/cnl/continued-deepening-cost-rejection.test.js packages/engine/dist/test/unit/cnl/continued-deepening-depthcap-mismatch.test.js packages/engine/dist/test/unit/cnl/unknown-strategy-and-capclass-rejected.test.js`
+- PASS: `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- PASS: `pnpm -F @ludoforge/engine test`
+- PASS: `pnpm turbo build`
+- PASS: `pnpm turbo test`
+- PASS: `pnpm turbo lint`
+- PASS: `pnpm turbo typecheck`
+- PASS: `pnpm run check:ticket-deps` (`4 active tickets and 2292 archived tickets`)
+- PASS: `git diff --check`
+
+Late-edit invalidation check:
+
+- The post-proof ticket edits changed only status, source-size ledger text, and verification transcription. The later ticket-deps proof transcription likewise touched only this outcome block. These edits do not affect generated artifacts, compiler behavior, schema shape, or test inputs; no code proof was invalidated.
+
 ## Acceptance Criteria
 
 ### Tests That Must Pass
@@ -152,11 +208,11 @@ Run the engine build and a full test pass; inspect snapshot diffs for previewInn
 
 ### New/Modified Tests
 
-1. `packages/engine/test/cnl/continued-deepening-cost-rejection.test.ts` — compiler-test class; both pass and reject cases; asserts message inputs.
-2. `packages/engine/test/cnl/continued-deepening-depthcap-mismatch.test.ts` — compiler-test class; asserts the depth-cap mismatch diagnostic.
-3. `packages/engine/test/cnl/unknown-strategy-and-capclass-rejected.test.ts` — compiler-test class; covers both unknown-value diagnostics.
+1. `packages/engine/test/unit/cnl/continued-deepening-cost-rejection.test.ts` — compiler-test class; both pass and reject cases; asserts message inputs.
+2. `packages/engine/test/unit/cnl/continued-deepening-depthcap-mismatch.test.ts` — compiler-test class; asserts the depth-cap mismatch diagnostic.
+3. `packages/engine/test/unit/cnl/unknown-strategy-and-capclass-rejected.test.ts` — compiler-test class; covers both unknown-value diagnostics.
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/cnl/continued-deepening-cost-rejection.test.js packages/engine/dist/test/cnl/continued-deepening-depthcap-mismatch.test.js packages/engine/dist/test/cnl/unknown-strategy-and-capclass-rejected.test.js`
+1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/cnl/continued-deepening-cost-rejection.test.js packages/engine/dist/test/unit/cnl/continued-deepening-depthcap-mismatch.test.js packages/engine/dist/test/unit/cnl/unknown-strategy-and-capclass-rejected.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`

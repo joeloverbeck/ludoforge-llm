@@ -692,6 +692,18 @@ export interface GameSpecAgentProfileDef {
       readonly maxOptions?: number;
       readonly chooseNBeamWidth?: number;
       readonly depthCap?: number;
+      readonly strategy?: string;
+      readonly capClass?: string;
+      readonly continuedDeepening?: {
+        readonly broad?: {
+          readonly depthCap?: number;
+        };
+        readonly deep?: {
+          readonly depthCap?: number;
+          readonly trigger?: readonly string[];
+          readonly rootPolicy?: string;
+        };
+      };
     };
     readonly phase1?: boolean;
     readonly phase1CompletionsPerAction?: number;

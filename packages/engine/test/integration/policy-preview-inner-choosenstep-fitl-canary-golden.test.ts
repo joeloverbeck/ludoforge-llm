@@ -61,6 +61,8 @@ function withChooseNStepCanaryProfile(def: GameDef) {
       maxOptions: 8,
       chooseNBeamWidth: 1,
       depthCap: 4,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     },
   };
   const baseUseConsiderations = baseProfile.use.considerations.includes(CONSIDERATION_ID)

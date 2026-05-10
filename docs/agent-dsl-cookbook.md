@@ -415,6 +415,89 @@ At a `chooseNStep` microturn, this scores ADD options only. CONFIRM is not a per
 
 The example's `chooseNStep` validation cost is `8 * (1 + 1 * 8 * max(0, 4 - 1)) = 200`, which fits under the 256 hard cap. Use `previewUsage.readyRefStats['preview.option.delta.victory.currentMargin.self']` and inner-frontier `scoreContributions[]` to confirm when projected margin deltas are differentiating the ADD options. When all root-option drives are unavailable, the trace reports `selectionReason: tiebreakAfterPreviewNoSignal`, candidate `unknownPreviewRefs`, and a `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory instead of a silent zero contribution.
 
+### Continued Deepening
+
+Use `preview.inner.strategy: continuedDeepening` when a broad `chooseNStep`
+preview proves that every requested `preview.option.*` ref is depth-capped, or
+when all ready values are uniform and a deeper bounded pass may differentiate
+the options. This is an opt-in profile setting. It does not change defaults for
+profiles that keep the `singlePass` strategy.
+
+```yaml
+preview:
+  mode: exactWorld
+  completion: policyGuided
+  fallbackCompletionPolicy: fail
+  inner:
+    chooseOne: true
+    chooseNStep: true
+    maxOptions: 8
+    chooseNBeamWidth: 1
+    depthCap: 4
+    strategy: continuedDeepening
+    capClass: deep1024
+    continuedDeepening:
+      broad:
+        depthCap: 4
+      deep:
+        depthCap: 16
+        trigger:
+          - allRequestedRefsDepthCapped
+        rootPolicy: allRootsWithinCap
+```
+
+Fields:
+
+| Field | Meaning |
+| --- | --- |
+| `strategy` | `singlePass` keeps the existing one-pass driver. `continuedDeepening` runs a broad pass and conditionally runs an additive deep pass. Defaults to `singlePass`. |
+| `capClass` | Named budget tier. Use the cap-class registry in `CAP_CLASS_BUDGETS` rather than duplicating budget literals in profile prose or tooling. Defaults to `standard256`. |
+| `continuedDeepening.broad.depthCap` | Broad-pass depth. It must equal the legacy `depthCap` field when `strategy: continuedDeepening` is used. |
+| `continuedDeepening.deep.depthCap` | Absolute deep-pass target depth. It must be greater than or equal to the broad depth and fit the selected cap class. |
+| `continuedDeepening.deep.trigger` | Non-empty list of deterministic trigger ids. Supported values are `allRequestedRefsDepthCapped` and `allReadyValuesUniform`. |
+| `continuedDeepening.deep.rootPolicy` | Currently `allRootsWithinCap`, meaning every root option is eligible for the deep pass within the declared cap class. |
+
+The static cost formula is:
+
+```text
+M = maxOptions
+B = chooseNBeamWidth
+I = maxOptions
+Db = continuedDeepening.broad.depthCap
+Dd = continuedDeepening.deep.depthCap
+R = M
+
+broadCost = M * (1 + B * I * max(0, Db - 1))
+incrementalDeepCost = R * B * I * max(0, Dd - Db)
+totalCost = broadCost + incrementalDeepCost
+```
+
+For the Spec 164 ARVN target row, `M=8`, `B=1`, `Db=4`, and `Dd=16`.
+That gives `broadCost = 200`, `incrementalDeepCost = 768`, and
+`totalCost = 968`, which fits the `deep1024` cap class. The actual budget
+limits are owned by the `CAP_CLASS_BUDGETS` registry in
+`packages/engine/src/cnl/compile-agents.ts`.
+
+Triggers are evaluated after the broad pass:
+
+| Trigger | Fires when | Meaning |
+| --- | --- | --- |
+| `allRequestedRefsDepthCapped` | Every requested `preview.option.*` ref across the broad-driven roots is unavailable because of `depthCap`. | The broad pass proved there is no usable signal at the current depth, so a deeper pass may recover ready values. |
+| `allReadyValuesUniform` | Every requested ref is ready, but the ready values are identical across roots. | The broad pass produced signal but not differentiation, so a deeper pass may break the tie. |
+
+Use continued deepening for deeply nested `chooseNStep` ladders where the broad
+pass reaches `depthCap` before projected refs can resolve. Do not use it for a
+top-level `chooseOne` or shallow `chooseNStep` profile that already produces
+differentiating ready signal under the broad pass.
+
+Continued deepening preserves Foundation 20. It is additive signal, not a way
+to silence unavailability. A ref that remains unavailable after the deep pass
+is still unavailable, still needs an explicit `previewFallback`, and still
+appears in trace output as unavailable rather than contributing an implicit
+zero. When the deep pass recovers ready values, traces expose the phase
+provenance through `previewUsage.coverage.broad` and
+`previewUsage.coverage.deep`.
+
 ### Preview Signal Integrity
 
 Every consideration whose `value` reads a `preview.option.*` ref must declare `previewFallback.onUnavailable`.

@@ -1,6 +1,6 @@
 # Spec 164 — Continued Inner Preview Deepening
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Date**: 2026-05-09
 **Priority**: M
 **Complexity**: L
@@ -402,4 +402,33 @@ Decomposed via `/spec-to-tickets` on 2026-05-09:
 - [`archive/tickets/164CONTPREVDEP-002.md`](../archive/tickets/164CONTPREVDEP-002.md) — Compiler — strategy/capClass lowering, per-phase cost validation, diagnostics (covers §5.1 + §5.2 + §7 + Phase 1)
 - [`archive/tickets/164CONTPREVDEP-003.md`](../archive/tickets/164CONTPREVDEP-003.md) — Strategy dispatch wiring with `singlePass` byte-identical baseline (covers §8 dispatch + Phase 2)
 - [`archive/tickets/164CONTPREVDEP-004.md`](../archive/tickets/164CONTPREVDEP-004.md) — Deep-pass driver, trigger evaluation, state handoff, per-phase coverage, ARVN witness (covers §5.3 + §5.4 + §5.5 + §5.6 + §10 + Phase 3)
-- [`tickets/164CONTPREVDEP-005.md`](../tickets/164CONTPREVDEP-005.md) — Cookbook update, benchmark sweep, e2e fixture profile (covers §15 docs + Phase 4)
+- [`archive/tickets/164CONTPREVDEP-005.md`](../archive/tickets/164CONTPREVDEP-005.md) — Cookbook update, benchmark sweep, e2e fixture profile (covers §15 docs + Phase 4)
+
+## Outcome
+
+Completed: 2026-05-10.
+
+Spec 164 landed across the archived `164CONTPREVDEP-*` ticket chain:
+
+- Foundation #10 now names bounded-computation cap classes and records the Spec 164 amendment in the appendix.
+- The compiler lowers `preview.inner.strategy`, `capClass`, and `continuedDeepening`, validates the continued-deepening cost formula against the selected cap class, and rejects unsupported strategy/cap-class values with dedicated diagnostics.
+- Runtime policy preview supports `singlePass` and `continuedDeepening` dispatch, deep-pass trigger evaluation, broad-to-deep state handoff, per-phase coverage, and preserved preview-unavailability semantics.
+- The agent DSL cookbook documents continued deepening, and the Phase 4 benchmark sweep/report plus e2e fixture profile exercise the feature end to end.
+
+Deviations from the original plan:
+
+- Default profiles were not migrated to `continuedDeepening` or `deep1024`, matching this spec's default-change policy.
+- The Texas Hold'em benchmark row is diagnostic no-signal evidence because the current production profile does not author `preview.option.*` considerations; no production profile migration was invented as part of this spec.
+
+Verification results:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/continued-deepening-e2e.test.js`
+- `node --check packages/engine/scripts/spec-164-deepening-benchmark.mjs`
+- `node packages/engine/scripts/spec-164-deepening-benchmark.mjs --date 20260510`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm run check:ticket-deps`

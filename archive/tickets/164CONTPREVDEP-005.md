@@ -1,6 +1,6 @@
 # 164CONTPREVDEP-005: Cookbook update, benchmark sweep, e2e fixture profile
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Minimal — new test fixture profile only; doc/report changes
@@ -46,7 +46,7 @@ Append a subsection to `docs/agent-dsl-cookbook.md` "Inner Preview" section (cur
 Run a sweep across:
 
 - FITL `arvn-evolved` profile under `singlePass + standard256` (baseline) and `continuedDeepening + deep1024 (Db=4, Dd=16)` (treatment).
-- Texas Hold'em representative profile under `singlePass + standard256` (baseline) and `continuedDeepening + standard256` (treatment with budget headroom).
+- Texas Hold'em representative profile under its current production baseline and a diagnostic `continuedDeepening + standard256` treatment with budget headroom. The current production Texas profile has no microturn-scoped `preview.option.*` consideration, so the report records that no-signal result rather than changing production defaults or inventing a production migration in this ticket.
 
 Capture, per profile/seed:
 
@@ -75,6 +75,7 @@ This is the e2e proof that compiler → runtime → trace round-trips the new fe
 ## Files to Touch
 
 - `docs/agent-dsl-cookbook.md` (modify) — append "Continued deepening" subsection within the Inner Preview section.
+- `packages/engine/scripts/spec-164-deepening-benchmark.mjs` (new) — reproducible benchmark/report generator.
 - `reports/spec-164-deepening-benchmarks-<YYYYMMDD>.md` (new) — benchmark report.
 - `packages/engine/test/fixtures/preview-deepening-e2e/` (new directory) — fixture profile YAML/markdown.
 - `packages/engine/test/integration/continued-deepening-e2e.test.ts` (new) — integration test consuming the fixture.
@@ -117,4 +118,49 @@ This is the e2e proof that compiler → runtime → trace round-trips the new fe
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/continued-deepening-e2e.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
-3. Benchmark sweep invocation (record exact command in the benchmark report header for reproducibility).
+3. `pnpm -F @ludoforge/engine build && node packages/engine/scripts/spec-164-deepening-benchmark.mjs --date <YYYYMMDD>` (also recorded in the benchmark report header for reproducibility).
+
+## Outcome
+
+Completed 2026-05-10.
+
+What landed:
+
+- Added a self-contained "Continued Deepening" cookbook subsection under `docs/agent-dsl-cookbook.md`'s Inner Preview section. It documents the YAML schema, cost formula, trigger meanings, trade-offs, and Foundation 20 preservation. It points at the `CAP_CLASS_BUDGETS` source owner instead of treating copied literals as authoritative.
+- Added `packages/engine/scripts/spec-164-deepening-benchmark.mjs`, a reproducible benchmark/report generator that measures FITL `arvn-evolved` baseline/treatment and a Texas diagnostic treatment without changing production profile defaults.
+- Added `reports/spec-164-deepening-benchmarks-20260510.md`.
+- Added `packages/engine/test/fixtures/preview-deepening-e2e/profile.yaml` and `README.md`.
+- Added `packages/engine/test/integration/continued-deepening-e2e.test.ts`, which consumes the fixture profile shape and asserts compile/run/trace coverage has both `coverage.broad` and `coverage.deep`, with at least one broad-unavailable to final-ready recovery.
+
+Ticket corrections applied:
+
+- The benchmark sweep now includes a checked-in script because the ticket requires a reproducible exact invocation in the report header.
+- The Texas row is recorded as a diagnostic no-signal measurement: the current production profile has no microturn-scoped `preview.option.*` consideration, so `continuedDeepening` has no meaningful signal surface until a future profile/default ticket introduces one.
+- The fixture test uses the existing generic continued-deepening helper for the synthetic GameDef/runtime harness, then compiles the parsed fixture profile into the catalog used by the policy trace. This avoids duplicating the synthetic GameDef setup while making the fixture profile the actual runtime input.
+
+Generated/schema fallout: none expected; no schema source, generated schema, compiled JSON, or golden fixture was modified.
+
+Deferred scope:
+
+- No production profile defaults were changed.
+- Future profile migration and any new cap classes remain out of scope per Spec 164.
+
+Benchmark result:
+
+- `reports/spec-164-deepening-benchmarks-20260510.md` records FITL treatment coverage `broad evaluated=64, ready=44, unavailable=20`, `deep evaluated=20, ready=20, unavailable=0`, trigger `allRequestedRefsDepthCapped=3`, and 3 decisions flipped from `tiebreakAfterPreviewNoSignal` to preview-driven selection.
+- The Texas diagnostic row records preview-decision count 0 and ref-flip count 0 because the current production profile does not author microturn-scoped `preview.option.*` considerations. This preserves the no-production-default boundary and makes the missing signal surface explicit for future work.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build`
+- `node --test packages/engine/dist/test/integration/continued-deepening-e2e.test.js`
+- `node packages/engine/scripts/spec-164-deepening-benchmark.mjs --date 20260510`
+- `pnpm -F @ludoforge/engine test`
+- `pnpm turbo build`
+- `pnpm turbo test`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm run check:ticket-deps`
+
+The final focused E2E rerun after the broad build/typecheck lanes passed with 1/1 test passing. `pnpm turbo test` completed with 5/5 tasks successful and the engine test runner reported 66/66 files passed.
+`pnpm run check:ticket-deps` passed for 1 active ticket and 2295 archived tickets.

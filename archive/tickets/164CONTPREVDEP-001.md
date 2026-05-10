@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/cnl/compile-agents.ts` (new exported constant)
-**Deps**: `specs/164-continued-inner-preview-deepening.md`
+**Deps**: `archive/specs/164-continued-inner-preview-deepening.md`
 
 ## Problem
 
@@ -79,6 +79,8 @@ Add a test asserting:
 
 Completed on 2026-05-09.
 
+Outcome amended: 2026-05-10 — Updated archived sibling/spec references after `164CONTPREVDEP-005` and Spec 164 were archived.
+
 What landed:
 
 - `docs/FOUNDATIONS.md` appends the Spec 164 cap-class sentence to Foundation #10 and records the Appendix amendment line.
@@ -88,7 +90,7 @@ What landed:
 Touched-file scope:
 
 - Ticket-named files touched: all three (`docs/FOUNDATIONS.md`, `compile-agents.ts`, new cap-class registry test).
-- Additional same-series draft context: `tickets/164CONTPREVDEP-005.md` appeared during implementation as a concurrent/untracked sibling draft; it is read-only context for this ticket and owns Phase 4.
+- Additional same-series draft context: `archive/tickets/164CONTPREVDEP-005.md` appeared during implementation as a concurrent/untracked sibling draft; it is read-only context for this ticket and now records the completed Phase 4 work.
 
 Generated fallout:
 
@@ -99,7 +101,7 @@ Deferred sibling/spec scope:
 - Ticket 002 owns YAML lowering, compiled-artifact `capClass` output, cost validation, diagnostics, and compiled-JSON fixture regeneration.
 - Ticket 003 owns strategy dispatch.
 - Ticket 004 owns the deep-pass driver, trigger evaluation, coverage/advisory runtime fields, and ARVN witness.
-- Ticket 005 owns cookbook, benchmark report, and e2e fixture work.
+- Archived Ticket 005 records the completed cookbook, benchmark report, and e2e fixture work.
 
 Source-size ledger:
 

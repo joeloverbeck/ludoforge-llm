@@ -64,7 +64,7 @@ The event stream, together with canonical snapshots when needed, must be suffici
 
 **All iteration MUST be bounded. No general recursion. All choices MUST be finite and enumerable.**
 
-`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. The kernel must finitely enumerate the current executable decision frontier in stable deterministic order. A compound human-visible turn is modeled as a bounded sequence of kernel-owned decision states (microturns), each of which exposes atomic legal actions only. Mechanics emerge from composition of a small instruction set, not bespoke primitives.
+`forEach` operates over finite collections. `repeat N` uses compile-time or validated runtime bounds. Trigger chains, reaction windows, and similar cascades are capped by configurable budgets. The kernel must finitely enumerate the current executable decision frontier in stable deterministic order. A compound human-visible turn is modeled as a bounded sequence of kernel-owned decision states (microturns), each of which exposes atomic legal actions only. Mechanics emerge from composition of a small instruction set, not bespoke primitives. When a bounded computation surface offers a tier of cap classes (e.g., `standard256`, `deep1024`), the chosen class MUST be statically named in the compiled artifact and recorded in reproducibility metadata, so that profile-quality witnesses and replay artifacts can assert which class was active.
 
 ## 11. Immutability
 
@@ -149,3 +149,5 @@ The distinction is architectural, not rhetorical: mixing determinism proof with 
 Spec 144 amended Foundation #18 to distinguish the published-legality contract from the runtime-recovery safety net, and formalized the engine-agnostic `tags: [pass]` fallback convention.
 
 Spec 162 added Foundation #20 (Preview Signal Integrity) to formalize the contract that bounded preview output cannot masquerade as ready evidence.
+
+Spec 164 amended Foundation #10 to formalize cap-class naming for bounded-computation tiers.

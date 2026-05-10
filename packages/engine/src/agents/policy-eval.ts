@@ -8,6 +8,7 @@ import type {
   CompiledAgentPreviewBudgetConfig,
   AgentSelectionMode,
   AgentPolicyCatalog,
+  DeepTrigger,
   CompiledPolicyConsideration,
   CompiledPolicyTieBreaker,
   GameDef,
@@ -203,6 +204,17 @@ export interface PolicyPreviewCoverage {
   readonly unavailableRootOptionCount: number;
   readonly allRootsUnavailable: boolean;
   readonly selectedByTieBreakerBecausePreviewUnavailable: boolean;
+  readonly strategy: 'singlePass' | 'continuedDeepening';
+  readonly capClass: 'standard256' | 'deep1024';
+  readonly broad?: PolicyPreviewPhaseCoverage;
+  readonly deep?: PolicyPreviewPhaseCoverage;
+}
+
+export interface PolicyPreviewPhaseCoverage {
+  readonly evaluatedRootOptionCount: number;
+  readonly readyRootOptionCount: number;
+  readonly unavailableRootOptionCount: number;
+  readonly triggerFired?: DeepTrigger;
 }
 
 export interface PolicyPreviewSignalUnavailableAdvisory {
@@ -214,7 +226,9 @@ export interface PolicyPreviewSignalUnavailableAdvisory {
   readonly requestedRefs: readonly string[];
   readonly evaluatedRootOptionCount: number;
   readonly unavailableRootOptionCount: number;
-  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnavailabilityReason, number>>;
+  readonly unavailabilityBreakdown: Readonly<Record<PolicyPreviewUnavailabilityReason, number> & {
+    readonly afterDeepPass?: number;
+  }>;
   readonly selectedStableMoveKey: string;
   readonly selectionReason: 'tiebreakAfterPreviewNoSignal';
 }
@@ -1196,6 +1210,8 @@ function summarizePreviewUsage(
         && evaluatedCandidates.length > 0
         && evaluatedCandidates.every((candidate) => candidate.previewOutcome !== 'ready'),
       selectedByTieBreakerBecausePreviewUnavailable: false,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     },
   };
 }
@@ -1320,6 +1336,8 @@ export function emptyPreviewUsage(mode: AgentPreviewMode): PolicyEvaluationPrevi
       unavailableRootOptionCount: 0,
       allRootsUnavailable: false,
       selectedByTieBreakerBecausePreviewUnavailable: false,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     },
   };
 }

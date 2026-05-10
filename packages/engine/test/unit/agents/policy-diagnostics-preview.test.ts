@@ -94,6 +94,8 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         unavailableRootOptionCount: 2,
         allRootsUnavailable: false,
         selectedByTieBreakerBecausePreviewUnavailable: false,
+        strategy: 'singlePass',
+        capClass: 'standard256',
       },
     },
     selectedStableMoveKey: 'govern',

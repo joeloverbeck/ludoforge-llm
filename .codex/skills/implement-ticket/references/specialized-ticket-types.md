@@ -62,6 +62,8 @@ For exploratory optimization loops, make abandoned-candidate cleanup explicit be
 
 When an audit matrix spans surfaces that do not share a meaningful metric, do not force a fake scalar comparison. Classify each row as `comparable metric`, `covered by existing smoke`, or `no meaningful comparable metric`, and record the rationale in the ticket outcome/report. Use this especially when a broad acceptance criterion names multiple games, profiles, packages, or corpora but only one subset participates in the measured harness.
 
+When a representative benchmark family lacks the authored signal surface needed to exercise the measured feature, do not invent a production migration or mark the family as meaningfully measured. Preserve production defaults, record the row as `diagnostic no-signal evidence`, name the missing signal surface, and identify the future owner that must introduce that surface before the benchmark can support default-change or quality claims for that family.
+
 ## Investigation Tickets
 
 For tickets whose primary deliverable is a verdict rather than a production code change:
@@ -140,6 +142,8 @@ When the owned deliverable is a large checked-in fixture or inventory artifact, 
 1. record the derivation source in working notes
 2. capture a compact summary (`entry counts`, `surface classes`, `deepest cases`, or similar) so the artifact can be sanity-checked without rereading the whole file
 3. add or extend a validator that proves schema conformance plus coverage parity against the same live seam when proportionate
+
+When the ticket owns a checked-in fixture, profile, sidecar input, or report input that a test or harness is supposed to exercise, prove the artifact is the actual runtime/test input rather than only proving a nearby helper shape. The focused proof should parse or load the checked-in artifact and thread it into the asserted compile, runtime, trace, or report path. If the artifact is provenance-only or documentation-only, record that classification explicitly in the active ticket outcome before final proof.
 
 When an investigation or measurement ticket needs a new checked-in helper script or harness to make the evidence repeatable:
 

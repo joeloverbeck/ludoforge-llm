@@ -5,7 +5,15 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, it } from 'node:test';
 
-type PreviewInnerField = 'chooseOne' | 'chooseNStep' | 'maxOptions' | 'chooseNBeamWidth' | 'depthCap';
+type PreviewInnerField =
+  | 'chooseOne'
+  | 'chooseNStep'
+  | 'maxOptions'
+  | 'chooseNBeamWidth'
+  | 'depthCap'
+  | 'strategy'
+  | 'capClass'
+  | 'continuedDeepening';
 
 const PREVIEW_INNER_FIELDS: readonly PreviewInnerField[] = [
   'chooseOne',
@@ -13,6 +21,9 @@ const PREVIEW_INNER_FIELDS: readonly PreviewInnerField[] = [
   'maxOptions',
   'chooseNBeamWidth',
   'depthCap',
+  'strategy',
+  'capClass',
+  'continuedDeepening',
 ];
 
 const TRACE_ONLY_ALLOWLIST: Readonly<Record<string, string>> = {};

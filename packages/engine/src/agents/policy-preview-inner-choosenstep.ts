@@ -91,6 +91,7 @@ export interface RunChooseNStepInnerPreviewInput extends InnerPreviewBaseInput {
 export interface ChooseNStepInnerPreviewResult {
   readonly decision: ChooseNStepDecision;
   readonly stableMoveKey: string;
+  readonly state: GameState;
   readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   readonly driveDepth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
@@ -373,7 +374,7 @@ export function runChooseNStepBeamPreview(input: RunChooseNStepBeamPreviewInput)
   };
 }
 
-const continueInnerPreviewDrive = (
+export const continueChooseNStepInnerPreviewDrive = (
   input: RunChooseNStepInnerPreviewInput,
   stateAfterRoot: GameState,
   initialDepth: number,
@@ -485,6 +486,7 @@ const resolvedInnerPreviewResult = (
   return {
     decision,
     stableMoveKey,
+    state: drive.state,
     resolvedRefs: withOutcome,
     driveDepth: drive.depth,
     outcome,
@@ -566,7 +568,7 @@ export function runChooseNStepInnerPreview(input: RunChooseNStepInnerPreviewInpu
       continue;
     }
 
-    const drive = continueInnerPreviewDrive(input, stateAfterRoot, 1);
+    const drive = continueChooseNStepInnerPreviewDrive(input, stateAfterRoot, 1);
     evaluatedCandidateCount += Math.max(0, drive.depth - 1);
     options.push(resolvedInnerPreviewResult(
       input,

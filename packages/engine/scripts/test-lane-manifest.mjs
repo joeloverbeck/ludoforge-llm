@@ -12,6 +12,7 @@ const POLICY_PROFILE_QUALITY_TEST_ROOT = resolve(ENGINE_ROOT, 'test', 'policy-pr
 export const GAME_PACKAGE_TEST_PREFIXES = ['fitl-', 'texas-'];
 
 export const GAME_PACKAGE_EXACT_TESTS = [
+  'gamedef-cache-equivalence.test.ts',
   'tooltip-cross-game-properties.test.ts',
   'tooltip-pipeline-integration.test.ts',
 ];

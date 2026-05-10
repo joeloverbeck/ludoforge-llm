@@ -34,6 +34,8 @@ import type {
   CompiledAgentParameterDef,
   CompiledAgentPreviewBudgetConfig,
   CompiledAgentPreviewInnerConfig,
+  ContinuedDeepeningConfig,
+  DeepTrigger,
   CompiledObserverCatalog,
   CompiledSurfaceCatalog,
   CompiledSurfaceVisibility,
@@ -93,6 +95,14 @@ type StrategicConditionWithExpr = CompiledStrategicCondition & {
 
 const AGENT_PARAMETER_TYPES: readonly AgentParameterType[] = ['number', 'integer', 'boolean', 'enum', 'idOrder'];
 export const INNER_PREVIEW_HARD_CAP = 256;
+export type CapClass = 'standard256' | 'deep1024';
+export const CAP_CLASS_BUDGETS: Record<CapClass, number> = {
+  standard256: INNER_PREVIEW_HARD_CAP,
+  deep1024: 1024,
+};
+const PREVIEW_INNER_STRATEGIES = new Set(['singlePass', 'continuedDeepening']);
+const PREVIEW_INNER_CAP_CLASSES = new Set(['standard256', 'deep1024']);
+const DEEP_TRIGGERS = new Set(['allRequestedRefsDepthCapped', 'allReadyValuesUniform']);
 const POLICY_VALUE_TYPES: readonly AgentPolicyValueType[] = ['number', 'boolean', 'id', 'idList'];
 const AGGREGATE_OPS = new Set<AggregateOp>(['max', 'min', 'count', 'any', 'all', 'rankDense', 'rankOrdinal']);
 const TIE_BREAKER_KINDS = new Set<TieBreakerKind>([
@@ -995,7 +1005,7 @@ function lowerPreviewInnerConfig(
     return undefined;
   }
 
-  const { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap } = inner;
+  const { chooseOne, chooseNStep, maxOptions, chooseNBeamWidth, depthCap, strategy, capClass } = inner;
   if (chooseOne !== undefined && typeof chooseOne !== 'boolean') {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
@@ -1030,18 +1040,80 @@ function lowerPreviewInnerConfig(
     return undefined;
   }
 
+  const loweredStrategy = lowerPreviewInnerStrategy(profileId, path, strategy, diagnostics);
+  const loweredCapClass = lowerPreviewInnerCapClass(profileId, path, capClass, diagnostics);
+  if (loweredStrategy === undefined || loweredCapClass === undefined) {
+    return undefined;
+  }
+  const capClassBudget = CAP_CLASS_BUDGETS[loweredCapClass];
+  const loweredContinuedDeepening = lowerContinuedDeepeningConfig(
+    profileId,
+    path,
+    inner.continuedDeepening,
+    diagnostics,
+  );
+  if (loweredStrategy === 'continuedDeepening' && loweredContinuedDeepening === undefined) {
+    return undefined;
+  }
+  if (loweredStrategy === 'singlePass' && loweredContinuedDeepening !== undefined) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.continuedDeepening`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.continuedDeepening is only valid when strategy is continuedDeepening.`,
+      suggestion: 'Remove preview.inner.continuedDeepening or set preview.inner.strategy to continuedDeepening.',
+    });
+    return undefined;
+  }
+
   const cost = chooseNStep === true
     ? loweredMaxOptions * (1 + loweredChooseNBeamWidth * loweredMaxOptions * Math.max(0, loweredDepthCap - 1))
     : loweredMaxOptions * loweredChooseNBeamWidth * loweredDepthCap;
-  if (!Number.isSafeInteger(cost) || cost > INNER_PREVIEW_HARD_CAP) {
+  if (loweredStrategy === 'continuedDeepening') {
+    if (loweredContinuedDeepening === undefined) {
+      return undefined;
+    }
+    const continuedDeepening = loweredContinuedDeepening;
+    const broadDepthCap = continuedDeepening.broad.depthCap;
+    const deepDepthCap = continuedDeepening.deep.depthCap;
+    if (loweredDepthCap !== broadDepthCap) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_DEPTHCAP_MISMATCH,
+        path: `${path}.inner.depthCap`,
+        severity: 'error',
+        message: `Profile "${profileId}" preview.inner.depthCap ${loweredDepthCap} must equal continuedDeepening.broad.depthCap ${broadDepthCap}.`,
+        suggestion: 'Set preview.inner.depthCap to the same positive integer as preview.inner.continuedDeepening.broad.depthCap.',
+      });
+      return undefined;
+    }
+    const innerOptionCap = loweredMaxOptions;
+    const rootsWithinCap = loweredMaxOptions;
+    const broadCost = loweredMaxOptions * (
+      1 + loweredChooseNBeamWidth * innerOptionCap * Math.max(0, broadDepthCap - 1)
+    );
+    const incrementalDeepCost = rootsWithinCap * loweredChooseNBeamWidth * innerOptionCap
+      * Math.max(0, deepDepthCap - broadDepthCap);
+    const totalCost = broadCost + incrementalDeepCost;
+    if (!Number.isSafeInteger(totalCost) || totalCost > capClassBudget) {
+      const breachAmount = totalCost - capClassBudget;
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_DEEP_COST_EXCEEDS_CAP_CLASS,
+        path: `${path}.inner.continuedDeepening`,
+        severity: 'error',
+        message: `Profile "${profileId}" preview.inner continuedDeepening totalCost ${totalCost} exceeds capClass ${loweredCapClass} budget ${capClassBudget}; M=${loweredMaxOptions}, B=${loweredChooseNBeamWidth}, I=${innerOptionCap}, Db=${broadDepthCap}, Dd=${deepDepthCap}, broadCost=${broadCost}, incrementalDeepCost=${incrementalDeepCost}, breachAmount=${breachAmount}.`,
+        suggestion: 'Reduce maxOptions, chooseNBeamWidth, broad.depthCap, or deep.depthCap, or choose a larger supported capClass.',
+      });
+      return undefined;
+    }
+  } else if (!Number.isSafeInteger(cost) || cost > capClassBudget) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_COST_EXCEEDS_HARD_CAP,
       path: `${path}.inner`,
       severity: 'error',
-      message: `Profile "${profileId}" preview.inner cost ${cost} exceeds INNER_PREVIEW_HARD_CAP ${INNER_PREVIEW_HARD_CAP}.`,
+      message: `Profile "${profileId}" preview.inner cost ${cost} exceeds capClass ${loweredCapClass} budget ${capClassBudget}.`,
       suggestion: chooseNStep === true
-        ? 'When chooseNStep is enabled, the per-root-option forced continuation beam costs maxOptions * (1 + chooseNBeamWidth * maxOptions * max(0, depthCap - 1)). Reduce maxOptions, chooseNBeamWidth, or depthCap.'
-        : `Set maxOptions * chooseNBeamWidth * depthCap to ${INNER_PREVIEW_HARD_CAP} or less.`,
+        ? 'When chooseNStep is enabled, the per-root-option forced continuation beam costs maxOptions * (1 + chooseNBeamWidth * maxOptions * max(0, depthCap - 1)). Reduce maxOptions, chooseNBeamWidth, depthCap, or choose a larger supported capClass.'
+        : `Set maxOptions * chooseNBeamWidth * depthCap to ${capClassBudget} or less for the selected capClass.`,
     });
     return undefined;
   }
@@ -1052,7 +1124,156 @@ function lowerPreviewInnerConfig(
     maxOptions: loweredMaxOptions,
     chooseNBeamWidth: loweredChooseNBeamWidth,
     depthCap: loweredDepthCap,
+    strategy: loweredStrategy,
+    capClass: loweredCapClass,
+    ...(loweredContinuedDeepening === undefined ? {} : { continuedDeepening: loweredContinuedDeepening }),
   };
+}
+
+function lowerPreviewInnerStrategy(
+  profileId: string,
+  path: string,
+  value: string | undefined,
+  diagnostics: Diagnostic[],
+): 'singlePass' | 'continuedDeepening' | undefined {
+  if (value === undefined) {
+    return 'singlePass';
+  }
+  if (typeof value !== 'string' || !PREVIEW_INNER_STRATEGIES.has(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_UNKNOWN_STRATEGY,
+      path: `${path}.inner.strategy`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.strategy must be singlePass or continuedDeepening, got ${String(value)}.`,
+      suggestion: 'Set preview.inner.strategy to singlePass or continuedDeepening.',
+    });
+    return undefined;
+  }
+  return value as 'singlePass' | 'continuedDeepening';
+}
+
+function lowerPreviewInnerCapClass(
+  profileId: string,
+  path: string,
+  value: string | undefined,
+  diagnostics: Diagnostic[],
+): CapClass | undefined {
+  if (value === undefined) {
+    return 'standard256';
+  }
+  if (typeof value !== 'string' || !PREVIEW_INNER_CAP_CLASSES.has(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_UNKNOWN_CAP_CLASS,
+      path: `${path}.inner.capClass`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.capClass must be standard256 or deep1024, got ${String(value)}.`,
+      suggestion: 'Set preview.inner.capClass to standard256 or deep1024.',
+    });
+    return undefined;
+  }
+  return value as CapClass;
+}
+
+function lowerContinuedDeepeningConfig(
+  profileId: string,
+  path: string,
+  block: NonNullable<NonNullable<GameSpecAgentProfileDef['preview']>['inner']>['continuedDeepening'],
+  diagnostics: Diagnostic[],
+): ContinuedDeepeningConfig | undefined {
+  if (block === undefined) {
+    return undefined;
+  }
+  if (block === null || typeof block !== 'object' || Array.isArray(block)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.continuedDeepening`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.continuedDeepening must be an object.`,
+      suggestion: 'Use preview.inner.continuedDeepening with broad.depthCap and deep settings.',
+    });
+    return undefined;
+  }
+
+  const broadDepthCap = lowerPreviewInnerContinuedDepthCap(
+    profileId,
+    path,
+    'continuedDeepening.broad.depthCap',
+    block.broad?.depthCap,
+    diagnostics,
+  );
+  const deepDepthCap = lowerPreviewInnerContinuedDepthCap(
+    profileId,
+    path,
+    'continuedDeepening.deep.depthCap',
+    block.deep?.depthCap,
+    diagnostics,
+  );
+  if (broadDepthCap === undefined || deepDepthCap === undefined) {
+    return undefined;
+  }
+  if (deepDepthCap < broadDepthCap) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.continuedDeepening.deep.depthCap`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.continuedDeepening.deep.depthCap ${deepDepthCap} must be at least broad.depthCap ${broadDepthCap}.`,
+      suggestion: 'Set deep.depthCap greater than or equal to broad.depthCap.',
+    });
+    return undefined;
+  }
+
+  const trigger = block.deep?.trigger;
+  if (!Array.isArray(trigger) || trigger.length === 0 || !trigger.every((entry) => (
+    typeof entry === 'string' && DEEP_TRIGGERS.has(entry)
+  ))) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.continuedDeepening.deep.trigger`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.continuedDeepening.deep.trigger must be a non-empty array of supported deep trigger ids.`,
+      suggestion: 'Use allRequestedRefsDepthCapped, allReadyValuesUniform, or both.',
+    });
+    return undefined;
+  }
+  if (block.deep?.rootPolicy !== 'allRootsWithinCap') {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.continuedDeepening.deep.rootPolicy`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.continuedDeepening.deep.rootPolicy must be allRootsWithinCap.`,
+      suggestion: 'Set preview.inner.continuedDeepening.deep.rootPolicy to allRootsWithinCap.',
+    });
+    return undefined;
+  }
+
+  return {
+    broad: { depthCap: broadDepthCap },
+    deep: {
+      depthCap: deepDepthCap,
+      trigger: trigger as readonly DeepTrigger[],
+      rootPolicy: block.deep.rootPolicy,
+    },
+  };
+}
+
+function lowerPreviewInnerContinuedDepthCap(
+  profileId: string,
+  path: string,
+  key: string,
+  value: number | undefined,
+  diagnostics: Diagnostic[],
+): number | undefined {
+  if (!isPositiveSafeInteger(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_INNER_INVALID,
+      path: `${path}.inner.${key}`,
+      severity: 'error',
+      message: `Profile "${profileId}" preview.inner.${key} must be a positive safe integer, got ${String(value)}.`,
+      suggestion: `Set preview.inner.${key} to a positive integer.`,
+    });
+    return undefined;
+  }
+  return value;
 }
 
 function lowerPreviewInnerPositiveInteger(

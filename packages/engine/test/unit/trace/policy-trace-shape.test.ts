@@ -104,6 +104,8 @@ const createMetadata = (): PolicyEvaluationMetadata => ({
       unavailableRootOptionCount: 0,
       allRootsUnavailable: false,
       selectedByTieBreakerBecausePreviewUnavailable: false,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     },
   },
   selectedStableMoveKey: 'advance|{}|false|event',

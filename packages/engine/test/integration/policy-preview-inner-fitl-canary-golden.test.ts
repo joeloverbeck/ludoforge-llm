@@ -144,6 +144,8 @@ function withDiagnosticInnerPreviewProfile(def: GameDef): GameDef {
       maxOptions: previewInner.maxOptions ?? 1,
       chooseNBeamWidth: previewInner.chooseNBeamWidth ?? 1,
       depthCap: previewInner.depthCap ?? 1,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     },
   };
 

@@ -1227,6 +1227,21 @@ const CompiledAgentProfileSchema = z
             maxOptions: z.number().int().positive(),
             chooseNBeamWidth: z.number().int().positive(),
             depthCap: z.number().int().positive(),
+            strategy: z.enum(['singlePass', 'continuedDeepening']),
+            capClass: z.enum(['standard256', 'deep1024']),
+            continuedDeepening: z
+              .object({
+                broad: z.object({ depthCap: z.number().int().positive() }).strict(),
+                deep: z
+                  .object({
+                    depthCap: z.number().int().positive(),
+                    trigger: z.array(z.enum(['allRequestedRefsDepthCapped', 'allReadyValuesUniform'])).nonempty(),
+                    rootPolicy: z.literal('allRootsWithinCap'),
+                  })
+                  .strict(),
+              })
+              .strict()
+              .optional(),
           })
           .strict()
           .optional(),
@@ -2198,6 +2213,15 @@ const PolicyPreviewOutcomeBreakdownTraceSchema = z
   })
   .strict();
 
+const PolicyPreviewPhaseCoverageTraceSchema = z
+  .object({
+    evaluatedRootOptionCount: IntegerSchema.nonnegative(),
+    readyRootOptionCount: IntegerSchema.nonnegative(),
+    unavailableRootOptionCount: IntegerSchema.nonnegative(),
+    triggerFired: z.enum(['allRequestedRefsDepthCapped', 'allReadyValuesUniform']).optional(),
+  })
+  .strict();
+
 const PolicyPreviewCoverageTraceSchema = z
   .object({
     requestedRefCount: IntegerSchema.nonnegative(),
@@ -2206,6 +2230,10 @@ const PolicyPreviewCoverageTraceSchema = z
     unavailableRootOptionCount: IntegerSchema.nonnegative(),
     allRootsUnavailable: BooleanSchema,
     selectedByTieBreakerBecausePreviewUnavailable: BooleanSchema,
+    strategy: z.enum(['singlePass', 'continuedDeepening']),
+    capClass: z.enum(['standard256', 'deep1024']),
+    broad: PolicyPreviewPhaseCoverageTraceSchema.optional(),
+    deep: PolicyPreviewPhaseCoverageTraceSchema.optional(),
   })
   .strict();
 
@@ -2242,6 +2270,7 @@ const PolicyPreviewSignalUnavailableAdvisoryTraceSchema = z
       depthCap: IntegerSchema.nonnegative(),
       noPreviewDecision: IntegerSchema.nonnegative(),
       gated: IntegerSchema.nonnegative(),
+      afterDeepPass: IntegerSchema.nonnegative().optional(),
     }).strict(),
     selectedStableMoveKey: StringSchema,
     selectionReason: z.literal('tiebreakAfterPreviewNoSignal'),

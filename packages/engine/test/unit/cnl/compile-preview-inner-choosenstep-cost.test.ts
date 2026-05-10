@@ -90,6 +90,8 @@ describe('compile preview.inner chooseNStep cost', () => {
       maxOptions: 8,
       chooseNBeamWidth: 1,
       depthCap: 4,
+      strategy: 'singlePass',
+      capClass: 'standard256',
     });
   });
 

@@ -73,6 +73,8 @@ function createProfile(chooseNStep: ChoosenStepPreviewFlag): CompiledAgentProfil
               maxOptions: 4,
               chooseNBeamWidth: 2,
               depthCap: 3,
+              strategy: 'singlePass',
+              capClass: 'standard256',
             },
           }),
     },

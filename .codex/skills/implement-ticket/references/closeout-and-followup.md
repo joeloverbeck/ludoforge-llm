@@ -177,8 +177,22 @@ For a small bounded refactor on an active tracked ticket, use this minimum termi
 2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers and with focused generated-output consumers rerun after any later lane rebuilds the consumed output.
 3. Apply a terminal status/proof transcription patch only after all final lanes are green or classified. Keep this patch to status and exact proof results when practical.
 4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
-5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and finish with untracked-aware `git status --short`.
+5. Transcribe only the checker result, record the no-invalidation rationale, run `git diff --check`, and cover newly added untracked files explicitly before final handoff. For each untracked source, test, fixture, ticket, or report file, either run a targeted whitespace check such as `git diff --no-index --check /dev/null <path>` (treat empty stdout/stderr as whitespace-clean despite the ordinary diff exit code) or record the exact substitute lane that already covered the relevant hygiene for that file.
 6. In the final handoff, state that `post-ticket-review` has or has not run and name the next review/archive workflow when it has not.
+
+### Small Tracked Engine Refactor Checklist
+
+For a small tracked engine ticket that adds or edits TypeScript source/tests, consumes compiled `dist`, and has no schema/golden/migration/follow-up ownership, this is the preferred compact order:
+
+1. Reassess the ticket against `docs/FOUNDATIONS.md`, the referenced spec, live source, and current `git status --short`; classify sibling scope and any stale assumptions before editing.
+2. Emit the working-notes checkpoint, including the ticket-named deliverables ledger, generated-fallout expectation, output-contention plan, source-size risk, runtime surface breadth, and terminal status plan.
+3. Make the source/test edits only after the checkpoint. Keep the diff inside the ticket-owned files unless live reassessment proves owned fallout.
+4. Build the engine package before running focused compiled tests, then run the narrow ticket-owned `node --test packages/engine/dist/...` witness lanes.
+5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, file-size ledger, command substitutions, exact final proof lanes, and no-invalidation plan.
+6. Run the ticket-named package/root lanes serially. Do not overlap any lane that rebuilds or cleans `dist`; after a broad lane rebuilds `dist`, rerun the focused compiled-output witness you still intend to cite as final acceptance evidence.
+7. Apply the terminal status/proof transcription as a narrow final ticket edit only after final lanes are green or classified, then run the ticket-dependency or markdown-integrity checker when status/dependency/archive state changed.
+8. Transcribe only the checker result, record why the transcription is clerical, run `git diff --check`, run targeted hygiene or record substitute coverage for untracked additions, and finish with untracked-aware `git status --short`.
+9. In the final response, include tracked modified paths, untracked additions, final green lanes, classified non-final lanes if any, archive status, and the `$post-ticket-review <ticket>` handoff when archival has not run.
 
 ### Bounded Draft Refactor Terminal Closeout
 

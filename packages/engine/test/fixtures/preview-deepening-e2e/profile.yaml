@@ -1,0 +1,27 @@
+profileId: continued-deepening-e2e
+purpose: synthetic chooseN ladder that makes broad preview depth-capped and deep preview ready
+preview:
+  mode: exactWorld
+  completion: policyGuided
+  inner:
+    chooseOne: false
+    chooseNStep: true
+    maxOptions: 4
+    chooseNBeamWidth: 1
+    depthCap: 1
+    strategy: continuedDeepening
+    capClass: deep1024
+    continuedDeepening:
+      broad:
+        depthCap: 1
+      deep:
+        depthCap: 3
+        trigger:
+          - allRequestedRefsDepthCapped
+        rootPolicy: allRootsWithinCap
+considerations:
+  - id: preferProjectedMargin
+    scopes: [microturn]
+    valueRef: preview.option.delta.victory.currentMargin.self
+    previewFallback:
+      onUnavailable: noContribution

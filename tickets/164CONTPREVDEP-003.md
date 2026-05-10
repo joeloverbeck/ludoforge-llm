@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-agent-inner-preview.ts` (strategy dispatch insertion)
-**Deps**: `tickets/164CONTPREVDEP-002.md`
+**Deps**: `archive/tickets/164CONTPREVDEP-002.md`
 
 ## Problem
 

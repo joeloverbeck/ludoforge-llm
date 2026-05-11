@@ -220,7 +220,7 @@ export function scoreProjectedOption(
 export function evaluateActionSelectionProjectedLookup() {
   const ref = projectedLookupRef('zones', 'ZoneId', {
     kind: 'ref',
-    ref: { kind: 'candidateParam', id: 'target' },
+    ref: { kind: 'candidateParam', id: 'target', onMissing: 'unavailable' },
   }, ['variables', 'population']);
   const considerations = { projected0: createProjectedConsideration(ref) };
   const candidate: PolicyEvaluationCandidate = {

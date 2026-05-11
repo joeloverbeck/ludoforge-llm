@@ -399,6 +399,12 @@ export type LookupUnavailabilityReason = 'hidden' | 'missing' | 'typeMismatch' |
 export type LookupRefStatus =
   | { readonly kind: 'ready'; readonly value: number | string | boolean }
   | { readonly kind: 'unavailable'; readonly reason: LookupUnavailabilityReason };
+export type CompiledAgentPolicyRefOnMissing =
+  | 'unavailable'
+  | {
+      readonly kind: 'constant';
+      readonly value: number | string | boolean;
+    };
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
@@ -413,6 +419,8 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'candidateParam';
       readonly id: string;
+      readonly onMissing: CompiledAgentPolicyRefOnMissing;
+      readonly appliesToActions?: readonly string[];
     }
   | {
       readonly kind: 'microturnIntrinsic';
@@ -434,10 +442,7 @@ export type CompiledAgentPolicyRef =
       readonly keyType: 'ZoneId' | 'TokenId' | 'PlayerId' | 'string';
       readonly key: CompiledPolicyExpr;
       readonly path: readonly string[];
-      readonly onMissing: 'unavailable' | {
-        readonly kind: 'constant';
-        readonly value: number | string | boolean;
-      };
+      readonly onMissing: CompiledAgentPolicyRefOnMissing;
       readonly onHidden: 'unavailable';
     }
   | {

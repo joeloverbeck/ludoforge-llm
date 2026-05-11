@@ -171,6 +171,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 - If you changed runtime Zod/object schemas or shared contract shapes, regenerate schema artifacts before interpreting schema-test failures.
 - When kernel schema sources, generated GameDef/Trace contracts, exported trace/result shapes, or other generator-backed public contracts change, schedule the authoritative artifact-generation command plus the artifact-check command before broad package/root test lanes. Record both commands in the active ticket outcome or final closeout when generated diffs persist.
+  - If the artifact checker reads built output such as `dist/`, treat broad build/test lanes that refresh that output as producers, not just verification. A typical stable sequence is: build the package/root lane, run artifact generation, run artifact check, run later broad lanes as needed, then rerun the narrow artifact check if any later lane rebuilt or cleaned the consumed output tree.
 - Confirm producing commands have exited before diagnosing artifact contents. Confirm artifact paths match command write targets.
 - Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
 - When touched source contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.

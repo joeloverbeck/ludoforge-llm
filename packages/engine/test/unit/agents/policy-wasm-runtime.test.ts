@@ -234,7 +234,7 @@ describe('policy WASM runtime bridge', () => {
       weight: { kind: 'literal' as const, value: 3 },
       value: {
         kind: 'ref' as const,
-        ref: { kind: 'candidateParam' as const, id: 'urgency' },
+        ref: { kind: 'candidateParam' as const, id: 'urgency', onMissing: 'unavailable' as const },
       },
       dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
     };
@@ -286,7 +286,7 @@ describe('policy WASM runtime bridge', () => {
       weight: { kind: 'param' as const, id: 'urgencyWeight' },
       value: {
         kind: 'ref' as const,
-        ref: { kind: 'candidateParam' as const, id: 'urgency' },
+        ref: { kind: 'candidateParam' as const, id: 'urgency', onMissing: 'unavailable' as const },
       },
       dependencies: { parameters: ['urgencyWeight'], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
     };

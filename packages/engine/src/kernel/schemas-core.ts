@@ -684,9 +684,18 @@ const CompiledAgentPolicyRefSchema = z.union([
     kind: z.literal('candidateIntrinsic'),
     intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
+  // Spec 166 §4.1: candidate-param refs carry explicit missing-value policy.
   z.object({
     kind: z.literal('candidateParam'),
     id: StringSchema,
+    onMissing: z.union([
+      z.literal('unavailable'),
+      z.object({
+        kind: z.literal('constant'),
+        value: z.union([IntegerSchema, StringSchema, BooleanSchema]),
+      }).strict(),
+    ]),
+    appliesToActions: z.array(StringSchema).optional(),
   }).strict(),
   z.object({
     kind: z.literal('microturnIntrinsic'),

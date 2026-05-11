@@ -71,7 +71,7 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
   globalTokenAgg: { expr: { kind: 'globalTokenAgg', zoneScope: 'all', prop: 'power', aggOp: 'sum' } },
   globalZoneAgg: { expr: { kind: 'globalZoneAgg', source: 'variable', field: 'control', aggOp: 'sum', zoneScope: 'all' } },
   candidateIntrinsic: { expr: { kind: 'ref', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } } },
-  candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount' } } },
+  candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount', onMissing: 'unavailable' } } },
   candidateTag: { expr: { kind: 'ref', ref: { kind: 'candidateTag', tagName: 'urgent' } } },
   candidateTags: { expr: { kind: 'ref', ref: { kind: 'candidateTags' } } },
   microturnIntrinsic: {

@@ -161,7 +161,7 @@ This ticket carries no new behavioral tests — the surface extension and code r
 - The spec's follow-on ticket list now uses the live `165PROSTALOO-*` ticket ids rather than the placeholder `165PROJLOOKUP-*` namespace.
 
 **Deferred sibling/spec scope**:
-- `tickets/165PROSTALOO-002.md` owns `LookupStateSource` and `resolveLookupAgainstState`.
+- `archive/tickets/165PROSTALOO-002.md` owns `LookupStateSource` and `resolveLookupAgainstState`.
 - `tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostic emission.
 - `tickets/165PROSTALOO-004.md` owns runtime routing.
 - `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
@@ -174,7 +174,7 @@ This ticket carries no new behavioral tests — the surface extension and code r
 **File-size ledger**:
 - `packages/engine/src/kernel/types-core.ts`: 2185 -> 2185 lines; preexisting canonical contract hub over guidance; active growth is one literal in an existing union. Extraction would widen the ticket seam. Residual owner: none.
 - `packages/engine/src/kernel/schemas-core.ts`: 2600 -> 2603 lines; preexisting canonical schema hub over guidance; active growth is one existing schema mirror union. Extraction would widen the ticket seam. Residual owner: none.
-- `packages/engine/src/agents/policy-lookup-surface.ts`: 347 -> 357 lines; resolver-adjacent provenance export remains in the existing lookup surface module. Residual owner: `tickets/165PROSTALOO-002.md`.
+- `packages/engine/src/agents/policy-lookup-surface.ts`: 347 -> 357 lines; resolver-adjacent provenance export remains in the existing lookup surface module. Residual owner: `archive/tickets/165PROSTALOO-002.md`.
 - `packages/engine/src/cnl/compiler-diagnostic-codes.ts`: 369 -> 372 lines; central diagnostic-code registry remains the canonical owner for compiler diagnostic constants. Residual owner: `tickets/165PROSTALOO-003.md`.
 
 **Post-review cleanup**:

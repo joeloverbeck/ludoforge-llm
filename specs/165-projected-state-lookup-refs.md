@@ -424,7 +424,7 @@ Each ticket records its own acceptance criteria, dependencies, and architectural
 Decomposed via `/spec-to-tickets` on 2026-05-11:
 
 - [`archive/tickets/165PROSTALOO-001.md`](../archive/tickets/165PROSTALOO-001.md) — Extend `lookup.surface` union, export `LookupStateProvenance`, register new diagnostic codes (covers Phase 0)
-- [`tickets/165PROSTALOO-002.md`](../tickets/165PROSTALOO-002.md) — Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution` (covers Phase 1 / §4.2)
+- [`archive/tickets/165PROSTALOO-002.md`](../archive/tickets/165PROSTALOO-002.md) — Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution` (covers Phase 1 / §4.2)
 - [`tickets/165PROSTALOO-003.md`](../tickets/165PROSTALOO-003.md) — Compiler lowering for `lookup.surface: previewOptionState` and surface-keyed fallback split (covers Phase 2 / §4.6 / §5)
 - [`tickets/165PROSTALOO-004.md`](../tickets/165PROSTALOO-004.md) — Runtime routing for `lookup.surface: previewOptionState` in `resolveLookupRef` (covers Phase 3 / §4.3 / §6)
 - [`tickets/165PROSTALOO-005.md`](../tickets/165PROSTALOO-005.md) — Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs (covers Phase 4 / §4.8)

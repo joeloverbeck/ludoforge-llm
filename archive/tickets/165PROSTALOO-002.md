@@ -1,6 +1,6 @@
 # 165PROSTALOO-002: Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-lookup-surface.ts`
@@ -136,3 +136,43 @@ No new tests authored in this ticket — the refactor's correctness is proven by
 3. `pnpm turbo typecheck` — strict typecheck.
 4. `pnpm turbo lint` — lint.
 5. `pnpm run check:ticket-deps` — verify Deps path resolves.
+
+## Outcome
+
+**Completion date**: 2026-05-11
+
+**Status target**: COMPLETED after final verification.
+
+**What landed**:
+- Added exported `LookupStateSource` beside the resolver context in `packages/engine/src/agents/policy-lookup-surface.ts`.
+- Extracted exported `resolveLookupAgainstState(context, source, ref, keyValue, seatContext?)` as the core lookup resolver.
+- Rewrote `resolveLookupViaSeatResolution` as the current-state wrapper, using `{ state: context.state, provenance: { kind: 'currentState' } }`.
+- Threaded the explicit source `GameState` through key validation and lookup projection helpers, while keeping visibility catalogs and observer-seat resolution on the existing resolver context.
+
+**Owned generated/artifact fallout**:
+- None. This ticket changes an internal policy/agent resolver surface only; no schema source, generated schema artifact, golden, or compiled game JSON changed.
+
+**Deferred sibling/spec scope**:
+- `tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostics.
+- `tickets/165PROSTALOO-004.md` owns runtime routing for `surface: 'previewOptionState'`.
+- `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
+- `tickets/165PROSTALOO-006.md` owns cookbook and end-to-end projected-lookup fixture coverage.
+
+**Touched-file scope**:
+- Ticket-named source file modified: `packages/engine/src/agents/policy-lookup-surface.ts`.
+- No caller-site changes were required; `packages/engine/src/agents/policy-runtime.ts` remains on the wrapper and is intentionally unchanged.
+
+**File-size ledger**:
+- `packages/engine/src/agents/policy-lookup-surface.ts`: 357 -> 384 lines; below repo guidance; active growth is the ticket-owned extraction and explicit state threading. Extraction into another file would widen this small resolver refactor. Residual owner: none.
+
+**Verification plan**:
+- `pnpm turbo build` — passed.
+- focused Spec 163 lookup-refs compiled lane: `node --test packages/engine/dist/test/architecture/lookup-refs/*.js` — passed, 16 tests / 8 suites.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm -F @ludoforge/engine test` — passed, including `schema:artifacts:check` and default engine lane summary `65/65 files passed`.
+- `pnpm run check:ticket-deps` — passed; dependency integrity check passed for 5 active tickets and 2297 archived tickets.
+
+**Late-edit proof validity**:
+- No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.
+- No-invalidation: dependency-check result transcription only; no dependency paths, status semantics, acceptance scope, proof command, or touched-file ownership changed.

@@ -3,7 +3,6 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import type { DeepTrigger } from '../kernel/types.js';
 import {
   buildPolicyVictorySurface,
-  type PolicyValue,
   type SurfaceResolutionContext,
 } from './policy-surface.js';
 import {
@@ -25,37 +24,76 @@ export interface DeepeningRunResult {
   readonly triggerFired?: DeepTrigger;
 }
 
-const policyValueKey = (value: PolicyValue): string => JSON.stringify(value);
+export interface PreviewDerivedTriggerTerm {
+  readonly id: string;
+  readonly refIds: readonly string[];
+}
+
+export interface PreviewDerivedTriggerOption {
+  readonly stableMoveKey: string;
+  readonly unavailableRefs: ReadonlyMap<string, string>;
+  readonly contributionByTermId: ReadonlyMap<string, number>;
+}
+
+export interface PreviewDerivedTriggerSignals {
+  readonly refIds: readonly string[];
+  readonly terms: readonly PreviewDerivedTriggerTerm[];
+  readonly options: readonly PreviewDerivedTriggerOption[];
+}
+
+const optionSignalsFor = (
+  signals: PreviewDerivedTriggerSignals,
+  stableMoveKey: string,
+): PreviewDerivedTriggerOption | undefined =>
+  signals.options.find((option) => option.stableMoveKey === stableMoveKey);
+
+const refStatus = (
+  option: ChooseNStepInnerPreviewResult,
+  signals: PreviewDerivedTriggerSignals,
+  refId: string,
+): { readonly kind: 'ready' } | { readonly kind: 'unavailable'; readonly reason: string } | undefined => {
+  const status = option.resolvedRefs.get(refId);
+  if (status !== undefined) {
+    return status.kind === 'ready' ? { kind: 'ready' } : status;
+  }
+  const reason = optionSignalsFor(signals, option.stableMoveKey)?.unavailableRefs.get(refId);
+  return reason === undefined ? undefined : { kind: 'unavailable', reason };
+};
 
 const allRequestedRefsDepthCapped = (
   run: ChooseNStepInnerPreviewRun,
-  refIds: readonly string[],
-): boolean => refIds.length > 0
+  signals: PreviewDerivedTriggerSignals,
+): boolean => signals.refIds.length > 0
   && run.options.length > 0
-  && run.options.every((option) => refIds.every((refId) => {
-    const status = option.resolvedRefs.get(refId);
+  && run.options.every((option) => signals.refIds.every((refId) => {
+    const status = refStatus(option, signals, refId);
     return status?.kind === 'unavailable' && status.reason === 'depthCap';
   }));
 
+// Spec 164/165 define uniformity over post-expression numeric contribution,
+// not over raw preview-derived ref identity.
 const allReadyValuesUniform = (
   run: ChooseNStepInnerPreviewRun,
-  refIds: readonly string[],
+  signals: PreviewDerivedTriggerSignals,
 ): boolean => {
-  if (refIds.length === 0 || run.options.length === 0) {
+  if (signals.terms.length === 0 || run.options.length === 0) {
     return false;
   }
-  for (const refId of refIds) {
-    let valueKey: string | undefined;
+  for (const term of signals.terms) {
+    let contribution: number | undefined;
     for (const option of run.options) {
-      const status = option.resolvedRefs.get(refId);
-      if (status?.kind !== 'ready') {
+      const optionSignals = optionSignalsFor(signals, option.stableMoveKey);
+      if (
+        optionSignals === undefined
+        || term.refIds.some((refId) => refStatus(option, signals, refId)?.kind === 'unavailable')
+      ) {
         return false;
       }
-      const nextKey = policyValueKey(status.value);
-      if (valueKey !== undefined && valueKey !== nextKey) {
+      const nextContribution = optionSignals.contributionByTermId.get(term.id) ?? 0;
+      if (contribution !== undefined && contribution !== nextContribution) {
         return false;
       }
-      valueKey = nextKey;
+      contribution = nextContribution;
     }
   }
   return true;
@@ -63,14 +101,14 @@ const allReadyValuesUniform = (
 
 const firedTrigger = (
   run: ChooseNStepInnerPreviewRun,
-  refIds: readonly string[],
+  signals: PreviewDerivedTriggerSignals,
   triggers: readonly DeepTrigger[],
 ): DeepTrigger | undefined => {
   for (const trigger of triggers) {
-    if (trigger === 'allRequestedRefsDepthCapped' && allRequestedRefsDepthCapped(run, refIds)) {
+    if (trigger === 'allRequestedRefsDepthCapped' && allRequestedRefsDepthCapped(run, signals)) {
       return trigger;
     }
-    if (trigger === 'allReadyValuesUniform' && allReadyValuesUniform(run, refIds)) {
+    if (trigger === 'allReadyValuesUniform' && allReadyValuesUniform(run, signals)) {
       return trigger;
     }
   }
@@ -127,13 +165,13 @@ const resolveDeepOption = (
 export const runDeepPass = (
   input: RunChooseNStepInnerPreviewInput,
   broadRun: ChooseNStepInnerPreviewRun,
-  refIds: readonly string[],
+  triggerSignals: PreviewDerivedTriggerSignals,
 ): DeepeningRunResult => {
   const config = input.profile.preview.inner?.continuedDeepening;
   if (config === undefined) {
     return { run: broadRun };
   }
-  const triggerFired = firedTrigger(broadRun, refIds, config.deep.trigger);
+  const triggerFired = firedTrigger(broadRun, triggerSignals, config.deep.trigger);
   if (triggerFired === undefined) {
     return { run: broadRun };
   }

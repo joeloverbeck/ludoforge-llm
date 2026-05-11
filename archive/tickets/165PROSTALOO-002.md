@@ -141,6 +141,8 @@ No new tests authored in this ticket — the refactor's correctness is proven by
 
 **Completion date**: 2026-05-11
 
+Outcome amended: 2026-05-11
+
 **Status target**: COMPLETED after final verification.
 
 **What landed**:
@@ -155,7 +157,7 @@ No new tests authored in this ticket — the refactor's correctness is proven by
 **Deferred sibling/spec scope**:
 - `tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostics.
 - `archive/tickets/165PROSTALOO-004.md` owns runtime routing for `surface: 'previewOptionState'`.
-- `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
+- `archive/tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
 - `tickets/165PROSTALOO-006.md` owns cookbook and end-to-end projected-lookup fixture coverage.
 
 **Touched-file scope**:

@@ -166,7 +166,7 @@ Outcome amended: 2026-05-11 — post-completion archived-ticket outcome normaliz
 - `archive/tickets/165PROSTALOO-002.md` owns `LookupStateSource` and `resolveLookupAgainstState`.
 - `archive/tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostic emission.
 - `archive/tickets/165PROSTALOO-004.md` owns runtime routing.
-- `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
+- `archive/tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
 - `tickets/165PROSTALOO-006.md` owns the cookbook and end-to-end fixture.
 
 **Touched-file scope**:

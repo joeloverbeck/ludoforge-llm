@@ -427,5 +427,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-11:
 - [`archive/tickets/165PROSTALOO-002.md`](../archive/tickets/165PROSTALOO-002.md) — Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution` (covers Phase 1 / §4.2)
 - [`archive/tickets/165PROSTALOO-003.md`](../archive/tickets/165PROSTALOO-003.md) — Compiler lowering for `lookup.surface: previewOptionState` and surface-keyed fallback split (covers Phase 2 / §4.6 / §5)
 - [`archive/tickets/165PROSTALOO-004.md`](../archive/tickets/165PROSTALOO-004.md) — Runtime routing for `lookup.surface: previewOptionState` in `resolveLookupRef` (covers Phase 3 / §4.3 / §6)
-- [`tickets/165PROSTALOO-005.md`](../tickets/165PROSTALOO-005.md) — Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs (covers Phase 4 / §4.8)
+- [`archive/tickets/165PROSTALOO-005.md`](../archive/tickets/165PROSTALOO-005.md) — Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs (covers Phase 4 / §4.8)
 - [`tickets/165PROSTALOO-006.md`](../tickets/165PROSTALOO-006.md) — Cookbook recipe + end-to-end projected-lookup fixture (covers Phase 5 / §4.5)

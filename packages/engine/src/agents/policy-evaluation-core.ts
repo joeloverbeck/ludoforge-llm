@@ -1816,7 +1816,7 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
   }
 }
 
-function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {
+export function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {
   return [
     'lookup',
     ref.surface,

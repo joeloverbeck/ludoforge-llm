@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new fixture file under `packages/engine/test/architecture/lookup-refs-projected/`; docs change in `docs/agent-dsl-cookbook.md`
-**Deps**: `archive/tickets/165PROSTALOO-003.md`, `archive/tickets/165PROSTALOO-004.md`, `tickets/165PROSTALOO-005.md`
+**Deps**: `archive/tickets/165PROSTALOO-003.md`, `archive/tickets/165PROSTALOO-004.md`, `archive/tickets/165PROSTALOO-005.md`
 
 ## Problem
 

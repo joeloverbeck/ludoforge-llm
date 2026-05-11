@@ -1,6 +1,6 @@
 # 165PROSTALOO-005: Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-preview-inner-deepening.ts`
@@ -20,13 +20,13 @@ The implementation is small: widen the ref-set scan in the trigger evaluator to 
 1. `packages/engine/src/agents/policy-preview-inner-deepening.ts` exists — verified by `test -f`.
 2. Spec 164 §5.4 documents `allRequestedRefsDepthCapped` and `allReadyValuesUniform` as the two deep-pass triggers; their evaluators live in `policy-preview-inner-deepening.ts` per Spec 165 §6.
 3. The ref-set scan in the trigger evaluator today probably keys on `previewOptionRef` ref kinds plus already-existing surface refs. Confirm at implementation time by reading the evaluator; widen the predicate to include `lookup.surface: 'previewOptionState'`.
-4. `allReadyValuesUniform` is "defined over post-expression numeric contribution" per both Spec 164 and Spec 165 §4.8 — confirm this is the existing semantics by reading the evaluator. Spec 165 explicitly states "this spec widens the ref set, not the trigger semantics". If the evaluator today is keyed on raw ref values (not post-expression contribution), that is a Spec-164-vs-implementation discrepancy and should be raised separately — do not silently expand the scope of this ticket.
+4. `allReadyValuesUniform` is "defined over post-expression numeric contribution" per both Spec 164 and Spec 165 §4.8. Live reassessment found the evaluator still compares raw per-ref values, not post-expression contribution values. Per the 2026-05-11 user-approved Foundation #15/#20 boundary reset, this ticket now owns repairing that Spec-164-vs-implementation discrepancy before widening projected-lookup trigger coverage.
 5. The two new tests follow the pattern of existing Spec 164 deepening tests (search `packages/engine/test/architecture/preview-deepening/` for examples); reuse fixture-construction patterns from there.
 6. The "depthCap → unavailable" outcome from `DriveResult.outcome === 'depthCap'` is mapped to a `depthCap` reason in `unknownPreviewRefs[]` by ticket 004; confirm the trigger evaluator inspects that map (or equivalent per-ref state) to determine `allRequestedRefsDepthCapped`.
 
 ## Architecture Check
 
-1. **Ref-set widening only, no trigger-semantics change**: Spec 165 §4.8 is explicit. The deepening pipeline's correctness invariants (post-expression contribution honesty, no manufactured differentiation) hold unchanged. Foundation #20 (Preview Signal Integrity) reinforced — the deep pass either produces real differentiation or honestly records `tiebreakAfterPreviewNoSignal`.
+1. **Ref-set widening plus trigger-semantics repair**: Spec 165 §4.8 is explicit that uniformity is over post-expression numeric contribution. Live code compared raw ref values, so this ticket now owns restoring the documented Spec 164/165 semantics and then widening projected-lookup participation. Foundation #20 (Preview Signal Integrity) reinforced — the deep pass either produces real differentiation or honestly records `tiebreakAfterPreviewNoSignal`.
 2. **No new cap class**: Spec §3 non-goals. The existing `standard256` / `deep1024` named cap classes accommodate the additional path-walk cost (O(1) per option per ref). Foundation #10 (Bounded Computation) preserved.
 3. **Engine-agnostic widening**: the trigger predicate is keyed on the generic compiled-ref shape (`refKind === 'previewOptionRef' || (refKind === 'lookup' && surface === 'previewOptionState')`). No game-specific branching. Foundation #1.
 4. **Determinism preserved**: the trigger evaluator's iteration order is unchanged; widening the included set does not alter the order of any ready-stats inspection. Foundation #8.
@@ -39,11 +39,11 @@ In `packages/engine/src/agents/policy-preview-inner-deepening.ts`, locate the pr
 
 Implementation note: the easiest predicate is "is this ref preview-derived?" — same predicate the compiler uses for `previewFallback` requirement (ticket 003). If a shared helper exists, reuse it. If not, define one and reuse across compiler and deepening evaluator to keep the two surfaces aligned.
 
-### 2. Confirm `allReadyValuesUniform` operates on post-expression contribution
+### 2. Repair `allReadyValuesUniform` to operate on post-expression contribution
 
-Read the evaluator's implementation. If it already operates on post-expression numeric contribution per `value.expr`, no code change is required for this trigger — Spec 165 §4.8 narrows the documentation. Add a docstring comment near the evaluator pointing at Spec 165 §4.8 for the post-expression-contribution semantics and Open Question #2 for the non-numeric edge case.
+The evaluator operated on raw ref values at reassessment time. Repair it so the trigger evaluates each preview-derived microturn consideration's final numeric contribution per candidate option. Projected lookups whose resolved values are non-numeric scalars participate through the downstream arithmetic in `value.expr`; no raw string/boolean identity comparison should fire or suppress the trigger by itself.
 
-If the evaluator operates on raw ref values today, this is a Spec-164-vs-implementation discrepancy — surface it via the 1-3-1 rule rather than silently changing behavior.
+This boundary reset was approved by the user on 2026-05-11 after reassessing the options against `docs/FOUNDATIONS.md`: Foundation #15 requires fixing the root semantic gap, and Foundation #20 requires preview no-signal decisions to be based on actual contribution signal rather than raw ref identity.
 
 ### 3. Trace honesty
 
@@ -60,14 +60,17 @@ Reuse fixture-construction patterns from `packages/engine/test/architecture/prev
 
 ## Files to Touch
 
-- `packages/engine/src/agents/policy-preview-inner-deepening.ts` (modify — widen `allRequestedRefsDepthCapped` predicate; possibly add docstring near `allReadyValuesUniform`)
+- `packages/engine/src/agents/policy-agent-inner-preview.ts` (modify — collect preview-derived projected lookup refs and compute contribution-based trigger signals)
+- `packages/engine/src/agents/policy-preview-inner-deepening.ts` (modify — widen `allRequestedRefsDepthCapped` predicate and repair `allReadyValuesUniform` to consume contribution-based trigger signals)
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify — export canonical `lookupRefKey` so preview usage/deepening and runtime evaluation share the same projected-lookup ref id)
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-deepening-fixture.ts` (new helper fixture for the Phase 4 trigger witnesses)
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-deepening-trigger-depthcap.test.ts` (new — Spec §8.3 #12)
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-deepening-trigger-uniform.test.ts` (new — Spec §8.3 #13)
 
 ## Out of Scope
 
 - New cap class introduction — Spec §3 forbids.
-- Spec 164 trigger-semantics change — Spec §4.8 is explicit: widen ref set only.
+- New trigger semantics beyond Spec 164/165 §4.8 — this ticket repairs live code back to the documented post-expression contribution semantics, but does not introduce a different trigger rule.
 - Cookbook recipe + end-to-end fixture — ticket 165PROSTALOO-006.
 - The optional FITL ARVN profile-quality witness — Spec §8.5 #14.
 - Drive-time observer-purity hardening — explicitly deferred per Spec §11 open question 1.
@@ -86,7 +89,7 @@ Reuse fixture-construction patterns from `packages/engine/test/architecture/prev
 
 ### Invariants
 
-1. **Ref-set widening, not trigger-semantics change**: `allRequestedRefsDepthCapped` covers `previewOptionRef`s AND `lookup.surface: 'previewOptionState'` refs; `allReadyValuesUniform` semantics are unchanged (post-expression numeric contribution).
+1. **Ref-set widening and documented trigger semantics**: `allRequestedRefsDepthCapped` covers `previewOptionRef`s AND `lookup.surface: 'previewOptionState'` refs; `allReadyValuesUniform` operates on post-expression numeric contribution.
 2. **No manufactured differentiation**: when deepening fires and contributions remain uniform, the trace records `tiebreakAfterPreviewNoSignal` honestly. Foundation #20 reinforced.
 3. **Determinism**: same compiled spec + same drive cache = same trigger outcome and same trace serialization. Foundation #8.
 
@@ -104,3 +107,26 @@ Reuse fixture-construction patterns from `packages/engine/test/architecture/prev
 3. `pnpm -F @ludoforge/engine test` — full engine suite (must include all Spec 164 deepening tests).
 4. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint` — gates.
 5. `pnpm run check:ticket-deps` — Deps validation.
+
+## Outcome
+
+Completed on 2026-05-11:
+
+- Landed the user-approved Foundation #15/#20 boundary reset: `allReadyValuesUniform` now evaluates preview-derived microturn consideration contributions after expression evaluation instead of comparing raw ref values.
+- Widened the preview-derived requested-ref set to include `lookup.surface: previewOptionState` refs, using the same canonical `lookupRefKey` string as runtime evaluation.
+- Added the two Phase 4 architectural witnesses plus a small projected-lookup deepening fixture. The depth-cap witness proves projected lookups trigger a deep pass after broad `depthCap`; the uniform witness proves post-expression uniform projected-lookup contributions trigger deepening and keep the selected trace reason honest as `tiebreakAfterPreviewNoSignal`.
+- Generated/schema fallout: none expected; this ticket changes policy-agent preview/deepening behavior and architecture tests only.
+- Deferred scope remains unchanged: cookbook/e2e fixture ticket `165PROSTALOO-006`, optional FITL ARVN profile-quality witness, and observer-purity hardening remain out of scope.
+- Source-size ledger: `packages/engine/src/agents/policy-agent-inner-preview.ts | 292 before | 519 after | crossed cap? no | active growth: projected-lookup signal collection and contribution summaries | extraction/defer rationale: still below 600-line near-cap threshold and cohesive with preview usage/deepening orchestration | successor: none`; `packages/engine/src/agents/policy-preview-inner-deepening.ts | 185 before | 223 after | crossed cap? no | active growth: trigger signal consumption | extraction/defer rationale: below guidance | successor: none`.
+- Final command ledger:
+  - `pnpm -F @ludoforge/engine build` — passed as intermediate build for compiled tests.
+  - `node --test packages/engine/dist/test/architecture/lookup-refs-projected/projected-lookup-deepening-*.test.js` — passed as focused witness.
+  - `node --test packages/engine/dist/test/architecture/preview-deepening/*.test.js packages/engine/dist/test/architecture/lookup-refs-projected/*.test.js` — passed as adjacent Spec 164 + Spec 165 architecture regression lane.
+  - `pnpm turbo build` — passed.
+  - `node --test packages/engine/dist/test/architecture/lookup-refs-projected/projected-lookup-deepening-*.test.js` — rerun after root build, passed.
+  - `pnpm -F @ludoforge/engine test` — passed, default lane summary `65/65 files passed`.
+  - `pnpm turbo typecheck` — passed.
+  - `pnpm turbo lint` — passed.
+  - `pnpm run check:ticket-deps` — passed after one archived-ticket metadata repair; final output: `Ticket dependency integrity check passed for 2 active tickets and 2300 archived tickets.`
+- Archived-ticket hygiene repair: `archive/tickets/165PROSTALOO-002.md` received the required `Outcome amended: 2026-05-11` marker for a pre-existing post-completion archived-ticket edit surfaced by `check:ticket-deps`. This was clerical graph hygiene and did not change active scope, acceptance criteria, command semantics, code, tests, or proof claims.
+- Late-edit proof validity: after the first final proof set, a narrow code review adjustment kept chooseOne preview-usage reporting on the pre-existing `preview.option.*` requested-ref set because chooseOne does not participate in continued deepening. The affected final proof lanes were rerun afterward: `pnpm turbo build`, the focused projected-lookup deepening compiled tests, `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm run check:ticket-deps` all passed.

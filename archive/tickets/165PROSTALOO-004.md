@@ -209,7 +209,7 @@ Touched files:
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-costclass-runtime.test.ts`
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-collection-coverage.test.ts`
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-determinism.test.ts`
-- `specs/165-projected-state-lookup-refs.md`
+- `archive/specs/165-projected-state-lookup-refs.md`
 - `archive/tickets/165PROSTALOO-004.md`
 
 Source-size ledger:

@@ -1,6 +1,6 @@
 # Spec 165 — Projected-State Lookup Refs
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium
 **Complexity**: M
 **Date**: 2026-05-11
@@ -423,9 +423,18 @@ Each ticket records its own acceptance criteria, dependencies, and architectural
 
 Decomposed via `/spec-to-tickets` on 2026-05-11:
 
-- [`archive/tickets/165PROSTALOO-001.md`](../archive/tickets/165PROSTALOO-001.md) — Extend `lookup.surface` union, export `LookupStateProvenance`, register new diagnostic codes (covers Phase 0)
-- [`archive/tickets/165PROSTALOO-002.md`](../archive/tickets/165PROSTALOO-002.md) — Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution` (covers Phase 1 / §4.2)
-- [`archive/tickets/165PROSTALOO-003.md`](../archive/tickets/165PROSTALOO-003.md) — Compiler lowering for `lookup.surface: previewOptionState` and surface-keyed fallback split (covers Phase 2 / §4.6 / §5)
-- [`archive/tickets/165PROSTALOO-004.md`](../archive/tickets/165PROSTALOO-004.md) — Runtime routing for `lookup.surface: previewOptionState` in `resolveLookupRef` (covers Phase 3 / §4.3 / §6)
-- [`archive/tickets/165PROSTALOO-005.md`](../archive/tickets/165PROSTALOO-005.md) — Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs (covers Phase 4 / §4.8)
-- [`tickets/165PROSTALOO-006.md`](../tickets/165PROSTALOO-006.md) — Cookbook recipe + end-to-end projected-lookup fixture (covers Phase 5 / §4.5)
+- [`archive/tickets/165PROSTALOO-001.md`](../tickets/165PROSTALOO-001.md) — Extend `lookup.surface` union, export `LookupStateProvenance`, register new diagnostic codes (covers Phase 0)
+- [`archive/tickets/165PROSTALOO-002.md`](../tickets/165PROSTALOO-002.md) — Extract `resolveLookupAgainstState` from `resolveLookupViaSeatResolution` (covers Phase 1 / §4.2)
+- [`archive/tickets/165PROSTALOO-003.md`](../tickets/165PROSTALOO-003.md) — Compiler lowering for `lookup.surface: previewOptionState` and surface-keyed fallback split (covers Phase 2 / §4.6 / §5)
+- [`archive/tickets/165PROSTALOO-004.md`](../tickets/165PROSTALOO-004.md) — Runtime routing for `lookup.surface: previewOptionState` in `resolveLookupRef` (covers Phase 3 / §4.3 / §6)
+- [`archive/tickets/165PROSTALOO-005.md`](../tickets/165PROSTALOO-005.md) — Continued-deepening integration — widen Spec 164 triggers to projected-lookup refs (covers Phase 4 / §4.8)
+- [`archive/tickets/165PROSTALOO-006.md`](../tickets/165PROSTALOO-006.md) — Cookbook recipe + end-to-end projected-lookup fixture (covers Phase 5 / §4.5)
+
+## Outcome
+
+- Completion date: 2026-05-11.
+- Implemented through the archived `165PROSTALOO-*` ticket series:
+  - `archive/tickets/165PROSTALOO-001.md` through `archive/tickets/165PROSTALOO-006.md`.
+- The completed series adds the `previewOptionState` lookup surface, resolver provenance, compiler diagnostics and fallback validation, runtime routing, continued-deepening integration, cookbook authoring guidance, and the synthetic end-to-end projected-lookup fixture.
+- Deferred scope remains unchanged: optional FITL ARVN profile-quality convergence witness and broader drive-time observer-purity hardening are future work, not prerequisites for this spec's completed implementation.
+- Final verification is recorded in the archived tickets. The terminal Phase 5 proof included `pnpm turbo build`, the focused projected lookup end-to-end Node test, `pnpm -F @ludoforge/engine test`, `pnpm turbo typecheck`, `pnpm turbo lint`, and `pnpm run check:ticket-deps`.

@@ -337,6 +337,75 @@ preferHighPopulationTarget:
 
 Use verbose trace output to confirm the scoring path. Ready lookups appear as normal `scoreContributions[]` entries. Unavailable lookups appear in `unknownLookupRefs`; explicit fallback use appears in `lookupFallbackFired`. The canonical architecture fixture `canonicalCookbookProfile()` in `packages/engine/test/architecture/lookup-refs/lookup-refs-fixture.ts` exercises `zones`, `tokens`, `players`, and `globals` in one profile.
 
+### Projected-State Lookups at chooseN Frontiers
+
+Use `lookup.surface: previewOptionState` when a microturn-scoped consideration needs to score a published option by a keyed property in that option's bounded synthetic-completion endpoint. This closes the authoring gap between current-state keyed lookups and scalar projected refs: the key still comes from the current option, usually `microturn.option.value`, but the path is walked against the option's projected `DriveResult.state`.
+
+Choose the scoring surface by the authoring goal:
+
+| Authoring goal | Choose |
+| --- | --- |
+| Score by a current-state per-object property. | `lookup.surface: policyState` |
+| Score by the projected per-object property at the synthetic-completion endpoint. | `lookup.surface: previewOptionState` |
+| Score by a scalar projected-state property such as margin delta, victory rank, or drive depth. | `preview.option.*` |
+| Score by the change in a per-object property. | Compose `lookup.previewOptionState.<path>` minus `lookup.policyState.<path>` with `sub`. |
+
+Projected lookups are preview-derived. A consideration whose value contains only `previewOptionState` lookups must declare `previewFallback.onUnavailable`, not `lookupFallback`. A mixed expression that reads both `previewOptionState` and `policyState` lookups must declare both fallback blocks because either state source can be unavailable.
+
+```yaml
+preferProjectedTroopBuildup:
+  scopes: [microturn]
+  costClass: preview
+  weight: 100
+  value:
+    lookup:
+      surface: previewOptionState
+      collection: zones
+      keyType: ZoneId
+      key:
+        ref: microturn.option.value
+      path: [variables, arvnTroopCount]
+      onMissing: unavailable
+  previewFallback:
+    onUnavailable: noContribution
+```
+
+Use composition when the useful signal is the projected delta, not the projected endpoint value alone:
+
+```yaml
+preferProjectedTroopDelta:
+  scopes: [microturn]
+  costClass: preview
+  weight: 50
+  value:
+    op: sub
+    args:
+      - lookup:
+          surface: previewOptionState
+          collection: zones
+          keyType: ZoneId
+          key:
+            ref: microturn.option.value
+          path: [variables, arvnTroopCount]
+          onMissing: unavailable
+      - lookup:
+          surface: policyState
+          collection: zones
+          keyType: ZoneId
+          key:
+            ref: microturn.option.value
+          path: [variables, arvnTroopCount]
+          onMissing: unavailable
+  previewFallback:
+    onUnavailable: noContribution
+  lookupFallback:
+    onUnavailable: noContribution
+```
+
+`onMissing` and `onHidden` keep the same semantics as current-state lookups. Missing paths follow `onMissing`; hidden paths always return `unavailable`, and `onHidden` cannot be overridden. For stable projected lookup signals, initialize zone, token, player, and global variables to explicit defaults in GameSpecDoc when a profile plans to read them; an absent projected path is legal but fallback-heavy.
+
+Projected lookups participate in continued deepening with the existing triggers. `allRequestedRefsDepthCapped` treats projected lookup refs as preview-derived refs, and `allReadyValuesUniform` evaluates the final numeric contribution after the expression has consumed the lookup value. See Spec 165 §4.1, §4.5, §4.6, and §4.8, and Spec 164's cap-class guidance for bounded deepening.
+
 ### Govern-Mode `chooseOne` Example
 
 This diagnostic profile shape opts into per-option preview for an inner govern-mode `chooseOne`. The `preferOptionProjectedMargin` consideration scores each option by its projected margin delta, so the agent can prefer a higher-margin option such as `patronage` over a greedy alphabetical choice such as `aid` when the projection supports it.

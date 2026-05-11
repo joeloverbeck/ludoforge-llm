@@ -1,6 +1,6 @@
 # 165PROSTALOO-006: Cookbook recipe + end-to-end projected-lookup fixture
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — new fixture file under `packages/engine/test/architecture/lookup-refs-projected/`; docs change in `docs/agent-dsl-cookbook.md`
@@ -128,3 +128,22 @@ If ticket 004's `projected-lookup-collection-coverage.test.ts` was written to us
 3. `pnpm -F @ludoforge/engine test` — full engine suite.
 4. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint` — gates.
 5. `pnpm run check:ticket-deps` — Deps validation.
+
+## Outcome
+
+- Completion date: 2026-05-11.
+- Added the cookbook section "Projected-State Lookups at chooseN Frontiers" after the current-state lookup recipe. It documents the four authoring choices (`policyState`, `previewOptionState`, scalar `preview.option.*`, and composed `sub` delta), the `previewFallback`/`lookupFallback` split, `onMissing`/`onHidden`, path-stability guidance, and continued-deepening participation.
+- Added `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-fixture.ts`, a generic two-zone fixture with a `chooseN` ADD frontier. The fixture initializes zone-level `variables.troopCount`, drives a synthetic completion that adds `+2` to the selected zone, keeps a scalar drive-depth baseline uniform, exposes all four lookup collections on the projected surface, and includes a seat-visible/private zone for observer-projection inheritance.
+- Added `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-end-to-end.test.ts`. The test compiles an authored projected-lookup consideration through the compiler helper, scores all four projected lookup collections without fallback, runs the agent at the fixture `chooseN` frontier, proves projected keyed lookup contributions differentiate `zone-a:none` (`5`) from `zone-b:0` (`7`), proves scalar `preview.option.driveDepth` stays uniform and selects a different baseline option, and proves continued deepening recovers projected lookups after a depth-capped broad pass.
+- Optional consolidation note: `projected-lookup-collection-coverage.test.ts` remains inline. This ticket leaves it self-contained and uses the new fixture as the comprehensive end-to-end witness, avoiding churn in the already-archived ticket 004 witness.
+- Generated/schema fallout: none; this ticket adds docs and architecture tests only. `dist/` is rebuilt by verification commands but not checked in.
+- Source-size ledger: `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-fixture.ts | 0 before | 485 after | crossed cap? no | active growth: canonical synthetic fixture plus trace helpers | extraction/defer rationale: below the 600-line near-cap threshold and cohesive fixture API; splitting would obscure the ticket-owned witness | successor: none`; `projected-lookup-end-to-end.test.ts | 0 before | 91 after | crossed cap? no | active growth: focused smoke assertions | extraction/defer rationale: below guidance | successor: none`.
+- Runtime surface breadth: ticket-specific architecture tests/docs only; no shared engine/kernel behavior change.
+- Final command ledger:
+  - `pnpm turbo build` — pass.
+  - `node --test packages/engine/dist/test/architecture/lookup-refs-projected/projected-lookup-end-to-end.test.js` — pass, 5 tests / 1 suite.
+  - `pnpm -F @ludoforge/engine test` — pass, 65/65 files.
+  - `pnpm turbo typecheck` — pass.
+  - `pnpm turbo lint` — pass.
+  - `pnpm run check:ticket-deps` — pass, dependency integrity check passed for 1 active ticket and 2301 archived tickets.
+- Late-edit proof validity: this terminal update only records status and exact verification results. It changes no scope, acceptance criteria, command semantics, touched-file ownership, follow-up classification, or dependency classification, so it does not invalidate the final proof lanes above.

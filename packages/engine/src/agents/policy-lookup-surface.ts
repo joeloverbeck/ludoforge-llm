@@ -8,6 +8,7 @@ import type {
   GameDef,
   GameState,
   LookupRefStatus,
+  PolicyPreviewDriveTrace,
   SurfaceVisibilityClass,
   Token,
   ZoneDef,
@@ -27,6 +28,15 @@ export interface PolicyLookupResolutionContext {
   readonly surfaceVisibility: CompiledSurfaceCatalog;
   readonly observerProfile?: CompiledObserverProfile;
 }
+
+export type LookupStateProvenance =
+  | { readonly kind: 'currentState' }
+  | {
+      readonly kind: 'previewOptionState';
+      readonly depth: number;
+      readonly capClass: string;
+      readonly completionPolicy: PolicyPreviewDriveTrace['completionPolicy'];
+    };
 
 interface TokenLocation {
   readonly token: Token;

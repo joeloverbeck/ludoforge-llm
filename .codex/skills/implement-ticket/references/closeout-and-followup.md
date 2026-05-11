@@ -141,6 +141,22 @@ When the ticket lands successfully but the live investigation disproves part of 
 
 - `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
 
+## Source-Size Ledger
+
+When active work grows a source file that is already near/over repo guidance, or creates a source file that crosses guidance, use this exact closeout ledger in the active ticket outcome or final closeout:
+
+- `source-size ledger`: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
+
+## Same-Series Draft Delta
+
+When new same-series draft tickets appear after the initial checkpoint and the active ticket/spec references deferred sibling scope, carry this compact field into the running note or durable outcome:
+
+- `new same-series drafts`: `paths | opened because | dependency role | active-boundary impact | final classification`
+
+Use `final classification` values from the main skill guidance: `read-only sibling context`, `concurrent unrelated draft`, or `boundary-changing sibling`. If the classification is boundary-changing, update the active ticket/spec before final proof and rerun affected lanes; if it is read-only sibling context, keep the ledger as closeout evidence rather than expanding the active ticket.
+
 ## Split Phase Completion
 
 When a spec phase or checklist item is satisfied by the combination of an already-landed predecessor plus the current ticket, record the basis before marking the phase complete:
@@ -173,7 +189,7 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 
 For a small bounded refactor on an active tracked ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
 
-1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, file-size or other final-sweep ledgers, and exact final lanes.
+1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, exact source-size ledger when triggered, same-series draft delta when triggered, and exact final lanes.
 2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers and with focused generated-output consumers rerun after any later lane rebuilds the consumed output.
 3. Apply a terminal status/proof transcription patch only after all final lanes are green or classified. Keep this patch to status and exact proof results when practical.
 4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
@@ -188,7 +204,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 2. Emit the working-notes checkpoint, including the ticket-named deliverables ledger, generated-fallout expectation, output-contention plan, source-size risk, runtime surface breadth, and terminal status plan.
 3. Make the source/test edits only after the checkpoint. Keep the diff inside the ticket-owned files unless live reassessment proves owned fallout.
 4. Build the engine package before running focused compiled tests, then run the narrow ticket-owned `node --test packages/engine/dist/...` witness lanes.
-5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, file-size ledger, command substitutions, exact final proof lanes, and no-invalidation plan.
+5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, exact source-size ledger when triggered, same-series draft delta when triggered, command substitutions, exact final proof lanes, and no-invalidation plan.
 6. Run the ticket-named package/root lanes serially. Do not overlap any lane that rebuilds or cleans `dist`; after a broad lane rebuilds `dist`, rerun the focused compiled-output witness you still intend to cite as final acceptance evidence.
 7. Apply the terminal status/proof transcription as a narrow final ticket edit only after final lanes are green or classified, then run the ticket-dependency or markdown-integrity checker when status/dependency/archive state changed.
 8. Transcribe only the checker result, record why the transcription is clerical, run `git diff --check`, run targeted hygiene or record substitute coverage for untracked additions, and finish with untracked-aware `git status --short`.
@@ -198,7 +214,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 
 For a small bounded refactor on an active untracked draft ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
 
-1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, and exact final lanes.
+1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, exact source-size ledger when triggered, same-series draft delta when triggered, and exact final lanes.
 2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers.
 3. Apply a status-only terminal patch plus exact proof transcription after all lanes are green or classified.
 4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.

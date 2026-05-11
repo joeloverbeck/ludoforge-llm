@@ -429,7 +429,7 @@ export type CompiledAgentPolicyRef =
     }
   | {
       readonly kind: 'lookup';
-      readonly surface: 'policyState';
+      readonly surface: 'policyState' | 'previewOptionState';
       readonly collection: 'zones' | 'tokens' | 'players' | 'globals';
       readonly keyType: 'ZoneId' | 'TokenId' | 'PlayerId' | 'string';
       readonly key: CompiledPolicyExpr;

@@ -26,6 +26,7 @@ When a change touches schemas or contracts, check updates across these layers:
 - When adding a new schema file under an existing schema/artifact directory, classify it before implementation as `generator-owned` or `manual artifact`. Check the generator's file list or write targets, decide whether the new schema should be added to that list, and name the validation lane that proves the decision. If it is intentionally manual, record that in the ticket closeout so later schema-artifact runs are not misread as missing the new file.
 - For additive compiled-field migrations, requiring the new field in compiler-owned artifacts while leaving handwritten TypeScript fixtures temporarily optional is valid when explicit, Foundation-compliant, and verified.
 - If a new field mainly supports one feature path, consider keeping it optional on local test-helper contracts to avoid unnecessary fixture churn.
+- For type-only exports or preparatory type surfaces whose acceptance asks for an import/typecheck spot-check, classify the witness before coding. If the symbol is exported from the named module and the package/workspace build or typecheck consumes that module surface, record the spot-check as `subsumed by build/typecheck`. Add a focused durable type-only consumer only when the ticket explicitly requires a witness file, package-barrel import, or cross-package/public export proof.
 
 **Required-field migrations**:
 - When an earlier ticket made a field required, add empty/default placeholders across constructors, defaults, fixtures, and goldens for atomicity.

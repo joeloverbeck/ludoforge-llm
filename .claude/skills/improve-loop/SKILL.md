@@ -38,7 +38,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 5. **Set persistent working directory**: After setup, run `cd $WT` as a standalone Bash command to anchor the session's working directory in the worktree. All subsequent Bash commands will execute from the worktree root. Do NOT rely solely on `cd $WT &&` chains — if any later command uses `cd` to another directory, the working directory drifts silently. Verify with `pwd` before the baseline harness run.
 
 6. **Copy runtime files**: Copy ALL non-tracked files from the source campaign folder to the worktree campaign folder. Use `ls` to enumerate, then copy any that don't exist in the worktree. Common runtime files include `results.tsv`, `seed-tier.txt`, `checkpoints.jsonl`, `lessons.jsonl`, `last-trace.json`, and `traces/`. These are gitignored and won't be created by `git worktree add`. **`musings.md` is conditional**: it may be tracked or gitignored depending on the campaign — verify with `git check-ignore campaigns/<campaign>/musings.md` and copy only if gitignored. If tracked, the worktree already has the canonical version from `git worktree add`; copying from main would either be a no-op or could mask a deliberate truncation the user committed to main.
-   - **Project-wide build artifacts (auto-mirror)**: if the engine test suite or harness depends on compiled binaries that are gitignored, mirror them from the source repo to avoid a fail-then-mirror cycle. Auto-mirror these well-known paths if they exist in the source: `packages/*/target/` (Rust / Cargo / wasm-pack output), `packages/engine/dist/` (TypeScript build output), `packages/runner/dist/`. Use `cp -r <src> <dst>` if `<src>` exists and `<dst>` does not. For other gitignored build outputs not in this list, run `git status --ignored` in the source repo to enumerate, then mirror the relevant ones (typically the compiled outputs the test gate loads). Failed test runs after `git worktree add` with `ENOENT` errors for paths under `packages/*/target/` or `dist/` are the diagnostic signal — see Phase 1 Baseline Failure Protocol step 3 for the symptom-to-fix mapping.
+   - **Project-wide build artifacts (auto-mirror)**: if the engine test suite or harness depends on compiled binaries that are gitignored, mirror them from the source repo to avoid a fail-then-mirror cycle. Auto-mirror these well-known paths if they exist in the source: any directory named `target/` at any depth under `packages/` (Rust / Cargo / wasm-pack output — enumerate exhaustively with `find packages -type d -name target` rather than relying on a fixed-depth glob, since real Rust workspace layouts often nest `target/` two levels deep, e.g., `packages/engine-wasm/policy-vm/target/`), `packages/engine/dist/` (TypeScript build output), `packages/runner/dist/`. Use `cp -r <src> <dst>` if `<src>` exists and `<dst>` does not. For other gitignored build outputs not in this list, run `git status --ignored` in the source repo to enumerate, then mirror the relevant ones (typically the compiled outputs the test gate loads). Failed test runs after `git worktree add` with `ENOENT` errors for paths under `packages/**/target/` or `dist/` are the diagnostic signal — see Phase 1 Baseline Failure Protocol step 3 for the symptom-to-fix mapping.
 
 ## Phase 0 — Setup
 
@@ -61,7 +61,7 @@ Set `WT` = the worktree root path. Every file path in every tool call below is p
 
 #### State Initialization
 
-10. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND musings.md does not contain a `**STRATEGY SHIFT**:` or `**CONTINUATION**:` marker, clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`. This applies on a fresh worktree creation OR after STALE BASELINE recovery in step 3, since both produce the same logical "fresh restart" state.
+10. Ensure `$WT/campaigns/<campaign>/musings.md` exists (create with `# Musings` header if missing). If results.tsv has only the header row AND musings.md does not contain a `**STRATEGY SHIFT**:`, `**CONTINUATION**:`, or `**STALE BASELINE**:` marker, clear musings.md to the header only — prior campaign history belongs in `campaigns/lessons-global.jsonl`. This applies on a fresh worktree creation OR after STALE BASELINE recovery in step 3, since both produce the same logical "fresh restart" state. The `**STALE BASELINE**:` marker is preserved (not cleared) when present because step 3 wrote it as a deliberate fresh-restart annotation; clearing it would defeat step 3's documentation step.
 11. Initialize strategy state: `strategy = "normal"`, `consecutive_rejects = 0`, `total_accepts = 0`.
 12. Read `campaigns/lessons-global.jsonl` if it exists — inject relevant global lessons into context. When applying global lessons from a different campaign (different `campaign` field), treat them as **hypotheses to verify**, not established facts. Cross-campaign lessons may be stale due to engine changes, different game mechanics, or different optimization targets. Note in musings which global lessons are being applied and flag any that come from campaigns targeting a different faction, game, or metric.
 13. Read `$WT/campaigns/<campaign>/lessons.jsonl` if resuming — prune lessons with `decay_weight < 0.3`. For lessons lacking a `type` field (backward compatibility), treat as `finding` (if `polarity: positive`) or `negative` (if `polarity: negative`).
@@ -122,6 +122,10 @@ Run this loop INDEFINITELY (or until `MAX_ITERATIONS` reached). Never stop. Neve
 
 If program.md defines fixture sync or tiered mutability, load `references/advanced-commit-policies.md`.
 
+### Interim Status Reports (optional)
+
+After every 10 experiments OR after any strategy ladder advance OR after any architectural-gap-halt assessment that did not fire, the agent MAY emit a brief status summary to the conversation (1-3 paragraphs: experiments completed, accept/reject counts, current strategy, top finding). The agent does NOT halt — the next iteration begins immediately after the summary. The status is informational, not a permission request. The human may interrupt to redirect; absent redirection, the loop continues. This complements the autonomy directive ("never seek permission") with a communication channel that does not violate it.
+
 ### Step 0: ANCHOR (Condition Drift Prevention + CWD Verify)
 
 - **CWD verify**: Run `pwd` and confirm the cwd matches `$WT`. If drift is detected (e.g., from a prior `cd` to the main repo for diagnostic work, end-of-campaign prep, or a Human Investigation Interrupt), re-anchor with `cd $WT`. The Phase-0 anchor only holds until the first cross-tree command; in long campaigns the cwd drifts silently otherwise, and downstream commits land on the wrong tree. This check is cheap; do it every iteration.
@@ -159,6 +163,8 @@ Document each mapping inline in the first ANCHOR musings entry so subsequent ite
 
 ### Step 1b: DIAGNOSE (Decision Landscape)
 
+**Precondition gate**: If `consecutive_zero_effects >= ZERO_EFFECT_THRESHOLD`, the **mandatory triggers** branch fires regardless of other conditions. The diagnostic protocol output (per the OBSERVE Phase Protocol or generic fallback below) MUST be appended to musings as `## DIAGNOSE-after-zero-effects-exp-NNN` BEFORE any Step 2 hypothesis is generated. Without the recorded diagnostic header in musings, the iteration is incomplete — the agent must not proceed to Step 2. Informal in-conversation diagnostics do not satisfy this gate; the recorded musings entry is the contract.
+
 **Mandatory triggers** — run the full diagnostic when ANY of these apply:
 - First iteration at a new tier or phase
 - After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments
@@ -181,6 +187,8 @@ Document each mapping inline in the first ANCHOR musings entry so subsequent ite
 **CWD discipline during diagnostics**: profiling and diagnostic commands (`node --prof`, `cd /tmp/<scratch>`, source greps that descend out of the worktree) routinely change the Bash session's cwd silently. The Step 0 ANCHOR catches drift on the next loop iteration but does NOT catch drift mid-iteration. Re-anchor with `cd "$WT"` AFTER any diagnostic command that crosses tree boundaries, BEFORE the next `bash campaigns/<campaign>/harness.sh` invocation. The Phase 1 Harness Preflight pattern is the canonical guard.
 
 ### Steps 1c-1g: STRATEGY MANAGEMENT
+
+**Per-iteration mandatory**: each iteration recomputes (a) `consecutive_rejects` from results.tsv tail, (b) UCB1 scores per category (Step 1d), and (c) current `strategy` (advance ladder if PLATEAU_THRESHOLD reached). Skip-on-context-pressure is forbidden — strategy state lives in results.tsv, not in agent memory. The strategy ladder (`normal → combine → ablation → radical → backtrack`) is the loop's core operational logic; ad-hoc hypothesis generation outside this ladder while `consecutive_rejects >= PLATEAU_THRESHOLD` is improvisation, not normal mode.
 
 Load `references/strategy-management.md`. Execute Steps 1c through 1g as described there.
 
@@ -225,8 +233,9 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
   - Skip to Step 8 (REPEAT).
 - Count `lines_delta` for this change (net lines added minus lines removed across all mutable files).
 - Tag the change with a `category` from program.md's experiment categories list.
-- **Fixture sync**: If `$WT/campaigns/<campaign>/sync-fixtures.sh` exists, run it now (after implementing changes, before executing the harness):
+- **Fixture sync**: If `$WT/campaigns/<campaign>/sync-fixtures.sh` exists, run it now (after implementing changes, before executing the harness). **Build prerequisite**: if `sync-fixtures.sh` reads from compiled output (e.g., paths under `packages/<pkg>/dist/` or any `await import('.../dist/...')` calls), run the project's build step BEFORE `sync-fixtures.sh` — the harness's own internal build runs AFTER fixture regeneration and is too late, so fixtures regenerated against stale `dist/` will mismatch the harness's freshly-compiled output. Canonical sequence: `build → sync-fixtures → harness`.
   ```bash
+  cd $WT && pnpm -F @ludoforge/engine build  # if sync-fixtures depends on dist/
   cd $WT && bash campaigns/<campaign>/sync-fixtures.sh
   ```
   This prevents stale-fixture test failures from wasting the first experiment iteration.
@@ -293,7 +302,7 @@ The judgment is the agent's mechanistic audit of WHY the gain is so large. If no
 
 **V8 JIT deopt pattern detection**: If 3+ consecutive rejects show measured regressions (not within-noise, but slowdowns >1%) with root causes attributable to V8 JIT deoptimization (object shape changes, closure body modifications, hidden class mutations, WeakMap/caching overhead in kernel execution paths), flag as `**V8 JIT CEILING**` in musings. Skip directly to ceiling report with architectural spec or report creation (Option D in Step 1g). Further micro-optimization experiments are provably futile — the architecture must change. This pattern is distinct from a normal plateau (where experiments are within noise) — V8 deopt regressions are ACTIVE performance degradation, not just failure to improve.
 
-**Zero-effect detection**: If the evolved system's trace is functionally identical to the previous experiment, flag as `**ZERO-EFFECT**` in the musings entry. For agent evolution campaigns, compare the evolved seat's move sequence (actionIds in order) and final margin from the trace files. Byte-level trace comparison is too strict (timestamps, intermediate scores may differ); compare the decision-relevant fields only. For non-agent campaigns, compare the primary metric output and any trace summary the harness produces. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
+**Zero-effect detection**: If the evolved system's trace is functionally identical to the previous experiment, flag as `**ZERO-EFFECT**` in the musings entry. For agent evolution campaigns, compare the evolved seat's move sequence (actionIds in order) and final margin from the trace files. Byte-level trace comparison is too strict (timestamps, intermediate scores may differ); compare the decision-relevant fields only. For non-agent campaigns, compare the primary metric output and any trace summary the harness produces. **An ACCEPT that produces an identical decision-relevant trace IS a zero-effect ACCEPT — increment the counter.** Lines-delta change (e.g., a simplification ACCEPT that removes dead-weight code without altering selections) does NOT count as a "non-zero-effect" reset; only experiments that change the evolved system's decision trace reset `consecutive_zero_effects`. Increment `consecutive_zero_effects` (reset on any non-zero-effect experiment, regardless of ACCEPT/REJECT classification). After `ZERO_EFFECT_THRESHOLD` (default 3) consecutive zero-effect experiments, the next iteration's Step 1b DIAGNOSE becomes mandatory — the hypothesis space is misaligned with the actual decision landscape. Zero-effect means the targeted decisions already have large score gaps; look for decisions with small gaps instead.
 
 ### Step 7.6: EXTRACT LESSON
 
@@ -363,6 +372,13 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 **Normal campaign** (one or more accepted experiments):
 
 This sequence crosses between the worktree and the main repo. Each step is annotated with its required cwd. **Verify with `pwd` after every cwd switch** — the Phase-0 anchor does not survive cross-tree work, and the lessons commit landing in the wrong tree is a known pitfall.
+
+**Spec/report creation timing — three options referenced by steps 7 and 8 below:**
+- **(a)** During a Human Investigation Interrupt (handled in the Human Investigation Interrupt section, not this sequence).
+- **(b)** Between user-directed campaign halt and squash-merge — created BEFORE step 7's squash-merge commit, referenced by file path (or commit hash) in the squash-merge commit message.
+- **(c)** Post-merge as a follow-up — created AFTER step 7's squash-merge commit, as a separate commit on main.
+
+Step 8 below elaborates on the spec-vs-report decision criterion. Both step 7 and step 8 reference these options by letter; the preamble lets the reader resolve the (a)/(b)/(c) labels without forward-looking through the sequence.
 
 1. Review the worktree branch: `git log --oneline` shows all accepted improvements. *(cwd: worktree)*
 2. Promote high-confidence lessons to global store (if not already done by Step 7.6 — apply the same `confidence >= 0.8 AND decay_weight >= 0.5` filter from `references/lesson-management.md` and skip duplicates by lesson text). *(cwd: worktree — append to the worktree's `campaigns/lessons-global.jsonl`)*

@@ -1,9 +1,9 @@
 # 165PROSTALOO-003: Compiler lowering for `lookup.surface: previewOptionState` and surface-keyed fallback split
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
-**Engine Changes**: Yes — `cnl/compile-agents.ts`
+**Engine Changes**: Yes — `cnl/compile-agents.ts`, `agents/policy-expr.ts`
 **Deps**: `archive/tickets/165PROSTALOO-001.md`
 
 ## Problem
@@ -27,7 +27,8 @@ This ticket is compile-time only: it does not wire runtime routing (ticket 004) 
 4. The author YAML format for the lookup ref is already defined in Spec §4.1 — `surface: previewOptionState` slots into the same parser path as `surface: policyState`.
 5. Existing diagnostic `CNL_COMPILER_AGENT_LOOKUP_HIDDEN_OVERRIDE_REJECTED` is unchanged: a projected lookup that writes `onHidden: { kind: 'constant'; value }` is still rejected by the existing rule (Spec §4.7) — verified, no new code needed.
 6. `collectPreviewOptionRefIds` already exists at `compile-agents.ts` (referenced in Spec §2.3 enforcement at line 2095) — its by-name signature collects any `previewOptionRef`. The new `projectedStateLookupRefIds` collector mirrors it but filters by `surface === 'previewOptionState'`. Or: parameterize the existing `collectLookupRefIds` with a surface filter — Spec §5.3 explicitly endorses either approach.
-7. The new fixture for these tests can be authored inline in each test file or extracted to a small shared YAML snippet; existing Spec 163 compiler tests demonstrate the inline pattern. Decision: inline per test, mirroring existing convention.
+7. The new fixture for these tests can be authored inline in each test file or extracted to a small shared YAML snippet; existing Spec 163 compiler tests demonstrate the inline pattern. Decision after implementation: extract the compile-only `GameSpecDoc` helper into `projected-lookup-compile-test-helpers.ts` to keep the six ticket-named compiler tests DRY. This helper is not the Phase 5 runtime/end-to-end fixture owned by `165PROSTALOO-006`.
+8. Live authoring types do not expose `costClass` on `GameSpecConsiderationDef`; the cost-class witness uses a fixture object carrying the stale draft field through an explicit test cast and asserts the real invariant: compiled effective `costClass === 'preview'` with no diagnostic. The compiler still derives effective cost from the value expression; no authored consideration `costClass` contract is added in this ticket.
 
 ## Architecture Check
 
@@ -99,6 +100,8 @@ Per Spec §5.6, the `maxCostClass` join silently escalates to `preview`. No diag
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-agents.ts` (modify — parser entry, fallback enforcement, ref-id collectors, three diagnostic emissions)
+- `packages/engine/src/agents/policy-expr.ts` (modify — lookup leaf cost-class classification for `previewOptionState`)
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-compile-test-helpers.ts` (new — shared compile-only fixture helper for the six compiler tests; not the Phase 5 end-to-end fixture)
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-fallback-contract.test.ts` (new — Spec §8.1 #2)
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-key-preview-free.test.ts` (new — Spec §8.1 #3)
 - `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-onhidden-no-override.test.ts` (new — Spec §8.1 #5)
@@ -124,7 +127,7 @@ Per Spec §5.6, the `maxCostClass` join silently escalates to `preview`. No diag
 3. **`projected-lookup-key-preview-free.test.ts`** — Three compilation attempts: (a) key reads `microturn.option.value` → compiles; (b) key reads a `preview.option.*` ref → rejected with `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_KEY_NOT_PREVIEW_FREE`; (c) key reads another `lookup.surface: previewOptionState` → rejected with the same diagnostic.
 4. **`projected-lookup-onhidden-no-override.test.ts`** — `onHidden: { kind: 'constant'; value: 0 }` on a projected lookup is rejected with the existing `CNL_COMPILER_AGENT_LOOKUP_HIDDEN_OVERRIDE_REJECTED` diagnostic — Spec 163's rule is not weakened.
 5. **`projected-lookup-policystate-unchanged.test.ts`** — All Spec 163 round-trip tests pass byte-identically with the surface union extension and the by-surface collector split. (This is a smoke test that the split-by-surface refactor did not regress current-state lookups.)
-6. **`projected-lookup-costclass-promotion.test.ts`** — An author writes `costClass: state` on a consideration whose `value` contains a projected lookup; the compiled consideration's effective `costClass === 'preview'` via the existing `maxCostClass` join. No diagnostic raised.
+6. **`projected-lookup-costclass-promotion.test.ts`** — A consideration whose `value` contains a projected lookup compiles with effective `costClass === 'preview'` via the existing `maxCostClass` join. The test fixture also carries the stale draft `costClass: state` field through an explicit cast to prove no diagnostic is raised, but the live authored type does not make that field part of the public contract.
 7. Full engine suite: `pnpm -F @ludoforge/engine test` green.
 8. Build/typecheck/lint: `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint` green.
 
@@ -134,6 +137,20 @@ Per Spec §5.6, the `maxCostClass` join silently escalates to `preview`. No diag
 2. **Cyclic-key prevention**: no projected lookup's `key` may transitively read any preview-derived ref (either `previewOptionRef` or another projected lookup).
 3. **Cost-class join honesty**: a consideration containing any projected lookup compiles with effective `costClass === 'preview'`.
 4. **No game-specific compiler branches**: the new diagnostics and lowering steps treat `previewOptionState` as a generic surface literal, identical in shape to `policyState`. Foundation #1.
+
+## Outcome
+
+**Completion date**: 2026-05-11
+
+- What landed: `lookup.surface` lowering now accepts `policyState` and `previewOptionState`; unknown surfaces emit `CNL_COMPILER_AGENT_LOOKUP_UNKNOWN_SURFACE`; lookup fallback enforcement is split by surface; projected lookups require `previewFallback`; projected lookup keys reject preview-derived refs with `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_KEY_NOT_PREVIEW_FREE`; lookup leaf cost classification now treats `previewOptionState` as `preview`.
+- Diagnostic heuristic: projected-only missing `previewFallback` emits `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK`. When a value also has direct `preview.option.*` refs, the existing `CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK` path remains authoritative and its message includes the full preview-derived ref set.
+- Touched-file scope correction: `packages/engine/src/agents/policy-expr.ts` is required because lookup leaf cost is assigned by `withCompiledLookupRef`, not in `compile-agents.ts`. `projected-lookup-compile-test-helpers.ts` is required DRY test support and is not the Phase 5 runtime fixture.
+- Generated fallout: no schema or generated artifact shape changed; ticket 001 already extended the compiled lookup surface union and diagnostic registry, and `pnpm -F @ludoforge/engine test` included `schema:artifacts:check`.
+- Deferred scope: runtime routing remains `165PROSTALOO-004`; deepening trigger widening remains `165PROSTALOO-005`; cookbook/end-to-end fixture remains `165PROSTALOO-006`.
+- Source-size ledger: `packages/engine/src/cnl/compile-agents.ts | 3748 | 3784 | crossed cap? no, preexisting oversize | active growth +36 lines | extraction deferred because the canonical compiler lowerer and fallback collector are the ticket seam; extraction would widen/obscure Phase 2 | successor none`. `packages/engine/src/agents/policy-expr.ts | 1749 | 1749 | crossed cap? no, preexisting oversize | active growth 0 lines, one surgical line replacement | extraction deferred because lookup analysis cost-classing belongs in the existing canonical helper | successor none`.
+- Final proof: `node --test packages/engine/dist/test/architecture/lookup-refs-projected/*.test.js` passed after the final root build/typecheck/lint sequence; `pnpm -F @ludoforge/engine test` passed, including `schema:artifacts:check`; `pnpm turbo build` passed; `pnpm turbo typecheck` passed; `pnpm turbo lint` passed.
+- Ticket-command ledger: focused compiled-test command ran directly after build and reran after root `dist` lanes; `pnpm -F @ludoforge/engine test` ran directly; root `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint` ran as three serial commands to avoid output contention; `pnpm run check:ticket-deps` passed for 4 active tickets and 2298 archived tickets after repairing the missing `Outcome amended: 2026-05-11` marker in archived dependency `archive/tickets/165PROSTALOO-001.md`.
+- Late-edit proof validity: terminal status, proof transcription, and archived dependency marker repair only; no source, schema, test, fixture, scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency boundary changed after the final focused proof rerun.
 
 ## Test Plan
 

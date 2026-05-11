@@ -144,13 +144,15 @@ This ticket carries no new behavioral tests — the surface extension and code r
 
 **Completion date**: 2026-05-11
 
+Outcome amended: 2026-05-11 — post-completion archived-ticket outcome normalization and dependency-integrity marker repair.
+
 **Status target**: COMPLETED after final verification.
 
 **What landed**:
 - Extended `CompiledAgentPolicyRef` lookup refs to accept exactly `surface: 'policyState' | 'previewOptionState'`.
 - Mirrored the same two-literal union in `CompiledAgentPolicyRefSchema`.
 - Exported `LookupStateProvenance` from `packages/engine/src/agents/policy-lookup-surface.ts`, using `PolicyPreviewDriveTrace['completionPolicy']` from the kernel trace types as the canonical completion-policy type.
-- Registered `CNL_COMPILER_AGENT_LOOKUP_UNKNOWN_SURFACE`, `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK`, and `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_KEY_NOT_PREVIEW_FREE` as diagnostic-code constants only. Emission remains owned by `tickets/165PROSTALOO-003.md`.
+- Registered `CNL_COMPILER_AGENT_LOOKUP_UNKNOWN_SURFACE`, `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK`, and `CNL_COMPILER_AGENT_PROJECTED_LOOKUP_KEY_NOT_PREVIEW_FREE` as diagnostic-code constants only. Emission is owned by `archive/tickets/165PROSTALOO-003.md`.
 
 **Owned generated/artifact fallout**:
 - `packages/engine/schemas/GameDef.schema.json` is expected owned fallout because `packages/engine/src/kernel/schemas-core.ts` changed the compiled `lookup` ref schema.
@@ -162,7 +164,7 @@ This ticket carries no new behavioral tests — the surface extension and code r
 
 **Deferred sibling/spec scope**:
 - `archive/tickets/165PROSTALOO-002.md` owns `LookupStateSource` and `resolveLookupAgainstState`.
-- `tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostic emission.
+- `archive/tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostic emission.
 - `tickets/165PROSTALOO-004.md` owns runtime routing.
 - `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
 - `tickets/165PROSTALOO-006.md` owns the cookbook and end-to-end fixture.
@@ -175,7 +177,7 @@ This ticket carries no new behavioral tests — the surface extension and code r
 - `packages/engine/src/kernel/types-core.ts`: 2185 -> 2185 lines; preexisting canonical contract hub over guidance; active growth is one literal in an existing union. Extraction would widen the ticket seam. Residual owner: none.
 - `packages/engine/src/kernel/schemas-core.ts`: 2600 -> 2603 lines; preexisting canonical schema hub over guidance; active growth is one existing schema mirror union. Extraction would widen the ticket seam. Residual owner: none.
 - `packages/engine/src/agents/policy-lookup-surface.ts`: 347 -> 357 lines; resolver-adjacent provenance export remains in the existing lookup surface module. Residual owner: `archive/tickets/165PROSTALOO-002.md`.
-- `packages/engine/src/cnl/compiler-diagnostic-codes.ts`: 369 -> 372 lines; central diagnostic-code registry remains the canonical owner for compiler diagnostic constants. Residual owner: `tickets/165PROSTALOO-003.md`.
+- `packages/engine/src/cnl/compiler-diagnostic-codes.ts`: 369 -> 372 lines; central diagnostic-code registry remains the canonical owner for compiler diagnostic constants. Residual owner: `archive/tickets/165PROSTALOO-003.md`.
 
 **Post-review cleanup**:
 - Normalized the completion notes to the archive-required `## Outcome` section and made the source-size ledger exact. Markdown-only; no source, schema, test, fixture, or generated artifact was changed.

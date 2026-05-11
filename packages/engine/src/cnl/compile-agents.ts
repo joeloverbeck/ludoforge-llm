@@ -2058,6 +2058,8 @@ class AgentLibraryCompiler {
       return null;
     }
     const lookupRefIds = collectLookupRefIds(value.expr);
+    const currentStateLookupRefIds = collectLookupRefIds(value.expr, 'policyState');
+    const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2093,23 +2095,35 @@ class AgentLibraryCompiler {
     }
 
     const previewOptionRefIds = collectPreviewOptionRefIds(value.expr);
+    const previewDerivedRefIds = uniqueSorted([...previewOptionRefIds, ...projectedStateLookupRefIds]);
     if (previewOptionRefIds.length > 0 && previewFallback === undefined) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PREVIEW_REF_REQUIRES_EXPLICIT_FALLBACK,
         path: `${path}.previewFallback`,
         severity: 'error',
-        message: `Consideration "${considerationId}" references ${previewOptionRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
+        message: `Consideration "${considerationId}" references ${previewDerivedRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
         suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
       });
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
-    if (lookupRefIds.length > 0 && lookupFallback === undefined) {
+    if (projectedStateLookupRefIds.length > 0 && previewFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROJECTED_LOOKUP_REQUIRES_PREVIEW_FALLBACK,
+        path: `${path}.previewFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" references projected lookup refs ${projectedStateLookupRefIds.join(', ')} but does not declare previewFallback.onUnavailable.`,
+        suggestion: 'Add either previewFallback: { onUnavailable: noContribution } or previewFallback: { onUnavailable: { constant: 0 } }.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    if (currentStateLookupRefIds.length > 0 && lookupFallback === undefined) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_LOOKUP_REF_REQUIRES_EXPLICIT_FALLBACK,
         path: `${path}.lookupFallback`,
         severity: 'error',
-        message: `Consideration "${considerationId}" references a lookup ref but does not declare lookupFallback.onUnavailable.`,
+        message: `Consideration "${considerationId}" references current-state lookup refs ${currentStateLookupRefIds.join(', ')} but does not declare lookupFallback.onUnavailable.`,
         suggestion: 'Add either lookupFallback: { onUnavailable: noContribution } or lookupFallback: { onUnavailable: { constant: 0 } }.',
       });
       this.considerationStatus.set(considerationId, 'failed');
@@ -2122,7 +2136,7 @@ class AgentLibraryCompiler {
       ...(def.when === undefined ? {} : { when: when!.expr }),
       weight: weight.expr,
       value: value.expr,
-      hasPreviewRef: previewOptionRefIds.length > 0,
+      hasPreviewRef: previewDerivedRefIds.length > 0,
       hasLookupRef: lookupRefIds.length > 0,
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(previewFallback === undefined ? {} : { previewFallback }),
@@ -2365,13 +2379,13 @@ class AgentLibraryCompiler {
     const onMissing = obj['onMissing'];
     const onHidden = obj['onHidden'];
 
-    if (surface !== 'policyState') {
+    if (!isLookupSurface(surface)) {
       this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_LOOKUP_UNKNOWN_SURFACE,
         path: `${path}.lookup.surface`,
         severity: 'error',
-        message: `lookup.surface must be policyState, got ${JSON.stringify(surface)}.`,
-        suggestion: 'Set lookup.surface to policyState.',
+        message: `lookup.surface must be policyState or previewOptionState, got ${JSON.stringify(surface)}.`,
+        suggestion: 'Set lookup.surface to policyState or previewOptionState.',
       });
       return null;
     }
@@ -2435,6 +2449,21 @@ class AgentLibraryCompiler {
         suggestion: 'Remove lookup.onHidden or set it to unavailable.',
       });
       return null;
+    }
+    if (surface === 'previewOptionState') {
+      const previewKeyRefIds = collectPreviewOptionRefIds(loweredKey);
+      const projectedKeyLookupRefIds = collectLookupRefIds(loweredKey, 'previewOptionState');
+      const previewDerivedKeyRefIds = uniqueSorted([...previewKeyRefIds, ...projectedKeyLookupRefIds]);
+      if (previewDerivedKeyRefIds.length > 0) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_PROJECTED_LOOKUP_KEY_NOT_PREVIEW_FREE,
+          path: `${path}.lookup.key`,
+          severity: 'error',
+          message: `lookup.surface previewOptionState key expression references preview-derived refs ${previewDerivedKeyRefIds.join(', ')}.`,
+          suggestion: 'Use root candidate or microturn refs such as microturn.option.value for projected lookup keys.',
+        });
+        return null;
+      }
     }
 
     return withCompiledLookupRef({
@@ -3577,12 +3606,15 @@ function collectPreviewOptionRefIds(expr: AgentPolicyExpr): readonly string[] {
   return [...ids].sort();
 }
 
-function collectLookupRefIds(expr: AgentPolicyExpr): readonly string[] {
+function collectLookupRefIds(
+  expr: AgentPolicyExpr,
+  surfaceFilter?: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['surface'],
+): readonly string[] {
   const ids = new Set<string>();
   const visit = (current: AgentPolicyExpr): void => {
     switch (current.kind) {
       case 'ref':
-        if (current.ref.kind === 'lookup') {
+        if (current.ref.kind === 'lookup' && (surfaceFilter === undefined || current.ref.surface === surfaceFilter)) {
           ids.add(`lookup.${current.ref.surface}.${current.ref.collection}.${current.ref.path.join('.')}`);
         }
         return;
@@ -3623,6 +3655,10 @@ function isLookupCollection(value: unknown): value is Extract<CompiledAgentPolic
 
 function isLookupKeyType(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['keyType'] {
   return value === 'ZoneId' || value === 'TokenId' || value === 'PlayerId' || value === 'string';
+}
+
+function isLookupSurface(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['surface'] {
+  return value === 'policyState' || value === 'previewOptionState';
 }
 
 function isLookupConstant(value: unknown): value is number | string | boolean {

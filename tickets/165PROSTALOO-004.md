@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-evaluation-core.ts`, `agents/policy-agent.ts` (consumes existing maps)
-**Deps**: `archive/tickets/165PROSTALOO-002.md`, `tickets/165PROSTALOO-003.md`
+**Deps**: `archive/tickets/165PROSTALOO-002.md`, `archive/tickets/165PROSTALOO-003.md`
 
 ## Problem
 

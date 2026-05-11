@@ -3868,6 +3868,7 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
+          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "trainWhenControlLow",
           "preferOptionProjectedMargin"
@@ -3907,16 +3908,19 @@
           "projectedSelfMargin"
         ],
         "candidateAggregates": [
-          "hasNonPassAlternative"
+          "hasNonPassAlternative",
+          "maxMarginScore",
+          "minMarginScore"
         ],
         "considerations": [
           "preferProjectedSelfMargin",
+          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "trainWhenControlLow",
           "preferOptionProjectedMargin"
         ]
       },
-      "fingerprint": "0dff77e09da4aeb290d448c7b05e41026eebf8be78513f320e806fba9797d306"
+      "fingerprint": "e702dcfce7ce3867ffb7d5995d4d203d3a5c7e314a795333ec34d79df3da3344"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -4036,5 +4040,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "5d45702f178e7fc722e0904a9d0c2c07b613decde24596b58e126c9554b7b86e"
+  "catalogFingerprint": "d5c7ad2e24a1a605acf4115cfcb003487f9301fe6475f728ae29004e94d2261f"
 }

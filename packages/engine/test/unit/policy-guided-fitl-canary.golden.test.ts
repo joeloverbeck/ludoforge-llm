@@ -32,6 +32,23 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
   args,
 });
 
+// Frozen consideration set for this canary test.
+//
+// Earlier revisions of this test spread `profile.use.considerations` and
+// `profile.plan.considerations` from the production `arvn-evolved` profile and
+// appended `preferPatronageMode`. That coupled the test's pass/fail to the
+// evolving production consideration list — any improve-loop campaign that
+// added or removed a consideration on `arvn-evolved` shifted the agent's
+// trajectory on this fixed FITL seed and broke the canary without indicating
+// a real regression. The invariant under test is "policy-guided completion
+// produces a differentiating preview decision when `preferPatronageMode` is
+// present", which depends only on a margin-signal consideration and the test
+// subject. The frozen list pins exactly that minimum.
+const POLICY_GUIDED_CANARY_CONSIDERATIONS: readonly string[] = [
+  'preferProjectedSelfMargin',
+  'preferPatronageMode',
+];
+
 function withPolicyGuidedPreferPatronageMode(def: GameDef): GameDef {
   const agents = def.agents;
   assert.ok(agents?.compiled, 'expected FITL production agents');
@@ -76,11 +93,11 @@ function withPolicyGuidedPreferPatronageMode(def: GameDef): GameDef {
         },
         use: {
           ...profile.use,
-          considerations: [...profile.use.considerations, 'preferPatronageMode'],
+          considerations: POLICY_GUIDED_CANARY_CONSIDERATIONS,
         },
         plan: {
           ...profile.plan,
-          considerations: [...profile.plan.considerations, 'preferPatronageMode'],
+          considerations: POLICY_GUIDED_CANARY_CONSIDERATIONS,
         },
       },
     },

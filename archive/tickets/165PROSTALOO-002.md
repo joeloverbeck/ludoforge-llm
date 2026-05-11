@@ -154,7 +154,7 @@ No new tests authored in this ticket — the refactor's correctness is proven by
 
 **Deferred sibling/spec scope**:
 - `tickets/165PROSTALOO-003.md` owns compiler lowering and diagnostics.
-- `tickets/165PROSTALOO-004.md` owns runtime routing for `surface: 'previewOptionState'`.
+- `archive/tickets/165PROSTALOO-004.md` owns runtime routing for `surface: 'previewOptionState'`.
 - `tickets/165PROSTALOO-005.md` owns continued-deepening trigger widening.
 - `tickets/165PROSTALOO-006.md` owns cookbook and end-to-end projected-lookup fixture coverage.
 

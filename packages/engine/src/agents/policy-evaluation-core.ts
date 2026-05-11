@@ -39,6 +39,7 @@ import type {
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyRuntimeProviders,
+  type PreviewOptionProjectedState,
   type PolicyRuntimeCandidate,
   type PolicyRuntimeProviders,
 } from './policy-runtime.js';
@@ -129,6 +130,7 @@ export interface CreatePolicyEvaluationContextInput {
     readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
     readonly unknownPreviewRefs?: Map<string, PolicyPreviewUnavailabilityReason>;
     readonly previewFallbackFired?: { current?: PolicyPreviewFallbackFired };
+    readonly projectedState?: PreviewOptionProjectedState;
   };
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
@@ -212,6 +214,12 @@ function applyComparisonOp(
     return actual <= expected;
   }
   return false;
+}
+
+function previewOutcomeToUnavailabilityReason(
+  outcome: Exclude<PolicyPreviewTraceOutcome, 'ready'>,
+): PolicyPreviewUnavailabilityReason {
+  return outcome === 'stochastic' ? 'random' : outcome;
 }
 
 export function matchesTokenFilter(
@@ -1316,7 +1324,50 @@ export class PolicyEvaluationContext {
   ): PolicyValue {
     const keyValue = this.evaluateCompiledExpr(ref.key, candidate);
     const refId = lookupRefKey(ref);
+    if (ref.surface === 'previewOptionState') {
+      return this.resolveProjectedLookupRef(ref, keyValue, refId, candidate);
+    }
     const resolution = this.runtimeProviders.lookupSurface.resolveLookup(ref, keyValue, this.currentSeatContext);
+    if (resolution.kind === 'unavailable') {
+      candidate?.unknownLookupRefs.set(refId, resolution.reason);
+      this.input.lookupOption?.unknownLookupRefs?.set(refId, resolution.reason);
+      return undefined;
+    }
+    return resolution.value;
+  }
+
+  private resolveProjectedLookupRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+    keyValue: PolicyValue,
+    refId: string,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    const projected = this.input.previewOption?.projectedState;
+    if (projected === undefined) {
+      candidate?.unknownPreviewRefs.set(refId, 'gated');
+      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'gated');
+      return undefined;
+    }
+    if (projected.outcome !== 'ready') {
+      const reason = previewOutcomeToUnavailabilityReason(projected.outcome);
+      candidate?.unknownPreviewRefs.set(refId, reason);
+      this.input.previewOption?.unknownPreviewRefs?.set(refId, reason);
+      return undefined;
+    }
+    if (projected.state === undefined) {
+      candidate?.unknownPreviewRefs.set(refId, 'failed');
+      this.input.previewOption?.unknownPreviewRefs?.set(refId, 'failed');
+      return undefined;
+    }
+    const resolution = this.runtimeProviders.lookupSurface.resolveLookupAgainstState({
+      state: projected.state,
+      provenance: {
+        kind: 'previewOptionState',
+        depth: projected.driveDepth,
+        capClass: projected.capClass,
+        completionPolicy: projected.completionPolicy,
+      },
+    }, ref, keyValue, this.currentSeatContext);
     if (resolution.kind === 'unavailable') {
       candidate?.unknownLookupRefs.set(refId, resolution.reason);
       this.input.lookupOption?.unknownLookupRefs?.set(refId, resolution.reason);
@@ -1768,6 +1819,7 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
 function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {
   return [
     'lookup',
+    ref.surface,
     ref.collection,
     ref.keyType,
     stablePayloadCode(ref.key),

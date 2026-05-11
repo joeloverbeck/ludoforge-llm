@@ -1,6 +1,6 @@
 # 165PROSTALOO-004: Runtime routing for `lookup.surface: previewOptionState` in `resolveLookupRef`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `agents/policy-evaluation-core.ts`, `agents/policy-agent.ts` (consumes existing maps)
@@ -14,7 +14,7 @@ Spec §4.3 specifies the routing rule:
 
 1. `ref.surface === 'policyState'` → delegate to `resolveLookupViaSeatResolution(currentStateContext, ...)`. Unchanged from Spec 163.
 2. `ref.surface === 'previewOptionState'`:
-   - Require a candidate-bound `DriveResult` in scope. Action-selection candidates and chooseNStep ADD/CONFIRM frontiers without per-option drive context return `unavailable` with reason `unknownGated` and register in `unknownPreviewRefs[]`.
+   - Require a candidate-bound `DriveResult` in scope. Action-selection candidates and chooseNStep ADD/CONFIRM frontiers without per-option drive context register `gated` in `unknownPreviewRefs[]` and produce an unavailable value. The aggregate preview breakdown still reports this under its existing `unknownGated` counter.
    - If `drive.outcome !== 'ready'`, map the drive outcome to a preview-unavailability reason (`depthCap`, `hidden`, `stochastic`, `failed`, `unresolved`) and register in `unknownPreviewRefs[]`. **Depth-capped `DriveResult.state` is NEVER read as a valid endpoint** (Spec §4.3 + §8.1 #1 + Foundation #20).
    - Otherwise construct `source = { state: drive.state, provenance: { kind: 'previewOptionState', depth, capClass, completionPolicy } }` and call `resolveLookupAgainstState`. Path-missing / hidden / type-mismatch outcomes at this stage register in `unknownLookupRefs[]` (proximate cause is the lookup, given a successful drive).
 
@@ -28,7 +28,7 @@ This ticket carries the six Spec §8.1 runtime invariant tests (#1 ready-endpoin
 4. `unknownPreviewRefs[]` and `unknownLookupRefs[]` maps are populated in `policy-evaluation-core.ts` today (Spec 162 and 163, respectively). The structural-frontier dispatch in `policy-agent.ts`'s `traceCandidatesForFrontier` already consumes both maps — verified by Spec §6.
 5. `policy-preview-inner.ts:447` calls `resolveVisibleSurface(input, drive.state, ...)` for scalar `preview.option.*` readouts — confirmed by Spec §2.2. **This call site is NOT touched** by this ticket; projected lookups route through `policy-lookup-surface.ts`'s separate visibility plumbing (Spec §4.7 §6).
 6. Per-candidate `DriveResult` is already cached per option at `policy-preview-inner.ts:495` (`runChooseOneInnerPreview`); the new family reads from the same cache. No additional drive invocations.
-7. The action-selection frontier path: confirm by reading `traceCandidatesForFrontier` whether action-selection candidates have access to a per-option `DriveResult`. Per Spec §4.3 and Spec 162 the answer is "no — gated by `unknownGated`", but spot-check the structural-frontier dispatch to confirm the per-candidate context lacks `DriveResult` at action-selection.
+7. The action-selection frontier path: confirm by reading `traceCandidatesForFrontier` whether action-selection candidates have access to a per-option `DriveResult`. Per Spec §4.3 and Spec 162 the answer is "no — gated by the canonical per-ref reason `gated`", but spot-check the structural-frontier dispatch to confirm the per-candidate context lacks `DriveResult` at action-selection.
 8. The Spec §4.4 key-evaluation rule says the lookup `key` expression is evaluated **in the root candidate context**, not in the projected state. Confirm that the existing `resolveLookupRef` evaluates `ref.key` against the candidate context (not the resolved state) — this should be the existing behavior since Spec 163, but worth verifying that the routing change does not accidentally swap key evaluation into projected state.
 
 ## Architecture Check
@@ -53,8 +53,8 @@ if (ref.surface === 'policyState') {
 // ref.surface === 'previewOptionState'
 const drive = candidate.drive; // or whatever the candidate's bound DriveResult accessor is
 if (!drive) {
-  registerUnknownPreviewRef(ref.id, 'unknownGated');
-  return unavailable('unknownGated');
+  registerUnknownPreviewRef(ref.id, 'gated');
+  return unavailable('gated');
 }
 if (drive.outcome !== 'ready') {
   const reason = mapDriveOutcomeToReason(drive.outcome); // depthCap, hidden, stochastic, failed, unresolved
@@ -105,7 +105,7 @@ Author the six runtime invariant tests in `packages/engine/test/architecture/loo
 
 1. `projected-lookup-ready-endpoint-only.test.ts` (Spec §8.1 #1): two parallel fixtures, one with `outcome: 'ready'`, one with `outcome: 'depthCap'`; same projected lookup ref; assert (a) returns the path value walked against `DriveResult.state`, (b) returns `unavailable(depthCap)` and never reads `DriveResult.state`.
 2. `projected-lookup-observer-visibility.test.ts` (Spec §8.1 #4): two-seat fixture; same projected lookup ref evaluated under each seat context; seat A resolves `ready`, seat B resolves `unavailable(hidden)`.
-3. `projected-lookup-gated-at-action-selection.test.ts` (Spec §8.1 #6): projected lookup at an action-selection frontier (no per-option `DriveResult`); every candidate returns `unavailable(unknownGated)`; `previewFallback.onUnavailable: noContribution` produces no contribution; `unknownPreviewRefs` records the ref.
+3. `projected-lookup-gated-at-action-selection.test.ts` (Spec §8.1 #6): projected lookup at an action-selection frontier (no per-option `DriveResult`); every candidate records `gated` in `unknownPreviewRefs` and contributes no value; `previewFallback.onUnavailable: noContribution` produces no contribution.
 4. `projected-lookup-costclass-runtime.test.ts` (Spec §8.1 #7 — runtime confirmation): the trace records `costClass: preview` for the consideration evaluated at runtime, regardless of author-written `costClass`. (Compile-time portion of #7 already lives in ticket 003's `projected-lookup-costclass-promotion.test.ts`; this test is the runtime confirmation that the join propagates into trace surface.) Implementer may merge this test with the compile-time one in ticket 003 if the trace surface is easier to assert in the same fixture — coordinate with that ticket's author.
 5. `projected-lookup-collection-coverage.test.ts` (Spec §8.1 #8): for each of `zones`, `tokens`, `players`, `globals`, a path-walk depth ≥ 2 against `DriveResult.state` from a synthetic completion resolves correctly.
 6. `projected-lookup-determinism.test.ts` (Spec §8.1 #9): replay a microturn twice; assert byte-identical resolution outcomes and ref-id-sorted unknown ref maps and contribution values.
@@ -138,7 +138,7 @@ If test #4 (`projected-lookup-costclass-runtime.test.ts`) is folded into ticket 
 
 1. **`projected-lookup-ready-endpoint-only.test.ts`** — `ready` drive produces a ready path-walk against `drive.state`; `depthCap` drive produces `unavailable(depthCap)` and the test asserts `drive.state` was never read (via spy / wrapped state-access). **Foundation #20 integrity.**
 2. **`projected-lookup-observer-visibility.test.ts`** — Two-seat fixture, same projected ref under each seat. Seat A `ready`, seat B `unavailable(hidden)`. **Foundation #4.**
-3. **`projected-lookup-gated-at-action-selection.test.ts`** — At an action-selection frontier without per-option drive context, every candidate returns `unavailable(unknownGated)`; ref registered in `unknownPreviewRefs[]`. **Spec §4.3 gating.**
+3. **`projected-lookup-gated-at-action-selection.test.ts`** — At an action-selection frontier without per-option drive context, every candidate records `gated` in `unknownPreviewRefs[]` and contributes no value. **Spec §4.3 gating.**
 4. **`projected-lookup-costclass-runtime.test.ts`** — Runtime trace records `costClass: preview` (or equivalent, depending on where the trace surfaces the consideration's effective costClass).
 5. **`projected-lookup-collection-coverage.test.ts`** — Each of `zones`, `tokens`, `players`, `globals` is exercised at path-depth ≥ 2 against a synthetic completion's `DriveResult.state`.
 6. **`projected-lookup-determinism.test.ts`** — Byte-identical resolution outcomes across two replays; `unknownPreviewRefs[]` and `unknownLookupRefs[]` entries sorted by ref id. **Foundation #8.**
@@ -172,3 +172,71 @@ If test #4 (`projected-lookup-costclass-runtime.test.ts`) is folded into ticket 
 3. `pnpm -F @ludoforge/engine test` — full engine suite.
 4. `pnpm turbo build && pnpm turbo typecheck && pnpm turbo lint` — gates.
 5. `pnpm run check:ticket-deps` — Deps validation.
+
+## Outcome (2026-05-11)
+
+Outcome amended: 2026-05-11
+
+Implemented the Phase 3 runtime routing for `lookup.surface: previewOptionState`:
+
+- `policyState` refs continue to resolve against the current policy state through the existing lookup path.
+- `previewOptionState` refs now resolve only from a candidate-bound projected preview endpoint. Missing candidate drive context records canonical per-ref reason `gated` in `unknownPreviewRefs`; non-ready projected outcomes record their preview reason there as well; ready-endpoint lookup/path/visibility failures record in `unknownLookupRefs`.
+- Ready projected lookup resolution delegates to the shared `resolveLookupAgainstState` helper with `LookupStateSource` provenance `{ kind: 'previewOptionState', depth, capClass, completionPolicy }`.
+- Per-option projected states are now carried from inner preview results through chooseOne and chooseNStep scoring, without adding trace schema fields.
+- Runtime lookup ref ids are now surface-qualified (`lookup.<surface>...`) so `policyState` and `previewOptionState` ids remain deterministic and distinct. The three existing Spec 163 lookup-ref tests were updated for this intended Spec 165 id shape while preserving current-state behavior.
+
+Representation correction made during implementation:
+
+- The live canonical per-ref reason is `gated`; the aggregate preview breakdown counter remains `unknownGated`. The ticket and spec were corrected from the draft wording that implied `unknownGated` was itself a per-ref reason.
+- `PolicyPreviewTraceOutcome` uses `stochastic`, while the existing preview-unavailability reason union uses `random`; runtime mapping preserves that live contract.
+
+Touched files:
+
+- `packages/engine/src/agents/policy-runtime.ts`
+- `packages/engine/src/agents/policy-evaluation-core.ts`
+- `packages/engine/src/agents/microturn-option-eval.ts`
+- `packages/engine/src/agents/microturn-option-evaluator.ts`
+- `packages/engine/src/agents/policy-preview-inner.ts`
+- `packages/engine/src/agents/policy-agent-inner-preview.ts`
+- `packages/engine/src/agents/policy-agent.ts`
+- `packages/engine/test/architecture/lookup-refs/lookup-dispatch-determinism.test.ts`
+- `packages/engine/test/architecture/lookup-refs/lookup-fallback-explicit-zero-traced.test.ts`
+- `packages/engine/test/architecture/lookup-refs/lookup-unavailable-not-silently-zero.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-runtime-test-helpers.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-ready-endpoint-only.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-observer-visibility.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-gated-at-action-selection.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-costclass-runtime.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-collection-coverage.test.ts`
+- `packages/engine/test/architecture/lookup-refs-projected/projected-lookup-determinism.test.ts`
+- `specs/165-projected-state-lookup-refs.md`
+- `archive/tickets/165PROSTALOO-004.md`
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts`: 1776 lines before, 1828 after. This file was already above guidance; this ticket made a surgical routing addition and did not attempt the unrelated split.
+- `packages/engine/src/agents/policy-agent.ts`: 816 lines after. This file remains above guidance from pre-existing runtime breadth; this ticket only threaded the projected-state map through existing scoring paths.
+- New shared projected lookup test helper: 256 lines.
+
+Proof:
+
+- `pnpm turbo build` — pass.
+- `node --test packages/engine/dist/test/architecture/lookup-refs-projected/*.test.js` — pass, 17 tests / 12 suites before the full engine suite; pass again after root typecheck/lint.
+- `pnpm -F @ludoforge/engine test` — pass, 65/65 files.
+- `pnpm turbo typecheck` — pass.
+- `pnpm turbo lint` — pass.
+- `pnpm run check:ticket-deps` — pass, 3 active tickets and 2299 archived tickets.
+
+Post-review cleanup:
+
+- Fixed a same-seam indentation issue in `packages/engine/src/agents/policy-agent-inner-preview.ts`.
+- Post-review verification: `pnpm -F @ludoforge/engine build`, `node --test packages/engine/dist/test/architecture/lookup-refs-projected/*.test.js`, and `pnpm -F @ludoforge/engine lint` all passed.
+
+Non-final red lane:
+
+- The first full engine test run exposed three stale Spec 163 expectations for non-surface-qualified lookup ref ids. Those were updated to the intended `lookup.policyState...` shape and the full engine suite then passed.
+
+Deferred to follow-up owners:
+
+- Continued-deepening trigger widening remains ticket `165PROSTALOO-005`.
+- Cookbook and comprehensive end-to-end fixture work remains ticket `165PROSTALOO-006`.

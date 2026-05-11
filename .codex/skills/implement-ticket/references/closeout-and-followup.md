@@ -232,6 +232,15 @@ When resuming after context compaction, interruption, or a handoff and the remai
 5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files.
 6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
 
+When proof is only partially complete after compaction or a long handoff, use this narrower recovery flow instead of jumping straight to terminal status:
+
+1. Poll or classify any in-flight proof lane before launching another command that can contend for the same package, cache, `dist`, generated schema, compiled JSON, golden, or benchmark output.
+2. Reconstruct the ticket-named deliverables ledger from the active ticket, final diff, and `git status --short`, including untracked additions.
+3. Patch only the pending outcome/proof plan while status remains nonterminal when scope, touched-file ownership, command coverage, or proof claims still need final verification.
+4. Run the remaining final lanes serially, with build-producing lanes before `dist` consumers and with focused compiled-output witnesses rerun after any later lane rebuilds or cleans the consumed output.
+5. Apply terminal status as a final narrow patch only after the final lanes are green, classified, or explicitly substituted.
+6. Run the dependency/markdown integrity check if status, dependency edges, sibling ownership, active/archive classification, or same-series ownership changed, then finish with hygiene and untracked-aware status checks.
+
 ### Status-Only Terminal Patch Sequence
 
 When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
@@ -242,6 +251,16 @@ When all final proof lanes are already green/classified and the only remaining c
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
    - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
 5. Run the final untracked-aware `git status --short` sweep before the user handoff.
+
+Use this compact final handoff shape when implementation stops before archival:
+
+- `implemented ticket`: active path and terminal status
+- `archive status`: `implemented but not archived`, `archived`, or `post-ticket-review already ran`
+- `tracked modified`: tracked files changed by this implementation
+- `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
+- `green proof lanes`: commands that passed and are final for the owned slice
+- `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
+- `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
 
 ## Dependency Integrity Pass
 

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: Yes — `agents/policy-preview-inner-deepening.ts`
-**Deps**: `tickets/165PROSTALOO-004.md`
+**Deps**: `archive/tickets/165PROSTALOO-004.md`
 
 ## Problem
 

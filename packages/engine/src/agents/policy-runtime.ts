@@ -4,6 +4,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type {
   AgentParameterValue,
+  AgentPreviewInnerCapClass,
   AgentPolicyCatalog,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
@@ -29,7 +30,11 @@ import {
   type PolicyPreviewTraceOutcome,
   type PolicyPreviewSurfaceResolution,
 } from './policy-preview.js';
-import { resolveLookupViaSeatResolution } from './policy-lookup-surface.js';
+import {
+  resolveLookupAgainstState,
+  resolveLookupViaSeatResolution,
+  type LookupStateSource,
+} from './policy-lookup-surface.js';
 import {
   buildPolicyVictorySurface,
   getPolicySurfaceVisibility,
@@ -94,6 +99,20 @@ export interface PolicyLookupSurfaceProvider {
     keyValue: PolicyValue,
     seatContext?: string,
   ): LookupRefStatus;
+  resolveLookupAgainstState(
+    source: LookupStateSource,
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>,
+    keyValue: PolicyValue,
+    seatContext?: string,
+  ): LookupRefStatus;
+}
+
+export interface PreviewOptionProjectedState {
+  readonly state?: GameState;
+  readonly outcome: PolicyPreviewTraceOutcome;
+  readonly driveDepth: number;
+  readonly completionPolicy: PolicyPreviewDriveTrace['completionPolicy'];
+  readonly capClass: AgentPreviewInnerCapClass;
 }
 
 export interface PolicyCompletionProvider {
@@ -262,6 +281,15 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     },
   };
   let disposed = false;
+  const lookupContext = {
+    def: input.def,
+    state: input.state,
+    actingSeatId: input.seatId,
+    actingPlayerIndex: Number(input.playerId),
+    seatResolutionIndex,
+    surfaceVisibility: input.catalog.surfaceVisibility,
+    ...(observerProfile === undefined ? {} : { observerProfile }),
+  };
 
   return {
     intrinsics: {
@@ -410,15 +438,10 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
     },
     lookupSurface: {
       resolveLookup(ref, keyValue, seatContext) {
-        return resolveLookupViaSeatResolution({
-          def: input.def,
-          state: input.state,
-          actingSeatId: input.seatId,
-          actingPlayerIndex: Number(input.playerId),
-          seatResolutionIndex,
-          surfaceVisibility: input.catalog.surfaceVisibility,
-          ...(observerProfile === undefined ? {} : { observerProfile }),
-        }, ref, keyValue, seatContext);
+        return resolveLookupViaSeatResolution(lookupContext, ref, keyValue, seatContext);
+      },
+      resolveLookupAgainstState(source, ref, keyValue, seatContext) {
+        return resolveLookupAgainstState(lookupContext, source, ref, keyValue, seatContext);
       },
     },
     ...(input.completion === undefined

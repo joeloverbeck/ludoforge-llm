@@ -18,6 +18,7 @@ import { runDeepPass } from './policy-preview-inner-deepening.js';
 import { classifyPreviewUtility } from './preview-utility-classifier.js';
 import type { PolicyEvaluationMetadata, PolicyPreviewPhaseCoverage, ReadyRefStats } from './policy-eval.js';
 import type { ResolvedPolicyProfile } from './policy-profile-resolution.js';
+import type { PreviewOptionProjectedState } from './policy-runtime.js';
 
 type PolicyAgentInnerPreviewRun = ChooseOneInnerPreviewRun | ChooseNStepInnerPreviewRun;
 type PolicyAgentInnerPreviewOption = PolicyAgentInnerPreviewRun['options'][number];
@@ -37,7 +38,22 @@ export interface PolicyAgentInnerPreview {
   readonly usage: PolicyEvaluationMetadata['previewUsage'];
   readonly byOptionKey: ReadonlyMap<string, PolicyAgentInnerPreviewOption>;
   readonly refsByOptionKey: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
+  readonly projectedStateByOptionKey: ReadonlyMap<string, PreviewOptionProjectedState>;
 }
+
+const projectedStatesByOptionKey = (
+  run: PolicyAgentInnerPreviewRun,
+  capClass: PreviewCapClass,
+): ReadonlyMap<string, PreviewOptionProjectedState> => new Map(run.options.map((option) => [
+  option.stableMoveKey,
+  {
+    ...(option.outcome === 'ready' ? { state: option.state } : {}),
+    outcome: option.outcome,
+    driveDepth: option.driveDepth,
+    completionPolicy: option.previewDrive.completionPolicy,
+    capClass,
+  },
+]));
 
 const walkPolicyExpr = (
   expr: CompiledPolicyExpr,
@@ -235,6 +251,7 @@ export function createPolicyAgentChooseOneInnerPreview(
   }
   const refs = collectMicroturnPreviewOptionRefs(resolvedProfile);
   const refIds = refs.map((ref) => previewOptionRefKey(ref));
+  const capClass = resolvedProfile.profile.preview.inner?.capClass ?? 'standard256';
   const run = runChooseOneInnerPreview({
     def: input.def,
     state: input.state,
@@ -254,10 +271,11 @@ export function createPolicyAgentChooseOneInnerPreview(
     refIds,
     usage: summarizeUsage(resolvedProfile.profile.preview.mode, run, refIds, {
       strategy: resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass',
-      capClass: resolvedProfile.profile.preview.inner?.capClass ?? 'standard256',
+      capClass,
     }),
     byOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(run.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
+    projectedStateByOptionKey: projectedStatesByOptionKey(run, capClass),
   };
 }
 
@@ -289,6 +307,7 @@ export function createPolicyAgentChooseNStepInnerPreview(
     ...(input.runtime === undefined ? {} : { runtime: input.runtime }),
   });
   const strategy = resolvedProfile.profile.preview.inner?.strategy ?? 'singlePass';
+  const capClass = resolvedProfile.profile.preview.inner?.capClass ?? 'standard256';
   const deepening = strategy === 'continuedDeepening'
     ? runDeepPass({
         def: input.def,
@@ -308,7 +327,7 @@ export function createPolicyAgentChooseNStepInnerPreview(
   const finalRun = deepening.run;
   const phaseCoverage = {
     strategy,
-    capClass: resolvedProfile.profile.preview.inner?.capClass ?? 'standard256',
+    capClass,
     ...(strategy === 'continuedDeepening' ? { broad: summarizePhaseCoverage(run, refIds) } : {}),
     ...(deepening.triggerFired === undefined
       ? {}
@@ -320,5 +339,6 @@ export function createPolicyAgentChooseNStepInnerPreview(
     usage: summarizeUsage(resolvedProfile.profile.preview.mode, finalRun, refIds, phaseCoverage),
     byOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option])),
     refsByOptionKey: new Map(finalRun.options.map((option) => [option.stableMoveKey, option.resolvedRefs])),
+    projectedStateByOptionKey: projectedStatesByOptionKey(finalRun, capClass),
   };
 }

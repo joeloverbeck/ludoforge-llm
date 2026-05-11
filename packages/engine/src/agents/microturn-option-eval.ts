@@ -13,6 +13,7 @@ import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import { PolicyEvaluationContext, type PolicyLookupFallbackFired, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
+import type { PreviewOptionProjectedState } from './policy-runtime.js';
 
 const EMPTY_TRUSTED_MOVE_INDEX: ReadonlyMap<string, TrustedExecutableMove> = new Map();
 
@@ -43,6 +44,7 @@ export function scoreMicroturnOption(
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
+  previewOptionProjectedState?: PreviewOptionProjectedState,
 ): number {
   return scoreMicroturnOptionWithContributions(
     state,
@@ -57,6 +59,7 @@ export function scoreMicroturnOption(
     considerationIds,
     runtime,
     previewOptionResolvedRefs,
+    previewOptionProjectedState,
   ).score;
 }
 
@@ -73,6 +76,7 @@ export function scoreMicroturnOptionWithContributions(
   considerationIds: readonly string[],
   runtime?: GameDefRuntime,
   previewOptionResolvedRefs?: ReadonlyMap<string, PreviewOptionRefStatus>,
+  previewOptionProjectedState?: PreviewOptionProjectedState,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
     return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map(), unknownLookupRefs: new Map() };
@@ -98,8 +102,10 @@ export function scoreMicroturnOptionWithContributions(
       optionIndex,
     },
     ...(previewOptionResolvedRefs === undefined
-      ? {}
-      : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired } }),
+      ? previewOptionProjectedState === undefined
+        ? {}
+        : { previewOption: { resolvedRefs: new Map(), unknownPreviewRefs, previewFallbackFired, projectedState: previewOptionProjectedState } }
+      : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired, ...(previewOptionProjectedState === undefined ? {} : { projectedState: previewOptionProjectedState }) } }),
     lookupOption: { unknownLookupRefs, lookupFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);

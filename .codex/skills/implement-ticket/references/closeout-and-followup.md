@@ -29,6 +29,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 
 - re-check non-command acceptance constraints such as file-size caps, named line-count limits, exact file/artifact deliverables, and explicit "do not modify X" boundaries
 - use cheap structural probes when helpful (`wc -l`, targeted file existence checks, touched-file scope checks including untracked files)
+- when a source-size ledger was drafted earlier, reconstructed after compaction, or transcribed from a handoff summary, rerun the cheap line-count probe for every ledger path immediately before the terminal ticket/status patch and reconcile the durable ledger with those exact counts
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
@@ -36,6 +37,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
 - compare the ticket's named file/artifact list against the actual touched-file scope; if a named file was not actually required or an unlisted file became required, correct the active ticket before marking it complete
 - reconcile ticket classification fields that summarize the closeout contract, such as status, engine/code-change markers, effort/risk notes when present, `What to Change`, `Files to Touch`, generated-fallout expectations, and verification/proof ledger entries
+- for completed tracked tickets, sweep the outcome/proof block for stale forward-looking closeout phrasing such as `planned`, `pending`, `expected`, `will run`, or `to be verified`. Replace it with final evidence or keep it only when explicitly describing historical pre-proof state.
 - when the active ticket corresponds to a parent spec checklist, MVP item, phase row, or other explicit completion marker, update that marker before final proof and include it in the touched-file/proof ledger. If this changes status, ticket-list parity, dependency ownership, or active/archive classification, run the repo's dependency or markdown-integrity checker before closeout.
 - reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run.
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
@@ -141,6 +143,22 @@ When the ticket lands successfully but the live investigation disproves part of 
 
 - `ticket corrections applied`: `<draft hypothesis> -> <measured live result>`
 
+## Source-Size Ledger
+
+When active work grows a source file that is already near/over repo guidance, or creates a source file that crosses guidance, use this exact closeout ledger in the active ticket outcome or final closeout:
+
+- `source-size ledger`: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
+
+## Same-Series Draft Delta
+
+When new same-series draft tickets appear after the initial checkpoint and the active ticket/spec references deferred sibling scope, carry this compact field into the running note or durable outcome:
+
+- `new same-series drafts`: `paths | opened because | dependency role | active-boundary impact | final classification`
+
+Use `final classification` values from the main skill guidance: `read-only sibling context`, `concurrent unrelated draft`, or `boundary-changing sibling`. If the classification is boundary-changing, update the active ticket/spec before final proof and rerun affected lanes; if it is read-only sibling context, keep the ledger as closeout evidence rather than expanding the active ticket.
+
 ## Split Phase Completion
 
 When a spec phase or checklist item is satisfied by the combination of an already-landed predecessor plus the current ticket, record the basis before marking the phase complete:
@@ -173,7 +191,7 @@ If those ticket edits include path, dependency, archival, or ticket-id correctio
 
 For a small bounded refactor on an active tracked ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
 
-1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, file-size or other final-sweep ledgers, and exact final lanes.
+1. Prewrite the tracked ticket outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, exact source-size ledger when triggered, same-series draft delta when triggered, and exact final lanes.
 2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers and with focused generated-output consumers rerun after any later lane rebuilds the consumed output.
 3. Apply a terminal status/proof transcription patch only after all final lanes are green or classified. Keep this patch to status and exact proof results when practical.
 4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
@@ -188,7 +206,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 2. Emit the working-notes checkpoint, including the ticket-named deliverables ledger, generated-fallout expectation, output-contention plan, source-size risk, runtime surface breadth, and terminal status plan.
 3. Make the source/test edits only after the checkpoint. Keep the diff inside the ticket-owned files unless live reassessment proves owned fallout.
 4. Build the engine package before running focused compiled tests, then run the narrow ticket-owned `node --test packages/engine/dist/...` witness lanes.
-5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, file-size ledger, command substitutions, exact final proof lanes, and no-invalidation plan.
+5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, exact source-size ledger when triggered, same-series draft delta when triggered, command substitutions, exact final proof lanes, and no-invalidation plan.
 6. Run the ticket-named package/root lanes serially. Do not overlap any lane that rebuilds or cleans `dist`; after a broad lane rebuilds `dist`, rerun the focused compiled-output witness you still intend to cite as final acceptance evidence.
 7. Apply the terminal status/proof transcription as a narrow final ticket edit only after final lanes are green or classified, then run the ticket-dependency or markdown-integrity checker when status/dependency/archive state changed.
 8. Transcribe only the checker result, record why the transcription is clerical, run `git diff --check`, run targeted hygiene or record substitute coverage for untracked additions, and finish with untracked-aware `git status --short`.
@@ -198,7 +216,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 
 For a small bounded refactor on an active untracked draft ticket, use this minimum terminal sequence when no schema/golden/migration/follow-up work is owned:
 
-1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, and exact final lanes.
+1. Prewrite the draft outcome while status remains pending: what landed, touched-file scope, generated fallout, deferred sibling/spec scope, exact source-size ledger when triggered, same-series draft delta when triggered, and exact final lanes.
 2. Run the final lanes serially after that outcome text, with build-producing lanes before `dist` consumers.
 3. Apply a status-only terminal patch plus exact proof transcription after all lanes are green or classified.
 4. Run the narrowest ticket-dependency or markdown-integrity check when terminal status, deps, sibling state, active/archive classification, or same-series ownership is present.
@@ -216,6 +234,15 @@ When resuming after context compaction, interruption, or a handoff and the remai
 5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files.
 6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
 
+When proof is only partially complete after compaction or a long handoff, use this narrower recovery flow instead of jumping straight to terminal status:
+
+1. Poll or classify any in-flight proof lane before launching another command that can contend for the same package, cache, `dist`, generated schema, compiled JSON, golden, or benchmark output.
+2. Reconstruct the ticket-named deliverables ledger from the active ticket, final diff, and `git status --short`, including untracked additions.
+3. Patch only the pending outcome/proof plan while status remains nonterminal when scope, touched-file ownership, command coverage, or proof claims still need final verification.
+4. Run the remaining final lanes serially, with build-producing lanes before `dist` consumers and with focused compiled-output witnesses rerun after any later lane rebuilds or cleans the consumed output.
+5. Apply terminal status as a final narrow patch only after the final lanes are green, classified, or explicitly substituted.
+6. Run the dependency/markdown integrity check if status, dependency edges, sibling ownership, active/archive classification, or same-series ownership changed, then finish with hygiene and untracked-aware status checks.
+
 ### Status-Only Terminal Patch Sequence
 
 When all final proof lanes are already green/classified and the only remaining closeout edit is terminal status plus exact proof transcription, use this order:
@@ -226,6 +253,16 @@ When all final proof lanes are already green/classified and the only remaining c
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
    - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
 5. Run the final untracked-aware `git status --short` sweep before the user handoff.
+
+Use this compact final handoff shape when implementation stops before archival:
+
+- `implemented ticket`: active path and terminal status
+- `archive status`: `implemented but not archived`, `archived`, or `post-ticket-review already ran`
+- `tracked modified`: tracked files changed by this implementation
+- `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
+- `green proof lanes`: commands that passed and are final for the owned slice
+- `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
+- `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
 
 ## Dependency Integrity Pass
 

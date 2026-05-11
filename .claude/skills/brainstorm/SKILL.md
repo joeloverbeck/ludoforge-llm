@@ -36,7 +36,8 @@ Classify: design | decision/triage | operational
          |
          +--> OPERATIONAL MODE: brief interview -> verify state -> write executable plan w/ verification
          |
-         +--> DESIGN MODE (default):
+         +--> DESIGN MODE (default; includes Decision-requiring-design when
+         |     evaluation requires producing the design — see Step 1.2):
               Confidence-driven interview loop (target: 95%)
                        |
                        v
@@ -301,7 +302,7 @@ Once all sections are approved, determine the output format:
 
 **Auto-mode + compound-move "approved without revision"**: Under the Step 4 auto-mode adaptation combined with the compound-move section preview, sections are previewed as bullets but never individually approved. The section-bullet preview without user pushback counts as "approved without revision" for the routing rule above — route to `specs/` if the design is well-scoped, route to `docs/plans/` only if the user pushed back on a section in the preview message. Pushback that arrives AFTER the artifact has been written is post-design feedback (handled per "Post-Design Requests"), not a routing reclassification.
 
-**Reassessment section for external-proposal outputs**: When the artifact is a Decision-requiring-design output derived from an external LLM proposal (per Step 1.2 "External LLM analysis"), include a final "Reassessment of source proposal" section enumerating per-recommendation dispositions: adopted, corrected (with what was wrong), deferred to follow-up spec (with the spec name), or rejected (with rationale). This preserves traceability of the brainstorm's decisions through to the implementer who otherwise has no record of which external proposals were honored versus modified.
+**Reassessment section for external-proposal outputs**: When the artifact is a Decision-requiring-design output derived from an external LLM proposal (per Step 1.2 "External LLM analysis"), include a final "Reassessment of source proposal" section enumerating per-recommendation dispositions: adopted (no change), adopted with adjustment (concept kept, implementation modified — with the change noted), corrected (with what was wrong), deferred to follow-up spec (with the spec name), or rejected (with rationale). This preserves traceability of the brainstorm's decisions through to the implementer who otherwise has no record of which external proposals were honored versus modified.
 
 **Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a phase-boundaries table where each phase row pairs a measurable acceptance criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this table — a single acceptance criteria section suffices.
 
@@ -399,7 +400,7 @@ What would you like to do next?
 4. Done for now — I'll review the spec later
 ```
 
-Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-LETTER-CHUNKS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` (letter chunks are typically 2-to-5 letters per word — not single-letter initials; common stop-words like "and", "the", "native" are dropped) — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`. Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
+Suggest a namespace for option 1 derived from the spec title at menu time. The existing repo convention (visible in `tickets/`) is `<spec-number><UPPERCASE-LETTER-CHUNKS-OF-FIRST-3-TO-4-MEANINGFUL-WORDS>` (letter chunks are typically 2-to-6 letters per word — not single-letter initials; common stop-words like "and", "the", "native" are dropped) — e.g., spec 139 "constructibility-certificate-legality-contract" → `139CCONLEGCONT`; spec 140 "microturn-native-decision-protocol" → `140MICRODECPRO`; spec 163 "generic-microturn-state-feature-lookups" → `163GENLOOKUP` (the 6-letter `LOOKUP` chunk illustrates the upper end of the range). Surfacing the namespace in the menu saves the user a round-trip through spec-to-tickets' "ask for namespace" prompt.
 
 Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose into 4+ tickets across 3+ implementation waves generally benefit from review-first; smaller specs may go straight to implementation. Adapt the menu wording to the actual spec shape when presenting it.
 
@@ -459,7 +460,7 @@ If the user has already stated their next step (e.g., in the same message that a
 
 **Auto-mode adaptation**: Under Claude Code's auto mode, the multi-option menu is replaced by a brief recommendation + one-beat pause. State the recommended next step (typically option 1 for well-scoped specs and operational plans, or option 2 for XL specs that benefit from review-first), explain in one sentence why it is the recommendation, and offer the user a chance to redirect before proceeding. If the user is silent or affirms the recommendation, proceed with it. This matches auto mode's "prefer action over planning" directive without forgoing substantive user control — the user still sees what will happen and can veto. The disposition of any Step 1.5 verification artifacts (promoted / ephemeral / deleted) belongs in this same auto-mode recommendation so the user can object before the next step starts.
 
-Use AskUserQuestion to present this as a proper choice (skip under auto-mode adaptation above). If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
+Use AskUserQuestion to present this as a proper choice (skip under auto-mode adaptation above). Under the "no clarifying questions" directive, treat the Step 6 menu the same as auto-mode adaptation — inline recommendation + redirect opportunity, no AskUserQuestion. If the user picks an option that invokes another skill, invoke it. If they pick "done", end the session.
 
 ## Post-Design Requests
 

@@ -26,7 +26,7 @@ describe('lookup unavailable constant fallback', () => {
     });
     assert.deepEqual([...scored.unknownLookupRefs.entries()], [
       [
-        'lookup.zones.ZoneId.734828891.properties.population',
+        'lookup.policyState.zones.ZoneId.734828891.properties.population',
         'missing',
       ],
     ]);

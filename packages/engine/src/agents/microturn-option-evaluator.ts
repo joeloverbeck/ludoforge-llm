@@ -19,6 +19,7 @@ import { scoreMicroturnOptionWithContributions, type CompletionScoreContribution
 import type { PolicyLookupFallbackFired, PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
+import type { PreviewOptionProjectedState } from './policy-runtime.js';
 
 export interface BuildMicroturnChooseCallbackInput {
   readonly state: GameState;
@@ -29,6 +30,7 @@ export interface BuildMicroturnChooseCallbackInput {
   readonly profile: CompiledAgentProfile;
   readonly runtime?: GameDefRuntime;
   readonly previewOptionResolvedRefsByOptionKey?: ReadonlyMap<string, ReadonlyMap<string, PreviewOptionRefStatus>>;
+  readonly previewOptionProjectedStateByOptionKey?: ReadonlyMap<string, PreviewOptionProjectedState>;
 }
 
 export interface MicroturnChoiceSelection {
@@ -109,6 +111,7 @@ export function selectBestMicroturnChooseOneValue(
       microturnConsiderationIds,
       input.runtime,
       input.previewOptionResolvedRefsByOptionKey?.get(optionKey),
+      input.previewOptionProjectedStateByOptionKey?.get(optionKey),
     );
     scoreContributionsByOption.set(optionKey, scored.scoreContributions);
     unknownPreviewRefsByOption.set(optionKey, scored.unknownPreviewRefs);
@@ -187,6 +190,7 @@ export function buildMicroturnChooseCallback(
           microturnConsiderationIds,
           input.runtime,
           input.previewOptionResolvedRefsByOptionKey?.get(scoreContributionsKeyForChooseNStepAdd(request, value)),
+          input.previewOptionProjectedStateByOptionKey?.get(scoreContributionsKeyForChooseNStepAdd(request, value)),
         ),
       }));
       for (const entry of scoredValues) {

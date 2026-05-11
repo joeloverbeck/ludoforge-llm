@@ -703,7 +703,10 @@ const CompiledAgentPolicyRefSchema = z.union([
   }).strict(),
   z.object({
     kind: z.literal('lookup'),
-    surface: z.literal('policyState'),
+    surface: z.union([
+      z.literal('policyState'),
+      z.literal('previewOptionState'),
+    ]),
     collection: z.union([
       z.literal('zones'),
       z.literal('tokens'),

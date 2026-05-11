@@ -803,7 +803,7 @@ export function withCompiledLookupRef(
   return {
     expr: { kind: 'ref', ref },
     valueType: 'unknown',
-    costClass: maxCostClass('state', key.costClass),
+    costClass: maxCostClass(ref.surface === 'previewOptionState' ? 'preview' : 'state', key.costClass),
     dependencies: key.dependencies,
     isStaticallyZero: false,
   };

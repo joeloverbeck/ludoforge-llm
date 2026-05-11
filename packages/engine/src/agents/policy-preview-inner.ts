@@ -74,6 +74,7 @@ export interface RunChooseOneInnerPreviewInput extends InnerPreviewBaseInput {
 export interface ChooseOneInnerPreviewResult {
   readonly decision: Extract<Decision, { readonly kind: 'chooseOne' }>;
   readonly stableMoveKey: string;
+  readonly state: GameState;
   readonly resolvedRefs: ReadonlyMap<string, PreviewOptionRefStatus>;
   readonly driveDepth: number;
   readonly outcome: PolicyPreviewTraceOutcome;
@@ -504,6 +505,7 @@ export function runChooseOneInnerPreview(input: RunChooseOneInnerPreviewInput): 
       return {
         decision,
         stableMoveKey: chooseOneStableMoveKey(input.microturn, decision),
+        state: drive.state,
         resolvedRefs: withOutcome,
         driveDepth: drive.depth,
         outcome,

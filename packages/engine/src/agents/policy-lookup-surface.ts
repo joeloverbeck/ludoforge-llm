@@ -8,6 +8,7 @@ import type {
   GameDef,
   GameState,
   LookupRefStatus,
+  PolicyPreviewDriveTrace,
   SurfaceVisibilityClass,
   Token,
   ZoneDef,
@@ -26,6 +27,20 @@ export interface PolicyLookupResolutionContext {
   readonly seatResolutionIndex: SeatResolutionIndex;
   readonly surfaceVisibility: CompiledSurfaceCatalog;
   readonly observerProfile?: CompiledObserverProfile;
+}
+
+export type LookupStateProvenance =
+  | { readonly kind: 'currentState' }
+  | {
+      readonly kind: 'previewOptionState';
+      readonly depth: number;
+      readonly capClass: string;
+      readonly completionPolicy: PolicyPreviewDriveTrace['completionPolicy'];
+    };
+
+export interface LookupStateSource {
+  readonly state: GameState;
+  readonly provenance: LookupStateProvenance;
 }
 
 interface TokenLocation {
@@ -54,15 +69,31 @@ export function resolveLookupViaSeatResolution(
   keyValue: PolicyValue,
   seatContext?: string,
 ): LookupRefStatus {
+  return resolveLookupAgainstState(
+    context,
+    { state: context.state, provenance: { kind: 'currentState' } },
+    ref,
+    keyValue,
+    seatContext,
+  );
+}
+
+export function resolveLookupAgainstState(
+  context: PolicyLookupResolutionContext,
+  source: LookupStateSource,
+  ref: LookupRef,
+  keyValue: PolicyValue,
+  seatContext?: string,
+): LookupRefStatus {
   const observerSeatId = seatContext ?? context.actingSeatId;
   const observerPlayerIndex = resolvePlayerIndexForSeatValue(observerSeatId, context.seatResolutionIndex)
     ?? context.actingPlayerIndex;
-  const key = validateLookupKey(context, ref, keyValue);
+  const key = validateLookupKey(context, source.state, ref, keyValue);
   if (key.kind === 'unavailable') {
     return key.status;
   }
 
-  const projected = projectLookupObject(context, ref, key.value, observerSeatId, observerPlayerIndex);
+  const projected = projectLookupObject(context, source.state, ref, key.value, observerSeatId, observerPlayerIndex);
   if (projected.kind === 'unavailable') {
     return projected.status;
   }
@@ -75,6 +106,7 @@ export function resolveLookupViaSeatResolution(
 
 function validateLookupKey(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   ref: LookupRef,
   keyValue: PolicyValue,
 ): { readonly kind: 'ready'; readonly value: string | number } | { readonly kind: 'unavailable'; readonly status: LookupRefStatus } {
@@ -100,12 +132,12 @@ function validateLookupKey(
         ? { kind: 'ready', value: keyValue }
         : { kind: 'unavailable', status: { kind: 'unavailable', reason: 'typeMismatch' } };
     }
-    if (findToken(context.state, keyValue) !== undefined) {
+    if (findToken(state, keyValue) !== undefined) {
       return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'typeMismatch' } };
     }
     return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'missing' } };
   }
-  if (findToken(context.state, keyValue) !== undefined) {
+  if (findToken(state, keyValue) !== undefined) {
     return ref.keyType === 'TokenId'
       ? { kind: 'ready', value: keyValue }
       : { kind: 'unavailable', status: { kind: 'unavailable', reason: 'typeMismatch' } };
@@ -131,6 +163,7 @@ function isLookupKeyTypeCompatible(ref: LookupRef): boolean {
 
 function projectLookupObject(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   ref: LookupRef,
   key: string | number,
   observerSeatId: string,
@@ -138,18 +171,19 @@ function projectLookupObject(
 ): { readonly kind: 'ready'; readonly value: ProjectedLookupObject } | { readonly kind: 'unavailable'; readonly status: LookupRefStatus } {
   switch (ref.collection) {
     case 'zones':
-      return projectZone(context, String(key), observerPlayerIndex);
+      return projectZone(context, state, String(key), observerPlayerIndex);
     case 'tokens':
-      return projectToken(context, String(key), observerPlayerIndex);
+      return projectToken(context, state, String(key), observerPlayerIndex);
     case 'players':
-      return projectPlayer(context, ref, Number(key), observerSeatId, observerPlayerIndex);
+      return projectPlayer(context, state, ref, Number(key), observerSeatId, observerPlayerIndex);
     case 'globals':
-      return projectGlobal(context, String(key), observerSeatId, observerPlayerIndex);
+      return projectGlobal(context, state, String(key), observerSeatId, observerPlayerIndex);
   }
 }
 
 function projectZone(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   zoneId: string,
   observerPlayerIndex: number,
 ): { readonly kind: 'ready'; readonly value: ProjectedLookupObject } | { readonly kind: 'unavailable'; readonly status: LookupRefStatus } {
@@ -168,17 +202,18 @@ function projectZone(
       owner: zone.owner,
       ownerPlayerIndex: zone.ownerPlayerIndex,
       properties: zone.attributes ?? {},
-      variables: context.state.zoneVars[String(zone.id)] ?? {},
+      variables: state.zoneVars[String(zone.id)] ?? {},
     },
   };
 }
 
 function projectToken(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   tokenId: string,
   observerPlayerIndex: number,
 ): { readonly kind: 'ready'; readonly value: ProjectedLookupObject } | { readonly kind: 'unavailable'; readonly status: LookupRefStatus } {
-  const located = findToken(context.state, tokenId);
+  const located = findToken(state, tokenId);
   if (located === undefined) {
     return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'missing' } };
   }
@@ -202,15 +237,16 @@ function projectToken(
 
 function projectPlayer(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   ref: LookupRef,
   playerIndex: number,
   observerSeatId: string,
   observerPlayerIndex: number,
 ): { readonly kind: 'ready'; readonly value: ProjectedLookupObject } | { readonly kind: 'unavailable'; readonly status: LookupRefStatus } {
-  if (!Number.isSafeInteger(playerIndex) || playerIndex < 0 || playerIndex >= context.state.playerCount) {
+  if (!Number.isSafeInteger(playerIndex) || playerIndex < 0 || playerIndex >= state.playerCount) {
     return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'missing' } };
   }
-  const variables = context.state.perPlayerVars[playerIndex] ?? {};
+  const variables = state.perPlayerVars[playerIndex] ?? {};
   const requestedVariableId = ref.path[0] === 'variables' && typeof ref.path[1] === 'string'
     ? ref.path[1]
     : undefined;
@@ -245,6 +281,7 @@ function projectPlayer(
 
 function projectGlobal(
   context: PolicyLookupResolutionContext,
+  state: GameState,
   id: string,
   observerSeatId: string,
   observerPlayerIndex: number,
@@ -254,7 +291,7 @@ function projectGlobal(
     if (!isCurrentSurfaceAccessible(variableVisibility, context.actingSeatId, observerSeatId, context.actingPlayerIndex, observerPlayerIndex)) {
       return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'hidden' } };
     }
-    const value = context.state.globalVars[id];
+    const value = state.globalVars[id];
     return value === undefined
       ? { kind: 'unavailable', status: { kind: 'unavailable', reason: 'missing' } }
       : { kind: 'ready', value: { id, value, properties: { value } } };
@@ -264,7 +301,7 @@ function projectGlobal(
     if (!isCurrentSurfaceAccessible(markerVisibility, context.actingSeatId, observerSeatId, context.actingPlayerIndex, observerPlayerIndex)) {
       return { kind: 'unavailable', status: { kind: 'unavailable', reason: 'hidden' } };
     }
-    const value = context.state.globalMarkers?.[id]
+    const value = state.globalMarkers?.[id]
       ?? context.def.globalMarkerLattices?.find((entry) => entry.id === id)?.defaultState;
     return value === undefined
       ? { kind: 'unavailable', status: { kind: 'unavailable', reason: 'missing' } }

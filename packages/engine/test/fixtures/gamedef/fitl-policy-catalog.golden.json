@@ -1412,6 +1412,9 @@
           "microturn"
         ],
         "costClass": "preview",
+        "previewFallback": {
+          "onUnavailable": "noContribution"
+        },
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -1939,6 +1942,8 @@
             "id": "projectedSelfMargin"
           }
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "projectedMarginWeight"
@@ -1986,6 +1991,8 @@
             "id": "selfResources"
           }
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "resourceWeight"
@@ -2038,6 +2045,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "eventWeight"
@@ -2088,6 +2097,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2136,6 +2147,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2184,6 +2197,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2232,6 +2247,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2280,6 +2297,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2328,6 +2347,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2376,6 +2397,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2424,6 +2447,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "rallyWeight"
@@ -2474,6 +2499,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2522,6 +2549,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2570,6 +2599,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2618,6 +2649,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2666,6 +2699,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "taxWeight"
@@ -2716,6 +2751,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "governWeight"
@@ -2766,6 +2803,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "trainWeight"
@@ -2816,6 +2855,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "sweepWeight"
@@ -2866,6 +2907,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [
             "assaultWeight"
@@ -2916,6 +2959,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -2964,6 +3009,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3012,6 +3059,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3078,6 +3127,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [
@@ -3146,6 +3197,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [
@@ -3214,6 +3267,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [
@@ -3311,6 +3366,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3411,6 +3468,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3459,6 +3518,8 @@
             "id": "projectedCapabilityGain"
           }
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3509,6 +3570,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [],
@@ -3594,6 +3657,8 @@
             }
           ]
         },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
         "dependencies": {
           "parameters": [],
           "stateFeatures": [
@@ -3640,6 +3705,11 @@
             "kind": "previewOptionRef",
             "refKind": "deltaVictoryCurrentMarginSelf"
           }
+        },
+        "hasPreviewRef": true,
+        "hasLookupRef": false,
+        "previewFallback": {
+          "onUnavailable": "noContribution"
         },
         "dependencies": {
           "parameters": [],
@@ -3798,10 +3868,7 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
-          "preferTrainWeighted",
-          "governWhenPatronageLow",
           "trainWhenControlLow",
           "preferOptionProjectedMargin"
         ],
@@ -3818,10 +3885,12 @@
         },
         "inner": {
           "chooseOne": true,
-          "chooseNStep": false,
+          "chooseNStep": true,
           "maxOptions": 8,
           "chooseNBeamWidth": 1,
-          "depthCap": 4
+          "depthCap": 4,
+          "strategy": "singlePass",
+          "capClass": "standard256"
         },
         "phase1": false,
         "phase1CompletionsPerAction": 1
@@ -3832,28 +3901,22 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
-          "patronage",
           "coinControlPop"
         ],
         "candidateFeatures": [
           "projectedSelfMargin"
         ],
         "candidateAggregates": [
-          "hasNonPassAlternative",
-          "maxMarginScore",
-          "minMarginScore"
+          "hasNonPassAlternative"
         ],
         "considerations": [
           "preferProjectedSelfMargin",
-          "preferStrongNormalizedMargin",
           "preferGovernWeighted",
-          "preferTrainWeighted",
-          "governWhenPatronageLow",
           "trainWhenControlLow",
           "preferOptionProjectedMargin"
         ]
       },
-      "fingerprint": "aa4d473fb89fc9fd87e83c4e045119f30529e2f2e11c71faf8144e15f21d9c2b"
+      "fingerprint": "0dff77e09da4aeb290d448c7b05e41026eebf8be78513f320e806fba9797d306"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -3973,5 +4036,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "48df603ce30de41cc20b98bc23ca09d0735b060274c23e04a9a30f66205f3b6e"
+  "catalogFingerprint": "5d45702f178e7fc722e0904a9d0c2c07b613decde24596b58e126c9554b7b86e"
 }

@@ -27,8 +27,8 @@ describe('policy lookup refs dispatch determinism', () => {
     assert.deepEqual(
       [...scored.unknownLookupRefs.entries()].map(([refId, reason]) => ({ refId, reason })),
       [
-        { refId: 'lookup.zones.ZoneId.1212757921.properties.alpha', reason: 'missing' },
-        { refId: 'lookup.zones.ZoneId.1212757921.properties.zeta', reason: 'missing' },
+        { refId: 'lookup.policyState.zones.ZoneId.1212757921.properties.alpha', reason: 'missing' },
+        { refId: 'lookup.policyState.zones.ZoneId.1212757921.properties.zeta', reason: 'missing' },
       ],
     );
   });

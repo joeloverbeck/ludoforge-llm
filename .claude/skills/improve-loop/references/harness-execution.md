@@ -17,7 +17,7 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 ## Step 4: EXECUTE
 
 - Read `HARNESS_RUNS` from program.md (default: 1).
-- **Fixture sync**: Already handled in Step 3 (IMPLEMENT). If `sync-fixtures.sh` was not run during IMPLEMENT (e.g., infrastructure-only change), run it now before the harness.
+- **Fixture sync**: Already handled in Step 3 (IMPLEMENT). If `sync-fixtures.sh` was not run during IMPLEMENT (e.g., infrastructure-only change), run it now before the harness. If `sync-fixtures.sh` reads from compiled output (e.g., `packages/<pkg>/dist/`), run the project's build step first — see SKILL.md Step 3 IMPLEMENT for the canonical `build → sync-fixtures → harness` sequence.
 - Run the harness using the Harness Preflight pattern from SKILL.md (defends against cwd drift after diagnostic / profiling commands silently changed the Bash session's cwd):
   ```bash
   cd "$WT" || { echo "PREFLIGHT: $WT unreachable"; exit 1; }

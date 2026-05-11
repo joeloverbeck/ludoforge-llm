@@ -467,10 +467,7 @@ agents:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
-          - preferStrongNormalizedMargin
           - preferGovernWeighted
-          - preferTrainWeighted
-          - governWhenPatronageLow
           - trainWhenControlLow
           - preferOptionProjectedMargin
         tieBreakers:

@@ -35,6 +35,7 @@ import { type PolicyValue } from './policy-surface.js';
 import {
   PolicyEvaluationContext,
   type PolicyEvaluationCandidate,
+  type PolicyCandidateParamFallbackFired,
   type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
   PolicyRuntimeError,
@@ -167,6 +168,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly unknownCandidateParamRefs: readonly PolicyCandidateParamUnknownRef[];
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
+  readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
   readonly previewDrive?: PolicyPreviewDriveTrace;
@@ -265,6 +267,7 @@ export interface PolicyEvaluationMetadata {
   readonly finalScore: number | null;
   readonly previewGatedCount?: number;
   readonly previewGatedTopFlipDetected?: boolean;
+  readonly candidateParamFallbackFiredCount?: number;
   readonly phase1Score?: number | null;
   readonly phase2Score?: number | null;
   readonly phase1ActionRanking?: readonly string[];
@@ -350,6 +353,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
   completionPolicyFallbackCount?: number;
+  candidateParamFallbackFired?: Map<string, number>;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
   selectionReason?: SelectionReason;
@@ -892,6 +896,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
           selectedStableMoveKey: selected.stableMoveKey,
           finalScore: Number.isFinite(selected.score) ? selected.score : null,
           previewGatedCount,
+          candidateParamFallbackFiredCount: candidateParamFallbackFiredCountFor(candidates),
           ...(Number.isFinite(maxCachedGatedPreviewScore) && maxCachedGatedPreviewScore > selected.score
             ? { previewGatedTopFlipDetected: true }
             : {}),
@@ -1125,6 +1130,9 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
     ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
+    ...(candidate.candidateParamFallbackFired === undefined
+      ? {}
+      : { candidateParamFallbackFired: serializeCandidateParamFallbackFired(candidate.candidateParamFallbackFired) }),
     selectionReason: candidate.selectionReason ?? (candidate.previewOutcome === 'gated' ? 'gated' : 'prior'),
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewDrive === undefined ? {} : { previewDrive: candidate.previewDrive }),
@@ -1150,6 +1158,9 @@ function scoreCandidateForGateFlipProbe(
     unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
     unknownLookupRefs: new Map(candidate.unknownLookupRefs),
     unknownCandidateParamRefs: new Map(candidate.unknownCandidateParamRefs),
+    ...(candidate.candidateParamFallbackFired === undefined
+      ? {}
+      : { candidateParamFallbackFired: new Map(candidate.candidateParamFallbackFired) }),
     score: candidate.score,
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),
@@ -1159,6 +1170,20 @@ function scoreCandidateForGateFlipProbe(
   return considerationIds.reduce((total, considerationId) => (
     total + evaluation.evaluateConsideration(considerations, considerationId, probe)
   ), 0);
+}
+
+function serializeCandidateParamFallbackFired(
+  candidateParamFallbackFired: PolicyCandidateParamFallbackFired,
+): Readonly<Record<string, number>> {
+  return Object.fromEntries([...candidateParamFallbackFired.entries()].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function candidateParamFallbackFiredCountFor(candidates: readonly CandidateEntry[]): number {
+  return candidates.reduce(
+    (total, candidate) => total + [...(candidate.candidateParamFallbackFired?.values() ?? [])]
+      .reduce((candidateTotal, count) => candidateTotal + count, 0),
+    0,
+  );
 }
 
 function traceGrantedOperation(

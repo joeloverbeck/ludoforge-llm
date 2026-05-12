@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None (engine code unchanged — this is a GameSpecDoc data change and a profile-quality witness)
-**Deps**: `tickets/166CANPARREF-005.md`
+**Deps**: `archive/tickets/166CANPARREF-005.md`
 
 ## Problem
 
@@ -105,7 +105,7 @@ The fixture uses the tier-15 ARVN baseline from `fitl-arvn-agent-evolution` per 
 
 Add under `packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/`:
 
-- `candidate-params-fitl-seed-1001-side.test.ts` (Spec 166 §8.1 #13) — seed 1001 turn N: card-78 shaded candidate records `contribution: -800`; unshaded candidate records `0`. Both per-candidate trace blocks include the resolved `candidate.params.side` ref with `provenance: 'publishedCandidate'`. Pinned trace fixture file. Header: `// @test-class: golden-trace`.
+- `candidate-params-fitl-seed-1001-side.test.ts` (Spec 166 §8.1 #13) — seed 1001 turn N: card-78 shaded candidate records `contribution: -800`; unshaded candidate records `0`; both candidates have empty `unknownCandidateParamRefs`. Pinned trace fixture file. Header: `// @test-class: golden-trace`.
 
 - `candidate-params-optional-branch-missing.test.ts` (§8.1 #14) — card-event candidate without `branch` resolves through `onMissing: { kind: constant, value: __absent__ }` fallback and records `status: 'missing'` with `resolvedValue: '__absent__'`. Trace does NOT route through `unknownCandidateParamRefs`. Header: `// @test-class: golden-trace`.
 

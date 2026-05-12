@@ -1922,6 +1922,14 @@
                   }
                 ]
               },
+              "candidateParamFallbackFiredCount": {
+                "minimum": 0,
+                "allOf": [
+                  {
+                    "$ref": "#/definitions/anon_e7c99bd4"
+                  }
+                ]
+              },
               "pruningSteps": {
                 "type": "array",
                 "items": {
@@ -2595,6 +2603,20 @@
                         "kind"
                       ],
                       "additionalProperties": false
+                    },
+                    "candidateParamFallbackFired": {
+                      "type": "object",
+                      "propertyNames": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      },
+                      "additionalProperties": {
+                        "minimum": 0,
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      }
                     },
                     "selectionReason": {
                       "type": "string",

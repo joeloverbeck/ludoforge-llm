@@ -1853,6 +1853,7 @@ export interface PolicyCandidateDecisionTrace {
     readonly kind: 'noContribution' | 'constant';
     readonly value?: number;
   };
+  readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;
@@ -1961,6 +1962,7 @@ export interface PolicyAgentDecisionTrace {
   readonly finalScore: number | null;
   readonly previewGatedCount?: number;
   readonly previewGatedTopFlipDetected?: boolean;
+  readonly candidateParamFallbackFiredCount?: number;
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;

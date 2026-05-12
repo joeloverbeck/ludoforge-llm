@@ -1,6 +1,6 @@
 # 166CANPARREF-005: Trace plumbing through microturn option eval and policy-agent per-candidate channel
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/microturn-option-eval.ts`, `packages/engine/src/agents/microturn-option-evaluator.ts`, `packages/engine/src/agents/policy-agent.ts`
@@ -52,7 +52,7 @@ In `traceCandidatesForFrontier` (or whatever the policy-agent's candidate-trace 
 
 - `unknownCandidateParamRefs` on the per-candidate trace block.
 - `candidateParamFallbackFired` on the per-candidate trace block (per-consideration breakdown).
-- Aggregated frontier-level breakdown counters: extend the existing analytics aggregator that surfaces `previewFallbackFiredCount` / `lookupFallbackFiredCount` to also emit `candidateParamFallbackFiredCount`.
+- Aggregated frontier-level breakdown counters: the live trace has no existing top-level `previewFallbackFiredCount` / `lookupFallbackFiredCount` fields; add the parallel `candidateParamFallbackFiredCount` counter for this family without reshaping the existing preview / lookup fired objects.
 
 ### 4. Apply `candidateParamFallback.onUnavailable` at consideration evaluation
 
@@ -69,7 +69,7 @@ Mixed-surface considerations (whose unavailable cause involves both `candidate.p
 
 - Header: `// @test-class: architectural-invariant`.
 - Construct a synthetic frontier with two candidates, one carrying the param, one not. Consideration declares `candidateParamFallback: { onUnavailable: noContribution }`.
-- Assert: the candidate carrying the param produces a ready ref with `provenance: 'publishedCandidate'`; the candidate missing the param produces an `unknownCandidateParamRefs` entry AND `candidateParamFallbackFired[considerationId] === 1`.
+- Assert: the candidate carrying the param contributes through the ready scoring path without an `unknownCandidateParamRefs` entry; the candidate missing the param produces an `unknownCandidateParamRefs` entry AND `candidateParamFallbackFired[considerationId] === 1`.
 - Assert: aggregated frontier-level `candidateParamFallbackFiredCount === 1`.
 - Assert: `unknownPreviewRefs.size === 0` and `unknownLookupRefs.size === 0` (Foundation #20).
 
@@ -101,7 +101,7 @@ Extend `candidate-params-determinism.test.ts` (introduced by ticket 004) with a 
 
 ### Invariants
 
-1. For every per-candidate trace block, exactly one of `{ ready resolution in considerations[].refs[] with provenance: 'publishedCandidate' }` OR `{ entry in unknownCandidateParamRefs with reason }` OR `{ ready ref with status: 'missing', resolvedValue: <constant> via onMissing constant }` is produced per evaluated `candidate.params.<name>` ref. No double-counting.
+1. For every evaluated `candidate.params.<name>` ref, exactly one of these observable outcomes occurs: ready scoring contribution with no `unknownCandidateParamRefs` entry, `unknownCandidateParamRefs` entry with reason, or `onMissing` constant scoring without an unknown entry. No double-counting.
 2. `candidateParamFallbackFired[considerationId]` increments by exactly 1 each time a consideration's `candidateParamFallback.onUnavailable` fires for a given candidate; aggregation across per-option tuples sums these counts deterministically (Foundation #8).
 3. Mixed-surface considerations fire each family's fallback independently. A consideration with unavailable preview ref AND unavailable candidate-param ref bumps BOTH `previewFallbackFired[id]` AND `candidateParamFallbackFired[id]`.
 
@@ -115,7 +115,70 @@ Extend `candidate-params-determinism.test.ts` (introduced by ticket 004) with a 
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test --test-name-pattern=candidate-params`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js`
 3. `pnpm turbo test`
 4. `pnpm turbo lint`
 5. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed on 2026-05-12.
+
+Authorization ledger:
+
+- Option B approved on 2026-05-12: proof-only correction to align with `docs/FOUNDATIONS.md` and the live trace contract. The draft `publishedCandidate` ready-ref assertion was stale because the repository has no `considerations[].refs[]` / `publishedCandidate` trace channel; adding one here would create an unnecessary parallel serialized trace structure. The corrected boundary proves ready candidate-param behavior through score contribution plus absence from `unknownCandidateParamRefs`, and records unavailable/fallback provenance through `unknownCandidateParamRefs`, `candidateParamFallbackFired`, and `candidateParamFallbackFiredCount`.
+
+What landed:
+
+- `candidateParamFallback.onUnavailable` is applied when a consideration value is unavailable because of a `candidate.params.*` ref, with `noContribution` and constant fallback behavior recorded in `candidateParamFallbackFired`.
+- Mixed-surface unavailable values now record each declared fallback family that actually became unavailable without turning ref-level `unknownAs` bookkeeping into mandatory consideration fallbacks.
+- `unknownCandidateParamRefs` and `candidateParamFallbackFired` now flow through microturn option scoring and policy-agent frontier tracing.
+- `candidateParamFallbackFiredCount` is emitted on policy decision metadata/trace as the aggregated frontier-level count.
+- Trace type/schema mirrors were updated and `Trace.schema.json` regenerated.
+- Added `candidate-params-trace-aggregation.test.ts` and `candidate-params-determinism.test.ts` as the ticket-owned architectural witnesses.
+
+Touched-file scope:
+
+- Named files modified: `packages/engine/src/agents/microturn-option-eval.ts`, `packages/engine/src/agents/microturn-option-evaluator.ts`, `packages/engine/src/agents/policy-agent.ts`.
+- Named tests added: `packages/engine/test/architecture/candidate-param-refs/candidate-params-trace-aggregation.test.ts`, `packages/engine/test/architecture/candidate-param-refs/candidate-params-determinism.test.ts`.
+- Owned fallout added: `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-diagnostics.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/schemas/Trace.schema.json` because the fallback-fired counter is a serialized policy trace surface.
+
+Generated schema/artifact fallout:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts` wrote `GameDef.schema.json`, `Trace.schema.json`, and `EvalReport.schema.json`.
+- Persisted diff: `packages/engine/schemas/Trace.schema.json`.
+- `GameDef.schema.json` and `EvalReport.schema.json` were byte-identical after generation/check.
+
+Verification command substitutions:
+
+- The drafted focused command used Jest-style `--test-name-pattern`, but engine tests use Node's test runner. The focused proof command is `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` after `pnpm -F @ludoforge/engine build`.
+
+Deferred sibling/spec scope:
+
+- FITL `event` action declaration and ARVN shaded-event witness remain owned by `tickets/166CANPARREF-006.md`.
+- Cookbook documentation remains owned by `tickets/166CANPARREF-007.md`.
+
+Post-review cleanup:
+
+- Stale `publishedCandidate` ready-ref assertions in `specs/166-candidate-parameter-refs.md` and `tickets/166CANPARREF-006.md` were normalized to the approved Option B contract before archival: ready candidate-param behavior is proven through score contribution plus absence from `unknownCandidateParamRefs`; unavailable/fallback provenance is explicit in the trace.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts`: 1849 -> 1930 lines. Preexisting oversized policy-evaluation hub; this ticket added the candidate-param fallback firing state at the existing consideration-evaluation site and the mixed-surface fallback-family detection.
+- `packages/engine/src/agents/policy-eval.ts`: 1473 -> 1498 lines. Preexisting oversized metadata/diagnostic hub; this ticket added serialized candidate fallback-fired metadata and aggregate counting.
+- `packages/engine/src/agents/policy-agent.ts`: 825 -> 885 lines. Preexisting oversized frontier-selection hub; this ticket threaded the new per-candidate trace channel through the existing frontier/candidate paths.
+- `packages/engine/src/kernel/types-core.ts`: 2201 -> 2203 lines. Preexisting shared type hub; this ticket added the serialized trace fields.
+- `packages/engine/src/kernel/schemas-core.ts`: 2623 -> 2625 lines. Preexisting shared schema hub; this ticket added the serialized trace fields.
+- `packages/engine/src/agents/microturn-option-eval.ts`: 153 -> 175 lines.
+- `packages/engine/src/agents/microturn-option-evaluator.ts`: 257 -> 279 lines.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after fixing new test RNG setup.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` — passed; 21 tests, 10 suites.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm -F @ludoforge/engine test` — passed; 65/65 files.
+- `pnpm turbo test` — passed; 5/5 tasks.
+- `pnpm turbo lint` — passed; 2/2 tasks.
+- Post-broad-rebuild focused rerun: `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` — passed; 21 tests, 10 suites.
+- `pnpm run check:ticket-deps` — passed; 3 active tickets and 2306 archived tickets checked.

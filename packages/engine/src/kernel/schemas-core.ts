@@ -2171,6 +2171,7 @@ const PolicyCandidateDecisionTraceSchema = z
       kind: z.enum(['noContribution', 'constant']),
       value: NumberSchema.optional(),
     }).strict().optional(),
+    candidateParamFallbackFired: z.record(StringSchema, IntegerSchema.nonnegative()).optional(),
     selectionReason: z.enum([
       'coverage',
       'prior',
@@ -2326,6 +2327,7 @@ const AgentDecisionTraceSchema = z
     finalScore: NumberSchema.nullable(),
     previewGatedCount: IntegerSchema.nonnegative().optional(),
     previewGatedTopFlipDetected: BooleanSchema.optional(),
+    candidateParamFallbackFiredCount: IntegerSchema.nonnegative().optional(),
     pruningSteps: z.array(PolicyPruningStepTraceSchema),
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,

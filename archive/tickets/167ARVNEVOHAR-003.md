@@ -1,6 +1,6 @@
 # 167ARVNEVOHAR-003: Engine build script — drop unconditional clean
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/package.json` `build` script
@@ -53,6 +53,7 @@ If `docs/architecture.md` or any README references the build script behavior, up
 ## Files to Touch
 
 - `packages/engine/package.json` (modify)
+- `packages/engine/test/unit/lint/build-script-incremental-policy.test.ts` (renamed from `build-script-clean-policy.test.ts`; owned stale guard fallout for the retired clean-before-compile invariant)
 
 ## Out of Scope
 
@@ -90,3 +91,47 @@ No new automated test. The behavior is verified by the existing test suite runni
 4. `pnpm -F @ludoforge/engine test` (regression parity).
 5. `pnpm turbo build && pnpm turbo test` (Turbo-orchestrated parity).
 6. `SEED_COUNT=2 bash campaigns/fitl-arvn-agent-evolution/harness.sh` (end-to-end).
+
+## Outcome
+
+Completion date: 2026-05-12
+
+### Implementation Notes
+
+- `packages/engine/package.json` now runs the default engine build as `node scripts/run-with-dist-lock.mjs "tsc"`, preserving `dist/tsconfig.tsbuildinfo` across consecutive builds.
+- Added explicit `build:clean` as `node scripts/run-with-dist-lock.mjs "pnpm run clean && tsc"` for consumers that require a known-fresh `dist/`.
+- Renamed and rewrote the stale clean-policy guard to `packages/engine/test/unit/lint/build-script-incremental-policy.test.ts`; it now proves the default build does not clean and `build:clean` still cleans before compiling.
+- `tsconfig.json`, `scripts/run-with-dist-lock.mjs`, and `campaigns/fitl-arvn-agent-evolution/harness.sh` were verified-no-edit; the wrapper and harness continue to call the same build entrypoint.
+- Generated fallout: `packages/engine/dist` and `dist/tsconfig.tsbuildinfo` were rebuilt during proof only; no schema, golden, or checked-in generated artifact diff persisted.
+- Deferred sibling scope: GameDef cache remains `tickets/167ARVNEVOHAR-004.md`; worker-thread shard pool remains `tickets/167ARVNEVOHAR-005.md`; baseline report remains `tickets/167ARVNEVOHAR-006.md`.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine clean` — passed before cold-build proof.
+- `/usr/bin/time -p pnpm -F @ludoforge/engine build` — passed cold after clean; `real 18.49`; produced `packages/engine/dist/tsconfig.tsbuildinfo`.
+- `/usr/bin/time -p pnpm -F @ludoforge/engine build` — passed immediately after; `real 2.24`; buildinfo preserved, proving incremental skip on unchanged files.
+- `/usr/bin/time -p pnpm -F @ludoforge/engine build:clean` — passed; `real 16.96`; exercised the explicit clean rebuild path.
+- Temporary source-edit probe in `packages/engine/src/kernel/index.ts` — passed; incremental rebuild emitted the temporary marker into `dist/src/kernel/index.js`, then a cleanup rebuild removed it. No temporary source diff remains.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/lint/build-script-incremental-policy.test.js` — passed, 5/5 tests.
+- `pnpm -F @ludoforge/engine test` — passed, schema artifact check plus default lane summary `66/66 files passed`.
+- `pnpm turbo build` — passed, 3/3 tasks successful.
+- `pnpm turbo test` — passed, 5/5 tasks successful.
+- `SEED_COUNT=2 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `completed=2`, `truncated=0`, `errors=0`, `real 161.27`.
+- Second consecutive `SEED_COUNT=2 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `completed=2`, `truncated=0`, `errors=0`, `real 155.21`.
+- Non-final diagnostic lane: one accidental default-seed harness invocation ran with `SEED_COUNT` omitted, used the current `seed-tier.txt` value of 15, and passed with `completed=15`, `truncated=0`, `errors=0`, `real 944.63`. It is not cited as the ticket's exact end-to-end acceptance lane.
+- `pnpm run check:ticket-deps` — passed after terminal status update; `4 active tickets and 2311 archived tickets`.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness/assertion | Status | Proof lane |
+|---|---|---|---|
+| Incremental correctness | Clean build produced `dist/tsconfig.tsbuildinfo`; unchanged second build was faster; temporary source edit emitted updated JS and cleanup rebuild removed it | proven | timed build pair + source-edit probe |
+| Full-rebuild availability | `build:clean` runs clean before `tsc` and succeeds | proven | timed `pnpm -F @ludoforge/engine build:clean` + lint guard |
+| No silent CI regression | Engine default tests, Turbo build, Turbo test, and real harness regression gate pass against the new default build output | proven | engine test, turbo build/test, repeated `SEED_COUNT=2` harness |
+
+### Closeout Notes
+
+- Ticket corrections applied: stale guard expectation `build must clean before tsc` -> live contract `default build preserves dist; build:clean cleans before tsc`.
+- Runtime surface breadth: build tooling only; no engine/kernel runtime behavior changed.
+- Source-size ledger: not applicable; touched source/test/package files are below repo guidance and no retained source growth is near the cap.
+- Late-edit proof validity: terminal status, proof transcription, and ticket-dependency checker transcription only after final lanes; no code, test, command semantics, acceptance boundary, dependency owner, or follow-up scope changed after the cited proof lanes.

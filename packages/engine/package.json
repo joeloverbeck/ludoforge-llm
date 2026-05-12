@@ -30,7 +30,8 @@
     }
   },
   "scripts": {
-    "build": "node scripts/run-with-dist-lock.mjs \"pnpm run clean && tsc\"",
+    "build": "node scripts/run-with-dist-lock.mjs \"tsc\"",
+    "build:clean": "node scripts/run-with-dist-lock.mjs \"pnpm run clean && tsc\"",
     "clean": "rm -rf dist",
     "lint": "eslint . --ext .ts --max-warnings 0",
     "typecheck": "tsc --noEmit",

@@ -461,7 +461,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-11:
 
 - [`archive/tickets/166CANPARREF-001.md`](../archive/tickets/166CANPARREF-001.md) — Compiled types + schema + diagnostic codes for candidateParam ref family (covers Phase 0; §4.1, §4.4, §5.1)
 - [`archive/tickets/166CANPARREF-002.md`](../archive/tickets/166CANPARREF-002.md) — Parser acceptance and compile-time validation of `candidate.params.<name>` (covers Phase 1; §4.1, §4.2, §5.1–§5.5, §5.7)
-- [`tickets/166CANPARREF-003.md`](../tickets/166CANPARREF-003.md) — Required-fallback collector and `candidateParamFallback` lowering (covers Phase 2; §4.3, §5.6, §5.8)
+- [`archive/tickets/166CANPARREF-003.md`](../archive/tickets/166CANPARREF-003.md) — Required-fallback collector and `candidateParamFallback` lowering (covers Phase 2; §4.3, §5.6, §5.8)
 - [`tickets/166CANPARREF-004.md`](../tickets/166CANPARREF-004.md) — Runtime resolver `onMissing` path, VM mirror, and `unknownCandidateParamRefs` trace (covers Phase 3; §4.4, §4.5, §6)
 - [`tickets/166CANPARREF-005.md`](../tickets/166CANPARREF-005.md) — Trace plumbing through microturn option eval and policy-agent per-candidate channel (covers Phase 4; §4.5, §6)
 - [`tickets/166CANPARREF-006.md`](../tickets/166CANPARREF-006.md) — FITL `event` action params declaration + ARVN shaded-event witness (covers Phase 5; §2.3, §2.5, §8.3, §11.4)

@@ -1794,6 +1794,13 @@
                       }
                     ]
                   },
+                  "candidateParamFallback": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_2480b44f_2"
+                      }
+                    ]
+                  },
                   "clamp": {
                     "type": "object",
                     "properties": {
@@ -2095,6 +2102,13 @@
                     ]
                   },
                   "lookupFallback": {
+                    "allOf": [
+                      {
+                        "$ref": "#/definitions/anon_2480b44f_2"
+                      }
+                    ]
+                  },
+                  "candidateParamFallback": {
                     "allOf": [
                       {
                         "$ref": "#/definitions/anon_2480b44f_2"

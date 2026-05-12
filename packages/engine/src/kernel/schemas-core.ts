@@ -1066,6 +1066,7 @@ const AgentLookupFallbackSchema = z
     ]),
   })
   .strict();
+const AgentCandidateParamFallbackSchema = AgentLookupFallbackSchema;
 
 const CompiledAgentConsiderationSchema = z
   .object({
@@ -1074,6 +1075,7 @@ const CompiledAgentConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
+    candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1092,6 +1094,7 @@ const CompiledPolicyConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
+    candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),

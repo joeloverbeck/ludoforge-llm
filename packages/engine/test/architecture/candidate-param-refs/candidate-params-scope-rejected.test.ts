@@ -11,6 +11,7 @@ describe('candidate.params scope validation', () => {
         scopes: ['microturn'],
         weight: 1,
         value: { boolToNumber: { eq: [{ ref: candidateParamRef('mode') }, 'A'] } },
+        candidateParamFallback: { onUnavailable: 'noContribution' },
       },
     }));
 

@@ -337,6 +337,7 @@ export type AgentLookupFallback = {
     | 'noContribution'
     | { readonly kind: 'constant'; readonly value: number };
 };
+export type AgentCandidateParamFallback = AgentLookupFallback;
 export type AgentPolicyOperator =
   | 'abs'
   | 'add'
@@ -655,6 +656,7 @@ export interface CompiledPolicyConsideration {
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
+  readonly candidateParamFallback?: AgentCandidateParamFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -851,6 +853,7 @@ export interface CompiledAgentConsideration {
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
+  readonly candidateParamFallback?: AgentCandidateParamFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;

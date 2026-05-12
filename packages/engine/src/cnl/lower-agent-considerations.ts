@@ -2,6 +2,7 @@ import type {
   AgentPolicyExpr,
   AgentPolicyCostClass,
   AgentPolicyValueType,
+  AgentCandidateParamFallback,
   AgentLookupFallback,
   AgentPreviewFallback,
   CompiledAgentDependencyRefs,
@@ -60,6 +61,7 @@ export interface AgentPolicyLibraryWithExpr {
     readonly unknownAs?: number;
     readonly previewFallback?: AgentPreviewFallback;
     readonly lookupFallback?: AgentLookupFallback;
+    readonly candidateParamFallback?: AgentCandidateParamFallback;
     readonly clamp?: {
       readonly min?: number;
       readonly max?: number;
@@ -140,6 +142,7 @@ export function lowerAgentConsiderations(
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
       ...(consideration.lookupFallback === undefined ? {} : { lookupFallback: consideration.lookupFallback }),
+      ...(consideration.candidateParamFallback === undefined ? {} : { candidateParamFallback: consideration.candidateParamFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
       readFootprint: unionFootprints([

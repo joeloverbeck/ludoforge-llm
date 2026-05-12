@@ -26,6 +26,7 @@ describe('candidate.params parser namespace', () => {
         scopes: ['move'],
         weight: 1,
         value: { boolToNumber: { eq: [{ ref: candidateParamRef('mode') }, 'A'] } },
+        candidateParamFallback: { onUnavailable: 'noContribution' },
       },
     }));
 

@@ -19,6 +19,7 @@ describe('candidate.params appliesToActions validation', () => {
         scopes: ['move'],
         weight: 1,
         value: { boolToNumber: { eq: [modeRefForActions(['chooseMode']), 'A'] } },
+        candidateParamFallback: { onUnavailable: 'noContribution' },
       },
     }));
 

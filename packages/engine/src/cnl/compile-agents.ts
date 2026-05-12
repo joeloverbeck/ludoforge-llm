@@ -17,6 +17,7 @@ import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
+  AgentCandidateParamFallback,
   AgentLookupFallback,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
@@ -53,6 +54,7 @@ import type {
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
+  GameSpecCandidateParamFallbackDef,
   GameSpecLookupFallbackDef,
   GameSpecPolicyExpr,
   GameSpecPolicySurfaceVisibilityDef,
@@ -215,6 +217,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
       ...(consideration.lookupFallback === undefined ? {} : { lookupFallback: consideration.lookupFallback }),
+      ...(consideration.candidateParamFallback === undefined ? {} : { candidateParamFallback: consideration.candidateParamFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
     };
@@ -2104,6 +2107,7 @@ class AgentLibraryCompiler {
     const lookupRefIds = collectLookupRefIds(value.expr);
     const currentStateLookupRefIds = collectLookupRefIds(value.expr, 'policyState');
     const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
+    const candidateParamRefIds = collectCandidateParamRefIds(value.expr);
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2134,6 +2138,16 @@ class AgentLibraryCompiler {
     }
     const lookupFallback = lowerLookupFallback(considerationId, `${path}.lookupFallback`, def.lookupFallback, this.diagnostics);
     if (lookupFallback === null) {
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    const candidateParamFallback = lowerCandidateParamFallback(
+      considerationId,
+      `${path}.candidateParamFallback`,
+      def.candidateParamFallback,
+      this.diagnostics,
+    );
+    if (candidateParamFallback === null) {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
@@ -2173,6 +2187,17 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    if (candidateParamRefIds.length > 0 && candidateParamFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_REQUIRES_EXPLICIT_FALLBACK,
+        path: `${path}.candidateParamFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" reads candidate.params.* ref(s) [${candidateParamRefIds.join(', ')}] without declaring candidateParamFallback.onUnavailable. Add candidateParamFallback: { onUnavailable: noContribution } or { onUnavailable: { constant: <number> } }.`,
+        suggestion: 'Required for refs whose onMissing is "unavailable" (default). Refs with onMissing: { kind: constant } do not require this fallback.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
 
     const compiled: AgentConsiderationWithExpr = {
       scopes,
@@ -2185,6 +2210,7 @@ class AgentLibraryCompiler {
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(previewFallback === undefined ? {} : { previewFallback }),
       ...(lookupFallback === undefined ? {} : { lookupFallback }),
+      ...(candidateParamFallback === undefined ? {} : { candidateParamFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
@@ -3731,6 +3757,55 @@ function lowerLookupFallback(
     severity: 'error',
     message: `Consideration "${considerationId}" lookupFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
     suggestion: 'Use lookupFallback: { onUnavailable: noContribution } or lookupFallback: { onUnavailable: { constant: 0 } }.',
+  });
+  return null;
+}
+
+function lowerCandidateParamFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecCandidateParamFallbackDef | undefined,
+  diagnostics: Diagnostic[],
+): AgentCandidateParamFallback | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Consideration "${considerationId}" candidateParamFallback must be an object.`,
+      suggestion: 'Use candidateParamFallback: { onUnavailable: noContribution } or candidateParamFallback: { onUnavailable: { constant: 0 } }.',
+    });
+    return null;
+  }
+
+  const { onUnavailable } = value;
+  if (onUnavailable === 'noContribution') {
+    return { onUnavailable: 'noContribution' };
+  }
+  if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
+    const { constant } = onUnavailable;
+    if (Number.isSafeInteger(constant)) {
+      return { onUnavailable: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.onUnavailable.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" candidateParamFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.onUnavailable`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" candidateParamFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
+    suggestion: 'Use candidateParamFallback: { onUnavailable: noContribution } or candidateParamFallback: { onUnavailable: { constant: 0 } }.',
   });
   return null;
 }

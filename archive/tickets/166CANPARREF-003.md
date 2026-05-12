@@ -1,9 +1,9 @@
 # 166CANPARREF-003: Required-fallback collector and `candidateParamFallback` lowering
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: Yes — `packages/engine/src/cnl/compile-agents.ts`
+**Engine Changes**: Yes — `packages/engine/src/cnl/compile-agents.ts` plus authored/compiled contract mirrors and `GameDef.schema.json`
 **Deps**: `archive/tickets/166CANPARREF-002.md`
 
 ## Problem
@@ -106,7 +106,13 @@ The test reuses the synthetic fixture from `candidate-params-fixture.ts` introdu
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-agents.ts` (modify)
+- `packages/engine/src/cnl/game-spec-doc.ts` (modify — authored `candidateParamFallback` shape)
+- `packages/engine/src/cnl/lower-agent-considerations.ts` (modify — preserve the compiled field when lowering expression-bearing considerations)
+- `packages/engine/src/kernel/types-core.ts` (modify — compiled consideration field/type mirror)
+- `packages/engine/src/kernel/schemas-core.ts` (modify — compiled consideration schema mirror)
+- `packages/engine/schemas/GameDef.schema.json` (generated artifact fallout)
 - `packages/engine/test/architecture/candidate-param-refs/candidate-params-fallback-required.test.ts` (new)
+- Existing candidate-param architecture tests may need small fixture updates so their positive or non-fallback diagnostics continue to target their intended invariant under the new required-fallback rule.
 
 ## Out of Scope
 
@@ -138,7 +144,57 @@ The test reuses the synthetic fixture from `candidate-params-fixture.ts` introdu
 ### Commands
 
 1. `pnpm -F @ludoforge/engine build`
-2. `pnpm -F @ludoforge/engine test --test-name-pattern=candidate-params-fallback`
+2. `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/candidate-params-fallback-required.test.js`
 3. `pnpm turbo test`
 4. `pnpm turbo lint`
 5. `pnpm run check:ticket-deps`
+
+## Implementation Outcome
+
+Completed: 2026-05-12.
+
+What landed:
+
+- `candidateParamFallback` is now an authored and compiled consideration field with the same explicit numeric `onUnavailable` shape as `lookupFallback`.
+- `lowerCandidateParamFallback` mirrors the lookup fallback lowerer and preserves absence as `undefined`; no default fallback is injected.
+- Considerations whose `value` reads any `candidate.params.*` ref with `onMissing: 'unavailable'` now fail compilation unless `candidateParamFallback.onUnavailable` is declared.
+- The existing `collectCandidateParamRefIds` helper was verified and reused with its default unavailable-only filter; no duplicate collector was added.
+- The new architectural invariant test covers missing fallback rejection, explicit fallback compilation, constant `onMissing` exemption, and mixed candidate-param plus lookup fallback requirements.
+- Existing candidate-param tests that need to reach a different invariant now declare `candidateParamFallback` explicitly so the new diagnostic does not mask their intended assertion.
+
+Generated schema/artifact fallout:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts` wrote `GameDef.schema.json`, `Trace.schema.json`, and `EvalReport.schema.json`.
+- Persisted diff: `packages/engine/schemas/GameDef.schema.json` only, adding optional `candidateParamFallback` to compiled consideration schemas.
+- Byte-identical after generation/check: `Trace.schema.json`, `EvalReport.schema.json`.
+
+Verification command substitutions:
+
+- The drafted focused command used Jest-style `--test-name-pattern`, but engine tests use Node's test runner. The focused proof command is `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/candidate-params-fallback-required.test.js`.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/compile-agents.ts | 4106 lines before | 4181 lines after | crossed cap? no, preexisting oversize | active growth: fallback mirror + diagnostic enforcement | extraction/defer rationale: canonical compiler hub and splitting the parallel fallback block would widen/obscure this ticket seam | successor: none`
+- `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, and `packages/engine/src/cnl/game-spec-doc.ts` were already over the repository guidance range; this ticket added only tiny optional-field mirrors in canonical contract hubs.
+
+Deferred sibling/spec scope:
+
+- Runtime resolver `onMissing` behavior remains owned by `tickets/166CANPARREF-004.md`.
+- Runtime trace/fallback firing for `candidateParamFallbackFired` remains owned by `tickets/166CANPARREF-005.md`.
+- FITL event action params and cookbook/docs updates remain owned by later Spec 166 tickets.
+
+Final verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/candidate-params-fallback-required.test.js` — passed.
+- `pnpm -F @ludoforge/engine exec node --test "dist/test/architecture/candidate-param-refs/*.test.js"` — passed after the scope-test fixture correction.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm -F @ludoforge/engine test` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/candidate-params-fallback-required.test.js` — passed again after `pnpm turbo test` rebuilt `dist`.
+- `pnpm turbo lint` — passed.
+- `pnpm run check:ticket-deps` — passed.
+
+Late-edit proof validity:
+
+- Terminal status/proof transcription changed only status and exact proof-result text after the code, tests, schema artifact, touched-file scope, command substitution, and deferred-scope claims were already proven. The focused built fallback test was rerun after the root rebuild; the final dependency-integrity result was transcribed after `pnpm run check:ticket-deps` passed. A final header correction aligned `Engine Changes` with the already-recorded touched-file scope; no code, acceptance criteria, command semantics, follow-up ownership, or dependency classification changed after the final proof lanes.

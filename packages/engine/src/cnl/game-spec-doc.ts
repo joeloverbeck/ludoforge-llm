@@ -624,6 +624,8 @@ export interface GameSpecLookupFallbackDef {
     | { readonly constant: number };
 }
 
+export type GameSpecCandidateParamFallbackDef = GameSpecLookupFallbackDef;
+
 export interface GameSpecConsiderationDef {
   readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'microturn'
   readonly when?: GameSpecPolicyExpr;
@@ -632,6 +634,7 @@ export interface GameSpecConsiderationDef {
   readonly unknownAs?: number;
   readonly previewFallback?: GameSpecPreviewFallbackDef;
   readonly lookupFallback?: GameSpecLookupFallbackDef;
+  readonly candidateParamFallback?: GameSpecCandidateParamFallbackDef;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;

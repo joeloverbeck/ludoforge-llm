@@ -13,11 +13,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeError } from './policy-evaluation-core.js';
 import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
-import {
-  buildPolicyVictorySurface,
-  resolvePolicyRoleSelector,
-  type PolicyValue,
-} from './policy-surface.js';
+import type { PolicyValue } from './policy-surface.js';
 import {
   evaluateProductionPreviewDriveBatchWithWasm,
   type PolicyWasmProductionPreviewDriveCandidate,
@@ -155,7 +151,9 @@ const previewGlobalSlotsForRef = (
       return [`global.${ref.id}`];
     }
     if (ref.family === 'victoryCurrentMargin' || ref.family === 'victoryCurrentRank') {
-      return def.globalVars.map((variable) => `global.${variable.name}`);
+      return ref.selector?.kind === 'role'
+        ? [`surface.${ref.family}.${ref.selector.seatToken}`, ...def.globalVars.map((variable) => `global.${variable.name}`)]
+        : undefined;
     }
     return undefined;
   }
@@ -186,6 +184,16 @@ const groupPreviewCandidatesByAction = (
   ));
 };
 
+const hasCardEventActionCandidate = (
+  def: GameDef,
+  candidates: readonly PolicyWasmScoreRoutingCandidate[],
+): boolean => {
+  const actionById = new Map(def.actions.map((action) => [String(action.id), action]));
+  return candidates.some((candidate) =>
+    actionById.get(candidate.actionId)?.capabilities?.includes('cardEvent') === true,
+  );
+};
+
 const materializePreviewDynamicRowsWithWasm = (
   input: {
     readonly runtime: PolicyWasmRuntime;
@@ -200,9 +208,12 @@ const materializePreviewDynamicRowsWithWasm = (
     readonly candidates: readonly PolicyWasmScoreRoutingCandidate[];
   },
   refs: readonly CompiledAgentPolicyRef[],
-): readonly PolicyWasmPrecomputedDynamicCandidateFeature[] => {
+): readonly PolicyWasmPrecomputedDynamicCandidateFeature[] | null => {
   if (refs.length === 0) {
     return [];
+  }
+  if (hasCardEventActionCandidate(input.def, input.candidates)) {
+    return null;
   }
   const slotsByCode = new Map<number, readonly string[]>();
   for (const ref of refs) {
@@ -327,32 +338,13 @@ const previewValueFromWasmRow = (
   if (ref.kind === 'previewSurface' && ref.family === 'globalVar') {
     return previewStateValues[slots[0]!];
   }
+  if (ref.kind === 'previewSurface' && (ref.family === 'victoryCurrentMargin' || ref.family === 'victoryCurrentRank')) {
+    return previewStateValues[slots[0]!];
+  }
   if (ref.kind === 'library' && ref.refKind === 'previewStateFeature') {
     return previewStateValues[slots[0]!];
   }
-  if (ref.kind !== 'previewSurface' || (ref.family !== 'victoryCurrentMargin' && ref.family !== 'victoryCurrentRank')) {
-    return undefined;
-  }
-  if (ref.selector?.kind !== 'role') {
-    return undefined;
-  }
-  const previewGlobalVars = { ...input.state.globalVars };
-  for (const slot of slots) {
-    const id = slot.startsWith('global.') ? slot.slice('global.'.length) : undefined;
-    const value = previewStateValues[slot];
-    if (id !== undefined && value !== undefined) {
-      previewGlobalVars[id] = value;
-    }
-  }
-  const previewState = { ...input.state, globalVars: previewGlobalVars };
-  const resolvedSeatId = resolvePolicyRoleSelector(input.def, previewState, ref.selector, input.seatId, undefined);
-  if (resolvedSeatId === undefined) {
-    return undefined;
-  }
-  const victorySurface = buildPolicyVictorySurface(input.def, previewState);
-  return ref.family === 'victoryCurrentMargin'
-    ? victorySurface.marginBySeat.get(resolvedSeatId)
-    : victorySurface.rankBySeat.get(resolvedSeatId);
+  return undefined;
 };
 
 export function tryScoreMoveConsiderationsWithWasm(input: {
@@ -416,6 +408,13 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
       continue;
     }
+    const precomputedDynamicCandidateFeatures = materializePreviewDynamicRowsWithWasm(
+      input,
+      collectPreviewDynamicRefs(feature.expr),
+    );
+    if (precomputedDynamicCandidateFeatures === null) {
+      return false;
+    }
     const values = evaluateWasmCandidateFeatureRow(input.runtime, {
       def: input.def,
       encoded: input.encodedView.encoded,
@@ -439,10 +438,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
           outcomes: input.candidates.map(encodeWasmPreviewOutcome),
           values: rowValues,
         })),
-      precomputedDynamicCandidateFeatures: materializePreviewDynamicRowsWithWasm(
-        input,
-        collectPreviewDynamicRefs(feature.expr),
-      ),
+      precomputedDynamicCandidateFeatures,
     });
     if (values === null) {
       recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');

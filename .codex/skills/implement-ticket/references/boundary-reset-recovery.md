@@ -52,6 +52,8 @@ When the user approves continuing under the **same ticket** after a `FOUNDATIONS
 
 Use this path when the user explicitly authorizes the widened same-ticket boundary. Do not force an unnecessary successor-ticket split once the user has chosen completion under the active ticket.
 
+Before terminal closeout after this path, run a reset compliance check: the authorization ledger names the approved option and scope effect; active ticket/spec/sibling artifacts were patched before widened coding resumed, or the ticket outcome records the late repair plus rerun proof; a fresh checkpoint exists for the widened boundary; acceptance/proof lanes were re-extracted from the corrected artifact; and no later mismatch class exceeded the approved option without a new `1-3-1`.
+
 ## Confirmed Narrowed or Deferred Boundary Re-Entry
 
 When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling handoff while the active ticket still remains the implementation owner for a smaller slice, do not continue on the pre-reset draft contract. Use this re-entry order before coding:
@@ -63,6 +65,8 @@ When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling ha
 5. Only then resume coding and verification under the corrected boundary.
 
 Use this path when the active ticket remains closeable after the correction. If the correction makes the active ticket evidence-only, blocked, or successor-owned, use the non-implementation rewrite or successor re-entry path instead.
+
+Before terminal closeout after this path, run the same reset compliance check: authorization recorded, active artifacts corrected before resumed coding or explicitly repaired with rerun proof, fresh checkpoint emitted, proof lanes re-extracted, and no unapproved later mismatch class folded into the terminal status.
 
 ## Foundation Numeric Normalization
 

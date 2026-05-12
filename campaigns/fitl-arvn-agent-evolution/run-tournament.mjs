@@ -53,6 +53,9 @@ const {
 const { PolicyAgent } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/agents/index.js'));
 
+const { defaultPolicyWasmPath, initializePolicyWasmRuntimeSync } =
+  await import(join(REPO_ROOT, 'packages/engine/dist/src/agents/policy-wasm-runtime-node-loader.js'));
+
 const { runGame } =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/sim/index.js'));
 
@@ -66,6 +69,10 @@ function getArg(name, defaultValue) {
   return idx >= 0 && args[idx + 1] !== undefined ? args[idx + 1] : defaultValue;
 }
 
+function hasFlag(name) {
+  return args.includes(`--${name}`);
+}
+
 const SEED_COUNT = Number(getArg('seeds', '3'));
 const PLAYER_COUNT = Number(getArg('players', '4'));
 const EVOLVED_SEAT = getArg('evolved-seat', 'arvn');
@@ -74,6 +81,23 @@ const MAX_TURNS = Number(getArg('max-turns', '500'));
 const TRACE_ALL = getArg('trace-all', 'true') === 'true';
 const TRACE_SEED = getArg('trace-seed', null);
 const PROFILE_COMPLETION_OVERRIDE = getArg('profile-completion', '');
+const DISABLE_WASM = hasFlag('no-wasm');
+
+let wasmEnabled = false;
+if (DISABLE_WASM) {
+  process.stderr.write('WASM policy runtime: disabled (--no-wasm)\n');
+} else {
+  const wasmPath = defaultPolicyWasmPath();
+  try {
+    initializePolicyWasmRuntimeSync({ wasmPath });
+    wasmEnabled = true;
+    process.stderr.write('WASM policy runtime: enabled\n');
+  } catch (error) {
+    process.stderr.write(`ERROR: failed to initialize WASM policy runtime at ${wasmPath}\n`);
+    process.stderr.write(`  ${error instanceof Error ? error.message : String(error)}\n`);
+    process.exit(1);
+  }
+}
 
 function parseProfileCompletionOverride(raw) {
   if (raw === '') {
@@ -546,6 +570,7 @@ const result = {
   evolvedProfile: EVOLVED_PROFILE,
   maxTurns: MAX_TURNS,
   profileCompletionOverride: profileCompletionOverride ?? null,
+  wasmEnabled,
   decisionBreakdown: buildDecisionBreakdown(averagedDecisionStats, round4),
 };
 

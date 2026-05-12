@@ -210,7 +210,7 @@ When a confidence gap can only be resolved by codebase investigation — not by 
 
 Announce what you're investigating and why, present findings, then resume the interview with the new information incorporated into your confidence score. The user explicitly requesting investigation (e.g., "investigate the matter carefully") is a strong signal to use this path.
 
-In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the problem boundary shifts — an artifact read in Step 1 may surface a diagnostic worth running in Step 1.5, which in turn may surface a broader sweep worth running mid-Step 2. There is no cap on investigation stages as long as each is justified, announced, and proportionate to the decision at stake. Record the confidence delta each phase produces so the accumulated investigation is visible rather than implicit. Each investigation phase that materially changes confidence should announce the delta in one inline sentence (e.g., `Confidence: 80% after CI log review — gap narrows to user intent`); phases that don't move confidence don't need an announcement, but the final pre-Step-3 confidence figure must be stated in full so the user can verify the audit trail.
+In design mode, investigation may legitimately span Step 1, 1.5, and 2 as the problem boundary shifts — an artifact read in Step 1 may surface a diagnostic worth running in Step 1.5, which in turn may surface a broader sweep worth running mid-Step 2. There is no cap on investigation stages as long as each is justified, announced, and proportionate to the decision at stake. Record the confidence delta each phase produces so the accumulated investigation is visible rather than implicit. Each investigation phase that materially changes confidence should announce the delta in one inline sentence (e.g., `Confidence: 80% after CI log review — gap narrows to user intent`); phases that don't move confidence don't need an announcement, but the final pre-Step-3 confidence figure must be stated in full so the user can verify the audit trail. When several investigation phases complete within a single message round (e.g., a parallel Explore-agent dispatch followed immediately by verification greps), batching the per-phase deltas into the final pre-Step-3 figure is acceptable — the message-by-message tool-call evidence covers the audit trail, and per-phase chatter under "no clarifying questions" produces no actionable surface for the user.
 
 ### Mid-Flow Investigation (Triage Mode)
 
@@ -282,7 +282,7 @@ The list above is a starting menu, not a fixed schema — domain-appropriate sub
 
 **Auto-mode adaptation**: When Claude Code's auto mode is active, section-by-section gating compresses to consolidated presentation with a single approval. Present the remaining sections together and proceed to Step 5 artifact writing unless the user has pushed back on a prior section. This matches auto mode's "prefer action over planning" posture while preserving substantive review — the user still sees every section before the artifact is written. If a user objection arises mid-consolidation, stop, revise the flagged section, and present the revision for approval before continuing. When "no clarifying questions" is the active directive (a softer constraint than auto-mode UI, but functionally equivalent for Step 4 compression purposes), the same consolidated-presentation behavior applies — see Pre-Set Directives §4 for the section-preview gate that accompanies the compression.
 
-**Compound-move + auto-mode intersection**: When Step 2's compound-move variant was used (approach presentation merged with terminal gap-closer), the consolidated Step 4 design preview is still required as a separate message before the artifact write — section-name bullets with a one-line summary each are sufficient, full prose is not. The compound-move's approach-level overview does NOT satisfy the section preview promise, since later sections (edge cases, recovery info, files NOT touched, step-by-step execution) are typically not enumerated at approach time. Skip the preview only when the user has explicitly waived it. Phrasings that DO count as preview waiver: "just write the file", "skip the preview", "no need to walk me through it", "go ahead and write". Phrasings that DO NOT count: "proceed with option X" (approves approach, not preview), "without stopping for clarifying questions" (constrains interview rounds, not transparency gates), "continue" / "go" (ambiguous — treat as approach approval only). When in doubt, preview as a separate message — the user can always say "skip the preview" the next time around. "Separate message" here means separate from the Write tool call only; bundling section-name bullets in the same prose message as the approach presentation is permitted (and often efficient under "no clarifying questions" directives), provided the bundle lands before the Write call.
+**Compound-move + auto-mode intersection**: When Step 2's compound-move variant was used (approach presentation merged with terminal gap-closer), the consolidated Step 4 design preview is still required as a separate message before the artifact write — section-name bullets with a one-line summary each are sufficient, full prose is not. The compound-move's approach-level overview does NOT satisfy the section preview promise, since later sections (edge cases, recovery info, files NOT touched, step-by-step execution) are typically not enumerated at approach time. Skip the preview only when the user has explicitly waived it. Phrasings that DO count as preview waiver: "just write the file", "skip the preview", "no need to walk me through it", "go ahead and write". Phrasings that DO NOT count: "proceed with option X" (approves approach, not preview), "without stopping for clarifying questions" (constrains interview rounds, not transparency gates), "continue" / "go" (ambiguous — treat as approach approval only). **Default for unenumerated phrasings** (e.g., "go with recommended", "looks good", "sounds right", "do it"): treat as approach-approval-only, not preview waiver — send the section-bullet preview before the Write call. When in doubt, preview as a separate message — the user can always say "skip the preview" the next time around. "Separate message" here means separate from the Write tool call only; bundling section-name bullets in the same prose message as the approach presentation is permitted (and often efficient under "no clarifying questions" directives), provided the bundle lands before the Write call.
 
 ## Step 5: Write Output Artifacts
 
@@ -304,7 +304,7 @@ Once all sections are approved, determine the output format:
 
 **Reassessment section for external-proposal outputs**: When the artifact is a Decision-requiring-design output derived from an external LLM proposal (per Step 1.2 "External LLM analysis"), include a final "Reassessment of source proposal" section enumerating per-recommendation dispositions: adopted (no change), adopted with adjustment (concept kept, implementation modified — with the change noted), corrected (with what was wrong), deferred to follow-up spec (with the spec name), or rejected (with rationale). This preserves traceability of the brainstorm's decisions through to the implementer who otherwise has no record of which external proposals were honored versus modified.
 
-**Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a phase-boundaries table where each phase row pairs a measurable acceptance criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this table — a single acceptance criteria section suffices.
+**Phased-spec acceptance budgets**: If the spec has phased delivery (Phase 0/1/2/... structure), include a per-phase acceptance row — either as a phase-boundaries table or as per-phase prose subsections — where each phase pairs a measurable criterion (latency budget, test pass rate, parity proof, etc.) with the phase's effort estimate. Tabular form is easier for `spec-to-tickets` to scan at a glance; per-phase prose subsections are acceptable when each phase warrants more narrative explanation than fits a table cell. Either shape works as long as each phase's measurable criterion and effort estimate are explicit. This is the primary scaffolding `spec-to-tickets` consumes when it decomposes the spec into ticket waves; without explicit per-phase budgets, decomposition becomes guesswork. Single-phase specs do not need this structure — a single acceptance criteria section suffices.
 
 **Destructive-action sections**: If the design prescribes destructive or irreversible actions (file deletion, branch-protection edits, dependency changes, schema migrations, force-push, etc.), include the operational-mode sections — *Verified state*, *Step-by-step execution*, *Verification checklist*, *Recovery info*, and *Files NOT touched* — regardless of which output format above applies. These sections turn a design into a safe-to-execute plan and prevent the implementor from improvising recovery on the spot.
 
@@ -387,7 +387,7 @@ Present the user with options for what to do next. Adapt the menu to the output 
 **If output was a design doc** (`docs/plans/`):
 ```
 What would you like to do next?
-1. Write an implementation plan (invoke superpowers:writing-plans skill)
+1. Write an implementation plan (invoke `/superpowers:writing-plans`)
 2. Create a spec from this design (write to specs/)
 3. Start implementing directly
 4. Done for now — I'll review the design doc later
@@ -396,7 +396,7 @@ What would you like to do next?
 **If output was already a spec** (`specs/`):
 ```
 What would you like to do next?
-1. Decompose into implementation tickets (invoke spec-to-tickets with the spec path and namespace <SUGGESTED>)
+1. Decompose into implementation tickets (invoke `/spec-to-tickets` with the spec path and namespace <SUGGESTED>)
 2. Review the spec first — recommended for XL specs (many tickets, broad scope) where direct implementation would skip the decomposition step
 3. Start implementing directly — appropriate for small specs (single ticket or small contiguous slice)
 4. Done for now — I'll review the spec later
@@ -408,12 +408,17 @@ Option 2 vs option 3 is a size heuristic, not a hard rule: specs that decompose 
 
 **Multi-spec output adaptation**: If the brainstorm produced 2+ specs in a single design pass (e.g., follow-up specs N+1 and N+2 from a predecessor that named both), expand option 1 into one decomposition option per spec (`Decompose Spec <N+1> into tickets (namespace <SUGGESTED-N+1>)`, `Decompose Spec <N+2> into tickets (namespace <SUGGESTED-N+2>)`, …) and renumber the remaining options. The namespace-derivation rule (uppercase-letter-chunks-of-first-3-to-4-meaningful-words) applies per-spec. Combine with Multi-phase spec adaptation below when a multi-spec output also has a phased earliest deliverable.
 
-**Multi-phase spec adaptation**: If the spec has a phased structure where the earliest phase is a tactical/standalone deliverable (e.g., a CI unblock paired with a multi-week architectural change), append an option: "Start Phase 0 immediately while reviewing the rest." This is appropriate when Phase 0's risk profile is unrelated to later phases AND Phase 0 is genuinely separable (small effort, no architectural dependencies on later phases). Pair this option with the restoration ticket required by the Step 3 "Tactical + strategic compound" rule — Phase 0 closes only when the strategic phases land.
+**Multi-phase spec adaptation**: If the spec has a phased structure where the earliest phase is genuinely separable (small effort, no architectural dependencies on later phases, risk profile unrelated to later phases), append an option: "Start Phase 0 immediately while reviewing the rest." Two distinct Phase 0 topologies exist and they pair differently:
+
+- **(a) Phased strategic delivery — Phase 0 is a permanent deliverable.** The phased structure is purely a sequencing decision; Phase 0 produces durable code or infrastructure that stays in the codebase after later phases land. No restoration ticket needed — Phase 0 is a planned permanent improvement, not a regression. Surface the option as written.
+- **(b) Tactical-T as Phase 0 — Phase 0 is a stopgap until later phases supersede it.** Phase 0 exists only because the strategic phases are slow to land (the Step 3 "Tactical + strategic compound" pattern, recast as a phase). MUST be paired with the restoration ticket required by the Step 3 rule — Phase 0 closes only when the strategic phases land. Without the restoration ticket, the tactical stopgap silently normalizes as the answer and violates Foundation #15 (Architectural Completeness).
+
+Decision criterion: ask "is Phase 0 a permanent deliverable, or a stopgap to be removed when later phases land?" If permanent → (a). If stopgap → (b). When in doubt, the test is whether the codebase contains Phase 0's artifacts unchanged after the full strategic plan lands.
 
 **If triage produced tickets directly** (`tickets/<PREFIX>-<NNN>.md`):
 ```
 What would you like to do next?
-1. Implement ticket <PREFIX>-<lowest-NNN> first (invoke implement-ticket skill)
+1. Implement ticket <PREFIX>-<lowest-NNN> first (invoke `/implement-ticket`)
 2. Run `pnpm run check:ticket-deps` to verify dependency integrity, then defer
 3. Done for now — I'll review the tickets later
 ```
@@ -423,7 +428,7 @@ Recommend option 1 only when the lowest-numbered ticket is genuinely independent
 **If triage produced spec(s) and/or report updates**:
 ```
 What would you like to do next?
-1. Decompose spec(s) into implementation tickets (invoke spec-to-tickets with each spec path and namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
+1. Decompose spec(s) into implementation tickets (invoke `/spec-to-tickets` with each spec path and namespace <SUGGESTED-PER-SPEC>, derived from each spec title using the same convention as the spec-output menu)
 2. Run a follow-up analysis pass (e.g., another missing-abstractions sweep on a different test suite, or a related triage in an adjacent area)
 3. Done for now — I'll review the artifacts later
 ```

@@ -22,6 +22,7 @@ import type {
   AgentPolicyCatalog,
   AgentPolicyTokenFilter,
   AgentPolicyZoneFilter,
+  CandidateParamUnavailabilityReason,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
   CompiledPolicyExpr,
@@ -84,6 +85,8 @@ export interface PolicyLookupFallbackFired {
   readonly value?: number;
 }
 
+export type PolicyCandidateParamFallbackFired = ReadonlyMap<string, number>;
+
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
 
@@ -98,11 +101,13 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
+  readonly unknownCandidateParamRefs: Map<string, CandidateParamUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
+  candidateParamFallbackFired?: Map<string, number>;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
 }
@@ -135,6 +140,10 @@ export interface CreatePolicyEvaluationContextInput {
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
     readonly lookupFallbackFired?: { current?: PolicyLookupFallbackFired };
+  };
+  readonly candidateParamOption?: {
+    readonly unknownCandidateParamRefs?: Map<string, CandidateParamUnavailabilityReason>;
+    readonly candidateParamFallbackFired?: { current?: Map<string, number> };
   };
 }
 
@@ -298,6 +307,7 @@ export class PolicyEvaluationContext {
   private currentCandidates: PolicyEvaluationCandidate[];
   private activeState: GameState;
   private currentSeatContext: string | undefined;
+  private candidateParamUnavailableDuringValue = false;
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
@@ -531,9 +541,38 @@ export class PolicyEvaluationContext {
     }
 
     const weight = this.evaluateCompiledExpr(consideration.weight, candidate);
+    const unknownCandidateParamRefsBefore = this.unknownCandidateParamRefCount(candidate);
+    const unknownPreviewRefsBefore = this.unknownPreviewRefCount(candidate);
+    const unknownLookupRefsBefore = this.unknownLookupRefCount(candidate);
+    this.candidateParamUnavailableDuringValue = false;
     const value = this.evaluateCompiledExpr(consideration.value, candidate);
+    const candidateParamUnavailable = this.candidateParamUnavailableDuringValue
+      || this.unknownCandidateParamRefCount(candidate) > unknownCandidateParamRefsBefore;
+    const previewUnavailable = this.unknownPreviewRefCount(candidate) > unknownPreviewRefsBefore;
+    const lookupUnavailable = this.unknownLookupRefCount(candidate) > unknownLookupRefsBefore;
+    this.candidateParamUnavailableDuringValue = false;
     if (typeof weight !== 'number' || typeof value !== 'number') {
-      if (consideration.hasPreviewRef === true) {
+      let contribution: number | undefined;
+      let shouldRecordContribution = false;
+      if (candidateParamUnavailable) {
+        const fallback = consideration.candidateParamFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Candidate-param consideration "${considerationId}" did not declare candidateParamFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'noContribution') {
+          this.recordCandidateParamFallbackFired(candidate, considerationId);
+          contribution ??= 0;
+        } else {
+          this.recordCandidateParamFallbackFired(candidate, considerationId);
+          contribution ??= fallback.value;
+          shouldRecordContribution = true;
+        }
+      }
+      if (previewUnavailable && consideration.previewFallback?.onUnavailable !== undefined) {
         const fallback = consideration.previewFallback?.onUnavailable;
         if (fallback === undefined) {
           throw this.runtimeError(
@@ -547,17 +586,18 @@ export class PolicyEvaluationContext {
             termId: considerationId,
             kind: 'noContribution',
           });
-          return 0;
+          contribution ??= 0;
+        } else {
+          this.recordPreviewFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'constant',
+            value: fallback.value,
+          });
+          contribution ??= fallback.value;
+          shouldRecordContribution = true;
         }
-        this.recordPreviewFallbackFired(candidate, {
-          termId: considerationId,
-          kind: 'constant',
-          value: fallback.value,
-        });
-        onContribution?.(fallback.value);
-        return fallback.value;
       }
-      if (consideration.hasLookupRef === true) {
+      if (lookupUnavailable && consideration.lookupFallback?.onUnavailable !== undefined) {
         const fallback = consideration.lookupFallback?.onUnavailable;
         if (fallback === undefined) {
           throw this.runtimeError(
@@ -571,18 +611,24 @@ export class PolicyEvaluationContext {
             termId: considerationId,
             kind: 'noContribution',
           });
-          return 0;
+          contribution ??= 0;
+        } else {
+          this.recordLookupFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'constant',
+            value: fallback.value,
+          });
+          contribution ??= fallback.value;
+          shouldRecordContribution = true;
         }
-        this.recordLookupFallbackFired(candidate, {
-          termId: considerationId,
-          kind: 'constant',
-          value: fallback.value,
-        });
-        onContribution?.(fallback.value);
-        return fallback.value;
       }
-      const contribution = consideration.unknownAs ?? 0;
-      onContribution?.(contribution);
+      if (contribution === undefined) {
+        contribution = consideration.unknownAs ?? 0;
+        shouldRecordContribution = true;
+      }
+      if (shouldRecordContribution) {
+        onContribution?.(contribution);
+      }
       return contribution;
     }
 
@@ -597,6 +643,24 @@ export class PolicyEvaluationContext {
     }
     onContribution?.(contribution);
     return contribution;
+  }
+
+  private unknownCandidateParamRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
+    return candidate?.unknownCandidateParamRefs.size
+      ?? this.input.candidateParamOption?.unknownCandidateParamRefs?.size
+      ?? 0;
+  }
+
+  private unknownPreviewRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
+    return candidate?.unknownPreviewRefs.size
+      ?? this.input.previewOption?.unknownPreviewRefs?.size
+      ?? 0;
+  }
+
+  private unknownLookupRefCount(candidate: PolicyEvaluationCandidate | undefined): number {
+    return candidate?.unknownLookupRefs.size
+      ?? this.input.lookupOption?.unknownLookupRefs?.size
+      ?? 0;
   }
 
   private recordPreviewFallbackFired(
@@ -620,6 +684,22 @@ export class PolicyEvaluationContext {
     }
     if (this.input.lookupOption?.lookupFallbackFired !== undefined) {
       this.input.lookupOption.lookupFallbackFired.current = fired;
+    }
+  }
+
+  private recordCandidateParamFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    considerationId: string,
+  ): void {
+    if (candidate !== undefined) {
+      const fired = candidate.candidateParamFallbackFired ?? new Map<string, number>();
+      fired.set(considerationId, (fired.get(considerationId) ?? 0) + 1);
+      candidate.candidateParamFallbackFired = fired;
+    }
+    if (this.input.candidateParamOption?.candidateParamFallbackFired !== undefined) {
+      const fired = this.input.candidateParamOption.candidateParamFallbackFired.current ?? new Map<string, number>();
+      fired.set(considerationId, (fired.get(considerationId) ?? 0) + 1);
+      this.input.candidateParamOption.candidateParamFallbackFired.current = fired;
     }
   }
 
@@ -1229,7 +1309,7 @@ export class PolicyEvaluationContext {
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
-        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
+        return this.resolveCandidateParamRef(ref, candidate);
       case 'microturnIntrinsic':
         return this.runtimeProviders.completion?.resolveMicroturnIntrinsic(ref.intrinsic);
       case 'microturnOptionIntrinsic':
@@ -1255,6 +1335,24 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveCandidateParamRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateParam' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (candidate === undefined) {
+      return undefined;
+    }
+    const resolution = this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref);
+    if (resolution.kind === 'ready' || resolution.kind === 'missingConstant') {
+      return resolution.value;
+    }
+    const refId = candidateParamTraceRefId(ref.id);
+    candidate.unknownCandidateParamRefs.set(refId, resolution.reason);
+    this.input.candidateParamOption?.unknownCandidateParamRefs?.set(refId, resolution.reason);
+    this.candidateParamUnavailableDuringValue = true;
+    return undefined;
   }
 
   private resolveStrategicConditionRef(
@@ -1814,6 +1912,10 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
     case 'driveDepth':
       return 'preview.option.driveDepth';
   }
+}
+
+function candidateParamTraceRefId(paramId: string): string {
+  return `candidate.params.${paramId}`;
 }
 
 export function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {

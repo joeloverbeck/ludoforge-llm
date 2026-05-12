@@ -2,6 +2,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
+  CandidateParamUnavailabilityReason,
   ChoicePendingRequest,
   GameDef,
   GameState,
@@ -10,7 +11,12 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import { PolicyEvaluationContext, type PolicyLookupFallbackFired, type PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import {
+  PolicyEvaluationContext,
+  type PolicyCandidateParamFallbackFired,
+  type PolicyLookupFallbackFired,
+  type PolicyPreviewFallbackFired,
+} from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
@@ -27,8 +33,10 @@ export interface CompletionOptionScore {
   readonly scoreContributions: readonly CompletionScoreContribution[];
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>;
+  readonly unknownCandidateParamRefs: ReadonlyMap<string, CandidateParamUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
+  readonly candidateParamFallbackFired?: PolicyCandidateParamFallbackFired;
 }
 
 export function scoreMicroturnOption(
@@ -79,14 +87,22 @@ export function scoreMicroturnOptionWithContributions(
   previewOptionProjectedState?: PreviewOptionProjectedState,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
-    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map(), unknownLookupRefs: new Map() };
+    return {
+      score: 0,
+      scoreContributions: [],
+      unknownPreviewRefs: new Map(),
+      unknownLookupRefs: new Map(),
+      unknownCandidateParamRefs: new Map(),
+    };
   }
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
   const unknownPreviewRefs = new Map<string, PolicyPreviewUnavailabilityReason>();
   const unknownLookupRefs = new Map<string, LookupUnavailabilityReason>();
+  const unknownCandidateParamRefs = new Map<string, CandidateParamUnavailabilityReason>();
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
   const lookupFallbackFired: { current?: PolicyLookupFallbackFired } = {};
+  const candidateParamFallbackFired: { current?: Map<string, number> } = {};
 
   const evaluation = new PolicyEvaluationContext({
     def,
@@ -107,6 +123,7 @@ export function scoreMicroturnOptionWithContributions(
         : { previewOption: { resolvedRefs: new Map(), unknownPreviewRefs, previewFallbackFired, projectedState: previewOptionProjectedState } }
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired, ...(previewOptionProjectedState === undefined ? {} : { projectedState: previewOptionProjectedState }) } }),
     lookupOption: { unknownLookupRefs, lookupFallbackFired },
+    candidateParamOption: { unknownCandidateParamRefs, candidateParamFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
 
@@ -129,8 +146,10 @@ export function scoreMicroturnOptionWithContributions(
       scoreContributions,
       unknownPreviewRefs,
       unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),
+      unknownCandidateParamRefs: sortUnknownCandidateParamRefs(unknownCandidateParamRefs),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
       ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
+      ...(candidateParamFallbackFired.current === undefined ? {} : { candidateParamFallbackFired: sortCandidateParamFallbackFired(candidateParamFallbackFired.current) }),
     };
   } finally {
     evaluation.dispose();
@@ -141,4 +160,16 @@ function sortUnknownLookupRefs(
   unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>,
 ): ReadonlyMap<string, LookupUnavailabilityReason> {
   return new Map([...unknownLookupRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function sortUnknownCandidateParamRefs(
+  unknownCandidateParamRefs: ReadonlyMap<string, CandidateParamUnavailabilityReason>,
+): ReadonlyMap<string, CandidateParamUnavailabilityReason> {
+  return new Map([...unknownCandidateParamRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function sortCandidateParamFallbackFired(
+  candidateParamFallbackFired: ReadonlyMap<string, number>,
+): PolicyCandidateParamFallbackFired {
+  return new Map([...candidateParamFallbackFired.entries()].sort(([left], [right]) => left.localeCompare(right)));
 }

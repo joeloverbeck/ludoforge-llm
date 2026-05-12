@@ -684,9 +684,18 @@ const CompiledAgentPolicyRefSchema = z.union([
     kind: z.literal('candidateIntrinsic'),
     intrinsic: z.enum(AGENT_POLICY_CANDIDATE_INTRINSICS),
   }).strict(),
+  // Spec 166 §4.1: candidate-param refs carry explicit missing-value policy.
   z.object({
     kind: z.literal('candidateParam'),
     id: StringSchema,
+    onMissing: z.union([
+      z.literal('unavailable'),
+      z.object({
+        kind: z.literal('constant'),
+        value: z.union([IntegerSchema, StringSchema, BooleanSchema]),
+      }).strict(),
+    ]),
+    appliesToActions: z.array(StringSchema).optional(),
   }).strict(),
   z.object({
     kind: z.literal('microturnIntrinsic'),
@@ -1057,6 +1066,7 @@ const AgentLookupFallbackSchema = z
     ]),
   })
   .strict();
+const AgentCandidateParamFallbackSchema = AgentLookupFallbackSchema;
 
 const CompiledAgentConsiderationSchema = z
   .object({
@@ -1065,6 +1075,7 @@ const CompiledAgentConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
+    candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1083,6 +1094,7 @@ const CompiledPolicyConsiderationSchema = z
     unknownAs: NumberSchema.optional(),
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
+    candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -2099,6 +2111,13 @@ const PolicyLookupUnknownRefTraceSchema = z
   })
   .strict();
 
+const PolicyCandidateParamUnknownRefTraceSchema = z
+  .object({
+    refId: StringSchema,
+    reason: z.enum(['missing', 'typeMismatch']),
+  })
+  .strict();
+
 const PolicyPreviewReadyRefStatsTraceSchema = z
   .object({
     readyCount: IntegerSchema.nonnegative(),
@@ -2141,6 +2160,7 @@ const PolicyCandidateDecisionTraceSchema = z
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     unknownLookupRefs: z.array(PolicyLookupUnknownRefTraceSchema),
+    unknownCandidateParamRefs: z.array(PolicyCandidateParamUnknownRefTraceSchema),
     previewFallbackFired: z.object({
       termId: StringSchema,
       kind: z.enum(['noContribution', 'constant']),
@@ -2151,6 +2171,7 @@ const PolicyCandidateDecisionTraceSchema = z
       kind: z.enum(['noContribution', 'constant']),
       value: NumberSchema.optional(),
     }).strict().optional(),
+    candidateParamFallbackFired: z.record(StringSchema, IntegerSchema.nonnegative()).optional(),
     selectionReason: z.enum([
       'coverage',
       'prior',
@@ -2306,6 +2327,7 @@ const AgentDecisionTraceSchema = z
     finalScore: NumberSchema.nullable(),
     previewGatedCount: IntegerSchema.nonnegative().optional(),
     previewGatedTopFlipDetected: BooleanSchema.optional(),
+    candidateParamFallbackFiredCount: IntegerSchema.nonnegative().optional(),
     pruningSteps: z.array(PolicyPruningStepTraceSchema),
     tieBreakChain: z.array(PolicyTieBreakStepTraceSchema),
     previewUsage: PolicyPreviewUsageTraceSchema,

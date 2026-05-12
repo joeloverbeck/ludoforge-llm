@@ -72,7 +72,7 @@ const createDef = (fullCandidateCap: number): GameDef => {
           scopes: ['move'],
           costClass: 'state',
           weight: literal(1),
-          value: refExpr({ kind: 'candidateParam', id: 'rank' }),
+          value: refExpr({ kind: 'candidateParam', id: 'rank', onMissing: 'unavailable' }),
           dependencies: emptyDeps,
         },
         projectedScore: {

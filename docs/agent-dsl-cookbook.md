@@ -94,12 +94,20 @@ These remain part of the production-safe move-scoped contract:
 | `candidate.tag.<name>` | whether the candidate has a tag |
 | `candidate.tags` | all candidate tags |
 | `candidate.stableMoveKey` | deterministic move identity |
+| `candidate.params.<name>` | typed scalar parameter on the published action-selection candidate |
 
-For new production authoring, prefer `candidate.tag.*` and state/preview-derived scoring over parameter introspection.
+Use `candidate.params.<name>` only for same-action variants whose discriminating value is already published on the candidate, such as an event side or card id. It is action-selection scoped (`scopes: [move]`), state-local, and does not invoke preview.
+
+Retired names remain retired:
+
+- `decision.*` (singular) is invalid; policy profiles do not author decisions directly.
+- `option.value` is invalid; use `microturn.option.value` at microturn scope.
+- `candidate.param.<name>` (singular) is invalid; use `candidate.params.<name>` (plural) at action-selection scope.
+- `microturn.option.*` is current for microturn option scoring.
 
 ### Preview Refs
 
-Preview remains useful when it stays bounded. Action-selection candidates now use a bounded synthetic-completion driver by default, so `preview.*` refs project through same-seat inner microturns without reviving retired `decision.*`, `option.value`, or `candidate.param.*` authoring.
+Preview remains useful when it stays bounded. Action-selection candidates now use a bounded synthetic-completion driver by default, so `preview.*` refs project through same-seat inner microturns while the retired ref families above stay invalid.
 
 | Ref | Meaning |
 | --- | --- |
@@ -125,6 +133,139 @@ candidateFeatures:
 ```
 
 When tuning preview, read `previewUsage.utility` and `previewUsage.readyRefStats` in the agent-decision trace to confirm the refs differentiate ready candidates.
+
+## Action-Selection Candidate Parameter Refs
+
+Use `candidate.params.<name>` when a move-scoped consideration needs to score same-action variants by a typed scalar already present on the published candidate. The read is state-local: it does not preview, it does not walk authoritative state, and it does not parse `candidate.stableMoveKey`.
+
+Good uses:
+
+- Score FITL `event` variants by `side`, where `side` is declared on the `event` action and published in the candidate params.
+- Score pivotal events by `eventCardId`, where `pivotalEvent` declares the card id param.
+- Give an explicitly declared optional-style param an `onMissing` constant for candidates that omit it.
+
+Do not use `candidate.params.*` from `scopes: [microturn]`. Microturn option scoring uses `microturn.option.*`; state-keyed reads use `lookup`.
+
+| What's being chosen | Ref family | Scope |
+| --- | --- | --- |
+| Action class | `candidate.tag.<actionId>`, `candidate.actionId` | move |
+| Same-action variant by typed scalar param | `candidate.params.<name>` | move |
+| Microturn option value | `microturn.option.value`, `microturn.option.tags`, `microturn.option.targetKind` | microturn |
+| Projected scalar metric | `preview.victory.*`, `preview.feature.*`, `preview.var.*` | move, preview-derived |
+| Projected keyed property | `lookup.surface: previewOptionState` | microturn, preview-derived |
+| Current-state keyed property | `lookup.surface: policyState` | move or microturn, state-keyed |
+
+### Required Param With Candidate Fallback
+
+Use `candidateParamFallback` when a `candidate.params.*` ref can be unavailable. `noContribution` omits the term for candidates that do not carry the param or whose param type does not match the declaration.
+
+```yaml
+avoidShadedEvent:
+  scopes: [move]
+  appliesToActions: [event]
+  weight: -800
+  value:
+    boolToNumber:
+      eq:
+        - { ref: candidate.params.side }
+        - shaded
+  candidateParamFallback:
+    onUnavailable: noContribution
+```
+
+### Optional-Style Param With `onMissing`
+
+Use a ref-local `onMissing` constant when the profile wants an omitted param to score as a normal value. This pattern is for an action surface that declares the param in the profile's target fixture or game data; do not use FITL `event.branch` as this example today, because `branch` is intentionally undeclared while branchless event moves remain legal.
+
+```yaml
+preferModeAOrAbsent:
+  scopes: [move]
+  weight: 200
+  value:
+    boolToNumber:
+      eq:
+        - ref:
+            candidate.params.mode:
+              onMissing:
+                kind: constant
+                value: __absent__
+        - A
+```
+
+Because every `candidate.params.mode` read in this expression has an `onMissing` constant, no `candidateParamFallback` is required.
+
+### Multi-Card Pivotal Preference
+
+Use `appliesToActions` when a consideration is intentionally limited to an action that declares the param. This makes the declaration check stricter and keeps the profile from scoring unrelated candidates.
+
+```yaml
+preferSpecificPivotal:
+  scopes: [move]
+  appliesToActions: [pivotalEvent]
+  weight: 500
+  value:
+    boolToNumber:
+      in:
+        - { ref: candidate.params.eventCardId }
+        - [card-121, card-122]
+  candidateParamFallback:
+    onUnavailable: noContribution
+```
+
+### Mixed Candidate Param And Lookup Signal
+
+When one expression mixes state sources, declare every fallback channel that can become unavailable. This example reads a candidate param and a current-state lookup, so it declares both `candidateParamFallback` and `lookupFallback`.
+
+```yaml
+preferUnshadedOnPopulatedBoard:
+  scopes: [move]
+  appliesToActions: [event]
+  weight: 100
+  value:
+    add:
+      - boolToNumber:
+          eq:
+            - { ref: candidate.params.side }
+            - unshaded
+      - lookup:
+          surface: policyState
+          collection: zones
+          keyType: ZoneId
+          key: board
+          path: [properties, population]
+          onMissing: unavailable
+  candidateParamFallback:
+    onUnavailable: noContribution
+  lookupFallback:
+    onUnavailable: noContribution
+```
+
+Fallback decision tree:
+
+```text
+Does any candidate.params.<name> ref in your value expression have onMissing: unavailable, which is the default?
+  yes -> declare candidateParamFallback.onUnavailable.
+  no, every ref has onMissing: { kind: constant } -> candidateParamFallback is not required for those refs.
+
+Does the same value expression read preview-derived refs?
+  yes -> also declare previewFallback.onUnavailable.
+
+Does the same value expression read lookup.surface refs?
+  yes -> also declare lookupFallback.onUnavailable for policyState lookups, or previewFallback.onUnavailable for previewOptionState lookups.
+```
+
+Diagnostic quick reference:
+
+| Code | When it fires |
+| --- | --- |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN` | The param name is not in `candidateParamDefs`. |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_SCOPE_INVALID` | `candidate.params.*` appears in a microturn-scope consideration. |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN_ACTION` | `appliesToActions` names an action that does not exist. |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_TYPE_INCONSISTENT` | The param was declared with inconsistent types across actions. |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_ONMISSING_TYPE_MISMATCH` | The `onMissing` constant does not match the declared param type. |
+| `CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_REQUIRES_EXPLICIT_FALLBACK` | A default-unavailable `candidate.params.*` ref lacks `candidateParamFallback.onUnavailable`. |
+
+Spec source: `archive/specs/166-candidate-parameter-refs.md`
 
 ## Reading the Preview Trace
 

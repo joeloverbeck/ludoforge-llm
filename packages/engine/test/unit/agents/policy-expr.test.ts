@@ -7,6 +7,11 @@ import type { AgentPolicyExpr, AgentPolicyLiteral, CompiledAgentParameterDef, Co
 
 const literal = (value: AgentPolicyLiteral): AgentPolicyExpr => ({ kind: 'literal', value });
 const refExpr = (ref: CompiledAgentPolicyRef): AgentPolicyExpr => ({ kind: 'ref', ref });
+const candidateParamRef = (id: string): Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateParam' }> => ({
+  kind: 'candidateParam',
+  id,
+  onMissing: 'unavailable',
+});
 const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...args: AgentPolicyExpr[]): AgentPolicyExpr => ({
   kind: 'op',
   op,
@@ -29,19 +34,19 @@ function createContext(parameterDefs: Readonly<Record<string, CompiledAgentParam
           return {
             type: 'id' as const,
             costClass: 'candidate' as const,
-            ref: { kind: 'candidateParam' as const, id: 'eventCardId' },
+            ref: candidateParamRef('eventCardId'),
           };
         case 'candidate.param.targetSpace':
           return {
             type: 'id' as const,
             costClass: 'candidate' as const,
-            ref: { kind: 'candidateParam' as const, id: 'targetSpace' },
+            ref: candidateParamRef('targetSpace'),
           };
         case 'candidate.param.$targets':
           return {
             type: 'idList' as const,
             costClass: 'candidate' as const,
-            ref: { kind: 'candidateParam' as const, id: '$targets' },
+            ref: candidateParamRef('$targets'),
           };
         case 'feature.currentMargin':
           return {
@@ -166,7 +171,7 @@ describe('policy-expr analysis', () => {
     );
 
     assert.deepEqual(diagnostics, []);
-    assert.deepEqual(analysis?.expr, opExpr('eq', refExpr({ kind: 'candidateParam', id: 'eventCardId' }), literal('card-2')));
+    assert.deepEqual(analysis?.expr, opExpr('eq', refExpr(candidateParamRef('eventCardId')), literal('card-2')));
     assert.equal(analysis?.valueType, 'boolean');
     assert.equal(analysis?.costClass, 'candidate');
   });
@@ -181,7 +186,7 @@ describe('policy-expr analysis', () => {
     );
 
     assert.deepEqual(diagnostics, []);
-    assert.deepEqual(analysis?.expr, opExpr('in', literal('zone-a'), refExpr({ kind: 'candidateParam', id: '$targets' })));
+    assert.deepEqual(analysis?.expr, opExpr('in', literal('zone-a'), refExpr(candidateParamRef('$targets'))));
     assert.equal(analysis?.valueType, 'boolean');
     assert.equal(analysis?.costClass, 'candidate');
   });
@@ -232,7 +237,7 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(analysis, {
       expr: {
         kind: 'zoneTokenAgg',
-        zone: refExpr({ kind: 'candidateParam', id: 'eventCardId' }),
+        zone: refExpr(candidateParamRef('eventCardId')),
         owner: 'self',
         prop: 'rank',
         aggOp: 'sum',
@@ -712,7 +717,7 @@ describe('policy-expr analysis', () => {
     assert.deepEqual(diagnostics, []);
     assert.deepEqual(analysis?.expr, {
       kind: 'adjacentTokenAgg',
-      anchorZone: refExpr({ kind: 'candidateParam', id: 'targetSpace' }),
+      anchorZone: refExpr(candidateParamRef('targetSpace')),
       tokenFilter: { type: 'troop' },
       aggOp: 'count',
     });

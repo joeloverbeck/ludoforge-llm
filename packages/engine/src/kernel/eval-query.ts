@@ -1195,6 +1195,11 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
       return [...query.values];
     }
 
+    case 'booleans': {
+      assertWithinBounds(query.values.length, query, maxQueryResults);
+      return [...query.values];
+    }
+
     case 'globalMarkers': {
       const allMarkers = (ctx.def.globalMarkerLattices ?? []).map((lattice) => lattice.id);
       const markerOrder = query.markers === undefined ? [...allMarkers].sort() : dedupeStringsPreserveOrder(query.markers);

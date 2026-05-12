@@ -148,6 +148,8 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 **Required compiled-field exact-shape fallout**: When a ticket adds a required compiled/runtime field, search for sibling fields and exact-shape assertions before relying on broad unit output alone. Mirror nearby field expectations intentionally, then rerun the likely compiler/schema exact-shape test files directly before escalating back to the broad package or workspace lane.
 
+**Required compiler-guard diagnostic ordering**: When a ticket adds a required compiler diagnostic, fallback, or precondition, sweep nearby positive and negative compiler tests for earlier-diagnostic masking. Add only the minimal prerequisite data needed to keep each existing test aimed at its original invariant, then rerun the focused sibling test file or glob before treating the new diagnostic as complete.
+
 **Identity-sensitive cache proofs**: When proving WeakMap or reference-keyed cache behavior, verify that helper fixtures preserve AST object identity. Avoid helpers that clone, retag, or normalize nodes when the assertion depends on repeated evaluation of the same object reference.
 
 **Isolating `node --test` failures**: If only a top-level file failure appears, rerun narrowly with test-name filtering or direct helper reproduction. Run built test modules directly for nested subtest output. For compiler/schema tests, reproduce minimal compile input against the built module.
@@ -171,6 +173,7 @@ Escalate sooner for shared exported contracts or cross-package consumers.
 
 - If you changed runtime Zod/object schemas or shared contract shapes, regenerate schema artifacts before interpreting schema-test failures.
 - When kernel schema sources, generated GameDef/Trace contracts, exported trace/result shapes, or other generator-backed public contracts change, schedule the authoritative artifact-generation command plus the artifact-check command before broad package/root test lanes. Record both commands in the active ticket outcome or final closeout when generated diffs persist.
+  - If the artifact checker reads built output such as `dist/`, treat broad build/test lanes that refresh that output as producers, not just verification. A typical stable sequence is: build the package/root lane, run artifact generation, run artifact check, run later broad lanes as needed, then rerun the narrow artifact check if any later lane rebuilt or cleaned the consumed output tree.
 - Confirm producing commands have exited before diagnosing artifact contents. Confirm artifact paths match command write targets.
 - Check freshness (timestamp or file size) before treating missing fields as real discrepancies.
 - When touched source contributes to exported contracts or schema surfaces, expect generator-backed artifact checks even if the ticket didn't name a generated file.

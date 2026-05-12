@@ -6,6 +6,7 @@ import type {
   CompiledAgentProfile,
   GameDef,
   GameState,
+  CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
   MoveParamScalar,
   MoveParamValue,
@@ -16,7 +17,7 @@ import {
   selectUniqueChoiceOptionValuesByLegalityPrecedence,
 } from '../kernel/choice-option-policy.js';
 import { scoreMicroturnOptionWithContributions, type CompletionScoreContribution } from './microturn-option-eval.js';
-import type { PolicyLookupFallbackFired, PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import type { PolicyCandidateParamFallbackFired, PolicyLookupFallbackFired, PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
@@ -39,8 +40,10 @@ export interface MicroturnChoiceSelection {
   readonly scoreContributionsByOption: ReadonlyMap<string, readonly CompletionScoreContribution[]>;
   readonly unknownPreviewRefsByOption: ReadonlyMap<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>;
   readonly unknownLookupRefsByOption: ReadonlyMap<string, ReadonlyMap<string, LookupUnavailabilityReason>>;
+  readonly unknownCandidateParamRefsByOption: ReadonlyMap<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>;
   readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
   readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
+  readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
 }
 
 const scoreContributionsKeyForChooseOne = (
@@ -90,12 +93,15 @@ export function selectBestMicroturnChooseOneValue(
     MicroturnChoiceSelection,
     'scoreContributionsByOption' | 'unknownPreviewRefsByOption' | 'previewFallbackFiredByOption'
     | 'unknownLookupRefsByOption' | 'lookupFallbackFiredByOption'
+    | 'unknownCandidateParamRefsByOption' | 'candidateParamFallbackFiredByOption'
   > | undefined;
   const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
   const unknownPreviewRefsByOption = new Map<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>();
   const unknownLookupRefsByOption = new Map<string, ReadonlyMap<string, LookupUnavailabilityReason>>();
+  const unknownCandidateParamRefsByOption = new Map<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>();
   const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
   const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
+  const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
   for (const [optionIndex, option] of selectableOptions.entries()) {
     const optionKey = scoreContributionsKeyForChooseOne(request, option.value);
     const scored = scoreMicroturnOptionWithContributions(
@@ -116,11 +122,15 @@ export function selectBestMicroturnChooseOneValue(
     scoreContributionsByOption.set(optionKey, scored.scoreContributions);
     unknownPreviewRefsByOption.set(optionKey, scored.unknownPreviewRefs);
     unknownLookupRefsByOption.set(optionKey, scored.unknownLookupRefs);
+    unknownCandidateParamRefsByOption.set(optionKey, scored.unknownCandidateParamRefs);
     if (scored.previewFallbackFired !== undefined) {
       previewFallbackFiredByOption.set(optionKey, scored.previewFallbackFired);
     }
     if (scored.lookupFallbackFired !== undefined) {
       lookupFallbackFiredByOption.set(optionKey, scored.lookupFallbackFired);
+    }
+    if (scored.candidateParamFallbackFired !== undefined) {
+      candidateParamFallbackFiredByOption.set(optionKey, scored.candidateParamFallbackFired);
     }
     const score = scored.score;
     if (bestSelection === undefined || score > bestSelection.score) {
@@ -139,8 +149,10 @@ export function selectBestMicroturnChooseOneValue(
     scoreContributionsByOption,
     unknownPreviewRefsByOption,
     unknownLookupRefsByOption,
+    unknownCandidateParamRefsByOption,
     previewFallbackFiredByOption,
     lookupFallbackFiredByOption,
+    candidateParamFallbackFiredByOption,
   };
 }
 
@@ -172,8 +184,10 @@ export function buildMicroturnChooseCallback(
       const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
       const unknownPreviewRefsByOption = new Map<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>();
       const unknownLookupRefsByOption = new Map<string, ReadonlyMap<string, LookupUnavailabilityReason>>();
+      const unknownCandidateParamRefsByOption = new Map<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>();
       const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
       const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
+      const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
       const scoredValues = selectableValues.map((value, index) => ({
         value,
         index,
@@ -198,11 +212,15 @@ export function buildMicroturnChooseCallback(
         scoreContributionsByOption.set(optionKey, entry.scored.scoreContributions);
         unknownPreviewRefsByOption.set(optionKey, entry.scored.unknownPreviewRefs);
         unknownLookupRefsByOption.set(optionKey, entry.scored.unknownLookupRefs);
+        unknownCandidateParamRefsByOption.set(optionKey, entry.scored.unknownCandidateParamRefs);
         if (entry.scored.previewFallbackFired !== undefined) {
           previewFallbackFiredByOption.set(optionKey, entry.scored.previewFallbackFired);
         }
         if (entry.scored.lookupFallbackFired !== undefined) {
           lookupFallbackFiredByOption.set(optionKey, entry.scored.lookupFallbackFired);
+        }
+        if (entry.scored.candidateParamFallbackFired !== undefined) {
+          candidateParamFallbackFiredByOption.set(optionKey, entry.scored.candidateParamFallbackFired);
         }
       }
       const rankedValues = [...scoredValues].sort((left, right) => {
@@ -225,8 +243,10 @@ export function buildMicroturnChooseCallback(
             scoreContributionsByOption,
             unknownPreviewRefsByOption,
             unknownLookupRefsByOption,
+            unknownCandidateParamRefsByOption,
             previewFallbackFiredByOption,
             lookupFallbackFiredByOption,
+            candidateParamFallbackFiredByOption,
           };
         }
         const supplement = rankedValues
@@ -244,8 +264,10 @@ export function buildMicroturnChooseCallback(
           scoreContributionsByOption,
           unknownPreviewRefsByOption,
           unknownLookupRefsByOption,
+          unknownCandidateParamRefsByOption,
           previewFallbackFiredByOption,
           lookupFallbackFiredByOption,
+          candidateParamFallbackFiredByOption,
         };
       }
 

@@ -326,6 +326,7 @@ optionsQuerySchemaInternal = z.union([
     })
     .strict(),
   z.object({ query: z.literal('enums'), values: z.array(StringSchema) }).strict(),
+  z.object({ query: z.literal('booleans'), values: z.array(BooleanSchema) }).strict(),
   z
     .object({
       query: z.literal('globalMarkers'),

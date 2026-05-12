@@ -196,6 +196,7 @@ const walkOptionsQueryConditionsAndValues = (
     case 'grantContext':
     case 'capturedSequenceZones':
     case 'enums':
+    case 'booleans':
     case 'globalMarkers':
     case 'players':
       return;

@@ -22,6 +22,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [],
         unknownLookupRefs: [],
+        unknownCandidateParamRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'ready',
         previewDrive: {
@@ -39,6 +40,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [{ refId: 'victory.currentMargin.self', reason: 'depthCap' }],
         unknownLookupRefs: [],
+        unknownCandidateParamRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'depthCap',
         previewFailureReason: 'depthCap',
@@ -57,6 +59,7 @@ function createPreviewMetadata(): PolicyEvaluationMetadata {
         previewRefIds: ['victory.currentMargin.self'],
         unknownPreviewRefs: [{ refId: 'victory.currentMargin.self', reason: 'gated' }],
         unknownLookupRefs: [],
+        unknownCandidateParamRefs: [],
         selectionReason: 'gated',
         previewOutcome: 'gated',
         previewFailureReason: 'gated',

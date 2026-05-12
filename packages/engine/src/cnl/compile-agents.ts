@@ -17,6 +17,7 @@ import { inferQueryRuntimeShapes } from '../kernel/query-shape-inference.js';
 import type {
   AgentParameterType,
   AgentParameterValue,
+  AgentCandidateParamFallback,
   AgentLookupFallback,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
@@ -53,6 +54,7 @@ import type {
   GameSpecAgentProfileDef,
   GameSpecAgentsSection,
   GameSpecCandidateFeatureDef,
+  GameSpecCandidateParamFallbackDef,
   GameSpecLookupFallbackDef,
   GameSpecPolicyExpr,
   GameSpecPolicySurfaceVisibilityDef,
@@ -215,6 +217,7 @@ function stripAgentLibraryExpressions(library: AgentLibraryWithExpr): CompiledAg
       ...(consideration.unknownAs === undefined ? {} : { unknownAs: consideration.unknownAs }),
       ...(consideration.previewFallback === undefined ? {} : { previewFallback: consideration.previewFallback }),
       ...(consideration.lookupFallback === undefined ? {} : { lookupFallback: consideration.lookupFallback }),
+      ...(consideration.candidateParamFallback === undefined ? {} : { candidateParamFallback: consideration.candidateParamFallback }),
       ...(consideration.clamp === undefined ? {} : { clamp: consideration.clamp }),
       dependencies: consideration.dependencies,
     };
@@ -494,6 +497,8 @@ function classifyActionParamCandidateParamDef(
   switch (runtimeShapes[0]) {
     case 'number':
       return { type: 'number' };
+    case 'boolean':
+      return { type: 'boolean' };
     case 'string':
     case 'token':
       return { type: 'id' };
@@ -514,6 +519,8 @@ function classifyChoiceBindingCandidateParamDef(
     switch (runtimeShapes[0]) {
       case 'number':
         return { type: 'number' };
+      case 'boolean':
+        return { type: 'boolean' };
       case 'string':
       case 'token':
         return { type: 'id' };
@@ -539,6 +546,46 @@ function classifyChoiceBindingCandidateParamDef(
     default:
       return null;
   }
+}
+
+function collectCandidateParamDefsForName(
+  actions: GameDef['actions'] | undefined,
+  actionPipelines: GameDef['actionPipelines'] | undefined,
+  paramName: string,
+): readonly (CompiledAgentCandidateParamDef | null)[] {
+  const defs: Array<CompiledAgentCandidateParamDef | null> = [];
+  for (const action of actions ?? []) {
+    for (const param of action.params) {
+      if (param.name === paramName) {
+        defs.push(classifyActionParamCandidateParamDef(param.domain));
+      }
+    }
+    for (const choiceSpec of collectChoiceBindingSpecs([...action.cost, ...action.effects])) {
+      if (!isDynamicBindingTemplate(choiceSpec.bind) && choiceSpec.bind === paramName) {
+        defs.push(classifyChoiceBindingCandidateParamDef(choiceSpec));
+      }
+    }
+  }
+  for (const pipeline of actionPipelines ?? []) {
+    for (const choiceSpec of collectChoiceBindingSpecs([
+      ...pipeline.costEffects,
+      ...pipeline.stages.flatMap((stage) => stage.effects),
+    ])) {
+      if (!isDynamicBindingTemplate(choiceSpec.bind) && choiceSpec.bind === paramName) {
+        defs.push(classifyChoiceBindingCandidateParamDef(choiceSpec));
+      }
+    }
+  }
+  return defs;
+}
+
+function actionDeclaresCandidateParam(action: GameDef['actions'][number], paramName: string): boolean {
+  if (action.params.some((param) => param.name === paramName)) {
+    return true;
+  }
+  return collectChoiceBindingSpecs([...action.cost, ...action.effects]).some(
+    (choiceSpec) => !isDynamicBindingTemplate(choiceSpec.bind) && choiceSpec.bind === paramName,
+  );
 }
 
 function lowerParameterDef(
@@ -2060,6 +2107,7 @@ class AgentLibraryCompiler {
     const lookupRefIds = collectLookupRefIds(value.expr);
     const currentStateLookupRefIds = collectLookupRefIds(value.expr, 'policyState');
     const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
+    const candidateParamRefIds = collectCandidateParamRefIds(value.expr);
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2090,6 +2138,16 @@ class AgentLibraryCompiler {
     }
     const lookupFallback = lowerLookupFallback(considerationId, `${path}.lookupFallback`, def.lookupFallback, this.diagnostics);
     if (lookupFallback === null) {
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    const candidateParamFallback = lowerCandidateParamFallback(
+      considerationId,
+      `${path}.candidateParamFallback`,
+      def.candidateParamFallback,
+      this.diagnostics,
+    );
+    if (candidateParamFallback === null) {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
@@ -2129,6 +2187,17 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    if (candidateParamRefIds.length > 0 && candidateParamFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_REQUIRES_EXPLICIT_FALLBACK,
+        path: `${path}.candidateParamFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" reads candidate.params.* ref(s) [${candidateParamRefIds.join(', ')}] without declaring candidateParamFallback.onUnavailable. Add candidateParamFallback: { onUnavailable: noContribution } or { onUnavailable: { constant: <number> } }.`,
+        suggestion: 'Required for refs whose onMissing is "unavailable" (default). Refs with onMissing: { kind: constant } do not require this fallback.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
 
     const compiled: AgentConsiderationWithExpr = {
       scopes,
@@ -2141,6 +2210,7 @@ class AgentLibraryCompiler {
       ...(def.unknownAs === undefined ? {} : { unknownAs: def.unknownAs }),
       ...(previewFallback === undefined ? {} : { previewFallback }),
       ...(lookupFallback === undefined ? {} : { lookupFallback }),
+      ...(candidateParamFallback === undefined ? {} : { candidateParamFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
@@ -2295,6 +2365,9 @@ class AgentLibraryCompiler {
     const scopes = consideration.scopes ?? [];
     const refKinds = collectConsiderationRefKinds(consideration);
     const hasMoveOnlyRefs = refKinds.has('candidate') || refKinds.has('preview');
+    const hasCandidateParamRefs = collectCandidateParamRefIds(consideration.value, 'all').length > 0
+      || (consideration.when !== undefined && collectCandidateParamRefIds(consideration.when, 'all').length > 0)
+      || collectCandidateParamRefIds(consideration.weight, 'all').length > 0;
     const hasMicroturnOnlyRefs = refKinds.has('microturn');
 
     if (scopes.length === 1) {
@@ -2310,10 +2383,14 @@ class AgentLibraryCompiler {
       }
       if (scope === 'microturn' && hasMoveOnlyRefs) {
         this.diagnostics.push({
-          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
+          code: hasCandidateParamRefs
+            ? CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_SCOPE_INVALID
+            : CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_CONSIDERATION_SCOPE_VIOLATION,
           path,
           severity: 'error',
-          message: `Consideration "${considerationId}" is microturn-scoped but references move-only refs.`,
+          message: hasCandidateParamRefs
+            ? `Consideration "${considerationId}" is microturn-scoped but references candidate.params.* refs.`
+            : `Consideration "${considerationId}" is microturn-scoped but references move-only refs.`,
           suggestion: 'move.* refs cannot be used in microturn-scope considerations; remove candidate./preview./move refs or use the move scope.',
         });
       }
@@ -2336,6 +2413,8 @@ class AgentLibraryCompiler {
       parameterDefs: this.parameterDefs,
       ...(this.options.referenceSeatIds === undefined ? {} : { referenceSeatIds: this.options.referenceSeatIds }),
       resolveRef: (refPath: string, path: string) => this.resolveRef(scope, refPath, path),
+      resolveObjectRef: (expr: Readonly<Record<string, GameSpecPolicyExpr>>, path: string) =>
+        this.resolveObjectRef(scope, expr, path),
       ...(allowLookup ? {
         resolveLookup: (expr: GameSpecPolicyExpr, path: string) => this.lowerLookupValue(scope, expr, path, context),
       } : {}),
@@ -2643,18 +2722,11 @@ class AgentLibraryCompiler {
       }
       return { type: 'number', costClass: 'candidate', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } };
     }
+    if (refPath.startsWith('candidate.params.')) {
+      return this.resolveCandidateParamRef(scope, refPath, path);
+    }
     if (refPath.startsWith('candidate.param.')) {
-      if (scope === 'stateFeature') {
-        this.reportInvalidCandidateParamRef(refPath, path);
-        return null;
-      }
-      this.diagnostics.push({
-        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
-        path,
-        severity: 'error',
-        message: `candidate.param.* refs are removed; use move candidate features or microturn.* refs as appropriate.`,
-        suggestion: 'Do not inspect retired candidate.param.* refs from policy expressions.',
-      });
+      this.reportInvalidCandidateParamRef(refPath, path);
       return null;
     }
 
@@ -3001,6 +3073,153 @@ class AgentLibraryCompiler {
     return false;
   }
 
+  private resolveObjectRef(
+    scope: LibraryRefScope,
+    expr: Readonly<Record<string, GameSpecPolicyExpr>>,
+    path: string,
+  ): ResolvedPolicyRef | null {
+    const entries = Object.entries(expr);
+    if (entries.length !== 1) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path,
+        severity: 'error',
+        message: 'Structured policy refs must contain exactly one ref path key.',
+        suggestion: 'Use { candidate.params.<name>: { onMissing, appliesToActions } }.',
+      });
+      return null;
+    }
+
+    const [refPath, options] = entries[0]!;
+    if (refPath.startsWith('candidate.params.')) {
+      return this.resolveCandidateParamRef(scope, refPath, path, options);
+    }
+
+    this.diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Structured policy ref "${refPath}" is not supported.`,
+      suggestion: 'Use structured refs only for candidate.params.<name> options.',
+    });
+    return null;
+  }
+
+  private resolveCandidateParamRef(
+    scope: LibraryRefScope,
+    refPath: string,
+    path: string,
+    options?: unknown,
+  ): ResolvedPolicyRef | null {
+    if (scope === 'stateFeature') {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+
+    const paramName = refPath.slice('candidate.params.'.length);
+    const candidateParamDef = this.candidateParamDefs[paramName];
+    if (paramName.length === 0 || candidateParamDef === undefined) {
+      this.reportUnknownCandidateParamRef(paramName, refPath, path);
+      return null;
+    }
+
+    const optionRecord = parseCandidateParamRefOptions(options, path, this.diagnostics);
+    if (optionRecord === null) {
+      return null;
+    }
+
+    const onMissing = parseCandidateParamOnMissing(
+      optionRecord.onMissing,
+      candidateParamDef.type,
+      `${path}.onMissing`,
+      this.diagnostics,
+    );
+    if (onMissing === null) {
+      return null;
+    }
+
+    const appliesToActions = parseCandidateParamAppliesToActions(optionRecord.appliesToActions, path, this.diagnostics);
+    if (appliesToActions === null) {
+      return null;
+    }
+    if (appliesToActions !== undefined && !this.validateCandidateParamAppliesToActions(paramName, appliesToActions, path)) {
+      return null;
+    }
+
+    return {
+      type: candidateParamDef.type,
+      costClass: 'candidate',
+      ref: {
+        kind: 'candidateParam',
+        id: paramName,
+        onMissing,
+        ...(appliesToActions === undefined ? {} : { appliesToActions }),
+      },
+    };
+  }
+
+  private reportUnknownCandidateParamRef(paramName: string, refPath: string, path: string): void {
+    const inconsistent = this.isInconsistentCandidateParam(paramName);
+    this.diagnostics.push({
+      code: inconsistent
+        ? CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_TYPE_INCONSISTENT
+        : CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN,
+      path,
+      severity: 'error',
+      message: inconsistent
+        ? `Candidate param ref "${refPath}" targets "${paramName}", but declarations for that param have inconsistent types across actions.`
+        : `Candidate param ref "${refPath}" targets unknown candidate param "${paramName}".`,
+      suggestion: 'Declare the candidate param on at least one action with a consistent action param domain.',
+    });
+  }
+
+  private isInconsistentCandidateParam(paramName: string): boolean {
+    const defs = collectCandidateParamDefsForName(this.options.actionDefs, this.options.actionPipelines, paramName);
+    return defs.some((candidateParamDef, index) => {
+      if (candidateParamDef === null) {
+        return true;
+      }
+      return defs.slice(index + 1).some(
+        (other) => other === null || !candidateParamDefsEqual(candidateParamDef, other),
+      );
+    });
+  }
+
+  private validateCandidateParamAppliesToActions(
+    paramName: string,
+    appliesToActions: readonly string[],
+    path: string,
+  ): boolean {
+    let valid = true;
+    const actions = this.options.actionDefs ?? [];
+    const actionsById = new Map(actions.map((action) => [String(action.id), action]));
+    for (const [index, actionId] of appliesToActions.entries()) {
+      const action = actionsById.get(actionId);
+      if (action === undefined) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN_ACTION,
+          path: `${path}.appliesToActions.${index}`,
+          severity: 'error',
+          message: `candidate.params.${paramName} appliesToActions references unknown action "${actionId}".`,
+          suggestion: 'List only action ids declared by the compiled game definition.',
+        });
+        valid = false;
+        continue;
+      }
+      if (!actionDeclaresCandidateParam(action, paramName)) {
+        this.diagnostics.push({
+          code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN,
+          path: `${path}.appliesToActions.${index}`,
+          severity: 'error',
+          message: `candidate.params.${paramName} applies to action "${actionId}", but that action does not declare candidate param "${paramName}".`,
+          suggestion: 'Declare the param on that action or remove the action id from appliesToActions.',
+        });
+        valid = false;
+      }
+    }
+    return valid;
+  }
+
   private reportCycle(category: string, entryId: string, stack: readonly string[]): void {
     this.diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_DEPENDENCY_CYCLE,
@@ -3026,8 +3245,8 @@ class AgentLibraryCompiler {
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID,
       path,
       severity: 'error',
-      message: `Invalid candidate param ref "${refPath}".`,
-      suggestion: 'Use exactly candidate.param.<paramName> for a concrete move param with a policy-visible compiled candidate-param contract.',
+      message: `candidate.param.* refs are removed; "${refPath}" is not a valid policy ref.`,
+      suggestion: 'Use the plural candidate.params.<paramName> ref family for action-selection candidate params.',
     });
   }
 
@@ -3542,6 +3761,55 @@ function lowerLookupFallback(
   return null;
 }
 
+function lowerCandidateParamFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecCandidateParamFallbackDef | undefined,
+  diagnostics: Diagnostic[],
+): AgentCandidateParamFallback | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Consideration "${considerationId}" candidateParamFallback must be an object.`,
+      suggestion: 'Use candidateParamFallback: { onUnavailable: noContribution } or candidateParamFallback: { onUnavailable: { constant: 0 } }.',
+    });
+    return null;
+  }
+
+  const { onUnavailable } = value;
+  if (onUnavailable === 'noContribution') {
+    return { onUnavailable: 'noContribution' };
+  }
+  if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
+    const { constant } = onUnavailable;
+    if (Number.isSafeInteger(constant)) {
+      return { onUnavailable: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.onUnavailable.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" candidateParamFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.onUnavailable`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" candidateParamFallback.onUnavailable must be noContribution or { constant: <integer> }.`,
+    suggestion: 'Use candidateParamFallback: { onUnavailable: noContribution } or candidateParamFallback: { onUnavailable: { constant: 0 } }.',
+  });
+  return null;
+}
+
 function lowerLookupMissingDisposition(
   value: unknown,
   path: string,
@@ -3562,6 +3830,89 @@ function lowerLookupMissingDisposition(
     severity: 'error',
     message: 'lookup.onMissing must be unavailable or { kind: constant, value: <integer|string|boolean> }.',
     suggestion: 'Use onMissing: unavailable or onMissing: { kind: constant, value: 0 }.',
+  });
+  return null;
+}
+
+function parseCandidateParamRefOptions(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): { readonly onMissing?: unknown; readonly appliesToActions?: unknown } | null {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: 'candidate.params structured ref options must be an object.',
+      suggestion: 'Use { candidate.params.<name>: { onMissing, appliesToActions } }.',
+    });
+    return null;
+  }
+  return value as { readonly onMissing?: unknown; readonly appliesToActions?: unknown };
+}
+
+function parseCandidateParamOnMissing(
+  value: unknown,
+  paramType: CompiledAgentCandidateParamDef['type'],
+  path: string,
+  diagnostics: Diagnostic[],
+): Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateParam' }>['onMissing'] | null {
+  if (value === undefined || value === 'unavailable') {
+    return 'unavailable';
+  }
+  if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+    const obj = value as Readonly<Record<string, unknown>>;
+    if (obj['kind'] === 'constant' && isCandidateParamOnMissingConstant(obj['value'], paramType)) {
+      return { kind: 'constant', value: obj['value'] as number | string | boolean };
+    }
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_CANDIDATE_PARAMS_ONMISSING_TYPE_MISMATCH,
+    path,
+    severity: 'error',
+    message: `candidate.params onMissing constant does not match declared param type "${paramType}".`,
+    suggestion: 'Use onMissing: unavailable or { kind: constant, value: <number|string|boolean> } with a value matching the declared param type.',
+  });
+  return null;
+}
+
+function isCandidateParamOnMissingConstant(
+  value: unknown,
+  paramType: CompiledAgentCandidateParamDef['type'],
+): boolean {
+  switch (paramType) {
+    case 'number':
+      return typeof value === 'number';
+    case 'boolean':
+      return typeof value === 'boolean';
+    case 'id':
+      return typeof value === 'string';
+    case 'idList':
+      return false;
+  }
+}
+
+function parseCandidateParamAppliesToActions(
+  value: unknown,
+  path: string,
+  diagnostics: Diagnostic[],
+): readonly string[] | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (Array.isArray(value) && value.every((entry) => typeof entry === 'string' && entry.length > 0)) {
+    return value;
+  }
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.appliesToActions`,
+    severity: 'error',
+    message: 'candidate.params appliesToActions must be an array of non-empty action ids.',
+    suggestion: 'Use appliesToActions: [actionId, ...].',
   });
   return null;
 }
@@ -3616,6 +3967,52 @@ function collectLookupRefIds(
       case 'ref':
         if (current.ref.kind === 'lookup' && (surfaceFilter === undefined || current.ref.surface === surfaceFilter)) {
           ids.add(`lookup.${current.ref.surface}.${current.ref.collection}.${current.ref.path.join('.')}`);
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function collectCandidateParamRefIds(
+  expr: AgentPolicyExpr,
+  onMissingPolicyFilter: 'unavailable' | 'all' = 'unavailable',
+): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (
+          current.ref.kind === 'candidateParam'
+          && (onMissingPolicyFilter === 'all' || current.ref.onMissing === 'unavailable')
+        ) {
+          ids.add(`candidate.params.${current.ref.id}`);
         }
         return;
       case 'op':

@@ -480,7 +480,7 @@ const TURN_1: PlaybookTurn = {
       label: 'VC shaded Burning Bonze',
       move: {
         actionId: asActionId('event'),
-        params: { eventCardId: 'card-107', side: 'shaded' },
+        params: { eventCardId: 'card-107', eventDeckId: EVENT_DECK_ID, side: 'shaded' },
       },
       expectedState: {
         globalVars: {
@@ -813,6 +813,7 @@ const TURN_3: PlaybookTurn = {
         actionId: asActionId('event'),
         params: {
           eventCardId: 'card-68',
+          eventDeckId: EVENT_DECK_ID,
           side: 'unshaded',
           branch: 'place-irregulars-and-support',
           $targetProvince: 'binh-dinh:none',
@@ -1022,6 +1023,7 @@ const TURN_4: PlaybookTurn = {
         actionId: asActionId('event'),
         params: {
           eventCardId: 'card-1',
+          eventDeckId: EVENT_DECK_ID,
           side: 'unshaded',
         },
       },
@@ -1322,7 +1324,7 @@ const TURN_5: PlaybookTurn = {
       label: 'VC shaded Brinks Hotel',
       move: {
         actionId: asActionId('event'),
-        params: { eventCardId: 'card-97', side: 'shaded' },
+        params: { eventCardId: 'card-97', eventDeckId: EVENT_DECK_ID, side: 'shaded' },
       },
       expectedState: {
         globalVars: {
@@ -1796,7 +1798,7 @@ const TURN_7: PlaybookTurn = {
       label: 'VC shaded Booby Traps',
       move: {
         actionId: asActionId('event'),
-        params: { eventCardId: 'card-101', side: 'shaded' },
+        params: { eventCardId: 'card-101', eventDeckId: EVENT_DECK_ID, side: 'shaded' },
       },
       expectedState: {
         globalMarkers: [

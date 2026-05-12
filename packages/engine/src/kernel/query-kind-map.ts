@@ -1,7 +1,7 @@
 import type { OptionsQuery } from './types.js';
 
 export type QueryDomainKind = 'token' | 'zone' | 'other';
-export type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'unknown';
+export type QueryRuntimeShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 'unknown';
 
 export type QueryPartitionKind = 'recursive' | 'leaf';
 
@@ -97,6 +97,7 @@ export const OPTIONS_QUERY_KIND_CONTRACT_MAP = {
   intsInRange: { partition: 'leaf', domain: 'other', runtimeShape: 'number' },
   intsInVarRange: { partition: 'leaf', domain: 'other', runtimeShape: 'number' },
   enums: { partition: 'leaf', domain: 'other', runtimeShape: 'string' },
+  booleans: { partition: 'leaf', domain: 'other', runtimeShape: 'boolean' },
   globalMarkers: { partition: 'leaf', domain: 'other', runtimeShape: 'string' },
   players: { partition: 'leaf', domain: 'other', runtimeShape: 'number' },
   zones: { partition: 'leaf', domain: 'zone', runtimeShape: 'string' },

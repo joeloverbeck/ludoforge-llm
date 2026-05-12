@@ -157,7 +157,155 @@ turnOrder:
 
 actions:
   - { id: pass, tags: [pass], actor: active, executor: 'actor', phase: [main], params: [], pre: null, cost: [], effects: [], limits: [] }
-  - { id: event, tags: [event-play], actor: active, executor: 'actor', phase: [main], capabilities: [cardEvent], params: [], pre: null, cost: [], effects: [], limits: [] }
+  - id: event
+    tags: [event-play]
+    actor: active
+    executor: 'actor'
+    phase: [main]
+    capabilities: [cardEvent]
+    params:
+      - name: eventCardId
+        domain:
+          query: enums
+          values:
+            - card-1
+            - card-2
+            - card-3
+            - card-4
+            - card-5
+            - card-6
+            - card-7
+            - card-8
+            - card-9
+            - card-10
+            - card-11
+            - card-12
+            - card-13
+            - card-14
+            - card-15
+            - card-16
+            - card-17
+            - card-18
+            - card-19
+            - card-20
+            - card-21
+            - card-22
+            - card-23
+            - card-24
+            - card-25
+            - card-26
+            - card-27
+            - card-28
+            - card-29
+            - card-30
+            - card-31
+            - card-32
+            - card-33
+            - card-34
+            - card-35
+            - card-36
+            - card-37
+            - card-38
+            - card-39
+            - card-40
+            - card-41
+            - card-42
+            - card-43
+            - card-44
+            - card-45
+            - card-46
+            - card-47
+            - card-48
+            - card-49
+            - card-50
+            - card-51
+            - card-52
+            - card-53
+            - card-54
+            - card-55
+            - card-56
+            - card-57
+            - card-58
+            - card-59
+            - card-60
+            - card-61
+            - card-62
+            - card-63
+            - card-64
+            - card-65
+            - card-66
+            - card-67
+            - card-68
+            - card-69
+            - card-70
+            - card-71
+            - card-72
+            - card-73
+            - card-74
+            - card-75
+            - card-76
+            - card-77
+            - card-78
+            - card-79
+            - card-80
+            - card-81
+            - card-82
+            - card-83
+            - card-84
+            - card-85
+            - card-86
+            - card-87
+            - card-88
+            - card-89
+            - card-90
+            - card-91
+            - card-92
+            - card-93
+            - card-94
+            - card-95
+            - card-96
+            - card-97
+            - card-98
+            - card-99
+            - card-100
+            - card-101
+            - card-102
+            - card-103
+            - card-104
+            - card-105
+            - card-106
+            - card-107
+            - card-108
+            - card-109
+            - card-110
+            - card-111
+            - card-112
+            - card-113
+            - card-114
+            - card-115
+            - card-116
+            - card-117
+            - card-118
+            - card-119
+            - card-120
+            - card-121
+            - card-122
+            - card-123
+            - card-124
+            - card-125
+            - card-126
+            - card-127
+            - card-128
+            - card-129
+            - card-130
+      - name: eventDeckId
+        domain: { query: enums, values: [fitl-events-initial-card-pack] }
+      - name: side
+        domain: { query: enums, values: [unshaded, shaded] }
+    pre: null
+    cost: []
+    effects: []
+    limits: []
   - id: coupVictoryCheck
     actor: active
     executor: 'actor'

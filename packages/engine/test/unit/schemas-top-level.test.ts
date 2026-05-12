@@ -630,7 +630,7 @@ describe('top-level runtime schemas', () => {
       kind: 'zoneProp',
       zone: {
         kind: 'ref',
-        ref: { kind: 'candidateParam', id: 'targetZone' },
+        ref: { kind: 'candidateParam', id: 'targetZone', onMissing: 'unavailable' },
       },
       prop: 'population',
     }));
@@ -692,7 +692,7 @@ describe('top-level runtime schemas', () => {
       kind: 'adjacentTokenAgg',
       anchorZone: {
         kind: 'ref',
-        ref: { kind: 'candidateParam', id: 'targetSpace' },
+        ref: { kind: 'candidateParam', id: 'targetSpace', onMissing: 'unavailable' },
       },
       tokenFilter: {
         type: 'troop',

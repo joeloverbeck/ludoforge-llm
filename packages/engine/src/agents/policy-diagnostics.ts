@@ -130,6 +130,9 @@ export function buildPolicyAgentDecisionTrace(
     ...(metadata.previewGatedTopFlipDetected === undefined
       ? {}
       : { previewGatedTopFlipDetected: metadata.previewGatedTopFlipDetected }),
+    ...(metadata.candidateParamFallbackFiredCount === undefined
+      ? {}
+      : { candidateParamFallbackFiredCount: metadata.candidateParamFallbackFiredCount }),
     pruningSteps: metadata.pruningSteps,
     tieBreakChain: metadata.tieBreakChain,
     previewUsage: metadata.previewUsage,

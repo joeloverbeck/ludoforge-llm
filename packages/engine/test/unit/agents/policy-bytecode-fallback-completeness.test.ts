@@ -71,7 +71,7 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
   globalTokenAgg: { expr: { kind: 'globalTokenAgg', zoneScope: 'all', prop: 'power', aggOp: 'sum' } },
   globalZoneAgg: { expr: { kind: 'globalZoneAgg', source: 'variable', field: 'control', aggOp: 'sum', zoneScope: 'all' } },
   candidateIntrinsic: { expr: { kind: 'ref', ref: { kind: 'candidateIntrinsic', intrinsic: 'paramCount' } } },
-  candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount' } } },
+  candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount', onMissing: 'unavailable' } } },
   candidateTag: { expr: { kind: 'ref', ref: { kind: 'candidateTag', tagName: 'urgent' } } },
   candidateTags: { expr: { kind: 'ref', ref: { kind: 'candidateTags' } } },
   microturnIntrinsic: {
@@ -123,7 +123,9 @@ function createCatalog(): AgentPolicyCatalog {
       activeCardAnnotation: { current: 'hidden', preview: { visibility: 'hidden', allowWhenHiddenSampling: false } },
     },
     parameterDefs: {},
-    candidateParamDefs: {},
+    candidateParamDefs: {
+      amount: { type: 'number' },
+    },
     library: {
       stateFeatures: {
         tempo: { type: 'number', costClass: 'state', expr: literal(17), dependencies: emptyDeps },
@@ -185,13 +187,14 @@ function createDef(): GameDef {
     tokenTypes: [{ id: 'unit', props: { power: 'int' } }],
     setup: [],
     turnStructure: { phases: [{ id: phaseId }] },
+    agents: createCatalog(),
     actions: [
       {
         id: asActionId('choose'),
         actor: 'active',
         executor: 'actor',
         phase: [phaseId],
-        params: [],
+        params: [{ name: 'amount', domain: { query: 'intsInRange', min: 0, max: 10 } }],
         pre: null,
         cost: [],
         effects: [],
@@ -231,6 +234,7 @@ function createCandidate(): PolicyEvaluationCandidate {
     previewRefIds: new Set(),
     unknownPreviewRefs: new Map(),
     unknownLookupRefs: new Map(),
+    unknownCandidateParamRefs: new Map(),
   };
 }
 

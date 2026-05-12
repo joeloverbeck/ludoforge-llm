@@ -9,6 +9,7 @@ const MOVE_PARAM_ENCODABLE_QUERY_RUNTIME_SHAPES: ReadonlySet<QueryRuntimeShape> 
   'token',
   'number',
   'string',
+  'boolean',
   'unknown',
 ]);
 

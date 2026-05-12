@@ -337,6 +337,7 @@ export type AgentLookupFallback = {
     | 'noContribution'
     | { readonly kind: 'constant'; readonly value: number };
 };
+export type AgentCandidateParamFallback = AgentLookupFallback;
 export type AgentPolicyOperator =
   | 'abs'
   | 'add'
@@ -399,6 +400,12 @@ export type LookupUnavailabilityReason = 'hidden' | 'missing' | 'typeMismatch' |
 export type LookupRefStatus =
   | { readonly kind: 'ready'; readonly value: number | string | boolean }
   | { readonly kind: 'unavailable'; readonly reason: LookupUnavailabilityReason };
+export type CompiledAgentPolicyRefOnMissing =
+  | 'unavailable'
+  | {
+      readonly kind: 'constant';
+      readonly value: number | string | boolean;
+    };
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
@@ -413,6 +420,8 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'candidateParam';
       readonly id: string;
+      readonly onMissing: CompiledAgentPolicyRefOnMissing;
+      readonly appliesToActions?: readonly string[];
     }
   | {
       readonly kind: 'microturnIntrinsic';
@@ -434,10 +443,7 @@ export type CompiledAgentPolicyRef =
       readonly keyType: 'ZoneId' | 'TokenId' | 'PlayerId' | 'string';
       readonly key: CompiledPolicyExpr;
       readonly path: readonly string[];
-      readonly onMissing: 'unavailable' | {
-        readonly kind: 'constant';
-        readonly value: number | string | boolean;
-      };
+      readonly onMissing: CompiledAgentPolicyRefOnMissing;
       readonly onHidden: 'unavailable';
     }
   | {
@@ -650,6 +656,7 @@ export interface CompiledPolicyConsideration {
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
+  readonly candidateParamFallback?: AgentCandidateParamFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -846,6 +853,7 @@ export interface CompiledAgentConsideration {
   readonly unknownAs?: number;
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
+  readonly candidateParamFallback?: AgentCandidateParamFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -1775,6 +1783,13 @@ export interface PolicyLookupUnknownRefTrace {
   readonly reason: LookupUnavailabilityReason;
 }
 
+export type CandidateParamUnavailabilityReason = 'missing' | 'typeMismatch';
+
+export interface PolicyCandidateParamUnknownRefTrace {
+  readonly refId: string;
+  readonly reason: CandidateParamUnavailabilityReason;
+}
+
 export interface PolicyPreviewReadyRefStatsTrace {
   readonly readyCount: number;
   readonly distinctValueCount: number;
@@ -1827,6 +1842,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly unknownLookupRefs: readonly PolicyLookupUnknownRefTrace[];
+  readonly unknownCandidateParamRefs: readonly PolicyCandidateParamUnknownRefTrace[];
   readonly previewFallbackFired?: {
     readonly termId: string;
     readonly kind: 'noContribution' | 'constant';
@@ -1837,6 +1853,7 @@ export interface PolicyCandidateDecisionTrace {
     readonly kind: 'noContribution' | 'constant';
     readonly value?: number;
   };
+  readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
   readonly previewDrive?: PolicyPreviewDriveTrace;
@@ -1945,6 +1962,7 @@ export interface PolicyAgentDecisionTrace {
   readonly finalScore: number | null;
   readonly previewGatedCount?: number;
   readonly previewGatedTopFlipDetected?: boolean;
+  readonly candidateParamFallbackFiredCount?: number;
   readonly pruningSteps: readonly PolicyPruningStepTrace[];
   readonly tieBreakChain: readonly PolicyTieBreakStepTrace[];
   readonly previewUsage: PolicyPreviewUsageTrace;

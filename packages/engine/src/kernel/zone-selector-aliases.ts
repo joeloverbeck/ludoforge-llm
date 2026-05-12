@@ -122,6 +122,7 @@ const collectZoneSelectorAliasesFromQuery = (query: OptionsQuery, aliases: Set<s
       collectZoneSelectorAliasesFromCondition(query.via, aliases);
       return;
     case 'enums':
+    case 'booleans':
     case 'globalMarkers':
     case 'players':
     case 'binding':

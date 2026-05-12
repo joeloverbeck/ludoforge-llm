@@ -43,6 +43,7 @@ export interface AnalyzePolicyExprContext {
   readonly referenceSeatIds?: readonly string[];
   readonly withinSeatAggExpr?: boolean;
   resolveRef(refPath: string, path: string): ResolvedPolicyRef | null;
+  resolveObjectRef?(expr: Readonly<Record<string, GameSpecPolicyExpr>>, path: string): ResolvedPolicyRef | null;
   resolveLookup?(expr: GameSpecPolicyExpr, path: string): PolicyExprAnalysis | null;
 }
 
@@ -301,6 +302,23 @@ function analyzeRefExpr(
   diagnostics: Diagnostic[],
   path: string,
 ): PolicyExprAnalysis | null {
+  if (expr !== null && typeof expr === 'object' && !Array.isArray(expr)) {
+    if (context.resolveObjectRef === undefined) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+        path,
+        severity: 'error',
+        message: 'Structured policy refs are not supported in this context.',
+        suggestion: 'Use a string ref path.',
+      });
+      return null;
+    }
+    const resolved = context.resolveObjectRef(expr as Readonly<Record<string, GameSpecPolicyExpr>>, path);
+    if (resolved === null) {
+      return null;
+    }
+    return withResolvedRef(resolved, emptyDependencies());
+  }
   if (typeof expr !== 'string' || expr.length === 0) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,

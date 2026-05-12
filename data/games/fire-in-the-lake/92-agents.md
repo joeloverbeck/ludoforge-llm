@@ -467,6 +467,7 @@ agents:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
+          - preferStrongNormalizedMargin
           - preferGovernWeighted
           - trainWhenControlLow
           - preferOptionProjectedMargin

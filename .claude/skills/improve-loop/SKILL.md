@@ -188,7 +188,7 @@ Document each mapping inline in the first ANCHOR musings entry so subsequent ite
 
 ### Steps 1c-1g: STRATEGY MANAGEMENT
 
-**Per-iteration mandatory**: each iteration recomputes (a) `consecutive_rejects` from results.tsv tail, (b) UCB1 scores per category (Step 1d), and (c) current `strategy` (advance ladder if PLATEAU_THRESHOLD reached). Skip-on-context-pressure is forbidden — strategy state lives in results.tsv, not in agent memory. The strategy ladder (`normal → combine → ablation → radical → backtrack`) is the loop's core operational logic; ad-hoc hypothesis generation outside this ladder while `consecutive_rejects >= PLATEAU_THRESHOLD` is improvisation, not normal mode.
+**Per-iteration mandatory**: each iteration recomputes (a) `consecutive_rejects` from results.tsv tail; (b) current `strategy` (advance ladder if PLATEAU_THRESHOLD reached). UCB1 scores per category (Step 1d) are mandatory only once any category has ≥2 attempts AND strategy is currently `normal`. Before that threshold, hypothesis selection in normal mode may draw from the "root causes to seed" list in program.md order, then opportunistic user-flagged hypotheses, without formal UCB1 ranking. Skip-on-context-pressure is forbidden for the (a)/(b) state; strategy state lives in results.tsv, not in agent memory. The strategy ladder (`normal → combine → ablation → radical → backtrack`) is the loop's core operational logic; ad-hoc hypothesis generation outside this ladder while `consecutive_rejects >= PLATEAU_THRESHOLD` is improvisation, not normal mode.
 
 Load `references/strategy-management.md`. Execute Steps 1c through 1g as described there.
 
@@ -201,6 +201,8 @@ If `meta_improvement: true` in program.md, load `references/meta-review.md`.
 - **Check for human override first:** Does `$WT/campaigns/<campaign>/next-idea.md` exist?
   - If yes: read its contents as the hypothesis. Rename to `next-idea.used-exp-NNN.md`. Skip normal generation.
   - If no: proceed with normal hypothesis generation below.
+
+- **Mid-campaign conversational user nudges:** A question or concern typed by the user during the loop (e.g., "are events being played?", "I'm worried about X") MAY be treated as equivalent to `next-idea.md` content. Parse the nudge into a concrete testable hypothesis and proceed; this elevates the user's input to authoritative-directive status for the next iteration. Quote the nudge verbatim in the corresponding Step 2.5 RECORD HYPOTHESIS musings entry under a `**USER NUDGE**:` line so it's discoverable on resume. Skip the elevation when the user's input is clearly a clarifying question without an implicit hypothesis (e.g., "what's the current best metric?") — answer in conversation and continue normal generation.
 
 - **Strategy-specific generation:**
   - `normal`: Select the category with the highest UCB1 score (from Step 1c). Propose ONE specific, testable change within that category. If early in the campaign, draw from the "root causes to seed" list. Consult local and global lessons for patterns that have worked in similar contexts.
@@ -290,6 +292,8 @@ Append to `$WT/campaigns/<campaign>/musings.md`:
 **Learning**: <what was learned — confirmed/refuted hypothesis, surprising observations, what to try differently>
 ```
 
+**Tracked-musings commit prohibition**: If `musings.md` is tracked in this campaign (verify with `git check-ignore campaigns/<campaign>/musings.md` per Worktree Requirement step 6), append in-place but do NOT include `musings.md` in the experiment's commit. The worktree branch's tracked `musings.md` content must remain at the main-baseline state until the campaign completes; session extensions are extracted to `lessons-global.jsonl` per the After Campaign Completes protocol, with the working-tree changes reverted at squash-merge time. Including `musings.md` in `improve-loop: exp-NNN ...` commits pollutes the eventual squash-merge to main with the running session narrative and forces a retroactive revert (see After Campaign Completes step 4 for the cleanup procedure if this prohibition was violated). For gitignored campaigns, append freely — the file never enters the squash-merge file set.
+
 **On `SUSPICIOUS_ACCEPT` only**, extend the template with a Suspicion-gate verification block:
 ```markdown
 **Suspicion-gate verification** (improvement >MAX_IMPROVEMENT_PCT triggered SUSPICIOUS_ACCEPT):
@@ -330,6 +334,8 @@ Trigger this step before Step 8 (REPEAT) when the just-completed experiment surf
 4. Append to results.tsv: `arch-gap-NNN	<best_metric>	0	architectural-gap	REJECT	architectural gap discovered at exp-NNN; see <artifact path>` (this is a marker row similar to ceiling-NNN, not a new experiment).
 5. **Pause for human input**: Present the artifact to the user with the same options as Step 1g Ceiling Detection (continue with workaround, halt the campaign, or pursue the spec/report). Do NOT proceed to Step 8 (REPEAT) until the human directs.
 
+**Dialogue-active variant**: When the user is actively engaged in dialogue (Human Investigation Interrupt active, or recent conversational input within the past few turns), it is acceptable to summarize the gap in conversation FIRST and write the report AFTER the user confirms scope. The autonomous write-then-pause ordering above (steps 2-5) is the default for unattended-loop discoveries; the dialogue-active variant prevents an over-broad or off-scope report from being written and then re-scoped. The musings and results.tsv entries (steps 3-4) still land before resuming, even in the dialogue-active variant.
+
 If the trigger conditions do NOT apply, skip this step and proceed to Step 8 (REPEAT) normally.
 
 ### Step 8: REPEAT
@@ -352,7 +358,7 @@ Go back to Step 1. Do NOT stop.
 | META-REVIEW revert | Restore program.md from program.md.backup |
 | Infrastructure (Tier 3+) | `git add <files>` + `git commit -m "infra: <description>"` — committable at any time during OBSERVE |
 
-`results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`, `intermediates.jsonl`, and `run.log` are untracked (gitignored) — they persist across accepts and rejects but are not committed. `musings.md` may be tracked or gitignored depending on campaign setup; verify with `git check-ignore campaigns/<campaign>/musings.md` before any cross-tree copy or commit decision.
+`results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`, `intermediates.jsonl`, and `run.log` are untracked (gitignored) — they persist across accepts and rejects but are not committed. `musings.md` may be tracked or gitignored depending on campaign setup; verify with `git check-ignore campaigns/<campaign>/musings.md` before any cross-tree copy or commit decision. **When `musings.md` is tracked, the running-session extensions written at Step 7.5 RECORD LEARNING MUST be excluded from experiment commits** — see Step 7.5's tracked-musings commit prohibition and the After Campaign Completes section for the full rationale.
 
 **Infrastructure commits outside experiments**: Tier 3 (observability) and campaign infrastructure changes (trace improvements, harness updates, documentation) can be committed at any point during the OBSERVE phase, not only during the IMPLEMENT->DECIDE cycle. Use commit messages prefixed with `infra:` and log in musings, but do NOT log in results.tsv (they are not experiments).
 
@@ -392,6 +398,8 @@ Step 8 below elaborates on the spec-vs-report decision criterion. Both step 7 an
    This file persists across campaigns — without this commit, lessons are lost when the worktree is removed. The squash-merge in step 5 picks up this commit; landing it on main directly bypasses that path and leaves the worktree branch missing the promotion.
 4. **Preserve runtime files**: Copy gitignored campaign runtime files (`results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`) from the worktree back to the source campaign folder in the main repo. These files are gitignored there too but persist on disk for future campaign resumption. Without this step, `git worktree remove` deletes the campaign's diagnostic history.
 
+   **Ad-hoc diagnostic scripts** (e.g., `campaigns/<campaign>/diagnose-*.mjs`) created during a Human Investigation Interrupt: copy back to the main repo's campaign folder if they encode reusable investigation logic that may help re-investigate the same question in future campaigns. Let them be deleted by `git worktree remove --force` if they were one-off probes specific to this session. Many campaigns already have a `diagnose-*.mjs` convention to match — follow it where present.
+
    **For `musings.md`**: check whether it is tracked in your campaign first (`git check-ignore campaigns/<campaign>/musings.md`).
 
    - *If gitignored*: the worktree's session-extended musings can be copied back to the main repo's gitignored campaign-folder copy (this preserves diagnostic history for future campaign resumption without any tracking concerns).
@@ -402,7 +410,9 @@ Step 8 below elaborates on the spec-vs-report decision criterion. Both step 7 an
      - The report or spec being written (project-level artifacts; see steps 7-8).
      - The squash-merge commit message itself (when the finding is short enough to inline).
 
-     Then `git checkout -- campaigns/<campaign>/musings.md` in the worktree to revert before the squash-merge file-set preview.
+     Then revert `musings.md` in the worktree to its main-baseline state before the squash-merge file-set preview. Two sub-cases:
+     - *Session-extensions are still uncommitted in the working tree* (Step 7.5's tracked-musings commit prohibition was respected throughout): `cd $WT && git checkout -- campaigns/<campaign>/musings.md` reverts the working tree to HEAD's content, which matches main.
+     - *Session-extensions were committed during the campaign* (legacy campaigns, or amid-protocol violation): the HEAD of the worktree branch carries the extensions, so reverting to HEAD won't help. Source the revert from main and commit it on the worktree branch: `cd $WT && git checkout main -- campaigns/<campaign>/musings.md && git commit -m "chore: revert tracked musings.md to main baseline (session findings preserved in reports/ and lessons-global.jsonl)"`. The revert commit will be folded into the squash-merge.
 
      **Confirm before squash-merge**: substantive findings preserved outside musings.md? If yes, proceed. If no, route them through one of the durable channels first, then revert.
 
@@ -438,12 +448,13 @@ If the human interrupts the loop for investigation (e.g., "stop, investigate thi
    - **(b) report** (in main repo `reports/<topic>-<date>.md`) — when the limitation spans multiple gaps that need external research or a brainstorm before settling on specs. Reports gather evidence, frame open research questions, and propose solution directions, but stop short of committing the project to a specific design. The user may direct which artifact type. After writing a report, the typical follow-up is to halt the campaign and convert findings into specs once the research narrows the design space.
 
    Adjust the campaign approach to work within the limitation. Log in musings: `**ENGINE LIMITATION**: <description>. See Spec NNN` or `See Report <path>`.
-6. **Bug fix during investigation**: If the investigation reveals a code bug (not a policy issue):
-   1. Implement the fix in engine code.
+6. **Bug fix during investigation**: If the investigation reveals a code bug or a game-spec encoding bug (not a policy/profile issue):
+   1. Implement the fix in engine code or game-spec data files (e.g., `data/games/<game>/`).
    2. Run the full test suite.
    3. Commit with a descriptive message (use `fix:` prefix, not `infra:`).
    4. If the fix changes compiled output, run `sync-fixtures.sh` and commit fixture updates separately.
    5. Re-run the harness to establish the post-fix baseline.
+   5b. **Validate prior accept/reject decisions against the post-fix baseline**: When the bug fix changes the meaning of prior measurements (e.g., a game-rules fix changes which seeds are winnable, an engine fix changes which optimizations are valid), treat as STALE BASELINE per Phase 0 step 3 — clear `results.tsv` to header, clear `checkpoints.jsonl`, document the reset in musings with reasoning. Prior commits on the worktree branch remain (preserving history); whether they remain relevant to the new baseline depends on whether the change in question still helps post-fix. Resume experiment numbering from `exp-001` in the post-fix regime. Existing per-campaign `lessons.jsonl` entries are preserved as observations but their accept/reject classifications may need re-derivation. Skip this step when the bug fix changes only execution speed or trace fidelity (not the semantic meaning of game outcomes).
    6. Update `best_metric` if the baseline changed.
    7. Log the fix in musings with `**BUG FIX**:` prefix.
    8. This counts as "unlocked new capabilities" — reset `consecutive_rejects = 0` and `strategy = "normal"`.

@@ -230,6 +230,7 @@ export function evaluateActionSelectionProjectedLookup() {
     previewRefIds: new Set(),
     unknownPreviewRefs: new Map(),
     unknownLookupRefs: new Map(),
+    unknownCandidateParamRefs: new Map(),
   };
   const evaluation = new PolicyEvaluationContext({
     def: lookupDef,

@@ -8,6 +8,7 @@ import type {
   ChoicePendingChooseNRequest,
   ChoicePendingChooseOneRequest,
   ChoicePendingRequest,
+  CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
 } from '../kernel/types.js';
 import {
@@ -52,6 +53,7 @@ interface FrontierCandidate {
   readonly previewRefIds?: readonly string[];
   readonly unknownPreviewRefs?: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs?: ReadonlyMap<string, LookupUnavailabilityReason>;
+  readonly unknownCandidateParamRefs?: ReadonlyMap<string, CandidateParamUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly previewOutcome?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewOutcome']>;
@@ -109,6 +111,7 @@ const traceCandidatesForFrontier = (
       previewRefIds: [...(candidate.previewRefIds ?? [])],
       unknownPreviewRefs: traceUnknownPreviewRefs(candidate.unknownPreviewRefs),
       unknownLookupRefs: traceUnknownLookupRefs(candidate.unknownLookupRefs),
+      unknownCandidateParamRefs: traceUnknownCandidateParamRefs(candidate.unknownCandidateParamRefs),
       ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
       ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
       selectionReason: selectionReasonForFrontierCandidate(candidate, selectedStableMoveKey, previewUsage),
@@ -143,6 +146,12 @@ const traceUnknownPreviewRefs = (
 const traceUnknownLookupRefs = (
   unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason> | undefined,
 ): PolicyEvaluationMetadata['candidates'][number]['unknownLookupRefs'] => [...(unknownLookupRefs?.entries() ?? [])]
+  .sort(([left], [right]) => left.localeCompare(right))
+  .map(([refId, reason]) => ({ refId, reason }));
+
+const traceUnknownCandidateParamRefs = (
+  unknownCandidateParamRefs: ReadonlyMap<string, CandidateParamUnavailabilityReason> | undefined,
+): PolicyEvaluationMetadata['candidates'][number]['unknownCandidateParamRefs'] => [...(unknownCandidateParamRefs?.entries() ?? [])]
   .sort(([left], [right]) => left.localeCompare(right))
   .map(([refId, reason]) => ({ refId, reason }));
 

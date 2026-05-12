@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/microturn-option-eval.ts`, `packages/engine/src/agents/microturn-option-evaluator.ts`, `packages/engine/src/agents/policy-agent.ts`
-**Deps**: `archive/tickets/166CANPARREF-003.md`, `tickets/166CANPARREF-004.md`
+**Deps**: `archive/tickets/166CANPARREF-003.md`, `archive/tickets/166CANPARREF-004.md`
 
 ## Problem
 

@@ -8,6 +8,7 @@ import type {
   AgentPolicyCatalog,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
+  CompiledAgentPolicyRefOnMissing,
   CompiledAgentProfile,
   CompiledCurrentSurfaceRef,
   CompiledPreviewSurfaceRef,
@@ -52,6 +53,20 @@ export interface PolicyRuntimeCandidate {
   readonly actionId: string;
 }
 
+export type CandidateParamResolution =
+  | {
+      readonly kind: 'ready';
+      readonly value: AgentParameterValue;
+    }
+  | {
+      readonly kind: 'missingConstant';
+      readonly value: number | string | boolean;
+    }
+  | {
+      readonly kind: 'unavailable';
+      readonly reason: 'missing' | 'typeMismatch';
+    };
+
 export interface PolicyIntrinsicProvider {
   resolveSeatIntrinsic(
     intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'seatIntrinsic' }>['intrinsic'],
@@ -68,7 +83,10 @@ export interface PolicyCandidateProvider {
     candidate: PolicyRuntimeCandidate,
     intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateIntrinsic' }>['intrinsic'],
   ): PolicyValue;
-  resolveCandidateParam(candidate: PolicyRuntimeCandidate, paramId: string): PolicyValue;
+  resolveCandidateParam(
+    candidate: PolicyRuntimeCandidate,
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateParam' }>,
+  ): CandidateParamResolution;
 }
 
 export interface PolicyCurrentSurfaceProvider {
@@ -320,10 +338,11 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         // paramCount — remaining case
         return Object.keys(candidate.move.params).length;
       },
-      resolveCandidateParam(candidate, paramId) {
+      resolveCandidateParam(candidate, ref) {
+        const paramId = ref.id;
         const candidateParamDef = input.catalog.candidateParamDefs[paramId];
         if (candidateParamDef === undefined) {
-          return undefined;
+          return resolveMissingCandidateParam(ref.onMissing);
         }
         let paramValue = candidate.move.params[paramId];
         if (paramValue === undefined) {
@@ -336,17 +355,26 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
             }
           }
         }
+        if (paramValue === undefined) {
+          return resolveMissingCandidateParam(ref.onMissing);
+        }
         switch (candidateParamDef.type) {
           case 'number':
-            return typeof paramValue === 'number' ? paramValue : undefined;
+            return typeof paramValue === 'number'
+              ? { kind: 'ready', value: paramValue }
+              : { kind: 'unavailable', reason: 'typeMismatch' };
           case 'boolean':
-            return typeof paramValue === 'boolean' ? paramValue : undefined;
+            return typeof paramValue === 'boolean'
+              ? { kind: 'ready', value: paramValue }
+              : { kind: 'unavailable', reason: 'typeMismatch' };
           case 'id':
-            return typeof paramValue === 'string' ? paramValue : undefined;
+            return typeof paramValue === 'string'
+              ? { kind: 'ready', value: paramValue }
+              : { kind: 'unavailable', reason: 'typeMismatch' };
           case 'idList':
             return Array.isArray(paramValue) && paramValue.every((entry) => typeof entry === 'string')
-              ? paramValue as AgentParameterValue
-              : undefined;
+              ? { kind: 'ready', value: paramValue as AgentParameterValue }
+              : { kind: 'unavailable', reason: 'typeMismatch' };
         }
       },
     },
@@ -542,4 +570,10 @@ function normalizeCompletionOptionValue(optionValue: MoveParamValue): PolicyValu
   return typeof optionValue === 'string' || typeof optionValue === 'number' || typeof optionValue === 'boolean'
     ? optionValue
     : undefined;
+}
+
+function resolveMissingCandidateParam(onMissing: CompiledAgentPolicyRefOnMissing): CandidateParamResolution {
+  return onMissing === 'unavailable'
+    ? { kind: 'unavailable', reason: 'missing' }
+    : { kind: 'missingConstant', value: onMissing.value };
 }

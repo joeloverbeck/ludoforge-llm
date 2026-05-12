@@ -13,6 +13,7 @@ import type {
   CompiledPolicyTieBreaker,
   GameDef,
   GameState,
+  CandidateParamUnavailabilityReason,
   LookupUnavailabilityReason,
   Move,
   PolicyPreviewOutcomeBreakdownTrace,
@@ -102,6 +103,11 @@ export interface PolicyLookupUnknownRef {
   readonly reason: LookupUnavailabilityReason;
 }
 
+export interface PolicyCandidateParamUnknownRef {
+  readonly refId: string;
+  readonly reason: CandidateParamUnavailabilityReason;
+}
+
 export const PREVIEW_UTILITY_VALUES = ['none', 'constant', 'lowInformation', 'differentiating'] as const;
 export type PreviewUtility = typeof PREVIEW_UTILITY_VALUES[number];
 
@@ -158,6 +164,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRef[];
   readonly unknownLookupRefs: readonly PolicyLookupUnknownRef[];
+  readonly unknownCandidateParamRefs: readonly PolicyCandidateParamUnknownRef[];
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly selectionReason: SelectionReason;
@@ -1092,6 +1099,7 @@ function canonicalizeCandidates(def: GameDef, legalMoves: readonly Move[]): Cand
       previewRefIds: new Set<string>(),
       unknownPreviewRefs: new Map<string, PolicyPreviewUnavailabilityReason>(),
       unknownLookupRefs: new Map<string, LookupUnavailabilityReason>(),
+      unknownCandidateParamRefs: new Map<string, CandidateParamUnavailabilityReason>(),
       score: Number.NEGATIVE_INFINITY,
     }))
     .sort((left, right) => left.stableMoveKey.localeCompare(right.stableMoveKey));
@@ -1110,6 +1118,9 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     unknownLookupRefs: [...candidate.unknownLookupRefs.entries()]
+      .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
+      .map(([refId, reason]) => ({ refId, reason })),
+    unknownCandidateParamRefs: [...candidate.unknownCandidateParamRefs.entries()]
       .sort(([leftId], [rightId]) => leftId.localeCompare(rightId))
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
@@ -1138,6 +1149,7 @@ function scoreCandidateForGateFlipProbe(
     previewRefIds: new Set(candidate.previewRefIds),
     unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
     unknownLookupRefs: new Map(candidate.unknownLookupRefs),
+    unknownCandidateParamRefs: new Map(candidate.unknownCandidateParamRefs),
     score: candidate.score,
     ...(candidate.previewOutcome === undefined ? {} : { previewOutcome: candidate.previewOutcome }),
     ...(candidate.previewFailureReason === undefined ? {} : { previewFailureReason: candidate.previewFailureReason }),

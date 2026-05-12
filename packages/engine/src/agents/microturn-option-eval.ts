@@ -2,6 +2,7 @@ import type { PlayerId } from '../kernel/branded.js';
 import type {
   AgentParameterValue,
   AgentPolicyCatalog,
+  CandidateParamUnavailabilityReason,
   ChoicePendingRequest,
   GameDef,
   GameState,
@@ -27,6 +28,7 @@ export interface CompletionOptionScore {
   readonly scoreContributions: readonly CompletionScoreContribution[];
   readonly unknownPreviewRefs: ReadonlyMap<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs: ReadonlyMap<string, LookupUnavailabilityReason>;
+  readonly unknownCandidateParamRefs: ReadonlyMap<string, CandidateParamUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
 }
@@ -79,7 +81,13 @@ export function scoreMicroturnOptionWithContributions(
   previewOptionProjectedState?: PreviewOptionProjectedState,
 ): CompletionOptionScore {
   if (considerationIds.length === 0) {
-    return { score: 0, scoreContributions: [], unknownPreviewRefs: new Map(), unknownLookupRefs: new Map() };
+    return {
+      score: 0,
+      scoreContributions: [],
+      unknownPreviewRefs: new Map(),
+      unknownLookupRefs: new Map(),
+      unknownCandidateParamRefs: new Map(),
+    };
   }
   const considerations = catalog.compiled.considerations;
   const scoreContributions: CompletionScoreContribution[] = [];
@@ -129,6 +137,7 @@ export function scoreMicroturnOptionWithContributions(
       scoreContributions,
       unknownPreviewRefs,
       unknownLookupRefs: sortUnknownLookupRefs(unknownLookupRefs),
+      unknownCandidateParamRefs: new Map(),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
       ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
     };

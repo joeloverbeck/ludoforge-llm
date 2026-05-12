@@ -22,6 +22,7 @@ import type {
   AgentPolicyCatalog,
   AgentPolicyTokenFilter,
   AgentPolicyZoneFilter,
+  CandidateParamUnavailabilityReason,
   ChoicePendingRequest,
   CompiledAgentPolicyRef,
   CompiledPolicyExpr,
@@ -98,6 +99,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   readonly previewRefIds: Set<string>;
   readonly unknownPreviewRefs: Map<string, PolicyPreviewUnavailabilityReason>;
   readonly unknownLookupRefs: Map<string, LookupUnavailabilityReason>;
+  readonly unknownCandidateParamRefs: Map<string, CandidateParamUnavailabilityReason>;
   previewOutcome?: PolicyPreviewTraceOutcome;
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
@@ -1229,7 +1231,7 @@ export class PolicyEvaluationContext {
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':
-        return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref.id);
+        return this.resolveCandidateParamRef(ref, candidate);
       case 'microturnIntrinsic':
         return this.runtimeProviders.completion?.resolveMicroturnIntrinsic(ref.intrinsic);
       case 'microturnOptionIntrinsic':
@@ -1255,6 +1257,21 @@ export class PolicyEvaluationContext {
       case 'contextKind':
         return this.input.completion !== undefined ? 'microturn' : 'move';
     }
+  }
+
+  private resolveCandidateParamRef(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'candidateParam' }>,
+    candidate: PolicyEvaluationCandidate | undefined,
+  ): PolicyValue {
+    if (candidate === undefined) {
+      return undefined;
+    }
+    const resolution = this.runtimeProviders.candidates.resolveCandidateParam(candidate, ref);
+    if (resolution.kind === 'ready' || resolution.kind === 'missingConstant') {
+      return resolution.value;
+    }
+    candidate.unknownCandidateParamRefs.set(candidateParamTraceRefId(ref.id), resolution.reason);
+    return undefined;
   }
 
   private resolveStrategicConditionRef(
@@ -1814,6 +1831,10 @@ function previewOptionRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kin
     case 'driveDepth':
       return 'preview.option.driveDepth';
   }
+}
+
+function candidateParamTraceRefId(paramId: string): string {
+  return `candidate.params.${paramId}`;
 }
 
 export function lookupRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>): string {

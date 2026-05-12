@@ -2111,6 +2111,13 @@ const PolicyLookupUnknownRefTraceSchema = z
   })
   .strict();
 
+const PolicyCandidateParamUnknownRefTraceSchema = z
+  .object({
+    refId: StringSchema,
+    reason: z.enum(['missing', 'typeMismatch']),
+  })
+  .strict();
+
 const PolicyPreviewReadyRefStatsTraceSchema = z
   .object({
     readyCount: IntegerSchema.nonnegative(),
@@ -2153,6 +2160,7 @@ const PolicyCandidateDecisionTraceSchema = z
     previewRefIds: z.array(StringSchema),
     unknownPreviewRefs: z.array(PolicyPreviewUnknownRefTraceSchema),
     unknownLookupRefs: z.array(PolicyLookupUnknownRefTraceSchema),
+    unknownCandidateParamRefs: z.array(PolicyCandidateParamUnknownRefTraceSchema),
     previewFallbackFired: z.object({
       termId: StringSchema,
       kind: z.enum(['noContribution', 'constant']),

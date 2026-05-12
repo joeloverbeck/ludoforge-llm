@@ -2519,6 +2519,29 @@
                         "additionalProperties": false
                       }
                     },
+                    "unknownCandidateParamRefs": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "refId": {
+                            "$ref": "#/definitions/anon_4682db72"
+                          },
+                          "reason": {
+                            "type": "string",
+                            "enum": [
+                              "missing",
+                              "typeMismatch"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "refId",
+                          "reason"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
                     "previewFallbackFired": {
                       "type": "object",
                       "properties": {
@@ -2772,6 +2795,7 @@
                     "previewRefIds",
                     "unknownPreviewRefs",
                     "unknownLookupRefs",
+                    "unknownCandidateParamRefs",
                     "selectionReason"
                   ],
                   "additionalProperties": false

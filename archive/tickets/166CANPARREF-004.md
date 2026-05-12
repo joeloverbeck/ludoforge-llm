@@ -1,6 +1,6 @@
 # 166CANPARREF-004: Runtime resolver `onMissing` path, VM mirror, and `unknownCandidateParamRefs` trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-vm/vm.ts`, `packages/engine/src/cnl/policy-bytecode/feature-table.ts`
@@ -147,3 +147,53 @@ VM/interpreter parity sub-case is integrated into `candidate-params-determinism.
 3. `pnpm turbo test`
 4. `pnpm turbo lint`
 5. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completion date: 2026-05-12
+
+What landed:
+
+- `resolveCandidateParam` now returns explicit ready, missing-constant, and unavailable results. It preserves the existing `::paramId` / `::paramId[` suffix fallback before applying `onMissing`.
+- Interpreted candidate-param dispatch now records `unknownCandidateParamRefs` with public ref ids like `candidate.params.mode` and reasons `missing` or `typeMismatch`.
+- `onMissing: { kind: 'constant', value }` returns the constant without populating `unknownCandidateParamRefs`.
+- The bytecode feature table now emits `onMissing` aux slots, and the TypeScript VM mirrors interpreter behavior for missing constants, suffix/indexed fallback, and candidate-param type checks using `candidateParamDefs`.
+- `unknownCandidateParamRefs` is now a required policy trace/metadata channel with empty defaults in non-candidate-param paths. This required `Trace.schema.json` regeneration and test fixture updates.
+- `microturn-option-eval.ts` carries the empty `unknownCandidateParamRefs` tuple field for the uniform shape promised by this ticket. Population/aggregation through `microturn-option-evaluator.ts` and fallback-fired counters remain deferred to ticket 005.
+
+Touched-file scope corrections:
+
+- Added owned fallout: `packages/engine/src/agents/policy-eval.ts`, `packages/engine/src/agents/policy-agent.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/schemas/Trace.schema.json`, and trace/schema/bytecode fixture tests. These are required by the new required metadata/schema channel and VM parity proof.
+- Deferred to `tickets/166CANPARREF-005.md`: runtime application/aggregation of `candidateParamFallbackFired`, microturn-option aggregation in `microturn-option-evaluator.ts`, and populated policy-agent per-candidate aggregation beyond empty/default channel threading.
+
+Generated schema/artifact fallout:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts` regenerated schema artifacts.
+- Persisted diff: `packages/engine/schemas/Trace.schema.json`.
+- `GameDef.schema.json` and `EvalReport.schema.json` were rewritten by the generator but remained byte-identical.
+
+Verification command substitutions:
+
+- The drafted focused command `pnpm -F @ludoforge/engine test --test-name-pattern=candidate-params` is Jest-style and not the repo-valid engine focused lane. The repo-valid focused lane is `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` after `pnpm -F @ludoforge/engine build`.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts | 1828 before | 1849 after | crossed cap? no, preexisting oversize | active growth: candidate-param dispatch and trace-map write | extraction/defer rationale: canonical evaluator hub; extraction would obscure the dispatch seam | successor: none`
+- `packages/engine/src/agents/policy-eval.ts | 1461 before | 1473 after | crossed cap? no, preexisting oversize | active growth: metadata defaults and serialization | extraction/defer rationale: canonical policy metadata hub; no separable helper justified | successor: none`
+- `packages/engine/src/agents/policy-agent.ts | 812 before | 825 after | crossed cap? no, preexisting oversize | active growth: empty/default channel threading for required metadata shape | extraction/defer rationale: type/trace fallout only; 005 owns populated aggregation | successor: tickets/166CANPARREF-005.md for real aggregation`
+- `packages/engine/src/kernel/types-core.ts | 2193 before | 2201 after | crossed cap? no, preexisting oversize | active growth: trace type mirror | extraction/defer rationale: canonical schema/type hub | successor: none`
+- `packages/engine/src/kernel/schemas-core.ts | 2615 before | 2623 after | crossed cap? no, preexisting oversize | active growth: trace zod schema mirror | extraction/defer rationale: canonical schema hub | successor: none`
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js dist/test/integration/policy-bytecode-equivalence.test.js` — passed after the bytecode fixture was updated to include the candidate-param def in the VM context.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-diagnostics.test.js dist/test/unit/agents/policy-diagnostics-preview.test.js dist/test/unit/trace/policy-trace-shape.test.js dist/test/unit/json-schema.test.js` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — passed.
+- `pnpm -F @ludoforge/engine test` — passed; default lane summary `65/65 files passed`.
+- `pnpm turbo test` — passed; 5/5 tasks successful.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/candidate-param-refs/*.js` — passed after the Turbo rebuild; 18 tests, 8 suites.
+- `pnpm turbo lint` — passed; 2/2 tasks successful.
+
+Late ticket-only status/proof transcription did not invalidate runtime, schema, or generated-artifact proof.

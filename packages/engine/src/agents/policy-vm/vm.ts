@@ -26,6 +26,10 @@ const OWNER_ACTIVE = 2;
 const CANDIDATE_INTRINSIC_ACTION_ID = 0;
 const CANDIDATE_INTRINSIC_STABLE_MOVE_KEY = 1;
 const CANDIDATE_INTRINSIC_PARAM_COUNT = 2;
+const CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE = 0;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER = 1;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING = 2;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_BOOLEAN = 3;
 const UNSUPPORTED_FEATURE = Symbol('unsupported policy bytecode feature');
 
 export class PolicyBytecodeVmUnsupportedError extends Error {
@@ -302,11 +306,35 @@ function resolveBuiltInFeature(
     case 'candidateParam': {
       const candidate = context.candidateIndex === undefined ? undefined : context.legalMoves?.[context.candidateIndex];
       if (candidate === undefined) return UNSUPPORTED_FEATURE;
+      const paramType = candidateParamTypeFromHash(context, ref.aux[0]);
       for (const [id, value] of Object.entries(candidate.params)) {
-        if (stableStringCode(id) !== ref.aux[0]) continue;
-        if (typeof value === 'number' || typeof value === 'boolean') return value;
-        if (typeof value === 'string') return stablePayloadCode({ literal: value });
-        return undefined;
+        const suffix = '::';
+        const matches = stableStringCode(id) === ref.aux[0]
+          || (id.includes(suffix) && stableStringCode(id.slice(id.lastIndexOf(suffix) + suffix.length)) === ref.aux[0])
+          || indexedCandidateParamKeyMatches(id, ref.aux[0]);
+        if (!matches) continue;
+        if (paramType === 'number') {
+          return typeof value === 'number' ? value : undefined;
+        }
+        if (paramType === 'boolean') {
+          return typeof value === 'boolean' ? value : undefined;
+        }
+        if (paramType === 'id') {
+          return typeof value === 'string' ? stablePayloadCode({ literal: value }) : undefined;
+        }
+        if (paramType === 'idList') {
+          return Array.isArray(value) && value.every((entry) => typeof entry === 'string')
+            ? stablePayloadCode({ literal: value })
+            : undefined;
+        }
+        break;
+      }
+      const onMissingTag = ref.aux[1] ?? CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE;
+      if (onMissingTag === CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER || onMissingTag === CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING) {
+        return ref.aux[2];
+      }
+      if (onMissingTag === CANDIDATE_PARAM_ON_MISSING_CONSTANT_BOOLEAN) {
+        return ref.aux[2] === 1;
       }
       return undefined;
     }
@@ -503,4 +531,33 @@ export function executeBytecode(bytecode: PolicyBytecode, encoded: EncodedState,
     scores: typeof value === 'number' ? [value] : [],
     usedDynamicFallback,
   };
+}
+
+function indexedCandidateParamKeyMatches(key: string, expectedParamHash: number | undefined): boolean {
+  if (expectedParamHash === undefined) {
+    return false;
+  }
+  const suffixStart = key.lastIndexOf('::');
+  if (suffixStart < 0) {
+    return false;
+  }
+  const suffix = key.slice(suffixStart + 2);
+  const bracketStart = suffix.indexOf('[');
+  const paramId = bracketStart < 0 ? suffix : suffix.slice(0, bracketStart);
+  return stableStringCode(paramId) === expectedParamHash;
+}
+
+function candidateParamTypeFromHash(
+  context: VMContext,
+  expectedParamHash: number | undefined,
+): 'number' | 'boolean' | 'id' | 'idList' | undefined {
+  if (expectedParamHash === undefined) {
+    return undefined;
+  }
+  for (const [paramId, def] of Object.entries(context.def.agents?.candidateParamDefs ?? {})) {
+    if (stableStringCode(paramId) === expectedParamHash) {
+      return def.type;
+    }
+  }
+  return undefined;
 }

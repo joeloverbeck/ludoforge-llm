@@ -71,6 +71,11 @@ const PREVIEW_OPTION_REF_KIND_CODE: Readonly<Record<string, number>> = {
   driveDepth: 7,
 };
 
+const CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE = 0;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER = 1;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING = 2;
+const CANDIDATE_PARAM_ON_MISSING_CONSTANT_BOOLEAN = 3;
+
 const PLAYER_SELECTOR_CODE: Readonly<Record<'self' | 'active', number>> = {
   self: 0,
   active: 1,
@@ -250,10 +255,25 @@ function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: Enc
   }
 
   if (ref.kind === 'candidateParam') {
+    const onMissingAux = ref.onMissing === 'unavailable'
+      ? [CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE]
+      : [
+          typeof ref.onMissing.value === 'number'
+            ? CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER
+            : typeof ref.onMissing.value === 'string'
+              ? CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING
+              : CANDIDATE_PARAM_ON_MISSING_CONSTANT_BOOLEAN,
+          typeof ref.onMissing.value === 'number'
+            ? ref.onMissing.value
+            : typeof ref.onMissing.value === 'string'
+              ? stablePayloadCode({ literal: ref.onMissing.value })
+              : ref.onMissing.value ? 1 : 0,
+        ];
     return {
       kind: 'candidateParam',
       layoutIndex: DYNAMIC_LAYOUT_INDEX,
-      aux: [stableStringCode(ref.id)],
+      // aux: [param id hash, onMissing tag, optional encoded constant]
+      aux: [stableStringCode(ref.id), ...onMissingAux],
     };
   }
 

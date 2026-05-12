@@ -1783,6 +1783,13 @@ export interface PolicyLookupUnknownRefTrace {
   readonly reason: LookupUnavailabilityReason;
 }
 
+export type CandidateParamUnavailabilityReason = 'missing' | 'typeMismatch';
+
+export interface PolicyCandidateParamUnknownRefTrace {
+  readonly refId: string;
+  readonly reason: CandidateParamUnavailabilityReason;
+}
+
 export interface PolicyPreviewReadyRefStatsTrace {
   readonly readyCount: number;
   readonly distinctValueCount: number;
@@ -1835,6 +1842,7 @@ export interface PolicyCandidateDecisionTrace {
   readonly previewRefIds: readonly string[];
   readonly unknownPreviewRefs: readonly PolicyPreviewUnknownRefTrace[];
   readonly unknownLookupRefs: readonly PolicyLookupUnknownRefTrace[];
+  readonly unknownCandidateParamRefs: readonly PolicyCandidateParamUnknownRefTrace[];
   readonly previewFallbackFired?: {
     readonly termId: string;
     readonly kind: 'noContribution' | 'constant';

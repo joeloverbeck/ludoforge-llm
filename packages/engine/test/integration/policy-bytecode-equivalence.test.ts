@@ -262,6 +262,7 @@ const evaluationCandidates = (def: GameDef, legalMoves: readonly Move[]): Policy
   previewRefIds: new Set(),
   unknownPreviewRefs: new Map(),
   unknownLookupRefs: new Map(),
+  unknownCandidateParamRefs: new Map(),
 }));
 
 const isWasmScoreExprSupported = (expr: CompiledPolicyExpr | undefined): boolean => {

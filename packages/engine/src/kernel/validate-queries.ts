@@ -784,6 +784,7 @@ export const validateOptionsQuery = (
       return;
     }
     case 'enums':
+    case 'booleans':
     case 'players':
     case 'grantContext': {
       return;

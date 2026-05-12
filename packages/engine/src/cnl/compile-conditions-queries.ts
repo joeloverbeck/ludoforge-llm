@@ -427,6 +427,15 @@ export function createQueryLowerers(
           diagnostics: [],
         };
       }
+      case 'booleans': {
+        if (!Array.isArray(source.values) || source.values.some((value) => typeof value !== 'boolean')) {
+          return missingCapability(path, 'booleans query', source, ['{ query: "booleans", values: boolean[] }']);
+        }
+        return {
+          value: { query: 'booleans', values: [...source.values] },
+          diagnostics: [],
+        };
+      }
       case 'globalMarkers': {
         if (source.markers !== undefined && (!Array.isArray(source.markers) || source.markers.some((value) => typeof value !== 'string'))) {
           return missingCapability(path, 'globalMarkers query markers', source, [

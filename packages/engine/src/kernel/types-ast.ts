@@ -310,6 +310,7 @@ export type OptionsQuery =
       readonly maxResults?: NumericValueExpr;
     }
   | { readonly query: 'enums'; readonly values: readonly string[] }
+  | { readonly query: 'booleans'; readonly values: readonly boolean[] }
   | { readonly query: 'globalMarkers'; readonly markers?: readonly string[]; readonly states?: readonly string[] }
   | { readonly query: 'players' }
   | { readonly query: 'zones'; readonly filter?: { readonly owner?: PlayerSel; readonly condition?: ConditionAST } }

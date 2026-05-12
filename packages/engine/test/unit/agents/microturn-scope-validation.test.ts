@@ -122,9 +122,12 @@ describe('microturn scope validation', () => {
     for (const [ref, expected] of cases) {
       const compiled = compileConsideration(['microturn'], ref);
       assert.equal(compiled.gameDef, null, `expected ${ref} to fail compilation`);
+      const expectedCode = ref.startsWith('candidate.param.')
+        ? 'CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID'
+        : 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN';
       assert.ok(
         compiled.diagnostics.some((diagnostic) =>
-          diagnostic.code === 'CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN'
+          diagnostic.code === expectedCode
           && diagnostic.message.includes(expected)),
         `expected migration diagnostic for ${ref}`,
       );

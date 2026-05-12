@@ -1,6 +1,6 @@
 # 166CANPARREF-002: Parser acceptance and compile-time validation of `candidate.params.<name>`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/cnl/compile-agents.ts`
@@ -28,7 +28,23 @@ The internal `kind: 'candidateParam'` discriminant and the `lowerCandidateParamD
 3. **Compile-time enforcement (Foundation #12).** Scope mismatches, unknown paramNames, missing actions, and type-inconsistent params are catchable from the spec alone; this ticket enforces them at compile time so runtime never needs an `unknown candidate param` branch.
 4. **Generic constant typing.** The `onMissing: { kind: 'constant'; value }` type-check rides on the existing `candidateParamDef.type` discriminant; no per-game type tables are introduced. The `idList`-typed param's constant-fallback support is deferred until aggregation primitives expand (Spec 166 §11.2); this ticket rejects `onMissing` constants for `idList`-typed params with the existing `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_ONMISSING_TYPE_MISMATCH`.
 
+## Authorization / Boundary Reset (2026-05-11)
+
+User approved Option 1 after a Foundations-alignment reassessment: this ticket now includes the small generic action-param domain substrate required to make the synthetic `urgent: boolean` fixture truthful through the public GameSpecDoc compiler seam. The widening is limited to a generic `booleans` options query that can be used as an action param domain; no game-specific logic, compatibility alias, or test-only compiled fixture bypass is allowed.
+
 ## What to Change
+
+### 0. Generic boolean action-param domain support
+
+Add a generic leaf options query:
+
+```yaml
+{ query: booleans, values: [true, false] }
+```
+
+The query is rule-authoritative GameSpecDoc data, evaluates to the authored boolean list in stable order, has runtime shape `boolean`, is move-param encodable, and is accepted wherever an `OptionsQuery` domain is already accepted. This lets `lowerCandidateParamDefs` classify an action param with `domain: { query: booleans, values: [true, false] }` as `{ type: 'boolean' }`.
+
+This is the only generic domain addition owned by this ticket. Do not add per-game schemas, `valuesFrom`, compatibility aliases, or a test-only compiled catalog bypass.
 
 ### 1. Split singular/plural branch at the ref parser
 
@@ -91,6 +107,12 @@ All tests carry `// @test-class: architectural-invariant` headers per `.claude/r
 ## Files to Touch
 
 - `packages/engine/src/cnl/compile-agents.ts` (modify)
+- `packages/engine/src/kernel/types-ast.ts` (modify — generic `booleans` query)
+- `packages/engine/src/kernel/schemas-ast.ts` (modify — generic `booleans` query schema)
+- `packages/engine/src/kernel/query-kind-map.ts` (modify — generic `booleans` runtime shape)
+- `packages/engine/src/kernel/eval-query.ts` (modify — generic `booleans` evaluation)
+- `packages/engine/src/kernel/validate-queries.ts` (modify — generic `booleans` validation no-op)
+- `packages/engine/src/kernel/ast-to-display.ts` (modify — generic `booleans` display)
 - `packages/engine/test/architecture/candidate-param-refs/candidate-params-fixture.ts` (new)
 - `packages/engine/test/architecture/candidate-param-refs/candidate-params-retired-namespace-rejected.test.ts` (new)
 - `packages/engine/test/architecture/candidate-param-refs/candidate-params-scope-rejected.test.ts` (new)
@@ -107,6 +129,42 @@ All tests carry `// @test-class: architectural-invariant` headers per `.claude/r
 - Cookbook update — owned by ticket 007.
 - `idList`-typed constant `onMissing` support: explicitly rejected for now (see §3 above and Spec 166 §11.2). Adding `idList` constant support is a future-spec concern.
 
+## Implementation Outcome (2026-05-11)
+
+Implemented the parser-validation slice plus the approved boolean domain substrate:
+
+- `OptionsQuery` now accepts `{ query: 'booleans', values: boolean[] }`; it evaluates in authored order, carries runtime shape `boolean`, is move-param encodable, and is represented in generated schemas.
+- `candidate.params.<name>` now lowers through the policy expression parser to a typed `candidateParam` ref with default `onMissing: 'unavailable'`.
+- Structured refs in the form `{ candidate.params.<name>: { onMissing, appliesToActions } }` are accepted only for candidate-param options.
+- Retired singular `candidate.param.*` refs continue to fail, now through `CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID`.
+- Move-scope validation rejects `candidate.params.*` from microturn-only considerations with `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_SCOPE_INVALID`.
+- Unknown names, inconsistent cross-action param types, unknown `appliesToActions`, actions missing the param, and mismatched `onMissing` constants are compile-time diagnostics.
+- The shared synthetic fixture owns `mode`, `role`, `urgent`, and an id-list choice binding. Its boolean `urgent` param proves the generic `booleans` query flows through `candidateParamDefs` as `{ type: 'boolean' }`.
+
+Generated schema artifact fallout:
+
+- `packages/engine/schemas/GameDef.schema.json`
+- `packages/engine/schemas/Trace.schema.json`
+
+Verification note: the ticket's drafted focused command `pnpm -F @ludoforge/engine test --test-name-pattern=candidate-params` is stale for this repo because engine tests use Node's test runner. The focused proof command is:
+
+```bash
+pnpm -F @ludoforge/engine exec node --test "dist/test/architecture/candidate-param-refs/*.test.js"
+```
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/compile-agents.ts`: 3,784 lines before, 4,106 lines after. This file was already over the repository guideline cap; this ticket kept the change surgical and did not split unrelated compiler structure.
+
+Final verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine test` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `pnpm -F @ludoforge/engine exec node --test "dist/test/architecture/candidate-param-refs/*.test.js"` — passed.
+
 ## Acceptance Criteria
 
 ### Tests That Must Pass
@@ -118,7 +176,8 @@ All tests carry `// @test-class: architectural-invariant` headers per `.claude/r
 5. `appliesToActions: [<nonExistentAction>]` fails with `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN_ACTION`; `appliesToActions: [<existingActionMissingParam>]` fails with `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_UNKNOWN`.
 6. A fixture with inconsistent types for the same param across actions causes a consideration ref to fail with `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_TYPE_INCONSISTENT`.
 7. `onMissing: { kind: 'constant', value: 0 }` against an `id`-typed param fails with `CNL_COMPILER_AGENT_CANDIDATE_PARAMS_ONMISSING_TYPE_MISMATCH`; same code fires for any `onMissing` constant against an `idList`-typed param.
-8. Existing suite: `pnpm turbo test` — full pass.
+8. An action param declared as `domain: { query: booleans, values: [true, false] }` appears in `candidateParamDefs` as `{ type: 'boolean' }`.
+9. Existing suite: `pnpm turbo test` — full pass.
 
 ### Invariants
 
@@ -140,3 +199,30 @@ All tests carry `// @test-class: architectural-invariant` headers per `.claude/r
 3. `pnpm turbo test`
 4. `pnpm turbo lint`
 5. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed: 2026-05-11; post-ticket review and archival: 2026-05-12.
+
+What landed:
+
+- Generic `booleans` action-param domains are supported through the existing `params: [{ name, domain }]` slot, including query evaluation, runtime shape mapping, move-param encoding, display/validation coverage, and generated schema artifacts.
+- `candidate.params.<name>` lowers at move scope to a typed `candidateParam` ref with default `onMissing: 'unavailable'`; structured refs support `onMissing` and `appliesToActions`.
+- The retired singular `candidate.param.*` namespace remains rejected through `CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_INVALID`; no alias or compatibility path was added.
+- Compile-time validation rejects unknown params, microturn-scope refs, unknown or missing `appliesToActions`, inconsistent cross-action param declarations, and `onMissing` constants whose type does not match the declared candidate-param type.
+- The synthetic architecture fixture owns number, id, boolean, and id-list candidate-param declarations; the boolean `urgent` param proves the generic `booleans` domain flows through `candidateParamDefs`.
+
+Post-ticket review:
+
+- No must-fix source/test cleanup, reopen item, or new follow-up ticket was warranted.
+- Active sibling `tickets/166CANPARREF-003.md` was truthened to reuse/verify the `collectCandidateParamRefIds` helper already introduced by this ticket instead of describing the collector as new work.
+- Remaining required-fallback, runtime, trace, FITL, and cookbook work remains owned by active tickets `166CANPARREF-003.md` through `166CANPARREF-007.md`.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine test` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm run check:ticket-deps` — passed.
+- `pnpm -F @ludoforge/engine exec node --test "dist/test/architecture/candidate-param-refs/*.test.js"` — passed.

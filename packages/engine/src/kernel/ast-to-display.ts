@@ -265,6 +265,8 @@ export const optionsQueryToInlineNodes = (query: OptionsQuery): DisplayInlineNod
       return spaced(kw('range'), kw('of'), ...scopedVarNameToInlineNodes(query.var, 'gvar'));
     case 'enums':
       return [kw('enum'), LPAREN, ...commaSeparated(query.values.map((v) => [val(JSON.stringify(v), 'string')])), RPAREN];
+    case 'booleans':
+      return [kw('booleans'), LPAREN, ...commaSeparated(query.values.map((v) => [val(JSON.stringify(v), 'boolean')])), RPAREN];
     case 'globalMarkers':
       return [kw('globalMarkers')];
     case 'players':

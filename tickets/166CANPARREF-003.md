@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/cnl/compile-agents.ts`
-**Deps**: `tickets/166CANPARREF-002.md`
+**Deps**: `archive/tickets/166CANPARREF-002.md`
 
 ## Problem
 
@@ -17,7 +17,7 @@ Spec 166 §4.3 and §5.6/§5.8 add a third state-source-keyed fallback bucket al
 | `lookup.surface: previewOptionState` | `previewFallback.onUnavailable` |
 | **`candidateParam`** (this ticket) | **`candidateParamFallback.onUnavailable`** |
 
-A consideration whose `value` reads any `candidate.params.<name>` ref with `onMissing: 'unavailable'` (default) MUST declare `candidateParamFallback.onUnavailable`. The existing fallback enforcement block at `compile-agents.ts:2086-2131` and the helper `lowerLookupFallback` at `:3496` plus `collectLookupRefIds` at `:3609` provide the canonical mirror. This ticket adds the parallel collector and lowering helper and wires the required-fallback diagnostic.
+A consideration whose `value` reads any `candidate.params.<name>` ref with `onMissing: 'unavailable'` (default) MUST declare `candidateParamFallback.onUnavailable`. The existing fallback enforcement block at `compile-agents.ts:2086-2131` and the helper `lowerLookupFallback` at `:3496` plus `collectLookupRefIds` at `:3609` provide the canonical mirror. Ticket 002 already added `collectCandidateParamRefIds` for move/microturn scope validation; this ticket reuses or extends that collector, adds the lowering helper, and wires the required-fallback diagnostic.
 
 ## Assumption Reassessment (2026-05-11)
 
@@ -25,7 +25,7 @@ A consideration whose `value` reads any `candidate.params.<name>` ref with `onMi
 2. `lowerLookupFallback` is at `compile-agents.ts:3496`. Verified.
 3. The required-fallback diagnostic enforcement block is at `compile-agents.ts:2086-2131` and currently emits `CNL_COMPILER_AGENT_LOOKUP_REF_REQUIRES_EXPLICIT_FALLBACK` (registry line `:269`).
 4. Compiled consideration shape carries `previewFallback?` / `lookupFallback?` fields; the new `candidateParamFallback?` is added alongside without breaking existing serialization paths.
-5. Ticket 002 (dep) makes `candidate.params.*` refs lowerable — the collector here walks the lowered value expression and matches on `kind: 'candidateParam'`.
+5. Ticket 002 (dep) makes `candidate.params.*` refs lowerable and introduced a `collectCandidateParamRefIds` helper for scope validation. This ticket verifies the helper's default filtering matches the required-fallback contract (`onMissing: 'unavailable'`) and extends it only if the live helper has drifted.
 6. The new diagnostic code `CNL_COMPILER_AGENT_CANDIDATE_PARAM_REF_REQUIRES_EXPLICIT_FALLBACK` is registered by ticket 001.
 
 ## Architecture Check
@@ -37,18 +37,18 @@ A consideration whose `value` reads any `candidate.params.<name>` ref with `onMi
 
 ## What to Change
 
-### 1. Add `collectCandidateParamRefIds`
+### 1. Reuse/verify `collectCandidateParamRefIds`
 
-Beneath `collectLookupRefIds` at `compile-agents.ts:3609`, add:
+Ticket 002 introduced `collectCandidateParamRefIds` near `collectLookupRefIds`. Confirm it has this shape:
 
 ```
 function collectCandidateParamRefIds(
   expr: CompiledAgentPolicyExpr,
   onMissingPolicyFilter?: 'unavailable' | 'all'
-): ReadonlyArray<string>
+): readonly string[]
 ```
 
-Walks the expression tree (reusing the same walker structure as `collectLookupRefIds`), collects every `kind: 'candidateParam'` ref, and returns the set of distinct ref ids whose `onMissing === 'unavailable'` (when `onMissingPolicyFilter` is `'unavailable'` or unspecified) or all candidateParam refs (when `'all'`). Default filter is `'unavailable'` so callers get only the refs that can produce unavailability and therefore require fallback.
+The helper walks the expression tree (reusing the same walker structure as `collectLookupRefIds`), collects every `kind: 'candidateParam'` ref, and returns the set of distinct ref ids whose `onMissing === 'unavailable'` (when `onMissingPolicyFilter` is `'unavailable'` or unspecified) or all candidateParam refs (when `'all'`). Default filter is `'unavailable'` so callers get only the refs that can produce unavailability and therefore require fallback. Do not add a duplicate helper; adjust the existing helper in place if it does not match this contract.
 
 ### 2. Add `lowerCandidateParamFallback`
 

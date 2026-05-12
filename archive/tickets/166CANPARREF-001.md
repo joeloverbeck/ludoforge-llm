@@ -136,7 +136,7 @@ Generated fallout:
 
 Deferred sibling/spec scope:
 
-- Parser acceptance and compile-time validation remain owned by `tickets/166CANPARREF-002.md`.
+- Parser acceptance and compile-time validation were completed and archived at `archive/tickets/166CANPARREF-002.md`.
 - Required fallback lowering remains owned by `tickets/166CANPARREF-003.md`.
 - Runtime resolver, VM mirror, and trace plumbing remain owned by `tickets/166CANPARREF-004.md` and `tickets/166CANPARREF-005.md`.
 - FITL action-data and cookbook work remain owned by `tickets/166CANPARREF-006.md` and `tickets/166CANPARREF-007.md`.

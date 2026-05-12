@@ -1,6 +1,6 @@
 # 167ARVNEVOHAR-004: Campaign-local GameDef disk cache
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — campaign-local cache module + test only
@@ -58,7 +58,7 @@ In the `result` object at `run-tournament.mjs:535-550`, add `gamedefCacheHit: <b
 
 ### 4. New unit test for cache-key invalidation
 
-Add `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.ts` (new directory `__tests__/`):
+Add `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` (new directory `__tests__/`):
 
 - Test fixture: a minimal spec source tree under a tmpdir.
 - Test class header: `// @test-class: architectural-invariant` (the invariant is "cache hit produces byte-identical `GameDef` to cache miss" — a property over any spec content + engine commit pair, not a witness for a specific trajectory).
@@ -67,7 +67,7 @@ Add `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.ts` (new d
   - Spec content unchanged + engine commit changed → cache miss.
   - Spec content unchanged + engine commit unchanged → cache hit.
   - Cache-hit `GameDef` is `JSON.stringify`-equal to cache-miss `GameDef`.
-- The test uses Vitest if the campaign test directory adopts Vitest, or `node --test` against compiled JS if it adopts the engine convention; pick whichever existing campaign-test pattern exists at implementation time. If neither exists, default to `node --test` with `.mjs` extension (no compile step required for campaign code).
+- The live campaign has no Vitest, TypeScript, or package-local test runner, so this ticket uses the authorized default: `node --test` with `.mjs` extension (no compile step required for campaign code).
 
 ### 5. Gitignore the cache directory
 
@@ -77,8 +77,8 @@ Add `campaigns/fitl-arvn-agent-evolution/.gamedef-cache/` to the appropriate `.g
 
 - `campaigns/fitl-arvn-agent-evolution/gamedef-cache.mjs` (new)
 - `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` (modify — compile site + result JSON)
-- `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.ts` (new)
-- `.gitignore` (modify — add `.gamedef-cache/` entry)
+- `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` (new)
+- `campaigns/fitl-arvn-agent-evolution/.gitignore` (modify — add `.gamedef-cache/` entry)
 
 ## Out of Scope
 
@@ -91,7 +91,7 @@ Add `campaigns/fitl-arvn-agent-evolution/.gamedef-cache/` to the appropriate `.g
 
 ### Tests That Must Pass
 
-1. `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.ts` — the four-cell invalidation matrix above.
+1. `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` — the four-cell invalidation matrix above.
 2. Existing suite: `pnpm -F @ludoforge/engine test` continues to pass.
 3. Manual: first invocation of `SEED_COUNT=1 bash campaigns/fitl-arvn-agent-evolution/harness.sh` writes `"gamedefCacheHit":false`; the immediately-subsequent invocation (no source change) writes `"gamedefCacheHit":true` and runs measurably faster on the compile phase.
 4. Manual: editing any `.md` file under `data/games/fire-in-the-lake/` and re-running causes the next invocation to write `"gamedefCacheHit":false`.
@@ -107,7 +107,7 @@ Add `campaigns/fitl-arvn-agent-evolution/.gamedef-cache/` to the appropriate `.g
 
 ### New/Modified Tests
 
-1. `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.ts` — architectural-invariant; asserts cache-key invalidation across spec content and engine commit, plus byte-identity of hit vs. miss outputs.
+1. `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` — architectural-invariant; asserts cache-key invalidation across spec content and engine commit, plus byte-identity of hit vs. miss outputs.
 
 ### Commands
 
@@ -115,3 +115,48 @@ Add `campaigns/fitl-arvn-agent-evolution/.gamedef-cache/` to the appropriate `.g
 2. `pnpm -F @ludoforge/engine test` (full engine suite — regression parity; cache touches only campaign code so engine tests are unaffected).
 3. Manual cache-warmth validation: `time bash campaigns/fitl-arvn-agent-evolution/harness.sh` twice; second run shows reduced compile-phase wall-time.
 4. `pnpm turbo lint && pnpm turbo typecheck` (clean checks).
+
+## Outcome
+
+Completion date: 2026-05-12.
+
+### Implementation Notes
+
+- Added `campaigns/fitl-arvn-agent-evolution/gamedef-cache.mjs`, a campaign-local compiled-GameDef cache keyed by deterministic spec-source content hash, git commit SHA, and cache format version `v1`.
+- The cache persists `{ def, sources, specSourceContentHash, engineCommitSha, cacheFormatVersion }` under `campaigns/fitl-arvn-agent-evolution/.gamedef-cache/` and writes entries through a temp file followed by `renameSync`; cache-write failures are best-effort accelerators and still return the freshly compiled `GameDef`.
+- `run-tournament.mjs` now loads the FITL `GameDef` through the cache, validates the hit/miss result through the existing `assertValidatedGameDef` path after any profile override, logs `GameDef cache: hit|miss`, and emits `gamedefCacheHit` in the final JSON metadata without changing `compositeScore`.
+- Added the campaign `.gitignore` entry for `.gamedef-cache/`.
+- Test path correction: the live campaign has no package-local Vitest or TypeScript test runner, so the ticket-authorized Node runner path is `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` rather than the draft `.test.ts` filename.
+- Deferred sibling scope: worker-thread sharding remains `tickets/167ARVNEVOHAR-005.md`; the post-Spec-167 baseline report remains `tickets/167ARVNEVOHAR-006.md`.
+- Runtime surface breadth: campaign-local/script-only; no engine kernel, compiler, schema, or generated artifact behavior changed.
+- Source-size ledger: `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs | 622 | 640 | no | minimal cache-wiring growth only | cache logic extracted to new module, no further extraction justified | none`.
+
+### Verification
+
+- `node --test campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` — passed; proves the source-change miss, engine-commit miss, same-content hit, byte-identical hit/miss `GameDef`, and opt-out no-read/no-write behavior.
+- `node --check campaigns/fitl-arvn-agent-evolution/gamedef-cache.mjs` — passed.
+- `node --check campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` — passed.
+- `node --check campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` — passed.
+- `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 0 --no-wasm --trace-default none` — passed twice against built engine artifacts; first run emitted `"gamedefCacheHit":false`, second emitted `"gamedefCacheHit":true`. This is a bounded runner metadata/cache-wiring smoke, not a replacement for the manual `SEED_COUNT=1` harness warmth lane.
+- `pnpm -F @ludoforge/engine test` — passed; schema artifact check plus default lane summary `66/66 files passed`.
+- `pnpm turbo lint` — passed; `2 successful, 2 total`.
+- `pnpm turbo typecheck` — passed; `3 successful, 3 total`.
+- Cold manual cache-warmth lane after clearing the ignored campaign cache: `SEED_COUNT=1 bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `completed=1`, `truncated=0`, `errors=0`; `run.log.runner` emitted `"gamedefCacheHit":false`.
+- Immediate warm manual cache-warmth lane: `SEED_COUNT=1 bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `completed=1`, `truncated=0`, `errors=0`; `run.log.runner` emitted `"gamedefCacheHit":true`.
+- Post-review production source-change validation: after a warm zero-seed smoke emitted `"gamedefCacheHit":true`, temporarily changed `data/games/fire-in-the-lake/00-metadata.md`, reran `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 0 --no-wasm --trace-default none`, and confirmed it compiled with `"gamedefCacheHit":false`; restored the source file afterward and confirmed no data-file diff remained.
+- `pnpm run check:ticket-deps` — passed after terminal status update; `3 active tickets and 2312 archived tickets`.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness/assertion | Status | Proof lane |
+|---|---|---|---|
+| Byte-identical determinism | Cache-hit `GameDef` JSON equals the cache-miss `GameDef` JSON for the same spec content and engine commit | proven | focused cache unit test |
+| Two-axis invalidation | Spec content change and engine commit change both produce cache misses | proven | focused cache unit test |
+| Atomic write safety | Cache entries are written to a unique temp path and renamed into place; failed writes remove the temp file and return the compiled `GameDef` | proven structurally | cache module implementation + syntax checks |
+| Environment opt-out | `LUDOFORGE_CAMPAIGN_GAMEDEF_CACHE=off` bypasses source loading, cache read, and cache write, then compiles normally | proven | focused cache unit test |
+
+### Closeout Notes
+
+- Ticket corrections applied: draft `.test.ts` campaign test path -> live `.test.mjs` Node test path because no campaign TypeScript/Vitest runner exists.
+- Generated/artifact fallout: no schemas, goldens, or checked-in generated artifacts changed. The campaign `.gamedef-cache/` directory is ignored runtime output.
+- Late-edit proof validity: terminal status, path correction, proof transcription, source-size ledger, and dependency-check transcription only after final lanes; no code, test, command semantics, acceptance boundary, dependency owner, or follow-up scope changed after the cited proof lanes.

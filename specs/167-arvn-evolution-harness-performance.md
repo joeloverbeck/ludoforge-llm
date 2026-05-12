@@ -210,6 +210,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-12:
 - [`archive/tickets/167ARVNEVOHAR-001.md`](../archive/tickets/167ARVNEVOHAR-001.md) — WASM runtime bootstrap in tournament runner (completed; covers Phase 0 — WASM half, §3.1)
 - [`archive/tickets/167ARVNEVOHAR-002.md`](../archive/tickets/167ARVNEVOHAR-002.md) — Trace emission defaults (`--trace-default`) (completed; covers Phase 0 — trace half, §3.5)
 - [`archive/tickets/167ARVNEVOHAR-003.md`](../archive/tickets/167ARVNEVOHAR-003.md) — Engine build script — drop unconditional clean (completed; covers Phase 1 — build half, §3.2)
-- [`tickets/167ARVNEVOHAR-004.md`](../tickets/167ARVNEVOHAR-004.md) — Campaign-local GameDef disk cache (covers Phase 1 — cache half, §3.3)
+- [`archive/tickets/167ARVNEVOHAR-004.md`](../archive/tickets/167ARVNEVOHAR-004.md) — Campaign-local GameDef disk cache (completed; covers Phase 1 — cache half, §3.3)
 - [`tickets/167ARVNEVOHAR-005.md`](../tickets/167ARVNEVOHAR-005.md) — Worker-thread shard pool for seeds (covers Phase 2, §3.4 + §7)
 - [`tickets/167ARVNEVOHAR-006.md`](../tickets/167ARVNEVOHAR-006.md) — Baseline measurement report turnperf-002 (covers §5 last bullet)

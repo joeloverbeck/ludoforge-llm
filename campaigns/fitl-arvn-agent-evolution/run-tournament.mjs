@@ -19,6 +19,8 @@ import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import { loadOrCompileGameDef } from './gamedef-cache.mjs';
+
 // ---------------------------------------------------------------------------
 // Repo root resolution
 // ---------------------------------------------------------------------------
@@ -40,7 +42,11 @@ const REPO_ROOT = resolveRepoRoot();
 // ---------------------------------------------------------------------------
 // Engine imports (from compiled dist)
 // ---------------------------------------------------------------------------
-const { loadGameSpecBundleFromEntrypoint, runGameSpecStagesFromBundle } =
+const {
+  loadGameSpecBundleFromEntrypoint,
+  loadGameSpecBundleSourcesFromEntrypoint,
+  runGameSpecStagesFromBundle,
+} =
   await import(join(REPO_ROOT, 'packages/engine/dist/src/cnl/index.js'));
 
 const {
@@ -371,33 +377,45 @@ if (!existsSync(entrypoint)) {
   process.exit(1);
 }
 
-process.stderr.write('Compiling FITL spec...\n');
-const bundle = loadGameSpecBundleFromEntrypoint(entrypoint);
-const staged = runGameSpecStagesFromBundle(bundle);
+process.stderr.write('Loading FITL GameDef...\n');
+const { def: cachedGameDef, cacheHit: gamedefCacheHit } = loadOrCompileGameDef({
+  entrypoint,
+  repoRoot: REPO_ROOT,
+  cacheDir: join(HERE, '.gamedef-cache'),
+  loadSources: loadGameSpecBundleSourcesFromEntrypoint,
+  compileFn: () => {
+    process.stderr.write('Compiling FITL spec...\n');
+    const bundle = loadGameSpecBundleFromEntrypoint(entrypoint);
+    const staged = runGameSpecStagesFromBundle(bundle);
 
-if (staged.validation.blocked) {
-  process.stderr.write('ERROR: Validation blocked\n');
-  for (const d of staged.validation.diagnostics ?? []) {
-    process.stderr.write(`  ${d.severity}: ${d.message}\n`);
-  }
-  process.exit(1);
-}
+    if (staged.validation.blocked) {
+      process.stderr.write('ERROR: Validation blocked\n');
+      for (const d of staged.validation.diagnostics ?? []) {
+        process.stderr.write(`  ${d.severity}: ${d.message}\n`);
+      }
+      process.exit(1);
+    }
 
-if (staged.compilation.blocked) {
-  process.stderr.write('ERROR: Compilation blocked\n');
-  for (const d of staged.compilation.diagnostics ?? []) {
-    process.stderr.write(`  ${d.severity}: ${d.message}\n`);
-  }
-  process.exit(1);
-}
+    if (staged.compilation.blocked) {
+      process.stderr.write('ERROR: Compilation blocked\n');
+      for (const d of staged.compilation.diagnostics ?? []) {
+        process.stderr.write(`  ${d.severity}: ${d.message}\n`);
+      }
+      process.exit(1);
+    }
 
-const compiled = staged.compilation.result;
-if (!compiled || !compiled.gameDef) {
-  process.stderr.write('ERROR: Compilation produced no gameDef\n');
-  process.exit(1);
-}
+    const compiled = staged.compilation.result;
+    if (!compiled || !compiled.gameDef) {
+      process.stderr.write('ERROR: Compilation produced no gameDef\n');
+      process.exit(1);
+    }
 
-const def = assertValidatedGameDef(applyProfileCompletionOverride(compiled.gameDef, profileCompletionOverride));
+    return compiled.gameDef;
+  },
+});
+process.stderr.write(`GameDef cache: ${gamedefCacheHit ? 'hit' : 'miss'}\n`);
+
+const def = assertValidatedGameDef(applyProfileCompletionOverride(cachedGameDef, profileCompletionOverride));
 const runtime = createGameDefRuntime(def);
 
 // Resolve evolved seat index
@@ -607,6 +625,7 @@ const result = {
   maxTurns: MAX_TURNS,
   profileCompletionOverride: profileCompletionOverride ?? null,
   wasmEnabled,
+  gamedefCacheHit,
   decisionBreakdown: buildDecisionBreakdown(averagedDecisionStats, round4),
 };
 

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`
-**Deps**: `specs/166-candidate-parameter-refs.md`
+**Deps**: `archive/specs/166-candidate-parameter-refs.md`
 
 ## Problem
 
@@ -140,7 +140,7 @@ Deferred sibling/spec scope:
 - Parser acceptance and compile-time validation were completed and archived at `archive/tickets/166CANPARREF-002.md`.
 - Required fallback lowering remains owned by `tickets/166CANPARREF-003.md`.
 - Runtime resolver, VM mirror, and trace plumbing remain owned by `tickets/166CANPARREF-004.md` and `tickets/166CANPARREF-005.md`.
-- FITL action-data is completed in `archive/tickets/166CANPARREF-006.md`; cookbook work remains owned by `tickets/166CANPARREF-007.md`.
+- FITL action-data is completed in `archive/tickets/166CANPARREF-006.md`; cookbook work is completed in `archive/tickets/166CANPARREF-007.md`.
 
 Source-size ledger:
 
@@ -158,4 +158,4 @@ Final verification:
 
 The terminal status/proof transcription is documentation-only and does not change source, schema, or test behavior; no broad proof invalidation follows from this ticket-text update.
 
-Post-ticket review (2026-05-11): no must-fix cleanup, reopen item, or new follow-up ticket was warranted. Remaining parser/runtime/FITL/cookbook work is already owned by active sibling tickets `166CANPARREF-002` through `166CANPARREF-007`.
+Post-ticket review (2026-05-11): no must-fix cleanup, reopen item, or new follow-up ticket was warranted. Remaining parser/runtime/FITL/cookbook work was already owned by sibling tickets `166CANPARREF-002` through `166CANPARREF-007`; those siblings are now archived.

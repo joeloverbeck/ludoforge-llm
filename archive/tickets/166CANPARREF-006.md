@@ -164,6 +164,7 @@ The original draft asked for a fitl-arvn-agent-evolution 15-seed campaign compos
 ## Outcome
 
 Completed on 2026-05-12.
+Outcome amended: 2026-05-12.
 
 What landed:
 
@@ -172,7 +173,7 @@ What landed:
 - No FITL data-assets file was changed; the approved implementation boundary removed the unsupported `valuesFrom: { dataAsset: ... }` deliverable.
 - `packages/engine/test/policy-profile-quality/candidate-params-fitl-witness/fitl-candidate-param-witness.test.ts` adds the profile-quality witness for compiled candidate-param defs and seed-1000 ARVN side scoring.
 - `packages/engine/test/e2e/fitl-playbook-golden.test.ts` now supplies `eventDeckId` on manual FITL event playbook moves, matching the newly declared required param.
-- `specs/166-candidate-parameter-refs.md` records the Phase 5 `branch` decision and the narrowed always-present FITL event-param declaration.
+- `archive/specs/166-candidate-parameter-refs.md` records the Phase 5 `branch` decision and the narrowed always-present FITL event-param declaration.
 - Post-ticket review synchronized the remaining Spec 166 Phase 5 prose and the active cookbook follow-up ticket so they no longer imply FITL `event.branch` is declared today.
 
 Proof:

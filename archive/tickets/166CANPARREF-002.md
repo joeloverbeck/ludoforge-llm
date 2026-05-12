@@ -217,7 +217,7 @@ Post-ticket review:
 
 - No must-fix source/test cleanup, reopen item, or new follow-up ticket was warranted.
 - Sibling `archive/tickets/166CANPARREF-003.md` was truthened to reuse/verify the `collectCandidateParamRefIds` helper already introduced by this ticket instead of describing the collector as new work.
-- Required-fallback work is complete in `archive/tickets/166CANPARREF-003.md`; remaining runtime, trace, FITL, and cookbook work remains owned by active tickets `166CANPARREF-004.md` through `166CANPARREF-007.md`.
+- Required-fallback work is complete in `archive/tickets/166CANPARREF-003.md`; remaining runtime, trace, FITL, and cookbook work is complete in archived tickets `166CANPARREF-004.md` through `166CANPARREF-007.md`.
 
 Verification:
 

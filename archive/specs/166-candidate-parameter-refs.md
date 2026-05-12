@@ -1,6 +1,6 @@
 # Spec 166 — Candidate Parameter Refs for Action-Selection Policy
 
-**Status**: Proposed
+**Status**: COMPLETED
 **Priority**: High — blocks agent evolution for any game whose action-selection candidates carry semantically loaded parameters (FITL events, FITL pivotal events, and any future analogous shape).
 **Complexity**: M
 **Date**: 2026-05-11
@@ -459,12 +459,36 @@ A new fixture profile in `packages/engine/test/architecture/candidate-param-refs
 
 Decomposed via `/spec-to-tickets` on 2026-05-11:
 
-- [`archive/tickets/166CANPARREF-001.md`](../archive/tickets/166CANPARREF-001.md) — Compiled types + schema + diagnostic codes for candidateParam ref family (covers Phase 0; §4.1, §4.4, §5.1)
-- [`archive/tickets/166CANPARREF-002.md`](../archive/tickets/166CANPARREF-002.md) — Parser acceptance and compile-time validation of `candidate.params.<name>` (covers Phase 1; §4.1, §4.2, §5.1–§5.5, §5.7)
-- [`archive/tickets/166CANPARREF-003.md`](../archive/tickets/166CANPARREF-003.md) — Required-fallback collector and `candidateParamFallback` lowering (covers Phase 2; §4.3, §5.6, §5.8)
-- [`archive/tickets/166CANPARREF-004.md`](../archive/tickets/166CANPARREF-004.md) — Runtime resolver `onMissing` path, VM mirror, and `unknownCandidateParamRefs` trace (covers Phase 3; §4.4, §4.5, §6)
-- [`archive/tickets/166CANPARREF-005.md`](../archive/tickets/166CANPARREF-005.md) — Trace plumbing through microturn option eval and policy-agent per-candidate channel (covers Phase 4; §4.5, §6)
-- [`archive/tickets/166CANPARREF-006.md`](../archive/tickets/166CANPARREF-006.md) — FITL `event` action params declaration + ARVN shaded-event witness (covers Phase 5; §2.3, §2.5, §8.3, §11.4)
-- [`tickets/166CANPARREF-007.md`](../tickets/166CANPARREF-007.md) — Cookbook retirement-line rewrite + new candidate-parameter-refs recipe (covers Phase 6; §4.7)
+- [`archive/tickets/166CANPARREF-001.md`](../tickets/166CANPARREF-001.md) — Compiled types + schema + diagnostic codes for candidateParam ref family (covers Phase 0; §4.1, §4.4, §5.1)
+- [`archive/tickets/166CANPARREF-002.md`](../tickets/166CANPARREF-002.md) — Parser acceptance and compile-time validation of `candidate.params.<name>` (covers Phase 1; §4.1, §4.2, §5.1–§5.5, §5.7)
+- [`archive/tickets/166CANPARREF-003.md`](../tickets/166CANPARREF-003.md) — Required-fallback collector and `candidateParamFallback` lowering (covers Phase 2; §4.3, §5.6, §5.8)
+- [`archive/tickets/166CANPARREF-004.md`](../tickets/166CANPARREF-004.md) — Runtime resolver `onMissing` path, VM mirror, and `unknownCandidateParamRefs` trace (covers Phase 3; §4.4, §4.5, §6)
+- [`archive/tickets/166CANPARREF-005.md`](../tickets/166CANPARREF-005.md) — Trace plumbing through microturn option eval and policy-agent per-candidate channel (covers Phase 4; §4.5, §6)
+- [`archive/tickets/166CANPARREF-006.md`](../tickets/166CANPARREF-006.md) — FITL `event` action params declaration + ARVN shaded-event witness (covers Phase 5; §2.3, §2.5, §8.3, §11.4)
+- [`archive/tickets/166CANPARREF-007.md`](../tickets/166CANPARREF-007.md) — Cookbook retirement-line rewrite + new candidate-parameter-refs recipe (covers Phase 6; §4.7)
 
 Each ticket records its own acceptance criteria, dependencies, and architectural-invariant test ownership. Wave plan: 001 first; then 002 and 004 in parallel; then 003 (after 002); then 005 (after 003 + 004); then 006 (after 005); then 007 (after 006).
+
+## Outcome
+
+Completed on 2026-05-12.
+
+What landed:
+
+- The `candidate.params.<name>` plural action-selection ref family was implemented across compiled types, schema mirrors, parser/lowering, fallback validation, runtime/VM resolution, and policy trace plumbing.
+- The retired singular `candidate.param.<name>` surface remains rejected; no alias or compatibility path was introduced.
+- FITL `event` action declarations now expose the always-present `eventCardId`, `eventDeckId`, and `side` params, while `branch` remains intentionally undeclared until a future optional-param or microturn-lowering design owns it.
+- `docs/agent-dsl-cookbook.md` now documents the action-selection candidate-param recipe, fallback decision tree, diagnostic quick reference, and the singular-vs-plural retirement line.
+- All Spec 166 implementation tickets are archived: `archive/tickets/166CANPARREF-001.md` through `archive/tickets/166CANPARREF-007.md`.
+
+Deferred scope:
+
+- Action-class differentiation at uniform preview margins remains deferred to a future telemetry/profile-quality spec.
+- FITL event side/branch microturn lowering remains deferred to a future Foundation #19 hardening spec.
+- Dynamic per-candidate tag emission remains rejected for kernel/runtime implementation; any future ergonomic sugar must lower through compiler macros to the generic ref family.
+
+Verification:
+
+- Each implementation ticket records its own focused and broad proof lanes.
+- Final ticket closeout for Phase 6 passed `pnpm turbo build`, an inline compiler smoke for the cookbook examples, `pnpm turbo lint`, `pnpm turbo test`, `pnpm run check:ticket-deps`, and `git diff --check`.
+- Post-review archive integrity for the final ticket passed `pnpm run check:ticket-deps` for 0 active tickets and 2309 archived tickets.

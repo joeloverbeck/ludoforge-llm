@@ -1,6 +1,6 @@
 # 166CANPARREF-007: Cookbook retirement-line rewrite + new candidate-parameter-refs recipe
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only
@@ -92,7 +92,7 @@ A small inline table mapping the six new diagnostic codes (introduced by ticket 
 
 ### 3. Cross-reference Spec 166
 
-Add a single-line provenance pointer at the end of the recipe: `Spec source: specs/166-candidate-parameter-refs.md` so authors can navigate to the canonical source.
+Add a single-line provenance pointer at the end of the recipe: `Spec source: archive/specs/166-candidate-parameter-refs.md` so authors can navigate to the canonical source.
 
 ## Files to Touch
 
@@ -131,3 +131,49 @@ No new tests authored by this ticket. The architectural-invariant test `candidat
 2. `pnpm turbo test`
 3. Manual: copy each cookbook YAML block into a minimal agent-profile fixture and run `pnpm -F @ludoforge/engine test --test-name-pattern=<targeted>` to confirm clean compilation against the synthetic two-action fixture or FITL.
 4. `pnpm run check:ticket-deps`
+
+## Outcome
+
+Completed on 2026-05-12.
+Outcome amended: 2026-05-12.
+
+What landed:
+
+- `docs/agent-dsl-cookbook.md` rewrites the retired-ref guidance so `candidate.param.<name>` singular remains a rejected dead-end, while `candidate.params.<name>` plural is documented as the current action-selection candidate-param surface.
+- Added a new "Action-Selection Candidate Parameter Refs" recipe with required-param, optional-style `onMissing` constant, pivotal-event `appliesToActions`, and mixed candidate-param/lookup examples.
+- The recipe keeps FITL `event.branch` out of the Phase 6 examples because `branch` remains intentionally undeclared until a future optional-param or microturn-lowering design owns it.
+- No engine, compiler, runtime, schema, generated artifact, or non-cookbook documentation changes are owned by this ticket.
+
+Touched-file scope:
+
+- Named file modified: `docs/agent-dsl-cookbook.md`.
+- Ticket closeout modified: `archive/tickets/166CANPARREF-007.md`.
+
+Generated fallout:
+
+- None. This is a cookbook-only documentation ticket.
+
+Ticket corrections applied:
+
+- The manual focused command `pnpm -F @ludoforge/engine test --test-name-pattern=<targeted>` is stale for this repo because engine tests use Node's test runner, not Jest-style name filtering. Final proof used `pnpm turbo build` plus an inline compiler smoke against built engine artifacts.
+- The mixed-surface cookbook example uses `lookup.surface: policyState` rather than `preview.*`; the ticket explicitly allowed `lookup.*` or `preview.*`, and this shape compiles cleanly against the current compiler surface.
+
+Proof:
+
+- Source review of `docs/agent-dsl-cookbook.md` confirms the retirement wording, trichotomy table, four examples, fallback decision tree, six diagnostic codes, and Spec 166 pointer.
+- `pnpm turbo build` — passed.
+- Inline compiler smoke for the four cookbook examples against built engine artifacts — passed after the final `pnpm turbo test` rebuild.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo test` — passed.
+- `pnpm run check:ticket-deps` — passed; ticket dependency integrity check passed for 1 active ticket and 2308 archived tickets.
+- `git diff --check` — passed.
+
+Late-edit proof validity:
+
+- Terminal status/proof transcription plus exact checker/hygiene result transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the final proof lanes above.
+
+Post-ticket review:
+
+- Archived to `archive/tickets/166CANPARREF-007.md` on 2026-05-12.
+- Same-series stale references were repaired in `archive/specs/166-candidate-parameter-refs.md`, `archive/tickets/166CANPARREF-001.md`, `archive/tickets/166CANPARREF-002.md`, and `archive/tickets/166CANPARREF-005.md`.
+- Final archive integrity: `pnpm run check:ticket-deps` passed for 0 active tickets and 2309 archived tickets; `git diff --check` passed for tracked review-edited markdown files; targeted untracked whitespace check passed for `archive/tickets/166CANPARREF-007.md`.

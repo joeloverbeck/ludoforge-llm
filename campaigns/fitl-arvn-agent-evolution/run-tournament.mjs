@@ -7,14 +7,15 @@
  *
  * Usage:
  *   node run-tournament.mjs [--seeds N] [--players N] [--evolved-seat SEAT]
- *                           [--max-turns N] [--trace-seed N]
+ *                           [--max-turns N] [--trace-default none|last|all]
+ *                           [--trace-seed N]
  *                           [--evolved-profile PROFILE]
  *                           [--profile-completion PROFILE=greedy|agentGuided]
  *
  * Output (stdout, last line): JSON with { compositeScore, avgMargin, winRate, ... }
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -78,10 +79,43 @@ const PLAYER_COUNT = Number(getArg('players', '4'));
 const EVOLVED_SEAT = getArg('evolved-seat', 'arvn');
 const EVOLVED_PROFILE = getArg('evolved-profile', `${EVOLVED_SEAT.toLowerCase()}-evolved`);
 const MAX_TURNS = Number(getArg('max-turns', '500'));
-const TRACE_ALL = getArg('trace-all', 'true') === 'true';
+const TRACE_DEFAULT_ARG = getArg('trace-default', null);
+const TRACE_ALL_ARG = getArg('trace-all', null);
 const TRACE_SEED = getArg('trace-seed', null);
 const PROFILE_COMPLETION_OVERRIDE = getArg('profile-completion', '');
 const DISABLE_WASM = hasFlag('no-wasm');
+const TRACE_DIR = join(HERE, 'traces');
+
+function resolveTraceMode() {
+  if (TRACE_DEFAULT_ARG !== null) {
+    return TRACE_DEFAULT_ARG;
+  }
+  if (TRACE_ALL_ARG !== null) {
+    if (TRACE_ALL_ARG !== 'true' && TRACE_ALL_ARG !== 'false') {
+      process.stderr.write(
+        `ERROR: --trace-all must be true or false, got "${TRACE_ALL_ARG}"\n`,
+      );
+      process.exit(1);
+    }
+    return TRACE_ALL_ARG === 'true' ? 'all' : 'last';
+  }
+  return SEED_COUNT > 1 ? 'last' : 'none';
+}
+
+const TRACE_MODE = resolveTraceMode();
+if (!['none', 'last', 'all'].includes(TRACE_MODE)) {
+  process.stderr.write(
+    `ERROR: --trace-default must be one of none|last|all, got "${TRACE_MODE}"\n`,
+  );
+  process.exit(1);
+}
+
+const traceSeedLabel = TRACE_SEED !== null ? ` (trace seed ${TRACE_SEED})` : '';
+process.stderr.write(`Trace mode: ${TRACE_MODE}${traceSeedLabel}\n`);
+rmSync(TRACE_DIR, { recursive: true, force: true });
+if (TRACE_MODE === 'all') {
+  mkdirSync(TRACE_DIR, { recursive: true });
+}
 
 let wasmEnabled = false;
 if (DISABLE_WASM) {
@@ -401,7 +435,6 @@ let truncated = 0;
 let errors = 0;
 let totalMargin = 0;
 let traceSaved = false;
-const traceDir = join(HERE, 'traces');
 const aggregateDecisionStats = createDecisionStats();
 const round4 = (v) => Math.round(v * 10000) / 10000;
 
@@ -478,9 +511,12 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
       `won=${evolvedWon}, stop=${trace.stopReason}\n`,
     );
 
-    // Save trace — all seeds when TRACE_ALL, or single seed via --trace-seed
-    const shouldSaveTrace = TRACE_ALL ||
-      (TRACE_SEED !== null && seed === Number(TRACE_SEED) && !traceSaved);
+    // Save trace according to the campaign trace mode, with --trace-seed as an explicit override.
+    const isTraceSeed = TRACE_SEED !== null && seed === Number(TRACE_SEED);
+    const shouldWriteLastTrace = TRACE_SEED !== null
+      ? isTraceSeed && !traceSaved
+      : TRACE_MODE === 'last' && seedOffset === 0 && !traceSaved;
+    const shouldSaveTrace = TRACE_MODE === 'all' || shouldWriteLastTrace;
 
     if (shouldSaveTrace) {
       // Enriched: all-seat margins at game end
@@ -521,10 +557,10 @@ for (let seedOffset = 0; seedOffset < SEED_COUNT; seedOffset++) {
         opponentMoves,
       };
 
-      if (TRACE_ALL) {
-        mkdirSync(traceDir, { recursive: true });
-        writeFileSync(join(traceDir, `trace-${seed}.json`), stringifyForJson(traceSummary));
-      } else {
+      if (TRACE_MODE === 'all') {
+        writeFileSync(join(TRACE_DIR, `trace-${seed}.json`), stringifyForJson(traceSummary));
+      }
+      if (shouldWriteLastTrace) {
         writeFileSync(join(HERE, 'last-trace.json'), stringifyForJson(traceSummary));
         traceSaved = true;
       }

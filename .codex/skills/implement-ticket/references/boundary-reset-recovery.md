@@ -46,9 +46,10 @@ When the user approves continuing under the **same ticket** after a `FOUNDATIONS
 
 1. restate the widened active-ticket boundary explicitly and mark the earlier bounded proof as `partial`, `superseded`, or another truthful non-final state
 2. update the active ticket/spec/dependency artifacts first if their current wording still reflects the narrower slice or stale proof lane
-3. emit a fresh working-notes checkpoint for the widened same-ticket scope rather than continuing on the old local-slice checkpoint
-4. re-read the widened proof surface and any newly in-scope files, commands, or neighboring failing suites before coding
-5. only then resume implementation and verification under the widened acceptance surface
+3. sweep the active ticket metadata that can silently preserve the old boundary: `Status`, `Engine Changes` or equivalent scope headers, `What to Change`, `Files to Touch`, `Out of Scope`, `Acceptance Criteria`, `Test Plan`, command wording, generated-fallout notes, and source-size/runtime-surface ledgers. Patch stale fields before proof, or record why a field intentionally remains unchanged.
+4. emit a fresh working-notes checkpoint for the widened same-ticket scope rather than continuing on the old local-slice checkpoint
+5. re-read the widened proof surface and any newly in-scope files, commands, or neighboring failing suites before coding
+6. only then resume implementation and verification under the widened acceptance surface
 
 Use this path when the user explicitly authorizes the widened same-ticket boundary. Do not force an unnecessary successor-ticket split once the user has chosen completion under the active ticket.
 

@@ -1,9 +1,9 @@
 # 167ARVNEVOHAR-002: Trace emission defaults (`--trace-default`)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
-**Engine Changes**: None — campaign runner only
+**Engine Changes**: No behavior change — campaign runner trace defaults plus lint-only engine import cleanup
 **Deps**: `specs/167-arvn-evolution-harness-performance.md`
 
 ## Problem
@@ -55,6 +55,7 @@ Per spec §3.5: at the start of each invocation, `rmSync(traceDir, { recursive: 
 ## Files to Touch
 
 - `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` (modify)
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` (lint-only hygiene: remove a pre-existing unused import from ticket 001's WASM predecessor so the ticket-named `pnpm turbo lint` lane can run cleanly; no behavior change)
 
 ## Out of Scope
 
@@ -91,4 +92,27 @@ No new automated test. Trace-emission behavior is verified by the manual matrix 
 
 1. Manual matrix (above): four invocations covering `default | --trace-default all | --trace-all true | --trace-seed 1000 --trace-default none`; verify directory contents match expectations.
 2. `SEED_COUNT=2 bash campaigns/fitl-arvn-agent-evolution/harness.sh` — confirm `errors=0` and `compositeScore` unchanged vs. pre-ticket baseline at the same seed set.
-3. `pnpm turbo lint && pnpm turbo typecheck` (clean checks; only `.mjs` lint applies to the campaign script).
+3. `pnpm turbo lint && pnpm turbo typecheck` (clean checks; campaign `.mjs` plus authorized lint-only engine cleanup).
+
+## Outcome
+
+Completed: 2026-05-12
+
+- `run-tournament.mjs` now resolves trace mode as `--trace-default` > `--trace-all` > built-in default (`last` for multi-seed, `none` for single-seed), validates `none|last|all`, logs the resolved mode, and clears `traces/` at invocation start.
+- Trace writes preserve the existing summary shape. `all` writes per-seed `traces/trace-*.json`; `last` writes one `last-trace.json` for the first seed; `none` writes no trace unless `--trace-seed N` explicitly selects `last-trace.json` for that seed.
+- Deviations from original plan: user approved a lint-only hygiene absorption on 2026-05-12 after `pnpm turbo lint` found a pre-existing unused import in ticket 001's WASM predecessor. `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` is touched only to remove that unused import so Foundation #14 and the ticket-named clean-check lane both stay truthful.
+- Generated/artifact fallout: none checked in. `last-trace.json`, `traces/`, and `run.log.*` are ignored runtime artifacts.
+- Source-size ledger: `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` grew from 586 to 622 lines; it remains below the 800-line cap, so no extraction is required. `packages/engine/src/agents/policy-wasm-production-preview-drive.ts` is 779 lines after this ticket and shrank by one unused import; no active growth or extraction is required.
+- Runtime surface breadth: script/profile-only campaign runner behavior, plus lint-only engine import cleanup with no runtime behavior change.
+- Final proof:
+  - `node --check campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` passed.
+  - `pnpm turbo lint` passed.
+  - `pnpm turbo typecheck` passed.
+  - `SEED_COUNT=2 bash campaigns/fitl-arvn-agent-evolution/harness.sh` passed with `Regression gate passed.`, `compositeScore=-6`, `avgMargin=-6`, and `errors=0`.
+  - Manual matrix from `campaigns/fitl-arvn-agent-evolution` passed after the harness rebuild:
+    - `node run-tournament.mjs --seeds 2 --players 4 --evolved-seat arvn` returned `compositeScore=-6`, wrote `last-trace.json` for seed 1000, and left no `traces/` directory.
+    - `node run-tournament.mjs --seeds 2 --players 4 --evolved-seat arvn --trace-default all` returned `compositeScore=-6` and wrote exactly `traces/trace-1000.json` and `traces/trace-1001.json`.
+    - `node run-tournament.mjs --seeds 2 --players 4 --evolved-seat arvn --trace-all true` returned `compositeScore=-6` and wrote exactly `traces/trace-1000.json` and `traces/trace-1001.json`.
+    - `node run-tournament.mjs --seeds 2 --players 4 --evolved-seat arvn --trace-seed 1000 --trace-default none` returned `compositeScore=-6`, wrote `last-trace.json` for seed 1000, and removed the stale `traces/` directory from the prior `all` run.
+  - `pnpm run check:ticket-deps` passed: `Ticket dependency integrity check passed for 5 active tickets and 2310 archived tickets.`
+  - No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change after the final proof lanes.

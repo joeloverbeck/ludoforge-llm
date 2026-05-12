@@ -37,7 +37,6 @@ import {
   classifyPolicyWasmPreviewStateSlots,
   evalPolicyWasmPreviewSurfaceSlot,
   evalPolicyWasmPreviewStateFeature,
-  type PolicyWasmPreviewSurfaceSlot,
 } from './policy-wasm-production-preview-feature-slots.js';
 import { lowerProductionPreviewDriveIr } from './policy-wasm-production-preview-drive-lowering.js';
 import type { ConditionAST, EffectAST, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';

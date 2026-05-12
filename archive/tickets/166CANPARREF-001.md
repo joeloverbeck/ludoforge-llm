@@ -116,6 +116,7 @@ If the build surfaces an exhaustiveness check at a `case 'candidateParam'` site 
 ## Outcome
 
 Completion date: 2026-05-11
+Outcome amended: 2026-05-12
 
 What landed:
 
@@ -139,7 +140,7 @@ Deferred sibling/spec scope:
 - Parser acceptance and compile-time validation were completed and archived at `archive/tickets/166CANPARREF-002.md`.
 - Required fallback lowering remains owned by `tickets/166CANPARREF-003.md`.
 - Runtime resolver, VM mirror, and trace plumbing remain owned by `tickets/166CANPARREF-004.md` and `tickets/166CANPARREF-005.md`.
-- FITL action-data and cookbook work remain owned by `tickets/166CANPARREF-006.md` and `tickets/166CANPARREF-007.md`.
+- FITL action-data is completed in `archive/tickets/166CANPARREF-006.md`; cookbook work remains owned by `tickets/166CANPARREF-007.md`.
 
 Source-size ledger:
 

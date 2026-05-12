@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only
-**Deps**: `tickets/166CANPARREF-006.md`
+**Deps**: `archive/tickets/166CANPARREF-006.md`
 
 ## Problem
 
@@ -19,13 +19,13 @@ The recipe needs working end-to-end examples; tickets 001–006 land the surface
 
 1. `docs/agent-dsl-cookbook.md` carries the retirement sentence per Spec §2.1 / §4.7. Confirm the exact location during implementation (grep for `candidate.param.*` to find the line).
 2. The cookbook uses recipe-style examples with YAML blocks — preserve that style.
-3. Tickets 001–006 are landed; the parser accepts `candidate.params.<name>`, the resolver honors `onMissing`, traces propagate, and FITL `event` action declarations carry the four canonical params. Every example in the new recipe can be copy-pasted into a profile and compile cleanly.
+3. Tickets 001–006 are landed; the parser accepts `candidate.params.<name>`, the resolver honors `onMissing`, traces propagate, and FITL `event` action declarations carry the three always-present params (`eventCardId`, `eventDeckId`, `side`). FITL `event.branch` remains undeclared until a future optional-param or microturn-lowering design owns it. Every example in the new recipe must be tied either to live FITL declarations or to a synthetic fixture that declares the optional param it demonstrates.
 4. The four authoring shapes from Spec §4.1 are: (a) required param with `candidateParamFallback: { onUnavailable: noContribution }`; (b) optional param with `onMissing: { constant: __absent__ }`; (c) multi-card pivotal preference with `appliesToActions: [pivotalEvent]` and `in` operator; (d) implicit — a mixed-surface consideration declaring both `previewFallback` and `candidateParamFallback`.
 
 ## Architecture Check
 
 1. **No code change (Foundation #1 / Foundation #6).** Documentation-only update; engine and compiler are unchanged.
-2. **Surface fidelity.** Every YAML example is copy-paste-valid and exercises the full parser path landed by tickets 002 and 003. Stale examples in cookbooks are a recurring drift hazard; this ticket's examples are tied to live test fixtures or to FITL declarations landed by ticket 006.
+2. **Surface fidelity.** Every YAML example is copy-paste-valid and exercises the full parser path landed by tickets 002 and 003. Stale examples in cookbooks are a recurring drift hazard; this ticket's examples are tied to live test fixtures or to FITL declarations landed by ticket 006. The optional-param example must not imply FITL `event.branch` is declared today.
 3. **Trichotomy clarity.** The cookbook's existing pattern is to document each ref family with a "use this family when..." matrix. The new recipe adds `candidate.params.*` as the third row alongside `microturn.option.*` and `lookup.*`, making the action-selection-scope discrimination surface complete (Spec §1 table).
 
 ## What to Change
@@ -65,10 +65,10 @@ Add a new top-level recipe section (heading depth matching the cookbook's existi
 
 #### Four canonical authoring shapes
 
-Reproduce the four YAML blocks from Spec §4.1 verbatim:
+Add four YAML blocks matching the four authoring shapes from Spec §4.1, adjusted only where needed so each block targets a live declared param or an explicitly synthetic declared optional-style param:
 
 1. Required param with `candidateParamFallback` (avoid-shaded-event).
-2. Optional param with `onMissing: { kind: constant }` constant fallback (prefer-event-branch).
+2. Optional param with `onMissing: { kind: constant }` constant fallback (use a synthetic declared optional-style param, or another live declared param that can be omitted; do not use FITL `event.branch` as a declared Phase 5 example).
 3. Multi-card pivotal preference with `appliesToActions: [pivotalEvent]` (prefer-specific-pivotal).
 4. Mixed-surface example combining `candidate.params.*` with `lookup.*` or `preview.*` — both fallbacks declared.
 

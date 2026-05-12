@@ -123,6 +123,7 @@ Extend `candidate-params-determinism.test.ts` (introduced by ticket 004) with a 
 ## Outcome
 
 Completed on 2026-05-12.
+Outcome amended: 2026-05-12
 
 Authorization ledger:
 
@@ -155,12 +156,12 @@ Verification command substitutions:
 
 Deferred sibling/spec scope:
 
-- FITL `event` action declaration and ARVN shaded-event witness remain owned by `tickets/166CANPARREF-006.md`.
+- FITL `event` action declaration and ARVN shaded-event witness are completed in `archive/tickets/166CANPARREF-006.md`.
 - Cookbook documentation remains owned by `tickets/166CANPARREF-007.md`.
 
 Post-review cleanup:
 
-- Stale `publishedCandidate` ready-ref assertions in `specs/166-candidate-parameter-refs.md` and `tickets/166CANPARREF-006.md` were normalized to the approved Option B contract before archival: ready candidate-param behavior is proven through score contribution plus absence from `unknownCandidateParamRefs`; unavailable/fallback provenance is explicit in the trace.
+- Stale `publishedCandidate` ready-ref assertions in `specs/166-candidate-parameter-refs.md` and `archive/tickets/166CANPARREF-006.md` were normalized to the approved Option B contract before archival: ready candidate-param behavior is proven through score contribution plus absence from `unknownCandidateParamRefs`; unavailable/fallback provenance is explicit in the trace.
 
 Source-size ledger:
 

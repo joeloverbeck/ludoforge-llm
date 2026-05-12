@@ -668,6 +668,15 @@
     }
   },
   "candidateParamDefs": {
+    "eventCardId": {
+      "type": "id"
+    },
+    "eventDeckId": {
+      "type": "id"
+    },
+    "side": {
+      "type": "id"
+    },
     "targetSpace": {
       "type": "id"
     },
@@ -696,9 +705,6 @@
       "type": "id"
     },
     "$__macro_coup_process_commitment_actions_15__effects_0__commitBaseDestFromMap": {
-      "type": "id"
-    },
-    "eventCardId": {
       "type": "id"
     },
     "amount": {
@@ -3890,8 +3896,21 @@
           "maxOptions": 8,
           "chooseNBeamWidth": 1,
           "depthCap": 4,
-          "strategy": "singlePass",
-          "capClass": "standard256"
+          "strategy": "continuedDeepening",
+          "capClass": "deep1024",
+          "continuedDeepening": {
+            "broad": {
+              "depthCap": 4
+            },
+            "deep": {
+              "depthCap": 16,
+              "trigger": [
+                "allRequestedRefsDepthCapped",
+                "allReadyValuesUniform"
+              ],
+              "rootPolicy": "allRootsWithinCap"
+            }
+          }
         },
         "phase1": false,
         "phase1CompletionsPerAction": 1
@@ -3920,7 +3939,7 @@
           "preferOptionProjectedMargin"
         ]
       },
-      "fingerprint": "e702dcfce7ce3867ffb7d5995d4d203d3a5c7e314a795333ec34d79df3da3344"
+      "fingerprint": "f410e55be93f0a814434694d0683dae12e4b854af2e85cacb2838c9b918785a4"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -4040,5 +4059,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "d5c7ad2e24a1a605acf4115cfcb003487f9301fe6475f728ae29004e94d2261f"
+  "catalogFingerprint": "09b5ec9e459e1ccfb49d94388d439b1284dfd10899e9bfdb7c58c49a95a8823a"
 }

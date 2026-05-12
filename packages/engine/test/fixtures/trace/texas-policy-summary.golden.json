@@ -18,6 +18,7 @@
     "selectedStableMoveKey": "raise|{\"raiseAmount\":426}|false|unclassified",
     "finalScore": 90,
     "previewGatedCount": 0,
+    "candidateParamFallbackFiredCount": 0,
     "pruningSteps": [],
     "tieBreakChain": [],
     "previewUsage": {

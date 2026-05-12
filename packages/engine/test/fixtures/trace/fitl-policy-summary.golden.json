@@ -21,6 +21,7 @@
     "selectedStableMoveKey": "event|{\"eventCardId\":\"card-29\",\"eventDeckId\":\"fitl-events-initial-card-pack\",\"side\":\"shaded\"}|false|event",
     "finalScore": -960,
     "previewGatedCount": 2,
+    "candidateParamFallbackFiredCount": 0,
     "pruningSteps": [
       {
         "ruleId": "dropPassWhenOtherMovesExist",

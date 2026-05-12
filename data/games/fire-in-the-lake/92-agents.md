@@ -458,6 +458,17 @@ agents:
           maxOptions: 8
           chooseNBeamWidth: 1
           depthCap: 4
+          strategy: continuedDeepening
+          capClass: deep1024
+          continuedDeepening:
+            broad:
+              depthCap: 4
+            deep:
+              depthCap: 16
+              trigger:
+                - allRequestedRefsDepthCapped
+                - allReadyValuesUniform
+              rootPolicy: allRootsWithinCap
       params:
         projectedMarginWeight: 300
         governWeight: 1000

@@ -917,7 +917,7 @@ export function createPolicyPreviewRuntime(input: CreatePolicyPreviewRuntimeInpu
       // simulator and is always canonically hashed. Inner preview iterations
       // intentionally defer final hashing until the drive exits; intermediate
       // states stay private to this bounded synthetic completion.
-      const draftTokenStateIndex = createDraftTokenStateIndex(input.state);
+      const draftTokenStateIndex = createDraftTokenStateIndex(input.state, input.runtime?.tokenStateIndexCache);
       // POLPREVDRIVE-004: drive-scoped resolveRef memoisation. Allocated fresh
       // per drive call, threaded through every kernel entry point that flows
       // into apply-move's effect-execution path, and cleared at the top of

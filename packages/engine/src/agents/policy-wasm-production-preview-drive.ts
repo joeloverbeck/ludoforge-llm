@@ -35,8 +35,10 @@ import {
 } from './policy-wasm-production-preview-values.js';
 import {
   classifyPolicyWasmPreviewStateSlots,
+  evalPolicyWasmPreviewSurfaceSlot,
   evalPolicyWasmPreviewStateFeature,
 } from './policy-wasm-production-preview-feature-slots.js';
+import { lowerProductionPreviewDriveIr } from './policy-wasm-production-preview-drive-lowering.js';
 import type { ConditionAST, EffectAST, OptionsQuery, ScopedVarNameExpr, ValueExpr } from '../kernel/index.js';
 import type {
   PolicyWasmProductionPreviewDriveInput,
@@ -44,9 +46,7 @@ import type {
   PolicyWasmProductionPreviewDriveIrProgram,
 } from './policy-wasm-production-preview-drive-types.js';
 import type {
-  PolicyWasmPreviewDriveBatchInput,
   PolicyWasmPreviewDriveResult,
-  PolicyWasmPreviewDriveStep,
   PolicyWasmPreviewDriveUnsupportedClass,
 } from './policy-wasm-preview-drive.js';
 
@@ -100,27 +100,6 @@ export const policyWasmProductionPreviewDriveInternals = {
   },
 };
 
-export const lowerProductionPreviewDriveIr = (
-  input: PolicyWasmProductionPreviewDriveInput,
-  program: PolicyWasmProductionPreviewDriveIrProgram,
-): PolicyWasmPreviewDriveBatchInput => {
-  const batch: PolicyWasmPreviewDriveBatchInput = {
-    profileId: input.profileId,
-    originSeatId: input.originSeatId,
-    originTurnId: input.originTurnId,
-    depthCap: input.depthCap,
-    previewStateSlots: input.previewStateSlots,
-    candidates: input.candidates.map((candidate) => ({
-      actionId: candidate.actionId ?? String(candidate.move.actionId),
-      stableMoveKey: candidate.stableMoveKey,
-      initialValue: program.rootValues[0] ?? 0,
-      initialPreviewStateValues: program.rootValues,
-    })),
-    steps: program.ops.flatMap(lowerProductionPreviewDriveIrOp),
-  };
-  return batch;
-};
-
 const compileProductionPreviewDrive = (
   input: PolicyWasmProductionPreviewDriveInput,
 ): CompileResult => {
@@ -130,10 +109,11 @@ const compileProductionPreviewDrive = (
   if (input.previewStateSlots.length === 0) {
     return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', 'production preview-drive requires at least one scalar preview-state slot');
   }
-  const { slotIndexByGlobalVar, featureSlots, unsupportedSlot } = classifyPolicyWasmPreviewStateSlots(input.previewStateSlots, parsePolicyWasmPreviewGlobalSlot);
+  const { slotIndexByGlobalVar, featureSlots, surfaceSlots, unsupportedSlot } = classifyPolicyWasmPreviewStateSlots(input.previewStateSlots, parsePolicyWasmPreviewGlobalSlot);
   if (unsupportedSlot !== undefined) {
     return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview-state slot "${unsupportedSlot}"`);
   }
+  const surfaceSlotByIndex = new Map(surfaceSlots.map((slot) => [slot.slotIndex, slot]));
 
   const actionIds = input.candidates.map((candidate) => candidate.actionId ?? String(candidate.move.actionId));
   const actionId = actionIds[0]!;
@@ -145,12 +125,21 @@ const compileProductionPreviewDrive = (
   if (pipeline === undefined && action === undefined) {
     return unsupported('unsupported-effect', `action:${actionId}`, `action "${actionId}" has no generic production definition`);
   }
-  const rootValues = input.previewStateSlots.map((slot) => {
+  const rootValues = input.previewStateSlots.map((slot, slotIndex) => {
     const featureId = slot.startsWith('feature.') ? slot.slice('feature.'.length) : undefined;
     if (featureId !== undefined) {
       return evalPolicyWasmPreviewStateFeature(featureId, input.def, input.state, slotIndexByGlobalVar, {
         slotValues: [],
         markerValues: buildPolicyWasmPreviewMarkerValues(input.state),
+      }) ?? 0;
+    }
+    const surfaceSlot = surfaceSlotByIndex.get(slotIndex);
+    if (surfaceSlot !== undefined) {
+      return evalPolicyWasmPreviewSurfaceSlot(surfaceSlot, input, slotIndexByGlobalVar, {
+        slotValues: [],
+        markerValues: buildPolicyWasmPreviewMarkerValues(input.state),
+        zoneVarValues: buildPolicyWasmPreviewZoneVarValues(input.state),
+        zoneValues: buildPolicyWasmPreviewZoneValues(input.state),
       }) ?? 0;
     }
     return readPolicyWasmPreviewRootSlot(input.state, slot);
@@ -189,6 +178,14 @@ const compileProductionPreviewDrive = (
     }
     state.ops.push({ kind: 'setPreviewSlot', slotIndex: featureSlot.slotIndex, value });
     state.slotValues[featureSlot.slotIndex] = value;
+  }
+  for (const surfaceSlot of surfaceSlots) {
+    const value = evalPolicyWasmPreviewSurfaceSlot(surfaceSlot, input, slotIndexByGlobalVar, state);
+    if (value === undefined) {
+      return unsupported('unsupported-effect', 'production-preview-drive.previewStateSlots', `unsupported preview surface "${surfaceSlot.family}"`);
+    }
+    state.ops.push({ kind: 'setPreviewSlot', slotIndex: surfaceSlot.slotIndex, value });
+    state.slotValues[surfaceSlot.slotIndex] = value;
   }
   return {
     kind: 'supported',
@@ -514,31 +511,6 @@ const compileEffects = (
     );
   }
   return undefined;
-};
-
-const lowerProductionPreviewDriveIrOp = (
-  op: PolicyWasmProductionPreviewDriveIrOp,
-): readonly PolicyWasmPreviewDriveStep[] => {
-  switch (op.kind) {
-    case 'applyCandidateDeltas':
-      return op.candidateDeltas.some((delta) => delta !== 0)
-        ? [{ kind: 'applyCandidateDeltas', candidateDeltas: op.candidateDeltas }]
-        : [];
-    case 'addGlobal':
-      return [{ kind: 'addGlobal', delta: op.delta }];
-    case 'setGlobal':
-      return [{ kind: 'setGlobal', value: op.value }];
-    case 'addPreviewSlot':
-      return [{ kind: 'addPreviewSlot', slotIndex: op.slotIndex, delta: op.delta }];
-    case 'setPreviewSlot':
-      return [{ kind: 'setPreviewSlot', slotIndex: op.slotIndex, value: op.value }];
-    case 'chooseOneGreedy':
-      return [{ kind: 'chooseOneGreedy', optionDeltas: op.optionDeltas }];
-    case 'chooseNGreedy':
-      return [{ kind: 'chooseNGreedy', min: op.min, max: op.max, optionDeltas: op.optionDeltas }];
-    case 'stochastic':
-      return [{ kind: 'stochastic' }];
-  }
 };
 
 const resolveBindingName = (name: string, state: CompileState): string =>

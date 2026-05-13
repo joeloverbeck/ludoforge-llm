@@ -1384,7 +1384,12 @@ const enumerateRawLegalMoves = (
   };
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const evalRuntimeResources = createEvalRuntimeResources();
+  const evalRuntimeResources = createEvalRuntimeResources(
+    runtime === undefined ? undefined : {
+      tokenStateIndexCache: runtime.tokenStateIndexCache,
+      compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+    },
+  );
   const snapshot = createEnumerationSnapshot(def, state);
   const currentPhaseDef = findPhaseDef(def, state.currentPhase);
   const defaultDiscover = createMoveDecisionSequenceChoiceDiscoverer(def, state, runtime);

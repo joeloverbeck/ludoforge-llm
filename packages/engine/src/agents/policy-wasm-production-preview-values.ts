@@ -128,7 +128,10 @@ export const materializePolicyWasmPreviewQueryValues = (
       activePlayer: input.state.activePlayer,
       actorPlayer: input.state.activePlayer,
       bindings: Object.fromEntries(bindings),
-      resources: createEvalRuntimeResources(),
+      resources: createEvalRuntimeResources({
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+      }),
       runtimeTableIndex: runtime.runtimeTableIndex,
       freeOperationOverlay: undefined,
       maxQueryResults: undefined,
@@ -150,10 +153,14 @@ export const materializePolicyWasmPreviewState = (
   state: GameState,
   zones: PolicyWasmPreviewZoneValues,
   zoneVars: PolicyWasmPreviewZoneVarValues,
+  markerValues?: ReadonlyMap<string, string>,
+  globalVars?: GameState['globalVars'],
 ): GameState => ({
   ...state,
+  ...(globalVars === undefined ? {} : { globalVars }),
   zones: Object.fromEntries(zones),
   zoneVars: Object.fromEntries([...zoneVars].map(([zoneId, vars]) => [zoneId, Object.fromEntries(vars)])),
+  ...(markerValues === undefined ? {} : { markers: materializePolicyWasmPreviewMarkers(markerValues) }),
 });
 
 export const readPolicyWasmPreviewZoneVar = (
@@ -322,6 +329,30 @@ export const buildPolicyWasmPreviewMarkerValues = (state: GameState): Map<string
 };
 
 export const policyWasmPreviewMarkerKey = (spaceId: string, marker: string): string => `${spaceId}\u0000${marker}`;
+
+const parsePolicyWasmPreviewMarkerKey = (key: string): { readonly spaceId: string; readonly marker: string } | undefined => {
+  const separator = key.indexOf('\u0000');
+  return separator < 0
+    ? undefined
+    : { spaceId: key.slice(0, separator), marker: key.slice(separator + 1) };
+};
+
+export const materializePolicyWasmPreviewMarkers = (
+  markerValues: ReadonlyMap<string, string>,
+): GameState['markers'] => {
+  const markers: Record<string, Record<string, string>> = {};
+  for (const [key, markerState] of markerValues) {
+    const parsed = parsePolicyWasmPreviewMarkerKey(key);
+    if (parsed === undefined || parsed.spaceId === '__global__') {
+      continue;
+    }
+    markers[parsed.spaceId] = {
+      ...(markers[parsed.spaceId] ?? {}),
+      [parsed.marker]: markerState,
+    };
+  }
+  return markers;
+};
 
 const findMarkerLattice = (
   def: GameDef,

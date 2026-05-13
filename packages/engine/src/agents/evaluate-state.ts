@@ -29,7 +29,12 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId, ru
     actorPlayer: playerId,
     bindings: {},
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
-    resources: createEvalRuntimeResources(),
+    resources: createEvalRuntimeResources(
+      runtime === undefined ? undefined : {
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+      },
+    ),
   });
   const score = evalValue(def.terminal.scoring.value, ctx);
   if (typeof score !== 'number') {

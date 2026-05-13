@@ -13,6 +13,7 @@ SEED_COUNT=${SEED_COUNT:-$(cat "$SCRIPT_DIR/seed-tier.txt" 2>/dev/null || echo 1
 PLAYER_COUNT=4
 EVOLVED_SEAT="arvn"
 MAX_TURNS=${MAX_TURNS:-200}
+CONCURRENCY=${CONCURRENCY:-8}
 
 # --- Step 1: Build (always, to prevent stale JS) ---
 echo "Building engine..." >&2
@@ -48,6 +49,7 @@ node "$SCRIPT_DIR/run-tournament.mjs" \
   --players "$PLAYER_COUNT" \
   --evolved-seat "$EVOLVED_SEAT" \
   --max-turns "$MAX_TURNS" \
+  --concurrency "$CONCURRENCY" \
   > "$RUNNER_LOG" 2>&1
 RUNNER_EXIT=$?
 set -e
@@ -88,6 +90,7 @@ WINS=$(parse_field wins)
 COMPLETED=$(parse_field completed)
 TRUNCATED=$(parse_field truncated)
 ERRORS=$(parse_field errors)
+CONCURRENCY_RESULT=$(parse_field concurrency)
 
 if [[ -z "$COMPOSITE_SCORE" ]]; then
   echo "status=PARSE_FAIL"
@@ -104,4 +107,5 @@ echo "wins=$WINS"
 echo "completed=$COMPLETED"
 echo "truncated=$TRUNCATED"
 echo "errors=$ERRORS"
+echo "concurrency=$CONCURRENCY_RESULT"
 exit 0

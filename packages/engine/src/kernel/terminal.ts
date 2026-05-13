@@ -213,7 +213,12 @@ function evaluateVictory(
 export const terminalResult = (def: GameDef, state: GameState, runtime?: GameDefRuntime): TerminalResult | null => {
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const resources = createEvalRuntimeResources();
+  const resources = createEvalRuntimeResources(
+    runtime === undefined ? undefined : {
+      tokenStateIndexCache: runtime.tokenStateIndexCache,
+      compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+    },
+  );
   const baseCtx = buildEvalContext(def, adjacencyGraph, runtimeTableIndex, state, resources);
   const victory = evaluateVictory(def, adjacencyGraph, runtimeTableIndex, state, resources);
   if (victory !== null) {

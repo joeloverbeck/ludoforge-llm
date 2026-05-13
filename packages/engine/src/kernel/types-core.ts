@@ -1224,6 +1224,17 @@ export interface ZobristTable {
    * Mutable for lazy population only — externally pure.
    */
   readonly keyCache: Map<string, bigint>;
+  /**
+   * `runLocal`: bounded cache of encoded decision-stack frame digests keyed by
+   * frame structure plus the already-computed parent-frame digest.
+   */
+  readonly frameDigestCache: {
+    readonly size: number;
+    readonly evictionLimit: number;
+    get(key: string): string | undefined;
+    set(key: string, value: string): void;
+    clear(): void;
+  };
   /** Pre-sorted key arrays for computeFullHash — avoids repeated sorting. */
   readonly sortedKeys: ZobristSortedKeys | null;
 }

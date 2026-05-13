@@ -25,11 +25,14 @@ pnpm turbo schema:artifacts
 pnpm -F @ludoforge/engine test        # engine unit + integration
 pnpm -F @ludoforge/engine test:e2e    # engine e2e
 pnpm -F @ludoforge/engine test:all    # full engine suite
+pnpm -F @ludoforge/engine test:performance # stable performance benchmarks under test/performance
+pnpm -F @ludoforge/engine test:perf   # opt-in perf witnesses under test/perf; CI-backed by Engine Perf
 pnpm -F @ludoforge/runner dev         # runner Vite dev server
 pnpm -F @ludoforge/runner test        # runner tests (Vitest)
 ```
 
 **Important**: Engine tests use Node's test runner (`node --test`), NOT Jest. Do not pass Jest-only flags like `--testPathPattern`. For focused engine runs, execute a concrete test file path after `pnpm turbo build`.
+`test:performance` and `test:perf` are separate lanes: `.github/workflows/engine-tests.yml` runs `test:performance`, while `.github/workflows/engine-perf.yml` runs `test:perf`.
 
 ## Repo Navigation (Codex tips)
 

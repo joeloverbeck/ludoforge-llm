@@ -1399,6 +1399,10 @@ const applyMoveCore = (
   const evalRuntimeResources = createEvalRuntimeResources({
     collector: runtime.collector,
     ...(coreOptions?.resolveRefCache === undefined ? {} : { resolveRefCache: coreOptions.resolveRefCache }),
+    ...(cachedRuntime === undefined ? {} : {
+      tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+      compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+    }),
   });
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
@@ -1611,7 +1615,12 @@ const applySimultaneousSubmission = (
     state,
     move,
     createSeatResolutionContext(def, state.playerCount),
-    createEvalRuntimeResources(),
+    createEvalRuntimeResources(
+      cachedRuntime === undefined ? undefined : {
+        tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+        compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+      },
+    ),
     cachedRuntime,
   );
 
@@ -1712,7 +1721,13 @@ const applySimultaneousSubmission = (
       lifecycleAndAdvanceLog,
       commitRuntime.executionPolicy,
       undefined,
-      createEvalRuntimeResources({ collector: commitRuntime.collector }),
+      createEvalRuntimeResources({
+        collector: commitRuntime.collector,
+        ...(cachedRuntime === undefined ? {} : {
+          tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+          compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+        }),
+      }),
       cachedRuntime,
     );
   const finalState = {
@@ -1885,7 +1900,12 @@ export const probeMoveLegality = (
       probedState,
       move,
       createSeatResolutionContext(def, probedState.playerCount),
-      createEvalRuntimeResources(),
+      createEvalRuntimeResources(
+        runtime === undefined ? undefined : {
+          tokenStateIndexCache: runtime.tokenStateIndexCache,
+          compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+        },
+      ),
       runtime,
     );
     return { legal: true };
@@ -1936,7 +1956,12 @@ const probeMoveViabilityRaw = (
   }
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
-    const evalRuntimeResources = createEvalRuntimeResources();
+    const evalRuntimeResources = createEvalRuntimeResources(
+      runtime === undefined ? undefined : {
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+      },
+    );
     const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
     if (classMismatch !== null) {
       throw illegalMoveError(move, ILLEGAL_MOVE_REASONS.TURN_FLOW_ACTION_CLASS_MISMATCH, {

@@ -1,0 +1,63 @@
+name: Engine Perf
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'packages/engine-wasm/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/engine-perf.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/engine/**'
+      - 'packages/engine-wasm/**'
+      - 'data/games/**'
+      - 'scripts/**'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - 'turbo.json'
+      - 'tsconfig.base.json'
+      - '.github/workflows/engine-perf.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: engine-perf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  perf:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - run: pnpm guard:worktree-pointers
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm -F @ludoforge/engine-wasm build
+      - run: pnpm -F @ludoforge/engine build
+      - name: Run engine perf lane
+        run: pnpm -F @ludoforge/engine test:perf
+      - name: Upload perf artifacts
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: engine-perf-artifacts
+          path: packages/engine/test/perf/.artifacts/**
+          retention-days: 7
+          if-no-files-found: ignore

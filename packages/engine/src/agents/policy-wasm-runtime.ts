@@ -2,6 +2,7 @@ import type { PolicyValue } from './policy-surface.js';
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
+import type { PolicyWasmBytecodeInputCache, PolicyWasmBytecodeStateWordsCache } from '../kernel/index.js';
 import {
   getCachedScoreRowBytecode,
   getScoreRowBytecodeCompileCount,
@@ -20,6 +21,12 @@ import {
   type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
 } from './policy-wasm-preview-drive.js';
+import {
+  getCachedPolicyWasmBytecodeInput,
+  getPolicyWasmBytecodeInputCacheCounters,
+  policyWasmBytecodeInputCacheKey,
+  resetPolicyWasmBytecodeInputCacheCounters,
+} from './policy-wasm-bytecode-input-cache.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
 export const POLICY_WASM_ABI_VERSION = 9;
@@ -105,6 +112,8 @@ export interface PolicyWasmBytecodeContext {
   readonly state: GameState;
   readonly playerId?: number;
   readonly expectedLayoutId?: number;
+  readonly bytecodeInputCache?: PolicyWasmBytecodeInputCache;
+  readonly bytecodeStateWordsCache?: PolicyWasmBytecodeStateWordsCache;
 }
 
 export interface PolicyWasmBatchCandidate {
@@ -258,6 +267,89 @@ const encodedPolicyBytecodeInputWordCount = (
     + 1
     + (encoded.globalMarkers.length * 2);
 
+const policyBytecodeProgramWords = (bytecode: PolicyBytecode): Int32Array => {
+  const words: number[] = [];
+  writeI32Array(words, bytecode.instructions);
+  writeI32Array(words, bytecode.constants);
+  for (const ref of bytecode.featureTable.refs) {
+    const kindCode = FEATURE_KIND_CODE[ref.kind];
+    if (kindCode === undefined) {
+      words.push(-1, ref.layoutIndex);
+      for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
+        words.push(0);
+      }
+      continue;
+    }
+    words.push(kindCode, ref.layoutIndex);
+    for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
+      words.push(ref.aux[index] ?? 0);
+    }
+  }
+  return Int32Array.from(words);
+};
+
+const encodedStateWordsCacheKey = (
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): string | undefined => typeof context.state.stateHash === 'bigint'
+  ? [
+      cachedLayoutIdentity(context.layout, context.def),
+      context.state.stateHash.toString(16),
+      encoded.tokenIds.length,
+    ].join('|')
+  : undefined;
+
+const buildEncodedStateWords = (
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): Int32Array => {
+  const words: number[] = [];
+  writeI32Array(words, cachedZoneKindCodes(context.layout, context.def));
+  writeI32Array(words, encoded.tokenZone);
+  writeI32Array(words, encoded.tokenOccurrenceOffset);
+  writeI32Array(words, encoded.tokenOccurrenceCount);
+  words.push(encoded.tokenOccurrenceZones.length);
+  writeI32Array(words, encoded.tokenOccurrenceZones);
+  writeI32Array(words, encoded.tokenScalarPropValues);
+  writeI32Array(words, encoded.tokenScalarPropPresent);
+  writeI32Array(words, encoded.playerInts);
+  writeI32Array(words, encoded.zoneInts);
+  writeI32Array(words, encoded.globals);
+  words.push(encoded.globalMarkers.length);
+  for (const value of encoded.globalMarkers) {
+    words.push(Number(BigInt.asIntN(32, value)));
+    words.push(Number(BigInt.asIntN(32, value >> 32n)));
+  }
+  return Int32Array.from(words);
+};
+
+const encodedPolicyBytecodeStateWords = (
+  encoded: EncodedState,
+  context: PolicyWasmBytecodeContext,
+): Int32Array => {
+  const cache = context.bytecodeStateWordsCache;
+  if (cache === undefined) {
+    return buildEncodedStateWords(encoded, context);
+  }
+  const key = encodedStateWordsCacheKey(encoded, context);
+  if (key === undefined) {
+    return buildEncodedStateWords(encoded, context);
+  }
+  const cached = cache.get(key);
+  if (cached !== undefined) {
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('policyWasmRuntime:encodedStateWordsCacheHit');
+    }
+    return cached;
+  }
+  if (hotPathProfilingEnabled) {
+    perfHotPathCount('policyWasmRuntime:encodedStateWordsCacheMiss');
+  }
+  const words = buildEncodedStateWords(encoded, context);
+  cache.set(key, words);
+  return words;
+};
+
 const encodePolicyBytecodeInput = (
   bytecode: PolicyBytecode,
   encoded: EncodedState,
@@ -268,6 +360,38 @@ const encodePolicyBytecodeInput = (
   try {
     const layoutId = cachedLayoutIdentity(context.layout, context.def);
     const expectedLayoutId = context.expectedLayoutId ?? layoutId;
+    if (HOST_LITTLE_ENDIAN) {
+      const headerWords = Int32Array.of(
+        POLICY_WASM_ABI_MAGIC,
+        POLICY_WASM_ABI_VERSION,
+        expectedLayoutId,
+        layoutId,
+        bytecode.metadata.version,
+        bytecode.metadata.targetVmVersion,
+        bytecode.instructions.length,
+        bytecode.constants.length,
+        bytecode.featureTable.refs.length,
+        Number(context.state.activePlayer),
+        context.playerId ?? Number(context.state.activePlayer),
+        context.layout.zoneIds.length,
+        encoded.tokenIds.length,
+        context.layout.playerIds.length,
+        context.layout.tokenLayout.scalarPropIds.length,
+        context.layout.varLayout.globalVariableIds.length,
+        context.layout.varLayout.perPlayerVariableIds.length,
+        context.layout.varLayout.zoneVariableIds.length,
+      );
+      const programWords = policyBytecodeProgramWords(bytecode);
+      const stateWords = encodedPolicyBytecodeStateWords(encoded, context);
+      const words = new Int32Array(headerWords.length + programWords.length + stateWords.length);
+      words.set(headerWords, 0);
+      words.set(programWords, headerWords.length);
+      words.set(stateWords, headerWords.length + programWords.length);
+      if (words.length !== encodedPolicyBytecodeInputWordCount(bytecode, encoded, context)) {
+        throw new Error('Policy WASM bytecode input size drifted.');
+      }
+      return new Uint8Array(words.buffer);
+    }
     const bytes = new Uint8Array(encodedPolicyBytecodeInputWordCount(bytecode, encoded, context) * I32_BYTES);
     const words = HOST_LITTLE_ENDIAN ? new Int32Array(bytes.buffer) : null;
     const view = words === null ? new DataView(bytes.buffer) : null;
@@ -358,16 +482,18 @@ const encodePolicyBytecodeInput = (
   }
 };
 
-const encodedPolicyBytecodeInputCache = new WeakMap<EncodedState, WeakMap<PolicyBytecode, Map<string, Uint8Array>>>();
-
 const encodedPolicyBytecodeInputCacheKey = (
   context: PolicyWasmBytecodeContext,
-): string => {
+): string | undefined => {
+  if (typeof context.state.stateHash !== 'bigint') {
+    return undefined;
+  }
   const layoutId = cachedLayoutIdentity(context.layout, context.def);
   const expectedLayoutId = context.expectedLayoutId ?? NO_EXPECTED_LAYOUT_ID;
   return [
     layoutId,
     expectedLayoutId,
+    context.state.stateHash.toString(16),
     Number(context.state.activePlayer),
     context.playerId ?? Number(context.state.activePlayer),
   ].join('|');
@@ -378,28 +504,22 @@ const getEncodedPolicyBytecodeInput = (
   encoded: EncodedState,
   context: PolicyWasmBytecodeContext,
 ): Uint8Array => {
-  const key = encodedPolicyBytecodeInputCacheKey(context);
-  const cachedByBytecode = encodedPolicyBytecodeInputCache.get(encoded);
-  const cachedByContext = cachedByBytecode?.get(bytecode);
-  const cached = cachedByContext?.get(key);
-  if (cached !== undefined) {
-    if (hotPathProfilingEnabled) {
-      perfHotPathCount('policyWasmRuntime:encodedInputCacheHit');
-    }
-    return cached;
+  if (context.bytecodeInputCache === undefined) {
+    return encodePolicyBytecodeInput(bytecode, encoded, context);
   }
-  if (hotPathProfilingEnabled) {
-    perfHotPathCount('policyWasmRuntime:encodedInputCacheMiss');
+  const contextKey = encodedPolicyBytecodeInputCacheKey(context);
+  if (contextKey === undefined) {
+    return encodePolicyBytecodeInput(bytecode, encoded, context);
   }
-  const input = encodePolicyBytecodeInput(bytecode, encoded, context);
-  if (cachedByContext !== undefined) {
-    cachedByContext.set(key, input);
-  } else if (cachedByBytecode !== undefined) {
-    cachedByBytecode.set(bytecode, new Map([[key, input]]));
-  } else {
-    encodedPolicyBytecodeInputCache.set(encoded, new WeakMap([[bytecode, new Map([[key, input]])]]));
-  }
-  return input;
+  const key = policyWasmBytecodeInputCacheKey(
+    bytecode,
+    contextKey,
+  );
+  return getCachedPolicyWasmBytecodeInput(
+    context.bytecodeInputCache,
+    key,
+    () => encodePolicyBytecodeInput(bytecode, encoded, context),
+  );
 };
 
 const encodedBatchCandidateWordsCache = new WeakMap<readonly PolicyWasmBatchCandidate[], Int32Array>();
@@ -938,6 +1058,13 @@ export const __internal_for_tests = {
   getProductionScoreRowBytecodeCompileCount(): number {
     return getScoreRowBytecodeCompileCount();
   },
+  getPolicyWasmBytecodeInputCacheCounters(): {
+    readonly hitCount: number;
+    readonly missCount: number;
+    readonly writeCount: number;
+  } {
+    return getPolicyWasmBytecodeInputCacheCounters();
+  },
   getProductionPreviewCandidateFeatureRowRouteCount(): number {
     return productionPreviewCandidateFeatureRowRouteCount;
   },
@@ -950,5 +1077,20 @@ export const __internal_for_tests = {
     productionPreviewCandidateFeatureRowRouteCount = 0;
     productionPreviewCandidateFeatureRowUnsupportedCount = 0;
     resetScoreRowBytecodeCompileCount();
+    resetPolicyWasmBytecodeInputCacheCounters();
+  },
+  encodePolicyBytecodeInputForTest(
+    bytecode: PolicyBytecode,
+    encoded: EncodedState,
+    context: PolicyWasmBytecodeContext,
+  ): Uint8Array {
+    return encodePolicyBytecodeInput(bytecode, encoded, context);
+  },
+  getEncodedPolicyBytecodeInputForTest(
+    bytecode: PolicyBytecode,
+    encoded: EncodedState,
+    context: PolicyWasmBytecodeContext,
+  ): Uint8Array {
+    return getEncodedPolicyBytecodeInput(bytecode, encoded, context);
   },
 };

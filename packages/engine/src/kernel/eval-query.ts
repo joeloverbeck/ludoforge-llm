@@ -48,6 +48,7 @@ type RuntimeQueryShape = 'token' | 'object' | 'number' | 'string' | 'boolean' | 
 const sortedZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
 const sortedMapSpaceZoneCache = new WeakMap<readonly ZoneDef[], readonly ZoneDef[]>();
 const contextIndependentTokenFilterCountCache = new WeakMap<readonly Token[], WeakMap<TokenFilterExpr, number>>();
+const contextIndependentTokenFilterResultCache = new WeakMap<readonly Token[], WeakMap<TokenFilterExpr, readonly Token[]>>();
 const tokenFilterContextIndependenceCache = new WeakMap<TokenFilterExpr, boolean>();
 
 function tokenFilterIsContextIndependent(filter: TokenFilterExpr): boolean {
@@ -419,7 +420,7 @@ function resolveTokenQueryFieldValue(
   predicate: Parameters<TokenFilterFieldResolver>[1],
   ctx: ReadContext,
 ): unknown {
-  const tokenStateIndex = getTokenStateIndex(ctx.state);
+  const tokenStateIndex = getTokenStateIndex(ctx.state, ctx.resources.tokenStateIndexCache);
   const zoneDefById = getZoneMap(ctx.def);
   const zoneId = tokenStateIndex.get(token.id)?.zoneId;
   if (predicate.field?.kind === 'tokenZone') {
@@ -433,17 +434,51 @@ function resolveTokenQueryFieldValue(
 
 function applyTokenFilter(tokens: readonly Token[], filter: TokenFilterExpr, ctx: ReadContext): readonly Token[] {
   const profileHotPath = hotPathProfilingEnabled;
-  const t0 = profileHotPath ? perfHotPathStart() : 0;
-  try {
-    if (ctx.freeOperationOverlay === undefined) {
-      const compiled = getCompiledTokenFilter(filter);
-      if (compiled !== null) {
-        if (profileHotPath) {
-          perfHotPathCount('evalQuery:applyTokenFilterCompiled');
+  if (ctx.freeOperationOverlay === undefined && tokenFilterIsContextIndependent(filter)) {
+    const cached = contextIndependentTokenFilterResultCache.get(tokens)?.get(filter);
+    if (cached !== undefined) {
+      if (profileHotPath) {
+        perfHotPathCount('evalQuery:applyTokenFilterCacheHit');
+      }
+      return cached;
+    }
+  }
+
+  if (ctx.freeOperationOverlay === undefined) {
+    const canCache = tokenFilterIsContextIndependent(filter);
+    const compiled = getCompiledTokenFilter(filter, ctx.resources.compiledQueryPlanCache);
+    if (compiled !== null) {
+      if (profileHotPath) {
+        perfHotPathCount('evalQuery:applyTokenFilterCompiled');
+      }
+      const t0 = profileHotPath ? perfHotPathStart() : 0;
+      try {
+        const result: Token[] = [];
+        for (let index = 0; index < tokens.length; index += 1) {
+          const token = tokens[index]!;
+          if (compiled(token, ctx)) {
+            result.push(token);
+          }
         }
-        return tokens.filter((token) => compiled(token, ctx));
+        if (canCache) {
+          const cachedByFilter = contextIndependentTokenFilterResultCache.get(tokens);
+          if (cachedByFilter !== undefined) {
+            cachedByFilter.set(filter, result);
+          } else {
+            contextIndependentTokenFilterResultCache.set(tokens, new WeakMap([[filter, result]]));
+          }
+        }
+        return result;
+      } finally {
+        if (profileHotPath) {
+          perfHotPathEnd('evalQuery:applyTokenFilter', t0);
+        }
       }
     }
+  }
+
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
     return filterTokensByExprInContext(
       tokens,
       filter,
@@ -477,30 +512,34 @@ function countMatchingTokens(tokens: readonly Token[], filter: TokenFilterExpr |
     return tokens.length;
   }
 
-  const t0 = profileHotPath ? perfHotPathStart() : 0;
-  try {
-    if (profileHotPath) {
-      perfHotPathCount('evalQuery:countMatchingTokensFilteredItems', tokens.length);
-    }
-    if (ctx.freeOperationOverlay === undefined) {
-      const canCache = tokenFilterIsContextIndependent(filter);
-      const cached = canCache
-        ? contextIndependentTokenFilterCountCache.get(tokens)?.get(filter)
-        : undefined;
-      if (cached !== undefined) {
-        if (profileHotPath) {
-          perfHotPathCount('evalQuery:countMatchingTokensCacheHit');
-        }
-        return cached;
+  if (profileHotPath) {
+    perfHotPathCount('evalQuery:countMatchingTokensFilteredItems', tokens.length);
+  }
+  if (ctx.freeOperationOverlay === undefined) {
+    const canCache = tokenFilterIsContextIndependent(filter);
+    const cached = canCache
+      ? contextIndependentTokenFilterCountCache.get(tokens)?.get(filter)
+      : undefined;
+    if (cached !== undefined) {
+      if (profileHotPath) {
+        perfHotPathCount('evalQuery:countMatchingTokensCacheHit');
       }
-      const compiled = getCompiledTokenFilter(filter);
-      if (compiled !== null) {
-        if (profileHotPath) {
-          perfHotPathCount('evalQuery:countMatchingTokensCompiled');
-        }
+      return cached;
+    }
+  }
+
+  if (ctx.freeOperationOverlay === undefined) {
+    const canCache = tokenFilterIsContextIndependent(filter);
+    const compiled = getCompiledTokenFilter(filter, ctx.resources.compiledQueryPlanCache);
+    if (compiled !== null) {
+      if (profileHotPath) {
+        perfHotPathCount('evalQuery:countMatchingTokensCompiled');
+      }
+      const t0 = profileHotPath ? perfHotPathStart() : 0;
+      try {
         let count = 0;
-        for (const token of tokens) {
-          if (compiled(token, ctx)) {
+        for (let index = 0; index < tokens.length; index += 1) {
+          if (compiled(tokens[index]!, ctx)) {
             count += 1;
           }
         }
@@ -513,8 +552,16 @@ function countMatchingTokens(tokens: readonly Token[], filter: TokenFilterExpr |
           }
         }
         return count;
+      } finally {
+        if (profileHotPath) {
+          perfHotPathEnd('evalQuery:countMatchingTokens', t0);
+        }
       }
     }
+  }
+
+  const t0 = profileHotPath ? perfHotPathStart() : 0;
+  try {
     let count = 0;
     for (const token of tokens) {
       if (tokenMatchesFilter(token, filter, ctx)) {
@@ -1088,7 +1135,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
       return evalHomogeneousRecursiveQuery(query, query.tiers, ctx, { child: 'tier', children: 'tiers' });
     case 'tokenZones': {
       const sourceItems = evalQuery(query.source, ctx);
-      const tokenStateIndex = getTokenStateIndex(ctx.state);
+      const tokenStateIndex = getTokenStateIndex(ctx.state, ctx.resources.tokenStateIndexCache);
 
       const zones = sourceItems.map((item) => {
         let tokenId: string | null = null;

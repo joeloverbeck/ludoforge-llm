@@ -22,7 +22,7 @@
         "0xda3e39cb94b95a99"
       ]
     },
-    "stateHash": "0x2e8772cca663d78d",
+    "stateHash": "0xa1ef2aba789f84f",
     "actionUsage": {},
     "markers": {},
     "globalMarkers": {},
@@ -280,6 +280,16 @@
       "unknownNoPreviewDecision": 0,
       "unknownGated": 0,
       "unknownFailed": 0
+    },
+    "coverage": {
+      "requestedRefCount": 0,
+      "evaluatedRootOptionCount": 0,
+      "readyRootOptionCount": 0,
+      "unavailableRootOptionCount": 0,
+      "allRootsUnavailable": false,
+      "selectedByTieBreakerBecausePreviewUnavailable": false,
+      "strategy": "singlePass",
+      "capClass": "standard256"
     }
   },
   "selectedStableMoveKey": "chooseNStep:$picks:add:\"spare\"",

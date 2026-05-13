@@ -26,9 +26,15 @@ Compile `data/games/texas-holdem/*.md` similarly. Texas Hold'em serves as the en
 
 ## Test Placement
 
-- Engine tests: `packages/engine/test/` (`unit`, `integration`, `e2e`, `memory`, `performance`)
+- Engine tests: `packages/engine/test/` (`unit`, `integration`, `e2e`, `memory`, `performance`, `perf`)
 - Runner tests: `packages/runner/test/` (`canvas/`, `model/`, `store/`, `utils/`, `worker/`)
 - Run targeted tests when possible (e.g., `node --test packages/engine/dist/test/unit/<file>.test.js`)
 - If running `node --test` directly, run `pnpm turbo build` first so `packages/engine/dist/` is up to date
 - For runner changes, run at least `pnpm -F @ludoforge/runner test`
 - Use `pnpm turbo test --force` to bypass Turbo cache for a guaranteed fresh run
+
+## Performance Lanes
+
+- `pnpm -F @ludoforge/engine test:performance` runs `packages/engine/test/performance/**/*.test.ts`. This lane is part of the Engine Tests workflow as the `performance` matrix job.
+- `pnpm -F @ludoforge/engine test:perf` runs `packages/engine/test/perf/**/*.test.ts`. This lane is intentionally separate from `test:performance` and is run by `.github/workflows/engine-perf.yml`.
+- Perf witnesses may emit warning lines for historical wall-clock or corpus drift while still passing structural assertions. Treat those warnings as profiling signals, not automatic correctness failures, unless the test contains an explicit hard assertion for the current owner.

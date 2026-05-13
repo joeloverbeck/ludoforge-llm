@@ -215,12 +215,15 @@ const xorDecisionStack = (
   stack: NonNullable<GameState['decisionStack']>,
 ): bigint => {
   let h = hash;
+  let parentFrameDigest = 'root';
   stack.forEach((frame, slot) => {
+    const digest = digestDecisionStackFrame(frame, table, parentFrameDigest);
     h ^= zobristKey(table, {
       kind: 'decisionStackFrame',
       slot,
-      digest: digestDecisionStackFrame(frame),
+      digest,
     });
+    parentFrameDigest = digest;
   });
   return h;
 };

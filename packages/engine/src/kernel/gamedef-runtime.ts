@@ -14,8 +14,14 @@ import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 import { LruCache } from '../shared/lru-cache.js';
+import { createCompiledQueryPlanCache, type CompiledQueryPlanCache } from './compiled-query-plan.js';
+import type { TokenStateIndexCache, TokenStateIndexEntry } from './token-state-index.js';
 
 export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
+export const TOKEN_STATE_INDEX_CACHE_LIMIT = 4_096;
+export const POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT = 4_096;
+export type PolicyWasmBytecodeInputCache = LruCache<string, Uint8Array>;
+export type PolicyWasmBytecodeStateWordsCache = LruCache<string, Int32Array>;
 
 export interface GameDefRuntime {
   /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */
@@ -39,6 +45,18 @@ export interface GameDefRuntime {
   readonly ruleCardCache: Map<string, RuleCard>;
   /** `runLocal`: memoizes publication probe verdicts; reset for every run. */
   readonly publicationProbeCache: LruCache<string, boolean>;
+  /** `runLocal`: memoizes canonical token-state-index snapshots; reset for every run. */
+  readonly tokenStateIndexCache: TokenStateIndexCache;
+  /** `runLocal`: memoizes encoded policy WASM bytecode inputs; reset for every run. */
+  readonly policyWasmBytecodeInputCache: PolicyWasmBytecodeInputCache;
+  /** `runLocal`: memoizes state-dependent words used by policy WASM bytecode inputs. */
+  readonly policyWasmBytecodeStateWordsCache: PolicyWasmBytecodeStateWordsCache;
+  /**
+   * `sharedStructural`: lazily populated compiled query/filter plans keyed by
+   * compiled AST object identity. Plans depend only on GameDef structure; they
+   * receive run-local state through `ReadContext` at invocation time.
+   */
+  readonly compiledQueryPlanCache: CompiledQueryPlanCache;
   /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
@@ -75,6 +93,10 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     firstDecisionDomains,
     ruleCardCache: new Map(),
     publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
+    tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
+    policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    compiledQueryPlanCache: createCompiledQueryPlanCache(),
     compiledLifecycleEffects,
   };
 }
@@ -87,9 +109,12 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * `firstDecisionDomains`, `ruleCardCache`, `compiledLifecycleEffects`, and the
  * structural Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
  *
- * The `runLocal` members are `zobristTable.keyCache` and
- * `publicationProbeCache`; both reset at game boundaries so long-lived callers
- * do not accumulate cross-run state.
+ * The `runLocal` members are `zobristTable.keyCache`,
+ * `zobristTable.frameDigestCache`, `publicationProbeCache`,
+ * `tokenStateIndexCache`, `policyWasmBytecodeInputCache`, and
+ * `policyWasmBytecodeStateWordsCache`; all reset at game boundaries so
+ * long-lived callers do not accumulate cross-run state.
+ * `compiledQueryPlanCache` remains shared structural across forks.
  */
 export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {
@@ -97,7 +122,11 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     zobristTable: {
       ...runtime.zobristTable,
       keyCache: new Map(),
+      frameDigestCache: new LruCache<string, string>(runtime.zobristTable.frameDigestCache.evictionLimit),
     },
     publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
-  } as ForkedGameDefRuntimeForRun;
+    tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
+    policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+  } as unknown as ForkedGameDefRuntimeForRun;
 }

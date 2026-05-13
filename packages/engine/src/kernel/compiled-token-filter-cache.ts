@@ -1,15 +1,16 @@
-import { tryCompileTokenFilter, type CompiledTokenFilterFn } from './token-filter-compiler.js';
+import {
+  createCompiledQueryPlanCache,
+  getCompiledQueryPlan,
+  type CompiledQueryPlanCache,
+} from './compiled-query-plan.js';
+import type { CompiledTokenFilterFn } from './token-filter-compiler.js';
 import type { TokenFilterExpr } from './types.js';
 
-const compiledTokenFilterCache = new WeakMap<TokenFilterExpr, CompiledTokenFilterFn | null>();
+const compiledTokenFilterCache = createCompiledQueryPlanCache();
 
 export const getCompiledTokenFilter = (
   expr: TokenFilterExpr,
+  cache: CompiledQueryPlanCache = compiledTokenFilterCache,
 ): CompiledTokenFilterFn | null => {
-  if (compiledTokenFilterCache.has(expr)) {
-    return compiledTokenFilterCache.get(expr) ?? null;
-  }
-  const compiled = tryCompileTokenFilter(expr);
-  compiledTokenFilterCache.set(expr, compiled);
-  return compiled;
+  return getCompiledQueryPlan(cache, expr);
 };

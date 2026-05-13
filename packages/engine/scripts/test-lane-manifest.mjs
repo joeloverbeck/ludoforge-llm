@@ -57,6 +57,8 @@ export const SLOW_INTEGRATION_TESTS = [
 // default/local feedback lane but remain blocking architectural/golden
 // coverage in engine-tests.yml.
 export const POLICY_CANARY_INTEGRATION_TESTS = [
+  'arvn-tournament-wasm-equivalence.test.ts',
+  'arvn-tournament-parallel-determinism.test.ts',
   'policy-bytecode-equivalence.test.ts',
   'policy-preview-inner-choosenstep-fitl-canary-golden.test.ts',
 ];

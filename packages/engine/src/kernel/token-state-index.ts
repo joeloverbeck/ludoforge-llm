@@ -1,5 +1,6 @@
 import type { GameState, Token } from './types.js';
 import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
+import type { LruCache } from '../shared/lru-cache.js';
 
 export interface TokenStateIndexEntry {
   readonly zoneId: string;
@@ -16,6 +17,8 @@ export interface MutableTokenStateIndex {
   attachAsCanonical(state: GameState): void;
 }
 
+export type TokenStateIndexCache = LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>;
+
 interface TokenOccurrence {
   readonly zoneId: string;
   readonly index: number;
@@ -31,6 +34,9 @@ let draftTokenStateIndexAttachCount = 0;
 let draftTokenStateIndexSnapshotCount = 0;
 let draftTokenStateIndexCowCopyCount = 0;
 let draftTokenStateIndexDeltaCount = 0;
+let persistentTokenStateIndexCacheHitCount = 0;
+let persistentTokenStateIndexCacheMissCount = 0;
+let persistentTokenStateIndexCacheWriteCount = 0;
 
 function buildTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
   const profileHotPath = hotPathProfilingEnabled;
@@ -90,7 +96,40 @@ function toIndexEntry(occurrences: readonly TokenOccurrence[]): TokenStateIndexE
   };
 }
 
-function buildMutableTokenStateIndex(initialState: GameState): MutableTokenStateIndex {
+export function findTokenStateIndexEntry(
+  state: GameState,
+  tokenId: string,
+): TokenStateIndexEntry | undefined {
+  const occurrences: TokenOccurrence[] = [];
+  for (const zoneId of Object.keys(state.zones)) {
+    const tokens = state.zones[zoneId] ?? [];
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+      const token = tokens[tokenIndex];
+      if (token !== undefined && String(token.id) === tokenId) {
+        occurrences.push({ zoneId, index: tokenIndex, token });
+      }
+    }
+  }
+  return toIndexEntry(occurrences);
+}
+
+function cachePersistentTokenStateIndex(
+  cache: TokenStateIndexCache | undefined,
+  state: GameState,
+  index: ReadonlyMap<string, TokenStateIndexEntry>,
+): void {
+  if (cache === undefined) {
+    return;
+  }
+  cache.set(state.stateHash, index);
+  sharedTokenStateIndexMaps.add(index);
+  persistentTokenStateIndexCacheWriteCount += 1;
+}
+
+function buildMutableTokenStateIndex(
+  initialState: GameState,
+  persistentCache?: TokenStateIndexCache,
+): MutableTokenStateIndex {
   let index = new Map<string, TokenStateIndexEntry>();
   const occurrencesByToken = new Map<string, TokenOccurrence[]>();
   const zoneOrder = Object.keys(initialState.zones);
@@ -242,13 +281,18 @@ function buildMutableTokenStateIndex(initialState: GameState): MutableTokenState
     attachAsCanonical(state) {
       draftTokenStateIndexAttachCount += 1;
       draftTokenStateIndexSnapshotCount += 1;
-      tokenStateIndexByZones.set(state.zones, new Map(index));
+      const snapshot = new Map(index);
+      tokenStateIndexByZones.set(state.zones, snapshot);
+      cachePersistentTokenStateIndex(persistentCache, state, snapshot);
     },
   };
 }
 
-export function createDraftTokenStateIndex(initialState: GameState): MutableTokenStateIndex {
-  return buildMutableTokenStateIndex(initialState);
+export function createDraftTokenStateIndex(
+  initialState: GameState,
+  persistentCache?: TokenStateIndexCache,
+): MutableTokenStateIndex {
+  return buildMutableTokenStateIndex(initialState, persistentCache);
 }
 
 export function copyCachedTokenStateIndex(fromState: GameState, toState: GameState): void {
@@ -362,7 +406,10 @@ export function refreshCachedTokenStateIndexEntries(
   }
 }
 
-export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenStateIndexEntry> {
+export function getTokenStateIndex(
+  state: GameState,
+  persistentCache?: TokenStateIndexCache,
+): ReadonlyMap<string, TokenStateIndexEntry> {
   const cached = tokenStateIndexByZones.get(state.zones);
   if (cached !== undefined) {
     if (hotPathProfilingEnabled) {
@@ -370,16 +417,37 @@ export function getTokenStateIndex(state: GameState): ReadonlyMap<string, TokenS
     }
     return cached;
   }
+  const persistent = persistentCache?.get(state.stateHash);
+  if (persistent !== undefined) {
+    persistentTokenStateIndexCacheHitCount += 1;
+    tokenStateIndexByZones.set(state.zones, persistent);
+    sharedTokenStateIndexMaps.add(persistent);
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('tokenStateIndex:persistentCacheHit');
+    }
+    return persistent;
+  }
+  if (persistentCache !== undefined) {
+    persistentTokenStateIndexCacheMissCount += 1;
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('tokenStateIndex:persistentCacheMiss');
+    }
+  }
   if (hotPathProfilingEnabled) {
     perfHotPathCount('tokenStateIndex:getCacheMiss');
   }
   const built = buildTokenStateIndex(state);
   tokenStateIndexByZones.set(state.zones, built);
+  cachePersistentTokenStateIndex(persistentCache, state, built);
   return built;
 }
 
-export function getTokenStateIndexEntry(state: GameState, tokenId: string): TokenStateIndexEntry | undefined {
-  return getTokenStateIndex(state).get(tokenId);
+export function getTokenStateIndexEntry(
+  state: GameState,
+  tokenId: string,
+  persistentCache?: TokenStateIndexCache,
+): TokenStateIndexEntry | undefined {
+  return getTokenStateIndex(state, persistentCache).get(tokenId);
 }
 
 /**
@@ -393,16 +461,24 @@ export function invalidateTokenStateIndex(state: GameState): void {
 
 export const __internal_for_tests = {
   buildTokenStateIndex,
+  findTokenStateIndexEntry,
   getBuildTokenStateIndexCount: () => buildTokenStateIndexCount,
   getDraftTokenStateIndexAttachCount: () => draftTokenStateIndexAttachCount,
   getDraftTokenStateIndexSnapshotCount: () => draftTokenStateIndexSnapshotCount,
   getDraftTokenStateIndexCowCopyCount: () => draftTokenStateIndexCowCopyCount,
   getDraftTokenStateIndexDeltaCount: () => draftTokenStateIndexDeltaCount,
+  getPersistentTokenStateIndexCacheHitCount: () => persistentTokenStateIndexCacheHitCount,
+  getPersistentTokenStateIndexCacheMissCount: () => persistentTokenStateIndexCacheMissCount,
+  getPersistentTokenStateIndexCacheWriteCount: () => persistentTokenStateIndexCacheWriteCount,
+  refreshCachedEntriesForTest: refreshCachedTokenStateIndexEntries,
   resetBuildTokenStateIndexCount: () => {
     buildTokenStateIndexCount = 0;
     draftTokenStateIndexAttachCount = 0;
     draftTokenStateIndexSnapshotCount = 0;
     draftTokenStateIndexCowCopyCount = 0;
     draftTokenStateIndexDeltaCount = 0;
+    persistentTokenStateIndexCacheHitCount = 0;
+    persistentTokenStateIndexCacheMissCount = 0;
+    persistentTokenStateIndexCacheWriteCount = 0;
   },
 };

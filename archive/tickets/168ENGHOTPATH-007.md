@@ -107,7 +107,7 @@ same-command metric, activation counters, and final recommendation.
   the measured resolution proves the residual token-index gate is actually
   sibling-owned there
 - Phase 3 Zobrist digest cache (`archive/tickets/168ENGHOTPATH-004.md`)
-- Phase 4 bytecode input row cache (`tickets/168ENGHOTPATH-005.md`)
+- Phase 4 bytecode input row cache (`archive/tickets/168ENGHOTPATH-005.md`)
 
 ## Acceptance Criteria
 

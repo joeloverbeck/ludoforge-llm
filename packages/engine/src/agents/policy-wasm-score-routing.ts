@@ -423,6 +423,10 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
         layout: input.encodedView.layout,
         state: input.state,
         playerId: Number(input.playerId),
+        ...(input.gameDefRuntime === undefined ? {} : {
+          bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
+          bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
+        }),
       },
       parameterValues: input.profile.params,
       expr: feature.expr,
@@ -477,6 +481,10 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       layout: input.encodedView.layout,
       state: input.state,
       playerId: Number(input.playerId),
+      ...(input.gameDefRuntime === undefined ? {} : {
+        bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
+        bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
+      }),
     },
     parameterValues: input.profile.params,
     considerations,

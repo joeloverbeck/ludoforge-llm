@@ -183,7 +183,7 @@ Generated fallout:
 Deferred sibling/spec scope:
 
 - Phase 3 remains with `archive/tickets/168ENGHOTPATH-004.md`.
-- Phase 4 remains with `tickets/168ENGHOTPATH-005.md`.
+- Phase 4 remains with `archive/tickets/168ENGHOTPATH-005.md`.
 - Phase 5 remains with `tickets/168ENGHOTPATH-006.md`; its precondition is now
   unblocked for Phase 2, pending Phases 3 and 4.
 - Remaining non-Phase-2 residuals shown by the CPU profile belong to later

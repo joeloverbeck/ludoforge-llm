@@ -1,6 +1,6 @@
 # 168ENGHOTPATH-005: Phase 4 — bytecode input row cache
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-wasm-runtime.ts`, `packages/engine/src/agents/policy-wasm-production-preview-values.ts`
@@ -89,3 +89,108 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 2. `pnpm -F @ludoforge/engine test packages/engine/test/integration/policy-bytecode-equivalence.test.ts`
 3. `pnpm -F @ludoforge/engine test:perf`
 4. `pnpm turbo test`
+
+## Outcome (2026-05-13)
+
+Phase 4 implementation landed the bytecode input row cache substrate and the
+decisive measured gate is green. The ticket-named correctness lanes, root test
+lane, and dependency integrity check are green.
+
+What landed:
+
+- Added bounded run-local `policyWasmBytecodeInputCache` and
+  `policyWasmBytecodeStateWordsCache` caches to
+  `GameDefRuntime`, reset by `forkGameDefRuntimeForRun(...)`.
+- Replaced the prior module-level WeakMap encoded-input cache with a bounded
+  runtime-owned LRU cache keyed by bytecode structure, layout identity, expected
+  layout, canonical `state.stateHash`, active player, and scoring player.
+- Added safe state-word segment reuse for repeated canonical state hashes when
+  bytecode constants differ and whole-row reuse is not correct.
+- Threaded the cache through production WASM preview-candidate and score-row
+  routes.
+- Added `packages/engine/src/agents/policy-wasm-bytecode-input-cache.ts` for
+  cache keying, counters, and LRU access.
+- Added `packages/engine/test/integration/bytecode-input-row-cache-equivalence.test.ts`
+  proving fresh encoded bytes match cached bytes and forked run-local caches
+  start empty.
+- Added `reports/turnperf-008-spec-168-phase-4.md` with the decisive Phase 4
+  measurement.
+
+Ticket corrections applied:
+
+- Cache home decision: `runLocal`, because encoded bytecode input bytes include
+  state-dependent values. The cache stores byte snapshots only, not `GameState`
+  references.
+- `packages/engine/src/agents/policy-wasm-production-preview-values.ts` was
+  verified-no-edit; live bytecode input encoding is owned by
+  `policy-wasm-runtime.ts`, while production route wiring lives in
+  `policy-wasm-score-routing.ts`.
+- Focused command substitution: the repo-valid focused proof is
+  `pnpm -F @ludoforge/engine build` followed by
+  `pnpm -F @ludoforge/engine exec node --test dist/test/integration/<file>.js`,
+  not `pnpm -F @ludoforge/engine test <source-file>`.
+
+Measured gate:
+
+| Field | Baseline | Phase 4 decisive |
+|---|---:|---:|
+| `policyWasmRuntime:encodeBytecodeInput` totalMs | `38.28` | `14.88` |
+| `policyWasmRuntime:encodeBytecodeInput` calls | `394` | `394` |
+| Whole-row input cache hits | `0` | `0` |
+| Whole-row input cache misses | `394` | `394` |
+| Encoded-state segment cache hits | `0` | `342` |
+| Encoded-state segment cache misses | `394` | `52` |
+| Delta | N/A | `-23.40` |
+| Required drop | N/A | `>= 10.00` |
+| Verdict | baseline | green |
+
+Per-call cost for Phase 5 input: `14.88 / 394 = 0.0378 ms` per bytecode input
+call.
+
+Generated fallout:
+
+- No schema, golden, or compiled GameDef fallout.
+- Ignored ephemeral artifact regenerated:
+  `packages/engine/test/perf/.artifacts/per-decision-cost-budget.json`.
+- An unsafe whole-row key that used only `sourceFingerprint` was rejected by
+  `arvn-tournament-wasm-equivalence.test.js`; the final key includes the full
+  bytecode structure. The green measured win comes from the state-word segment
+  cache where reuse is semantically valid.
+
+Deferred sibling/spec scope:
+
+- Phase 5 escalation memo remains owned by `tickets/168ENGHOTPATH-006.md`.
+- New WASM opcodes, ABI changes, and wider preview-drive batching remain out of
+  scope for this ticket.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-wasm-runtime.ts | before lines 954 | after lines 1096 | crossed cap? no, preexisting over guidance | active growth cache wiring, state-word encoder fast path, and test internals | extraction/defer rationale cache key/counter mechanics extracted to packages/engine/src/agents/policy-wasm-bytecode-input-cache.ts; further extraction would widen/obscure the Phase 4 seam | successor none`
+- `packages/engine/src/agents/policy-wasm-bytecode-input-cache.ts | after lines 73 | new helper | crossed cap? no`
+- `packages/engine/src/agents/policy-wasm-score-routing.ts | after lines 545 | crossed cap? no`
+- `packages/engine/src/kernel/gamedef-runtime.ts | after lines 132 | crossed cap? no`
+- `packages/engine/test/integration/bytecode-input-row-cache-equivalence.test.ts | after lines 101 | crossed cap? no`
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/bytecode-input-row-cache-equivalence.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` — passed, 6 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-wasm-equivalence.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-parallel-determinism.test.js` — passed, 1 test.
+- `pnpm -F @ludoforge/engine test:perf` — passed, 4/4 perf files; emitted the decisive green Phase 4 metric recorded in
+  `reports/turnperf-008-spec-168-phase-4.md`.
+- `pnpm turbo test` — passed, 5/5 tasks; engine default integration summary
+  `70/70` files passed.
+- `pnpm run check:ticket-deps` — passed.
+
+Visible advisory perf warnings from older witnesses were non-final for this
+ticket: `SPEC149_PHASE4_PER_CARD_RESET_WARNING`,
+`SPEC149_PHASE4_PREVIEW_BATCH_COUNT_DRIFT`, and
+`POLICY_PREVIEW_CORPUS_INCOMPLETE`. The ticket-owned Spec 168 fixture passed and
+reported a green Phase 4 bucket gate.
+
+Late-edit validity: after the final `test:perf` sample, only ticket/report proof
+transcription and status text changed. No source, acceptance, command semantics,
+touched-file ownership, follow-up ownership, or dependency classification
+changed after the final correctness and perf witnesses.

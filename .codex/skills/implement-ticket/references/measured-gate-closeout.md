@@ -51,17 +51,22 @@ owned:
    witnesses that prove cache/hash/determinism parity for the owned seam.
 3. Run the decisive same-command metric and transcribe exact fields, counters,
    delta, threshold, and verdict into the checked-in report and active ticket.
-4. Run required broad lanes serially. If a broad lane rebuilds or cleans
+4. If any retained or rejected optimization candidate failed correctness,
+   determinism, legality, immutability, stale-cache-key safety, or another
+   Foundation-level invariant, record a compact attempt ledger in the active
+   ticket or report before terminal status:
+   `candidate | unsafe assumption | failing proof | cleanup/final proof | final verdict`.
+5. Run required broad lanes serially. If a broad lane rebuilds or cleans
    `dist`, rerun the focused compiled-output witness you still intend to cite.
-5. Classify any visible perf warnings or advisory red children in the
+6. Classify any visible perf warnings or advisory red children in the
    report/ticket when they could be confused with ticket-owned residual work.
-6. Apply terminal status only after final lanes are green, classified, or
+7. Apply terminal status only after final lanes are green, classified, or
    explicitly substituted; keep the final status/proof edit narrow and record
    the no-invalidation rationale when relying on prior proof.
-7. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-integrity lane
+8. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-integrity lane
    when status, deps, active/archive classification, or sibling ownership
    changed.
-8. Run `git diff --check`, cover untracked additions with targeted hygiene such
+9. Run `git diff --check`, cover untracked additions with targeted hygiene such
    as `git diff --no-index --check /dev/null <path>` or a recorded substitute,
    finish with untracked-aware `git status --short`, and use the exact
    `$post-ticket-review <ticket>` handoff when archival did not run.
@@ -159,6 +164,30 @@ the attempt ledger is mandatory even if the runtime diff is fully reverted. The
 ledger should name the unsafe key/assumption, the failing command or error, and
 the cleanup proof, so future runs do not rediscover the same invalid
 optimization.
+
+### Cache-Key and Segment-Cache Discipline
+
+For cache or memoization tickets, enumerate the key dimensions before relying on
+green correctness proof. Include every dimension that can affect the cached
+bytes/value, such as compiled artifact identity, state identity, layout or ABI
+version identity, actor/observer identity, parameter or constant identity, and
+invalidation/fork scope. If a candidate key omits a dimension and a focused
+proof catches it, record that rejected key in the candidate attempt ledger.
+
+When the ticket's drafted cache noun differs from the safe live cache noun,
+for example a whole encoded object versus a reusable state segment, add a
+compact cache acceptance matrix to the active ticket or report before terminal
+status:
+
+| Field | Value |
+|---|---|
+| Draft cache noun | `<ticket wording>` |
+| Implemented cache noun | `<whole object / segment / other>` |
+| Activation counter | `<hit/miss/write or trace field>` |
+| Correctness witness | `<focused command/assertion>` |
+| Metric owner | `<bucket or measured seam>` |
+| Ticket correction needed? | `<yes/no + path>` |
+| Terminal allowed? | `<yes/no + why>` |
 
 ## Metric Arithmetic
 

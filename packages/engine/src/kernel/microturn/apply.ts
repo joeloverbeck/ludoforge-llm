@@ -767,7 +767,9 @@ const applyPublishedDecisionInternal = (
       decision.retiringTurnId,
     );
     const triggerFirings: TriggerLogEntry[] = [];
-    const advanced = advancePhase(buildAdvancePhaseRequest(def, baseState, createEvalRuntimeResources(), {
+    const advanced = advancePhase(buildAdvancePhaseRequest(def, baseState, createEvalRuntimeResources({
+      tokenStateIndexCache: resolvedRuntime.tokenStateIndexCache,
+    }), {
       cachedRuntime: resolvedRuntime,
       triggerLogCollector: triggerFirings,
     }));

@@ -34,6 +34,7 @@ describe('Spec 168 persistent token-state-index cache', () => {
       expectedMinDepth: 1,
       maxSteps: 24,
     });
+    forkedRuntime.tokenStateIndexCache.clear();
     __internal_for_tests.resetBuildTokenStateIndexCount();
 
     for (const fixture of fixtures) {

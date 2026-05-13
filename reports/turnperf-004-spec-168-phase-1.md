@@ -11,8 +11,9 @@ cache hits, `0` persistent cache misses, and `66` writes.
 The Phase 1 gate requires the combined
 `tokenStateIndex:build + tokenStateIndex:refreshCachedEntries` buckets to drop
 by at least `50 ms`. The decisive delta was `1.26 ms`, so
-`tickets/168ENGHOTPATH-002.md` remains `BLOCKED` and the residual measured-gate
-work moves to `tickets/168ENGHOTPATH-007.md`.
+`archive/tickets/168ENGHOTPATH-002.md` remained `BLOCKED` at this report's
+original closeout and the residual measured-gate work moved to
+`archive/tickets/168ENGHOTPATH-007.md`, which later resolved the miss.
 
 ## Reproducibility Metadata
 
@@ -109,11 +110,11 @@ optimization evidence.
 
 ## Follow-Up Ownership
 
-`tickets/168ENGHOTPATH-007.md` owns the residual Phase 1 measured-gate miss. It
-must not duplicate the completed substrate work from `002`; its first job is to
-profile why the canonical workload records persistent writes but no hits, then
-choose between a different token-index optimization, a narrower acceptance
-rewrite, or skipping/reordering Phase 1 under Spec 168.
+`archive/tickets/168ENGHOTPATH-007.md` owned and later resolved the residual
+Phase 1 measured-gate miss. It did not duplicate the completed substrate work
+from `archive/tickets/168ENGHOTPATH-002.md`; it landed a different token-index
+optimization and recorded the green result in
+`reports/turnperf-005-spec-168-phase-1b.md`.
 
 ## Verification
 

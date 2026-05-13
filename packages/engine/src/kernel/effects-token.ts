@@ -12,6 +12,7 @@ import { EffectRuntimeError, effectRuntimeError } from './effect-error.js';
 import { EFFECT_RUNTIME_REASONS } from './runtime-reasons.js';
 import { resolveRuntimeTokenBindingValue } from './token-binding.js';
 import {
+  findTokenStateIndexEntry,
   getTokenStateIndexEntry,
   refreshCachedTokenStateIndexEntries,
   invalidateTokenStateIndex,
@@ -240,12 +241,18 @@ const buildDuplicateTokenOccurrenceError = (
   });
 };
 
-const resolveTokenOccurrence = (ctx: Pick<ReadContext, 'state'>, tokenId: string): {
+const resolveTokenOccurrence = (
+  ctx: Pick<ReadContext, 'state' | 'resources'>,
+  tokenId: string,
+  tracker?: unknown,
+): {
   readonly occurrence: TokenOccurrence | null;
   readonly occurrenceCount: number;
   readonly occurrenceZoneIds: readonly string[];
 } => {
-  const tokenState = getTokenStateIndexEntry(ctx.state, tokenId);
+  const tokenState = tracker === undefined
+    ? getTokenStateIndexEntry(ctx.state, tokenId, ctx.resources.tokenStateIndexCache)
+    : findTokenStateIndexEntry(ctx.state, tokenId);
   if (tokenState === undefined) {
     return { occurrence: null, occurrenceCount: 0, occurrenceZoneIds: [] };
   }
@@ -382,7 +389,7 @@ export const applyMoveToken = (
   const destinationTokens = resolveZoneTokens(evalCtx, toZoneId, 'moveToken', 'to');
 
   const tokenId = resolveBoundTokenId(resolvedBindings, effect.moveToken.token, 'moveToken');
-  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId, evalCursor.tracker);
 
   if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
@@ -625,7 +632,7 @@ export const applyDestroyToken = (
   updateReadScopeRaw(scope, cursor);
   const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, cursor);
-  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId, cursor.tracker);
 
   if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {
@@ -678,7 +685,7 @@ export const applySetTokenProp = (
   updateReadScopeRaw(scope, cursor);
   const evalCtx = scope;
   const traceCtx = toTraceProvenanceContext(env, cursor);
-  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId);
+  const resolvedOccurrence = resolveTokenOccurrence(evalCtx, tokenId, cursor.tracker);
 
   if (resolvedOccurrence.occurrenceCount === 0 || resolvedOccurrence.occurrence === null) {
     throw effectRuntimeError(EFFECT_RUNTIME_REASONS.TOKEN_RUNTIME_VALIDATION_FAILED, `Token not found in any zone: ${tokenId}`, {

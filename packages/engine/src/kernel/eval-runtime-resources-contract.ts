@@ -6,8 +6,13 @@ const isObjectRecord = (value: unknown): value is Record<string, unknown> =>
 
 // Use Sets for O(1) key validation without array allocation.
 // `resolveRefCache` is the optional drive-scoped memoisation cache wired by
-// POLPREVDRIVE-004; non-drive paths leave it unset.
-const EVAL_RUNTIME_RESOURCE_KEYS_SET: ReadonlySet<string> = new Set(['collector', 'resolveRefCache']);
+// POLPREVDRIVE-004; non-drive paths leave it unset. `tokenStateIndexCache`
+// is the run-local Spec 168 cache carried by GameDefRuntime.
+const EVAL_RUNTIME_RESOURCE_KEYS_SET: ReadonlySet<string> = new Set([
+  'collector',
+  'resolveRefCache',
+  'tokenStateIndexCache',
+]);
 const EVAL_RUNTIME_COLLECTOR_KEYS_SET: ReadonlySet<string> = new Set([
   'warnings', 'trace', 'conditionTrace', 'decisionTrace', 'selectorTrace', 'nextSeq',
 ]);

@@ -240,8 +240,8 @@ N/A. This spec was authored from a session-internal investigation grounded in `r
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
 - [`archive/tickets/168ENGHOTPATH-001.md`](../archive/tickets/168ENGHOTPATH-001.md) — Phase 0 — baseline pin + per-decision benchmark fixture (covers §3.1 + §4 Phase 0)
-- [`tickets/168ENGHOTPATH-002.md`](../tickets/168ENGHOTPATH-002.md) — Phase 1 — persistent token-state-index substrate (covers §3.2 correctness substrate; measured gate remains blocked by `007`)
-- [`tickets/168ENGHOTPATH-007.md`](../tickets/168ENGHOTPATH-007.md) — Phase 1b — resolve token-state-index measured-gate miss (covers the red Phase 1 metric from `reports/turnperf-004-spec-168-phase-1.md`)
+- [`archive/tickets/168ENGHOTPATH-002.md`](../archive/tickets/168ENGHOTPATH-002.md) — Phase 1 — persistent token-state-index substrate (covers §3.2 correctness substrate; measured gate resolved by `007`)
+- [`archive/tickets/168ENGHOTPATH-007.md`](../archive/tickets/168ENGHOTPATH-007.md) — Phase 1b — resolved token-state-index measured-gate miss (covers the red Phase 1 metric from `reports/turnperf-004-spec-168-phase-1.md`)
 - [`tickets/168ENGHOTPATH-003.md`](../tickets/168ENGHOTPATH-003.md) — Phase 2 — compiled query/filter plans (covers §3.3 + §4 Phase 2)
 - [`tickets/168ENGHOTPATH-004.md`](../tickets/168ENGHOTPATH-004.md) — Phase 3 — zobrist incremental digest (covers §3.4 + §4 Phase 3)
 - [`tickets/168ENGHOTPATH-005.md`](../tickets/168ENGHOTPATH-005.md) — Phase 4 — bytecode input row cache (covers §3.5 + §4 Phase 4)

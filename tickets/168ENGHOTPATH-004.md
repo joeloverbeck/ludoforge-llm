@@ -54,7 +54,7 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 
 ## Out of Scope
 
-- Phase 1 token-state-index changes (`tickets/168ENGHOTPATH-002`)
+- Phase 1 token-state-index changes (`archive/tickets/168ENGHOTPATH-002.md`, `archive/tickets/168ENGHOTPATH-007.md`)
 - Phase 2 query/filter plan changes (`tickets/168ENGHOTPATH-003`)
 - Phase 4 bytecode input row cache (`tickets/168ENGHOTPATH-005`)
 - Moving Zobrist hashing into the Rust WASM VM (deferred to potential Spec 169 per Phase 5 escalation gate)
@@ -91,4 +91,4 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 2. `pnpm -F @ludoforge/engine test:perf`
 3. `pnpm turbo test`
 
-**Coordination note**: `tickets/168ENGHOTPATH-002` (Phase 1) also extends `gamedef-runtime.ts` with a new `runLocal` field. Both tickets are independently implementable but the second to land must merge the additive field declarations cleanly. Conflicts will be mechanical (additive fields in the same file). Recommended landing order: 002 then 004 to minimize merge friction, or land in either order with a short rebase.
+**Coordination note**: `archive/tickets/168ENGHOTPATH-002.md` (Phase 1) extended `gamedef-runtime.ts` with a new `runLocal` field. Phase 3 must merge any additional additive runtime fields cleanly.

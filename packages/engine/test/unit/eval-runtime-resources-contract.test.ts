@@ -7,10 +7,21 @@ import {
   createCollector,
   createEvalRuntimeResources,
 } from '../../src/kernel/index.js';
+import { LruCache } from '../../src/shared/lru-cache.js';
 
 describe('assertEvalRuntimeResourcesContract', () => {
   it('accepts canonical runtime resources', () => {
     const resources = createEvalRuntimeResources({ collector: createCollector({ trace: true }) });
+    assert.doesNotThrow(() => {
+      assertEvalRuntimeResourcesContract(resources, 'testBoundary evalRuntimeResources');
+    });
+  });
+
+  it('accepts runtime resources carrying the token-state-index cache', () => {
+    const resources = createEvalRuntimeResources({
+      collector: createCollector({ trace: true }),
+      tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, never>>(1),
+    });
     assert.doesNotThrow(() => {
       assertEvalRuntimeResourcesContract(resources, 'testBoundary evalRuntimeResources');
     });

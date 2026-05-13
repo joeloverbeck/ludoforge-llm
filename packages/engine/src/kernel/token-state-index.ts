@@ -96,6 +96,23 @@ function toIndexEntry(occurrences: readonly TokenOccurrence[]): TokenStateIndexE
   };
 }
 
+export function findTokenStateIndexEntry(
+  state: GameState,
+  tokenId: string,
+): TokenStateIndexEntry | undefined {
+  const occurrences: TokenOccurrence[] = [];
+  for (const zoneId of Object.keys(state.zones)) {
+    const tokens = state.zones[zoneId] ?? [];
+    for (let tokenIndex = 0; tokenIndex < tokens.length; tokenIndex += 1) {
+      const token = tokens[tokenIndex];
+      if (token !== undefined && String(token.id) === tokenId) {
+        occurrences.push({ zoneId, index: tokenIndex, token });
+      }
+    }
+  }
+  return toIndexEntry(occurrences);
+}
+
 function cachePersistentTokenStateIndex(
   cache: TokenStateIndexCache | undefined,
   state: GameState,
@@ -444,6 +461,7 @@ export function invalidateTokenStateIndex(state: GameState): void {
 
 export const __internal_for_tests = {
   buildTokenStateIndex,
+  findTokenStateIndexEntry,
   getBuildTokenStateIndexCount: () => buildTokenStateIndexCount,
   getDraftTokenStateIndexAttachCount: () => draftTokenStateIndexAttachCount,
   getDraftTokenStateIndexSnapshotCount: () => draftTokenStateIndexSnapshotCount,

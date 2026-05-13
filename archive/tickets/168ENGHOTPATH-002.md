@@ -1,6 +1,6 @@
 # 168ENGHOTPATH-002: Phase 1 — persistent token-state-index
 
-**Status**: BLOCKED
+**Status**: COMPLETED with measured gate resolved by `archive/tickets/168ENGHOTPATH-007.md`
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/token-state-index.ts`, `packages/engine/src/kernel/gamedef-runtime.ts`
@@ -101,7 +101,8 @@ Phase 1 landed the run-local persistent token-state-index substrate, but the
 measured Phase 1 gate remains red on the canonical one-card probe. Per user
 authorization after a 1-3-1 reset, this ticket is blocked rather than marked as
 implemented: the correct cache groundwork is retained, and the remaining
-Phase 1 measured-gate miss is split to `tickets/168ENGHOTPATH-007.md`.
+Phase 1 measured-gate miss was split to `archive/tickets/168ENGHOTPATH-007.md`,
+which has since resolved it.
 
 What landed:
 
@@ -120,7 +121,7 @@ Boundary reset:
 - Approved option: Option 1, narrow/blocked closeout.
 - Scope effect: retains correct run-local cache groundwork, records the red
   measured gate honestly, and defers the remaining Phase 1 optimization to
-  `tickets/168ENGHOTPATH-007.md`.
+  `archive/tickets/168ENGHOTPATH-007.md`.
 - Durable evidence: `reports/turnperf-004-spec-168-phase-1.md`.
 
 Measured gate:
@@ -146,10 +147,8 @@ Generated fallout:
 
 Deferred sibling/spec scope:
 
-- `tickets/168ENGHOTPATH-007.md` owns the remaining Phase 1 measured-gate miss:
-  determine why the canonical workload does not hit the persistent
-  state-hash cache, then either land a material token-index optimization or
-  update Spec 168 to skip/reorder Phase 1.
+- `archive/tickets/168ENGHOTPATH-007.md` owned and resolved the remaining
+  Phase 1 measured-gate miss with a retained material token-index optimization.
 - Tickets `168ENGHOTPATH-003.md` through `006.md` keep their existing Phase 2-5
   ownership; Phase 5 now also waits for `007`.
 
@@ -181,3 +180,8 @@ Late-edit proof validity:
   blocked status, dependency graph, and evidence transcription. Correctness
   lanes were rerun where the code surface required them; dependency graph
   integrity was rerun with `pnpm run check:ticket-deps`.
+
+Post-review resolution (2026-05-13):
+
+- Successor `archive/tickets/168ENGHOTPATH-007.md` resolved the Phase 1 measured-gate miss with a green `99.17 ms` drop from the Phase 0 combined token-index bucket baseline.
+- This ticket is now complete as the retained Phase 1 cache substrate plus explicit successor-resolved measured gate. No additional `002` code or proof lane is owned.

@@ -113,6 +113,20 @@ describe('POLPREVDRIVE-002 draft token-state index', () => {
     assertIndexMatchesFreshRebuild('duplicate move', nextState, draftIndex.read());
   });
 
+  it('direct token lookup matches canonical full-index occurrence semantics', () => {
+    const state = makeTokenState({
+      'zone-a': [{ id: 'shared', type: 'card', props: {} }],
+      'zone-b': [{ id: 'other', type: 'card', props: {} }],
+      'zone-c': [{ id: 'shared', type: 'card', props: {} }],
+    } as unknown as GameState['zones']);
+    const direct = __internal_for_tests.findTokenStateIndexEntry(state, 'shared');
+    const indexed = getTokenStateIndex(state).get('shared');
+
+    assert.deepEqual(direct, indexed);
+    assert.equal(direct?.occurrenceCount, 2);
+    assert.deepEqual(direct?.occurrenceZoneIds, ['zone-a', 'zone-c']);
+  });
+
   it('snapshots only states that leave the private preview lifetime', () => {
     const state = makeTokenState({
       source: [{ id: 'unit', type: 'pawn', props: {} }],

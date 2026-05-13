@@ -2,6 +2,24 @@
 
 Use this reference when a profiling, benchmark, or measured-gate ticket lands correctness work but the metric, threshold, or acceptance story is still under decision.
 
+## Green Gate Status
+
+When the decisive measured gate is green, keep the metric evidence and durable
+report/reporting artifact aligned without rerunning expensive empirical lanes
+unnecessarily.
+
+Preferred order when the ticket requires a checked-in report or outcome:
+
+1. Prewrite the report or ticket outcome skeleton while terminal status remains pending when practical, including command names, threshold, baseline fields, and the final lanes you intend to cite.
+2. Run the decisive same-command metric on the final code path and capture exact metric fields, counters, threshold, delta, percent change, and verdict.
+3. Patch only the exact measured values, command results, and terminal verdict into the report/ticket. If this edit changes the threshold, owned metric, command semantics, acceptance boundary, touched-file ownership, dependency/sibling ownership, or follow-up status, treat it as acceptance-story affecting and rerun the narrowest affected proof lane.
+4. If the edit only transcribes just-run metrics and the already-proven verdict, reread the edited report/ticket for consistency and run cheap hygiene/integrity checks such as `git diff --check` and the repo's ticket-dependency checker when graph/status facts changed. A full empirical rerun is not required solely because the measured values were transcribed after the lane.
+5. Record the no-invalidation rationale or final lane-validity classification in the active ticket outcome when the decisive metric, broad acceptance lane, and report/ticket closeout were not all produced in a single command.
+
+If the final broad acceptance lane returns from cache replay, combine this
+green-gate flow with `references/verification-acceptance-proof.md`'s cache-hit
+classification before citing that broad lane as acceptance proof.
+
 ## Red Gate Status
 
 When a code migration lands but an explicit benchmark/performance gate remains red, do not mark the ticket terminal just because ordinary tests are green. Record exact samples, threshold comparison, variance or drift when available, and the active route proof. If satisfying or relaxing the gate changes an explicit deliverable, status, scope, dependency story, or phase plan, stop for `1-3-1` before creating successors or rewriting acceptance.

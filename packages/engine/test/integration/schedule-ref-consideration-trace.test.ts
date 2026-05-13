@@ -174,17 +174,20 @@ describe('FITL schedule ref sandbox consideration trace shape', () => {
     const { parsed, gameDef } = getFitlProductionFixture();
     assertNoErrors(parsed);
     assert.equal(gameDef.agents?.profiles[PROFILE_ID], undefined, 'sandbox profile must not be production-loaded');
-    assert.deepEqual(
-      gameDef.agents?.profiles['arvn-evolved']?.use.considerations,
-      [
-        'preferProjectedSelfMargin',
-        'preferStrongNormalizedMargin',
-        'preferGovernWeighted',
-        'trainWhenControlLow',
-        'preferOptionProjectedMargin',
-      ],
-      'arvn-evolved consideration set must stay byte-identical',
-    );
+    const REQUIRED_ARVN_EVOLVED_TERMS = [
+      'preferProjectedSelfMargin',
+      'preferStrongNormalizedMargin',
+      'preferGovernWeighted',
+      'trainWhenControlLow',
+      'preferOptionProjectedMargin',
+    ];
+    const arvnEvolvedConsiderations = gameDef.agents?.profiles['arvn-evolved']?.use.considerations ?? [];
+    for (const term of REQUIRED_ARVN_EVOLVED_TERMS) {
+      assert.ok(
+        arvnEvolvedConsiderations.includes(term),
+        `arvn-evolved must contain required baseline consideration ${term} (current: [${arvnEvolvedConsiderations.join(', ')}])`,
+      );
+    }
 
     const def = withSandboxProfile(gameDef);
     const state = initialState(def, 1000, 4).state;

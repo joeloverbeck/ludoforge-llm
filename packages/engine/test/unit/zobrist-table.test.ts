@@ -292,13 +292,23 @@ describe('zobrist table canonicalization and feature keying', () => {
       ...baseState,
       decisionStack: [
         {
-          id: 'frame-1',
-          turnId: 'turn-1',
+          frameId: 0,
+          parentFrameId: null,
+          turnId: 0,
           context: {
             kind: 'chooseOne',
             seatId: '0',
-            bind: '$choice',
-            options: ['a', 'b'],
+            decisionKey: '$choice',
+            options: [
+              { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+              { value: 'b', legality: 'legal', illegalReason: null, resolution: 'exact' },
+            ],
+          },
+          effectFrame: {
+            programCounter: 0,
+            boundedIterationCursors: {},
+            localBindings: {},
+            pendingTriggerQueue: [],
           },
         },
       ],
@@ -307,13 +317,23 @@ describe('zobrist table canonicalization and feature keying', () => {
       ...baseState,
       decisionStack: [
         {
-          id: 'frame-1',
-          turnId: 'turn-1',
+          frameId: 0,
+          parentFrameId: null,
+          turnId: 0,
           context: {
             kind: 'chooseOne',
             seatId: '0',
-            bind: '$choice',
-            options: ['a', 'b'],
+            decisionKey: '$choice',
+            options: [
+              { value: 'a', legality: 'legal', illegalReason: null, resolution: 'exact' },
+              { value: 'b', legality: 'legal', illegalReason: null, resolution: 'exact' },
+            ],
+          },
+          effectFrame: {
+            programCounter: 0,
+            boundedIterationCursors: {},
+            localBindings: {},
+            pendingTriggerQueue: [],
           },
         },
       ],

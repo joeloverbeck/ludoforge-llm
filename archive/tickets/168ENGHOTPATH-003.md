@@ -65,7 +65,7 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 ## Out of Scope
 
 - Phase 1 token-state-index changes (`archive/tickets/168ENGHOTPATH-002.md`, `archive/tickets/168ENGHOTPATH-007.md`)
-- Phase 3 zobrist digest cache (`tickets/168ENGHOTPATH-004`)
+- Phase 3 zobrist digest cache (`archive/tickets/168ENGHOTPATH-004.md`)
 - Phase 4 bytecode input row cache (`tickets/168ENGHOTPATH-005`)
 - Reusing compiled plans inside `effect-compiler-codegen.ts` and `first-decision-compiler.ts` — deferred per spec §9 open question (extend only if Phase 2 measurement shows reusability is non-trivial)
 - Routing query/filter ops through WASM (deferred to potential Spec 169 per Phase 5 escalation gate)
@@ -182,7 +182,7 @@ Generated fallout:
 
 Deferred sibling/spec scope:
 
-- Phase 3 remains with `tickets/168ENGHOTPATH-004.md`.
+- Phase 3 remains with `archive/tickets/168ENGHOTPATH-004.md`.
 - Phase 4 remains with `tickets/168ENGHOTPATH-005.md`.
 - Phase 5 remains with `tickets/168ENGHOTPATH-006.md`; its precondition is now
   unblocked for Phase 2, pending Phases 3 and 4.

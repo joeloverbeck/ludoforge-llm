@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement + report only
-**Deps**: `archive/tickets/168ENGHOTPATH-002.md`, `archive/tickets/168ENGHOTPATH-007.md`, `archive/tickets/168ENGHOTPATH-003.md`, `tickets/168ENGHOTPATH-004.md`, `tickets/168ENGHOTPATH-005.md`
+**Deps**: `archive/tickets/168ENGHOTPATH-002.md`, `archive/tickets/168ENGHOTPATH-007.md`, `archive/tickets/168ENGHOTPATH-003.md`, `archive/tickets/168ENGHOTPATH-004.md`, `tickets/168ENGHOTPATH-005.md`
 
 ## Problem
 

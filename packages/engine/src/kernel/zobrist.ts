@@ -3,6 +3,7 @@ import type { MutableGameState } from './state-draft.js';
 import { fnv1a64, fnv1a64FromState, updateFnv1a64State, type Fnv1a64State } from './fnv1a64.js';
 import { canonicalTokenFilterKey } from './hidden-info-grants.js';
 import { hotPathProfilingEnabled, perfHotPathCount, perfHotPathEnd, perfHotPathStart } from './perf-profiler.js';
+import { LruCache } from '../shared/lru-cache.js';
 
 type TokenPlacementFeature = Extract<ZobristFeature, { readonly kind: 'tokenPlacement' }>;
 type PerPlayerVarFeature = Extract<ZobristFeature, { readonly kind: 'perPlayerVar' }>;
@@ -141,10 +142,12 @@ const FRAME_DIGEST_SALT_B = 'decision-stack-frame-v1:b';
 const FRAME_DIGEST_PREFIX_A = updateFnv1a64State(`${FRAME_DIGEST_SALT_A}|`);
 const FRAME_DIGEST_PREFIX_B = updateFnv1a64State(`${FRAME_DIGEST_SALT_B}|`);
 const DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT = 4096;
-const DECISION_STACK_FRAME_STRUCTURAL_CACHE_MAX_CHARS = 8192;
+const DECISION_STACK_ROOT_PARENT_DIGEST = 'root';
 const DYNAMIC_FEATURE_KEY_CACHE_LIMIT = 4096;
-const decisionStackFrameDigestCache = new WeakMap<NonNullable<GameState['decisionStack']>[number], string>();
-const decisionStackFrameDigestByEncoded = new Map<string, string>();
+const decisionStackFrameDigestCache = new WeakMap<
+  NonNullable<GameState['decisionStack']>[number],
+  { readonly parentFrameDigest: string; readonly digest: string }
+>();
 const dynamicFeatureKeyCaches = new WeakMap<ZobristTable, Map<string, bigint>>();
 const zobristFeaturePrefixStates = new WeakMap<ZobristTable, Fnv1a64State>();
 let zobristKeyCacheHitCount = 0;
@@ -154,56 +157,90 @@ let zobristKeyUncachedCount = 0;
 const stringifyDecisionStackFrameDigestValue = (_key: string, value: unknown): unknown =>
   typeof value === 'bigint' ? value.toString() : value;
 
-const encodeDecisionStackFrameDigestInput = (frame: NonNullable<GameState['decisionStack']>[number]): string =>
-  // Decision-stack frames are constructed through typed engine paths; preserving
-  // that schema order avoids a full sorted-key walk over large suspended frames.
-  JSON.stringify(frame, stringifyDecisionStackFrameDigestValue);
+const summarizeSuspendedFrameForDigestCache = (
+  suspendedFrame: NonNullable<NonNullable<GameState['decisionStack']>[number]['effectFrame']['suspendedFrame']>,
+): unknown => ({
+  stateHash: suspendedFrame.state.stateHash.toString(16),
+  rng: suspendedFrame.rng,
+  actorPlayer: suspendedFrame.actorPlayer,
+  bindings: suspendedFrame.bindings,
+  ...(suspendedFrame.freeOperationOverlay === undefined
+    ? {}
+    : { freeOperationOverlay: suspendedFrame.freeOperationOverlay }),
+  leaf: suspendedFrame.leaf,
+  resumeStack: suspendedFrame.resumeStack,
+});
 
-export const digestDecisionStackFrame = (frame: NonNullable<GameState['decisionStack']>[number]): string => {
-  const cached = decisionStackFrameDigestCache.get(frame);
-  if (cached !== undefined) {
-    if (hotPathProfilingEnabled) {
-      perfHotPathCount('zobrist:decisionStackFrameWeakCacheHit');
-    }
-    return cached;
-  }
-  const profileHotPath = hotPathProfilingEnabled;
-  const t0Encode = profileHotPath ? perfHotPathStart() : 0;
-  const encoded = encodeDecisionStackFrameDigestInput(frame);
-  if (profileHotPath) {
-    perfHotPathEnd('zobrist:encodeDecisionStackFrame', t0Encode);
-  }
-  const canUseStructuralCache = encoded.length <= DECISION_STACK_FRAME_STRUCTURAL_CACHE_MAX_CHARS;
-  const structurallyCached = canUseStructuralCache
-    ? decisionStackFrameDigestByEncoded.get(encoded)
-    : undefined;
-  if (structurallyCached !== undefined) {
-    if (profileHotPath) {
-      perfHotPathCount('zobrist:decisionStackFrameStructuralCacheHit');
-    }
-    decisionStackFrameDigestCache.set(frame, structurallyCached);
-    return structurallyCached;
-  }
-  if (profileHotPath) {
-    perfHotPathCount('zobrist:decisionStackFrameStructuralCacheMiss');
-    perfHotPathCount('zobrist:decisionStackFrameEncodedChars', encoded.length);
-  }
+const encodeDecisionStackFrameDigestInput = (
+  frame: NonNullable<GameState['decisionStack']>[number],
+  parentFrameDigest: string,
+): string => JSON.stringify({
+  parentFrameDigest,
+  frameId: frame.frameId,
+  parentFrameId: frame.parentFrameId,
+  turnId: frame.turnId,
+  context: frame.context,
+  ...(frame.continuationBindings === undefined ? {} : { continuationBindings: frame.continuationBindings }),
+  effectFrame: {
+    programCounter: frame.effectFrame.programCounter,
+    boundedIterationCursors: frame.effectFrame.boundedIterationCursors,
+    localBindings: frame.effectFrame.localBindings,
+    pendingTriggerQueue: frame.effectFrame.pendingTriggerQueue,
+    ...(frame.effectFrame.decisionHistory === undefined ? {} : { decisionHistory: frame.effectFrame.decisionHistory }),
+    ...(frame.effectFrame.suspendedFrame === undefined
+      ? {}
+      : { suspendedFrame: summarizeSuspendedFrameForDigestCache(frame.effectFrame.suspendedFrame) }),
+  },
+}, stringifyDecisionStackFrameDigestValue);
+
+const digestEncodedDecisionStackFrame = (encoded: string, profileHotPath: boolean): string => {
   const t0Digest = profileHotPath ? perfHotPathStart() : 0;
   const digestA = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_A).toString(16).padStart(16, '0');
   const digestB = fnv1a64FromState(encoded, FRAME_DIGEST_PREFIX_B).toString(16).padStart(16, '0');
   if (profileHotPath) {
     perfHotPathEnd('zobrist:digestDecisionStackFrame', t0Digest);
   }
-  const digest = `${digestA}:${digestB}`;
-  decisionStackFrameDigestCache.set(frame, digest);
-  if (canUseStructuralCache) {
-    if (decisionStackFrameDigestByEncoded.size >= DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT) {
-      decisionStackFrameDigestByEncoded.clear();
+  return `${digestA}:${digestB}`;
+};
+
+export const recomputeDecisionStackFrameDigest = (
+  frame: NonNullable<GameState['decisionStack']>[number],
+  parentFrameDigest: string = DECISION_STACK_ROOT_PARENT_DIGEST,
+): string => digestEncodedDecisionStackFrame(encodeDecisionStackFrameDigestInput(frame, parentFrameDigest), false);
+
+export const digestDecisionStackFrame = (
+  frame: NonNullable<GameState['decisionStack']>[number],
+  table?: ZobristTable,
+  parentFrameDigest: string = DECISION_STACK_ROOT_PARENT_DIGEST,
+): string => {
+  const cached = decisionStackFrameDigestCache.get(frame);
+  if (cached?.parentFrameDigest === parentFrameDigest) {
+    if (hotPathProfilingEnabled) {
+      perfHotPathCount('zobrist:decisionStackFrameWeakCacheHit');
     }
-    decisionStackFrameDigestByEncoded.set(encoded, digest);
-  } else if (profileHotPath) {
-    perfHotPathCount('zobrist:decisionStackFrameStructuralCacheSkipped');
+    return cached.digest;
   }
+  const profileHotPath = hotPathProfilingEnabled;
+  const t0Encode = profileHotPath ? perfHotPathStart() : 0;
+  const encoded = encodeDecisionStackFrameDigestInput(frame, parentFrameDigest);
+  if (profileHotPath) {
+    perfHotPathEnd('zobrist:encodeDecisionStackFrame', t0Encode);
+  }
+  const runLocalCached = table?.frameDigestCache.get(encoded);
+  if (runLocalCached !== undefined) {
+    if (profileHotPath) {
+      perfHotPathCount('zobrist:decisionStackFrameRunLocalCacheHit');
+    }
+    decisionStackFrameDigestCache.set(frame, { parentFrameDigest, digest: runLocalCached });
+    return runLocalCached;
+  }
+  if (profileHotPath && table !== undefined) {
+    perfHotPathCount('zobrist:decisionStackFrameRunLocalCacheMiss');
+    perfHotPathCount('zobrist:decisionStackFrameEncodedChars', encoded.length);
+  }
+  const digest = digestEncodedDecisionStackFrame(encoded, profileHotPath);
+  decisionStackFrameDigestCache.set(frame, { parentFrameDigest, digest });
+  table?.frameDigestCache.set(encoded, digest);
   return digest;
 };
 
@@ -245,7 +282,14 @@ const buildSortedKeys = (def: GameDef): ZobristSortedKeys => {
 export const createZobristTable = (def: GameDef): ZobristTable => {
   const fingerprint = canonicalizeGameDefFingerprint(def);
   const seed = fnv1a64(`table-seed|fingerprint=${fingerprint}`);
-  return { seed, fingerprint, seedHex: seed.toString(16), keyCache: new Map(), sortedKeys: buildSortedKeys(def) };
+  return {
+    seed,
+    fingerprint,
+    seedHex: seed.toString(16),
+    keyCache: new Map(),
+    frameDigestCache: new LruCache<string, string>(DECISION_STACK_FRAME_DIGEST_CACHE_LIMIT),
+    sortedKeys: buildSortedKeys(def),
+  };
 };
 
 const shouldCacheFeatureKey = (feature: ZobristFeature): boolean => {
@@ -560,12 +604,15 @@ export const computeFullHash = (table: ZobristTable, state: GameState): bigint =
   });
 
   const decisionStack = state.decisionStack ?? [];
+  let parentFrameDigest = DECISION_STACK_ROOT_PARENT_DIGEST;
   decisionStack.forEach((frame, slot) => {
+    const digest = digestDecisionStackFrame(frame, table, parentFrameDigest);
     hash ^= zobristKey(table, {
       kind: 'decisionStackFrame',
       slot,
-      digest: digestDecisionStackFrame(frame),
+      digest,
     });
+    parentFrameDigest = digest;
   });
 
   const unavailableActionsPerTurn = state.unavailableActionsPerTurn ?? {};

@@ -41,6 +41,8 @@ If the implemented ticket is already archived, still proceed with the review.
 
 Inspect `git status --short` early. Separate unrelated dirty files from the implemented-ticket review scope, and leave them alone unless the completed ticket or concrete same-seam evidence makes them part of the review.
 
+When searching markdown literals, code spans, or command text, quote shell patterns so markdown backticks are not executed by the shell. Prefer single-quoted `rg` patterns, `rg -F` for fixed strings, or separate plain-string anchors instead of one broad interpolated regex.
+
 If resuming after context compaction or interruption, do a lightweight revalidation before acting: reopen the implemented ticket or archived ticket, reopen any active sibling tickets already touched by this review, and rerun `git status --short`. Reread `docs/FOUNDATIONS.md` and `AGENTS.md` only if the current context does not clearly show they were read for the same review slice. If an in-flight verification command from before compaction cannot be polled or its result is otherwise unobservable, rerun the idempotent check instead of treating the lost session as evidence.
 
 ## Evidence Model
@@ -134,7 +136,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - keep the scope specific and actionable
    - if the new follow-up changes the truth of any sibling active ticket's dependency, audit boundary, or ownership wording, update those sibling tickets in the same review turn
    - after later archive/rewrite commands run, reread every active ticket you created or edited in this review turn and confirm `Deps`, `Files to Touch`, and any archive-path references are still literal-path correct
-    - classify later old-path grep hits as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable handoff references such as `Deps`, target snippets, live-path instructions, and markdown links that would send the next implementer to the wrong file
+   - classify later old-path grep hits as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable handoff references such as `Deps`, target snippets, live-path instructions, and markdown links that would send the next implementer to the wrong file
 12. If review evidence shows the implementation can stand but the original ticket was not fully satisfied as written:
    - amend the original ticket's closeout text so it truthfully records the deviation
    - state what landed, what did not, and which active follow-up ticket now owns the remainder
@@ -144,15 +146,16 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
    - normalize the implemented ticket to archival-ready terminal status accepted by `docs/archival-workflow.md`, add or refresh `## Outcome`, and ensure it records what landed, deviations, verification, and any post-review cleanup
    - if review cleanup changed production runtime, compiler, schema, or shared tests, include a short post-review correction bullet and refreshed proof ledger inside that Outcome before archival
+   - if the implemented ticket owns a report, generated proof note, measurement file, or other durable proof artifact, update that artifact alongside the ticket outcome when post-review fixes, reruns, or measurements change the proof story
    - before running archival tooling, confirm every verification command listed in `## Outcome` is current after review-created code, schema, test, fixture, or shared artifact edits; if a command is intentionally retained as prior proof rather than rerun, label it that way in the outcome instead of implying it proves the post-review state
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
 14. If no unresolved `must-fix-now` cleanup remains and the original ticket was not reopened, archive the implemented ticket per `docs/archival-workflow.md`.
 15. After archival:
    - confirm the original source path is gone
-   - inspect `git status --short` for the moved ticket and classify the archive state as `tracked rename`, `delete-plus-untracked archive`, or `plain untracked archive`; mention unusual archive state in the final handoff when it affects commit or staging readiness
+   - inspect `git status --short` for the moved ticket and classify the archive state as `tracked rename`, `delete-plus-untracked archive`, or `plain untracked archive`; include that status in the final handoff whenever it is not a tracked rename
    - run a literal old-path sweep across active tickets, the implemented spec or roadmap/doc that owns the ticket family, and the newly archived ticket
-   - when sweeping markdown literals that may include backticks, use single-quoted shell patterns or split the search into plain-string anchors so the shell does not execute backtick contents before `rg` runs
+   - when sweeping markdown literals that may include backticks, use the general markdown-search quoting rule above so the shell does not execute backtick contents before `rg` runs
    - For a moved ticket, prefer exact live-path patterns before classifying broad id hits: search for forms such as `` `tickets/<id>.md` ``, `../tickets/<id>.md`, `(../tickets/<id>.md)`, and bare `tickets/<id>.md`. Treat `archive/tickets/<id>.md` or `../archive/tickets/<id>.md` hits as already-correct archive references unless the surrounding prose still sends future work to the active path.
    - remember that `scripts/archive-ticket.mjs` rewrites active tickets only; specs, roadmaps, reports, and archived-ticket prose may still contain stale markdown links or live-path instructions
    - classify each old-path hit as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable references, not harmless historical prose
@@ -161,6 +164,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
 16. Run verification for review-created edits:
    - always run `pnpm run check:ticket-deps` after archiving or changing ticket dependencies
    - run `git diff --check -- <all-review-created-edited-files>` after must-fix cleanup or archive edits; for markdown-only archive fallout, the edited ticket/spec/archive markdown files are the minimum
+   - for untracked review-created files, remember that `git diff --check` does not inspect them; run `git diff --no-index --check /dev/null <file>` or a targeted trailing-whitespace scan such as `rg -n '[ \t]+$' <file>` before final handoff
    - if review-created edits changed production runtime, compiler, schema, or shared tests, rerun the affected original acceptance lanes before archival closeout
 
 ## Ticket Authoring Rules
@@ -188,7 +192,7 @@ For any ticket you create or extend:
   - new ticket created
   - original ticket archived
   - removed or retargeted overlapping successor/follow-up artifacts
-  - archive move status when it is unusual or affects commit/staging readiness
+  - archive move status whenever it is not a tracked rename
   - unrelated dirty paths only when needed to keep the ticket-review output distinct from other same-session or pre-existing work
 
 ## Guardrails

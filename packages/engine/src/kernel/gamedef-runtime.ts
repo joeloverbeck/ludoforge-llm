@@ -101,8 +101,9 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * structural Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
  *
  * The `runLocal` members are `zobristTable.keyCache`,
- * `publicationProbeCache`, and `tokenStateIndexCache`; all reset at game
- * boundaries so long-lived callers do not accumulate cross-run state.
+ * `zobristTable.frameDigestCache`, `publicationProbeCache`, and
+ * `tokenStateIndexCache`; all reset at game boundaries so long-lived callers do
+ * not accumulate cross-run state.
  * `compiledQueryPlanCache` remains shared structural across forks.
  */
 export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
@@ -111,8 +112,9 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     zobristTable: {
       ...runtime.zobristTable,
       keyCache: new Map(),
+      frameDigestCache: new LruCache<string, string>(runtime.zobristTable.frameDigestCache.evictionLimit),
     },
     publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
-  } as ForkedGameDefRuntimeForRun;
+  } as unknown as ForkedGameDefRuntimeForRun;
 }

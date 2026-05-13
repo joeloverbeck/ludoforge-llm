@@ -16,6 +16,14 @@ Preferred order when the ticket requires a checked-in report or outcome:
 4. If the edit only transcribes just-run metrics and the already-proven verdict, reread the edited report/ticket for consistency and run cheap hygiene/integrity checks such as `git diff --check` and the repo's ticket-dependency checker when graph/status facts changed. A full empirical rerun is not required solely because the measured values were transcribed after the lane.
 5. Record the no-invalidation rationale or final lane-validity classification in the active ticket outcome when the decisive metric, broad acceptance lane, and report/ticket closeout were not all produced in a single command.
 
+If a green perf or benchmark lane emits warnings, advisory summaries, or
+nonblocking red children, classify them in the checked-in report or active
+ticket when they are visible in final output and relevant to closeout trust.
+Use concrete labels such as `advisory`, `preexisting`, `sibling-owned`,
+`historical residual`, or `not ticket-owned`; do not let a passing exit code
+hide warnings that a later reader could mistake for unresolved ticket-owned
+work.
+
 If the final broad acceptance lane returns from cache replay, combine this
 green-gate flow with `references/verification-acceptance-proof.md`'s cache-hit
 classification before citing that broad lane as acceptance proof.
@@ -27,6 +35,36 @@ rerun the isolated ticket-owned fixture or otherwise restore/prove the decisive
 artifact before final transcription. Do not let a later broad-suite sample
 silently replace the metric artifact that the report/ticket cites as the
 decisive gate.
+
+### Measured Engine Refactor Terminal Checklist
+
+For a measured engine/kernel refactor that produces a checked-in report,
+consumes compiled `dist`, and may create untracked test/report files, use this
+compact closeout order when no successor or schema/golden regeneration is
+owned:
+
+1. Prewrite the active ticket outcome and report skeleton while terminal status
+   remains pending, including baseline, threshold, expected decisive command,
+   touched-file scope, ignored raw-artifact path, source-size ledger when
+   triggered, and planned final lanes.
+2. Build before focused compiled consumers, then run the focused correctness
+   witnesses that prove cache/hash/determinism parity for the owned seam.
+3. Run the decisive same-command metric and transcribe exact fields, counters,
+   delta, threshold, and verdict into the checked-in report and active ticket.
+4. Run required broad lanes serially. If a broad lane rebuilds or cleans
+   `dist`, rerun the focused compiled-output witness you still intend to cite.
+5. Classify any visible perf warnings or advisory red children in the
+   report/ticket when they could be confused with ticket-owned residual work.
+6. Apply terminal status only after final lanes are green, classified, or
+   explicitly substituted; keep the final status/proof edit narrow and record
+   the no-invalidation rationale when relying on prior proof.
+7. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-integrity lane
+   when status, deps, active/archive classification, or sibling ownership
+   changed.
+8. Run `git diff --check`, cover untracked additions with targeted hygiene such
+   as `git diff --no-index --check /dev/null <path>` or a recorded substitute,
+   finish with untracked-aware `git status --short`, and use the exact
+   `$post-ticket-review <ticket>` handoff when archival did not run.
 
 ## Red Gate Status
 

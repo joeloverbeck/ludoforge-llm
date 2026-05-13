@@ -4,6 +4,8 @@ import { asBoundaryId, asPhaseId } from '../kernel/branded.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecPhaseBoundaryDef } from './game-spec-doc.js';
 
+const NON_CARD_SCHEDULE_DISTANCE_UNITS = ['microturns', 'actions', 'turns', 'rounds'] as const;
+
 export interface PhaseBoundaryValidationContext {
   readonly phaseBoundaries: readonly PhaseBoundaryDef[];
   readonly phaseIds: ReadonlySet<string>;
@@ -87,12 +89,15 @@ export function findPhaseBoundaryById(
 }
 
 export function scheduleKindSupportsUnit(
-  scheduleKind: NonNullable<PhaseBoundaryDef['schedule']>['kind'] | undefined,
+  schedule: PhaseBoundaryDef['schedule'] | undefined,
   unit: string,
 ): boolean {
-  switch (scheduleKind) {
+  switch (schedule?.kind) {
     case 'cardDraw':
-      return unit === 'cards';
+      return unit === 'cards' || (
+        isNonCardScheduleDistanceUnit(unit)
+        && schedule.unitRates?.[unit] !== undefined
+      );
     case 'turnCount':
     case 'condition':
     case undefined:
@@ -102,6 +107,10 @@ export function scheduleKindSupportsUnit(
 
 export function isScheduleDistanceUnit(value: string): boolean {
   return value === 'cards' || value === 'microturns' || value === 'actions' || value === 'turns' || value === 'rounds';
+}
+
+function isNonCardScheduleDistanceUnit(value: string): value is typeof NON_CARD_SCHEDULE_DISTANCE_UNITS[number] {
+  return NON_CARD_SCHEDULE_DISTANCE_UNITS.some((unit) => unit === value);
 }
 
 function validateCardDrawSchedule(
@@ -136,6 +145,22 @@ function validateCardDrawSchedule(
       message: `phase boundary "${boundary.id}" cardDraw schedule must select at least one card tag or card id.`,
       suggestion: 'Add cardSelector.tags or cardSelector.cardIds.',
     });
+  }
+
+  for (const unit of NON_CARD_SCHEDULE_DISTANCE_UNITS) {
+    const rate = schedule.unitRates?.[unit];
+    if (rate === undefined) {
+      continue;
+    }
+    if (!Number.isInteger(rate) || rate <= 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.PHASE_BOUNDARY_INVALID_UNIT_RATE,
+        path: `${path}.schedule.unitRates.${unit}`,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" cardDraw unit rate "${unit}" must be a positive integer.`,
+        suggestion: 'Use exact positive integer rates so non-card schedule distance remains deterministic.',
+      });
+    }
   }
 
   const knownTags = new Set(deck.cards.flatMap((card) => card.tags ?? []));

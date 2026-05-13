@@ -297,9 +297,13 @@ function resolveBoundaryCardDistance(
   def: GameDef,
   runtime: GameDefRuntime,
   boundaryId: BoundaryId,
+  unit: 'cards' | 'microturns' | 'actions' | 'turns' | 'rounds',
 ): PhaseScheduleResolution {
   const boundary = runtime.scheduleIndex.boundaries.get(boundaryId);
-  const cardDrawState = boundary?.cardDrawState;
+  if (boundary === undefined) {
+    return { kind: 'unavailable', reason: 'notCardScheduled' };
+  }
+  const cardDrawState = boundary.cardDrawState;
   if (cardDrawState === undefined) {
     return { kind: 'unavailable', reason: 'notCardScheduled' };
   }
@@ -314,7 +318,17 @@ function resolveBoundaryCardDistance(
   if (nextPosition === undefined) {
     return { kind: 'unavailable', reason: 'noTriggeringCardRemaining' };
   }
-  return { kind: 'ready', value: nextPosition - cardDrawState.currentDrawPosition };
+  const cardDistance = nextPosition - cardDrawState.currentDrawPosition;
+  if (unit === 'cards') {
+    return { kind: 'ready', value: cardDistance };
+  }
+  const rate = boundary.definition.schedule?.kind === 'cardDraw'
+    ? boundary.definition.schedule.unitRates?.[unit]
+    : undefined;
+  if (rate === undefined) {
+    return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
+  }
+  return { kind: 'ready', value: cardDistance * rate };
 }
 
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
@@ -436,8 +450,8 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
         if (ref.target.kind === 'nextBoundary' && ref.unit === undefined) {
           return resolveNextBoundaryId(input.def, stateOverride ?? input.state);
         }
-        if (ref.target.kind === 'boundary' && ref.unit === 'cards') {
-          return resolveBoundaryCardDistance(input.def, scheduleRuntime, ref.target.boundaryId);
+        if (ref.target.kind === 'boundary' && ref.unit !== undefined) {
+          return resolveBoundaryCardDistance(input.def, scheduleRuntime, ref.target.boundaryId, ref.unit);
         }
         return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
       },

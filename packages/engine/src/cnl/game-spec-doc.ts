@@ -159,11 +159,19 @@ export interface GameSpecCardSelector {
   readonly cardIds?: readonly string[];
 }
 
+export interface GameSpecCardDrawUnitRates {
+  readonly microturns?: number;
+  readonly actions?: number;
+  readonly turns?: number;
+  readonly rounds?: number;
+}
+
 export type GameSpecScheduleKindDef =
   | {
       readonly kind: 'cardDraw';
       readonly deckId: string;
       readonly cardSelector: GameSpecCardSelector;
+      readonly unitRates?: GameSpecCardDrawUnitRates;
     }
   | { readonly kind: 'turnCount' }
   | { readonly kind: 'condition' };

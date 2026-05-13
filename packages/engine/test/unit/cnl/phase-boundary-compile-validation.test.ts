@@ -169,9 +169,25 @@ describe('phase boundary compile validation', () => {
       CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
     ],
     [
-      'rejects deferred non-card units until real unit semantics ship',
+      'rejects non-card units when no exact rate is declared',
       docWithAgentRef('schedule.distance.toBoundary.coupEntry.actions'),
       CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
+    ],
+    [
+      'rejects non-positive card-draw unit rates',
+      {
+        ...baseDoc(),
+        phaseBoundaries: [{
+          ...baseDoc().phaseBoundaries![0]!,
+          schedule: {
+            kind: 'cardDraw',
+            deckId: 'eventDeck',
+            cardSelector: { tags: ['coup'] },
+            unitRates: { actions: 0 },
+          },
+        }],
+      },
+      CNL_COMPILER_DIAGNOSTIC_CODES.PHASE_BOUNDARY_INVALID_UNIT_RATE,
     ],
     [
       'rejects phase refs outside move and microturn policy scopes',
@@ -206,6 +222,12 @@ describe('phase boundary compile validation', () => {
               value: ref('schedule.distance.toBoundary.coupEntry.cards'),
               scheduleFallback: { onUnavailable: 'noContribution' },
             },
+            actions: {
+              scopes: ['move'],
+              weight: 1,
+              value: ref('schedule.distance.toBoundary.coupEntry.actions'),
+              scheduleFallback: { onUnavailable: 'noContribution' },
+            },
             phaseCards: {
               scopes: ['move'],
               weight: 1,
@@ -221,6 +243,15 @@ describe('phase boundary compile validation', () => {
           },
         },
       },
+      phaseBoundaries: [{
+        ...baseDoc().phaseBoundaries![0]!,
+        schedule: {
+          kind: 'cardDraw',
+          deckId: 'eventDeck',
+          cardSelector: { tags: ['coup'] },
+          unitRates: { actions: 2 },
+        },
+      }],
     });
 
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
@@ -231,6 +262,10 @@ describe('phase boundary compile validation', () => {
     assert.deepEqual(considerations.cards!.value, {
       kind: 'ref',
       ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'cards' },
+    });
+    assert.deepEqual(considerations.actions!.value, {
+      kind: 'ref',
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'actions' },
     });
     assert.deepEqual(considerations.phaseCards!.value, {
       kind: 'ref',

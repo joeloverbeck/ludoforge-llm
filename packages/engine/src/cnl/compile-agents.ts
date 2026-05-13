@@ -2998,7 +2998,7 @@ class AgentLibraryCompiler {
       });
       return null;
     }
-    if (!scheduleKindSupportsUnit(boundary.schedule?.kind, unit)) {
+    if (!scheduleKindSupportsUnit(boundary.schedule, unit)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
         path,
@@ -3046,7 +3046,7 @@ class AgentLibraryCompiler {
       (entry) => entry.kind === 'phaseEntry' && String(entry.phaseId) === phaseId,
     );
     const boundary = matchingBoundaries[0];
-    if (!scheduleKindSupportsUnit(boundary?.schedule?.kind, unit)) {
+    if (!scheduleKindSupportsUnit(boundary?.schedule, unit)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
         path,

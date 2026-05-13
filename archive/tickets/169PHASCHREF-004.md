@@ -10,11 +10,11 @@
 
 With `schedule.distance.toBoundary.<BoundaryId>.cards` shipped in 003, Spec 169 §4.2 still requires the convenience aliasing surface `schedule.distance.toPhase.<PhaseId>.cards` that resolves to the nearest `phaseEntry` boundary targeting `<PhaseId>`. The live compiler already validates `.toPhase` references, but it still emits a runtime AST target of `target.kind === 'phase'`; the intended architecture is a compile-time alias to the concrete boundary, so runtime dispatch remains identical to `.toBoundary.<BoundaryId>.cards`.
 
-The originally drafted four non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) are deferred to `tickets/169PHASCHREF-007.md`. Live reassessment proved the required action/microturn/round counters and card-to-unit rate metadata are not currently present in the engine surface, so closing them in this ticket would require inventing new semantics beyond the aliasing slice.
+The originally drafted four non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) are deferred to `archive/tickets/169PHASCHREF-007.md`. Live reassessment proved the required action/microturn/round counters and card-to-unit rate metadata are not currently present in the engine surface, so closing them in this ticket would require inventing new semantics beyond the aliasing slice.
 
 ## Assumption Reassessment (2026-05-13)
 
-1. **Non-card unit substrate is absent**: live `GameState` has `turnCount`, but no persistent `actionCount`, `microturnCount`, or round counter; `PhaseBoundaryDef` / `GameDefRuntime.scheduleIndex` stores card-draw positions only, not cards-per-action/turn/round rate metadata. The non-card unit work is split to `tickets/169PHASCHREF-007.md`.
+1. **Non-card unit substrate is absent**: live `GameState` has `turnCount`, but no persistent `actionCount`, `microturnCount`, or round counter; `PhaseBoundaryDef` / `GameDefRuntime.scheduleIndex` stores card-draw positions only, not cards-per-action/turn/round rate metadata. The non-card unit work is split to `archive/tickets/169PHASCHREF-007.md`.
 2. **`schedule.distance.toPhase` is a compiler-resolved alias**: per spec §4.2 ("convenience aliases that resolve to the nearest boundary of `kind: phaseEntry` targeting `<PhaseId>`"). Compile-time picks the boundary; runtime dispatches as `.toBoundary.<picked>.cards`. If multiple `phaseEntry` boundaries exist for one phase, spec §11 Open Question 3 directs aliasing to the first declared.
 3. **Live compiler currently validates but does not rewrite**: `compile-agents.ts` accepts `.toPhase.<PhaseId>.cards` and emits `{ target: { kind: 'phase' } }`. This ticket removes that interim AST shape from compiler output and the public compiled ref schema.
 4. **Ambiguity advisory needs a diagnostic code**: the original draft said no new diagnostic codes, but the alias contract also requires a compile-time advisory when multiple phase-entry boundaries target the same phase. This ticket adds a warning-only diagnostic for that case.
@@ -23,8 +23,8 @@ The originally drafted four non-card units (`.microturns`, `.actions`, `.turns`,
 
 - User-approved option: Option 2, "Narrow ticket".
 - Confirmation: 2026-05-13 user message, "Proceed with recommended option 2."
-- Scope effect: narrows ticket; defers non-card unit semantics to `tickets/169PHASCHREF-007.md`.
-- Durable repo locations: this ticket, `specs/169-phase-boundary-and-schedule-refs.md`, and `tickets/169PHASCHREF-007.md`.
+- Scope effect: narrows ticket; defers non-card unit semantics to `archive/tickets/169PHASCHREF-007.md`.
+- Durable repo locations: this ticket, `specs/169-phase-boundary-and-schedule-refs.md`, and `archive/tickets/169PHASCHREF-007.md`.
 
 ## Architecture Check
 
@@ -46,7 +46,7 @@ In `compile-agents.ts`:
 
 ### 2. Fail closed for deferred non-card units
 
-In `compile-phase-boundaries.ts`, limit Phase 3a `cardDraw` schedule-distance support to `.cards`. The deferred `.microturns`, `.actions`, `.turns`, and `.rounds` units must reject with `SCHEDULE_REF_UNSUPPORTED_UNIT` until `tickets/169PHASCHREF-007.md` defines real semantics.
+In `compile-phase-boundaries.ts`, limit Phase 3a `cardDraw` schedule-distance support to `.cards`. The deferred `.microturns`, `.actions`, `.turns`, and `.rounds` units must reject with `SCHEDULE_REF_UNSUPPORTED_UNIT` until `archive/tickets/169PHASCHREF-007.md` defines real semantics.
 
 ### 3. Remove the interim compiled phase target shape
 
@@ -69,7 +69,7 @@ Add focused tests proving `schedule.distance.toPhase.<PhaseId>.cards` compiles t
 
 ## Out of Scope
 
-- Non-card distance units (`.microturns`, `.actions`, `.turns`, `.rounds`) — split to `tickets/169PHASCHREF-007.md`.
+- Non-card distance units (`.microturns`, `.actions`, `.turns`, `.rounds`) — split to `archive/tickets/169PHASCHREF-007.md`.
 - WASM opcode integration — 005 ticket. This ticket extends the TS resolver only.
 - FITL `phaseBoundaries` data authoring — 006 ticket.
 - Cumulative-sequence distance (e.g., "actions until the coup sequence completes" rather than "actions until coup first enters") — spec §11 Open Question 1; deferred.
@@ -81,7 +81,7 @@ Add focused tests proving `schedule.distance.toPhase.<PhaseId>.cards` compiles t
 
 1. `phase-boundary-compile-validation.test.ts` — `schedule.distance.toPhase.<PhaseId>.cards` lowers to `{ target: { kind: 'boundary', boundaryId: <picked> }, unit: 'cards' }`, never to `{ target: { kind: 'phase' } }`.
 2. `phase-boundary-compile-validation.test.ts` — warning diagnostic emitted when 2+ `phaseEntry` boundaries target the same phase, while compilation remains successful.
-3. `phase-boundary-compile-validation.test.ts` — non-card units reject with `SCHEDULE_REF_UNSUPPORTED_UNIT` while `tickets/169PHASCHREF-007.md` owns their semantics.
+3. `phase-boundary-compile-validation.test.ts` — non-card units reject with `SCHEDULE_REF_UNSUPPORTED_UNIT` while `archive/tickets/169PHASCHREF-007.md` owns their semantics.
 4. `schedule-to-phase-alias.test.ts` — for a fixture with `coupEntry` and `lateCoupEntry` both targeting `scoring`, `schedule.distance.toPhase.scoring.cards` resolves identically to `schedule.distance.toBoundary.coupEntry.cards` at every fixture position. Same status, same value.
 5. Existing suite: `pnpm -F @ludoforge/engine test:unit` passes — no regression.
 
@@ -113,10 +113,12 @@ Add focused tests proving `schedule.distance.toPhase.<PhaseId>.cards` compiles t
 
 Completion date: 2026-05-13
 
+Outcome amended: 2026-05-13 — updated stale handoff paths after `169PHASCHREF-007` completed and archived.
+
 What landed:
 
 - Corrected this ticket to the user-approved narrowed boundary: `schedule.distance.toPhase.<PhaseId>.cards` aliasing only.
-- Added `tickets/169PHASCHREF-007.md` as the owner for real non-card unit semantics.
+- Added `archive/tickets/169PHASCHREF-007.md` as the owner for real non-card unit semantics.
 - Updated Spec 169 and `tickets/169PHASCHREF-005.md` so the active series no longer assumes `.microturns`, `.actions`, `.turns`, or `.rounds` exist before their substrate is designed.
 - Changed `.toPhase.<PhaseId>.cards` lowering to emit a concrete `boundary` target for the first matching `phaseEntry` boundary.
 - Added warning diagnostic `SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY` when multiple `phaseEntry` boundaries target the same phase.
@@ -126,9 +128,9 @@ What landed:
 Touched-file scope:
 
 - Planned and touched: `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/compile-phase-boundaries.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/schemas/GameDef.schema.json`, `packages/engine/test/unit/agents/schedule-to-phase-alias.test.ts`, `packages/engine/test/unit/cnl/phase-boundary-compile-validation.test.ts`.
-- Owned graph/spec fallout: `specs/169-phase-boundary-and-schedule-refs.md`, `tickets/169PHASCHREF-005.md`, `tickets/169PHASCHREF-007.md`.
+- Owned graph/spec fallout: `specs/169-phase-boundary-and-schedule-refs.md`, `tickets/169PHASCHREF-005.md`, `archive/tickets/169PHASCHREF-007.md`.
 - Verified-no-edit from original draft: `packages/engine/src/agents/policy-runtime.ts`; alias lowering removes the need for a runtime `phase` branch, and non-card runtime units are deferred.
-- Rewritten/deferred from original draft: `schedule-distance-units.test.ts` and `schedule-distance-cross-unit-consistency.test.ts` move to `tickets/169PHASCHREF-007.md`.
+- Rewritten/deferred from original draft: `schedule-distance-units.test.ts` and `schedule-distance-cross-unit-consistency.test.ts` move to `archive/tickets/169PHASCHREF-007.md`.
 
 Generated/schema fallout:
 
@@ -137,7 +139,7 @@ Generated/schema fallout:
 
 Deferred sibling/spec scope:
 
-- Non-card distance units (`.microturns`, `.actions`, `.turns`, `.rounds`) are deferred to `tickets/169PHASCHREF-007.md`.
+- Non-card distance units (`.microturns`, `.actions`, `.turns`, `.rounds`) are deferred to `archive/tickets/169PHASCHREF-007.md`.
 - WASM parity remains `tickets/169PHASCHREF-005.md`; it now covers the currently implemented TypeScript schedule refs rather than nonexistent non-card units.
 - FITL authoring remains `tickets/169PHASCHREF-006.md`.
 

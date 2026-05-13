@@ -206,11 +206,21 @@ const CardSelectorSchema = z
   })
   .strict();
 
+const CardDrawUnitRatesSchema = z
+  .object({
+    microturns: IntegerSchema.optional(),
+    actions: IntegerSchema.optional(),
+    turns: IntegerSchema.optional(),
+    rounds: IntegerSchema.optional(),
+  })
+  .strict();
+
 const ScheduleKindDefSchema = z.union([
   z.object({
     kind: z.literal('cardDraw'),
     deckId: StringSchema,
     cardSelector: CardSelectorSchema,
+    unitRates: CardDrawUnitRatesSchema.optional(),
   }).strict(),
   z.object({ kind: z.literal('turnCount') }).strict(),
   z.object({ kind: z.literal('condition') }).strict(),

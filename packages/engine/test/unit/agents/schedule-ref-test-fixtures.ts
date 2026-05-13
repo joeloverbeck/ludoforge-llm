@@ -37,10 +37,11 @@ const opExpr = (op: Extract<AgentPolicyExpr, { readonly kind: 'op' }>['op'], ...
 
 export const scheduleDistanceRef = (
   boundaryId = 'coupEntry',
+  unit: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>['unit'] = 'cards',
 ): Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }> => ({
   kind: 'scheduleDistance',
   target: { kind: 'boundary', boundaryId: asBoundaryId(boundaryId) },
-  unit: 'cards',
+  unit,
 });
 
 export const scheduleRefExpr = (boundaryId?: string): AgentPolicyExpr => refExpr(scheduleDistanceRef(boundaryId));

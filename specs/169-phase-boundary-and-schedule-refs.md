@@ -227,6 +227,7 @@ The compiler MUST reject (at compile time):
 | `PHASE_BOUNDARY_UNKNOWN_DECK` | `schedule.deckId` references a deck not declared in `eventDecks[]`. |
 | `PHASE_BOUNDARY_UNKNOWN_CARD_TAG` | `schedule.cardSelector.tags[]` references a tag not declared on any card in the deck. |
 | `PHASE_BOUNDARY_UNKNOWN_CARD_ID` | `schedule.cardSelector.cardIds[]` references a card id not in the deck. |
+| `PHASE_BOUNDARY_INVALID_UNIT_RATE` | `schedule.unitRates.<unit>` is present but is not an exact positive integer. |
 | `SCHEDULE_REF_UNKNOWN_BOUNDARY` | `schedule.distance.toBoundary.<X>.<unit>` references an undeclared BoundaryId. |
 | `SCHEDULE_REF_UNKNOWN_PHASE` | `schedule.distance.toPhase.<X>.<unit>` references an undeclared PhaseId. |
 | `SCHEDULE_REF_NO_PHASE_BOUNDARY` | `schedule.distance.toPhase.<X>.<unit>` references a phase with no declared `phaseEntry` boundary. |
@@ -244,6 +245,39 @@ The compatibility matrix after Phase 3a:
 | `condition` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 A `condition`-kind boundary exposes only identity refs (`schedule.nextBoundary.id` if it is the nearest), not distance refs. Phase 3b owns any future expansion beyond `cardDraw` + `cards`; `turnCount` is reserved for the schedule-kind extension surface and not implemented in this spec.
+
+Phase 3b selects the compiled-rate model for `cardDraw` non-card units:
+
+```yaml
+phaseBoundaries:
+  - id: coupEntry
+    kind: phaseEntry
+    phaseId: coupVictory
+    schedule:
+      kind: cardDraw
+      deckId: eventDeck
+      cardSelector:
+        tags: [coup]
+      unitRates:
+        actions: 2
+        turns: 1
+```
+
+`unitRates` values are exact positive integers and mean "this many units per card of
+distance to the next matching trigger card." Runtime resolution first computes the
+same observer-safe card distance used by `.cards`; if the card distance is
+`ready`, the requested non-card unit resolves to `cardDistance * unitRates[unit]`.
+If the card distance is unavailable, the non-card unit returns the same
+unavailable status. If a non-card unit has no declared rate, the compiler rejects
+that ref with `SCHEDULE_REF_UNSUPPORTED_UNIT`.
+
+The compatibility matrix after Phase 3b:
+
+| `schedule.kind` | `cards` | `microturns` | `actions` | `turns` | `rounds` |
+|---|---|---|---|---|---|
+| `cardDraw` | ✅ | ✅ only with `unitRates.microturns` | ✅ only with `unitRates.actions` | ✅ only with `unitRates.turns` | ✅ only with `unitRates.rounds` |
+| `turnCount` | ❌ | ❌ | ❌ | ❌ | ❌ |
+| `condition` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ### 4.5 Runtime state and resolution
 
@@ -334,7 +368,7 @@ This spec ships in five sequential phases with explicit acceptance criteria. Eac
 | **1** | `phase.current.id`, `phase.next.id`, `schedule.nextBoundary.id` refs implemented. | Golden tests for each ref against a fixture GameSpec; replay-determinism test (same GameDef + seed produces identical ref readouts across a 20-turn trace). |
 | **2** | `schedule.distance.toBoundary.<X>.cards` for `cardDraw` schedules. Card-draw index maintenance under `drawFromDeck`. | Golden distance tests at ≥5 distinct game positions (start of game, mid-cycle, immediately after coup card draw, end-game with no remaining coup cards [status: unavailable]). `scheduleFallback` paths exercised in trace output. |
 | **3a** | `schedule.distance.toPhase.<PhaseId>.cards` compile-time aliases to the first matching `phaseEntry` boundary. | Alias rewrite test; runtime parity test against direct `.toBoundary.<picked>.cards`; ambiguity warning test. |
-| **3b** | Real non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) after the engine has explicit unit semantics/counters/rates. | Per-unit golden test; one cross-unit consistency test matching the selected semantics. |
+| **3b** | Real non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) for `cardDraw` boundaries with exact declared `unitRates`. Underived units remain compile-time unsupported. | Per-unit golden test; one cross-unit consistency test matching the declared-rate semantics. |
 | **4** | WASM opcode integration: new ref kinds added to the policy VM ABI; Rust handlers in `lib.rs` resolve schedule refs from the encoded input. | WASM↔TS bytecode equivalence test (`policy-bytecode-equivalence.test.ts`) passes with the new ref kinds in a fixture profile. Equivalence holds across `wasmScoreRowRoute` and `wasmPreviewCandidateFeatureRowRoute` paths. |
 | **5** | FITL `phaseBoundaries` authored in `data/games/fire-in-the-lake/`; one demonstration consideration in a sandbox profile (NOT promoted to `arvn-evolved`). | Demonstration consideration fires non-zero contribution at appropriate game positions in trace output. No regression on the `policy-profile-quality` baseline. |
 
@@ -388,6 +422,7 @@ None mandated by this spec. The Phase 5 demonstration consideration is exercised
 - **Compiler validation**: `packages/engine/src/cnl/compile-agents.ts` — top-level `compileGameSpec` accepts `phaseBoundaries`; ref-kind validator (search for `candidateParam` template at lines ~2144-2213) extended with two new kinds. Diagnostic registry: search for existing diagnostic-code constants.
 - **Runtime resolver**: `packages/engine/src/agents/policy-runtime.ts` — ref dispatcher extended with two new branches (search for `candidateParam` runtime resolution).
 - **GameDefRuntime**: `packages/engine/src/kernel/gamedef-runtime.ts:84-95` — `forkGameDefRuntimeForRun` extends per-run state for the card-draw index. Architecture note in `docs/architecture.md` "Runtime Ownership" section.
+- **Phase 3b unit rates**: `packages/engine/src/cnl/compile-phase-boundaries.ts` validates exact positive integer `cardDraw.schedule.unitRates`; `packages/engine/src/agents/policy-runtime.ts` resolves non-card units as exact multiples of the ready card distance.
 - **WASM ABI**: `packages/engine-wasm/policy-vm/src/lib.rs` — new opcode slots and feature constants (search `FEATURE_CANDIDATE_PARAM` as template). `packages/engine/src/agents/policy-wasm-runtime.ts` — opcode-to-ref-kind mapping.
 - **FITL data (Phase 5)**: `data/games/fire-in-the-lake/30-rules-actions.md` — append `phaseBoundaries:` block. Coup event cards must carry a `tags: [coup]` field, which may require a sweep across event card declarations.
 - **Cookbook**: `docs/agent-dsl-cookbook.md` — new section documenting `phase.*` and `schedule.*` ref families with worked examples.
@@ -448,6 +483,6 @@ Decomposed via `/spec-to-tickets` on 2026-05-13:
 - [`archive/tickets/169PHASCHREF-002.md`](../archive/tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
 - [`archive/tickets/169PHASCHREF-003.md`](../archive/tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
 - [`archive/tickets/169PHASCHREF-004.md`](../archive/tickets/169PHASCHREF-004.md) — Phase 3a — schedule.distance.toPhase aliases (covers §7 Phase 3a)
-- [`tickets/169PHASCHREF-007.md`](../tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
+- [`archive/tickets/169PHASCHREF-007.md`](../archive/tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
 - [`tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
 - [`tickets/169PHASCHREF-006.md`](../tickets/169PHASCHREF-006.md) — Phase 5 — FITL phaseBoundaries authoring & demonstration consideration (covers §7 Phase 5, §8.2 phase-boundary-fitl-coup-distance + schedule-ref-consideration-trace)

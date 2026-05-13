@@ -196,11 +196,19 @@ export interface CardSelector {
   readonly cardIds?: readonly string[];
 }
 
+export interface CardDrawUnitRates {
+  readonly microturns?: number;
+  readonly actions?: number;
+  readonly turns?: number;
+  readonly rounds?: number;
+}
+
 export type ScheduleKindDef =
   | {
       readonly kind: 'cardDraw';
       readonly deckId: string;
       readonly cardSelector: CardSelector;
+      readonly unitRates?: CardDrawUnitRates;
     }
   // Future schedule kinds are reserved for downstream Spec 169 tickets.
   | { readonly kind: 'turnCount' }

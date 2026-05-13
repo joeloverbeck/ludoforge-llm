@@ -581,6 +581,40 @@
                       }
                     },
                     "additionalProperties": false
+                  },
+                  "unitRates": {
+                    "type": "object",
+                    "properties": {
+                      "microturns": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "turns": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      },
+                      "rounds": {
+                        "allOf": [
+                          {
+                            "$ref": "#/definitions/anon_e7c99bd4"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalProperties": false
                   }
                 },
                 "required": [

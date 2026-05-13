@@ -215,12 +215,25 @@ const CardDrawUnitRatesSchema = z
   })
   .strict();
 
+const ObserverPolicySchema = z
+  .object({
+    kind: z.literal('topNVisible'),
+    visiblePrefix: z
+      .object({
+        zones: z.array(z.object({ id: StringSchema }).strict()),
+        maxItems: IntegerSchema,
+      })
+      .strict(),
+  })
+  .strict();
+
 const ScheduleKindDefSchema = z.union([
   z.object({
     kind: z.literal('cardDraw'),
     deckId: StringSchema,
     cardSelector: CardSelectorSchema,
     unitRates: CardDrawUnitRatesSchema.optional(),
+    observerPolicy: ObserverPolicySchema.optional(),
   }).strict(),
   z.object({ kind: z.literal('turnCount') }).strict(),
   z.object({ kind: z.literal('condition') }).strict(),
@@ -1128,6 +1141,14 @@ const AgentScheduleFallbackSchema = z
       z.literal('dropConsideration'),
       z.object({ kind: z.literal('constant'), value: IntegerSchema }).strict(),
     ]),
+    onPartial: z.object({
+      visiblePrefixExhausted: z.union([
+        z.literal('useLowerBound'),
+        z.literal('noContribution'),
+        z.literal('dropConsideration'),
+        z.object({ kind: z.literal('constant'), value: IntegerSchema }).strict(),
+      ]),
+    }).strict().optional(),
   })
   .strict();
 

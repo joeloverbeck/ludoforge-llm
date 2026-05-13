@@ -85,9 +85,15 @@ export interface PolicyLookupFallbackFired {
   readonly value?: number;
 }
 
+export type PolicyScheduleFallbackKind =
+  | 'useLowerBound'
+  | 'noContribution'
+  | 'constant'
+  | 'dropConsideration';
+
 export interface PolicyScheduleFallbackFired {
   readonly termId: string;
-  readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
+  readonly kind: PolicyScheduleFallbackKind;
   readonly value?: number;
 }
 

@@ -629,6 +629,7 @@ function compileExpandedDoc(
       resolvedTableRefDoc.phaseBoundaries,
       sections.turnStructure,
       sections.eventDecks,
+      sections.zones,
       diagnostics,
     ),
   );

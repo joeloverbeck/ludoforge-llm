@@ -72,6 +72,15 @@ export type PhaseScheduleResolution =
   | {
       readonly kind: 'ready';
       readonly value: string | number;
+      readonly observerPolicy?: { readonly kind: 'topNVisible' };
+      readonly visiblePrefixLength?: number;
+    }
+  | {
+      readonly kind: 'partial';
+      readonly partialKind: 'lowerBound';
+      readonly lowerBound: number;
+      readonly observerPolicy: { readonly kind: 'topNVisible' };
+      readonly visiblePrefixLength: number;
     }
   | {
       readonly kind: 'unavailable';

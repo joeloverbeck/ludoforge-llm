@@ -103,7 +103,7 @@ same-command metric, activation counters, and final recommendation.
 
 - Re-implementing the run-local `tokenStateIndexCache` substrate already landed
   by `archive/tickets/168ENGHOTPATH-002.md`
-- Phase 2 compiled query/filter plans (`tickets/168ENGHOTPATH-003.md`) unless
+- Phase 2 compiled query/filter plans (`archive/tickets/168ENGHOTPATH-003.md`) unless
   the measured resolution proves the residual token-index gate is actually
   sibling-owned there
 - Phase 3 Zobrist digest cache (`tickets/168ENGHOTPATH-004.md`)

@@ -130,6 +130,7 @@ export const materializePolicyWasmPreviewQueryValues = (
       bindings: Object.fromEntries(bindings),
       resources: createEvalRuntimeResources({
         tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
       }),
       runtimeTableIndex: runtime.runtimeTableIndex,
       freeOperationOverlay: undefined,

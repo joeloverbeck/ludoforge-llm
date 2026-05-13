@@ -129,6 +129,7 @@ Output the audit in the conversation, not in a file.
 
 [If the skill was already updated and only low-severity findings remain, note that further auditing may have diminishing returns.]
 [Optional] **Recommended next actions**: <top 1-2 follow-ups when the audit clearly points to concrete next steps>
+[Optional] **Likely edit targets**: <skill file/reference paths and sections to inspect first if the user asks to implement suggestions>
 ```
 
 ## Guardrails
@@ -155,6 +156,7 @@ If the current audit targets a different skill than any earlier audit in this se
 2. List the earlier findings briefly.
 3. Classify each earlier finding as `resolved`, `still open`, or `new context changed the assessment`.
    - Report this mapping at the start of the audit, either as a short delta block immediately before `## Issues` or as the first lines inside `## Summary` when that is more concise.
+   - If the earlier audit output is not directly visible, state the evidence limitation in the audit scope or delta block. Map only findings supported by visible conversation, tool history, memory summary, opened files, or another concrete evidence source; do not present inferred prior findings as confirmed.
 4. Report only the remaining open findings plus any genuinely new findings from the current session.
 5. Avoid repeating unchanged narrative when a short delta statement is sufficient.
 
@@ -174,6 +176,7 @@ If the current audit targets a different skill than any earlier audit in this se
 - For `skill-audit` self-audits, report those five dimensions explicitly in the final audit under `Alignment Check` using the optional `Self-audit rubric` block. Do not leave the rubric implicit.
 - For self-audits, compare the immediately previous audit output against the report template before drafting findings. Explicitly check whether the required headings, summary fields, per-finding structure, and total-count summary were present.
   - If context compaction or missing history prevents direct comparison to the immediately previous audit output, use the available conversation summary and tool history, state the evidence limitation in the audit scope or relevant finding, and only score/report structure details that can be verified. Do not infer missing headings, counts, or severity calibration from memory alone.
+- For non-self re-audits where the prior audit output is unavailable, use the same evidence-limitation discipline: say what source you used for the prior-finding map and classify uncertain items as unverified rather than resolved or still open.
 - Use this optional self-audit rubric when deciding whether each evidence dimension passed:
   - `pass`: the audit satisfied the requirement cleanly
   - `minor drift`: the audit was usable but omitted structure or precision the skill asked for

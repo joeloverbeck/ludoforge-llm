@@ -5,6 +5,7 @@ import { describe, it } from 'node:test';
 import {
   assertEvalRuntimeResourcesContract,
   createCollector,
+  createCompiledQueryPlanCache,
   createEvalRuntimeResources,
 } from '../../src/kernel/index.js';
 import { LruCache } from '../../src/shared/lru-cache.js';
@@ -21,6 +22,16 @@ describe('assertEvalRuntimeResourcesContract', () => {
     const resources = createEvalRuntimeResources({
       collector: createCollector({ trace: true }),
       tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, never>>(1),
+    });
+    assert.doesNotThrow(() => {
+      assertEvalRuntimeResourcesContract(resources, 'testBoundary evalRuntimeResources');
+    });
+  });
+
+  it('accepts runtime resources carrying the compiled query plan cache', () => {
+    const resources = createEvalRuntimeResources({
+      collector: createCollector({ trace: true }),
+      compiledQueryPlanCache: createCompiledQueryPlanCache(),
     });
     assert.doesNotThrow(() => {
       assertEvalRuntimeResourcesContract(resources, 'testBoundary evalRuntimeResources');

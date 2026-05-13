@@ -20,6 +20,14 @@ If the final broad acceptance lane returns from cache replay, combine this
 green-gate flow with `references/verification-acceptance-proof.md`'s cache-hit
 classification before citing that broad lane as acceptance proof.
 
+If a supplemental broad perf lane can rewrite the same JSON, report, fixture
+artifact, or generated output as the decisive isolated metric, classify that
+broad lane as an artifact producer before running it. After the broad lane,
+rerun the isolated ticket-owned fixture or otherwise restore/prove the decisive
+artifact before final transcription. Do not let a later broad-suite sample
+silently replace the metric artifact that the report/ticket cites as the
+decisive gate.
+
 ## Red Gate Status
 
 When a code migration lands but an explicit benchmark/performance gate remains red, do not mark the ticket terminal just because ordinary tests are green. Record exact samples, threshold comparison, variance or drift when available, and the active route proof. If satisfying or relaxing the gate changes an explicit deliverable, status, scope, dependency story, or phase plan, stop for `1-3-1` before creating successors or rewriting acceptance.
@@ -32,6 +40,15 @@ Before treating a red elapsed-time result as ticket-owned, decompose wrapper com
 - `out-of-scope workflow budget`: preserved regression gates, unrelated package checks, CI scheduling, or other workflow cost covered by another owner or by the spec's out-of-scope section
 
 If the owned metric is green but the aggregate wrapper is red, do not default to `BLOCKED` or silently weaken the target. Use `1-3-1` with options that distinguish `proof-only correction`, `workflow-gate successor`, and `same-ticket optimization`, and state how each option aligns with `docs/FOUNDATIONS.md` before recommending one. If the ticket/spec already excludes workflow-gate tuning, a boundary correction may be the truthful terminal path after user approval; record the wrapper result as residual evidence rather than as the decisive measured gate.
+
+Exception: when the aggregate wrapper's red children were already classified in
+the active ticket/report as unrelated, sibling-owned, historical residual, or
+expected supplemental red/non-final, and the isolated ticket-owned metric is
+green, a new `1-3-1` is not required solely because that same broad wrapper is
+still red. Preserve the exact failing paths, assertions, and owner
+classification; rerun the ticket-owned decisive metric after any artifact
+clobbering; then close terminal only if the ticket's explicit acceptance story
+allows the broad lane to remain classified red.
 
 Exception: a ticket may close with terminal wording on a red result only when it explicitly defines `red measured result + active route proof + successor/follow-up owner` as acceptance-complete and no stricter materiality note blocks that closeout. In that case, record exact red metrics, active-route proof, retained/rejected candidate classification, successor ownership, dependency/status rewrites, and `pnpm run check:ticket-deps` result before terminal status.
 
@@ -51,11 +68,11 @@ Use this pattern when a measured-gate ticket lands correct reusable substrate, f
 1. Stop for `1-3-1` before deciding to keep the substrate, revert it, or keep optimizing in the same ticket.
 2. If the user confirms keeping the substrate while blocking the ticket, mark the active ticket `BLOCKED`, `PARTIAL`, or the series-local equivalent. Do not use terminal completion wording and do not archive it.
 3. In the active ticket or report, record: retained candidate classification, exact baseline and decisive final metric, materiality verdict, activation/root-cause counters, why the retained code is correct reusable substrate, and why the measured gate is still unmet.
-4. Create or update the non-overlapping successor that owns the remaining measured improvement. Name its dependency on the blocked substrate ticket and record the non-overlap rationale.
-5. Update dependent tickets, specs, phase rows, and sibling status text so the series does not imply the red gate is green or archived.
+4. Create or update the non-overlapping successor that owns the remaining measured improvement, unless the user-approved boundary explicitly keeps the residual in the same active ticket. Name its dependency on the blocked substrate ticket and record the non-overlap rationale. For same-ticket continuation, record `residual owner: same active ticket`, the remaining measured seam, and why a separate successor would duplicate ownership rather than clarify it.
+5. Open immediate active dependents and spec phase rows that name the blocked ticket or phase. Patch stale `green`, `landed`, `complete`, or archived assumptions, or record `checked-no-edit` with the exact paths inspected in the active ticket/report. Update sibling status text so the series does not imply the red gate is green or archived.
 6. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-graph integrity lane after status, dependency, successor, or spec ownership changes.
 7. Rerun affected correctness and measured lanes, or record why post-metric edits were only ownership/transcription changes and did not invalidate the decisive metric.
-8. In the final handoff, say `post-ticket-review` did not run and the ticket is blocked/not archive-ready. Name the successor or same-ticket continuation as the next implementation owner.
+8. In the final handoff, say `post-ticket-review` did not run and the ticket is blocked/not archive-ready. Name the successor id, or say `same active ticket remains the next owner` only when step 4 recorded that same-ticket continuation explicitly.
 
 ## Ordering
 
@@ -80,6 +97,14 @@ For tickets with multiple plausible optimizations, use a measured experiment loo
 - profile only when the smoke is promising or diagnostically necessary
 - revert or isolate candidates that regress, do not move the owned root-cause metric, remain red without an authorized exception, or shift the hotspot outside the owned seam
 
+Instrumentation-scope candidates are allowed only when they make the measured
+bucket more truthful without hiding runtime work. Keep activation counters,
+classify what moved outside the timed interval, and pair the change with a
+top-line or wall-time sanity check so the closeout does not pass by metric
+gaming. If instrumentation removal changes the owned metric noun, command
+semantics, threshold, or public report contract, stop for `1-3-1` before using
+it as the decisive fix.
+
 Before closeout, classify each retained performance candidate as exactly one of:
 
 - `owned metric improved`
@@ -90,6 +115,29 @@ Before closeout, classify each retained performance candidate as exactly one of:
 
 For rejected candidates, keep a compact attempt ledger when it prevents repeated work: `candidate`, `correctness proof`, `measurement`, `verdict`, `cleanup proof`, and `reason not retained`.
 
+For rejected candidates that fail correctness, determinism, legality,
+immutability, stale-cache-key safety, or another Foundation-level invariant,
+the attempt ledger is mandatory even if the runtime diff is fully reverted. The
+ledger should name the unsafe key/assumption, the failing command or error, and
+the cleanup proof, so future runs do not rediscover the same invalid
+optimization.
+
+## Metric Arithmetic
+
+For measured gates with multiple bucket fields, compute the final materiality
+ledger mechanically before terminal status:
+
+- `baseline combined`: sum of every ticket-owned baseline field, with each input named
+- `current combined`: sum of every ticket-owned final field from the decisive same-command metric
+- `absolute delta`: `current combined - baseline combined`
+- `required delta`: the ticket/spec threshold, preserving sign and units
+- `verdict`: `green`, `red`, or `close-enough exception`, with the terminal-status implication
+
+When practical, include this calculation table in the report/ticket instead of
+only prose. If any source number changes after a rerun, update every dependent
+sum and delta in the same edit, then reread the artifact for stale earlier
+values before closeout.
+
 ## Worksheets
 
 Optional red-gate outcome worksheet:
@@ -98,7 +146,8 @@ Optional red-gate outcome worksheet:
 - `candidate probes`: retained and rejected candidates, diagnostic correctness proof while each candidate existed, measured result, post-revert cleanup proof for rejected paths
 - `decisive final metric`: command, label, metric, threshold, verdict, drift from probes
 - `CPU/profile evidence`: artifact path or ephemeral note, parser command/method, top owners, ticket-owned samples, residual samples
-- `successor handoff`: successor id, non-overlap rationale, dependent ticket/spec rewrites, `pnpm run check:ticket-deps` result
+- `residual owner`: successor id plus non-overlap rationale, or `same active ticket` plus why no separate successor was created
+- `dependent/spec checks`: immediate active dependents and phase rows inspected, patched, or recorded as `checked-no-edit`, plus `pnpm run check:ticket-deps` result
 - `proof invalidation`: post-metric edits, rerun lanes, no-invalidation rationale, terminal status timing
 
 For measured decision tickets whose truthful result is respec-only completion rather than retained optimization or successor work, use this worksheet before terminal status: `retired proof surface`, `replacement evidence`, `why no code/topology change is retained`, `why no successor is needed`, `retained code/report diff`, `materiality verdict`, `dependency/spec edits`, and `terminal-status basis`.

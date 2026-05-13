@@ -14,6 +14,7 @@ import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
 import { LruCache } from '../shared/lru-cache.js';
+import { createCompiledQueryPlanCache, type CompiledQueryPlanCache } from './compiled-query-plan.js';
 import type { TokenStateIndexCache, TokenStateIndexEntry } from './token-state-index.js';
 
 export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
@@ -43,6 +44,12 @@ export interface GameDefRuntime {
   readonly publicationProbeCache: LruCache<string, boolean>;
   /** `runLocal`: memoizes canonical token-state-index snapshots; reset for every run. */
   readonly tokenStateIndexCache: TokenStateIndexCache;
+  /**
+   * `sharedStructural`: lazily populated compiled query/filter plans keyed by
+   * compiled AST object identity. Plans depend only on GameDef structure; they
+   * receive run-local state through `ReadContext` at invocation time.
+   */
+  readonly compiledQueryPlanCache: CompiledQueryPlanCache;
   /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
@@ -80,6 +87,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     ruleCardCache: new Map(),
     publicationProbeCache: new LruCache<string, boolean>(PUBLICATION_PROBE_CACHE_LIMIT),
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
+    compiledQueryPlanCache: createCompiledQueryPlanCache(),
     compiledLifecycleEffects,
   };
 }
@@ -95,6 +103,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * The `runLocal` members are `zobristTable.keyCache`,
  * `publicationProbeCache`, and `tokenStateIndexCache`; all reset at game
  * boundaries so long-lived callers do not accumulate cross-run state.
+ * `compiledQueryPlanCache` remains shared structural across forks.
  */
 export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {

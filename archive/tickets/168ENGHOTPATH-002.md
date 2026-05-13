@@ -59,7 +59,7 @@ After landing, re-run the Phase 0 fixture (`archive/tickets/168ENGHOTPATH-001.md
 
 ## Out of Scope
 
-- Phase 2 query/filter plan changes (`tickets/168ENGHOTPATH-003`)
+- Phase 2 query/filter plan changes (`archive/tickets/168ENGHOTPATH-003.md`)
 - Phase 3 zobrist digest cache (`tickets/168ENGHOTPATH-004`)
 - Phase 4 bytecode input row cache (`tickets/168ENGHOTPATH-005`)
 - Sharing index across runs (Spec 143 forbids; `runLocal` isolation is preserved)

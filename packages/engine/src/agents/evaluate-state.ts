@@ -30,7 +30,10 @@ const evalScoringValue = (def: GameDef, state: GameState, playerId: PlayerId, ru
     bindings: {},
     runtimeTableIndex: runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def),
     resources: createEvalRuntimeResources(
-      runtime === undefined ? undefined : { tokenStateIndexCache: runtime.tokenStateIndexCache },
+      runtime === undefined ? undefined : {
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+      },
     ),
   });
   const score = evalValue(def.terminal.scoring.value, ctx);

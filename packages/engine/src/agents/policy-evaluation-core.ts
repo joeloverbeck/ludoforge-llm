@@ -1767,7 +1767,10 @@ export class PolicyEvaluationContext {
       return this.transientZoneReadContext.context;
     }
     const resources = createEvalRuntimeResources(
-      this.input.runtime === undefined ? undefined : { tokenStateIndexCache: this.input.runtime.tokenStateIndexCache },
+      this.input.runtime === undefined ? undefined : {
+        tokenStateIndexCache: this.input.runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: this.input.runtime.compiledQueryPlanCache,
+      },
     );
     const context = createEvalContext({
       def: this.input.def,

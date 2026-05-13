@@ -1399,7 +1399,10 @@ const applyMoveCore = (
   const evalRuntimeResources = createEvalRuntimeResources({
     collector: runtime.collector,
     ...(coreOptions?.resolveRefCache === undefined ? {} : { resolveRefCache: coreOptions.resolveRefCache }),
-    ...(cachedRuntime === undefined ? {} : { tokenStateIndexCache: cachedRuntime.tokenStateIndexCache }),
+    ...(cachedRuntime === undefined ? {} : {
+      tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+      compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+    }),
   });
   const shared: SharedMoveExecutionContext = {
     adjacencyGraph,
@@ -1613,7 +1616,10 @@ const applySimultaneousSubmission = (
     move,
     createSeatResolutionContext(def, state.playerCount),
     createEvalRuntimeResources(
-      cachedRuntime === undefined ? undefined : { tokenStateIndexCache: cachedRuntime.tokenStateIndexCache },
+      cachedRuntime === undefined ? undefined : {
+        tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+        compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+      },
     ),
     cachedRuntime,
   );
@@ -1717,7 +1723,10 @@ const applySimultaneousSubmission = (
       undefined,
       createEvalRuntimeResources({
         collector: commitRuntime.collector,
-        ...(cachedRuntime === undefined ? {} : { tokenStateIndexCache: cachedRuntime.tokenStateIndexCache }),
+        ...(cachedRuntime === undefined ? {} : {
+          tokenStateIndexCache: cachedRuntime.tokenStateIndexCache,
+          compiledQueryPlanCache: cachedRuntime.compiledQueryPlanCache,
+        }),
       }),
       cachedRuntime,
     );
@@ -1892,7 +1901,10 @@ export const probeMoveLegality = (
       move,
       createSeatResolutionContext(def, probedState.playerCount),
       createEvalRuntimeResources(
-        runtime === undefined ? undefined : { tokenStateIndexCache: runtime.tokenStateIndexCache },
+        runtime === undefined ? undefined : {
+          tokenStateIndexCache: runtime.tokenStateIndexCache,
+          compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+        },
       ),
       runtime,
     );
@@ -1945,7 +1957,10 @@ const probeMoveViabilityRaw = (
   try {
     const seatResolution = createSeatResolutionContext(def, state.playerCount);
     const evalRuntimeResources = createEvalRuntimeResources(
-      runtime === undefined ? undefined : { tokenStateIndexCache: runtime.tokenStateIndexCache },
+      runtime === undefined ? undefined : {
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+        compiledQueryPlanCache: runtime.compiledQueryPlanCache,
+      },
     );
     const classMismatch = resolveTurnFlowActionClassMismatch(def, move);
     if (classMismatch !== null) {

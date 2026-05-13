@@ -55,7 +55,7 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 ## Out of Scope
 
 - Phase 1 token-state-index changes (`archive/tickets/168ENGHOTPATH-002.md`, `archive/tickets/168ENGHOTPATH-007.md`)
-- Phase 2 query/filter plan changes (`tickets/168ENGHOTPATH-003`)
+- Phase 2 query/filter plan changes (`archive/tickets/168ENGHOTPATH-003.md`)
 - Phase 4 bytecode input row cache (`tickets/168ENGHOTPATH-005`)
 - Moving Zobrist hashing into the Rust WASM VM (deferred to potential Spec 169 per Phase 5 escalation gate)
 - Changing the zobrist key algorithm or hash width

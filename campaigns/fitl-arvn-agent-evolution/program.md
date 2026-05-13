@@ -270,6 +270,7 @@ PIVOT_CHECK_INTERVAL = 10       # PROCEED/REFINE/PIVOT every 10 experiments
 ```
 HARNESS_RUNS = 1                # single run per experiment
 HARNESS_SEEDS = 1               # seeds handled internally by run-tournament.mjs (progressive)
+CONCURRENCY = 8                 # default worker-thread seed shard pool; override via CONCURRENCY
 meta_improvement = false        # meta-loop disabled for this campaign
 METRIC_DIRECTION = higher-is-better  # maximize compositeScore
 MAX_ITERATIONS = unlimited      # run until externally interrupted

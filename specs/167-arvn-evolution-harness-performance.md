@@ -155,6 +155,8 @@ The `traces/` directory is cleared at the start of each tournament invocation (p
 
 The 3-minute target is a budget, not a goal; the realistic expectation is ~2 minutes once all three phases compound.
 
+**Implementation reassessment (2026-05-13)**: ticket 167ARVNEVOHAR-005 owns the Phase 2 worker-thread tournament-loop slice, not regression-gate scoping. Live proof after Phase 2 showed the 15-seed tournament runner at `--concurrency 8` completed in `172.67s` with `errors == 0` and exact aggregate parity across the tested concurrency values, while the full `harness.sh` invocation completed in `261.28s` because it still includes the preserved build plus full engine regression gate. Since §8 keeps test-gate scoping out of scope, the worker-pool ticket closes on the tournament-loop budget and records the full-harness result as residual end-to-end evidence for later campaign-protocol work.
+
 ## 5. Test plan
 
 - `packages/engine/test/integration/arvn-tournament-wasm-equivalence.test.ts` — Phase 0 equivalence. Architectural-invariant class (asserts identical decision streams under either VM path).
@@ -211,5 +213,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-12:
 - [`archive/tickets/167ARVNEVOHAR-002.md`](../archive/tickets/167ARVNEVOHAR-002.md) — Trace emission defaults (`--trace-default`) (completed; covers Phase 0 — trace half, §3.5)
 - [`archive/tickets/167ARVNEVOHAR-003.md`](../archive/tickets/167ARVNEVOHAR-003.md) — Engine build script — drop unconditional clean (completed; covers Phase 1 — build half, §3.2)
 - [`archive/tickets/167ARVNEVOHAR-004.md`](../archive/tickets/167ARVNEVOHAR-004.md) — Campaign-local GameDef disk cache (completed; covers Phase 1 — cache half, §3.3)
-- [`tickets/167ARVNEVOHAR-005.md`](../tickets/167ARVNEVOHAR-005.md) — Worker-thread shard pool for seeds (covers Phase 2, §3.4 + §7)
+- [`archive/tickets/167ARVNEVOHAR-005.md`](../archive/tickets/167ARVNEVOHAR-005.md) — Worker-thread shard pool for seeds (completed; covers Phase 2, §3.4 + §7)
 - [`tickets/167ARVNEVOHAR-006.md`](../tickets/167ARVNEVOHAR-006.md) — Baseline measurement report turnperf-002 (covers §5 last bullet)

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement script + checked-in report only
-**Deps**: `tickets/167ARVNEVOHAR-005.md`
+**Deps**: `archive/tickets/167ARVNEVOHAR-005.md`
 
 ## Problem
 

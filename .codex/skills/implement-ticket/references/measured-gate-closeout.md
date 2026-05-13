@@ -6,6 +6,15 @@ Use this reference when a profiling, benchmark, or measured-gate ticket lands co
 
 When a code migration lands but an explicit benchmark/performance gate remains red, do not mark the ticket terminal just because ordinary tests are green. Record exact samples, threshold comparison, variance or drift when available, and the active route proof. If satisfying or relaxing the gate changes an explicit deliverable, status, scope, dependency story, or phase plan, stop for `1-3-1` before creating successors or rewriting acceptance.
 
+Before treating a red elapsed-time result as ticket-owned, decompose wrapper commands that include more than the measured implementation seam. Classify each meaningful phase as one of:
+
+- `owned metric`: the runtime, benchmark, harness loop, or artifact generation the ticket explicitly owns
+- `required acceptance wrapper`: the exact broader command the ticket still explicitly requires, even if it includes non-runtime phases
+- `diagnostic overhead`: setup, cache warmup, compilation, report generation, or orchestration cost that explains the aggregate but is not itself the owned improvement target
+- `out-of-scope workflow budget`: preserved regression gates, unrelated package checks, CI scheduling, or other workflow cost covered by another owner or by the spec's out-of-scope section
+
+If the owned metric is green but the aggregate wrapper is red, do not default to `BLOCKED` or silently weaken the target. Use `1-3-1` with options that distinguish `proof-only correction`, `workflow-gate successor`, and `same-ticket optimization`, and state how each option aligns with `docs/FOUNDATIONS.md` before recommending one. If the ticket/spec already excludes workflow-gate tuning, a boundary correction may be the truthful terminal path after user approval; record the wrapper result as residual evidence rather than as the decisive measured gate.
+
 Exception: a ticket may close with terminal wording on a red result only when it explicitly defines `red measured result + active route proof + successor/follow-up owner` as acceptance-complete and no stricter materiality note blocks that closeout. In that case, record exact red metrics, active-route proof, retained/rejected candidate classification, successor ownership, dependency/status rewrites, and `pnpm run check:ticket-deps` result before terminal status.
 
 Use this terminal-status decision table:

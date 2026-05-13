@@ -1,6 +1,6 @@
 # 167ARVNEVOHAR-005: Worker-thread shard pool for seeds
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: None — campaign runner + new integration test only
@@ -21,6 +21,10 @@
 7. Spec §3.4 mandates work-stealing dispatch (not static partition) so long-running seeds do not stall short workers. A simple queue + `postMessage` pull pattern suffices; `--concurrency` defines pool size.
 8. The result JSON written by `run-tournament.mjs:535-550` does not currently include a `concurrency` field. Spec §7 mandates adding it.
 9. `harness.sh:46-51` passes flags to the runner; spec §3.4 says to add `--concurrency ${CONCURRENCY:-N}` where `N` is benchmarked at implementation time (spec §9 open question). Implementer selects the default after a `{2,4,6,8}` benchmark on the dev box; default value lives in `harness.sh` and is documented in `campaigns/fitl-arvn-agent-evolution/program.md:268-278` (Configuration section).
+
+## Boundary Reset (2026-05-13)
+
+User-approved Option 2 boundary correction: keep this ticket focused on the worker-thread seed-shard pool and its deterministic tournament-loop proof. The previous end-to-end `harness.sh <= 3 minutes` acceptance clause was over-broad for this ticket because Spec 167 §8 explicitly keeps test-gate scoping out of scope while `harness.sh` still runs the full engine regression gate before the tournament. The worker-pool implementation is accepted when the 15-seed tournament runner itself completes within the 3-minute budget with deterministic results; the full harness wall-time is recorded as a red residual caused by the preserved build + regression gate, not as remaining worker-pool work.
 
 ## Architecture Check
 
@@ -108,7 +112,7 @@ The `reports/turnperf-002-spec-167-baseline.md` deliverable from spec §5 is own
 
 1. `packages/engine/test/integration/arvn-tournament-parallel-determinism.test.ts` — per-seed deep equality + aggregate exact equality across `--concurrency 1` vs. `--concurrency 4`.
 2. Existing suite: `pnpm -F @ludoforge/engine test` continues to pass.
-3. End-to-end at tier 15: `SEED_COUNT=15 bash campaigns/fitl-arvn-agent-evolution/harness.sh` completes in ≤ 3 minutes wall-time on the dev box, with `errors=0` and `compositeScore` exactly matching the single-worker baseline (no noise tolerance — determinism is preserved).
+3. Tournament-loop tier 15: `node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200 --trace-default none --concurrency N` completes in ≤ 3 minutes wall-time on the dev box for the selected default `N`, with `errors=0` and `compositeScore` exactly matching the single-worker baseline (no noise tolerance — determinism is preserved). The full `SEED_COUNT=15 bash campaigns/fitl-arvn-agent-evolution/harness.sh` lane remains a recorded end-to-end smoke and may exceed 3 minutes while the full engine regression gate is preserved out of scope.
 4. Manual: `--concurrency 1` continues to take the in-process serial path; no worker-spawn overhead introduced for single-thread invocations.
 
 ### Invariants
@@ -130,5 +134,74 @@ The `reports/turnperf-002-spec-167-baseline.md` deliverable from spec §5 is own
 1. `node packages/engine/scripts/run-tests.mjs --testNamePattern "arvn-tournament-parallel-determinism"` (after `pnpm turbo build`).
 2. `pnpm -F @ludoforge/engine test` (full engine suite — regression parity).
 3. `pnpm turbo lint && pnpm turbo typecheck` (clean checks).
-4. End-to-end: `SEED_COUNT=15 time bash campaigns/fitl-arvn-agent-evolution/harness.sh` — measure wall-time; verify ≤ 3 minutes and `compositeScore` exact-match vs. the pre-ticket-005 baseline at the same seed set.
+4. End-to-end smoke: `SEED_COUNT=15 time bash campaigns/fitl-arvn-agent-evolution/harness.sh` — measure wall-time and verify `errors=0`, `concurrency=<selected default>`, and `compositeScore` exact-match vs. the tournament-loop evidence at the same seed set. The ≤3 minute gate applies to the tournament-loop command in item 5, not the full harness while the full regression gate remains intentionally preserved.
 5. Benchmark `--concurrency ∈ {2, 4, 6, 8}` at `SEED_COUNT=15` to select the harness default; record the chosen value in `program.md`.
+
+## Outcome
+
+Completed: 2026-05-13.
+
+### Implementation Notes
+
+- Extracted the per-seed tournament logic into `campaigns/fitl-arvn-agent-evolution/run-seed.mjs`, including per-seed margin computation, decision-stat accumulation, trace-summary construction, and seed-ordered aggregate reduction.
+- Added `campaigns/fitl-arvn-agent-evolution/run-seed-worker.mjs`, which reconstructs `GameDefRuntime` once per worker, initializes the policy WASM runtime unless `--no-wasm` is propagated, and processes seed jobs from the main thread.
+- `run-tournament.mjs` now accepts `--concurrency`, preserves the in-process serial path at concurrency 1, uses a worker-thread work-stealing queue when concurrency is greater than 1, writes traces from the main process after reduction, and emits `concurrency` in the final JSON metadata.
+- `harness.sh` now passes `--concurrency "${CONCURRENCY:-8}"` to the tournament runner and echoes the resolved `concurrency` metric from the JSON output.
+- `program.md` documents the default `CONCURRENCY = 8` setting.
+- Added `packages/engine/test/integration/arvn-tournament-parallel-determinism.test.ts` and classified it in the policy-canary integration lane. The automated witness uses a bounded two-seed production FITL run because the draft four-seed shape timed out in this environment while proving the same direct-vs-worker invariant.
+
+### Boundary and Command Corrections
+
+- Authorization ledger: user approved Option 2 on 2026-05-13. Scope effect: proof-boundary correction. Durable locations: this Boundary Reset section and Spec 167's Phase 2 reassessment note.
+- Verification substitution: the draft `node packages/engine/scripts/run-tests.mjs --testNamePattern "arvn-tournament-parallel-determinism"` is not a live Node test-runner filter. The repo-valid final lane is `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-parallel-determinism.test.js`.
+- Acceptance correction: the ≤3 minute budget applies to the 15-seed tournament-runner loop owned by this ticket. The full `harness.sh` lane is retained as an end-to-end smoke and residual timing record while the full regression gate remains intentionally preserved out of scope.
+
+### Measurement Ledger
+
+- Runner calibration, all with `--seeds 15 --players 4 --evolved-seat arvn --max-turns 200 --trace-default none`, warm GameDef cache, `errors=0`, and exact aggregate parity (`compositeScore=-3.4`, `avgMargin=-6.0667`, `winRate=0.2667`, `wins=4`, `completed=15`, `truncated=0`):
+  - `--concurrency 2`: `380.43s`
+  - `--concurrency 4`: `210.74s`
+  - `--concurrency 6`: `174.04s`
+  - `--concurrency 8`: `172.67s`
+- Selected default: `CONCURRENCY=8`, the fastest measured candidate and below the corrected 3-minute tournament-loop budget.
+- Full harness smoke with preserved build + full engine regression gate: `SEED_COUNT=15 bash campaigns/fitl-arvn-agent-evolution/harness.sh` completed in `261.28s`, `errors=0`, `concurrency=8`, `compositeScore=-3.4`. This is red against the old full-harness ≤3 minute clause but classified as out-of-scope residual end-to-end evidence under the approved boundary reset.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness/assertion | Status | Proof lane |
+|---|---|---|---|
+| Per-seed determinism | Direct `runSeed` results deep-equal worker-pool results for the same seeds | proven | focused integration test |
+| Aggregate determinism | `compositeScore`, `avgMargin`, `winRate`, and `decisionBreakdown` exactly match after seed-ordered reduction | proven | focused integration test + calibration parity |
+| Run-local isolation | `runSeed` forks the runtime per seed and workers reconstruct structural runtime per worker | proven | implementation + focused integration test |
+| Worker WASM parity | each worker initializes WASM unless `disableWasm` is set | proven | worker implementation + runner smoke |
+| Reduction is order-stable | aggregate reduction sorts results by numeric seed before summing | proven | implementation + focused integration test |
+
+### Source-Size Ledger
+
+`path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+- `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs | 641 | 362 | no | shrink | per-seed logic extracted to run-seed.mjs | none`
+- `campaigns/fitl-arvn-agent-evolution/run-seed.mjs | 0 | 504 | no | new extracted campaign module | below 800-line cap; further splitting would obscure the ticket seam before proof | none`
+- `campaigns/fitl-arvn-agent-evolution/run-seed-worker.mjs | 0 | 70 | no | new worker entry | small focused worker bootstrap | none`
+- `packages/engine/test/integration/arvn-tournament-parallel-determinism.test.ts | 0 | 87 | no | new proof file | small focused test | none`
+
+### Generated Fallout and Deferred Scope
+
+- Generated/artifact fallout: no schema artifacts, goldens, or checked-in generated JSON are expected to change. Ignored runtime outputs remain `.gamedef-cache/`, `traces/`, and `last-trace.json`.
+- Deferred sibling scope: `reports/turnperf-002-spec-167-baseline.md` remains owned by `tickets/167ARVNEVOHAR-006.md`; engine per-decision hot-path optimization remains out of scope per Spec 167 §8; test-gate scoping remains out of scope per Spec 167 §8.
+
+### Verification
+
+- `node --check campaigns/fitl-arvn-agent-evolution/run-seed.mjs` — passed.
+- `node --check campaigns/fitl-arvn-agent-evolution/run-seed-worker.mjs` — passed.
+- `node --check campaigns/fitl-arvn-agent-evolution/run-tournament.mjs` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-parallel-determinism.test.js` — passed after the final typecheck/build output; `1/1` test passed in `82950.788316ms`.
+- `timeout 240 node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 2 --players 4 --evolved-seat arvn --max-turns 1 --trace-default none --concurrency 2` — passed after the final typecheck/build output; final JSON included `"errors":0`, `"completed":2`, `"truncated":2`, `"concurrency":2`, `"gamedefCacheHit":true`, and `"compositeScore":-8.5`.
+- `pnpm -F @ludoforge/engine test` — passed; schema artifact check plus default lane summary `66/66 files passed`.
+- `pnpm turbo lint` — passed; `2 successful, 2 total`.
+- `pnpm turbo typecheck` — passed; `3 successful, 3 total`.
+- `pnpm run check:ticket-deps` — passed after terminal status update; `2 active tickets and 2313 archived tickets`.
+
+Late-edit proof validity: terminal status and exact proof transcription only after final lanes; no scope, acceptance command semantics, touched-file ownership, follow-up ownership, code, test, or dependency change in this terminal patch. The focused compiled test and runner smoke were rerun after `pnpm turbo typecheck` rebuilt engine output.
+No-invalidation: checker-result transcription only; no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency change.

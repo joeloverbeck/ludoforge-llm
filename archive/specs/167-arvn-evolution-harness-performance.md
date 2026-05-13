@@ -1,6 +1,6 @@
 # Spec 167 — ARVN Evolution Harness Performance
 
-**Status**: PROPOSED
+**Status**: ✅ COMPLETED
 **Priority**: High — the `fitl-arvn-agent-evolution` campaign at seed-tier 15 takes ~15 minutes per harness invocation, which throttles every experiment in the improve-loop and compounds across the unbounded campaign horizon. Recovering even half of that wall-time roughly doubles the experimental throughput of the active campaign and every successor that reuses the harness.
 **Complexity**: M
 **Date**: 2026-05-12
@@ -215,3 +215,15 @@ Decomposed via `/spec-to-tickets` on 2026-05-12:
 - [`archive/tickets/167ARVNEVOHAR-004.md`](../archive/tickets/167ARVNEVOHAR-004.md) — Campaign-local GameDef disk cache (completed; covers Phase 1 — cache half, §3.3)
 - [`archive/tickets/167ARVNEVOHAR-005.md`](../archive/tickets/167ARVNEVOHAR-005.md) — Worker-thread shard pool for seeds (completed; covers Phase 2, §3.4 + §7)
 - [`archive/tickets/167ARVNEVOHAR-006.md`](../archive/tickets/167ARVNEVOHAR-006.md) — Baseline measurement report turnperf-002 (completed; covers §5 last bullet)
+
+## Outcome
+
+**Completion date**: 2026-05-13
+
+**What actually changed**: All six decomposed tickets (167ARVNEVOHAR-001 through 167ARVNEVOHAR-006) landed and are archived under `archive/tickets/`. Phase 0 (WASM bootstrap + trace defaults), Phase 1 (incremental build + GameDef disk cache), and Phase 2 (worker-thread shard pool) shipped; the per-card cost dropped from `8710 ms` (TURNPERF-001 baseline) to `2051 ms` (`12.82 ms/decision`) — a `-76.5%` reduction on the canonical one-card profile.
+
+**Deviations from original plan**: The §4 Phase 2 acceptance criterion expected the full `harness.sh` invocation to land at `≤ 3 minutes` total wall-time on the development box. The reassessment recorded inline in §4 (2026-05-13) documents that the tournament-loop budget was met (`172.67s` at `--concurrency 8`, exact aggregate parity), but the full `harness.sh` invocation completed in `261.28s` — and `277.90s` on the turnperf-002 measurement run — because the preserved full engine regression gate (`114.10s` per turnperf-002) is part of every harness invocation. Test-gate scoping was explicitly out of scope per §8, so the tournament-loop budget is the spec's contractual acceptance and the full-harness number is recorded as residual evidence for later campaign-protocol work.
+
+**Verification results**: Captured in `reports/turnperf-002-spec-167-baseline.md` (kernel commit `e2346e8e84c403153f8133d6ee14afe9a49fea55`). 15-seed harness result: `compositeScore=-3.4`, `winRate=0.2667`, `wins=4`, `completed=15`, `truncated=0`, `errors=0`, `concurrency=8`, `wasmEnabled=true`, `gamedefCacheHit=true`. WASM↔TS bytecode equivalence (`policy-bytecode-equivalence.test.ts`) and parallel-determinism (`arvn-tournament-parallel-determinism.test.ts`) tests remain green.
+
+**Follow-up**: `specs/168-engine-per-decision-hot-path-optimizations.md` covers the per-decision kernel-internal hot-path scope this spec deferred in §8 (working name "engine per-decision hot-path optimizations" → final name "Engine Per-Decision Hot-Path Optimizations"). The follow-up is grounded in turnperf-002's "Prioritized Targets for Spec 168" section and is a profile-validated 5-phase plan with an explicit Phase 5 escalation gate for further bytecode-IR / WASM expansion.

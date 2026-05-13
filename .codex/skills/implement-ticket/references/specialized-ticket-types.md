@@ -113,6 +113,8 @@ For investigation tickets whose primary output is a checked-in measurement artif
 
 For long-running measurement tickets, that minimal probe should also validate the **output shape**, not just command viability. Before the expensive run, execute a one-seed, one-item, or otherwise tiny smoke probe and inspect that emitted rows use the promised unit of analysis, counters are per-row rather than accidental cumulative totals, required columns are present, and disabled/toggled modes report comparable fields.
 
+For Ludoforge `profile-fitl-preview-drive.mjs --perCard` witnesses, use `perCardRows` as the per-card decision-count and milliseconds-per-decision oracle. The top-level `result.decisions` is tied to retained trace decisions and can be `0` when trace retention is `finalStateOnly`; do not use that top-level field as the positive per-card decision-count assertion unless the command configuration explicitly retains those decisions.
+
 When the ticket's deliverable is a new long-running measurement script, design the script itself for bounded proof before the full corpus run. Prefer adding a representative subset option, file/item limit, or equivalent smoke mode that exercises the same code path and output schema as the full run. If stdout is the machine-readable artifact, send progress or heartbeat lines to stderr so a silent multi-minute run can be distinguished from a stuck child process without corrupting JSON output. The smoke mode is a preflight, not a replacement for a ticket-required full measurement unless a later 1-3-1 reset narrows the deliverable.
 
 For measurement scripts over persistent caches, generated output, warmed artifacts, or other shared mutable state, treat probes that clear, warm, read, or rewrite the same state as output-contending. Do not run those probes in parallel when their timings, hit/miss counts, or activation evidence will be cited. If an accidental parallel probe completes, label it diagnostic/contaminated and rerun the smallest needed probe serially before using the numbers in a ticket, spec, or successor.
@@ -154,6 +156,8 @@ When an investigation or measurement ticket needs a new checked-in helper script
 5. add the helper to the active ticket's touched-file or outcome ledger before final proof
 6. cite the helper's exact invocation in the durable report or ticket closeout
 7. include the helper in the final touched-file scope sweep
+
+When the repeatable evidence is a new Node perf fixture that spawns an existing package script and writes a durable JSON artifact, also check the package cwd, build prerequisite, stdout/stderr contract, artifact path, and ignore-rule state explicitly. Prefer parsing machine-readable stdout, keeping progress on stderr, writing ignored raw artifacts under a test-owned `.artifacts/` directory, transcribing the durable fields into the checked-in report or ticket, and rerunning the focused compiled fixture after any broad lane that rebuilds `dist`.
 
 When the helper is a fixture/golden `regenerate` script:
 

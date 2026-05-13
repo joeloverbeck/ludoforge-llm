@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — adds new perf-test fixture under `packages/engine/test/perf/`
-**Deps**: `specs/168-engine-per-decision-hot-path-optimizations.md`
+**Deps**: `archive/specs/168-engine-per-decision-hot-path-optimizations.md`
 
 ## Problem
 
@@ -79,6 +79,10 @@ Capture one canonical run from the fixture into `reports/turnperf-NNN-spec-168-p
 
 ## Outcome (2026-05-13)
 
+Outcome amended: 2026-05-13 — post-archive path repair after Phase 5 moved to
+`archive/tickets/168ENGHOTPATH-006.md` and Spec 168 moved to
+`archive/specs/168-engine-per-decision-hot-path-optimizations.md`.
+
 Phase 0 implementation landed the opt-in per-decision budget fixture and the checked-in baseline report.
 
 What landed:
@@ -99,7 +103,10 @@ Generated fallout:
 
 Deferred sibling/spec scope:
 
-- Phases 1-5 remain owned by `tickets/168ENGHOTPATH-002.md` through `tickets/168ENGHOTPATH-006.md`.
+- Phases 1-5 are owned by `archive/tickets/168ENGHOTPATH-002.md`,
+  `archive/tickets/168ENGHOTPATH-007.md`, and
+  `archive/tickets/168ENGHOTPATH-003.md` through
+  `archive/tickets/168ENGHOTPATH-006.md`.
 
 Source-size ledger:
 

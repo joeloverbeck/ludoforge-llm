@@ -101,6 +101,9 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 
 ## Outcome (2026-05-13)
 
+Outcome amended: 2026-05-13 — post-archive path repair after Phase 5 moved to
+`archive/tickets/168ENGHOTPATH-006.md`.
+
 Phase 2 landed a Foundation-aligned compiled query/filter plan substrate and
 now meets the explicit measured gate. The first retained implementation was
 correct but red; follow-up work on this same ticket fixed the measured
@@ -184,8 +187,7 @@ Deferred sibling/spec scope:
 
 - Phase 3 remains with `archive/tickets/168ENGHOTPATH-004.md`.
 - Phase 4 remains with `archive/tickets/168ENGHOTPATH-005.md`.
-- Phase 5 remains with `tickets/168ENGHOTPATH-006.md`; its precondition is now
-  unblocked for Phase 2, pending Phases 3 and 4.
+- Phase 5 is archived at `archive/tickets/168ENGHOTPATH-006.md`.
 - Remaining non-Phase-2 residuals shown by the CPU profile belong to later
   phase owners, not this ticket.
 

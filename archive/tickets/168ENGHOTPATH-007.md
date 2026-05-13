@@ -79,8 +79,9 @@ live evidence makes the correction purely clerical.
 ### 3. Update Spec 168 and dependent tickets
 
 If the measured resolution changes the Phase 1 target, phase order, or Phase 5
-preconditions, update `specs/168-engine-per-decision-hot-path-optimizations.md`
-and dependent tickets in the same turn.
+preconditions, update
+`archive/specs/168-engine-per-decision-hot-path-optimizations.md` and dependent
+tickets in the same turn.
 
 ### 4. Per-phase measurement report
 
@@ -96,8 +97,8 @@ same-command metric, activation counters, and final recommendation.
 - `packages/engine/scripts/profile-fitl-preview-drive.mjs` (modify only for
   additional diagnostic counters)
 - `reports/turnperf-NNN-spec-168-phase-1-*.md` (new or amend)
-- `specs/168-engine-per-decision-hot-path-optimizations.md` (modify if phase
-  acceptance or ordering changes)
+- `archive/specs/168-engine-per-decision-hot-path-optimizations.md` (modify if
+  phase acceptance or ordering changes)
 
 ## Out of Scope
 
@@ -142,6 +143,9 @@ same-command metric, activation counters, and final recommendation.
 4. `pnpm turbo test` or recorded substitution
 
 ## Outcome (2026-05-13)
+
+Outcome amended: 2026-05-13 — post-archive path repair after Spec 168 moved to
+`archive/specs/168-engine-per-decision-hot-path-optimizations.md`.
 
 Phase 1b landed a measured token-state-index hot-path fix instead of rewriting
 the Spec 168 target. The canonical one-card probe now records

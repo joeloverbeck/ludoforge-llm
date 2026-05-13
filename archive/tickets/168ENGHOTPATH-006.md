@@ -1,6 +1,6 @@
 # 168ENGHOTPATH-006: Phase 5 — re-profile + Spec 169 escalation memo
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement + report only
@@ -110,3 +110,78 @@ If the Spec 169 trigger memo is produced, surface it in this ticket's `Outcome` 
 2. `pnpm -F @ludoforge/engine test:perf`
 3. `pnpm turbo test`
 4. `SEED_COUNT=15 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` (full-harness sanity check, optional — record total wall-time for residual evidence)
+
+## Outcome (2026-05-13)
+
+What landed:
+
+- Added `reports/turnperf-009-spec-168-final.md` with the Phase 5 final
+  bucket decomposition and closure note.
+- No production code, schema, golden, compiled GameDef, or Spec 169 artifact was
+  changed.
+
+Phase 5 verdict:
+
+- Overall Spec 168 budget remains red: final per-card `elapsedMs=1800.57`
+  against `<=1700`, and final per-card `msPerDecision=11.2536` against
+  `<=10.6`.
+- Spec 169 escalation does not trigger under Spec 168 §3.6. The only remaining
+  single kernel-internal bucket over `40 ms` is `tokenStateIndex:build`, and the
+  Phase 5 marshalling proxy leaves only about `1.65 ms` of total WASM execution
+  headroom before a WASM route would lose to the current TypeScript bucket.
+  `simApplyMove` is still large, but it is an aggregate simulator wrapper, not a
+  narrow opcode/ABI candidate.
+
+Invariant proof matrix:
+
+| Invariant | Witness / assertion | Status | Proof lane |
+|---|---|---|---|
+| Final report records the post-Phase-4 bucket decomposition. | `reports/turnperf-009-spec-168-final.md` transcribes the `spec-168-final` profiler output. | proven | direct profiler command |
+| Exactly one Spec 169 trigger memo or closure note exists. | The final report contains a `Closure Note` and no trigger memo. | proven | report inspection |
+| Overall Spec 168 acceptance criterion is checked. | Report records `1800.57 ms/card` and `11.2536 ms/decision`, both red against the target. | proven red and documented | direct profiler command |
+| Determinism / score sanity preserved. | Direct profile reports WASM unsupported counts `0`; optional harness reports `errors=0`, `compositeScore=-3.4`, `completed=15`, matching the pre-Spec-168 baseline in `reports/turnperf-002-spec-167-baseline.md`. | proven | direct profiler command, optional harness, and baseline report |
+
+Command ledger:
+
+| Ticket section | Literal command / shorthand | Final classification |
+|---|---|---|
+| What to Change | `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec-168-final` | ran directly; decisive final decomposition |
+| Acceptance | `pnpm turbo test` | passed from Turbo cache replay; cache-hit supplemental because direct profile, harness regression gate, and perf lane prove the ticket-owned measurement/report boundary |
+| Test Plan | `pnpm -F @ludoforge/engine test:perf` | ran directly; passed |
+| Test Plan | `SEED_COUNT=15 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` | ran optional residual score/error sanity; passed |
+
+Generated fallout:
+
+- New checked-in report: `reports/turnperf-009-spec-168-final.md`.
+- Ignored campaign logs were regenerated under
+  `campaigns/fitl-arvn-agent-evolution/run.log.*`.
+- No schema, golden, compiled GameDef, or raw profiler JSON artifact is checked
+  in.
+
+Deferred sibling/spec scope:
+
+- Spec 169 authoring, WASM opcode/ABI work, and further engine optimization are
+  out of scope. The report recommends a new profiling/design slice only if the
+  remaining overall budget gap still matters; this ticket does not create that
+  successor.
+
+Runtime surface breadth: script/profile-only measurement and report closeout.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec-168-final` — passed; produced the decisive final bucket decomposition.
+- `SEED_COUNT=15 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `compositeScore=-3.4`, `errors=0`, `real=270.38 s`.
+  This matches the pre-Spec-168 fixed-seed baseline in
+  `reports/turnperf-002-spec-167-baseline.md`, which recorded
+  `compositeScore=-3.4` and `errors=0`.
+- `pnpm -F @ludoforge/engine test:perf` — passed, 4/4 perf files; emitted known advisory warnings from older perf witnesses, but no failing tests.
+- `pnpm turbo test` — passed from Turbo cache replay, 5/5 tasks; cache-hit supplemental.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2321 archived tickets.
+
+Late-edit validity: final ticket/report edits after the measured lanes
+transcribe already-run metrics, final proof results, and terminal status only.
+They do not change runtime code, command semantics, thresholds, acceptance
+boundaries, touched-file ownership, follow-up ownership, or dependency
+classification. The dependency-check result transcription is clerical and does
+not change ticket graph facts after the check.

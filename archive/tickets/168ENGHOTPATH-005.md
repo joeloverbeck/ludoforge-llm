@@ -92,6 +92,9 @@ After landing, re-run the Phase 0 fixture and capture pre/post bucket decomposit
 
 ## Outcome (2026-05-13)
 
+Outcome amended: 2026-05-13 — post-archive path repair after Phase 5 moved to
+`archive/tickets/168ENGHOTPATH-006.md`.
+
 Phase 4 implementation landed the bytecode input row cache substrate and the
 decisive measured gate is green. The ticket-named correctness lanes, root test
 lane, and dependency integrity check are green.
@@ -159,7 +162,8 @@ Generated fallout:
 
 Deferred sibling/spec scope:
 
-- Phase 5 escalation memo remains owned by `tickets/168ENGHOTPATH-006.md`.
+- Phase 5 escalation memo is archived at
+  `archive/tickets/168ENGHOTPATH-006.md`.
 - New WASM opcodes, ABI changes, and wider preview-drive batching remain out of
   scope for this ticket.
 

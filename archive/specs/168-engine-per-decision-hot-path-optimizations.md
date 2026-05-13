@@ -1,6 +1,6 @@
 # Spec 168 — Engine Per-Decision Hot-Path Optimizations
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: Medium-High — with Spec 167 closed, the per-card cost in `fitl-arvn-agent-evolution` is `2051 ms` at `12.82 ms/decision` (160 decisions/card). Recovering ~250–450 ms/card cuts another 12–22% off every tournament-loop seed and compounds over the unbounded campaign horizon. Lower priority than 167 because the harness is already inside its acceptable wall-time band; higher than the deferred Spec 168 sketch in 167 §10 indicated, because turnperf-002 has now profile-validated the targets.
 **Complexity**: M
 **Date**: 2026-05-13
@@ -245,4 +245,53 @@ Decomposed via `/spec-to-tickets` on 2026-05-13:
 - [`archive/tickets/168ENGHOTPATH-003.md`](../archive/tickets/168ENGHOTPATH-003.md) — Phase 2 — compiled query/filter plans (covers §3.3 + §4 Phase 2)
 - [`archive/tickets/168ENGHOTPATH-004.md`](../archive/tickets/168ENGHOTPATH-004.md) — Phase 3 — zobrist incremental digest (covers §3.4 + §4 Phase 3)
 - [`archive/tickets/168ENGHOTPATH-005.md`](../archive/tickets/168ENGHOTPATH-005.md) — Phase 4 — bytecode input row cache (covers §3.5 + §4 Phase 4)
-- [`tickets/168ENGHOTPATH-006.md`](../tickets/168ENGHOTPATH-006.md) — Phase 5 — re-profile + Spec 169 escalation memo (covers §3.6 + §4 Phase 5)
+- [`archive/tickets/168ENGHOTPATH-006.md`](../archive/tickets/168ENGHOTPATH-006.md) — Phase 5 — re-profile + Spec 169 escalation memo (covers §3.6 + §4 Phase 5)
+
+## Outcome (2026-05-13)
+
+Spec 168 completed through its full ticket chain. Phases 0-5 are archived under
+`archive/tickets/168ENGHOTPATH-001.md` through
+`archive/tickets/168ENGHOTPATH-006.md`, with Phase 1b archived separately as
+`archive/tickets/168ENGHOTPATH-007.md`.
+
+What landed:
+
+- Phase 0 added the opt-in per-decision budget fixture and baseline report:
+  `reports/turnperf-003-spec-168-phase-0-baseline.md`.
+- Phase 1 plus Phase 1b landed and activated the token-state-index hot-path
+  reductions recorded in `reports/turnperf-004-spec-168-phase-1.md` and
+  `reports/turnperf-005-spec-168-phase-1b.md`.
+- Phase 2 landed compiled query/filter plan caching and result-cache timing
+  fixes, recorded in `reports/turnperf-006-spec-168-phase-2.md`.
+- Phase 3 landed decision-stack frame digest caching, recorded in
+  `reports/turnperf-007-spec-168-phase-3.md`.
+- Phase 4 landed bytecode input row/state-word caching, recorded in
+  `reports/turnperf-008-spec-168-phase-4.md`.
+- Phase 5 produced the final re-profile and closure memo in
+  `reports/turnperf-009-spec-168-final.md`.
+
+Deviations from the original budget:
+
+- The final canonical probe improved from the Phase 0 baseline
+  `2145.94 ms/card` and `13.4121 ms/decision` to `1800.57 ms/card` and
+  `11.2536 ms/decision`, but it did not reach the original `<=1700 ms/card`
+  and `<=10.6 ms/decision` target.
+- The published Phase 5 Spec 169 escalation gate did not trigger. The final
+  report records that the remaining single kernel-internal bucket over `40 ms`
+  is `tokenStateIndex:build`, but the measured marshalling proxy leaves only
+  about `1.65 ms` of total WASM execution headroom before a WASM route would be
+  slower than the current TypeScript path. `simApplyMove` remains larger, but it
+  is an aggregate wrapper rather than a narrow opcode/ABI candidate.
+- No Spec 169 was authored as part of this spec. If the remaining
+  `<=1700 ms/card` budget still matters, the final report recommends a new
+  profiling/design slice against the residual aggregate rather than a
+  bytecode-IR/WASM expansion spec.
+
+Verification summary:
+
+- `pnpm -F @ludoforge/engine build` — passed during Phase 5 closeout.
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label spec-168-final` — passed and produced the decisive final bucket decomposition.
+- `SEED_COUNT=15 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `compositeScore=-3.4`, `errors=0`, matching the pre-Spec-168 fixed-seed baseline in `reports/turnperf-002-spec-167-baseline.md`.
+- `pnpm -F @ludoforge/engine test:perf` — passed, 4/4 perf files; emitted known advisory warnings from older perf witnesses, but no failing tests.
+- `pnpm turbo test` — passed from Turbo cache replay, 5/5 tasks; treated as supplemental because the direct profile, harness regression gate, and perf lane prove the measurement/report boundary.
+- `pnpm run check:ticket-deps` — passed after Phase 5 archival for 0 active tickets and 2322 archived tickets.

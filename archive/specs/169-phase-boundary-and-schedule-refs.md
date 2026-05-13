@@ -1,6 +1,6 @@
 # Spec 169 — Phase Boundary and Schedule Distance Refs
 
-**Status**: Proposed
+**Status**: COMPLETED
 **Priority**: Medium — closes the most-tractable third of the cross-phase projection gap diagnosed in `reports/agent-cross-phase-projection-gap-2026-05-12.md`. Timing-aware considerations are the cheapest architectural improvement over the static `preferGovernWeighted=1000` prior, and they unblock the candidate-relative latent-value layer (deferred to a follow-up spec). Post-Spec-167 the harness wall-time is ~2 minutes for 15 seeds; this spec's runtime overhead is O(1) per ref lookup.
 **Complexity**: M
 **Date**: 2026-05-13
@@ -37,12 +37,9 @@ preferGovernEarlyInCoupCycle:
   scopes: [move]
   weight: 250
   when:
-    gte:
-      - { ref: schedule.distance.toBoundary.coupEntry.cards }
-      - 3
+    ref: candidate.tag.govern
   value:
-    boolToNumber:
-      ref: candidate.tag.govern
+    ref: schedule.distance.toBoundary.coupEntry.cards
   scheduleFallback:
     onUnavailable: noContribution
 ```
@@ -198,12 +195,9 @@ preferGovernEarlyInCoupCycle:
   scopes: [move]
   weight: 250
   when:
-    gte:
-      - { ref: schedule.distance.toBoundary.coupEntry.cards }
-      - 3
+    ref: candidate.tag.govern
   value:
-    boolToNumber:
-      ref: candidate.tag.govern
+    ref: schedule.distance.toBoundary.coupEntry.cards
   scheduleFallback:
     onUnavailable: noContribution   # | { constant: 0 } | dropConsideration
 ```
@@ -293,15 +287,15 @@ Resolution cost: O(1) per ref lookup. The schedule index is maintained as part o
 
 Schedule refs MUST respect observer visibility. Two FITL-relevant cases:
 
-1. **Event deck order is visible per FITL rules** — drawn cards are face-up in the operations-track display; the next event card is also visible. The full deck-position-to-triggering-card index is computable from the publicly-visible card identity sequence. `schedule.distance.toBoundary.coupEntry.cards` is `ready` for all observers, including player agents.
+1. **FITL event deck order remains hidden in the live GameSpec** — drawn cards and the lookahead slot are face-up, but `deck:none` is still `visibility: hidden`. Under the Phase 0-4 resolver contract, `schedule.distance.toBoundary.coupEntry.cards` therefore resolves `unavailable` with reason `hiddenDeck` for ordinary player agents. Phase 5 demonstrates the authored boundary and the trace-visible `scheduleFallbackFired` path, not omniscient numeric countdowns.
 
-2. **Hidden-deck games** (future-spec hypothetical) — for a deck whose composition is private (e.g., a face-down player hand), card-draw distance is observer-dependent. The runtime resolver MUST consult the observer's visibility view; if the requested distance depends on unseen cards, status is `unavailable` (not `0`, never the omniscient distance).
+2. **Hidden-deck games** — for a deck whose composition is private (including current FITL `deck:none`), card-draw distance is observer-dependent. The runtime resolver MUST consult the observer's visibility view; if the requested distance depends on unseen cards, status is `unavailable` (not `0`, never the omniscient distance).
 
-This spec adds a compile-time check: any `schedule.distance.toBoundary.<X>.cards` reference compiles only if the targeted deck is **publicly observable** for the consuming agent's scope, OR the GameSpec explicitly opts in to per-observer projection via a new `schedule.observerPolicy: omniscient | observerView` field (default `observerView`). Phase 0 ships `observerView` only; `omniscient` is reserved for explicit omniscient-analysis modes per Foundation #4.
+This spec intentionally does not add an omniscient override in Phase 5. A future generic observer-policy extension may add explicit omniscient-analysis or partial-visibility semantics, but that is outside this FITL data ticket.
 
 ### 4.7 Trace surface
 
-When a consideration uses a schedule or phase ref, the trace row MUST include the resolved status and value (or fallback resolution). This mirrors the spec-166 `candidate.params` trace shape:
+When a consideration uses a schedule or phase ref, the trace MUST expose the value or fallback path that affected scoring. The generic `inputRefs` row below is the intended ready-state trace shape and remains a trace-surface follow-up unless a later ticket wires that row into the emitted TypeScript trace.
 
 ```json
 {
@@ -316,24 +310,23 @@ When a consideration uses a schedule or phase ref, the trace row MUST include th
   },
   "when": true,
   "weight": 250,
-  "value": 1,
-  "contribution": 250
+  "value": 5,
+  "contribution": 1250
 }
 ```
 
-When the ref resolves `unavailable` and a numeric fallback fires:
+When the ref resolves `unavailable` and a numeric fallback fires, the current emitted TypeScript trace pins the fallback through candidate metadata:
 
 ```json
 {
-  "consideration": "preferGovernEarlyInCoupCycle",
-  "inputRefs": {
-    "schedule.distance.toBoundary.coupEntry.cards": {
-      "status": "unavailable",
-      "reason": "noTriggeringCardRemaining"
-    }
-  },
-  "fallback": { "kind": "noContribution" },
-  "contribution": 0
+  "actionId": "govern",
+  "scoreContributions": [
+    { "termId": "preferGovernEarlyInCoupCycle", "contribution": 0 }
+  ],
+  "scheduleFallbackFired": {
+    "termId": "preferGovernEarlyInCoupCycle",
+    "kind": "noContribution"
+  }
 }
 ```
 
@@ -370,7 +363,7 @@ This spec ships in five sequential phases with explicit acceptance criteria. Eac
 | **3a** | `schedule.distance.toPhase.<PhaseId>.cards` compile-time aliases to the first matching `phaseEntry` boundary. | Alias rewrite test; runtime parity test against direct `.toBoundary.<picked>.cards`; ambiguity warning test. |
 | **3b** | Real non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) for `cardDraw` boundaries with exact declared `unitRates`. Underived units remain compile-time unsupported. | Per-unit golden test; one cross-unit consistency test matching the declared-rate semantics. |
 | **4** | WASM opcode integration: new ref kinds added to the policy VM ABI; Rust handlers in `lib.rs` resolve schedule refs from the encoded input. | WASM↔TS bytecode equivalence test (`policy-bytecode-equivalence.test.ts`) passes with the new ref kinds in a fixture profile. Equivalence holds across `wasmScoreRowRoute` and `wasmPreviewCandidateFeatureRowRoute` paths. |
-| **5** | FITL `phaseBoundaries` authored in `data/games/fire-in-the-lake/`; one demonstration consideration in a sandbox profile (NOT promoted to `arvn-evolved`). | Demonstration consideration fires non-zero contribution at appropriate game positions in trace output. No regression on the `policy-profile-quality` baseline. |
+| **5** | FITL `phaseBoundaries` authored in `data/games/fire-in-the-lake/`; one demonstration consideration in a sandbox profile (NOT promoted to `arvn-evolved`). | Demonstration consideration compiles and emits trace-visible `scheduleFallbackFired` metadata for the hidden FITL deck. No regression on the `policy-profile-quality` baseline. |
 
 Phases 0-3 are engine-internal; Phase 4 is the WASM cross-cut; Phase 5 is the FITL data deliverable. Phases 0-4 must land before Phase 5 ships.
 
@@ -388,8 +381,8 @@ Per `.claude/rules/testing.md`, each new test file declares its class.
 
 ### 8.2 golden-trace tests
 
-- `phase-boundary-fitl-coup-distance.test.ts` — golden distances at game positions: turn 1 start, just after first non-coup event card draw, immediately after a coup card draw, mid-final-round, end-game with no remaining coup cards. Each readout is byte-pinned to the fixture state.
-- `schedule-ref-consideration-trace.test.ts` — a fixture profile uses `preferGovernEarlyInCoupCycle`; the trace row's `inputRefs`, `when`, `weight`, `value`, `contribution`, and `fallback` fields are byte-pinned.
+- `phase-boundary-fitl-coup-distance.test.ts` — golden hidden-deck distance statuses at game positions: turn 1 start, just after first non-coup event card draw, immediately after a coup card draw, mid-final-round, end-game. Each readout is byte-pinned to `unavailable: hiddenDeck` because FITL's draw deck remains hidden.
+- `schedule-ref-consideration-trace.test.ts` — a fixture profile uses `preferGovernEarlyInCoupCycle`; the trace row's score contribution and `scheduleFallbackFired` metadata are byte-pinned. The test does not require a generic ready-state `inputRefs` row unless a later trace-redesign ticket adds that surface.
 
 ### 8.3 convergence-witness tests
 
@@ -479,10 +472,19 @@ The proposal's testing plan and experiment design (paired seeds, `governPriorDep
 
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
-- [`archive/tickets/169PHASCHREF-001.md`](../archive/tickets/169PHASCHREF-001.md) — Phase 0 — types, BoundaryId, GameSpecDoc declaration & compiler validation (covers §7 Phase 0, §8.1 phase-boundary-compile-validation + phase-boundary-determinism)
-- [`archive/tickets/169PHASCHREF-002.md`](../archive/tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
-- [`archive/tickets/169PHASCHREF-003.md`](../archive/tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
-- [`archive/tickets/169PHASCHREF-004.md`](../archive/tickets/169PHASCHREF-004.md) — Phase 3a — schedule.distance.toPhase aliases (covers §7 Phase 3a)
-- [`archive/tickets/169PHASCHREF-007.md`](../archive/tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
-- [`archive/tickets/169PHASCHREF-005.md`](../archive/tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
-- [`tickets/169PHASCHREF-006.md`](../tickets/169PHASCHREF-006.md) — Phase 5 — FITL phaseBoundaries authoring & demonstration consideration (covers §7 Phase 5, §8.2 phase-boundary-fitl-coup-distance + schedule-ref-consideration-trace)
+- [`archive/tickets/169PHASCHREF-001.md`](../tickets/169PHASCHREF-001.md) — Phase 0 — types, BoundaryId, GameSpecDoc declaration & compiler validation (covers §7 Phase 0, §8.1 phase-boundary-compile-validation + phase-boundary-determinism)
+- [`archive/tickets/169PHASCHREF-002.md`](../tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
+- [`archive/tickets/169PHASCHREF-003.md`](../tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
+- [`archive/tickets/169PHASCHREF-004.md`](../tickets/169PHASCHREF-004.md) — Phase 3a — schedule.distance.toPhase aliases (covers §7 Phase 3a)
+- [`archive/tickets/169PHASCHREF-007.md`](../tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
+- [`archive/tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
+- [`archive/tickets/169PHASCHREF-006.md`](../tickets/169PHASCHREF-006.md) — Phase 5 — FITL phaseBoundaries authoring & demonstration consideration (covers §7 Phase 5, §8.2 phase-boundary-fitl-coup-distance + schedule-ref-consideration-trace)
+
+## Outcome
+
+- Completion date: 2026-05-13.
+- Spec 169 completed across archived tickets `169PHASCHREF-001` through `169PHASCHREF-007`.
+- What landed: generic `phase.*` and `schedule.*` state-local ref families, `BoundaryId` and `phaseBoundaries[]` GameSpecDoc support, card-draw schedule indexing, `.toPhase` aliases, declared-rate non-card schedule units, WASM policy-VM parity, FITL `coupEntry` authoring, and the hidden-deck `scheduleFallbackFired` demonstration profile/test seam.
+- Deviations from original plan: live FITL event-deck visibility required Foundation #4/#20 alignment. Phase 5 therefore proves authored FITL boundaries plus explicit hidden-deck fallback metadata instead of an omniscient ready numeric countdown. Generic ready-state `inputRefs` trace rows remain future trace-surface work.
+- Deferred scope remains as listed in §13: Layer 2 candidate-effect/control features, Layer 3 horizon preview probes, Layer 4 forward-model WASM primitives, ARVN profile refactor, extra heuristic state-features, additional schedule kinds, and observer policies beyond the default observer-view contract.
+- Verification is recorded in the archived implementation tickets linked in §14, with the final Phase 5 closeout in `archive/tickets/169PHASCHREF-006.md`.

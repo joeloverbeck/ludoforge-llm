@@ -133,10 +133,10 @@ Generated/schema fallout: none expected; no schema or serialized trace shape cha
 
 Deferred sibling scope:
 
-- Outcome amended: 2026-05-13 — Updated the Phase 2 owner reference to its archived path after 169PHASCHREF-003 archival; updated the Phase 4 owner reference after 169PHASCHREF-005 archival.
+- Outcome amended: 2026-05-13 — Updated the Phase 2 owner reference to its archived path after 169PHASCHREF-003 archival; updated the Phase 4 owner reference after 169PHASCHREF-005 archival; updated the FITL authoring owner reference after 169PHASCHREF-006 archival.
 - `archive/tickets/169PHASCHREF-003.md` owns card-distance schedule computation and `scheduleFallback` enforcement.
 - `archive/tickets/169PHASCHREF-005.md` owns WASM opcode/runtime integration.
-- `tickets/169PHASCHREF-006.md` owns FITL `phaseBoundaries` authoring.
+- `archive/tickets/169PHASCHREF-006.md` completed FITL `phaseBoundaries` authoring.
 
 Source-size ledger:
 

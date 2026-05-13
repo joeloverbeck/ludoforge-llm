@@ -128,6 +128,8 @@ In `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`:
 
 Completion date: 2026-05-13
 
+Outcome amended: 2026-05-13 — updated the FITL authoring owner reference after `169PHASCHREF-006` completed and archived.
+
 What landed:
 
 - Added first-class bytecode feature kinds for `phaseIntrinsic` and `scheduleDistance`.
@@ -153,7 +155,7 @@ Generated/schema fallout:
 
 Deferred sibling/spec scope:
 
-- `tickets/169PHASCHREF-006.md` remains the owner for FITL `phaseBoundaries`, coup-card tags, sandbox profile authoring, and FITL golden traces.
+- `archive/tickets/169PHASCHREF-006.md` completed FITL `phaseBoundaries`, coup-card tag verification, sandbox profile authoring, and FITL golden traces.
 - Schedule kinds beyond already-implemented `cardDraw` declared-rate units remain out of scope.
 
 Invariant proof matrix:

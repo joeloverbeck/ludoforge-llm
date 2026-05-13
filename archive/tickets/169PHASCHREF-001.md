@@ -4,11 +4,11 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel types, branded ids, compiler validation, diagnostic registry
-**Deps**: `specs/169-phase-boundary-and-schedule-refs.md`
+**Deps**: `archive/specs/169-phase-boundary-and-schedule-refs.md`
 
 ## Problem
 
-Spec 169 (`specs/169-phase-boundary-and-schedule-refs.md`) introduces a new state-local ref family (`phase.*` and `schedule.*`) that lets agent profiles write timing-aware considerations without forward simulation. Before any ref can resolve, the compiler must accept a new `phaseBoundaries[]` declaration in GameSpecDoc, validate it against existing phase/deck/card data, and reject malformed schedule references at compile time per Spec 169 §4.4. Without Phase 0's static substrate (types, branded `BoundaryId`, declaration acceptance, diagnostic codes), no downstream phase can ship — runtime resolvers and tests both require these primitives.
+Spec 169 (`archive/specs/169-phase-boundary-and-schedule-refs.md`) introduces a new state-local ref family (`phase.*` and `schedule.*`) that lets agent profiles write timing-aware considerations without forward simulation. Before any ref can resolve, the compiler must accept a new `phaseBoundaries[]` declaration in GameSpecDoc, validate it against existing phase/deck/card data, and reject malformed schedule references at compile time per Spec 169 §4.4. Without Phase 0's static substrate (types, branded `BoundaryId`, declaration acceptance, diagnostic codes), no downstream phase can ship — runtime resolvers and tests both require these primitives.
 
 This ticket is the foundation for the entire Spec 169 surface. It introduces no runtime resolution and no behavioral change to the engine — only validation and type plumbing.
 
@@ -143,6 +143,8 @@ Register all 10 new codes in the existing diagnostic-code registry (search `comp
 5. `pnpm turbo lint` — lint gate.
 
 ## Implementation Closeout (2026-05-13)
+
+Outcome amended: 2026-05-13 — updated the Spec 169 dependency/reference path after the spec completed and moved to `archive/specs/169-phase-boundary-and-schedule-refs.md`.
 
 Implemented the Phase 0 static substrate only:
 

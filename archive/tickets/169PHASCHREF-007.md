@@ -91,7 +91,7 @@ Add unit-level golden tests and cross-unit consistency tests that reflect the fi
 
 - `.toPhase` aliasing — completed by `archive/tickets/169PHASCHREF-004.md`.
 - WASM opcode integration — `archive/tickets/169PHASCHREF-005.md` integrates the schedule refs that existed when it started, including the declared-rate non-card units shipped here.
-- FITL `phaseBoundaries` authoring — `tickets/169PHASCHREF-006.md`.
+- FITL `phaseBoundaries` authoring — `archive/tickets/169PHASCHREF-006.md`.
 - Cumulative-sequence distance until an entire multi-phase sequence completes.
 
 ## Acceptance Criteria
@@ -127,7 +127,7 @@ Add unit-level golden tests and cross-unit consistency tests that reflect the fi
 
 Completion date: 2026-05-13
 
-Outcome amended: 2026-05-13 — post-ticket-review extended `archive/tickets/169PHASCHREF-005.md` to own WASM parity for declared-rate non-card units and archived this ticket; later path cleanup updated that owner reference after 005 archived.
+Outcome amended: 2026-05-13 — post-ticket-review extended `archive/tickets/169PHASCHREF-005.md` to own WASM parity for declared-rate non-card units and archived this ticket; later path cleanup updated that owner reference after 005 archived, the FITL authoring reference after 006 archived, and the Spec 169 path after it moved to `archive/specs/169-phase-boundary-and-schedule-refs.md`.
 
 What landed:
 
@@ -142,7 +142,7 @@ Touched-file scope:
 
 - Planned and touched: `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/compile-phase-boundaries.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, `packages/engine/src/cnl/game-spec-doc.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/test/unit/agents/schedule-distance-units.test.ts`, `packages/engine/test/unit/agents/schedule-distance-cross-unit-consistency.test.ts`, `packages/engine/test/unit/agents/schedule-ref-test-fixtures.ts`, `packages/engine/test/unit/cnl/phase-boundary-compile-validation.test.ts`.
 - Owned generated fallout: `packages/engine/schemas/GameDef.schema.json`.
-- Owned spec closeout: `specs/169-phase-boundary-and-schedule-refs.md`.
+- Owned spec closeout: `archive/specs/169-phase-boundary-and-schedule-refs.md`.
 - Verified-no-counter-needed: `packages/engine/src/kernel/*` did not gain action/microturn/round counters because the selected semantics use declared exact conversion metadata, not live counter deltas.
 
 Invariant proof matrix:
@@ -163,7 +163,7 @@ Generated/schema fallout:
 Deferred sibling/spec scope:
 
 - Post-review follow-up update: `archive/tickets/169PHASCHREF-005.md` was extended to own WASM parity for the declared-rate non-card schedule units shipped here.
-- FITL phase-boundary authoring remains `tickets/169PHASCHREF-006.md`.
+- FITL phase-boundary authoring completed in `archive/tickets/169PHASCHREF-006.md`.
 - Live-counter schedule semantics and schedule kinds beyond `cardDraw` remain future work, not hidden behavior in this ticket.
 
 Source-size ledger:

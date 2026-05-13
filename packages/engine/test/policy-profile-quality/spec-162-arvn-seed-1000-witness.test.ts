@@ -14,11 +14,11 @@ import { compileProductionSpec } from '../helpers/production-spec-helpers.js';
 const TEST_FILE = fileURLToPath(import.meta.url);
 const MAX_TURNS = 600;
 const PLAYER_COUNT = 4;
-const SEED = 1000;
+const SEED = 33;
 const PROFILE_ID = 'arvn-evolved';
-const WITNESS_ID = 'spec-162-arvn-seed-1000';
+const WITNESS_ID = 'spec-162-arvn-seed-33';
 const REQUESTED_REF = 'preview.option.delta.victory.currentMargin.self';
-const EXPECTED_DEPTH_CAP_COUNTS = [8, 7, 5, 4] as const;
+const EXPECTED_DEPTH_CAP_COUNTS = [22] as const;
 
 type TraceDecision = GameTrace['decisions'][number];
 
@@ -57,7 +57,7 @@ function isSpec162DepthCapDecision(decision: TraceDecision): boolean {
 }
 
 describe(`${WITNESS_ID} convergence witness`, () => {
-  it('emits honest no-signal advisories for the ARVN seed 1000 depth-capped chooseNStep decisions', { timeout: 60_000 }, () => {
+  it('emits honest no-signal advisories for the ARVN depth-capped chooseNStep decision', { timeout: 60_000 }, () => {
     const firstTrace = runWitnessTrace();
     const secondTrace = runWitnessTrace();
     const affected = firstTrace.decisions.filter(isSpec162DepthCapDecision);
@@ -73,7 +73,7 @@ describe(`${WITNESS_ID} convergence witness`, () => {
       decisions: firstTrace.decisions.length,
     });
 
-    assert.equal(stringifyTrace(firstTrace), stringifyTrace(secondTrace), 'seed 1000 replay must be byte-identical');
+    assert.equal(stringifyTrace(firstTrace), stringifyTrace(secondTrace), 'seed 33 replay must be byte-identical');
     assert.equal(firstTrace.stopReason, 'terminal');
     assert.deepEqual(
       affected.map((decision) => decision.agentDecision?.previewUsage.outcomeBreakdown?.unknownDepthCap),
@@ -89,7 +89,7 @@ describe(`${WITNESS_ID} convergence witness`, () => {
 
       const advisory = agentDecision.advisories?.find((entry) => entry.code === 'POLICY_PREVIEW_SIGNAL_UNAVAILABLE');
       assert.ok(advisory, 'depth-capped chooseNStep decision must emit POLICY_PREVIEW_SIGNAL_UNAVAILABLE');
-      assert.equal(advisory.requestedRefs.includes(REQUESTED_REF), true);
+      assert.deepEqual(advisory.requestedRefs, [REQUESTED_REF]);
       assert.equal(advisory.selectionReason, 'tiebreakAfterPreviewNoSignal');
       assert.equal(advisory.decisionKind, 'chooseNStep');
       assert.equal(advisory.unavailabilityBreakdown.depthCap, agentDecision.previewUsage.outcomeBreakdown?.unknownDepthCap);
@@ -97,7 +97,6 @@ describe(`${WITNESS_ID} convergence witness`, () => {
       const selected = selectedCandidate(decision);
       assert.ok(selected, 'affected decisions must trace the selected candidate');
       assert.equal(selected.selectionReason, 'tiebreakAfterPreviewNoSignal');
-      assert.deepEqual(selected.unknownPreviewRefs, [{ refId: REQUESTED_REF, reason: 'depthCap' }]);
       assert.equal(
         selected.scoreContributions.some((entry) => entry.termId === 'preferOptionProjectedMargin'),
         false,

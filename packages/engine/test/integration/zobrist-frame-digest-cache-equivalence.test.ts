@@ -6,7 +6,6 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { forkGameDefRuntimeForRun } from '../../src/kernel/gamedef-runtime.js';
-import type { GameState } from '../../src/kernel/types-core.js';
 import {
   computeFullHash,
   digestDecisionStackFrame,

@@ -231,6 +231,7 @@ function mergeSection(
     case 'effectMacros':
     case 'conditionMacros':
     case 'phaseTemplates':
+    case 'phaseBoundaries':
       return mergeListSection(doc, section, value);
   }
 }
@@ -389,7 +390,8 @@ function mergeListSection(
     | 'triggers'
     | 'effectMacros'
     | 'conditionMacros'
-    | 'phaseTemplates',
+    | 'phaseTemplates'
+    | 'phaseBoundaries',
   value: unknown,
 ): readonly string[] {
   const existingLength = getListSectionLength(doc, section);
@@ -473,6 +475,11 @@ function mergeListSection(
       (doc as MutableGameSpecDoc).phaseTemplates =
         (doc.phaseTemplates === null ? listValue : [...doc.phaseTemplates, ...listValue]) as MutableGameSpecDoc['phaseTemplates'];
       return buildAnchoredPaths(section, listValue, existingLength);
+    case 'phaseBoundaries':
+      (doc as MutableGameSpecDoc).phaseBoundaries = (
+        doc.phaseBoundaries === null ? listValue : [...doc.phaseBoundaries, ...listValue]
+      ) as MutableGameSpecDoc['phaseBoundaries'];
+      return buildAnchoredPaths(section, listValue, existingLength);
   }
 }
 
@@ -513,7 +520,8 @@ function getListSectionLength(
     | 'triggers'
     | 'effectMacros'
     | 'conditionMacros'
-    | 'phaseTemplates',
+    | 'phaseTemplates'
+    | 'phaseBoundaries',
 ): number {
   const current = doc[section];
   if (current === null) {

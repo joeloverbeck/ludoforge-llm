@@ -18,6 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
+   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `classified non-final lanes or none`, `archive status`, and the exact `$post-ticket-review <ticket>` sentence when review/archive did not run
    - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
@@ -33,6 +34,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - hard source-size gate: if any touched source file ends over the repo cap (800 lines in this repo), crosses the cap because of active growth, or remains preexisting-oversize with active growth, do not set terminal status until the active ticket or final closeout contains the exact source-size ledger and one of these is true: narrow extraction is done, user-approved deferral exists, or a `1-3-1` decision resolves why extraction would widen the ticket
+- exact source-size ledger means the durable ticket/final closeout names every field, not just current counts: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - when the touched oversized file is an established canonical table, lowerer, schema mirror, diagnostic registry, or comparable shared contract hub, a surgical adjacent addition may be the least risky ticket-sized change. Still record `preexisting oversize + active growth`, why extraction would widen or obscure the ticket seam, whether a narrow helper was considered, and the residual owner (`none` if no separate extraction ticket is justified).
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
@@ -264,6 +266,7 @@ Use this compact final handoff shape when implementation stops before archival:
 - `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
 - `green proof lanes`: commands that passed and are final for the owned slice
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
+- `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
 
 ## Dependency Integrity Pass

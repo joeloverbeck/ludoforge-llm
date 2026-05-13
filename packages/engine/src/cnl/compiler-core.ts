@@ -59,6 +59,7 @@ import { validateAgents } from './validate-agents.js';
 import { validateObservers, type KnownSurfaceIds, type KnownZoneInfo } from './validate-observers.js';
 import { lowerAgents } from './compile-agents.js';
 import { lowerObservers } from './compile-observers.js';
+import { lowerPhaseBoundaries } from './compile-phase-boundaries.js';
 
 export interface CompileLimits {
   readonly maxExpandedEffects: number;
@@ -82,6 +83,7 @@ export interface CompileSectionResults {
   readonly tokenTypes: GameDef['tokenTypes'] | null;
   readonly setup: GameDef['setup'] | null;
   readonly turnStructure: GameDef['turnStructure'] | null;
+  readonly phaseBoundaries: Exclude<GameDef['phaseBoundaries'], undefined> | null;
   readonly turnOrder: Exclude<GameDef['turnOrder'], undefined> | null;
   readonly actionPipelines: Exclude<GameDef['actionPipelines'], undefined> | null;
   readonly derivedMetrics: Exclude<GameDef['derivedMetrics'], undefined> | null;
@@ -303,6 +305,7 @@ function compileExpandedDoc(
     tokenTypes: null,
     setup: null,
     turnStructure: null,
+    phaseBoundaries: null,
     turnOrder: null,
     actionPipelines: null,
     derivedMetrics: null,
@@ -621,6 +624,16 @@ function compileExpandedDoc(
     sections.eventDecks = eventDecks.failed ? null : eventDecks.value;
   }
 
+  const phaseBoundaries = compileSection(diagnostics, () =>
+    lowerPhaseBoundaries(
+      resolvedTableRefDoc.phaseBoundaries,
+      sections.turnStructure,
+      sections.eventDecks,
+      diagnostics,
+    ),
+  );
+  sections.phaseBoundaries = phaseBoundaries.failed ? null : phaseBoundaries.value;
+
   const rawVictoryStandings = resolvedTableRefDoc.victoryStandings;
   let victoryStandingsCompilationFailed = false;
   if (rawVictoryStandings !== null) {
@@ -721,6 +734,8 @@ function compileExpandedDoc(
         ...{ perPlayerVarIds: perPlayerVars.value.map((variable) => variable.name) },
         ...(actions === null ? {} : { actionDefs: actions }),
         ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
+        ...(sections.phaseBoundaries === null ? {} : { phaseBoundaries: sections.phaseBoundaries }),
+        ...(turnStructure === null ? {} : { turnStructure }),
         ...(
           derivedMetricsCompilationFailed || victoryStandingsCompilationFailed
             ? {}
@@ -762,6 +777,7 @@ function compileExpandedDoc(
     tokenTypes: tokenTypes.value,
     setup: mergedSetup,
     turnStructure,
+    ...(sections.phaseBoundaries === null ? {} : { phaseBoundaries: sections.phaseBoundaries }),
     ...(sections.turnOrder === null ? {} : { turnOrder: sections.turnOrder }),
     ...(sections.actionPipelines === null ? {} : { actionPipelines: sections.actionPipelines }),
     ...(sections.derivedMetrics === null ? {} : { derivedMetrics: sections.derivedMetrics }),

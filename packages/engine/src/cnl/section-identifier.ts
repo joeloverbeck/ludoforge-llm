@@ -11,6 +11,7 @@ export const CANONICAL_SECTION_KEYS = [
   'tokenTypes',
   'setup',
   'turnStructure',
+  'phaseBoundaries',
   'turnOrder',
   'actionPipelines',
   'derivedMetrics',

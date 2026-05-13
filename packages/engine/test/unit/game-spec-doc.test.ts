@@ -21,6 +21,7 @@ describe('game-spec-doc', () => {
       tokenTypes: null,
       setup: null,
       turnStructure: null,
+      phaseBoundaries: null,
       phaseTemplates: null,
       turnOrder: null,
       actionPipelines: null,

@@ -29,6 +29,7 @@ const LIST_SECTIONS = [
   'actionPipelines',
   'derivedMetrics',
   'eventDecks',
+  'phaseBoundaries',
   'actions',
   'triggers',
   'effectMacros',
@@ -459,6 +460,9 @@ function assignListSection(
       break;
     case 'eventDecks':
       mutable.eventDecks = value as MutableGameSpecDoc['eventDecks'];
+      break;
+    case 'phaseBoundaries':
+      mutable.phaseBoundaries = value as MutableGameSpecDoc['phaseBoundaries'];
       break;
     case 'actions':
       mutable.actions = value as MutableGameSpecDoc['actions'];

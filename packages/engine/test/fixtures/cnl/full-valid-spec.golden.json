@@ -33,6 +33,7 @@
         }
       ]
     },
+    "phaseBoundaries": null,
     "phaseTemplates": [
       {
         "id": "scoring-round",

@@ -22,6 +22,25 @@ const REF: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }
   unit: 'cards',
 };
 
+function withoutCoupEntryObserverPolicy(def: GameDef): GameDef {
+  assert.ok(def.phaseBoundaries, 'expected FITL phase boundaries');
+  return {
+    ...def,
+    phaseBoundaries: def.phaseBoundaries.map((boundary) => {
+      if (String(boundary.id) !== 'coupEntry' || boundary.schedule?.kind !== 'cardDraw') {
+        return boundary;
+      }
+      const schedule = {
+        kind: boundary.schedule.kind,
+        deckId: boundary.schedule.deckId,
+        cardSelector: boundary.schedule.cardSelector,
+        ...(boundary.schedule.unitRates === undefined ? {} : { unitRates: boundary.schedule.unitRates }),
+      };
+      return { ...boundary, schedule };
+    }),
+  };
+}
+
 function resolveAtDrawCount(def: GameDef, drawnCount: number) {
   const state = initialState(def, 1000, 4).state;
   const runtime = createGameDefRuntime(def);
@@ -53,8 +72,16 @@ describe('FITL coupEntry phase boundary distance status', () => {
         kind: 'cardDraw',
         deckId: 'fitl-events-initial-card-pack',
         cardSelector: { tags: ['coup'] },
+        observerPolicy: {
+          kind: 'topNVisible',
+          visiblePrefix: {
+            zones: [{ id: 'played:none' }, { id: 'lookahead:none' }],
+            maxItems: 2,
+          },
+        },
       },
     });
+    const withoutObserverPolicy = withoutCoupEntryObserverPolicy(gameDef);
 
     const eventDeck = gameDef.eventDecks?.find((deck) => deck.id === 'fitl-events-initial-card-pack');
     assert.ok(eventDeck, 'expected FITL event deck');
@@ -67,7 +94,7 @@ describe('FITL coupEntry phase boundary distance status', () => {
       'hidden',
     );
 
-    const runtime = createGameDefRuntime(gameDef);
+    const runtime = createGameDefRuntime(withoutObserverPolicy);
     assert.deepEqual(
       runtime.scheduleIndex.boundaries.get(asBoundaryId('coupEntry'))?.cardDrawState?.triggeringCardPositions,
       [125, 126, 127, 128, 129, 130],
@@ -75,7 +102,7 @@ describe('FITL coupEntry phase boundary distance status', () => {
     );
 
     assert.deepEqual(
-      [0, 1, 125, 128, 130].map((drawnCount) => [drawnCount, resolveAtDrawCount(gameDef, drawnCount)]),
+      [0, 1, 125, 128, 130].map((drawnCount) => [drawnCount, resolveAtDrawCount(withoutObserverPolicy, drawnCount)]),
       [
         [0, { kind: 'unavailable', reason: 'hiddenDeck' }],
         [1, { kind: 'unavailable', reason: 'hiddenDeck' }],

@@ -39,8 +39,8 @@ phaseBoundaries:
         kind: topNVisible
         visiblePrefix:
           zones:
+            - id: played:none
             - id: lookahead:none
-            - id: leader:none
           maxItems: 2
 ```
 
@@ -106,7 +106,7 @@ cardLifecycle:
   leader: leader:none
 ```
 
-FITL's `cardLifecycle` (`packages/engine/src/kernel/turn-flow-lifecycle.ts:55-108`) advances cards through `lookahead → leader → played` as the turn flow progresses. At a steady-state main-phase decision, the `leader` slot holds the current turn's driving card and the `lookahead` slot holds the next-turn card — both are public, both are part of the agent-observable surface, both are load-bearing for FITL event scoring and action enumeration.
+FITL's `cardLifecycle` (`packages/engine/src/kernel/turn-flow-lifecycle.ts:348-470`) advances cards through `lookahead -> played` as the turn flow progresses; `leader` is used only for coup handoff storage. At a steady-state main-phase decision, the `played` slot holds the current turn's driving card and the `lookahead` slot holds the next-turn card - both are public, both are part of the agent-observable surface, both are load-bearing for FITL event scoring and action enumeration.
 
 **This is what required the architectural correction during cross-review**: a single `visibleSlot` is undersized for FITL itself. The schema must be sequence-shaped (ordered zones list) from day one.
 
@@ -168,10 +168,10 @@ phaseBoundaries:
       observerPolicy:
         kind: topNVisible
         visiblePrefix:
-          # Ordered list — index 0 is the next card to be drawn.
+          # Ordered list — index 0 is the nearest visible scheduled card.
           zones:
+            - id: played:none
             - id: lookahead:none
-            - id: leader:none
           # Maximum number of cards to scan across all zones.
           # If a zone is empty at runtime, the resolver advances to the next zone.
           maxItems: 2
@@ -180,7 +180,7 @@ phaseBoundaries:
 **Field semantics**:
 
 - `observerPolicy.kind`: enum, currently `topNVisible` only. Compiler rejects unknown kinds (`OBSERVER_POLICY_UNKNOWN_KIND`).
-- `visiblePrefix.zones`: ordered, non-empty list of zone references. Order is meaningful: index 0 is "next card to be drawn", index 1 is "card after that", etc. Each zone MUST be public, container-of-cards-shaped, and distinct from the deck's hidden draw zone.
+- `visiblePrefix.zones`: ordered, non-empty list of zone references. Order is meaningful: index 0 is the nearest visible scheduled card, index 1 is the next visible scheduled card after that, etc. Each zone MUST be public, container-of-cards-shaped, and distinct from the deck's hidden draw zone.
 - `visiblePrefix.maxItems`: positive integer (≥1). Hard cap on total cards scanned across the ordered zones; provides Foundation #10 bounded computation guarantee.
 
 **Validation rules** (compiler-enforced, see §5):
@@ -418,7 +418,7 @@ The compiler emits zero warnings for omitted `observerPolicy` — the default be
 | **0** | Types (`ObserverPolicy`, `ObserverVisiblePrefix`, `partial.lowerBound` resolution variant), GameSpecDoc declaration, compiler validation, all diagnostic codes from §5. No runtime resolution yet. | Architectural-invariant tests pass for: (a) every rejection rule in §5, (b) byte-identical compile output for a GameSpec compiled twice with `observerPolicy` declared, (c) `SCHEDULE_FALLBACK_PARTIAL_REQUIRED` raised when a consideration reads a `topNVisible`-bearing boundary without declaring `onPartial`. |
 | **1** | Runtime resolver branch for `topNVisible`; `partial.lowerBound` resolution path; `scheduleFallback.onPartial` application; updated trace surface. | Golden tests for `topNVisible` resolution against a fixture GameSpec exposing 2 visible zones. Cases: (a) match at index 0 → `ready: value: 0, visiblePrefixLength: 1`, (b) match at index 1 → `ready: value: 1, visiblePrefixLength: 2`, (c) no match across 2 zones with cards → `partial.lowerBound: 2`, (d) one empty zone + one occupied non-matching → `partial.lowerBound: 1`, (e) all listed zones empty → `partial.lowerBound: 0`. Replay-determinism test (same GameDef + seed produces identical ref readouts across 20 turns). |
 | **2** | WASM score-row integration: `topNVisible` resolution and `partial.lowerBound` status path implemented through the live host-encoded phase/schedule value seam, with parity against the TS path. | Focused bytecode-equivalence witness plus existing bytecode-equivalence rows pass with a fixture profile that exercises both `ready` and `partial.lowerBound`. |
-| **3** | FITL data: `observerPolicy: { kind: topNVisible, visiblePrefix: { zones: [lookahead:none, leader:none], maxItems: 2 } }` added to the `coupEntry` boundary in `data/games/fire-in-the-lake/30-rules-actions.md`. Cookbook update in `docs/agent-dsl-cookbook.md` documenting the `phase.*`, `schedule.*` ref families, the observer-policy variant, and the dual fallback contract. | The spec-169 demonstration profile (`sandbox-profiles/169-demonstration.md`) returns at least one `ready` AND at least one `partial.lowerBound` `schedule.distance.toBoundary.coupEntry.cards` reading at documented FITL game positions (test extended from spec 169 §8.2). Cookbook examples compile and lint-pass. |
+| **3** | FITL data: `observerPolicy: { kind: topNVisible, visiblePrefix: { zones: [played:none, lookahead:none], maxItems: 2 } }` added to the `coupEntry` boundary in `data/games/fire-in-the-lake/30-rules-actions.md`. Cookbook update in `docs/agent-dsl-cookbook.md` documenting the `phase.*`, `schedule.*` ref families, the observer-policy variant, and the dual fallback contract. | The spec-169 demonstration profile (`sandbox-profiles/169-demonstration.md`) returns at least one `ready` AND at least one `partial.lowerBound` `schedule.distance.toBoundary.coupEntry.cards` reading at documented FITL game positions (test extended from spec 169 §8.2). Cookbook examples compile and lint-pass. |
 
 Phases 0-2 are engine-internal; Phase 3 is the FITL data and documentation deliverable. Phases 0-2 must land before Phase 3 ships.
 
@@ -435,7 +435,7 @@ Per `.claude/rules/testing.md`, each new test file declares its class.
 
 ### 8.2 golden-trace tests
 
-- `partial-visibility-fitl-coup-distance.test.ts` — extends the spec 169 `phase-boundary-fitl-coup-distance.test.ts` fixture set. New rows pin: (a) `ready` when the lookahead slot exposes a coup card, (b) `ready` when the leader slot exposes a coup card and lookahead does not, (c) `partial.lowerBound` when neither slot exposes a coup card, (d) the prior `unavailable: hiddenDeck` rows preserved via a parametrized fixture against both the with-observer-policy and without-observer-policy boundary declarations.
+- `partial-visibility-fitl-coup-distance.test.ts` — extends the spec 169 `phase-boundary-fitl-coup-distance.test.ts` fixture set. New rows pin: (a) `ready` when the played slot exposes a coup card, (b) `ready` when the lookahead slot exposes a coup card and played does not, (c) `partial.lowerBound` when neither slot exposes a coup card, (d) the prior `unavailable: hiddenDeck` rows preserved via a parametrized fixture against both the with-observer-policy and without-observer-policy boundary declarations.
 - `schedule-ref-consideration-trace-topNVisible.test.ts` — exercise `preferGovernEarlyInCoupCycle` against a fixture profile that uses `topNVisible` with `onPartial.visiblePrefixExhausted: useLowerBound`. Pin the per-candidate trace with `inputRefs[].observerPolicy`, `visiblePrefixLength`, and `fallbackApplied` metadata for both ready and partial cases.
 
 ### 8.3 convergence-witness tests
@@ -477,7 +477,7 @@ None mandated by this spec. The campaign-side effect (whether `arvn-evolved` ado
 - **Fallback evaluator**: `packages/engine/src/agents/policy-evaluation-core.ts:78-90` — extend `PolicyScheduleFallback` with `onPartial.visiblePrefixExhausted`. `packages/engine/src/agents/microturn-option-eval.ts:107-156` — extend the schedule-option fallback application path to route `partial.lowerBound` through `onPartial`.
 - **Status union**: see Types row.
 - **WASM score-row parity**: `packages/engine/src/agents/policy-wasm-phase-schedule-encoding.ts` — extend the live host-side schedule-distance value encoder with the topNVisible-aware branch. The current Rust guest does not own schedule resolution; it loads pre-encoded `FEATURE_SCHEDULE_DISTANCE` values. A Rust guest schedule resolver or ABI redesign is deferred until a future ticket explicitly moves schedule resolution across the FFI boundary.
-- **FITL data**: `data/games/fire-in-the-lake/30-rules-actions.md:18-26` — add `observerPolicy: { kind: topNVisible, visiblePrefix: { zones: [lookahead:none, leader:none], maxItems: 2 } }` to the `coupEntry` boundary.
+- **FITL data**: `data/games/fire-in-the-lake/30-rules-actions.md:18-26` — add `observerPolicy: { kind: topNVisible, visiblePrefix: { zones: [played:none, lookahead:none], maxItems: 2 } }` to the `coupEntry` boundary.
 - **FITL profile** (acceptance test only, not deliverable): `data/games/fire-in-the-lake/sandbox-profiles/169-demonstration.md` — extend `preferGovernEarlyInCoupCycle.scheduleFallback` with `onPartial.visiblePrefixExhausted: useLowerBound` so the demonstration produces a non-zero contribution under the new behavior.
 - **Cookbook**: `docs/agent-dsl-cookbook.md` — new section documenting `phase.*` and `schedule.*` ref families (parallel to existing `candidate.params.*` section per spec 166), with the observer-policy variant and the dual `scheduleFallback.onUnavailable`/`onPartial` contract worked through end-to-end.
 
@@ -487,12 +487,12 @@ This spec was authored, externally reviewed (ChatGPT deep-research), and revised
 
 | Source recommendation | Disposition | Rationale |
 |---|---|---|
-| Multi-zone `visiblePrefix.zones[]` from day one | **Adopted** | Verified: FITL's `cardLifecycle` exposes BOTH `leader:none` AND `lookahead:none` as public stack-shaped zones (§2.3). A single `visibleSlot` is undersized for FITL itself. The schema must be sequence-shaped from the start. |
+| Multi-zone `visiblePrefix.zones[]` from day one | **Adopted** | Verified: FITL's `cardLifecycle` exposes BOTH `played:none` AND `lookahead:none` as public stack-shaped zones (§2.3). A single `visibleSlot` is undersized for FITL itself. The schema must be sequence-shaped from the start. |
 | First-class `partial.lowerBound` status distinct from `unavailable` | **Adopted** | Verified: Foundation #20 explicitly names `partial` as a distinct semantic outcome (§2.5). The prior spec-170 draft collapsed partial-evidence into `unavailable: behindHiddenPrefix`, violating #20. |
 | `scheduleFallback.onPartial` discriminator split from `onUnavailable` | **Adopted** | Verified: parallel to the existing `previewFallback`/`lookupFallback`/`candidateParamFallback` patterns in `compile-agents.ts:2187-2220`. Profiles can opt into `useLowerBound` to extract strategic signal from prefix exhaustion. |
 | Compile-time validation includes ordered-zones, public-only, non-duplicate, no-draw-zone-overlap | **Adopted (with adjustment)** | Adopted. Adjustment: the source proposed an `OBSERVER_POLICY_FACET_HIDDEN` rule for `exposedFacets`; rejected (see below) so the diagnostic is dropped. |
 | Trace surface includes `observerScope`, `observationSource`, `visiblePrefixLength`, `fallbackApplied` | **Adopted (with adjustment)** | Adopted in substance. Adjustment: `observerScope` is not separately recorded because the policy-kind alone identifies the scope (`topNVisible` implies public-observer for this spec); `observationSource` is not separately recorded because the boundary id already identifies it. The recorded fields are `observerPolicy`, `visiblePrefixLength`, and `fallbackApplied` — sufficient for replay and audit. |
-| FITL acceptance test must verify lookahead-slot identity against `cardLifecycle` | **Adopted** | Phase 3 requires authoring `lookahead:none` and `leader:none` per the verified FITL `cardLifecycle` (§2.3). |
+| FITL acceptance test must verify visible-slot identity against `cardLifecycle` | **Adopted** | Phase 3 requires authoring `played:none` and `lookahead:none` per the verified FITL `cardLifecycle` (§2.3). |
 | Leakage test that hidden deck composition cannot be recovered | **Adopted** | §8.5 covers this directly. |
 | Free-standing `observableSequences[]` top-level GameSpecDoc construct | **Rejected** | No second consumer outside schedule resolution exists yet. Per Foundation #15, the abstraction is introduced at the level where the problem lives (schedule's observation surface). A future spec may elevate the primitive once a second consumer (UI projection, candidate-effect introspection, additional schedule kinds) materializes. Tracked as a deferred consolidation candidate. |
 | `exposedFacets: [identity, tags]` decomposition | **Rejected** | FITL exposes full card identity in the visible slots; no near-term game requires facet decomposition. YAGNI per `CLAUDE.md` coding guidelines. |
@@ -507,7 +507,7 @@ This spec was authored, externally reviewed (ChatGPT deep-research), and revised
 
 1. **Empty-zone advance vs. miss semantics.** When `visiblePrefix.zones[0]` is empty at runtime and `zones[1]` has a non-matching card, the spec currently treats the empty zone as zero scanned items and advances to zone[1], counting one card scanned. Alternative reading: the empty zone counts as `maxItems_for_zone_0 = 1` regardless of occupancy, treating "no card revealed yet" as "card present but unmatched". The spec adopts the advancing-on-empty reading because it preserves the "exact distance through visible cards" semantics; flagging for review during Phase 1 implementation.
 2. **`maxItems` per-zone vs. aggregate.** The spec uses an aggregate `maxItems` across all listed zones. An alternative is per-zone caps (`zones: [{ id, max: 1 }, …]`). Aggregate is simpler and sufficient for FITL (no zone has more than 1 card in practice); flagging for review if a game emerges where per-zone caps matter.
-3. **Lookahead-slot vs. leader-slot ordering.** The spec orders `lookahead:none` before `leader:none` because the lookahead slot holds the NEXT turn's card (later draw position from the deck) and the leader slot holds the CURRENT turn's card (earlier draw position from the deck)… or does it? FITL's `turn-flow-lifecycle.ts` orders the lifecycle as `lookahead → leader → played` (`packages/engine/src/kernel/turn-flow-lifecycle.ts:55-108`). The "next card to be drawn from the deck" semantics depends on whether the deck draws into `lookahead` (then promotes to `leader` on turn boundary) or directly into `leader`. The Phase 3 implementer MUST verify against the FITL `cardLifecycle` advancement code and pin the correct order in the test fixture; if the documented order in §4.1 is wrong, the example YAML is updated before authoring against FITL data. This open question does not block the engine work in Phases 0-2.
+3. **Played-slot vs. lookahead-slot ordering.** Closed by Phase 3 reassessment: FITL's live `turn-flow-lifecycle.ts` promotes `lookahead -> played` and draws the next card into `lookahead`; `leader` is coup-handoff storage. The visible-prefix order is therefore `played:none` first and `lookahead:none` second for FITL's current-driving-card and next-card readout.
 4. **Reusing the visible-prefix concept for other ref families.** If/when a second consumer materializes (UI projection, additional schedule kinds, candidate-effect introspection), the visible-prefix declaration should be promoted to a shared primitive (per the rejected `observableSequences[]` proposal). Tracked as a deferred consolidation candidate; not in scope here.
 5. **Interaction with `omniscient` observer policy (future).** When `omniscient` lands, it must respect the same compile-time validation surface (kind enum) and runtime-dispatch shape; the patterns established by this spec should be reusable.
 
@@ -531,4 +531,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-13:
 - [`archive/tickets/170PARTVISOBS-001.md`](../archive/tickets/170PARTVISOBS-001.md) — Types, `ObserverPolicy` union, and compiler validation (covers §7 Phase 0, §8.1 partial-visibility-compile-validation + partial-visibility-determinism)
 - [`archive/tickets/170PARTVISOBS-002.md`](../archive/tickets/170PARTVISOBS-002.md) — Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, trace (covers §7 Phase 1, §8.1 partial-visibility-resolver-correctness + partial-visibility-fallback-routing, §8.2 schedule-ref-consideration-trace-topNVisible, §8.5 partial-visibility-no-leak)
 - [`archive/tickets/170PARTVISOBS-003.md`](../archive/tickets/170PARTVISOBS-003.md) — WASM score-row parity for `topNVisible` and `partial.lowerBound` through the live host-encoded phase/schedule value seam (covers §7 Phase 2, §8.4 WASM equivalence)
-- [`tickets/170PARTVISOBS-004.md`](../tickets/170PARTVISOBS-004.md) — FITL `observerPolicy` authoring with verified slot order + cookbook + golden trace (covers §7 Phase 3, §8.2 partial-visibility-fitl-coup-distance, cookbook section)
+- [`archive/tickets/170PARTVISOBS-004.md`](../archive/tickets/170PARTVISOBS-004.md) — FITL `observerPolicy` authoring with verified slot order + cookbook + golden trace (covers §7 Phase 3, §8.2 partial-visibility-fitl-coup-distance, cookbook section)

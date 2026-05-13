@@ -1,6 +1,6 @@
 # 170PARTVISOBS-004: FITL `observerPolicy` authoring, cookbook section, and golden trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None (data + docs + test). FITL game data file, sandbox profile YAML, cookbook markdown, one extended golden-trace test.
@@ -19,8 +19,8 @@ The campaign-side rerun of `fitl-arvn-agent-evolution` exp-001 is profile-qualit
 
 ## Assumption Reassessment (2026-05-13)
 
-1. FITL declares both `leader:none` and `lookahead:none` as `visibility: public, ordering: stack` (verified in `data/games/fire-in-the-lake/10-vocabulary.md:62-69` this session). The 2-zone visible prefix is the structurally correct authoring.
-2. FITL's `cardLifecycle` maps `lookahead → leader → played` per `packages/engine/src/kernel/turn-flow-lifecycle.ts:55-108`. **Open question per spec 170 §12.3**: the "next card to be drawn" semantics depend on whether the deck draws into `lookahead` (then promotes to `leader` on turn boundary) or directly into `leader`. Implementation MUST verify the actual lifecycle advancement order against `turn-flow-lifecycle.ts` and `phase-advance.ts:339-353` before authoring `visiblePrefix.zones[]` order. If the documented order in spec 170 §4.1 (`[lookahead:none, leader:none]`) is wrong relative to lifecycle advancement, correct the FITL data AND update spec 170's example before authoring tests.
+1. FITL declares `played:none`, `lookahead:none`, and `leader:none` as `visibility: public, ordering: stack` (verified in `data/games/fire-in-the-lake/10-vocabulary.md:62-69` this session). The 2-zone visible prefix is the structurally correct authoring.
+2. FITL's live `cardLifecycle` maps `lookahead -> played` per `packages/engine/src/kernel/turn-flow-lifecycle.ts:348-470`; `leader` is coup-handoff storage, not the current draw-order slot. The verified visible-prefix order is `[played:none, lookahead:none]`: index 0 is the current driving card and index 1 is the next visible card. Spec 170's stale `[lookahead:none, leader:none]` example is corrected by this ticket.
 3. `data/games/fire-in-the-lake/30-rules-actions.md:18-26` currently declares `coupEntry` without `observerPolicy` — confirmed earlier this session.
 4. `data/games/fire-in-the-lake/sandbox-profiles/169-demonstration.md` exists and uses `scheduleFallback.onUnavailable: noContribution` — pre-spec-170 shape; this ticket adds `onPartial.visiblePrefixExhausted: useLowerBound`.
 5. `docs/agent-dsl-cookbook.md` does not yet have a section documenting `phase.*` or `schedule.*` ref families (per spec 170 §10 and spec 169 §10). The new section parallels the existing `candidate.params.*` section from spec 166.
@@ -36,17 +36,17 @@ The campaign-side rerun of `fitl-arvn-agent-evolution` exp-001 is profile-qualit
 
 ## What to Change
 
-### 1. Verify FITL lookahead-slot identity (per spec 170 §12 open question 3)
+### 1. Verify FITL visible-slot identity (per spec 170 §12 open question 3)
 
 Before authoring, run a focused inspection of:
 
 - `data/games/fire-in-the-lake/30-rules-actions.md` (cardLifecycle declaration).
-- `packages/engine/src/kernel/turn-flow-lifecycle.ts:55-108` (lifecycle advancement order).
+- `packages/engine/src/kernel/turn-flow-lifecycle.ts:348-470` (lifecycle advancement order).
 - `packages/engine/src/kernel/phase-advance.ts:339-353` (slot transition handling).
 
-Determine whether `lookahead` precedes `leader` in draw order (i.e., the deck draws into `lookahead` first, then promotes to `leader` on turn boundary) or whether `leader` is the "current top of deck" with `lookahead` being "the card after". The visible-prefix ordering in `observerPolicy.visiblePrefix.zones[]` MUST reflect draw order: index 0 is the NEXT card to be drawn from the deck, index 1 is the card after that.
+Determine whether `played`, `lookahead`, or `leader` owns the current and next visible card slots. The visible-prefix ordering in `observerPolicy.visiblePrefix.zones[]` MUST reflect FITL's policy readout order: index 0 is the current driving card, index 1 is the next visible card.
 
-If the spec 170 example (`zones: [lookahead:none, leader:none]`) is inverted relative to lifecycle advancement, correct the FITL data to the verified order. Note the correction in commit body and (if needed) propose an editorial correction to spec 170 §4.1 via a follow-up doc edit.
+The live verification result is `[played:none, lookahead:none]`; update FITL data, spec 170 examples, and tests to that order.
 
 ### 2. FITL game data authoring
 
@@ -80,12 +80,12 @@ phaseBoundaries:
         kind: topNVisible
         visiblePrefix:
           zones:
-            - id: <verified-first-slot>:none
-            - id: <verified-second-slot>:none
+            - id: played:none
+            - id: lookahead:none
           maxItems: 2
 ```
 
-Where `<verified-first-slot>` and `<verified-second-slot>` come from §1's verification.
+The verified order comes from §1's lifecycle inspection: `played:none` is the current driving-card slot and `lookahead:none` is the next visible card slot.
 
 ### 3. FITL demonstration profile update
 
@@ -150,7 +150,7 @@ Run the cookbook example through the agent-DSL compiler (or equivalent doc-test 
    - (b) coup card in verified-second slot only → `ready` with `value: 1, visiblePrefixLength: 2`.
    - (c) neither slot exposes a coup card → `partial.lowerBound: 2`.
 2. Same test file — `unavailable: hiddenDeck` rows preserved verbatim under the without-observerPolicy parametrization.
-3. Existing suite: `pnpm turbo test` — spec 169's `phase-boundary-fitl-coup-distance.test.ts` continues to pass unchanged (the spec-169 fixture is preserved as the without-observerPolicy parametrization counterpart).
+3. Existing suite: `pnpm turbo test` — spec 169's `phase-boundary-fitl-coup-distance.test.ts` continues to pass by preserving the spec-169 hidden-deck fixture through a without-observerPolicy parametrization counterpart.
 4. Cookbook examples compile against the agent-DSL compiler.
 5. `pnpm turbo lint && pnpm turbo typecheck` clean.
 
@@ -176,3 +176,68 @@ Test class header per `.claude/rules/testing.md`:
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`.
 4. `pnpm turbo test` — full suite.
 5. Cookbook example validation: re-compile FITL GameSpec end-to-end after data changes to confirm YAML accepts the new field.
+
+## Outcome (2026-05-13)
+
+Terminal state: COMPLETED.
+
+What landed:
+
+- Verified the live FITL lifecycle order from `turn-flow-lifecycle.ts`: `lookahead -> played`; `leader` is coup-handoff storage. Corrected the active spec and this ticket from the stale `[lookahead:none, leader:none]` example to `[played:none, lookahead:none]`.
+- Added `observerPolicy.kind: topNVisible` to FITL `coupEntry` with `visiblePrefix.zones: [played:none, lookahead:none]` and `maxItems: 2`.
+- Extended the spec-169 sandbox profile with `scheduleFallback.onPartial.visiblePrefixExhausted: useLowerBound`, preserving `onUnavailable: noContribution`.
+- Added the cookbook section for `phase.*`, `schedule.*`, `scheduleFallback.onUnavailable`, `scheduleFallback.onPartial.visiblePrefixExhausted`, and `observerPolicy.topNVisible`.
+- Added `partial-visibility-fitl-coup-distance.test.ts` to pin ready value 0, ready value 1, `partial.lowerBound: 2`, preserved without-policy `unavailable: hiddenDeck`, and same-seed deterministic resolver readouts.
+- Updated `phase-boundary-fitl-coup-distance.test.ts` to keep the spec-169 hidden-deck golden through a cloned without-observerPolicy fixture after production FITL gained the observer policy.
+- Updated `schedule-ref-consideration-trace.test.ts` so the sandbox demonstration now pins `useLowerBound` contribution and trace metadata instead of the old hidden-deck no-contribution row.
+
+Ticket corrections applied:
+
+- `visiblePrefix.zones: [lookahead:none, leader:none]` -> `[played:none, lookahead:none]`, based on live lifecycle advancement.
+- `phase-boundary-fitl-coup-distance.test.ts continues unchanged` -> the hidden-deck invariant continues through an explicit without-observerPolicy fixture.
+- Cookbook example validation has no standalone doc-test lane; the substitute proof is sandbox YAML parse plus compiled sandbox-profile trace witness and FITL production compilation through the engine test/build lanes.
+
+Generated/schema fallout:
+
+- None expected; this ticket changes authored FITL data, markdown docs, and tests only. No schema artifacts or generated goldens are expected to persist.
+
+Deferred scope:
+
+- Engine runtime/compiler/WASM surfaces remain completed by archived tickets 001-003.
+- ARVN production profile adoption and campaign rerun remain out of scope.
+
+Command ledger:
+
+| ticket section | literal command/shorthand | ran directly/subsumed/split/not run | final citation |
+| --- | --- | --- | --- |
+| Test Plan | `pnpm -F @ludoforge/engine test packages/engine/test/integration/partial-visibility-fitl-coup-distance.test.ts` | replaced by build plus focused compiled Node lane | `pnpm -F @ludoforge/engine exec node --test dist/test/integration/partial-visibility-fitl-coup-distance.test.js dist/test/integration/phase-boundary-fitl-coup-distance.test.js dist/test/integration/schedule-ref-consideration-trace.test.js` passed |
+| Test Plan | `pnpm -F @ludoforge/engine test packages/engine/test/integration/phase-boundary-fitl-coup-distance.test.ts` | replaced by build plus focused compiled Node lane | same focused compiled Node lane passed |
+| Test Plan | `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck` | split and run serially | all three passed |
+| Test Plan | `pnpm turbo test` | run directly | passed, 5 successful tasks |
+| Test Plan | cookbook example validation | substituted | sandbox-profile trace witness passed; FITL production compile/build passed through focused tests, `pnpm turbo build`, and `pnpm turbo test` |
+
+Invariant proof matrix:
+
+| invariant | witness/assertion | status | proof lane |
+| --- | --- | --- | --- |
+| ready in first visible slot | `played:none` coup card resolves `ready` value 0 and `visiblePrefixLength: 1` | proven | `partial-visibility-fitl-coup-distance.test.ts` |
+| ready in second visible slot | non-coup `played:none` plus coup `lookahead:none` resolves `ready` value 1 and `visiblePrefixLength: 2` | proven | `partial-visibility-fitl-coup-distance.test.ts` |
+| visible prefix exhausted | neither visible slot is coup, producing `partial.lowerBound: 2` | proven | `partial-visibility-fitl-coup-distance.test.ts` |
+| spec-169 hiddenDeck preserved | cloned without-observerPolicy boundary returns `unavailable: hiddenDeck` | proven | new test plus `phase-boundary-fitl-coup-distance.test.ts` |
+| sandbox profile uses lower bound | `preferGovernEarlyInCoupCycle` emits `useLowerBound` fallback, `value: 2`, and contribution 500 | proven | `schedule-ref-consideration-trace.test.ts` |
+| no non-FITL regression | `observerPolicy` is opt-in and broad engine suite remains green | proven | `pnpm turbo test` |
+| FITL determinism preserved | same seed/state gives identical resolver readout | proven | `partial-visibility-fitl-coup-distance.test.ts` |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed after implementation edits.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/partial-visibility-fitl-coup-distance.test.js dist/test/integration/phase-boundary-fitl-coup-distance.test.js dist/test/integration/schedule-ref-consideration-trace.test.js` — passed before broad lanes and again after `pnpm turbo test`.
+- `pnpm turbo lint` — passed; runner lint was a cache hit replay, engine lint ran directly.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo build` — passed; engine and engine-wasm build were cache-hit replays, runner build ran directly.
+- `pnpm turbo test` — passed, 5 successful tasks; engine default summary 79/79 files passed.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2332 archived tickets.
+
+Late-edit proof validity:
+
+- The terminal status/proof transcription and ticket-dependency check transcription only record the just-run green lanes and do not change scope, acceptance, command semantics, touched-file ownership, deferred ownership, or dependency classification. No-invalidation: terminal status/proof transcription only.

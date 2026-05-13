@@ -183,7 +183,7 @@ Deferred sibling/spec scope:
 
 - `archive/tickets/170PARTVISOBS-002.md` owns resolver logic, runtime partial fallback routing, and trace population.
 - `tickets/170PARTVISOBS-003.md` owns WASM parity.
-- `tickets/170PARTVISOBS-004.md` appeared during implementation and was opened as read-only sibling context; it owns FITL authoring, cookbook docs, and FITL golden traces after tickets 001-003.
+- `archive/tickets/170PARTVISOBS-004.md` appeared during implementation and was opened as read-only sibling context; it owns FITL authoring, cookbook docs, and FITL golden traces after tickets 001-003.
 
 Schema/artifact fallout:
 

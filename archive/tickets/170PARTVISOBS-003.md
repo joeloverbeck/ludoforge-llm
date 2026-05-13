@@ -143,7 +143,7 @@ Ticket corrections applied:
 
 Deferred sibling/spec scope:
 
-- `tickets/170PARTVISOBS-004.md` still owns FITL data authoring, cookbook docs, and FITL golden trace.
+- `archive/tickets/170PARTVISOBS-004.md` owns FITL data authoring, cookbook docs, and FITL golden trace.
 - A future Rust guest schedule resolver or ABI redesign remains out of scope unless a later ticket explicitly moves schedule resolution across the FFI boundary.
 
 Generated/artifact fallout:

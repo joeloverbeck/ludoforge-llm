@@ -207,7 +207,7 @@ Ticket corrections applied:
 Deferred sibling/spec scope:
 
 - `archive/tickets/170PARTVISOBS-003.md` owns WASM score-row parity support.
-- `tickets/170PARTVISOBS-004.md` owns FITL `observerPolicy` authoring, slot-order proof, and cookbook documentation.
+- `archive/tickets/170PARTVISOBS-004.md` owns FITL `observerPolicy` authoring, slot-order proof, and cookbook documentation.
 - Compiler validation and type declarations were already completed by `archive/tickets/170PARTVISOBS-001.md`.
 
 Schema/artifact fallout:

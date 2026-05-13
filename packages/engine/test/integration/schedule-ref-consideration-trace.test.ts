@@ -33,7 +33,10 @@ interface SandboxProfileArtifact {
           readonly weight?: number;
           readonly when?: { readonly ref?: string };
           readonly value?: { readonly ref?: string };
-          readonly scheduleFallback?: { readonly onUnavailable?: string };
+          readonly scheduleFallback?: {
+            readonly onUnavailable?: string;
+            readonly onPartial?: { readonly visiblePrefixExhausted?: string };
+          };
         };
       };
     };
@@ -106,7 +109,10 @@ function withSandboxProfile(def: GameDef): GameDef {
   assert.equal(consideration.weight, 250);
   assert.equal(consideration.when?.ref, 'candidate.tag.govern');
   assert.equal(consideration.value?.ref, SCHEDULE_REF_ID);
-  assert.deepEqual(consideration.scheduleFallback, { onUnavailable: 'noContribution' });
+  assert.deepEqual(consideration.scheduleFallback, {
+    onUnavailable: 'noContribution',
+    onPartial: { visiblePrefixExhausted: 'useLowerBound' },
+  });
   assert.equal(profileArtifact.extends, 'arvn-evolved');
   assert.deepEqual(profileArtifact.use?.considerations, [CONSIDERATION_ID]);
 
@@ -129,7 +135,10 @@ function withSandboxProfile(def: GameDef): GameDef {
           when: refExpr({ kind: 'candidateTag', tagName: 'govern' }),
           weight: literal(250),
           value: refExpr(scheduleRef),
-          scheduleFallback: { onUnavailable: 'noContribution' },
+          scheduleFallback: {
+            onUnavailable: 'noContribution',
+            onPartial: { visiblePrefixExhausted: 'useLowerBound' },
+          },
           dependencies: { parameters: [], stateFeatures: [], candidateFeatures: [], aggregates: [], strategicConditions: [] },
         },
       },
@@ -213,14 +222,29 @@ describe('FITL schedule ref sandbox consideration trace shape', () => {
     assert.deepEqual(governCandidate, {
       actionId: 'govern',
       stableMoveKey: 'govern|{}|false|specialActivity',
-      score: 0,
+      score: 500,
       prunedBy: [],
-      scoreContributions: [{ termId: CONSIDERATION_ID, contribution: 0 }],
+      scoreContributions: [{ termId: CONSIDERATION_ID, contribution: 500 }],
       previewRefIds: [],
       unknownPreviewRefs: [],
       unknownLookupRefs: [],
       unknownCandidateParamRefs: [],
-      scheduleFallbackFired: { termId: CONSIDERATION_ID, kind: 'noContribution' },
+      inputRefs: {
+        [SCHEDULE_REF_ID]: {
+          status: 'partial',
+          partialKind: 'lowerBound',
+          lowerBound: 2,
+          observerPolicy: 'topNVisible',
+          visiblePrefixLength: 2,
+          fallbackApplied: { kind: 'useLowerBound', numericValue: 2 },
+        },
+      },
+      scheduleFallbackFired: {
+        termId: CONSIDERATION_ID,
+        kind: 'useLowerBound',
+        value: 2,
+        reason: 'partial.lowerBound.visiblePrefixExhausted',
+      },
       selectionReason: 'prior',
     });
   });

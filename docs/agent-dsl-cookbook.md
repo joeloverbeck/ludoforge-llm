@@ -267,6 +267,97 @@ Diagnostic quick reference:
 
 Spec source: `archive/specs/166-candidate-parameter-refs.md`
 
+## Phase And Schedule Refs
+
+Use `phase.*` and `schedule.*` refs when a move- or microturn-scoped consideration needs state-local timing context. These refs read the current kernel schedule state; they do not run preview and they do not inspect hidden deck order unless the game data declares an observer policy.
+
+| Ref | Meaning |
+| --- | --- |
+| `phase.current.id` | current phase id |
+| `phase.next.id` | next phase id in the live phase sequence |
+| `schedule.nextBoundary.id` | nearest declared phase boundary id |
+| `schedule.distance.toBoundary.<boundaryId>.cards` | card count to the next matching card-draw boundary |
+| `schedule.distance.toBoundary.<boundaryId>.microturns` | card distance multiplied by the boundary's `unitRates.microturns` |
+| `schedule.distance.toBoundary.<boundaryId>.actions` | card distance multiplied by the boundary's `unitRates.actions` |
+| `schedule.distance.toBoundary.<boundaryId>.turns` | card distance multiplied by the boundary's `unitRates.turns` |
+| `schedule.distance.toBoundary.<boundaryId>.rounds` | card distance multiplied by the boundary's `unitRates.rounds` |
+
+Use `schedule.distance.*.cards` for card-draw boundaries unless the boundary explicitly declares a unit rate for another unit. When the target deck is hidden and no observer policy is declared, the ref resolves unavailable with reason `hiddenDeck`; the profile must declare `scheduleFallback.onUnavailable`.
+
+### Schedule Fallbacks
+
+Declare the fallback path next to the consideration that reads the schedule ref:
+
+```yaml
+scheduleFallback:
+  onUnavailable: noContribution
+```
+
+`onUnavailable` supports:
+
+| Kind | Effect |
+| --- | --- |
+| `noContribution` | contribution is zero and the row records the fallback |
+| `dropConsideration` | the consideration is removed from the scoring sum |
+| `constant` | a declared integer is used as the value |
+
+For a boundary that declares `observerPolicy.kind: topNVisible`, also declare an explicit partial fallback:
+
+```yaml
+scheduleFallback:
+  onUnavailable: noContribution
+  onPartial:
+    visiblePrefixExhausted: useLowerBound
+```
+
+`onPartial.visiblePrefixExhausted` supports `useLowerBound`, `noContribution`, `dropConsideration`, and `constant`. Use `useLowerBound` only when a lower-bound distance is meaningful for the heuristic. This keeps partial visibility distinct from unavailable hidden information and makes the fallback visible in deterministic trace output.
+
+### Visible Prefix Declaration
+
+Use `phaseBoundaries[].schedule.observerPolicy.topNVisible` when a hidden deck has public face-up slots that expose the current or next cards in order:
+
+```yaml
+phaseBoundaries:
+  - id: coupEntry
+    kind: phaseEntry
+    phaseId: coupVictory
+    schedule:
+      kind: cardDraw
+      deckId: fitl-events-initial-card-pack
+      cardSelector:
+        tags: [coup]
+      observerPolicy:
+        kind: topNVisible
+        visiblePrefix:
+          zones:
+            - id: played:none
+            - id: lookahead:none
+          maxItems: 2
+```
+
+The listed zones must be public, ordered, distinct, and separate from the hidden draw zone. The resolver scans at most `maxItems` cards in declaration order. A matching visible card resolves `ready`; an exhausted visible prefix resolves `partial.lowerBound`; a boundary without `observerPolicy` preserves the hidden-deck `unavailable` result.
+
+### FITL Coup Timing Example
+
+```yaml
+preferGovernEarlyInCoupCycle:
+  scopes: [move]
+  costClass: state
+  weight: 250
+  when:
+    ref: candidate.tag.govern
+  value:
+    ref: schedule.distance.toBoundary.coupEntry.cards
+  scheduleFallback:
+    onUnavailable: noContribution
+    onPartial:
+      visiblePrefixExhausted: useLowerBound
+```
+
+In Fire in the Lake, `played:none` is the current driving-card slot and `lookahead:none` is the next visible card slot. If either visible slot is a coup card, the ref is ready with an exact distance. If neither visible slot is a coup card, the ref returns `partial.lowerBound: 2`, and `useLowerBound` lets the heuristic score that bounded timing signal without peeking into the hidden deck.
+
+Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `specs/170-partial-visibility-observer-policy.md`
+
 ## Reading the Preview Trace
 
 Preview trace fields answer three separate questions:

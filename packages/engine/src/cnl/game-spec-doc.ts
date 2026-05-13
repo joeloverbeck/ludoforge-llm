@@ -166,12 +166,23 @@ export interface GameSpecCardDrawUnitRates {
   readonly rounds?: number;
 }
 
+export type GameSpecObserverPolicyDef = {
+  readonly kind: 'topNVisible';
+  readonly visiblePrefix: GameSpecObserverVisiblePrefixDef;
+};
+
+export interface GameSpecObserverVisiblePrefixDef {
+  readonly zones: readonly { readonly id: string }[];
+  readonly maxItems: number;
+}
+
 export type GameSpecScheduleKindDef =
   | {
       readonly kind: 'cardDraw';
       readonly deckId: string;
       readonly cardSelector: GameSpecCardSelector;
       readonly unitRates?: GameSpecCardDrawUnitRates;
+      readonly observerPolicy?: GameSpecObserverPolicyDef;
     }
   | { readonly kind: 'turnCount' }
   | { readonly kind: 'condition' };
@@ -659,6 +670,13 @@ export interface GameSpecScheduleFallbackDef {
     | 'noContribution'
     | 'dropConsideration'
     | { readonly constant: number };
+  readonly onPartial?: {
+    readonly visiblePrefixExhausted:
+      | 'useLowerBound'
+      | 'noContribution'
+      | 'dropConsideration'
+      | { readonly constant: number };
+  };
 }
 
 export interface GameSpecConsiderationDef {

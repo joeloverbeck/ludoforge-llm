@@ -18,6 +18,8 @@ sandboxAgents:
           ref: schedule.distance.toBoundary.coupEntry.cards
         scheduleFallback:
           onUnavailable: noContribution
+          onPartial:
+            visiblePrefixExhausted: useLowerBound
 
   profiles:
     spec-169-schedule-demo:

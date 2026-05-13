@@ -69,3 +69,23 @@ export const unavailableScheduleFallbackConsideration = (): CompiledPolicyConsid
   scheduleFallback: { onUnavailable: 'noContribution' },
   dependencies: emptyDependencies,
 });
+
+export const topNVisibleScheduleFallbackConsideration = (
+  visiblePrefixExhausted:
+    | 'useLowerBound'
+    | 'noContribution'
+    | 'dropConsideration'
+    | { readonly kind: 'constant'; readonly value: number } = 'useLowerBound',
+  clamp?: CompiledPolicyConsideration['clamp'],
+): CompiledPolicyConsideration => ({
+  scopes: ['move'],
+  costClass: 'state',
+  weight: literalExpr(10),
+  value: refExpr(scheduleDistanceRef('coupEntry', 'cards')),
+  scheduleFallback: {
+    onUnavailable: { kind: 'constant', value: 99 },
+    onPartial: { visiblePrefixExhausted },
+  },
+  ...(clamp === undefined ? {} : { clamp }),
+  dependencies: emptyDependencies,
+});

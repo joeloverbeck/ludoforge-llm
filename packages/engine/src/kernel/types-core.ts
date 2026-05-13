@@ -203,12 +203,23 @@ export interface CardDrawUnitRates {
   readonly rounds?: number;
 }
 
+export type ObserverPolicy = {
+  readonly kind: 'topNVisible';
+  readonly visiblePrefix: ObserverVisiblePrefix;
+};
+
+export interface ObserverVisiblePrefix {
+  readonly zones: readonly { readonly id: string }[];
+  readonly maxItems: number;
+}
+
 export type ScheduleKindDef =
   | {
       readonly kind: 'cardDraw';
       readonly deckId: string;
       readonly cardSelector: CardSelector;
       readonly unitRates?: CardDrawUnitRates;
+      readonly observerPolicy?: ObserverPolicy;
     }
   // Future schedule kinds are reserved for downstream Spec 169 tickets.
   | { readonly kind: 'turnCount' }
@@ -374,6 +385,13 @@ export type AgentScheduleFallback = {
     | 'noContribution'
     | 'dropConsideration'
     | { readonly kind: 'constant'; readonly value: number };
+  readonly onPartial?: {
+    readonly visiblePrefixExhausted:
+      | 'useLowerBound'
+      | 'noContribution'
+      | 'dropConsideration'
+      | { readonly kind: 'constant'; readonly value: number };
+  };
 };
 export type AgentPolicyOperator =
   | 'abs'
@@ -1836,6 +1854,25 @@ export interface AgentDecisionScoreContribution {
   readonly contribution: number;
 }
 
+export type PolicyScheduleInputRefTrace =
+  | {
+      readonly status: 'ready';
+      readonly value: number | string;
+      readonly observerPolicy?: 'topNVisible';
+      readonly visiblePrefixLength?: number;
+    }
+  | {
+      readonly status: 'partial';
+      readonly partialKind: 'lowerBound';
+      readonly lowerBound: number;
+      readonly observerPolicy: 'topNVisible';
+      readonly visiblePrefixLength: number;
+      readonly fallbackApplied?: {
+        readonly kind: 'useLowerBound' | 'noContribution' | 'constant' | 'dropConsideration';
+        readonly numericValue?: number;
+      };
+    };
+
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
   readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
@@ -1918,9 +1955,11 @@ export interface PolicyCandidateDecisionTrace {
   };
   readonly scheduleFallbackFired?: {
     readonly termId: string;
-    readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
+    readonly kind: 'useLowerBound' | 'noContribution' | 'constant' | 'dropConsideration';
     readonly value?: number;
+    readonly reason?: 'partial.lowerBound.visiblePrefixExhausted';
   };
+  readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';

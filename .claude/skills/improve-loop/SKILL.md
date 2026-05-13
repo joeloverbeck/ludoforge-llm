@@ -30,10 +30,12 @@ The improvement loop commits and rolls back frequently. It MUST run inside a ded
 
 Set `WT` = the worktree root path. Every file path in every tool call below is prefixed with `$WT/`. For tool calls (Read, Edit, Glob, Grep), always use the full absolute worktree path — `$WT` is a conceptual prefix in this document, not a shell variable available to tools.
 
-4. If the project uses a package manager, install dependencies in the worktree:
+4. If `package.json` exists at the worktree root, install dependencies — this is mandatory for any monorepo with a `package.json`, not optional:
    ```bash
    cd $WT && pnpm install   # or npm install / yarn install
+   [ -d node_modules ] || { echo "PREFLIGHT: node_modules missing after install"; exit 1; }
    ```
+   Skipping this step produces non-obvious TS2307 build errors (`Cannot find module 'node:test'`, `Cannot find module 'node:fs'`, etc.) at the first harness invocation — see Phase 1 Baseline Failure Protocol step 3 for the symptom-to-fix mapping.
 
 5. **Set persistent working directory**: After setup, run `cd $WT` as a standalone Bash command to anchor the session's working directory in the worktree. All subsequent Bash commands will execute from the worktree root. Do NOT rely solely on `cd $WT &&` chains — if any later command uses `cd` to another directory, the working directory drifts silently. Verify with `pwd` before the baseline harness run.
 
@@ -113,7 +115,7 @@ If the baseline harness fails (non-zero exit), this is a **campaign-blocking iss
 
 1. **Investigate the root cause.** Follow the same diagnostic approach as the Human Investigation Interrupt protocol — read error output, trace logs, and reproduce minimally.
 2. **If the root cause is in the game spec or engine** (not the campaign configuration): escalate as an engine limitation. Create a spec or report in the main repo root (not the worktree) documenting the bug with reproduction steps — use a spec when there's a clear single fix, or a report when the limitation spans multiple gaps that need external research (per the criteria in Human Investigation Interrupt step 5). Then trigger degenerate campaign completion — the campaign cannot proceed until the bug is fixed.
-3. **If the root cause is in the campaign configuration** (wrong seed count, missing files, incorrect profile name, harness misconfiguration, missing build artifacts): fix the configuration and retry the baseline. This does not count as an experiment. **Common case**: an `ENOENT` error during the test gate for a path under `packages/*/target/` (Rust/wasm) or `dist/` (TypeScript) is a missing-build-artifact symptom — mirror the path from the source repo (per Worktree Requirement step 6's auto-mirror list) and retry.
+3. **If the root cause is in the campaign configuration** (wrong seed count, missing files, incorrect profile name, harness misconfiguration, missing build artifacts, missing dependencies): fix the configuration and retry the baseline. This does not count as an experiment. **Common cases**: (a) `error TS2307: Cannot find module 'node:test'` (or `'node:fs'`, `'node:path'`, etc.) during the BUILD step is a missing-`node_modules` symptom — run `pnpm install` per Worktree Requirement step 4 and retry. (b) An `ENOENT` error during the test gate for a path under `packages/*/target/` (Rust/wasm) or `dist/` (TypeScript) is a missing-build-artifact symptom — mirror the path from the source repo (per Worktree Requirement step 6's auto-mirror list) and retry.
 4. **Never mask a failing baseline with a workaround** (e.g., remapping error codes, suppressing exceptions, loosening assertions). A workaround produces unreliable metrics that invalidate all subsequent experiments.
 
 ## Phase 2 — Improvement Loop
@@ -157,7 +159,7 @@ Document each mapping inline in the first ANCHOR musings entry so subsequent ite
 ### Step 1a: REFRESH (Correctness)
 
 - Re-read mutable files **from disk** (not from stale context). This ensures each iteration operates on fresh state. If the mutable surface is a directory tree, re-read only the specific files modified in the previous experiment. If no experiment has run yet, read the files identified by profiling as hot paths.
-- Verify that no immutable files have been modified since baseline. If any have, **hard error** — abort the loop.
+- Verify that no immutable files have been modified since baseline. If any have, **hard error** — abort the loop. Quick check: `git diff --name-only $(git merge-base HEAD <baseline-commit>) HEAD` lists every path touched since baseline; cross-reference against program.md's "Mutable System" section. Any path outside the declared mutable union (plus sync-fixtures-regenerated derived artifacts) is an immutable-file violation.
 - Review experiment history in results.tsv — what's been tried, what worked, what failed.
 - Note the current `best_metric` and cumulative `lines_delta`.
 
@@ -281,7 +283,7 @@ Append a row to `$WT/campaigns/<campaign>/results.tsv`:
 
 **Status selection guidance**:
 - `ACCEPT` / `SUSPICIOUS_ACCEPT`: metric improved past the program.md acceptance gate.
-- `REJECT`: metric regressed beyond `NOISE_TOLERANCE`, or metric was within-noise without a simplification (lines_delta ≥ 0).
+- `REJECT`: metric regressed beyond `NOISE_TOLERANCE`. (Terminology note: when program.md prose says "REJECT (near-miss → stash)" for a within-noise + non-simplification case, treat as the more precise `NEAR_MISS` status below — the skill's status enum is authoritative for results.tsv. The program.md prose is describing the same semantic outcome with informal wording.)
 - `NEAR_MISS`: metric within `NOISE_TOLERANCE` of best AND `lines_delta >= 0`; stash for combine strategy.
 - `EARLY_ABORT`: harness was killed mid-run for exceeding `ABORT_THRESHOLD`.
 - `CRASH`: harness exited non-zero (build/gate/runner failure) OR a test asserted incorrectly. Use `CRASH` for both retryable trivial errors AND for un-retryable correctness failures (e.g., a determinism test caught that the diff broke an invariant). The 3-retry policy in Git Operations Summary applies to TRIVIAL crashes only — for un-retryable correctness CRASH the row's `metric_value` column is `null` (write the literal `null`) since no measurement was produced; the `description` column names the failing test or assertion.
@@ -342,9 +344,17 @@ Then in either mode:
    - **Ticket archaeology** — if the gap traces to a deferred ticket (Out-of-Scope notes that say "follows the same pattern" but never landed), cite the ticket file path and the deferral text.
    - **Adjacent concerns** — anything else surfaced during the audit that is suspicious but not the primary gap (e.g., a fallback semantic that may also be misbehaving). Flag uncertainty explicitly.
    - **Proposed fix** — concrete implementation plan with alternatives compared. Cite the foundations the fix must respect.
+
+   If the report or spec creation precedes a degenerate-flow squash-merge (the typical autonomous-loop case), see After Campaign Completes step 7's pre-merge timing branch — pre-merge artifacts are referenced by file path or commit hash in the squash-merge commit message. **Spec authoring convention**: when a report is written first and a follow-up spec next, cite the report as a "Trigger reports:" entry in the spec's frontmatter header (see spec 169 §1 / spec 170 §1 for the format). This preserves the audit trail from empirical evidence to design proposal to implementation.
 3. Append to musings: `**ARCHITECTURAL-GAP HALT**: <one-line summary>. See <report or spec path>. Halting at exp-NNN.`
 4. Append to results.tsv: `arch-gap-NNN	<best_metric>	0	architectural-gap	REJECT	architectural gap discovered at exp-NNN; see <artifact path>` (this is a marker row similar to ceiling-NNN, not a new experiment).
-5. **Pause for human input**: Present the artifact to the user with the same options as Step 1g Ceiling Detection (continue with workaround, halt the campaign, or pursue the spec/report). Do NOT proceed to Step 8 (REPEAT) until the human directs.
+5. **Pause for human input**: Use AskUserQuestion with the four-option taxonomy from Step 1g Ceiling Detection, scoped to the single-experiment halt context:
+   - **Option A** — Human provides a `next-idea.md` → resume the loop with that hypothesis.
+   - **Option B** — Halt the campaign → proceed to "After Campaign Completes" (typically degenerate-flow).
+   - **Option C** — Program.md amendment (usually not applicable to single-experiment halts; offer only if the gap is in program.md's accept logic itself, not in the engine).
+   - **Option D** — Architectural spec or report creation per step 2 above; pair with halt-and-resume-after-spec if the unblock requires implementation work (see After Campaign Completes "Suspended Campaign Resume" for the resume contract).
+
+   Tag the recommended option with "(Recommended)" based on the report's evidence. Do NOT proceed to Step 8 (REPEAT) until the human directs.
 
 **Dialogue-active variant**: When the user is actively engaged in dialogue (Human Investigation Interrupt active, or recent conversational input within the past few turns), it is acceptable to summarize the gap in conversation FIRST and write the report AFTER the user confirms scope. The autonomous write-then-pause ordering above (steps 2-5) is the default for unattended-loop discoveries; the dialogue-active variant prevents an over-broad or off-scope report from being written and then re-scoped. The musings and results.tsv entries (steps 3-4) still land before resuming, even in the dialogue-active variant.
 
@@ -370,6 +380,8 @@ Go back to Step 1. Do NOT stop.
 | META-REVIEW revert | Restore program.md from program.md.backup |
 | Infrastructure (Tier 3+) | `git add <files>` + `git commit -m "infra: <description>"` — committable at any time during OBSERVE |
 
+**NEAR_MISS stash caveat**: `git stash push -- <pathspec>` refuses the entire stash if ANY listed pathspec is untracked or unknown to git. Filter the list against `git status --short` first — only stash paths that appear there. Common pitfall: `sync-fixtures.sh` may CLAIM to regenerate fixture files that aren't actually written to disk; listing them in the stash command fails with `pathspec did not match any file(s) known to git` and aborts the stash entirely. Recover by re-running stash with only the paths git knows about.
+
 `results.tsv`, `checkpoints.jsonl`, `lessons.jsonl`, `intermediates.jsonl`, and `run.log` are untracked (gitignored) — they persist across accepts and rejects but are not committed. `musings.md` may be tracked or gitignored depending on campaign setup; verify with `git check-ignore campaigns/<campaign>/musings.md` before any cross-tree copy or commit decision. **When `musings.md` is tracked, the running-session extensions written at Step 7.5 RECORD LEARNING MUST be excluded from experiment commits** — see Step 7.5's tracked-musings commit prohibition and the After Campaign Completes section for the full rationale.
 
 **Infrastructure commits outside experiments**: Tier 3 (observability) and campaign infrastructure changes (trace improvements, harness updates, documentation) can be committed at any point during the OBSERVE phase, not only during the IMPLEMENT->DECIDE cycle. Use commit messages prefixed with `infra:` and log in musings, but do NOT log in results.tsv (they are not experiments).
@@ -386,6 +398,13 @@ When the human decides to stop the loop (or `MAX_ITERATIONS` is reached):
 3. **Pre-merge check**: Verify the branch has commits worth keeping: `git diff main...improve/<campaign> --stat`. If no meaningful diff remains (all changes were reverted in the working tree, or only invalid/diagnostic commits exist), skip the squash-merge and proceed directly to step 5.
 4. If the branch has useful infrastructure commits OR `campaigns/lessons-global.jsonl` has been modified during this campaign (e.g., a `type: negative` correction obsoleting a prior global lesson, or any other infrastructure-shaped lesson update): switch to the main repo root and squash-merge. **If `lessons-global.jsonl` was modified, commit it on the worktree branch first per the normal-flow step 3** (`git add -f campaigns/lessons-global.jsonl && git commit -m "chore: promote global lessons from <campaign>"`) so the squash-merge picks it up. Commit the squash-merge with a summary noting the campaign was halted due to `<reason>` and listing infrastructure changes. The "skip lesson promotion" guidance applies to forward-looking ACCEPT-driven lesson promotion only; retroactive corrections to `lessons-global.jsonl` persist regardless of campaign outcome. Skip the metric impact summary.
 5. Remove the worktree and delete the branch (step 9 below).
+
+**Suspended Campaign Resume** (degenerate-flow termination with an architectural unblock pending — e.g., Step 7.7 Option D where the user halts the campaign and commissions a follow-up spec that must land before the loop can produce signal):
+
+1. The Degenerate-campaign squash-merge captures the infra fix + lessons-global update + spec/report references; this is the correct terminal shape, not a separate flow. The campaign is "suspended" only from the operator's perspective — git-wise it has completed.
+2. The worktree and branch are removed at completion (step 5 above), which deletes any near-miss stashes that lived only in the worktree. Any stash with content worth revisiting after the unblock lands MUST be promoted to a lesson (`lessons-global.jsonl`) or copied to the report BEFORE step 5 — `git stash list` runs in the worktree before removal; after removal, the stashes are unrecoverable.
+3. On resume after the unblocking spec lands: re-invoke `/improve-loop campaigns/<campaign>`. The STATE-EVOLVED stale-baseline path (Phase 0 step 3) is the expected entry point — the recorded baseline commit will be unreachable from the freshly-created worktree HEAD. `results.tsv` and `checkpoints.jsonl` are cleared, `seed-tier.txt` is retained at its current tier, lessons are preserved. Re-baseline at the current evolved state and proceed with hypotheses that depend on the new engine capability.
+4. The squash-merge commit message MUST explicitly name the unblocking spec (e.g., "Loop halted pending spec 170 implementation") so future operators can find the resume contract via `git log` rather than inferring it from runtime-file state.
 
 **Normal campaign** (one or more accepted experiments):
 

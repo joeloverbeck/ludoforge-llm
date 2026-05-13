@@ -17,6 +17,7 @@ import {
   type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
   type PolicyScheduleFallbackFired,
+  type PolicyScheduleInputRefTrace,
 } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
@@ -38,6 +39,7 @@ export interface CompletionOptionScore {
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
+  readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: PolicyCandidateParamFallbackFired;
 }
 
@@ -105,6 +107,7 @@ export function scoreMicroturnOptionWithContributions(
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
   const lookupFallbackFired: { current?: PolicyLookupFallbackFired } = {};
   const scheduleFallbackFired: { current?: PolicyScheduleFallbackFired } = {};
+  const scheduleInputRefs: { current?: Map<string, PolicyScheduleInputRefTrace> } = {};
   const candidateParamFallbackFired: { current?: Map<string, number> } = {};
 
   const evaluation = new PolicyEvaluationContext({
@@ -126,7 +129,7 @@ export function scoreMicroturnOptionWithContributions(
         : { previewOption: { resolvedRefs: new Map(), unknownPreviewRefs, previewFallbackFired, projectedState: previewOptionProjectedState } }
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired, ...(previewOptionProjectedState === undefined ? {} : { projectedState: previewOptionProjectedState }) } }),
     lookupOption: { unknownLookupRefs, lookupFallbackFired },
-    scheduleOption: { scheduleFallbackFired },
+    scheduleOption: { scheduleFallbackFired, scheduleInputRefs },
     candidateParamOption: { unknownCandidateParamRefs, candidateParamFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
@@ -154,11 +157,18 @@ export function scoreMicroturnOptionWithContributions(
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
       ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
       ...(scheduleFallbackFired.current === undefined ? {} : { scheduleFallbackFired: scheduleFallbackFired.current }),
+      ...(scheduleInputRefs.current === undefined ? {} : { inputRefs: serializeScheduleInputRefs(scheduleInputRefs.current) }),
       ...(candidateParamFallbackFired.current === undefined ? {} : { candidateParamFallbackFired: sortCandidateParamFallbackFired(candidateParamFallbackFired.current) }),
     };
   } finally {
     evaluation.dispose();
   }
+}
+
+function serializeScheduleInputRefs(
+  inputRefs: ReadonlyMap<string, PolicyScheduleInputRefTrace>,
+): Readonly<Record<string, PolicyScheduleInputRefTrace>> {
+  return Object.fromEntries([...inputRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function sortUnknownLookupRefs(

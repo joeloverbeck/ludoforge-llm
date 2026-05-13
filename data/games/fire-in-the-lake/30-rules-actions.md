@@ -24,6 +24,13 @@ phaseBoundaries:
       deckId: fitl-events-initial-card-pack
       cardSelector:
         tags: [coup]
+      observerPolicy:
+        kind: topNVisible
+        visiblePrefix:
+          zones:
+            - id: played:none
+            - id: lookahead:none
+          maxItems: 2
 
 turnOrder:
   type: cardDriven

@@ -28,8 +28,11 @@ import {
   policyWasmBytecodeInputCacheKey,
   resetPolicyWasmBytecodeInputCacheCounters,
 } from './policy-wasm-bytecode-input-cache.js';
-import type { PolicyScheduleFallbackFired } from './policy-evaluation-core.js';
-import { encodeWasmPhaseScheduleValue } from './policy-wasm-phase-schedule-encoding.js';
+import type { PolicyScheduleFallbackFired, PolicyScheduleFallbackKind } from './policy-evaluation-core.js';
+import {
+  encodeWasmPhaseScheduleValue,
+  resolveWasmScheduleDistanceRef,
+} from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
 export const POLICY_WASM_ABI_VERSION = 10;
@@ -760,6 +763,136 @@ const exprReadsScheduleDistance = (expr: CompiledPolicyExpr | undefined): boolea
   }
 };
 
+const exprReadsTopNVisibleScheduleDistance = (def: GameDef, expr: CompiledPolicyExpr | undefined): boolean => {
+  if (expr === undefined) {
+    return false;
+  }
+  switch (expr.kind) {
+    case 'ref': {
+      const ref = expr.ref;
+      if (ref.kind !== 'scheduleDistance' || ref.target.kind !== 'boundary') {
+        return false;
+      }
+      const boundaryId = ref.target.boundaryId;
+      const boundary = def.phaseBoundaries?.find((entry) => String(entry.id) === String(boundaryId));
+      return boundary?.schedule?.kind === 'cardDraw' && boundary.schedule.observerPolicy?.kind === 'topNVisible';
+    }
+    case 'op':
+      return expr.args.some((arg) => exprReadsTopNVisibleScheduleDistance(def, arg));
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.anchorZone);
+    case 'seatAgg':
+      return exprReadsTopNVisibleScheduleDistance(def, expr.expr);
+    case 'zoneProp':
+      return typeof expr.zone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.zone);
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return false;
+  }
+};
+
+const firstTopNVisibleSchedulePartial = (
+  expr: CompiledPolicyExpr | undefined,
+  context: PolicyWasmBytecodeContext,
+): { readonly lowerBound: number } | undefined => {
+  if (expr === undefined) {
+    return undefined;
+  }
+  switch (expr.kind) {
+    case 'ref': {
+      const ref = expr.ref;
+      if (ref.kind !== 'scheduleDistance' || ref.target.kind !== 'boundary') {
+        return undefined;
+      }
+      const target = ref.target;
+      const boundary = context.def.phaseBoundaries?.find((entry) => String(entry.id) === String(target.boundaryId));
+      if (boundary?.schedule?.kind !== 'cardDraw' || boundary.schedule.observerPolicy?.kind !== 'topNVisible') {
+        return undefined;
+      }
+      const resolution = resolveWasmScheduleDistanceRef(ref, context);
+      return resolution.kind === 'partial' ? { lowerBound: resolution.lowerBound } : undefined;
+    }
+    case 'op':
+      for (const arg of expr.args) {
+        const partial = firstTopNVisibleSchedulePartial(arg, context);
+        if (partial !== undefined) {
+          return partial;
+        }
+      }
+      return undefined;
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? undefined : firstTopNVisibleSchedulePartial(expr.zone, context);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? undefined : firstTopNVisibleSchedulePartial(expr.anchorZone, context);
+    case 'seatAgg':
+      return firstTopNVisibleSchedulePartial(expr.expr, context);
+    case 'zoneProp':
+      return typeof expr.zone === 'string' ? undefined : firstTopNVisibleSchedulePartial(expr.zone, context);
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return undefined;
+  }
+};
+
+const applyTopNVisiblePartialFallback = (
+  entryId: string,
+  fallback: NonNullable<NonNullable<CompiledPolicyConsideration['scheduleFallback']>['onPartial']>['visiblePrefixExhausted'],
+  lowerBound: number,
+  weight: PolicyValue,
+  contribution: number,
+): {
+  readonly contribution: number;
+  readonly fired: PolicyScheduleFallbackFired;
+} => {
+  if (fallback === 'dropConsideration') {
+    return {
+      contribution: 0,
+      fired: {
+        termId: entryId,
+        kind: 'dropConsideration',
+        reason: 'partial.lowerBound.visiblePrefixExhausted',
+      },
+    };
+  }
+  if (fallback === 'noContribution') {
+    return {
+      contribution: 0,
+      fired: {
+        termId: entryId,
+        kind: 'noContribution',
+        reason: 'partial.lowerBound.visiblePrefixExhausted',
+      },
+    };
+  }
+  if (fallback === 'useLowerBound') {
+    return {
+      contribution,
+      fired: {
+        termId: entryId,
+        kind: 'useLowerBound',
+        value: lowerBound,
+        reason: 'partial.lowerBound.visiblePrefixExhausted',
+      },
+    };
+  }
+  const constantContribution = typeof weight === 'number' ? weight * fallback.value : fallback.value;
+  return {
+    contribution: constantContribution,
+    fired: {
+      termId: entryId,
+      kind: 'constant' satisfies PolicyScheduleFallbackKind,
+      value: fallback.value,
+      reason: 'partial.lowerBound.visiblePrefixExhausted',
+    },
+  };
+};
+
 export const evaluateWasmMoveConsiderationScoreRows = (
   runtime: PolicyWasmRuntime,
   input: {
@@ -790,6 +923,14 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     const consideration = entry.consideration;
     if (consideration.scopes?.includes('move') !== true) {
       continue;
+    }
+    const readsTopNVisibleScheduleDistance =
+      exprReadsTopNVisibleScheduleDistance(input.def, consideration.when)
+      || exprReadsTopNVisibleScheduleDistance(input.def, consideration.weight)
+      || exprReadsTopNVisibleScheduleDistance(input.def, consideration.value);
+    const topNVisiblePartialFallback = consideration.scheduleFallback?.onPartial?.visiblePrefixExhausted;
+    if (readsTopNVisibleScheduleDistance && topNVisiblePartialFallback === undefined) {
+      return { kind: 'unsupported', reason: `topNVisible schedule-distance consideration ${entry.id} is missing partial fallback` };
     }
     if (consideration.costClass === 'preview') {
       for (const featureId of consideration.dependencies.candidateFeatures) {
@@ -839,6 +980,11 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     if (valueValues === null) {
       return { kind: 'unsupported', reason: `unsupported value expression for consideration ${entry.id}` };
     }
+    const topNVisiblePartial = readsTopNVisibleScheduleDistance
+      ? firstTopNVisibleSchedulePartial(consideration.when, input.context)
+        ?? firstTopNVisibleSchedulePartial(consideration.weight, input.context)
+        ?? firstTopNVisibleSchedulePartial(consideration.value, input.context)
+      : undefined;
 
     for (const [index] of input.candidates.entries()) {
       if (whenValues[index] !== true) {
@@ -869,7 +1015,17 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       } else {
         contribution = consideration.unknownAs ?? 0;
       }
-      if (consideration.clamp !== undefined) {
+      if (topNVisiblePartial !== undefined) {
+        const applied = applyTopNVisiblePartialFallback(
+          entry.id,
+          topNVisiblePartialFallback!,
+          topNVisiblePartial.lowerBound,
+          weight,
+          contribution,
+        );
+        contribution = applied.contribution;
+        scheduleFallbackFired[index] = applied.fired;
+      } else if (consideration.clamp !== undefined) {
         if (consideration.clamp.min !== undefined) {
           contribution = Math.max(consideration.clamp.min, contribution);
         }

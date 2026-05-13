@@ -2123,6 +2123,8 @@ class AgentLibraryCompiler {
     const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
     const candidateParamRefIds = collectCandidateParamRefIds(value.expr);
     const scheduleDistanceRefIds = collectScheduleDistanceRefIds(value.expr);
+    const phaseBoundaryContext = buildPhaseBoundaryValidationContext(this.options.phaseBoundaries, this.options.turnStructure ?? null);
+    const topNVisibleScheduleDistanceRefIds = collectTopNVisibleScheduleDistanceRefIds(value.expr, phaseBoundaryContext);
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2230,6 +2232,20 @@ class AgentLibraryCompiler {
         severity: 'error',
         message: `Consideration "${considerationId}" reads schedule distance ref(s) [${scheduleDistanceRefIds.join(', ')}] without declaring scheduleFallback.onUnavailable.`,
         suggestion: 'Add scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { onUnavailable: { constant: <number> } }.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    if (
+      topNVisibleScheduleDistanceRefIds.length > 0
+      && scheduleFallback?.onPartial?.visiblePrefixExhausted === undefined
+    ) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_FALLBACK_PARTIAL_REQUIRED,
+        path: `${path}.scheduleFallback.onPartial.visiblePrefixExhausted`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" reads topNVisible schedule distance ref(s) [${topNVisibleScheduleDistanceRefIds.join(', ')}] without declaring scheduleFallback.onPartial.visiblePrefixExhausted.`,
+        suggestion: 'Add scheduleFallback: { onUnavailable: noContribution, onPartial: { visiblePrefixExhausted: useLowerBound } } or another explicit partial fallback.',
       });
       this.considerationStatus.set(considerationId, 'failed');
       return null;
@@ -4037,13 +4053,23 @@ function lowerScheduleFallback(
   }
 
   const { onUnavailable } = value;
+  const onPartial = lowerSchedulePartialFallback(considerationId, path, value.onPartial, diagnostics);
+  if (onPartial === null) {
+    return null;
+  }
   if (onUnavailable === 'noContribution' || onUnavailable === 'dropConsideration') {
-    return { onUnavailable };
+    return {
+      onUnavailable,
+      ...(onPartial === undefined ? {} : { onPartial }),
+    };
   }
   if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
     const { constant } = onUnavailable;
     if (Number.isSafeInteger(constant)) {
-      return { onUnavailable: { kind: 'constant', value: constant } };
+      return {
+        onUnavailable: { kind: 'constant', value: constant },
+        ...(onPartial === undefined ? {} : { onPartial }),
+      };
     }
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
@@ -4061,6 +4087,48 @@ function lowerScheduleFallback(
     severity: 'error',
     message: `Consideration "${considerationId}" scheduleFallback.onUnavailable must be noContribution, dropConsideration, or { constant: <integer> }.`,
     suggestion: 'Use scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { constant: 0 }.',
+  });
+  return null;
+}
+
+function lowerSchedulePartialFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecScheduleFallbackDef['onPartial'] | undefined,
+  diagnostics: Diagnostic[],
+): AgentScheduleFallback['onPartial'] | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  const visiblePrefixExhausted = value.visiblePrefixExhausted;
+  if (
+    visiblePrefixExhausted === 'useLowerBound'
+    || visiblePrefixExhausted === 'noContribution'
+    || visiblePrefixExhausted === 'dropConsideration'
+  ) {
+    return { visiblePrefixExhausted };
+  }
+  if (visiblePrefixExhausted !== null && typeof visiblePrefixExhausted === 'object' && !Array.isArray(visiblePrefixExhausted)) {
+    const { constant } = visiblePrefixExhausted;
+    if (Number.isSafeInteger(constant)) {
+      return { visiblePrefixExhausted: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.onPartial.visiblePrefixExhausted.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" scheduleFallback.onPartial.visiblePrefixExhausted.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.onPartial.visiblePrefixExhausted`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" scheduleFallback.onPartial.visiblePrefixExhausted must be useLowerBound, noContribution, dropConsideration, or { constant: <integer> }.`,
+    suggestion: 'Use scheduleFallback.onPartial: { visiblePrefixExhausted: useLowerBound } or another supported partial fallback.',
   });
   return null;
 }
@@ -4310,6 +4378,57 @@ function collectScheduleDistanceRefIds(expr: AgentPolicyExpr): readonly string[]
           ids.add(scheduleDistanceRefKey(current.ref));
         }
         return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function collectTopNVisibleScheduleDistanceRefIds(
+  expr: AgentPolicyExpr,
+  context: PhaseBoundaryValidationContext,
+): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref': {
+        if (
+          current.ref.kind === 'scheduleDistance'
+          && current.ref.unit === 'cards'
+          && current.ref.target.kind === 'boundary'
+        ) {
+          const boundary = findPhaseBoundaryById(context, String(current.ref.target.boundaryId));
+          if (boundary?.schedule?.kind === 'cardDraw' && boundary.schedule.observerPolicy?.kind === 'topNVisible') {
+            ids.add(scheduleDistanceRefKey(current.ref));
+          }
+        }
+        return;
+      }
       case 'op':
         for (const arg of current.args) {
           visit(arg);

@@ -39,6 +39,7 @@ import {
   type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
   type PolicyScheduleFallbackFired,
+  type PolicyScheduleInputRefTrace,
   PolicyRuntimeError,
 } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
@@ -170,6 +171,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
+  readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
@@ -355,6 +357,7 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
   previewFailureReason?: string;
   previewDrive?: PolicyPreviewDriveTrace;
   completionPolicyFallbackCount?: number;
+  scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
   candidateParamFallbackFired?: Map<string, number>;
   grantedOperation?: PolicyPreviewGrantedOperation;
   score: number;
@@ -1133,6 +1136,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
     ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
     ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
     ...(candidate.scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired: candidate.scheduleFallbackFired }),
+    ...(candidate.scheduleInputRefs === undefined ? {} : { inputRefs: serializeScheduleInputRefs(candidate.scheduleInputRefs) }),
     ...(candidate.candidateParamFallbackFired === undefined
       ? {}
       : { candidateParamFallbackFired: serializeCandidateParamFallbackFired(candidate.candidateParamFallbackFired) }),
@@ -1161,6 +1165,7 @@ function scoreCandidateForGateFlipProbe(
     unknownPreviewRefs: new Map(candidate.unknownPreviewRefs),
     unknownLookupRefs: new Map(candidate.unknownLookupRefs),
     unknownCandidateParamRefs: new Map(candidate.unknownCandidateParamRefs),
+    ...(candidate.scheduleInputRefs === undefined ? {} : { scheduleInputRefs: new Map(candidate.scheduleInputRefs) }),
     ...(candidate.candidateParamFallbackFired === undefined
       ? {}
       : { candidateParamFallbackFired: new Map(candidate.candidateParamFallbackFired) }),
@@ -1179,6 +1184,12 @@ function serializeCandidateParamFallbackFired(
   candidateParamFallbackFired: PolicyCandidateParamFallbackFired,
 ): Readonly<Record<string, number>> {
   return Object.fromEntries([...candidateParamFallbackFired.entries()].sort(([left], [right]) => left.localeCompare(right)));
+}
+
+function serializeScheduleInputRefs(
+  inputRefs: ReadonlyMap<string, PolicyScheduleInputRefTrace>,
+): Readonly<Record<string, PolicyScheduleInputRefTrace>> {
+  return Object.fromEntries([...inputRefs.entries()].sort(([left], [right]) => left.localeCompare(right)));
 }
 
 function candidateParamFallbackFiredCountFor(candidates: readonly CandidateEntry[]): number {

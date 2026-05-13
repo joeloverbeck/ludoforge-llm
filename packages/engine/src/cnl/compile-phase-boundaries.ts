@@ -1,5 +1,5 @@
 import type { Diagnostic } from '../kernel/diagnostics.js';
-import type { EventDeckDef, PhaseBoundaryDef, TurnStructure } from '../kernel/types.js';
+import type { EventDeckDef, PhaseBoundaryDef, TurnStructure, ZoneDef } from '../kernel/types.js';
 import { asBoundaryId, asPhaseId } from '../kernel/branded.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import type { GameSpecPhaseBoundaryDef } from './game-spec-doc.js';
@@ -16,6 +16,7 @@ export function lowerPhaseBoundaries(
   rawBoundaries: readonly GameSpecPhaseBoundaryDef[] | null | undefined,
   turnStructure: TurnStructure | null,
   eventDecks: readonly EventDeckDef[] | null,
+  zones: readonly ZoneDef[] | null,
   diagnostics: Diagnostic[],
 ): readonly PhaseBoundaryDef[] | null {
   if (rawBoundaries == null) {
@@ -24,6 +25,7 @@ export function lowerPhaseBoundaries(
 
   const phaseIds = collectPhaseIds(turnStructure);
   const decksById = new Map((eventDecks ?? []).map((deck) => [deck.id, deck]));
+  const zonesById = new Map((zones ?? []).map((zone) => [String(zone.id), zone]));
   const seenIds = new Set<string>();
   const lowered: PhaseBoundaryDef[] = [];
 
@@ -51,7 +53,7 @@ export function lowerPhaseBoundaries(
     }
 
     if (boundary.schedule?.kind === 'cardDraw') {
-      validateCardDrawSchedule(boundary, path, decksById, diagnostics);
+      validateCardDrawSchedule(boundary, path, decksById, zonesById, diagnostics);
     }
 
     lowered.push({
@@ -117,6 +119,7 @@ function validateCardDrawSchedule(
   boundary: GameSpecPhaseBoundaryDef,
   path: string,
   decksById: ReadonlyMap<string, EventDeckDef>,
+  zonesById: ReadonlyMap<string, ZoneDef>,
   diagnostics: Diagnostic[],
 ): void {
   const schedule = boundary.schedule;
@@ -185,6 +188,131 @@ function validateCardDrawSchedule(
         severity: 'error',
         message: `phase boundary "${boundary.id}" references unknown card id "${cardId}" in deck "${deck.id}".`,
         suggestion: 'Reference a card id declared in the selected deck.',
+      });
+    }
+  }
+
+  validateObserverPolicy(boundary, path, deck, zonesById, diagnostics);
+}
+
+function validateObserverPolicy(
+  boundary: GameSpecPhaseBoundaryDef,
+  path: string,
+  deck: EventDeckDef,
+  zonesById: ReadonlyMap<string, ZoneDef>,
+  diagnostics: Diagnostic[],
+): void {
+  const schedule = boundary.schedule;
+  if (schedule?.kind !== 'cardDraw') {
+    return;
+  }
+  const observerPolicy = schedule.observerPolicy as {
+    readonly kind?: unknown;
+    readonly visiblePrefix?: {
+      readonly zones?: readonly { readonly id?: unknown }[];
+      readonly maxItems?: unknown;
+    };
+  } | undefined;
+  if (observerPolicy === undefined) {
+    return;
+  }
+
+  if (observerPolicy.kind !== 'topNVisible') {
+    const kindPath = `${path}.schedule.observerPolicy.kind`;
+    if (observerPolicy.kind === 'omniscient' || observerPolicy.kind === 'observerView') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_DEFERRED_KIND,
+        path: kindPath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy kind "${String(observerPolicy.kind)}" is reserved for future work.`,
+        suggestion: 'Use observerPolicy.kind "topNVisible".',
+      });
+    } else {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_UNKNOWN_KIND,
+        path: kindPath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy kind must be "topNVisible".`,
+        suggestion: 'Use observerPolicy.kind "topNVisible".',
+      });
+    }
+    return;
+  }
+
+  const prefix = observerPolicy.visiblePrefix;
+  const prefixZones = prefix?.zones;
+  if (!Array.isArray(prefixZones) || prefixZones.length === 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_EMPTY_VISIBLE_PREFIX,
+      path: `${path}.schedule.observerPolicy.visiblePrefix.zones`,
+      severity: 'error',
+      message: `phase boundary "${boundary.id}" observerPolicy.visiblePrefix.zones must list at least one public zone.`,
+      suggestion: 'Add one or more ordered public zone ids, such as lookahead:none.',
+    });
+  }
+
+  if (!Number.isInteger(prefix?.maxItems) || Number(prefix?.maxItems) <= 0) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_MAXITEMS,
+      path: `${path}.schedule.observerPolicy.visiblePrefix.maxItems`,
+      severity: 'error',
+      message: `phase boundary "${boundary.id}" observerPolicy.visiblePrefix.maxItems must be a positive integer.`,
+      suggestion: 'Use a positive integer cap such as 1 or 2.',
+    });
+  }
+
+  const seenZoneIds = new Set<string>();
+  for (const [zoneIndex, zoneRef] of (prefixZones ?? []).entries()) {
+    const zoneId = typeof zoneRef?.id === 'string' ? zoneRef.id : String(zoneRef?.id);
+    const zonePath = `${path}.schedule.observerPolicy.visiblePrefix.zones.${zoneIndex}.id`;
+    if (seenZoneIds.has(zoneId)) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_DUPLICATE_ZONE,
+        path: zonePath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy repeats visible-prefix zone "${zoneId}".`,
+        suggestion: 'List each visible-prefix zone at most once.',
+      });
+      continue;
+    }
+    seenZoneIds.add(zoneId);
+
+    const zone = zonesById.get(zoneId);
+    if (zone === undefined) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_UNKNOWN_ZONE,
+        path: zonePath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy references unknown zone "${zoneId}".`,
+        suggestion: 'Reference a materialized zone id declared in zones.',
+      });
+      continue;
+    }
+    if (zone.visibility !== 'public') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_NON_PUBLIC_ZONE,
+        path: zonePath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy zone "${zoneId}" must be public, got "${zone.visibility}".`,
+        suggestion: 'Visible-prefix zones must be public observer surfaces.',
+      });
+    }
+    if (zone.ordering === 'set') {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_ZONE_KIND,
+        path: zonePath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy zone "${zoneId}" must have deterministic card order.`,
+        suggestion: 'Use a stack or queue zone for a visible prefix.',
+      });
+    }
+    if (zoneId === deck.drawZone) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_DRAW_ZONE_IN_PREFIX,
+        path: zonePath,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy cannot list draw zone "${zoneId}" as a visible prefix.`,
+        suggestion: 'List only public zones that expose cards ahead of the hidden draw zone.',
       });
     }
   }

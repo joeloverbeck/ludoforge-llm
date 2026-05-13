@@ -13,6 +13,7 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 - `discrepancy class`: `blocking` or `nonblocking` for each boundary-affecting mismatch
 - `authoritative boundary`: the final owned implementation slice after reassessment
 - `proof noun alignment`: the ticket's claimed invariant noun, the required observable fields/values, and whether the proposed witness proves behavior rather than only invocation, plumbing, or reachability
+- `ref/operator discriminator scope`: for tickets that add or change refs, operators, preview/schedule references, status kinds, fallback kinds, or other discriminated unions, list the exact in-scope discriminators and units (for example `cards` vs `actions`) and plan a post-implementation sweep for accidental broader matching
 - `implementation-introduced status branches`: when the implementation adds a status/result union, stable reason strings, or new ready/unavailable branches not already enumerated by the ticket, list every branch as `tested`, `unreachable by construction`, or `deferred to confirmed sibling` before final proof
 - `expected generated fallout`: schema artifacts, goldens, compiled JSON, or `none`; if editing `schemas-core.ts`, serialized trace/result unions, generated-schema-bearing types, or other compiled public schema surfaces, default to `schema artifacts likely` until `schema:artifacts:check` proves otherwise
 - `verification substitutions`: any repo-valid replacement command or required flag/output-path correction
@@ -41,6 +42,8 @@ This reference is the canonical compact checklist for normal Codex runs. If the 
 Before coding, emit one compact working-notes checkpoint in `commentary` (or the equivalent running notes surface) using the checklist order above. If multiple discrepancies exist, group them under the same checkpoint rather than scattering the minimum fields across multiple updates.
 
 For tiny bounded local changes, keep the checkpoint complete but do not over-expand fields that are genuinely irrelevant. It is acceptable to group adjacent non-applicable ledgers into one explicit line, for example `not applicable: migration scripts, commit-body evidence, red gates, diagnostic metrics`, as long as the grouped line still covers every required field and any non-`not applicable` field is stated separately.
+
+Terminal status stop: do not set a ticket's terminal status until no further source, test, schema, generated-artifact, ticket-scope, touched-file, dependency, or proof-story edits remain expected and the final proof set has run or been explicitly classified. If the active ticket needs an early closeout draft, write the intended terminal state in prose while leaving the status nonterminal, then apply the terminal status only as the final narrow edit after proof.
 
 If you resume from context compaction, interruption, or a long handoff summary, do not rely on a summary sentence that says the checkpoint happened unless the full ticket-named deliverables ledger is visible. Reconstruct the ledger from the active ticket's explicit `What to Change`, `Files to Touch`, named artifacts/tests, `git diff --name-only`, and `git status --short` before any further file edit or terminal closeout. Re-emit the reconstructed ledger when it changes the owned boundary, proof plan, or closeout status.
 

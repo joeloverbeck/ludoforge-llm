@@ -15,6 +15,15 @@ turnStructure:
     - id: honoluluPacify
     - id: apcPacify
 
+phaseBoundaries:
+  - id: coupEntry
+    kind: phaseEntry
+    phaseId: coupVictory
+    schedule:
+      kind: cardDraw
+      deckId: fitl-events-initial-card-pack
+      cardSelector:
+        tags: [coup]
 
 turnOrder:
   type: cardDriven

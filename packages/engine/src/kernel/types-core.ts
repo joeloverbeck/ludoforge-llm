@@ -1,5 +1,6 @@
 import type {
   ActionId,
+  BoundaryId,
   PhaseId,
   PlayerId,
   TokenId,
@@ -190,6 +191,36 @@ export interface PhaseDef {
   };
 }
 
+export interface CardSelector {
+  readonly tags?: readonly string[];
+  readonly cardIds?: readonly string[];
+}
+
+export interface CardDrawUnitRates {
+  readonly microturns?: number;
+  readonly actions?: number;
+  readonly turns?: number;
+  readonly rounds?: number;
+}
+
+export type ScheduleKindDef =
+  | {
+      readonly kind: 'cardDraw';
+      readonly deckId: string;
+      readonly cardSelector: CardSelector;
+      readonly unitRates?: CardDrawUnitRates;
+    }
+  // Future schedule kinds are reserved for downstream Spec 169 tickets.
+  | { readonly kind: 'turnCount' }
+  | { readonly kind: 'condition' };
+
+export interface PhaseBoundaryDef {
+  readonly id: BoundaryId;
+  readonly kind: 'phaseEntry' | 'phaseExit' | 'condition';
+  readonly phaseId?: PhaseId;
+  readonly schedule?: ScheduleKindDef;
+}
+
 export interface TurnStructure {
   readonly phases: readonly PhaseDef[];
   readonly interrupts?: readonly PhaseDef[];
@@ -338,6 +369,12 @@ export type AgentLookupFallback = {
     | { readonly kind: 'constant'; readonly value: number };
 };
 export type AgentCandidateParamFallback = AgentLookupFallback;
+export type AgentScheduleFallback = {
+  readonly onUnavailable:
+    | 'noContribution'
+    | 'dropConsideration'
+    | { readonly kind: 'constant'; readonly value: number };
+};
 export type AgentPolicyOperator =
   | 'abs'
   | 'add'
@@ -406,6 +443,7 @@ export type CompiledAgentPolicyRefOnMissing =
       readonly kind: 'constant';
       readonly value: number | string | boolean;
     };
+export type ScheduleDistanceUnit = 'cards' | 'microturns' | 'actions' | 'turns' | 'rounds';
 export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'library';
@@ -453,6 +491,17 @@ export type CompiledAgentPolicyRef =
   | {
       readonly kind: 'turnIntrinsic';
       readonly intrinsic: 'phaseId' | 'stepId' | 'round';
+    }
+  | {
+      readonly kind: 'phaseIntrinsic';
+      readonly name: 'current.id' | 'next.id';
+    }
+  | {
+      readonly kind: 'scheduleDistance';
+      readonly target:
+        | { readonly kind: 'nextBoundary' }
+        | { readonly kind: 'boundary'; readonly boundaryId: BoundaryId };
+      readonly unit?: ScheduleDistanceUnit;
     }
   | {
       readonly kind: 'strategicCondition';
@@ -657,6 +706,7 @@ export interface CompiledPolicyConsideration {
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
   readonly candidateParamFallback?: AgentCandidateParamFallback;
+  readonly scheduleFallback?: AgentScheduleFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -854,6 +904,7 @@ export interface CompiledAgentConsideration {
   readonly previewFallback?: AgentPreviewFallback;
   readonly lookupFallback?: AgentLookupFallback;
   readonly candidateParamFallback?: AgentCandidateParamFallback;
+  readonly scheduleFallback?: AgentScheduleFallback;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -999,6 +1050,7 @@ export interface GameDef {
   readonly tokenTypes: readonly TokenTypeDef[];
   readonly setup: readonly EffectAST[];
   readonly turnStructure: TurnStructure;
+  readonly phaseBoundaries?: readonly PhaseBoundaryDef[];
   readonly turnOrder?: TurnOrderStrategy;
   readonly actionPipelines?: readonly ActionPipelineDef[];
   readonly derivedMetrics?: readonly DerivedMetricDef[];
@@ -1862,6 +1914,11 @@ export interface PolicyCandidateDecisionTrace {
   readonly lookupFallbackFired?: {
     readonly termId: string;
     readonly kind: 'noContribution' | 'constant';
+    readonly value?: number;
+  };
+  readonly scheduleFallbackFired?: {
+    readonly termId: string;
+    readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
     readonly value?: number;
   };
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;

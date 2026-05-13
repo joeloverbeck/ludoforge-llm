@@ -38,6 +38,7 @@ import {
   type PolicyCandidateParamFallbackFired,
   type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
+  type PolicyScheduleFallbackFired,
   PolicyRuntimeError,
 } from './policy-evaluation-core.js';
 import { resolvePolicyBindingSeatId } from './policy-profile-resolution.js';
@@ -168,6 +169,7 @@ export interface PolicyEvaluationCandidateMetadata {
   readonly unknownCandidateParamRefs: readonly PolicyCandidateParamUnknownRef[];
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
+  readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: SelectionReason;
   readonly previewOutcome?: PolicyPreviewTraceOutcome;
@@ -1130,6 +1132,7 @@ function candidateMetadata(candidate: CandidateEntry): PolicyEvaluationCandidate
       .map(([refId, reason]) => ({ refId, reason })),
     ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
     ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
+    ...(candidate.scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired: candidate.scheduleFallbackFired }),
     ...(candidate.candidateParamFallbackFired === undefined
       ? {}
       : { candidateParamFallbackFired: serializeCandidateParamFallbackFired(candidate.candidateParamFallbackFired) }),

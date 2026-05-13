@@ -22,6 +22,7 @@ import { resolveEffectBindings, toTraceProvenanceContext, updateReadScopeRaw } f
 import type { EffectCursor, EffectEnv, MutableReadScope, PartialEffectResult } from './effect-context.js';
 import type { EffectBudgetState } from './effects-control.js';
 import type { ApplyEffectsWithBudget } from './effect-registry.js';
+import { advanceScheduleIndexForDrawZone } from './gamedef-runtime.js';
 import { ensureZoneCloned, type MutableGameState } from './state-draft.js';
 import { updateZoneTokenHash } from './zobrist-token-hash.js';
 import type { EffectAST, GameState, Rng, Token, TokenTypeDef, ZoneDef } from './types.js';
@@ -256,7 +257,6 @@ const resolveTokenOccurrence = (
   if (tokenState === undefined) {
     return { occurrence: null, occurrenceCount: 0, occurrenceZoneIds: [] };
   }
-
   return {
     occurrence: {
       zoneId: tokenState.zoneId,
@@ -779,7 +779,6 @@ export const applySetTokenProp = (
     }
     return { state: cursor.state, rng: cursor.rng };
   }
-
   return {
     state: {
       ...cursor.state,
@@ -990,12 +989,14 @@ export const applyDraw = (
     (ms.zones as Record<string, Token[]>)[fromZoneId] = sourceAfter as Token[];
     (ms.zones as Record<string, Token[]>)[toZoneId] = destinationAfter;
     invalidateTokenStateIndex(currentState);
+    advanceScheduleIndexForDrawZone(env.cachedRuntime, env.def, fromZoneId, moveCount);
     return {
       state: currentState,
       rng: currentRng,
       emittedEvents: movedTokens.map(() => ({ type: 'tokenEntered' as const, zone: toZone })),
     };
   }
+  advanceScheduleIndexForDrawZone(env.cachedRuntime, env.def, fromZoneId, moveCount);
   return {
     state: {
       ...currentState,

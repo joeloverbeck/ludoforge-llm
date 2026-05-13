@@ -18,6 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
+   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `classified non-final lanes or none`, `archive status`, and the exact `$post-ticket-review <ticket>` sentence when review/archive did not run
    - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
@@ -33,6 +34,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - re-check repo-level structural conventions from `AGENTS.md` that remain relevant even if the ticket did not name them explicitly, such as file-size guidance, worktree discipline, and explicit artifact-touch expectations
 - when the ticket added a new source file that is near or over the repo's typical size band, classify it before terminal status: split now if a narrow extraction is clearly in scope, defer with rationale when splitting would widen the ticket, or stop for `1-3-1` if the durable state would otherwise violate an explicit cap
 - hard source-size gate: if any touched source file ends over the repo cap (800 lines in this repo), crosses the cap because of active growth, or remains preexisting-oversize with active growth, do not set terminal status until the active ticket or final closeout contains the exact source-size ledger and one of these is true: narrow extraction is done, user-approved deferral exists, or a `1-3-1` decision resolves why extraction would widen the ticket
+- exact source-size ledger means the durable ticket/final closeout names every field, not just current counts: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 - when a touched file was already over a repo file-size cap before the ticket and your diff grows it further, classify that explicitly as `preexisting oversize + active growth` before closeout. If a narrow extraction is clearly in-scope, do it; if extraction is nontrivial or would widen the ticket, stop for `1-3-1`; if the user or ticket boundary justifies deferring the split, record the exception and residual owner in the active ticket outcome before completion.
 - when the touched oversized file is an established canonical table, lowerer, schema mirror, diagnostic registry, or comparable shared contract hub, a surgical adjacent addition may be the least risky ticket-sized change. Still record `preexisting oversize + active growth`, why extraction would widen or obscure the ticket seam, whether a narrow helper was considered, and the residual owner (`none` if no separate extraction ticket is justified).
 - for retained `preexisting oversize + active growth`, include the compact ledger in the active ticket outcome: starting condition, active-growth reason, extraction considered, deferral/in-scope decision, and residual owner or `none`
@@ -45,6 +47,8 @@ Before declaring completion or updating the ticket status, run one final accepta
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
+- when the implementation added a status/result union, stable reason strings, or new ready/unavailable branches not already enumerated by the ticket, confirm the ticket outcome or final closeout classifies each branch as `tested`, `unreachable by construction`, or `deferred to confirmed sibling`
+- when the ticket outcome records a `public-contract representation correction`, confirm it names the concrete evidence source for the live contract when practical, such as the inspected file/function/test/trace producer, before relying on the correction as a semantic clarification
 - for new packages, crates, or other workspace units, confirm they are discoverable by the workspace/package filter, their build artifacts are intentionally ignored or checked in, and any package/task-runner output declarations remain truthful
 - for binary/WASM/FFI ABI skeletons, confirm the ticket/spec outcome records the concrete ABI identity fields, buffer shape, mismatch/error behavior, and proof command that exercised both success and fail-closed paths
 - if a command-level verification already passed but the acceptance sweep finds a remaining ticket invariant miss, fix that miss and rerun the affected proof lane before closeout
@@ -59,6 +63,17 @@ Acceptance-proof runs are invalidated by later edits to the proved surface or ac
 Purely clerical ticket/spec edits, such as typo fixes or appending evidence that does not alter status, scope, command coverage, or proof claims, may preserve earlier proof only when you record an explicit no-invalidation decision in the ticket outcome or final closeout. If there is any doubt whether the edit changes the acceptance story, treat it as proof-affecting and rerun the affected lane.
 
 Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
+
+Use this compact classifier for late closeout edits after the first final-proof lane:
+
+| Late edit | Usually clerical? | Required action |
+| --- | --- | --- |
+| Terminal status set to the already-proven result | yes | Record no-invalidation when scope, acceptance, command coverage, touched-file scope, dependency ownership, and proof claims are unchanged. |
+| Exact proof result transcription from a command that just ran | yes | Record the command and result; rerun only if the text changes command coverage or acceptance meaning. |
+| Typo, formatting, or obvious grammar in non-contract prose | yes | Record or mention no-invalidation when the edit happens in the active ticket/spec after proof. |
+| Touched-file scope, generated-fallout, sibling-owner, dependency, or deferred-scope change | no | Rerun the narrowest affected proof or integrity lane after updating the artifact. |
+| Acceptance wording, invariant/proof matrix, command substitution, threshold, or status classification change | no | Treat as proof-affecting unless a prior user-approved boundary reset already covers the exact change. |
+| Adding or removing a path in the durable outcome/proof ledger | usually no | Rerun or explicitly justify no-invalidation only when it is pure transcription of an already-proven dirty-state fact. |
 
 After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
 
@@ -149,6 +164,8 @@ When the ticket lands successfully but the live investigation disproves part of 
 When active work grows a source file that is already near/over repo guidance, or creates a source file that crosses guidance, use this exact closeout ledger in the active ticket outcome or final closeout:
 
 - `source-size ledger`: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+If exact before counts were lost after compaction or late shared-contract fallout, reconstruct them mechanically for tracked modified files: capture `after` with `wc -l <path>`, capture added/deleted counts with `git diff --numstat -- <path>`, then compute `before = after - added + deleted`. For new files, use `before = 0`; for deleted files, use the pre-delete line count from Git when needed. If the file was also changed by unrelated user work in the same path, do not pretend the reconstructed count is ticket-local; classify the overlap before closeout.
 
 If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
 
@@ -264,6 +281,7 @@ Use this compact final handoff shape when implementation stops before archival:
 - `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
 - `green proof lanes`: commands that passed and are final for the owned slice
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
+- `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
 
 ## Dependency Integrity Pass

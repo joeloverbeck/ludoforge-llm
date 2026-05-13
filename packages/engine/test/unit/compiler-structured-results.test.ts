@@ -1656,6 +1656,7 @@ describe('compiler structured section results', () => {
       | 'tokenTypes'
       | 'setup'
       | 'turnStructure'
+      | 'phaseBoundaries'
       | 'turnOrder'
       | 'actionPipelines'
       | 'derivedMetrics'

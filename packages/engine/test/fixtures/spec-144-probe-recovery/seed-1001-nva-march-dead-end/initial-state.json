@@ -3760,6 +3760,9 @@
         "us": true
       },
       "pendingEligibilityOverrides": [],
+      "lifecycleStatus": {
+        "stalled": false
+      },
       "currentCard": {
         "firstEligible": "nva",
         "secondEligible": "arvn",

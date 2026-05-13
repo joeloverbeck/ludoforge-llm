@@ -13,6 +13,7 @@ import { createRng } from '../../src/kernel/prng.js';
 import { emptyScope, withIterationSegment, type DecisionScope } from '../../src/kernel/decision-scope.js';
 import { buildAdjacencyGraph } from '../../src/kernel/spatial.js';
 import type { RuntimeTableIndex } from '../../src/kernel/runtime-table-index.js';
+import type { GameDefRuntime } from '../../src/kernel/gamedef-runtime.js';
 import type { AdjacencyGraph } from '../../src/kernel/spatial.js';
 import type {
   ExecutionCollector,
@@ -43,6 +44,7 @@ interface EffectContextTestOptions {
   readonly freeOperation?: boolean;
   readonly freeOperationOverlay?: FreeOperationExecutionOverlay | undefined;
   readonly maxQueryResults?: number | undefined;
+  readonly cachedRuntime?: GameDefRuntime;
   readonly transientDecisionSelections?: Readonly<Record<string, readonly MoveParamScalar[]>>;
   readonly collector?: ExecutionCollector;
   readonly resources?: RuntimeEffectContextOptions['resources'];
@@ -76,6 +78,7 @@ const makeRuntimeEffectContextOptions = ({
   freeOperation,
   freeOperationOverlay,
   maxQueryResults,
+  cachedRuntime,
   transientDecisionSelections,
   phaseTransitionBudget,
   decisionScope,
@@ -98,6 +101,7 @@ const makeRuntimeEffectContextOptions = ({
   ...(freeOperation === undefined ? {} : { freeOperation }),
   ...(freeOperationOverlay === undefined ? {} : { freeOperationOverlay }),
   ...(maxQueryResults === undefined ? {} : { maxQueryResults }),
+  ...(cachedRuntime === undefined ? {} : { cachedRuntime }),
   ...(transientDecisionSelections === undefined ? {} : { transientDecisionSelections }),
   resources: resources ?? makeEvalRuntimeResources({ collector }),
   ...(phaseTransitionBudget === undefined ? {} : { phaseTransitionBudget }),

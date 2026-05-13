@@ -387,6 +387,7 @@ function sectionsFromGameDef(gameDef: NonNullable<CompileResult['gameDef']>): Co
     tokenTypes: gameDef.tokenTypes,
     setup: gameDef.setup,
     turnStructure: gameDef.turnStructure,
+    phaseBoundaries: gameDef.phaseBoundaries ?? null,
     turnOrder: gameDef.turnOrder ?? null,
     actionPipelines: gameDef.actionPipelines ?? null,
     derivedMetrics: gameDef.derivedMetrics ?? null,

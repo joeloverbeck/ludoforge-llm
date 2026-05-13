@@ -15,7 +15,7 @@ import {
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
 import { computeEffectFootprint, unionFootprints } from '../cnl/compile-effect-footprint.js';
-import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
+import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AttributeValue,
   AgentParameterValue,
@@ -85,6 +85,12 @@ export interface PolicyLookupFallbackFired {
   readonly value?: number;
 }
 
+export interface PolicyScheduleFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
+  readonly value?: number;
+}
+
 export type PolicyCandidateParamFallbackFired = ReadonlyMap<string, number>;
 
 export class PolicyRuntimeError extends Error {
@@ -107,6 +113,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewDrive?: PolicyPreviewDriveTrace;
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
+  scheduleFallbackFired?: PolicyScheduleFallbackFired;
   candidateParamFallbackFired?: Map<string, number>;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
@@ -140,6 +147,9 @@ export interface CreatePolicyEvaluationContextInput {
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
     readonly lookupFallbackFired?: { current?: PolicyLookupFallbackFired };
+  };
+  readonly scheduleOption?: {
+    readonly scheduleFallbackFired?: { current?: PolicyScheduleFallbackFired };
   };
   readonly candidateParamOption?: {
     readonly unknownCandidateParamRefs?: Map<string, CandidateParamUnavailabilityReason>;
@@ -308,6 +318,7 @@ export class PolicyEvaluationContext {
   private activeState: GameState;
   private currentSeatContext: string | undefined;
   private candidateParamUnavailableDuringValue = false;
+  private scheduleUnavailableDuringValue = false;
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
@@ -535,6 +546,7 @@ export class PolicyEvaluationContext {
 
     if (consideration.when !== undefined) {
       const when = this.evaluateCompiledExpr(consideration.when, candidate);
+      this.scheduleUnavailableDuringValue = false;
       if (when !== true) {
         return 0;
       }
@@ -551,9 +563,12 @@ export class PolicyEvaluationContext {
     const previewUnavailable = this.unknownPreviewRefCount(candidate) > unknownPreviewRefsBefore;
     const lookupUnavailable = this.unknownLookupRefCount(candidate) > unknownLookupRefsBefore;
     this.candidateParamUnavailableDuringValue = false;
+    const scheduleUnavailable = this.scheduleUnavailableDuringValue;
+    this.scheduleUnavailableDuringValue = false;
     if (typeof weight !== 'number' || typeof value !== 'number') {
       let contribution: number | undefined;
       let shouldRecordContribution = false;
+      let dropConsideration = false;
       if (candidateParamUnavailable) {
         const fallback = consideration.candidateParamFallback?.onUnavailable;
         if (fallback === undefined) {
@@ -622,6 +637,41 @@ export class PolicyEvaluationContext {
           shouldRecordContribution = true;
         }
       }
+      if (scheduleUnavailable) {
+        const fallback = consideration.scheduleFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Schedule consideration "${considerationId}" did not declare scheduleFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'dropConsideration') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'dropConsideration',
+          });
+          dropConsideration = true;
+        } else if (fallback === 'noContribution') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          contribution ??= 0;
+          shouldRecordContribution = true;
+        } else {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'constant',
+            value: fallback.value,
+          });
+          contribution ??= fallback.value;
+          shouldRecordContribution = true;
+        }
+      }
+      if (dropConsideration) {
+        return 0;
+      }
       if (contribution === undefined) {
         contribution = consideration.unknownAs ?? 0;
         shouldRecordContribution = true;
@@ -684,6 +734,18 @@ export class PolicyEvaluationContext {
     }
     if (this.input.lookupOption?.lookupFallbackFired !== undefined) {
       this.input.lookupOption.lookupFallbackFired.current = fired;
+    }
+  }
+
+  private recordScheduleFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyScheduleFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.scheduleFallbackFired = fired;
+    }
+    if (this.input.scheduleOption?.scheduleFallbackFired !== undefined) {
+      this.input.scheduleOption.scheduleFallbackFired.current = fired;
     }
   }
 
@@ -925,6 +987,14 @@ export class PolicyEvaluationContext {
       }
       case 'candidateTags':
         return candidate === undefined ? undefined : this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
+      case 'phaseIntrinsic':
+      case 'scheduleDistance': {
+        const agentRef = this.findPhaseScheduleAgentRef(expr, ref);
+        if (agentRef !== undefined) {
+          return this.toVmStackValue(this.resolveAgentPolicyRef(agentRef, candidate));
+        }
+        break;
+      }
       case 'adjacentTokenAgg':
       case 'seatAgg':
         throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
@@ -934,6 +1004,31 @@ export class PolicyEvaluationContext {
         );
     }
     throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
+  }
+
+  private findPhaseScheduleAgentRef(expr: CompiledPolicyExpr, ref: FeatureRef): CompiledAgentPolicyRef | undefined {
+    return this.collectAgentPolicyRefs(expr).find((candidateRef) => {
+      if (ref.kind === 'phaseIntrinsic' && candidateRef.kind === 'phaseIntrinsic') {
+        return (candidateRef.name === 'current.id' ? 0 : candidateRef.name === 'next.id' ? 1 : stableStringCode(candidateRef.name)) === ref.aux[0];
+      }
+      if (ref.kind !== 'scheduleDistance' || candidateRef.kind !== 'scheduleDistance') {
+        return false;
+      }
+      const targetCode = candidateRef.target.kind === 'nextBoundary' ? 0 : 1;
+      const boundaryCode = candidateRef.target.kind === 'boundary' ? stableStringCode(candidateRef.target.boundaryId) : 0;
+      const unitCode = candidateRef.unit === undefined
+        ? -1
+        : candidateRef.unit === 'cards'
+          ? 0
+          : candidateRef.unit === 'microturns'
+            ? 1
+            : candidateRef.unit === 'actions'
+              ? 2
+              : candidateRef.unit === 'turns'
+                ? 3
+                : 4;
+      return targetCode === ref.aux[0] && boundaryCode === ref.aux[1] && unitCode === ref.aux[2];
+    });
   }
 
   private toVmStackValue(value: PolicyValue): PolicyValue {
@@ -1306,6 +1401,18 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':
         return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic, this.activeState);
+      case 'phaseIntrinsic': {
+        const resolution = this.runtimeProviders.phaseSchedule.resolvePhaseIntrinsic(ref, this.activeState);
+        return resolution.kind === 'ready' ? resolution.value : undefined;
+      }
+      case 'scheduleDistance': {
+        const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(ref, this.activeState);
+        if (resolution.kind === 'ready') {
+          return resolution.value;
+        }
+        this.scheduleUnavailableDuringValue = true;
+        return undefined;
+      }
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':

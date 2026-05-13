@@ -13,6 +13,7 @@ import {
 } from '../../../src/cnl/policy-bytecode/index.js';
 import {
   asActionId,
+  asBoundaryId,
   asPhaseId,
   asPlayerId,
   asTokenId,
@@ -74,6 +75,8 @@ const fixtures: { readonly [K in FeatureRefKind]: FeatureKindFixture } = {
   candidateParam: { expr: { kind: 'ref', ref: { kind: 'candidateParam', id: 'amount', onMissing: 'unavailable' } } },
   candidateTag: { expr: { kind: 'ref', ref: { kind: 'candidateTag', tagName: 'urgent' } } },
   candidateTags: { expr: { kind: 'ref', ref: { kind: 'candidateTags' } } },
+  phaseIntrinsic: { expr: { kind: 'ref', ref: { kind: 'phaseIntrinsic', name: 'current.id' } } },
+  scheduleDistance: { expr: { kind: 'ref', ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: asBoundaryId('coupEntry') }, unit: 'cards' } } },
   microturnIntrinsic: {
     expr: { kind: 'ref', ref: { kind: 'microturnIntrinsic', intrinsic: 'kind' } },
     allowUnsupported: true,
@@ -181,12 +184,39 @@ function createDef(): GameDef {
         category: 'rear',
         adjacentTo: [{ to: asZoneId('a:none'), direction: 'bidirectional' }],
       },
+      {
+        id: asZoneId('draw:none'),
+        owner: 'none',
+        visibility: 'public',
+        ordering: 'stack',
+        behavior: { type: 'deck', drawFrom: 'top' },
+      },
+      { id: asZoneId('discard:none'), owner: 'none', visibility: 'public', ordering: 'stack' },
     ],
     derivedMetrics: [],
     seats: [{ id: 'alpha' }, { id: 'beta' }],
     tokenTypes: [{ id: 'unit', props: { power: 'int' } }],
     setup: [],
-    turnStructure: { phases: [{ id: phaseId }] },
+    turnStructure: { phases: [{ id: phaseId }, { id: asPhaseId('scoring') }] },
+    phaseBoundaries: [{
+      id: asBoundaryId('coupEntry'),
+      kind: 'phaseEntry',
+      phaseId: asPhaseId('scoring'),
+      schedule: {
+        kind: 'cardDraw',
+        deckId: 'eventDeck',
+        cardSelector: { tags: ['coup'] },
+      },
+    }],
+    eventDecks: [{
+      id: 'eventDeck',
+      drawZone: 'draw:none',
+      discardZone: 'discard:none',
+      cards: [
+        { id: 'op-1', title: 'Operation 1', sideMode: 'single', tags: ['operation'] },
+        { id: 'coup-1', title: 'Coup 1', sideMode: 'single', tags: ['coup'] },
+      ],
+    }],
     agents: createCatalog(),
     actions: [
       {
@@ -257,6 +287,10 @@ function fallbackValue(ref: FeatureRef): number | string | boolean | readonly st
   switch (ref.kind) {
     case 'candidateTags':
       return ['urgent'];
+    case 'phaseIntrinsic':
+      return 'main';
+    case 'scheduleDistance':
+      return 2;
     case 'candidateFeature':
       return 13;
     case 'stateFeature':

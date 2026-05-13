@@ -19,6 +19,7 @@ import type {
   AgentParameterValue,
   AgentCandidateParamFallback,
   AgentLookupFallback,
+  AgentScheduleFallback,
   AgentPolicyCatalog,
   AgentPolicyCostClass,
   AgentPolicyExpr,
@@ -46,6 +47,8 @@ import type {
   CompiledAgentTieBreaker,
   CompiledStrategicCondition,
   GameDef,
+  PhaseBoundaryDef,
+  ScheduleDistanceUnit,
 } from '../kernel/types.js';
 import type {
   GameSpecAgentLibrary,
@@ -59,11 +62,20 @@ import type {
   GameSpecPolicyExpr,
   GameSpecPolicySurfaceVisibilityDef,
   GameSpecPreviewFallbackDef,
+  GameSpecScheduleFallbackDef,
   GameSpecStateFeatureDef,
   GameSpecTieBreakerDef,
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
+import { asBoundaryId } from '../kernel/branded.js';
+import {
+  buildPhaseBoundaryValidationContext,
+  findPhaseBoundaryById,
+  isScheduleDistanceUnit,
+  scheduleKindSupportsUnit,
+  type PhaseBoundaryValidationContext,
+} from './compile-phase-boundaries.js';
 
 type ProfileUseKey = keyof CompiledAgentProfile['use'];
 type AggregateOp = 'max' | 'min' | 'count' | 'any' | 'all' | 'rankDense' | 'rankOrdinal';
@@ -126,6 +138,8 @@ export interface LowerAgentsOptions {
   readonly hasVictoryMargins?: boolean;
   readonly actionDefs?: GameDef['actions'];
   readonly actionPipelines?: GameDef['actionPipelines'];
+  readonly phaseBoundaries?: readonly PhaseBoundaryDef[];
+  readonly turnStructure?: GameDef['turnStructure'];
   readonly observerCatalog?: CompiledObserverCatalog;
 }
 
@@ -2108,6 +2122,7 @@ class AgentLibraryCompiler {
     const currentStateLookupRefIds = collectLookupRefIds(value.expr, 'policyState');
     const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
     const candidateParamRefIds = collectCandidateParamRefIds(value.expr);
+    const scheduleDistanceRefIds = collectScheduleDistanceRefIds(value.expr);
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2148,6 +2163,16 @@ class AgentLibraryCompiler {
       this.diagnostics,
     );
     if (candidateParamFallback === null) {
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    const scheduleFallback = lowerScheduleFallback(
+      considerationId,
+      `${path}.scheduleFallback`,
+      def.scheduleFallback,
+      this.diagnostics,
+    );
+    if (scheduleFallback === null) {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
@@ -2198,6 +2223,17 @@ class AgentLibraryCompiler {
       this.considerationStatus.set(considerationId, 'failed');
       return null;
     }
+    if (scheduleDistanceRefIds.length > 0 && scheduleFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_MISSING_FALLBACK,
+        path: `${path}.scheduleFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" reads schedule distance ref(s) [${scheduleDistanceRefIds.join(', ')}] without declaring scheduleFallback.onUnavailable.`,
+        suggestion: 'Add scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { onUnavailable: { constant: <number> } }.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
 
     const compiled: AgentConsiderationWithExpr = {
       scopes,
@@ -2211,6 +2247,7 @@ class AgentLibraryCompiler {
       ...(previewFallback === undefined ? {} : { previewFallback }),
       ...(lookupFallback === undefined ? {} : { lookupFallback }),
       ...(candidateParamFallback === undefined ? {} : { candidateParamFallback }),
+      ...(scheduleFallback === undefined ? {} : { scheduleFallback }),
       ...(def.clamp === undefined ? {} : { clamp: def.clamp }),
       dependencies: mergeDependencies([when?.dependencies ?? emptyDependencies(), weight.dependencies, value.dependencies]),
     };
@@ -2701,6 +2738,14 @@ class AgentLibraryCompiler {
     if (refPath === 'turn.round') {
       return { type: 'number', costClass: 'state', ref: { kind: 'turnIntrinsic', intrinsic: 'round' } };
     }
+    const phaseRef = this.resolvePhaseRuntimeRef(scope, refPath, path);
+    if (phaseRef !== null) {
+      return phaseRef;
+    }
+    const scheduleRef = this.resolveScheduleRuntimeRef(scope, refPath, path);
+    if (scheduleRef !== null) {
+      return scheduleRef;
+    }
     if (refPath === 'candidate.actionId' || refPath === 'candidate.stableMoveKey') {
       if (scope === 'stateFeature') {
         this.reportUnknownLibraryRef(refPath, path);
@@ -2864,6 +2909,167 @@ class AgentLibraryCompiler {
       default:
         return null;
     }
+  }
+
+  private resolvePhaseRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    switch (refPath) {
+      case 'phase.current.id':
+        if (scope === 'stateFeature') {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'id', costClass: 'state', ref: { kind: 'phaseIntrinsic', name: 'current.id' } };
+      case 'phase.next.id':
+        if (scope === 'stateFeature') {
+          this.reportUnknownLibraryRef(refPath, path);
+          return null;
+        }
+        return { type: 'id', costClass: 'state', ref: { kind: 'phaseIntrinsic', name: 'next.id' } };
+      default:
+        if (refPath.startsWith('phase.')) {
+          this.reportUnknownLibraryRef(refPath, path);
+        }
+        return null;
+    }
+  }
+
+  private resolveScheduleRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
+    if (refPath === 'schedule.nextBoundary.id') {
+      if (scope === 'stateFeature') {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return {
+        type: 'id',
+        costClass: 'state',
+        ref: { kind: 'scheduleDistance', target: { kind: 'nextBoundary' } },
+      };
+    }
+    const prefix = 'schedule.distance.';
+    if (!refPath.startsWith(prefix)) {
+      return null;
+    }
+    if (scope === 'stateFeature') {
+      this.reportUnknownLibraryRef(refPath, path);
+      return null;
+    }
+
+    const context = buildPhaseBoundaryValidationContext(this.options.phaseBoundaries, this.options.turnStructure ?? null);
+    const rest = refPath.slice(prefix.length);
+    const boundaryPrefix = 'toBoundary.';
+    if (rest.startsWith(boundaryPrefix)) {
+      const parsed = parseScheduleTargetAndUnit(rest.slice(boundaryPrefix.length));
+      if (parsed === null) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return this.resolveBoundaryScheduleRef(context, parsed.targetId, parsed.unit, refPath, path);
+    }
+
+    const phasePrefix = 'toPhase.';
+    if (rest.startsWith(phasePrefix)) {
+      const parsed = parseScheduleTargetAndUnit(rest.slice(phasePrefix.length));
+      if (parsed === null) {
+        this.reportUnknownLibraryRef(refPath, path);
+        return null;
+      }
+      return this.resolvePhaseScheduleRef(context, parsed.targetId, parsed.unit, refPath, path);
+    }
+
+    this.reportUnknownLibraryRef(refPath, path);
+    return null;
+  }
+
+  private resolveBoundaryScheduleRef(
+    context: PhaseBoundaryValidationContext,
+    boundaryId: string,
+    unit: ScheduleDistanceUnit,
+    refPath: string,
+    path: string,
+  ): ResolvedPolicyRef | null {
+    const boundary = findPhaseBoundaryById(context, boundaryId);
+    if (boundary === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNKNOWN_BOUNDARY,
+        path,
+        severity: 'error',
+        message: `schedule ref "${refPath}" targets unknown boundary "${boundaryId}".`,
+        suggestion: 'Declare the boundary in phaseBoundaries.',
+      });
+      return null;
+    }
+    if (!scheduleKindSupportsUnit(boundary.schedule, unit)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
+        path,
+        severity: 'error',
+        message: `schedule ref "${refPath}" requests unit "${unit}" unsupported by boundary "${boundaryId}".`,
+        suggestion: 'Use a unit supported by the boundary schedule kind.',
+      });
+      return null;
+    }
+    return {
+      type: 'number',
+      costClass: 'state',
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: asBoundaryId(boundaryId) }, unit },
+    };
+  }
+
+  private resolvePhaseScheduleRef(
+    context: PhaseBoundaryValidationContext,
+    phaseId: string,
+    unit: ScheduleDistanceUnit,
+    refPath: string,
+    path: string,
+  ): ResolvedPolicyRef | null {
+    if (!context.phaseIds.has(phaseId)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNKNOWN_PHASE,
+        path,
+        severity: 'error',
+        message: `schedule ref "${refPath}" targets unknown phase "${phaseId}".`,
+        suggestion: 'Reference a phase declared in turnStructure.phases or turnStructure.interrupts.',
+      });
+      return null;
+    }
+    if (!context.phaseEntryBoundaryPhaseIds.has(phaseId)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_NO_PHASE_BOUNDARY,
+        path,
+        severity: 'error',
+        message: `schedule ref "${refPath}" targets phase "${phaseId}", but no phaseEntry boundary declares that phase.`,
+        suggestion: 'Declare a phaseEntry boundary for this phase in phaseBoundaries.',
+      });
+      return null;
+    }
+    const matchingBoundaries = context.phaseBoundaries.filter(
+      (entry) => entry.kind === 'phaseEntry' && String(entry.phaseId) === phaseId,
+    );
+    const boundary = matchingBoundaries[0];
+    if (!scheduleKindSupportsUnit(boundary?.schedule, unit)) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
+        path,
+        severity: 'error',
+        message: `schedule ref "${refPath}" requests unit "${unit}" unsupported by phase "${phaseId}" boundary.`,
+        suggestion: 'Use a unit supported by the phase entry boundary schedule kind.',
+      });
+      return null;
+    }
+    if (matchingBoundaries.length > 1) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY,
+        path,
+        severity: 'warning',
+        message: `schedule ref "${refPath}" matches ${matchingBoundaries.length} phaseEntry boundaries for phase "${phaseId}"; using first declared boundary "${String(boundary!.id)}".`,
+        suggestion: 'Use schedule.distance.toBoundary.<BoundaryId>.cards when a specific boundary is required.',
+      });
+    }
+    return {
+      type: 'number',
+      costClass: 'state',
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: boundary!.id }, unit },
+    };
   }
 
   private resolvePreviewOptionRuntimeRef(scope: LibraryRefScope, refPath: string, path: string): ResolvedPolicyRef | null {
@@ -3810,6 +4016,55 @@ function lowerCandidateParamFallback(
   return null;
 }
 
+function lowerScheduleFallback(
+  considerationId: string,
+  path: string,
+  value: GameSpecScheduleFallbackDef | undefined,
+  diagnostics: Diagnostic[],
+): AgentScheduleFallback | undefined | null {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path,
+      severity: 'error',
+      message: `Consideration "${considerationId}" scheduleFallback must be an object.`,
+      suggestion: 'Use scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { constant: 0 }.',
+    });
+    return null;
+  }
+
+  const { onUnavailable } = value;
+  if (onUnavailable === 'noContribution' || onUnavailable === 'dropConsideration') {
+    return { onUnavailable };
+  }
+  if (onUnavailable !== null && typeof onUnavailable === 'object' && !Array.isArray(onUnavailable)) {
+    const { constant } = onUnavailable;
+    if (Number.isSafeInteger(constant)) {
+      return { onUnavailable: { kind: 'constant', value: constant } };
+    }
+    diagnostics.push({
+      code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+      path: `${path}.onUnavailable.constant`,
+      severity: 'error',
+      message: `Consideration "${considerationId}" scheduleFallback.onUnavailable.constant must be a safe integer, got ${String(constant)}.`,
+      suggestion: 'Use an exact integer constant such as 0, 1, or -100.',
+    });
+    return null;
+  }
+
+  diagnostics.push({
+    code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_EXPR_INVALID,
+    path: `${path}.onUnavailable`,
+    severity: 'error',
+    message: `Consideration "${considerationId}" scheduleFallback.onUnavailable must be noContribution, dropConsideration, or { constant: <integer> }.`,
+    suggestion: 'Use scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { constant: 0 }.',
+  });
+  return null;
+}
+
 function lowerLookupMissingDisposition(
   value: unknown,
   path: string,
@@ -4046,6 +4301,57 @@ function collectCandidateParamRefIds(
   return [...ids].sort();
 }
 
+function collectScheduleDistanceRefIds(expr: AgentPolicyExpr): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (current.ref.kind === 'scheduleDistance' && current.ref.unit !== undefined) {
+          ids.add(scheduleDistanceRefKey(current.ref));
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function scheduleDistanceRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>): string {
+  if (ref.target.kind === 'nextBoundary') {
+    return 'schedule.nextBoundary.id';
+  }
+  const unit = ref.unit ?? 'id';
+  if (ref.target.kind === 'boundary') {
+    return `schedule.distance.toBoundary.${String(ref.target.boundaryId)}.${unit}`;
+  }
+  return `schedule.nextBoundary.id`;
+}
+
 function isLookupCollection(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['collection'] {
   return value === 'zones' || value === 'tokens' || value === 'players' || value === 'globals';
 }
@@ -4056,6 +4362,19 @@ function isLookupKeyType(value: unknown): value is Extract<CompiledAgentPolicyRe
 
 function isLookupSurface(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['surface'] {
   return value === 'policyState' || value === 'previewOptionState';
+}
+
+function parseScheduleTargetAndUnit(value: string): { readonly targetId: string; readonly unit: ScheduleDistanceUnit } | null {
+  const lastDot = value.lastIndexOf('.');
+  if (lastDot <= 0 || lastDot === value.length - 1) {
+    return null;
+  }
+  const targetId = value.slice(0, lastDot);
+  const unit = value.slice(lastDot + 1);
+  if (targetId.length === 0 || !isScheduleDistanceUnit(unit)) {
+    return null;
+  }
+  return { targetId, unit: unit as ScheduleDistanceUnit };
 }
 
 function isLookupConstant(value: unknown): value is number | string | boolean {

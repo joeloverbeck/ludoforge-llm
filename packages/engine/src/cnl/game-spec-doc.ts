@@ -154,6 +154,35 @@ export interface GameSpecPhaseDef {
   readonly _origin?: GameSpecExpansionOrigin;
 }
 
+export interface GameSpecCardSelector {
+  readonly tags?: readonly string[];
+  readonly cardIds?: readonly string[];
+}
+
+export interface GameSpecCardDrawUnitRates {
+  readonly microturns?: number;
+  readonly actions?: number;
+  readonly turns?: number;
+  readonly rounds?: number;
+}
+
+export type GameSpecScheduleKindDef =
+  | {
+      readonly kind: 'cardDraw';
+      readonly deckId: string;
+      readonly cardSelector: GameSpecCardSelector;
+      readonly unitRates?: GameSpecCardDrawUnitRates;
+    }
+  | { readonly kind: 'turnCount' }
+  | { readonly kind: 'condition' };
+
+export interface GameSpecPhaseBoundaryDef {
+  readonly id: string;
+  readonly kind: 'phaseEntry' | 'phaseExit' | 'condition';
+  readonly phaseId?: string;
+  readonly schedule?: GameSpecScheduleKindDef;
+}
+
 export interface GameSpecPhaseTemplateParam {
   readonly name: string;
 }
@@ -625,6 +654,12 @@ export interface GameSpecLookupFallbackDef {
 }
 
 export type GameSpecCandidateParamFallbackDef = GameSpecLookupFallbackDef;
+export interface GameSpecScheduleFallbackDef {
+  readonly onUnavailable:
+    | 'noContribution'
+    | 'dropConsideration'
+    | { readonly constant: number };
+}
 
 export interface GameSpecConsiderationDef {
   readonly scopes?: readonly string[]; // validated at compile time: 'move' | 'microturn'
@@ -635,6 +670,7 @@ export interface GameSpecConsiderationDef {
   readonly previewFallback?: GameSpecPreviewFallbackDef;
   readonly lookupFallback?: GameSpecLookupFallbackDef;
   readonly candidateParamFallback?: GameSpecCandidateParamFallbackDef;
+  readonly scheduleFallback?: GameSpecScheduleFallbackDef;
   readonly clamp?: {
     readonly min?: number;
     readonly max?: number;
@@ -739,6 +775,7 @@ export interface GameSpecDoc {
   readonly tokenTypes: readonly GameSpecTokenTypeDef[] | null;
   readonly setup: readonly GameSpecEffect[] | null;
   readonly turnStructure: GameSpecTurnStructure | null;
+  readonly phaseBoundaries: readonly GameSpecPhaseBoundaryDef[] | null;
   readonly phaseTemplates: readonly GameSpecPhaseTemplateDef[] | null;
   readonly turnOrder: GameSpecTurnOrder | null;
   readonly actionPipelines: readonly GameSpecActionPipelineDef[] | null;
@@ -804,6 +841,7 @@ export function createEmptyGameSpecDoc(): GameSpecDoc {
     tokenTypes: null,
     setup: null,
     turnStructure: null,
+    phaseBoundaries: null,
     phaseTemplates: null,
     turnOrder: null,
     actionPipelines: null,

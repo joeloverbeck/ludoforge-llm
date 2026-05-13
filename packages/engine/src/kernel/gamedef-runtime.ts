@@ -2,7 +2,7 @@ import type { AdjacencyGraph } from './spatial.js';
 import { buildAdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
-import type { ActionId } from './branded.js';
+import type { ActionId, BoundaryId } from './branded.js';
 import type { ZobristTable, GameDef } from './types.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
@@ -16,6 +16,23 @@ import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilatio
 import { LruCache } from '../shared/lru-cache.js';
 import { createCompiledQueryPlanCache, type CompiledQueryPlanCache } from './compiled-query-plan.js';
 import type { TokenStateIndexCache, TokenStateIndexEntry } from './token-state-index.js';
+
+export interface ScheduleIndex {
+  readonly boundaries: ReadonlyMap<BoundaryId, BoundaryRuntimeState>;
+  /** Test/diagnostic counter for the most recent draw advancement. */
+  lastAdvanceCount: number;
+}
+
+export interface BoundaryRuntimeState {
+  readonly definition: NonNullable<GameDef['phaseBoundaries']>[number];
+  readonly cardDrawState?: CardDrawRuntimeState;
+}
+
+export interface CardDrawRuntimeState {
+  readonly deckId: string;
+  readonly triggeringCardPositions: readonly number[];
+  currentDrawPosition: number;
+}
 
 export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
 export const TOKEN_STATE_INDEX_CACHE_LIMIT = 4_096;
@@ -57,6 +74,11 @@ export interface GameDefRuntime {
    * receive run-local state through `ReadContext` at invocation time.
    */
   readonly compiledQueryPlanCache: CompiledQueryPlanCache;
+  /**
+   * Mixed ownership: boundary definitions and triggering positions are
+   * `sharedStructural`; current draw positions are `runLocal` and forked.
+   */
+  readonly scheduleIndex: ScheduleIndex;
   /** `sharedStructural`: compiled once from `def`; immutable thereafter. */
   readonly compiledLifecycleEffects: ReadonlyMap<CompiledLifecycleEffectKey, CompiledEffectSequence>;
 }
@@ -85,6 +107,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
   const compiledLifecycleEffects = compileAllLifecycleEffects(def);
   const alwaysCompleteActionIds = computeAlwaysCompleteActionIds(def);
   const firstDecisionDomains = compileGameDefFirstDecisionDomains(def);
+  const scheduleIndex = createScheduleIndex(def);
   return {
     adjacencyGraph: buildAdjacencyGraph(def.zones),
     runtimeTableIndex: buildRuntimeTableIndex(def),
@@ -97,6 +120,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     compiledQueryPlanCache: createCompiledQueryPlanCache(),
+    scheduleIndex,
     compiledLifecycleEffects,
   };
 }
@@ -128,5 +152,94 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    scheduleIndex: forkScheduleIndexForRun(runtime.scheduleIndex),
   } as unknown as ForkedGameDefRuntimeForRun;
+}
+
+export function createScheduleIndex(def: GameDef): ScheduleIndex {
+  const boundaries = new Map<BoundaryId, BoundaryRuntimeState>();
+  for (const boundary of def.phaseBoundaries ?? []) {
+    boundaries.set(boundary.id, {
+      definition: boundary,
+      ...(boundary.schedule?.kind === 'cardDraw'
+        ? { cardDrawState: createCardDrawRuntimeState(def, boundary.schedule) }
+        : {}),
+    });
+  }
+  return { boundaries, lastAdvanceCount: 0 };
+}
+
+export function forkScheduleIndexForRun(index: ScheduleIndex): ScheduleIndex {
+  const boundaries = new Map<BoundaryId, BoundaryRuntimeState>();
+  for (const [id, state] of index.boundaries) {
+    boundaries.set(id, {
+      definition: state.definition,
+      ...(state.cardDrawState === undefined
+        ? {}
+        : {
+            cardDrawState: {
+              deckId: state.cardDrawState.deckId,
+              triggeringCardPositions: state.cardDrawState.triggeringCardPositions,
+              currentDrawPosition: state.cardDrawState.currentDrawPosition,
+            },
+          }),
+    });
+  }
+  return { boundaries, lastAdvanceCount: 0 };
+}
+
+export function advanceScheduleIndexForDraw(runtime: GameDefRuntime, deckId: string, count: number): void {
+  let advanced = 0;
+  for (const boundary of runtime.scheduleIndex.boundaries.values()) {
+    if (boundary.cardDrawState?.deckId !== deckId) {
+      continue;
+    }
+    boundary.cardDrawState.currentDrawPosition += count;
+    advanced += 1;
+  }
+  runtime.scheduleIndex.lastAdvanceCount = advanced;
+}
+
+export function advanceScheduleIndexForDrawZone(
+  runtime: GameDefRuntime | undefined,
+  def: GameDef,
+  drawZoneId: string,
+  count: number,
+): void {
+  if (runtime === undefined || count <= 0) {
+    return;
+  }
+  let advanced = 0;
+  for (const deck of def.eventDecks ?? []) {
+    if (deck.drawZone !== drawZoneId) {
+      continue;
+    }
+    for (const boundary of runtime.scheduleIndex.boundaries.values()) {
+      if (boundary.cardDrawState?.deckId !== deck.id) {
+        continue;
+      }
+      boundary.cardDrawState.currentDrawPosition += count;
+      advanced += 1;
+    }
+  }
+  runtime.scheduleIndex.lastAdvanceCount = advanced;
+}
+
+function createCardDrawRuntimeState(
+  def: GameDef,
+  schedule: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>,
+): CardDrawRuntimeState {
+  const deck = (def.eventDecks ?? []).find((entry) => entry.id === schedule.deckId);
+  const tags = new Set(schedule.cardSelector.tags ?? []);
+  const cardIds = new Set(schedule.cardSelector.cardIds ?? []);
+  return {
+    deckId: schedule.deckId,
+    triggeringCardPositions: (deck?.cards ?? [])
+      .map((card, index) => ({ card, position: index + 1 }))
+      .filter(({ card }) =>
+        cardIds.has(card.id) || (card.tags ?? []).some((tag) => tags.has(tag)),
+      )
+      .map(({ position }) => position),
+    currentDrawPosition: 0,
+  };
 }

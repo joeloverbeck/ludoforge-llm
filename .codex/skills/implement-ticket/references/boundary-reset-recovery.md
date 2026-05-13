@@ -60,10 +60,14 @@ Before terminal closeout after this path, run a reset compliance check: the auth
 When the user approves a `FOUNDATIONS`-driven narrowing, deferral, or sibling handoff while the active ticket still remains the implementation owner for a smaller slice, do not continue on the pre-reset draft contract. Use this re-entry order before coding:
 
 1. Restate the approved active-ticket boundary and the specific deferred or sibling-owned surface.
-2. Update the active ticket, spec, and affected sibling tickets first when their current wording still claims the deferred surface.
-3. Emit a fresh working-notes checkpoint for the narrowed slice, including `proof noun alignment`, `authorization ledger`, `deferred sibling/spec scope`, `verification substitutions`, and any changed final proof lanes.
-4. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket before implementation.
-5. Only then resume coding and verification under the corrected boundary.
+2. Record the authorization in working notes or the active ticket with the selected option, scope effect, and durable owner of deferred work.
+3. Update the active ticket, spec, and affected sibling tickets first when their current wording still claims the deferred surface.
+4. Create or update the successor/follow-up owner when the reset splits real work out of the active ticket. The successor must name the residual surface precisely enough that the active ticket can close without hiding it.
+5. Scan direct dependents before coding. Use an id/path search such as `rg -n '<active-ticket-id>|Deps:.*<active-ticket-id>' tickets specs` or the nearest repo-safe equivalent, then classify each hit as `no edit`, `updated stale assumption`, or `successor owner`. Update same-series dependent acceptance text when it still assumes the old boundary.
+6. Classify every deferred public/authored syntax or artifact in the reset class as `absent`, `rejected fail-closed`, or `implemented now`. If the current compiler, schema, CLI, or public API still accepts a deferred syntax, add or preserve a focused fail-closed diagnostic before terminal status unless the user-approved option explicitly kept that syntax in scope.
+7. Emit a fresh working-notes checkpoint for the narrowed slice, including `proof noun alignment`, `authorization ledger`, `deferred sibling/spec scope`, `verification substitutions`, changed final proof lanes, dependent-sibling classification, and deferred-syntax disposition.
+8. Re-extract `What to Change`, `Files to Touch`, acceptance criteria, and proof commands from the corrected active ticket before implementation.
+9. Only then resume coding and verification under the corrected boundary.
 
 Use this path when the active ticket remains closeable after the correction. If the correction makes the active ticket evidence-only, blocked, or successor-owned, use the non-implementation rewrite or successor re-entry path instead.
 

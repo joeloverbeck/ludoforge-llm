@@ -26,7 +26,12 @@ import {
 } from './policy-eval.js';
 import type { CompletionScoreContribution } from './microturn-option-eval.js';
 import { scoreMicroturnOptionWithContributions } from './microturn-option-eval.js';
-import type { PolicyCandidateParamFallbackFired, PolicyLookupFallbackFired, PolicyPreviewFallbackFired } from './policy-evaluation-core.js';
+import type {
+  PolicyCandidateParamFallbackFired,
+  PolicyLookupFallbackFired,
+  PolicyPreviewFallbackFired,
+  PolicyScheduleFallbackFired,
+} from './policy-evaluation-core.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
 import type { PreviewWideningState } from './preview-budget-allocator.js';
@@ -56,6 +61,7 @@ interface FrontierCandidate {
   readonly unknownCandidateParamRefs?: ReadonlyMap<string, CandidateParamUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
+  readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
   readonly candidateParamFallbackFired?: PolicyCandidateParamFallbackFired;
   readonly previewOutcome?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewOutcome']>;
   readonly previewDrive?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewDrive']>;
@@ -68,6 +74,7 @@ interface FrontierScoring {
   readonly unknownCandidateParamRefsByOption: ReadonlyMap<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>;
   readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
   readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
+  readonly scheduleFallbackFiredByOption: ReadonlyMap<string, PolicyScheduleFallbackFired>;
   readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
 }
 
@@ -117,6 +124,7 @@ const traceCandidatesForFrontier = (
       unknownCandidateParamRefs: traceUnknownCandidateParamRefs(candidate.unknownCandidateParamRefs),
       ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
       ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
+      ...(candidate.scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired: candidate.scheduleFallbackFired }),
       ...(candidate.candidateParamFallbackFired === undefined
         ? {}
         : { candidateParamFallbackFired: traceCandidateParamFallbackFired(candidate.candidateParamFallbackFired) }),
@@ -302,6 +310,7 @@ const scoreFrontierForTrace = (
   const unknownCandidateParamRefsByOption = new Map<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>();
   const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
   const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
+  const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
   const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
   const record = (stableMoveKey: string, scored: ReturnType<typeof scoreMicroturnOptionWithContributions>): void => {
     scoreContributionsByOption.set(stableMoveKey, scored.scoreContributions);
@@ -313,6 +322,9 @@ const scoreFrontierForTrace = (
     }
     if (scored.lookupFallbackFired !== undefined) {
       lookupFallbackFiredByOption.set(stableMoveKey, scored.lookupFallbackFired);
+    }
+    if (scored.scheduleFallbackFired !== undefined) {
+      scheduleFallbackFiredByOption.set(stableMoveKey, scored.scheduleFallbackFired);
     }
     if (scored.candidateParamFallbackFired !== undefined) {
       candidateParamFallbackFiredByOption.set(stableMoveKey, scored.candidateParamFallbackFired);
@@ -359,6 +371,7 @@ const scoreFrontierForTrace = (
       unknownCandidateParamRefsByOption,
       previewFallbackFiredByOption,
       lookupFallbackFiredByOption,
+      scheduleFallbackFiredByOption,
       candidateParamFallbackFiredByOption,
     };
   }
@@ -411,6 +424,7 @@ const scoreFrontierForTrace = (
     unknownCandidateParamRefsByOption,
     previewFallbackFiredByOption,
     lookupFallbackFiredByOption,
+    scheduleFallbackFiredByOption,
     candidateParamFallbackFiredByOption,
   };
 };
@@ -434,6 +448,7 @@ const chooseStructuralFrontierDecision = (
     const unknownCandidateParamRefs = frontierScoring?.unknownCandidateParamRefsByOption.get(stableMoveKey);
     const previewFallbackFired = frontierScoring?.previewFallbackFiredByOption.get(stableMoveKey);
     const lookupFallbackFired = frontierScoring?.lookupFallbackFiredByOption.get(stableMoveKey);
+    const scheduleFallbackFired = frontierScoring?.scheduleFallbackFiredByOption.get(stableMoveKey);
     const candidateParamFallbackFired = frontierScoring?.candidateParamFallbackFiredByOption.get(stableMoveKey);
     return {
       decision,
@@ -443,6 +458,7 @@ const chooseStructuralFrontierDecision = (
       ...(unknownLookupRefs === undefined ? {} : { unknownLookupRefs }),
       ...(unknownCandidateParamRefs === undefined ? {} : { unknownCandidateParamRefs }),
       ...(lookupFallbackFired === undefined ? {} : { lookupFallbackFired }),
+      ...(scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired }),
       ...(candidateParamFallbackFired === undefined ? {} : { candidateParamFallbackFired }),
       ...(previewOption === undefined
         ? {}
@@ -502,6 +518,7 @@ type GuidedChoiceMatch =
       readonly unknownCandidateParamRefsByOption: ReadonlyMap<string, ReadonlyMap<string, CandidateParamUnavailabilityReason>>;
       readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
       readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
+      readonly scheduleFallbackFiredByOption: ReadonlyMap<string, PolicyScheduleFallbackFired>;
       readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
     }
   | null;
@@ -637,6 +654,7 @@ export class PolicyAgent implements Agent {
         const unknownCandidateParamRefs = guidedChoice.unknownCandidateParamRefsByOption.get(stableMoveKey);
         const previewFallbackFired = guidedChoice.previewFallbackFiredByOption.get(stableMoveKey);
         const lookupFallbackFired = guidedChoice.lookupFallbackFiredByOption.get(stableMoveKey);
+        const scheduleFallbackFired = guidedChoice.scheduleFallbackFiredByOption.get(stableMoveKey);
         const candidateParamFallbackFired = guidedChoice.candidateParamFallbackFiredByOption.get(stableMoveKey);
         const scoreContributions = guidedChoice.scoreContributionsByOption.get(stableMoveKey) ?? [];
         const score = decision === guidedChoice.matchedDecision
@@ -650,6 +668,7 @@ export class PolicyAgent implements Agent {
           ...(unknownLookupRefs === undefined ? {} : { unknownLookupRefs }),
           ...(unknownCandidateParamRefs === undefined ? {} : { unknownCandidateParamRefs }),
           ...(lookupFallbackFired === undefined ? {} : { lookupFallbackFired }),
+          ...(scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired }),
           ...(candidateParamFallbackFired === undefined ? {} : { candidateParamFallbackFired }),
           ...(previewOption === undefined
             ? {}
@@ -799,6 +818,7 @@ export class PolicyAgent implements Agent {
         unknownCandidateParamRefsByOption: fallbackSelection.unknownCandidateParamRefsByOption,
         previewFallbackFiredByOption: fallbackSelection.previewFallbackFiredByOption,
         lookupFallbackFiredByOption: fallbackSelection.lookupFallbackFiredByOption,
+        scheduleFallbackFiredByOption: fallbackSelection.scheduleFallbackFiredByOption,
         candidateParamFallbackFiredByOption: fallbackSelection.candidateParamFallbackFiredByOption,
       };
   }
@@ -851,6 +871,7 @@ export class PolicyAgent implements Agent {
           unknownCandidateParamRefsByOption: preferredSelection.unknownCandidateParamRefsByOption,
           previewFallbackFiredByOption: preferredSelection.previewFallbackFiredByOption,
           lookupFallbackFiredByOption: preferredSelection.lookupFallbackFiredByOption,
+          scheduleFallbackFiredByOption: preferredSelection.scheduleFallbackFiredByOption,
           candidateParamFallbackFiredByOption: preferredSelection.candidateParamFallbackFiredByOption,
         };
       }
@@ -875,6 +896,7 @@ export class PolicyAgent implements Agent {
           unknownCandidateParamRefsByOption: preferredSelection.unknownCandidateParamRefsByOption,
           previewFallbackFiredByOption: preferredSelection.previewFallbackFiredByOption,
           lookupFallbackFiredByOption: preferredSelection.lookupFallbackFiredByOption,
+          scheduleFallbackFiredByOption: preferredSelection.scheduleFallbackFiredByOption,
           candidateParamFallbackFiredByOption: preferredSelection.candidateParamFallbackFiredByOption,
         };
       }

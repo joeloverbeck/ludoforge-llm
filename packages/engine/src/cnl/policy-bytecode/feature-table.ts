@@ -71,6 +71,24 @@ const PREVIEW_OPTION_REF_KIND_CODE: Readonly<Record<string, number>> = {
   driveDepth: 7,
 };
 
+const PHASE_INTRINSIC_CODE: Readonly<Record<string, number>> = {
+  'current.id': 0,
+  'next.id': 1,
+};
+
+const SCHEDULE_TARGET_CODE: Readonly<Record<string, number>> = {
+  nextBoundary: 0,
+  boundary: 1,
+};
+
+const SCHEDULE_UNIT_CODE: Readonly<Record<string, number>> = {
+  cards: 0,
+  microturns: 1,
+  actions: 2,
+  turns: 3,
+  rounds: 4,
+};
+
 const CANDIDATE_PARAM_ON_MISSING_UNAVAILABLE = 0;
 const CANDIDATE_PARAM_ON_MISSING_CONSTANT_NUMBER = 1;
 const CANDIDATE_PARAM_ON_MISSING_CONSTANT_STRING = 2;
@@ -290,6 +308,26 @@ function featureRefForCompiledPolicyRef(ref: CompiledAgentPolicyRef, layout: Enc
       kind: 'candidateTags',
       layoutIndex: DYNAMIC_LAYOUT_INDEX,
       aux: [],
+    };
+  }
+
+  if (ref.kind === 'phaseIntrinsic') {
+    return {
+      kind: 'phaseIntrinsic',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [PHASE_INTRINSIC_CODE[ref.name] ?? stableStringCode(ref.name)],
+    };
+  }
+
+  if (ref.kind === 'scheduleDistance') {
+    return {
+      kind: 'scheduleDistance',
+      layoutIndex: DYNAMIC_LAYOUT_INDEX,
+      aux: [
+        SCHEDULE_TARGET_CODE[ref.target.kind] ?? stableStringCode(ref.target.kind),
+        ref.target.kind === 'boundary' ? stableStringCode(ref.target.boundaryId) : 0,
+        ref.unit === undefined ? -1 : SCHEDULE_UNIT_CODE[ref.unit] ?? stableStringCode(ref.unit),
+      ],
     };
   }
 

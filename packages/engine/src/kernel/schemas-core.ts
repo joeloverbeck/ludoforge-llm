@@ -199,6 +199,42 @@ export const TurnStructureSchema = z
   })
   .strict();
 
+const CardSelectorSchema = z
+  .object({
+    tags: z.array(StringSchema).optional(),
+    cardIds: z.array(StringSchema).optional(),
+  })
+  .strict();
+
+const CardDrawUnitRatesSchema = z
+  .object({
+    microturns: IntegerSchema.optional(),
+    actions: IntegerSchema.optional(),
+    turns: IntegerSchema.optional(),
+    rounds: IntegerSchema.optional(),
+  })
+  .strict();
+
+const ScheduleKindDefSchema = z.union([
+  z.object({
+    kind: z.literal('cardDraw'),
+    deckId: StringSchema,
+    cardSelector: CardSelectorSchema,
+    unitRates: CardDrawUnitRatesSchema.optional(),
+  }).strict(),
+  z.object({ kind: z.literal('turnCount') }).strict(),
+  z.object({ kind: z.literal('condition') }).strict(),
+]);
+
+const PhaseBoundaryDefSchema = z
+  .object({
+    id: StringSchema,
+    kind: z.union([z.literal('phaseEntry'), z.literal('phaseExit'), z.literal('condition')]),
+    phaseId: StringSchema.optional(),
+    schedule: ScheduleKindDefSchema.optional(),
+  })
+  .strict();
+
 const CompiledActionTagIndexSchema = z
   .object({
     byAction: z.record(StringSchema, z.array(StringSchema)),
@@ -748,6 +784,24 @@ const CompiledAgentPolicyRefSchema = z.union([
     intrinsic: z.union([z.literal('phaseId'), z.literal('stepId'), z.literal('round')]),
   }).strict(),
   z.object({
+    kind: z.literal('phaseIntrinsic'),
+    name: z.union([z.literal('current.id'), z.literal('next.id')]),
+  }).strict(),
+  z.object({
+    kind: z.literal('scheduleDistance'),
+    target: z.union([
+      z.object({ kind: z.literal('nextBoundary') }).strict(),
+      z.object({ kind: z.literal('boundary'), boundaryId: StringSchema }).strict(),
+    ]),
+    unit: z.union([
+      z.literal('cards'),
+      z.literal('microturns'),
+      z.literal('actions'),
+      z.literal('turns'),
+      z.literal('rounds'),
+    ]).optional(),
+  }).strict(),
+  z.object({
     kind: z.literal('strategicCondition'),
     conditionId: StringSchema,
     field: z.union([z.literal('satisfied'), z.literal('proximity')]),
@@ -1067,6 +1121,15 @@ const AgentLookupFallbackSchema = z
   })
   .strict();
 const AgentCandidateParamFallbackSchema = AgentLookupFallbackSchema;
+const AgentScheduleFallbackSchema = z
+  .object({
+    onUnavailable: z.union([
+      z.literal('noContribution'),
+      z.literal('dropConsideration'),
+      z.object({ kind: z.literal('constant'), value: IntegerSchema }).strict(),
+    ]),
+  })
+  .strict();
 
 const CompiledAgentConsiderationSchema = z
   .object({
@@ -1076,6 +1139,7 @@ const CompiledAgentConsiderationSchema = z
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
     candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
+    scheduleFallback: AgentScheduleFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1095,6 +1159,7 @@ const CompiledPolicyConsiderationSchema = z
     previewFallback: AgentPreviewFallbackSchema.optional(),
     lookupFallback: AgentLookupFallbackSchema.optional(),
     candidateParamFallback: AgentCandidateParamFallbackSchema.optional(),
+    scheduleFallback: AgentScheduleFallbackSchema.optional(),
     clamp: z.object({ min: NumberSchema.optional(), max: NumberSchema.optional() }).strict().optional(),
     dependencies: CompiledAgentDependencyRefsSchema,
     readFootprint: EffectFootprintSchema.optional(),
@@ -1354,6 +1419,7 @@ export const GameDefSchema = z
     tokenTypes: z.array(TokenTypeDefSchema),
     setup: z.array(EffectASTSchema),
     turnStructure: TurnStructureSchema,
+    phaseBoundaries: z.array(PhaseBoundaryDefSchema).optional(),
     turnOrder: TurnOrderSchema.optional(),
     actionPipelines: z.array(ActionPipelineSchema).optional(),
     derivedMetrics: z.array(DerivedMetricDefSchema).optional(),
@@ -2169,6 +2235,11 @@ const PolicyCandidateDecisionTraceSchema = z
     lookupFallbackFired: z.object({
       termId: StringSchema,
       kind: z.enum(['noContribution', 'constant']),
+      value: NumberSchema.optional(),
+    }).strict().optional(),
+    scheduleFallbackFired: z.object({
+      termId: StringSchema,
+      kind: z.enum(['noContribution', 'constant', 'dropConsideration']),
       value: NumberSchema.optional(),
     }).strict().optional(),
     candidateParamFallbackFired: z.record(StringSchema, IntegerSchema.nonnegative()).optional(),

@@ -1909,6 +1909,11 @@ export interface PolicyCandidateDecisionTrace {
     readonly kind: 'noContribution' | 'constant';
     readonly value?: number;
   };
+  readonly scheduleFallbackFired?: {
+    readonly termId: string;
+    readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
+    readonly value?: number;
+  };
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';

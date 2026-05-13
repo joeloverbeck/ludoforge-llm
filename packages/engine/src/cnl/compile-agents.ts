@@ -2122,6 +2122,7 @@ class AgentLibraryCompiler {
     const currentStateLookupRefIds = collectLookupRefIds(value.expr, 'policyState');
     const projectedStateLookupRefIds = collectLookupRefIds(value.expr, 'previewOptionState');
     const candidateParamRefIds = collectCandidateParamRefIds(value.expr);
+    const scheduleDistanceRefIds = collectScheduleDistanceRefIds(value.expr);
     if (weight.valueType !== 'number' || (value.valueType !== 'number' && lookupRefIds.length === 0)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_TYPE_INVALID,
@@ -2218,6 +2219,17 @@ class AgentLibraryCompiler {
         severity: 'error',
         message: `Consideration "${considerationId}" reads candidate.params.* ref(s) [${candidateParamRefIds.join(', ')}] without declaring candidateParamFallback.onUnavailable. Add candidateParamFallback: { onUnavailable: noContribution } or { onUnavailable: { constant: <number> } }.`,
         suggestion: 'Required for refs whose onMissing is "unavailable" (default). Refs with onMissing: { kind: constant } do not require this fallback.',
+      });
+      this.considerationStatus.set(considerationId, 'failed');
+      return null;
+    }
+    if (scheduleDistanceRefIds.length > 0 && scheduleFallback === undefined) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_MISSING_FALLBACK,
+        path: `${path}.scheduleFallback`,
+        severity: 'error',
+        message: `Consideration "${considerationId}" reads schedule distance ref(s) [${scheduleDistanceRefIds.join(', ')}] without declaring scheduleFallback.onUnavailable.`,
+        suggestion: 'Add scheduleFallback: { onUnavailable: noContribution }, dropConsideration, or { onUnavailable: { constant: <number> } }.',
       });
       this.considerationStatus.set(considerationId, 'failed');
       return null;
@@ -4277,6 +4289,57 @@ function collectCandidateParamRefIds(
   };
   visit(expr);
   return [...ids].sort();
+}
+
+function collectScheduleDistanceRefIds(expr: AgentPolicyExpr): readonly string[] {
+  const ids = new Set<string>();
+  const visit = (current: AgentPolicyExpr): void => {
+    switch (current.kind) {
+      case 'ref':
+        if (current.ref.kind === 'scheduleDistance' && current.ref.unit !== undefined) {
+          ids.add(scheduleDistanceRefKey(current.ref));
+        }
+        return;
+      case 'op':
+        for (const arg of current.args) {
+          visit(arg);
+        }
+        return;
+      case 'zoneTokenAgg':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      case 'adjacentTokenAgg':
+        if (typeof current.anchorZone !== 'string') {
+          visit(current.anchorZone);
+        }
+        return;
+      case 'seatAgg':
+        visit(current.expr);
+        return;
+      case 'zoneProp':
+        if (typeof current.zone !== 'string') {
+          visit(current.zone);
+        }
+        return;
+      default:
+        return;
+    }
+  };
+  visit(expr);
+  return [...ids].sort();
+}
+
+function scheduleDistanceRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>): string {
+  if (ref.target.kind === 'nextBoundary') {
+    return 'schedule.nextBoundary.id';
+  }
+  const unit = ref.unit ?? 'id';
+  if (ref.target.kind === 'boundary') {
+    return `schedule.distance.toBoundary.${String(ref.target.boundaryId)}.${unit}`;
+  }
+  return `schedule.distance.toPhase.${String(ref.target.phaseId)}.${unit}`;
 }
 
 function isLookupCollection(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['collection'] {

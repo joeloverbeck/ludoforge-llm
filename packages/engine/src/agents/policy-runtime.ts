@@ -1,6 +1,6 @@
 import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { createSeatResolutionContext } from '../kernel/identity.js';
-import type { PlayerId } from '../kernel/branded.js';
+import type { BoundaryId, PlayerId } from '../kernel/branded.js';
 import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import type {
   AgentParameterValue,
@@ -20,6 +20,7 @@ import type {
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
+import { createGameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   createPolicyPreviewRuntime,
   K_PREVIEW_DEPTH,
@@ -70,7 +71,7 @@ export type CandidateParamResolution =
 export type PhaseScheduleResolution =
   | {
       readonly kind: 'ready';
-      readonly value: string;
+      readonly value: string | number;
     }
   | {
       readonly kind: 'unavailable';
@@ -78,7 +79,10 @@ export type PhaseScheduleResolution =
         | 'interruptStateNoSuccessor'
         | 'phaseSequenceExhausted'
         | 'noBoundaryReachable'
-        | 'unsupportedScheduleDistance';
+        | 'unsupportedScheduleDistance'
+        | 'notCardScheduled'
+        | 'noTriggeringCardRemaining'
+        | 'hiddenDeck';
     };
 
 export interface PolicyIntrinsicProvider {
@@ -289,7 +293,32 @@ function resolveNextBoundaryId(def: GameDef, state: GameState): PhaseScheduleRes
   return { kind: 'unavailable', reason: 'noBoundaryReachable' };
 }
 
+function resolveBoundaryCardDistance(
+  def: GameDef,
+  runtime: GameDefRuntime,
+  boundaryId: BoundaryId,
+): PhaseScheduleResolution {
+  const boundary = runtime.scheduleIndex.boundaries.get(boundaryId);
+  const cardDrawState = boundary?.cardDrawState;
+  if (cardDrawState === undefined) {
+    return { kind: 'unavailable', reason: 'notCardScheduled' };
+  }
+  const deck = (def.eventDecks ?? []).find((entry) => entry.id === cardDrawState.deckId);
+  const drawZoneVisibility = def.zones.find((zone) => String(zone.id) === deck?.drawZone)?.visibility;
+  if (drawZoneVisibility !== 'public') {
+    return { kind: 'unavailable', reason: 'hiddenDeck' };
+  }
+  const nextPosition = cardDrawState.triggeringCardPositions.find(
+    (position) => position > cardDrawState.currentDrawPosition,
+  );
+  if (nextPosition === undefined) {
+    return { kind: 'unavailable', reason: 'noTriggeringCardRemaining' };
+  }
+  return { kind: 'ready', value: nextPosition - cardDrawState.currentDrawPosition };
+}
+
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
+  const scheduleRuntime = input.runtime ?? createGameDefRuntime(input.def);
   const seatResolutionIndex = createSeatResolutionContext(input.def, input.state.playerCount).index;
   const activeProfileId = input.catalog.bindingsBySeat[input.seatId];
   const activeProfile = activeProfileId !== undefined ? input.catalog.profiles[activeProfileId] : undefined;
@@ -406,6 +435,9 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
       resolveScheduleDistance(ref, stateOverride) {
         if (ref.target.kind === 'nextBoundary' && ref.unit === undefined) {
           return resolveNextBoundaryId(input.def, stateOverride ?? input.state);
+        }
+        if (ref.target.kind === 'boundary' && ref.unit === 'cards') {
+          return resolveBoundaryCardDistance(input.def, scheduleRuntime, ref.target.boundaryId);
         }
         return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
       },

@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — policy ref resolver extension
-**Deps**: `tickets/169PHASCHREF-003.md`
+**Deps**: `archive/tickets/169PHASCHREF-003.md`
 
 ## Problem
 

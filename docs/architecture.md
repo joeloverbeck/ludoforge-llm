@@ -76,9 +76,11 @@ The current runtime contract is:
 | `alwaysCompleteActionIds` | `sharedStructural` | Compiled once from `def` |
 | `firstDecisionDomains` | `sharedStructural` | Compiled once from `def` |
 | `ruleCardCache` | `sharedStructural` | Lazily populated, but keyed only by bounded structural inputs under one compiled `GameDef` |
+| `scheduleIndex.boundaries[].definition` / `triggeringCardPositions` | `sharedStructural` | Phase-boundary definitions and matching card positions derived from the compiled `GameDef` |
+| `scheduleIndex.boundaries[].cardDrawState.currentDrawPosition` | `runLocal` | Per-run card-draw cursor advanced by draw effects and reset by `forkGameDefRuntimeForRun(...)` |
 | `compiledLifecycleEffects` | `sharedStructural` | Compiled once from `def` |
 
-`forkGameDefRuntimeForRun(...)` is the run-boundary guard. It preserves every `sharedStructural` reference and resets only `zobristTable.keyCache`. Callers may safely reuse a compiled runtime across many runs only through that ownership contract.
+`forkGameDefRuntimeForRun(...)` is the run-boundary guard. It preserves every `sharedStructural` reference and resets each `runLocal` cache or cursor, including the schedule-index card-draw position. Callers may safely reuse a compiled runtime across many runs only through that ownership contract.
 
 ### Lifetime Classes
 

@@ -2604,6 +2604,34 @@
                       ],
                       "additionalProperties": false
                     },
+                    "scheduleFallbackFired": {
+                      "type": "object",
+                      "properties": {
+                        "termId": {
+                          "$ref": "#/definitions/anon_4682db72"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "noContribution",
+                            "constant",
+                            "dropConsideration"
+                          ]
+                        },
+                        "value": {
+                          "allOf": [
+                            {
+                              "$ref": "#/definitions/anon_c0e4ebfe"
+                            }
+                          ]
+                        }
+                      },
+                      "required": [
+                        "termId",
+                        "kind"
+                      ],
+                      "additionalProperties": false
+                    },
                     "candidateParamFallbackFired": {
                       "type": "object",
                       "propertyNames": {

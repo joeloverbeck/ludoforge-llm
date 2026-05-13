@@ -32,7 +32,7 @@ This ticket adds:
 2. **Foundation #8 (Determinism)**: WASM resolution is deterministic; no FFI nondeterminism, no thread-local state in handlers.
 3. **Foundation #10 (Bounded)**: opcode dispatch is O(1) per ref; resolution itself remains O(1) per the underlying schedule index (003) or phase-sequence lookup (002).
 4. **No backwards compatibility**: ABI version bump is the canonical signal. Existing fixtures and profile bytecode are recompiled at load time; no shim layer.
-5. **Trace-route parity**: WASM-routed refs must emit identical `inputRefs[]` shape to TS-routed refs (status, value, reason, fallback). The equivalence test asserts byte-identical trace JSON across both paths.
+5. **Trace-route parity**: WASM-routed refs must emit the same scoring, route metadata, unavailable/fallback behavior, and `scheduleFallbackFired` candidate metadata as the TypeScript path. 003 corrected the live trace contract: the current policy metadata surface does not expose a generic ready-state `inputRefs[]` row for these refs.
 
 ## What to Change
 
@@ -100,7 +100,7 @@ In `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`:
 
 ### Invariants
 
-1. For every fixture state + consideration referencing `phase.*` or `schedule.*`, WASM scoring == TS scoring (byte-identical trace rows).
+1. For every fixture state + consideration referencing `phase.*` or `schedule.*`, WASM scoring == TS scoring, including route counts and fallback metadata such as `scheduleFallbackFired`.
 2. `wasmScoreRowRouteCount + wasmPreviewCandidateFeatureRowRouteCount > 0` for the new fixture; `unsupported` counts remain at 0 (parity with Spec 167's verified production state).
 3. Encoder cost regression is bounded: new ref encoding adds <5ms to `encodeBytecodeInput` per the baseline probe.
 4. ABI version is bumped exactly once in this ticket; downstream tickets that don't change the ABI must not modify the version.

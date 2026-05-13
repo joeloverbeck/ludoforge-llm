@@ -2228,6 +2228,11 @@ const PolicyCandidateDecisionTraceSchema = z
       kind: z.enum(['noContribution', 'constant']),
       value: NumberSchema.optional(),
     }).strict().optional(),
+    scheduleFallbackFired: z.object({
+      termId: StringSchema,
+      kind: z.enum(['noContribution', 'constant', 'dropConsideration']),
+      value: NumberSchema.optional(),
+    }).strict().optional(),
     candidateParamFallbackFired: z.record(StringSchema, IntegerSchema.nonnegative()).optional(),
     selectionReason: z.enum([
       'coverage',

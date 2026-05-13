@@ -14,7 +14,7 @@ With Phases 0-4 shipped (engine-internal types, refs, schedule index, WASM port)
 2. Sweeping FITL event card declarations to add `tags: [coup]` on coup-triggering cards. The exact card list is determined by reading the current event-deck data; per spec §10's "Code anchors", the sweep may touch many event card files.
 3. Authoring **one** demonstration consideration in a sandbox profile (NOT `arvn-evolved`) that uses `schedule.distance.toBoundary.coupEntry.cards`. The consideration shows the trace fires non-zero contribution at appropriate game positions. The sandbox profile is illustrative — not a promotion, not a campaign deliverable.
 4. A golden trace test pinning the FITL `coupEntry` distance at 5+ game positions.
-5. A trace-shape test pinning the consideration's `inputRefs` / fallback / contribution structure.
+5. A trace-shape test pinning the consideration's live fallback metadata and contribution structure. Per 003's completed TypeScript trace contract, unavailable schedule fallback evidence is exposed through `scheduleFallbackFired` candidate metadata rather than a generic ready-state `inputRefs` row.
 
 This ticket is **deferred-execution** in the sense of the spec-to-tickets skill: it cannot land until 005 ships (engine support is complete) per Spec 169 §7's "Phases 0-4 must land before Phase 5 ships" mandate.
 
@@ -99,9 +99,9 @@ Use byte-pinning per existing golden-trace convention.
 `packages/engine/test/golden/schedule-ref-consideration-trace.test.ts`:
 
 - Run the sandbox demonstration profile against a fixture state where `coupEntry.cards >= 3` (consideration fires).
-- Assert the trace row's `inputRefs`, `when`, `weight`, `value`, `contribution` fields exactly match the byte-pinned expected shape per Spec 169 §4.7.
+- Assert the live trace/candidate metadata fields exactly match the byte-pinned expected shape: selected consideration id, score contribution, and any `scheduleFallbackFired` metadata. Do not require a generic ready-state `inputRefs` row unless a later trace-redesign ticket explicitly adds that surface.
 - Also test a state where `coupEntry.cards < 3` (consideration's `when` is false; trace row shows `when: false`, contribution 0).
-- Optional: state where `coupEntry` resolves `unavailable` (e.g., end-game); `scheduleFallback.onUnavailable: noContribution` fires; trace row shows `status: unavailable, fallback: noContribution, contribution: 0`.
+- Optional: state where `coupEntry` resolves `unavailable` (e.g., end-game); `scheduleFallback.onUnavailable: noContribution` fires; trace metadata shows `scheduleFallbackFired: { kind: 'noContribution' }` and contribution 0.
 
 ### 6. Verify no regression
 
@@ -134,7 +134,7 @@ The exact set of event card files in step 2 depends on the current event deck co
 ### Tests That Must Pass
 
 1. `phase-boundary-fitl-coup-distance.test.ts` — byte-pinned distances at 5 fixture positions.
-2. `schedule-ref-consideration-trace.test.ts` — byte-pinned trace shapes for the three consideration cases (fires, when-false, unavailable + fallback).
+2. `schedule-ref-consideration-trace.test.ts` — byte-pinned live trace/metadata shapes for the three consideration cases (fires, when-false, unavailable + `scheduleFallbackFired`).
 3. `policy-profile-quality` baseline holds for `arvn-evolved` — `compositeScore = -3.5333` (or whatever the current pre-spec-169 baseline is) unchanged. If a regression appears, do not re-bless; investigate.
 4. Existing suite: `pnpm -F @ludoforge/engine test` passes — no regression in FITL or kernel tests.
 5. FITL GameSpec compiles with the new `phaseBoundaries` block; no new compile warnings beyond what 001's diagnostic budget admits.

@@ -154,6 +154,8 @@ When active work grows a source file that is already near/over repo guidance, or
 
 - `source-size ledger`: `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
+If exact before counts were lost after compaction or late shared-contract fallout, reconstruct them mechanically for tracked modified files: capture `after` with `wc -l <path>`, capture added/deleted counts with `git diff --numstat -- <path>`, then compute `before = after - added + deleted`. For new files, use `before = 0`; for deleted files, use the pre-delete line count from Git when needed. If the file was also changed by unrelated user work in the same path, do not pretend the reconstructed count is ticket-local; classify the overlap before closeout.
+
 If the touched oversized file is a canonical contract hub, schema mirror, generated-artifact source, diagnostic registry, or comparable shared table, a surgical addition may still be the right ticket-sized change. Record the exact before/after counts anyway, then state why extraction would widen or obscure the ticket seam and whether a successor is needed.
 
 ## Same-Series Draft Delta

@@ -259,7 +259,7 @@ describe('phase identity refs', () => {
         target: { kind: 'boundary', boundaryId: asBoundaryId('scoringEntry') },
         unit: 'cards',
       }),
-      { kind: 'unavailable', reason: 'unsupportedScheduleDistance' },
+      { kind: 'unavailable', reason: 'notCardScheduled' },
     );
   });
 });

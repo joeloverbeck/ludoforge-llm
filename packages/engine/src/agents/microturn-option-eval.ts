@@ -16,6 +16,7 @@ import {
   type PolicyCandidateParamFallbackFired,
   type PolicyLookupFallbackFired,
   type PolicyPreviewFallbackFired,
+  type PolicyScheduleFallbackFired,
 } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
@@ -36,6 +37,7 @@ export interface CompletionOptionScore {
   readonly unknownCandidateParamRefs: ReadonlyMap<string, CandidateParamUnavailabilityReason>;
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
+  readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
   readonly candidateParamFallbackFired?: PolicyCandidateParamFallbackFired;
 }
 
@@ -102,6 +104,7 @@ export function scoreMicroturnOptionWithContributions(
   const unknownCandidateParamRefs = new Map<string, CandidateParamUnavailabilityReason>();
   const previewFallbackFired: { current?: PolicyPreviewFallbackFired } = {};
   const lookupFallbackFired: { current?: PolicyLookupFallbackFired } = {};
+  const scheduleFallbackFired: { current?: PolicyScheduleFallbackFired } = {};
   const candidateParamFallbackFired: { current?: Map<string, number> } = {};
 
   const evaluation = new PolicyEvaluationContext({
@@ -123,6 +126,7 @@ export function scoreMicroturnOptionWithContributions(
         : { previewOption: { resolvedRefs: new Map(), unknownPreviewRefs, previewFallbackFired, projectedState: previewOptionProjectedState } }
       : { previewOption: { resolvedRefs: previewOptionResolvedRefs, unknownPreviewRefs, previewFallbackFired, ...(previewOptionProjectedState === undefined ? {} : { projectedState: previewOptionProjectedState }) } }),
     lookupOption: { unknownLookupRefs, lookupFallbackFired },
+    scheduleOption: { scheduleFallbackFired },
     candidateParamOption: { unknownCandidateParamRefs, candidateParamFallbackFired },
     ...(runtime === undefined ? {} : { runtime }),
   }, []);
@@ -149,6 +153,7 @@ export function scoreMicroturnOptionWithContributions(
       unknownCandidateParamRefs: sortUnknownCandidateParamRefs(unknownCandidateParamRefs),
       ...(previewFallbackFired.current === undefined ? {} : { previewFallbackFired: previewFallbackFired.current }),
       ...(lookupFallbackFired.current === undefined ? {} : { lookupFallbackFired: lookupFallbackFired.current }),
+      ...(scheduleFallbackFired.current === undefined ? {} : { scheduleFallbackFired: scheduleFallbackFired.current }),
       ...(candidateParamFallbackFired.current === undefined ? {} : { candidateParamFallbackFired: sortCandidateParamFallbackFired(candidateParamFallbackFired.current) }),
     };
   } finally {

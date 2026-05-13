@@ -195,8 +195,18 @@ describe('phase boundary compile validation', () => {
             currentPhase: { scopes: ['move'], when: { eq: [ref('phase.current.id'), 'main'] }, weight: 1, value: 1 },
             nextPhase: { scopes: ['move'], when: { eq: [ref('phase.next.id'), 'scoring'] }, weight: 1, value: 1 },
             nextBoundary: { scopes: ['move'], when: { eq: [ref('schedule.nextBoundary.id'), 'coupEntry'] }, weight: 1, value: 1 },
-            cards: { scopes: ['move'], weight: 1, value: ref('schedule.distance.toBoundary.coupEntry.cards') },
-            phaseCards: { scopes: ['move'], weight: 1, value: ref('schedule.distance.toPhase.scoring.cards') },
+            cards: {
+              scopes: ['move'],
+              weight: 1,
+              value: ref('schedule.distance.toBoundary.coupEntry.cards'),
+              scheduleFallback: { onUnavailable: 'noContribution' },
+            },
+            phaseCards: {
+              scopes: ['move'],
+              weight: 1,
+              value: ref('schedule.distance.toPhase.scoring.cards'),
+              scheduleFallback: { onUnavailable: 'noContribution' },
+            },
             scheduleFallback: {
               scopes: ['microturn'],
               weight: 1,

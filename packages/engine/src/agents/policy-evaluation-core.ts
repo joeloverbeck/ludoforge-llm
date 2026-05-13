@@ -85,6 +85,12 @@ export interface PolicyLookupFallbackFired {
   readonly value?: number;
 }
 
+export interface PolicyScheduleFallbackFired {
+  readonly termId: string;
+  readonly kind: 'noContribution' | 'constant' | 'dropConsideration';
+  readonly value?: number;
+}
+
 export type PolicyCandidateParamFallbackFired = ReadonlyMap<string, number>;
 
 export class PolicyRuntimeError extends Error {
@@ -107,6 +113,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewDrive?: PolicyPreviewDriveTrace;
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
+  scheduleFallbackFired?: PolicyScheduleFallbackFired;
   candidateParamFallbackFired?: Map<string, number>;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
@@ -140,6 +147,9 @@ export interface CreatePolicyEvaluationContextInput {
   readonly lookupOption?: {
     readonly unknownLookupRefs?: Map<string, LookupUnavailabilityReason>;
     readonly lookupFallbackFired?: { current?: PolicyLookupFallbackFired };
+  };
+  readonly scheduleOption?: {
+    readonly scheduleFallbackFired?: { current?: PolicyScheduleFallbackFired };
   };
   readonly candidateParamOption?: {
     readonly unknownCandidateParamRefs?: Map<string, CandidateParamUnavailabilityReason>;
@@ -308,6 +318,7 @@ export class PolicyEvaluationContext {
   private activeState: GameState;
   private currentSeatContext: string | undefined;
   private candidateParamUnavailableDuringValue = false;
+  private scheduleUnavailableDuringValue = false;
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
@@ -535,6 +546,7 @@ export class PolicyEvaluationContext {
 
     if (consideration.when !== undefined) {
       const when = this.evaluateCompiledExpr(consideration.when, candidate);
+      this.scheduleUnavailableDuringValue = false;
       if (when !== true) {
         return 0;
       }
@@ -551,9 +563,12 @@ export class PolicyEvaluationContext {
     const previewUnavailable = this.unknownPreviewRefCount(candidate) > unknownPreviewRefsBefore;
     const lookupUnavailable = this.unknownLookupRefCount(candidate) > unknownLookupRefsBefore;
     this.candidateParamUnavailableDuringValue = false;
+    const scheduleUnavailable = this.scheduleUnavailableDuringValue;
+    this.scheduleUnavailableDuringValue = false;
     if (typeof weight !== 'number' || typeof value !== 'number') {
       let contribution: number | undefined;
       let shouldRecordContribution = false;
+      let dropConsideration = false;
       if (candidateParamUnavailable) {
         const fallback = consideration.candidateParamFallback?.onUnavailable;
         if (fallback === undefined) {
@@ -622,6 +637,41 @@ export class PolicyEvaluationContext {
           shouldRecordContribution = true;
         }
       }
+      if (scheduleUnavailable) {
+        const fallback = consideration.scheduleFallback?.onUnavailable;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Schedule consideration "${considerationId}" did not declare scheduleFallback.onUnavailable.`,
+            { considerationId },
+          );
+        }
+        if (fallback === 'dropConsideration') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'dropConsideration',
+          });
+          dropConsideration = true;
+        } else if (fallback === 'noContribution') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+          });
+          contribution ??= 0;
+          shouldRecordContribution = true;
+        } else {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'constant',
+            value: fallback.value,
+          });
+          contribution ??= fallback.value;
+          shouldRecordContribution = true;
+        }
+      }
+      if (dropConsideration) {
+        return 0;
+      }
       if (contribution === undefined) {
         contribution = consideration.unknownAs ?? 0;
         shouldRecordContribution = true;
@@ -684,6 +734,18 @@ export class PolicyEvaluationContext {
     }
     if (this.input.lookupOption?.lookupFallbackFired !== undefined) {
       this.input.lookupOption.lookupFallbackFired.current = fired;
+    }
+  }
+
+  private recordScheduleFallbackFired(
+    candidate: PolicyEvaluationCandidate | undefined,
+    fired: PolicyScheduleFallbackFired,
+  ): void {
+    if (candidate !== undefined) {
+      candidate.scheduleFallbackFired = fired;
+    }
+    if (this.input.scheduleOption?.scheduleFallbackFired !== undefined) {
+      this.input.scheduleOption.scheduleFallbackFired.current = fired;
     }
   }
 
@@ -1312,7 +1374,11 @@ export class PolicyEvaluationContext {
       }
       case 'scheduleDistance': {
         const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(ref, this.activeState);
-        return resolution.kind === 'ready' ? resolution.value : undefined;
+        if (resolution.kind === 'ready') {
+          return resolution.value;
+        }
+        this.scheduleUnavailableDuringValue = true;
+        return undefined;
       }
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);

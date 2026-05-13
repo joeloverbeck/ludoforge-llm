@@ -1306,9 +1306,14 @@ export class PolicyEvaluationContext {
         return this.runtimeProviders.intrinsics.resolveSeatIntrinsic(ref.intrinsic, this.activeState);
       case 'turnIntrinsic':
         return this.runtimeProviders.intrinsics.resolveTurnIntrinsic(ref.intrinsic, this.activeState);
-      case 'phaseIntrinsic':
-      case 'scheduleDistance':
-        return undefined;
+      case 'phaseIntrinsic': {
+        const resolution = this.runtimeProviders.phaseSchedule.resolvePhaseIntrinsic(ref, this.activeState);
+        return resolution.kind === 'ready' ? resolution.value : undefined;
+      }
+      case 'scheduleDistance': {
+        const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(ref, this.activeState);
+        return resolution.kind === 'ready' ? resolution.value : undefined;
+      }
       case 'candidateIntrinsic':
         return candidate === undefined ? undefined : this.runtimeProviders.candidates.resolveCandidateIntrinsic(candidate, ref.intrinsic);
       case 'candidateParam':

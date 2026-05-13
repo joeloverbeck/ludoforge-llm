@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel runtime ownership, card-draw effect hook, policy ref resolver, fallback discipline
-**Deps**: `tickets/169PHASCHREF-002.md`
+**Deps**: `archive/tickets/169PHASCHREF-002.md`
 
 ## Problem
 

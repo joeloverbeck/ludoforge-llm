@@ -1,6 +1,6 @@
 # 169PHASCHREF-002: Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — policy runtime ref resolution
@@ -72,6 +72,7 @@ For `unavailable` status (interrupt path on `phase.next.id`), include `"reason":
 ## Files to Touch
 
 - `packages/engine/src/agents/policy-runtime.ts` (modify) — add `phaseIntrinsic` and `scheduleDistance`-identity resolver branches.
+- `packages/engine/src/agents/policy-evaluation-core.ts` (modify) — route compiled `phaseIntrinsic` and identity-only `scheduleDistance` refs through the new runtime resolver.
 - `packages/engine/test/unit/agents/phase-identity-refs.test.ts` (new) — golden tests for each ref at multiple game positions.
 - `packages/engine/test/determinism/phase-identity-refs-determinism.test.ts` (new) — replay determinism test asserting identical ref readouts across a 20-turn trace.
 
@@ -106,6 +107,51 @@ For `unavailable` status (interrupt path on `phase.next.id`), include `"reason":
 
 ### Commands
 
-1. `pnpm -F @ludoforge/engine test:unit -- --test-name-pattern phase-identity` — runs new tests in isolation.
+1. `pnpm -F @ludoforge/engine build` followed by `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/phase-identity-refs.test.js dist/test/determinism/phase-identity-refs-determinism.test.js` — runs the new compiled Node tests in isolation. The earlier `--test-name-pattern` form was a stale Jest-style flag and is not valid for this repo's Node test runner.
 2. `pnpm turbo test --filter=@ludoforge/engine` — full engine test gate.
 3. `pnpm turbo typecheck` — cross-package typecheck.
+
+## Outcome
+
+Completion date: 2026-05-13
+
+Implemented the Phase 1 TypeScript resolver slice:
+
+- Added policy-runtime resolver support for `phase.current.id`, `phase.next.id`, and identity-only `schedule.nextBoundary.id`.
+- Routed `phaseIntrinsic` and `scheduleDistance` compiled refs through `PolicyEvaluationContext` instead of returning `undefined`.
+- Added `phase-identity-refs.test.ts` coverage for first-phase, mid-sequence, and interrupt-state readouts. The interrupt case proves `phase.next.id` returns the stable unavailable reason `interruptStateNoSuccessor` while `schedule.nextBoundary.id` still resolves from declared boundary metadata.
+- Post-review cleanup added direct assertions for the remaining implementation-introduced schedule-resolution branches: `noBoundaryReachable` and `unsupportedScheduleDistance`.
+- Added `phase-identity-refs-determinism.test.ts` coverage asserting byte-identical resolver readouts across a 20-step state-local trace for the same `GameDef` and seed.
+
+Live-surface corrections from the draft:
+
+- `policy-evaluation-core.ts` is owned routing fallout because the runtime provider alone is not reachable from compiled policy evaluation.
+- The live policy metadata model does not emit a generic per-consideration `inputRefs` object for ready state-local refs. Evidence source: `packages/engine/src/agents/policy-evaluation-core.ts` and `packages/engine/src/agents/policy-agent.ts` record the existing unknown-ref metadata maps (`unknownPreviewRefs`, `unknownLookupRefs`, `unknownCandidateParamRefs`) rather than a generic ready-ref `inputRefs` row. This ticket proves ready values through scoring/readout witnesses and preserves the unavailable reason at the resolver boundary; broad trace-row redesign and schedule fallback trace detail remain out of scope for later schedule/fallback tickets.
+- The focused acceptance command uses the repo's compiled Node-test shape instead of the stale `--test-name-pattern` flag.
+
+Generated/schema fallout: none expected; no schema or serialized trace shape changed.
+
+Deferred sibling scope:
+
+- `tickets/169PHASCHREF-003.md` owns card-distance schedule computation and `scheduleFallback` enforcement.
+- `tickets/169PHASCHREF-005.md` owns WASM opcode/runtime integration.
+- `tickets/169PHASCHREF-006.md` owns FITL `phaseBoundaries` authoring.
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+|---|---:|---:|---|---:|---|---|
+| `packages/engine/src/agents/policy-runtime.ts` | 579 | 662 | No | +83 | Resolver helpers are small and local to the provider that owns state-local policy reads. The file crossed the near-cap checkpoint threshold but stayed below the 800-line cap; extracting these helpers now would obscure the ticket seam. | None |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 1938 | 1943 | No — preexisting oversized | +5 | The evaluator change is a surgical dispatch from the compiled ref switch into the new provider. Extraction is not meaningful for a five-line routing update in an established evaluator hub. | None |
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/phase-identity-refs.test.js dist/test/determinism/phase-identity-refs-determinism.test.js` — passed, 5 tests after post-review branch coverage.
+- `pnpm -F @ludoforge/engine test:unit` — passed, 5697 tests after post-review branch coverage.
+- `pnpm turbo test --filter=@ludoforge/engine` — passed; fresh engine build, schema artifact check, and default engine test lane.
+- `pnpm turbo typecheck` — passed.
+- Post-review focused rerun after rebuilding compiled output: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/phase-identity-refs.test.js dist/test/determinism/phase-identity-refs-determinism.test.js` — passed, 5 tests.
+- `pnpm run check:ticket-deps` — passed for 5 active tickets and 2323 archived tickets.
+
+Late-edit proof validity: after spotting that the terminal main-sequence phase shared the interrupt unavailable reason, I added a failing unit assertion for the distinct `phaseSequenceExhausted` reason, fixed the resolver, and reran the affected proof lanes. Post-review then added branch-only test coverage for `noBoundaryReachable` and `unsupportedScheduleDistance`, with no production-code change; the focused compiled lane and full unit lane were rerun after that cleanup.

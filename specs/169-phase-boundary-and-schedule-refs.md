@@ -447,7 +447,7 @@ The proposal's testing plan and experiment design (paired seeds, `governPriorDep
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
 - [`archive/tickets/169PHASCHREF-001.md`](../archive/tickets/169PHASCHREF-001.md) — Phase 0 — types, BoundaryId, GameSpecDoc declaration & compiler validation (covers §7 Phase 0, §8.1 phase-boundary-compile-validation + phase-boundary-determinism)
-- [`tickets/169PHASCHREF-002.md`](../tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
+- [`archive/tickets/169PHASCHREF-002.md`](../archive/tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
 - [`tickets/169PHASCHREF-003.md`](../tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
 - [`tickets/169PHASCHREF-004.md`](../tickets/169PHASCHREF-004.md) — Phase 3 — remaining distance units & schedule.distance.toPhase aliases (covers §7 Phase 3)
 - [`tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)

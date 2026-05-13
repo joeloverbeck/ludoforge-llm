@@ -67,6 +67,20 @@ export type CandidateParamResolution =
       readonly reason: 'missing' | 'typeMismatch';
     };
 
+export type PhaseScheduleResolution =
+  | {
+      readonly kind: 'ready';
+      readonly value: string;
+    }
+  | {
+      readonly kind: 'unavailable';
+      readonly reason:
+        | 'interruptStateNoSuccessor'
+        | 'phaseSequenceExhausted'
+        | 'noBoundaryReachable'
+        | 'unsupportedScheduleDistance';
+    };
+
 export interface PolicyIntrinsicProvider {
   resolveSeatIntrinsic(
     intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'seatIntrinsic' }>['intrinsic'],
@@ -76,6 +90,17 @@ export interface PolicyIntrinsicProvider {
     intrinsic: Extract<CompiledAgentPolicyRef, { readonly kind: 'turnIntrinsic' }>['intrinsic'],
     stateOverride?: GameState,
   ): PolicyValue;
+}
+
+export interface PolicyPhaseScheduleProvider {
+  resolvePhaseIntrinsic(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'phaseIntrinsic' }>,
+    stateOverride?: GameState,
+  ): PhaseScheduleResolution;
+  resolveScheduleDistance(
+    ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>,
+    stateOverride?: GameState,
+  ): PhaseScheduleResolution;
 }
 
 export interface PolicyCandidateProvider {
@@ -144,6 +169,7 @@ export interface PolicyCompletionProvider {
 
 export interface PolicyRuntimeProviders {
   readonly intrinsics: PolicyIntrinsicProvider;
+  readonly phaseSchedule: PolicyPhaseScheduleProvider;
   readonly candidates: PolicyCandidateProvider;
   readonly currentSurface: PolicyCurrentSurfaceProvider;
   readonly previewSurface: PolicyPreviewSurfaceProvider;
@@ -221,6 +247,46 @@ function resolveEncodedCurrentSurface(
     }
   }
   return undefined;
+}
+
+function phaseSequenceIndex(def: GameDef, phaseId: string): number {
+  return def.turnStructure.phases.findIndex((phase) => String(phase.id) === phaseId);
+}
+
+function phaseBoundaryTargetIndex(def: GameDef, boundary: NonNullable<GameDef['phaseBoundaries']>[number]): number {
+  if (boundary.kind !== 'phaseEntry' && boundary.kind !== 'phaseExit') {
+    return -1;
+  }
+  if (boundary.phaseId === undefined) {
+    return -1;
+  }
+  return phaseSequenceIndex(def, String(boundary.phaseId));
+}
+
+function resolveNextPhaseId(def: GameDef, state: GameState): PhaseScheduleResolution {
+  const currentIndex = phaseSequenceIndex(def, String(state.currentPhase));
+  if (currentIndex < 0) {
+    return { kind: 'unavailable', reason: 'interruptStateNoSuccessor' };
+  }
+  if (currentIndex >= def.turnStructure.phases.length - 1) {
+    return { kind: 'unavailable', reason: 'phaseSequenceExhausted' };
+  }
+  return { kind: 'ready', value: String(def.turnStructure.phases[currentIndex + 1]!.id) };
+}
+
+function resolveNextBoundaryId(def: GameDef, state: GameState): PhaseScheduleResolution {
+  const boundaries = def.phaseBoundaries ?? [];
+  const currentIndex = phaseSequenceIndex(def, String(state.currentPhase));
+  for (const boundary of boundaries) {
+    const targetIndex = phaseBoundaryTargetIndex(def, boundary);
+    if (targetIndex < 0) {
+      continue;
+    }
+    if (currentIndex < 0 || targetIndex >= currentIndex) {
+      return { kind: 'ready', value: String(boundary.id) };
+    }
+  }
+  return { kind: 'unavailable', reason: 'noBoundaryReachable' };
 }
 
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
@@ -325,6 +391,23 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return undefined;
         }
         return state.turnCount;
+      },
+    },
+    phaseSchedule: {
+      resolvePhaseIntrinsic(ref, stateOverride) {
+        const state = stateOverride ?? input.state;
+        switch (ref.name) {
+          case 'current.id':
+            return { kind: 'ready', value: String(state.currentPhase) };
+          case 'next.id':
+            return resolveNextPhaseId(input.def, state);
+        }
+      },
+      resolveScheduleDistance(ref, stateOverride) {
+        if (ref.target.kind === 'nextBoundary' && ref.unit === undefined) {
+          return resolveNextBoundaryId(input.def, stateOverride ?? input.state);
+        }
+        return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
       },
     },
     candidates: {

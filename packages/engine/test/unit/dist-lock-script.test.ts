@@ -57,16 +57,18 @@ describe('run-with-dist-lock script', () => {
   it('serializes concurrent commands touching dist artifacts', async () => {
     mkdirSync(tmpDir, { recursive: true });
     const outputFile = join(tmpDir, `dist-lock-order-${randomUUID()}.txt`);
+    const firstEnteredFile = join(tmpDir, `dist-lock-first-entered-${randomUUID()}.txt`);
     const lockName = `.dist-lock-test-${randomUUID()}`;
     const lockPath = join(lockRoot, lockName);
     cleanupPaths.push(outputFile);
+    cleanupPaths.push(firstEnteredFile);
     cleanupPaths.push(lockPath);
 
-    const firstCommand = `node -e "const fs=require('node:fs'); setTimeout(() => fs.appendFileSync('${outputFile}', 'first\\\\n'), 350); setTimeout(() => process.exit(0), 450);"`;
+    const firstCommand = `node -e "const fs=require('node:fs'); fs.writeFileSync('${firstEnteredFile}', '1'); setTimeout(() => fs.appendFileSync('${outputFile}', 'first\\\\n'), 350); setTimeout(() => process.exit(0), 450);"`;
     const secondCommand = `node -e "const fs=require('node:fs'); fs.appendFileSync('${outputFile}', 'second\\\\n');"`;
 
     const first = runWithLock(firstCommand, lockName);
-    await new Promise((resolveDelay) => setTimeout(resolveDelay, 50));
+    await waitForFile(firstEnteredFile);
     const second = runWithLock(secondCommand, lockName);
 
     await Promise.all([first, second]);
@@ -166,3 +168,13 @@ describe('run-with-dist-lock script', () => {
     assert.match(waitingResult.stderr, /Timed out waiting for dist lock/u);
   });
 });
+
+async function waitForFile(path: string): Promise<void> {
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    if (existsSync(path)) {
+      return;
+    }
+    await new Promise((resolveDelay) => setTimeout(resolveDelay, 10));
+  }
+  throw new Error(`Timed out waiting for ${path}`);
+}

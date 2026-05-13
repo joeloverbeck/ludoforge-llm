@@ -2176,6 +2176,26 @@ const AgentDecisionScoreContributionSchema = z
   })
   .strict();
 
+const PolicyScheduleInputRefTraceSchema = z.union([
+  z.object({
+    status: z.literal('ready'),
+    value: z.union([NumberSchema, StringSchema]),
+    observerPolicy: z.literal('topNVisible').optional(),
+    visiblePrefixLength: IntegerSchema.nonnegative().optional(),
+  }).strict(),
+  z.object({
+    status: z.literal('partial'),
+    partialKind: z.literal('lowerBound'),
+    lowerBound: IntegerSchema.nonnegative(),
+    observerPolicy: z.literal('topNVisible'),
+    visiblePrefixLength: IntegerSchema.nonnegative(),
+    fallbackApplied: z.object({
+      kind: z.enum(['useLowerBound', 'noContribution', 'constant', 'dropConsideration']),
+      numericValue: NumberSchema.optional(),
+    }).strict().optional(),
+  }).strict(),
+]);
+
 const PolicyPreviewUnknownRefTraceSchema = z
   .object({
     refId: StringSchema,
@@ -2260,9 +2280,11 @@ const PolicyCandidateDecisionTraceSchema = z
     }).strict().optional(),
     scheduleFallbackFired: z.object({
       termId: StringSchema,
-      kind: z.enum(['noContribution', 'constant', 'dropConsideration']),
+      kind: z.enum(['useLowerBound', 'noContribution', 'constant', 'dropConsideration']),
       value: NumberSchema.optional(),
+      reason: z.literal('partial.lowerBound.visiblePrefixExhausted').optional(),
     }).strict().optional(),
+    inputRefs: z.record(StringSchema, PolicyScheduleInputRefTraceSchema).optional(),
     candidateParamFallbackFired: z.record(StringSchema, IntegerSchema.nonnegative()).optional(),
     selectionReason: z.enum([
       'coverage',

@@ -160,10 +160,12 @@ Test class headers per `.claude/rules/testing.md`:
 
 ## Outcome (2026-05-13)
 
+Outcome amended: 2026-05-13
+
 Completed the type-system and compiler-validation half of Spec 170:
 
 - Added generic `ObserverPolicy.topNVisible` / `ObserverVisiblePrefix` types to the compiled `cardDraw` schedule contract.
-- Extended `PhaseScheduleResolution` with the type-only `partial.lowerBound` variant plus optional ready-path observer metadata. No resolver branch was added; runtime production of `partial` remains owned by `tickets/170PARTVISOBS-002.md`.
+- Extended `PhaseScheduleResolution` with the type-only `partial.lowerBound` variant plus optional ready-path observer metadata. No resolver branch was added; runtime production of `partial` remains owned by `archive/tickets/170PARTVISOBS-002.md`.
 - Added authored `scheduleFallback.onPartial.visiblePrefixExhausted` lowering for `useLowerBound`, `noContribution`, `dropConsideration`, and integer `constant`.
 - Added compile-time observer-policy validation for all ticket-required diagnostics: unknown/deferred kind, empty prefix, invalid `maxItems`, unknown zone, non-public zone, unordered zone, draw-zone prefix, duplicate zone, and missing partial fallback.
 - Regenerated `packages/engine/schemas/GameDef.schema.json` from the schema source.
@@ -179,7 +181,7 @@ Ticket corrections applied:
 
 Deferred sibling/spec scope:
 
-- `tickets/170PARTVISOBS-002.md` owns resolver logic, runtime partial fallback routing, and trace population.
+- `archive/tickets/170PARTVISOBS-002.md` owns resolver logic, runtime partial fallback routing, and trace population.
 - `tickets/170PARTVISOBS-003.md` owns WASM parity.
 - `tickets/170PARTVISOBS-004.md` appeared during implementation and was opened as read-only sibling context; it owns FITL authoring, cookbook docs, and FITL golden traces after tickets 001-003.
 
@@ -197,7 +199,7 @@ Invariant proof matrix:
 | A topNVisible schedule-distance value ref requires `scheduleFallback.onPartial.visiblePrefixExhausted` | diagnostic path/code assertion for `SCHEDULE_FALLBACK_PARTIAL_REQUIRED` | proven | `partial-visibility-compile-validation.test.ts` |
 | Compile output with `observerPolicy` is byte-identical across repeated compiles | `JSON.stringify(first.gameDef) === JSON.stringify(second.gameDef)` | proven | `partial-visibility-determinism.test.ts` |
 | Absence of `observerPolicy` preserves spec-169 hidden-deck behavior | existing FITL phase-boundary golden remained green | proven | `pnpm turbo test` included `phase-boundary-fitl-coup-distance.test.js` |
-| `partial.lowerBound` is unreachable at runtime in this ticket | no resolver, evaluator, trace, or WASM behavior was added; runtime owner confirmed in sibling 002 | deferred to confirmed sibling | `tickets/170PARTVISOBS-002.md` |
+| `partial.lowerBound` is unreachable at runtime in this ticket | no resolver, evaluator, trace, or WASM behavior was added; runtime owner confirmed in sibling 002 | deferred to confirmed sibling | `archive/tickets/170PARTVISOBS-002.md` |
 | Schema artifact generation is deterministic and checked in | generator and check passed; only `GameDef.schema.json` persisted as owned diff | proven | `pnpm turbo schema:artifacts`; `pnpm -F @ludoforge/engine run schema:artifacts:check` |
 
 Implementation-introduced branch ledger:
@@ -215,7 +217,7 @@ Source-size ledger:
 | Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
 | --- | ---: | ---: | --- | --- | --- | --- |
 | `packages/engine/src/kernel/types-core.ts` | 2271 | 2289 | no; preexisting over guidance | +18 net | canonical shared contract hub; surgical type addition is clearer than extraction | none |
-| `packages/engine/src/agents/policy-runtime.ts` | 708 | 717 | no | +9 net | near-cap file only gained the type union required by this ticket; resolver extraction belongs to sibling 002 if needed | `tickets/170PARTVISOBS-002.md` for behavior |
+| `packages/engine/src/agents/policy-runtime.ts` | 708 | 717 | no | +9 net | near-cap file only gained the type union required by this ticket; resolver extraction belongs to sibling 002 if needed | `archive/tickets/170PARTVISOBS-002.md` for behavior |
 | `packages/engine/src/cnl/compile-agents.ts` | 4500 | 4619 | no; preexisting over guidance | +119 net | canonical policy compiler hub; change is localized fallback validation/lowering, extraction would obscure the ticket seam | none |
 | `packages/engine/src/agents/policy-evaluation-core.ts` | 2042 | 2048 | no; preexisting over guidance | +6 net | canonical policy evaluation type hub; type-only schedule fallback kind extension | none |
 | `packages/engine/src/kernel/schemas-core.ts` | 2696 | 2717 | no; preexisting over guidance | +21 net | canonical schema mirror hub; surgical schema addition required for generated artifacts | none |

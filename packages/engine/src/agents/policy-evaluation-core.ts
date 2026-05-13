@@ -95,9 +95,29 @@ export interface PolicyScheduleFallbackFired {
   readonly termId: string;
   readonly kind: PolicyScheduleFallbackKind;
   readonly value?: number;
+  readonly reason?: 'partial.lowerBound.visiblePrefixExhausted';
 }
 
 export type PolicyCandidateParamFallbackFired = ReadonlyMap<string, number>;
+
+export type PolicyScheduleInputRefTrace =
+  | {
+      readonly status: 'ready';
+      readonly value: number | string;
+      readonly observerPolicy?: 'topNVisible';
+      readonly visiblePrefixLength?: number;
+    }
+  | {
+      readonly status: 'partial';
+      readonly partialKind: 'lowerBound';
+      readonly lowerBound: number;
+      readonly observerPolicy: 'topNVisible';
+      readonly visiblePrefixLength: number;
+      readonly fallbackApplied?: {
+        readonly kind: PolicyScheduleFallbackKind;
+        readonly numericValue?: number;
+      };
+    };
 
 export class PolicyRuntimeError extends Error {
   readonly failure: PolicyRuntimeFailure;
@@ -120,6 +140,7 @@ export interface PolicyEvaluationCandidate extends PolicyRuntimeCandidate {
   previewFallbackFired?: PolicyPreviewFallbackFired;
   lookupFallbackFired?: PolicyLookupFallbackFired;
   scheduleFallbackFired?: PolicyScheduleFallbackFired;
+  scheduleInputRefs?: Map<string, PolicyScheduleInputRefTrace>;
   candidateParamFallbackFired?: Map<string, number>;
   completionPolicyFallbackCount?: number;
   grantedOperation?: PolicyPreviewGrantedOperation;
@@ -156,6 +177,7 @@ export interface CreatePolicyEvaluationContextInput {
   };
   readonly scheduleOption?: {
     readonly scheduleFallbackFired?: { current?: PolicyScheduleFallbackFired };
+    readonly scheduleInputRefs?: { current?: Map<string, PolicyScheduleInputRefTrace> };
   };
   readonly candidateParamOption?: {
     readonly unknownCandidateParamRefs?: Map<string, CandidateParamUnavailabilityReason>;
@@ -247,6 +269,13 @@ function previewOutcomeToUnavailabilityReason(
   return outcome === 'stochastic' ? 'random' : outcome;
 }
 
+function scheduleDistanceRefId(ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>): string {
+  const target = ref.target.kind === 'boundary'
+    ? `toBoundary.${String(ref.target.boundaryId)}`
+    : 'toBoundary.next';
+  return `schedule.distance.${target}.${ref.unit ?? 'cards'}`;
+}
+
 export function matchesTokenFilter(
   token: Token,
   filter: ResolvedTokenFilter | undefined,
@@ -325,6 +354,7 @@ export class PolicyEvaluationContext {
   private currentSeatContext: string | undefined;
   private candidateParamUnavailableDuringValue = false;
   private scheduleUnavailableDuringValue = false;
+  private schedulePartialsDuringValue: { readonly refId: string; readonly lowerBound: number }[] = [];
 
   constructor(
     private readonly input: CreatePolicyEvaluationContextInput,
@@ -553,6 +583,7 @@ export class PolicyEvaluationContext {
     if (consideration.when !== undefined) {
       const when = this.evaluateCompiledExpr(consideration.when, candidate);
       this.scheduleUnavailableDuringValue = false;
+      this.schedulePartialsDuringValue = [];
       if (when !== true) {
         return 0;
       }
@@ -571,6 +602,8 @@ export class PolicyEvaluationContext {
     this.candidateParamUnavailableDuringValue = false;
     const scheduleUnavailable = this.scheduleUnavailableDuringValue;
     this.scheduleUnavailableDuringValue = false;
+    const schedulePartials = this.schedulePartialsDuringValue;
+    this.schedulePartialsDuringValue = [];
     if (typeof weight !== 'number' || typeof value !== 'number') {
       let contribution: number | undefined;
       let shouldRecordContribution = false;
@@ -675,6 +708,55 @@ export class PolicyEvaluationContext {
           shouldRecordContribution = true;
         }
       }
+      if (schedulePartials.length > 0) {
+        const fallback = consideration.scheduleFallback?.onPartial?.visiblePrefixExhausted;
+        if (fallback === undefined) {
+          throw this.runtimeError(
+            'RUNTIME_EVALUATION_ERROR',
+            `Schedule consideration "${considerationId}" did not declare scheduleFallback.onPartial.visiblePrefixExhausted.`,
+            { considerationId },
+          );
+        }
+        const lowerBound = schedulePartials[0]!.lowerBound;
+        if (fallback === 'dropConsideration') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'dropConsideration',
+            reason: 'partial.lowerBound.visiblePrefixExhausted',
+          });
+          this.recordSchedulePartialFallbackApplied(candidate, schedulePartials, 'dropConsideration');
+          dropConsideration = true;
+        } else if (fallback === 'noContribution') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'noContribution',
+            reason: 'partial.lowerBound.visiblePrefixExhausted',
+          });
+          this.recordSchedulePartialFallbackApplied(candidate, schedulePartials, 'noContribution', 0);
+          contribution ??= 0;
+          shouldRecordContribution = true;
+        } else if (fallback === 'useLowerBound') {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'useLowerBound',
+            value: lowerBound,
+            reason: 'partial.lowerBound.visiblePrefixExhausted',
+          });
+          this.recordSchedulePartialFallbackApplied(candidate, schedulePartials, 'useLowerBound', lowerBound);
+          contribution ??= typeof weight === 'number' ? weight * lowerBound : lowerBound;
+          shouldRecordContribution = true;
+        } else {
+          this.recordScheduleFallbackFired(candidate, {
+            termId: considerationId,
+            kind: 'constant',
+            value: fallback.value,
+            reason: 'partial.lowerBound.visiblePrefixExhausted',
+          });
+          this.recordSchedulePartialFallbackApplied(candidate, schedulePartials, 'constant', fallback.value);
+          contribution ??= typeof weight === 'number' ? weight * fallback.value : fallback.value;
+          shouldRecordContribution = true;
+        }
+      }
       if (dropConsideration) {
         return 0;
       }
@@ -752,6 +834,53 @@ export class PolicyEvaluationContext {
     }
     if (this.input.scheduleOption?.scheduleFallbackFired !== undefined) {
       this.input.scheduleOption.scheduleFallbackFired.current = fired;
+    }
+  }
+
+  private recordScheduleInputRef(
+    candidate: PolicyEvaluationCandidate | undefined,
+    refId: string,
+    trace: PolicyScheduleInputRefTrace,
+  ): void {
+    if (candidate !== undefined) {
+      const refs = candidate.scheduleInputRefs ?? new Map<string, PolicyScheduleInputRefTrace>();
+      refs.set(refId, trace);
+      candidate.scheduleInputRefs = refs;
+    }
+    if (this.input.scheduleOption?.scheduleInputRefs !== undefined) {
+      const refs = this.input.scheduleOption.scheduleInputRefs.current ?? new Map<string, PolicyScheduleInputRefTrace>();
+      refs.set(refId, trace);
+      this.input.scheduleOption.scheduleInputRefs.current = refs;
+    }
+  }
+
+  private recordSchedulePartialFallbackApplied(
+    candidate: PolicyEvaluationCandidate | undefined,
+    partials: readonly { readonly refId: string }[],
+    kind: PolicyScheduleFallbackKind,
+    numericValue?: number,
+  ): void {
+    const applyTo = (refs: Map<string, PolicyScheduleInputRefTrace>): void => {
+      for (const partial of partials) {
+        const existing = refs.get(partial.refId);
+        if (existing?.status !== 'partial') {
+          continue;
+        }
+        refs.set(partial.refId, {
+          ...existing,
+          fallbackApplied: {
+            kind,
+            ...(numericValue === undefined ? {} : { numericValue }),
+          },
+        });
+      }
+    };
+    if (candidate?.scheduleInputRefs !== undefined) {
+      applyTo(candidate.scheduleInputRefs);
+    }
+    const inputRefs = this.input.scheduleOption?.scheduleInputRefs?.current;
+    if (inputRefs !== undefined) {
+      applyTo(inputRefs);
     }
   }
 
@@ -872,7 +1001,9 @@ export class PolicyEvaluationContext {
         case 'zoneProp':
           return true;
         case 'ref':
-          return current.ref.kind === 'previewSurface' || current.ref.kind === 'candidateTag';
+          return current.ref.kind === 'previewSurface'
+            || current.ref.kind === 'candidateTag'
+            || this.isTopNVisibleScheduleDistanceRef(current.ref);
         case 'globalTokenAgg':
           return current.tokenFilter !== undefined || current.zoneFilter !== undefined;
         case 'globalZoneAgg':
@@ -1035,6 +1166,15 @@ export class PolicyEvaluationContext {
                 : 4;
       return targetCode === ref.aux[0] && boundaryCode === ref.aux[1] && unitCode === ref.aux[2];
     });
+  }
+
+  private isTopNVisibleScheduleDistanceRef(ref: CompiledAgentPolicyRef): boolean {
+    if (ref.kind !== 'scheduleDistance' || ref.target.kind !== 'boundary') {
+      return false;
+    }
+    const boundaryId = ref.target.boundaryId;
+    const boundary = this.input.def.phaseBoundaries?.find((entry) => String(entry.id) === String(boundaryId));
+    return boundary?.schedule?.kind === 'cardDraw' && boundary.schedule.observerPolicy?.kind === 'topNVisible';
   }
 
   private toVmStackValue(value: PolicyValue): PolicyValue {
@@ -1414,7 +1554,27 @@ export class PolicyEvaluationContext {
       case 'scheduleDistance': {
         const resolution = this.runtimeProviders.phaseSchedule.resolveScheduleDistance(ref, this.activeState);
         if (resolution.kind === 'ready') {
+          if (resolution.observerPolicy?.kind === 'topNVisible') {
+            this.recordScheduleInputRef(candidate, scheduleDistanceRefId(ref), {
+              status: 'ready',
+              value: resolution.value,
+              observerPolicy: 'topNVisible',
+              ...(resolution.visiblePrefixLength === undefined ? {} : { visiblePrefixLength: resolution.visiblePrefixLength }),
+            });
+          }
           return resolution.value;
+        }
+        if (resolution.kind === 'partial') {
+          const refId = scheduleDistanceRefId(ref);
+          this.recordScheduleInputRef(candidate, refId, {
+            status: 'partial',
+            partialKind: resolution.partialKind,
+            lowerBound: resolution.lowerBound,
+            observerPolicy: 'topNVisible',
+            visiblePrefixLength: resolution.visiblePrefixLength,
+          });
+          this.schedulePartialsDuringValue.push({ refId, lowerBound: resolution.lowerBound });
+          return undefined;
         }
         this.scheduleUnavailableDuringValue = true;
         return undefined;

@@ -1,6 +1,6 @@
 # 170PARTVISOBS-002: Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, and trace
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-runtime.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/microturn-option-eval.ts`, `packages/engine/src/agents/policy-agent.ts` (trace surface), four new integration tests
@@ -175,3 +175,99 @@ Test class headers per `.claude/rules/testing.md`:
 5. `pnpm -F @ludoforge/engine test packages/engine/test/integration/phase-boundary-fitl-coup-distance.test.ts` — regression check: spec 169 golden traces unchanged.
 6. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
 7. `pnpm turbo test` — full suite.
+
+## Outcome (2026-05-13)
+
+Implemented the Spec 170 Phase 1 TypeScript runtime slice:
+
+- Added `topNVisible` visible-prefix scanning to the schedule-distance resolver for `cardDraw`/`cards` refs. The resolver reads only declared public visible-prefix zones, scans at most `maxItems`, emits `ready` with observer metadata on matches, and emits `partial.lowerBound` when the visible prefix exhausts.
+- Routed `partial.lowerBound` through `scheduleFallback.onPartial.visiblePrefixExhausted` rather than `onUnavailable`. `useLowerBound` and `constant` substitute a numeric value before weight multiplication; `noContribution` contributes zero; `dropConsideration` drops the row.
+- Added deterministic trace metadata for topNVisible schedule refs: candidate `inputRefs[refId]` now records ready/partial status, observer policy, visible-prefix length, lower bound, and `fallbackApplied` for partial fallbacks. `scheduleFallbackFired` now records `reason: partial.lowerBound.visiblePrefixExhausted` for partial fallback routes.
+- Kept WASM parity deferred to `tickets/170PARTVISOBS-003.md` by making topNVisible schedule-distance rows unsupported for the WASM score-row route so the TypeScript evaluator owns this ticket's behavior.
+- Regenerated `packages/engine/schemas/Trace.schema.json` from `packages/engine/src/kernel/schemas-core.ts` for the trace-shape change.
+- Added the four ticket-named integration witnesses plus a shared synthetic fixture helper:
+  - `packages/engine/test/integration/fixtures/partial-visibility-fixtures.ts`
+  - `packages/engine/test/integration/partial-visibility-resolver-correctness.test.ts`
+  - `packages/engine/test/integration/partial-visibility-fallback-routing.test.ts`
+  - `packages/engine/test/integration/schedule-ref-consideration-trace-topNVisible.test.ts`
+  - `packages/engine/test/integration/partial-visibility-no-leak.test.ts`
+
+Post-review correction:
+
+- Added the missing replay-determinism acceptance witness to `partial-visibility-resolver-correctness.test.ts`: the resolver now asserts byte-identical readouts across 20 turn-indexed states for the same synthetic fixture seed.
+
+Ticket corrections applied:
+
+- Touched-file scope expanded beyond the draft `Files to Touch` because the live trace contract is shared through `PolicyEvaluationMetadata`, policy-agent guided microturn paths, kernel trace types, Zod schema mirrors, and generated `Trace.schema.json`.
+- The `policy-agent.ts` trace deliverable is implemented through the shared candidate metadata field `inputRefs`, which is then carried by both move and microturn policy-agent paths.
+- WASM behavior remains out of scope for this ticket; topNVisible schedule-distance score rows are intentionally unsupported on the WASM route until ticket 003.
+
+Deferred sibling/spec scope:
+
+- `tickets/170PARTVISOBS-003.md` owns WASM opcode/parity support.
+- `tickets/170PARTVISOBS-004.md` owns FITL `observerPolicy` authoring, slot-order proof, and cookbook documentation.
+- Compiler validation and type declarations were already completed by `archive/tickets/170PARTVISOBS-001.md`.
+
+Schema/artifact fallout:
+
+- `pnpm -F @ludoforge/engine run schema:artifacts` wrote `GameDef.schema.json`, `Trace.schema.json`, and `EvalReport.schema.json`; only `packages/engine/schemas/Trace.schema.json` persisted as a diff.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` passed after regeneration.
+
+Invariant proof matrix:
+
+| Invariant | Witness/assertion | Status | Proof lane |
+| --- | --- | --- | --- |
+| `topNVisible` ready matches preserve exact visible-prefix distance | index 0 and index 1 assertions with observer metadata | proven | `partial-visibility-resolver-correctness.test.ts` |
+| `partial.lowerBound` is emitted when the visible prefix exhausts | occupied, empty+occupied, and all-empty cases | proven | `partial-visibility-resolver-correctness.test.ts` |
+| Partial-status routing is exclusive from `onUnavailable` | `onUnavailable.constant: 99` never used for partial; each `onPartial` kind asserted | proven | `partial-visibility-fallback-routing.test.ts` |
+| No hidden-tail leakage | hidden draw zone contains a coup card but resolver returns only lower bound `2` | proven | `partial-visibility-no-leak.test.ts` |
+| Trace determinism shape exposes observer policy and fallback | ready and partial candidate `inputRefs` pinned; partial fallback reason pinned | proven | `schedule-ref-consideration-trace-topNVisible.test.ts` |
+| Replay-determinism readouts stay stable across 20 turn-indexed states | same fixture seed and visible prefix produce byte-identical partial readouts for turn counts 0-19 | proven | `partial-visibility-resolver-correctness.test.ts` |
+| Non-policy-bearing FITL boundaries preserve `unavailable: hiddenDeck` | existing FITL coup-distance golden remains green | proven | `phase-boundary-fitl-coup-distance.test.ts` |
+| WASM parity not silently claimed | topNVisible schedule refs fail closed to the TypeScript evaluator | deferred to confirmed sibling | `tickets/170PARTVISOBS-003.md` |
+
+Implementation-introduced branch ledger:
+
+| Branch/status | Classification |
+| --- | --- |
+| `PhaseScheduleResolution.kind === "ready"` with `observerPolicy: topNVisible` | tested |
+| `PhaseScheduleResolution.kind === "partial"` / `partialKind === "lowerBound"` | tested |
+| `scheduleFallback.onPartial.visiblePrefixExhausted === "useLowerBound"` | tested |
+| `scheduleFallback.onPartial.visiblePrefixExhausted === "noContribution"` | tested |
+| `scheduleFallback.onPartial.visiblePrefixExhausted === "dropConsideration"` | tested |
+| `scheduleFallback.onPartial.visiblePrefixExhausted.constant` | tested |
+| WASM topNVisible schedule score row | deferred to confirmed sibling 003 |
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+| --- | ---: | ---: | --- | --- | --- | --- |
+| `packages/engine/src/agents/policy-runtime.ts` | 717 | 786 | no | +69 net | Resolver branch is local to the existing schedule-distance resolver; extraction would obscure the ticket seam before any second consumer exists. | none |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2048 | 2208 | no; preexisting over guidance | +160 net | Canonical policy evaluator hub; new helper methods keep the partial route centralized with existing fallback state. | none |
+| `packages/engine/src/agents/microturn-option-eval.ts` | 180 | 190 | no | +10 net | Small trace propagation only. | none |
+| `packages/engine/src/agents/microturn-option-evaluator.ts` | 296 | 310 | no | +14 net | Small trace propagation only. | none |
+| `packages/engine/src/agents/policy-agent.ts` | 907 | 925 | no; preexisting over guidance | +18 net | Shared trace propagation through existing frontier structures; extraction would widen beyond this ticket. | none |
+| `packages/engine/src/agents/policy-eval.ts` | 1501 | 1512 | no; preexisting over guidance | +11 net | Canonical candidate metadata serializer; small field propagation only. | none |
+| `packages/engine/src/agents/policy-wasm-runtime.ts` | 1153 | 1192 | no; preexisting over guidance | +39 net | Narrow fail-closed guard for deferred sibling 003; deleting or refactoring the WASM route is outside this ticket. | `tickets/170PARTVISOBS-003.md` for behavior |
+| `packages/engine/src/kernel/types-core.ts` | 2289 | 2310 | no; preexisting over guidance | +21 net | Canonical trace contract hub; type addition mirrors runtime trace output. | none |
+| `packages/engine/src/kernel/schemas-core.ts` | 2717 | 2739 | no; preexisting over guidance | +22 net | Canonical Zod/schema mirror; required by generated trace schema. | none |
+| `packages/engine/test/integration/fixtures/partial-visibility-fixtures.ts` | 0 | 274 | no | new file | Shared synthetic fixture keeps the four ticket witnesses consistent. | none |
+
+Verification completed before final root lanes:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/partial-visibility-resolver-correctness.test.js dist/test/integration/partial-visibility-fallback-routing.test.js dist/test/integration/schedule-ref-consideration-trace-topNVisible.test.js dist/test/integration/partial-visibility-no-leak.test.js` — passed initially (12 tests), then passed after post-review determinism-witness cleanup (13 tests).
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/phase-boundary-fitl-coup-distance.test.js` — passed.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check` — initially failed on `Trace.schema.json`, then passed after `pnpm -F @ludoforge/engine run schema:artifacts`.
+
+Final proof:
+
+- `pnpm turbo build` — passed.
+- `pnpm turbo lint` — passed.
+- `pnpm turbo typecheck` — passed.
+- `pnpm turbo test` — passed (5/5 tasks successful; engine default lane summary 77/77 files passed).
+- Post-review cleanup proof: `pnpm -F @ludoforge/engine build` — passed; focused four-file partial-visibility Node test command above — passed (13 tests).
+
+Terminal-status edit note:
+
+- The terminal status/proof transcription above did not change implementation scope or acceptance criteria; it only records the already-completed final root lanes.

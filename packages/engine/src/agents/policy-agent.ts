@@ -31,6 +31,7 @@ import type {
   PolicyLookupFallbackFired,
   PolicyPreviewFallbackFired,
   PolicyScheduleFallbackFired,
+  PolicyScheduleInputRefTrace,
 } from './policy-evaluation-core.js';
 import { resolveEffectivePolicyProfile } from './policy-profile-resolution.js';
 import type { PreviewOptionProjectedState } from './policy-runtime.js';
@@ -62,6 +63,7 @@ interface FrontierCandidate {
   readonly previewFallbackFired?: PolicyPreviewFallbackFired;
   readonly lookupFallbackFired?: PolicyLookupFallbackFired;
   readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
+  readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: PolicyCandidateParamFallbackFired;
   readonly previewOutcome?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewOutcome']>;
   readonly previewDrive?: NonNullable<PolicyEvaluationMetadata['candidates'][number]['previewDrive']>;
@@ -75,6 +77,7 @@ interface FrontierScoring {
   readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
   readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
   readonly scheduleFallbackFiredByOption: ReadonlyMap<string, PolicyScheduleFallbackFired>;
+  readonly scheduleInputRefsByOption: ReadonlyMap<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>;
   readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
 }
 
@@ -125,6 +128,7 @@ const traceCandidatesForFrontier = (
       ...(candidate.previewFallbackFired === undefined ? {} : { previewFallbackFired: candidate.previewFallbackFired }),
       ...(candidate.lookupFallbackFired === undefined ? {} : { lookupFallbackFired: candidate.lookupFallbackFired }),
       ...(candidate.scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired: candidate.scheduleFallbackFired }),
+      ...(candidate.inputRefs === undefined ? {} : { inputRefs: candidate.inputRefs }),
       ...(candidate.candidateParamFallbackFired === undefined
         ? {}
         : { candidateParamFallbackFired: traceCandidateParamFallbackFired(candidate.candidateParamFallbackFired) }),
@@ -311,6 +315,7 @@ const scoreFrontierForTrace = (
   const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
   const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
   const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
+  const scheduleInputRefsByOption = new Map<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>();
   const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
   const record = (stableMoveKey: string, scored: ReturnType<typeof scoreMicroturnOptionWithContributions>): void => {
     scoreContributionsByOption.set(stableMoveKey, scored.scoreContributions);
@@ -325,6 +330,9 @@ const scoreFrontierForTrace = (
     }
     if (scored.scheduleFallbackFired !== undefined) {
       scheduleFallbackFiredByOption.set(stableMoveKey, scored.scheduleFallbackFired);
+    }
+    if (scored.inputRefs !== undefined) {
+      scheduleInputRefsByOption.set(stableMoveKey, scored.inputRefs);
     }
     if (scored.candidateParamFallbackFired !== undefined) {
       candidateParamFallbackFiredByOption.set(stableMoveKey, scored.candidateParamFallbackFired);
@@ -372,6 +380,7 @@ const scoreFrontierForTrace = (
       previewFallbackFiredByOption,
       lookupFallbackFiredByOption,
       scheduleFallbackFiredByOption,
+      scheduleInputRefsByOption,
       candidateParamFallbackFiredByOption,
     };
   }
@@ -425,6 +434,7 @@ const scoreFrontierForTrace = (
     previewFallbackFiredByOption,
     lookupFallbackFiredByOption,
     scheduleFallbackFiredByOption,
+    scheduleInputRefsByOption,
     candidateParamFallbackFiredByOption,
   };
 };
@@ -449,6 +459,7 @@ const chooseStructuralFrontierDecision = (
     const previewFallbackFired = frontierScoring?.previewFallbackFiredByOption.get(stableMoveKey);
     const lookupFallbackFired = frontierScoring?.lookupFallbackFiredByOption.get(stableMoveKey);
     const scheduleFallbackFired = frontierScoring?.scheduleFallbackFiredByOption.get(stableMoveKey);
+    const inputRefs = frontierScoring?.scheduleInputRefsByOption.get(stableMoveKey);
     const candidateParamFallbackFired = frontierScoring?.candidateParamFallbackFiredByOption.get(stableMoveKey);
     return {
       decision,
@@ -459,6 +470,7 @@ const chooseStructuralFrontierDecision = (
       ...(unknownCandidateParamRefs === undefined ? {} : { unknownCandidateParamRefs }),
       ...(lookupFallbackFired === undefined ? {} : { lookupFallbackFired }),
       ...(scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired }),
+      ...(inputRefs === undefined ? {} : { inputRefs }),
       ...(candidateParamFallbackFired === undefined ? {} : { candidateParamFallbackFired }),
       ...(previewOption === undefined
         ? {}
@@ -519,6 +531,7 @@ type GuidedChoiceMatch =
       readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
       readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
       readonly scheduleFallbackFiredByOption: ReadonlyMap<string, PolicyScheduleFallbackFired>;
+      readonly scheduleInputRefsByOption: ReadonlyMap<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>;
       readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
     }
   | null;
@@ -655,6 +668,7 @@ export class PolicyAgent implements Agent {
         const previewFallbackFired = guidedChoice.previewFallbackFiredByOption.get(stableMoveKey);
         const lookupFallbackFired = guidedChoice.lookupFallbackFiredByOption.get(stableMoveKey);
         const scheduleFallbackFired = guidedChoice.scheduleFallbackFiredByOption.get(stableMoveKey);
+        const inputRefs = guidedChoice.scheduleInputRefsByOption.get(stableMoveKey);
         const candidateParamFallbackFired = guidedChoice.candidateParamFallbackFiredByOption.get(stableMoveKey);
         const scoreContributions = guidedChoice.scoreContributionsByOption.get(stableMoveKey) ?? [];
         const score = decision === guidedChoice.matchedDecision
@@ -669,6 +683,7 @@ export class PolicyAgent implements Agent {
           ...(unknownCandidateParamRefs === undefined ? {} : { unknownCandidateParamRefs }),
           ...(lookupFallbackFired === undefined ? {} : { lookupFallbackFired }),
           ...(scheduleFallbackFired === undefined ? {} : { scheduleFallbackFired }),
+          ...(inputRefs === undefined ? {} : { inputRefs }),
           ...(candidateParamFallbackFired === undefined ? {} : { candidateParamFallbackFired }),
           ...(previewOption === undefined
             ? {}
@@ -819,6 +834,7 @@ export class PolicyAgent implements Agent {
         previewFallbackFiredByOption: fallbackSelection.previewFallbackFiredByOption,
         lookupFallbackFiredByOption: fallbackSelection.lookupFallbackFiredByOption,
         scheduleFallbackFiredByOption: fallbackSelection.scheduleFallbackFiredByOption,
+        scheduleInputRefsByOption: fallbackSelection.scheduleInputRefsByOption,
         candidateParamFallbackFiredByOption: fallbackSelection.candidateParamFallbackFiredByOption,
       };
   }
@@ -872,6 +888,7 @@ export class PolicyAgent implements Agent {
           previewFallbackFiredByOption: preferredSelection.previewFallbackFiredByOption,
           lookupFallbackFiredByOption: preferredSelection.lookupFallbackFiredByOption,
           scheduleFallbackFiredByOption: preferredSelection.scheduleFallbackFiredByOption,
+          scheduleInputRefsByOption: preferredSelection.scheduleInputRefsByOption,
           candidateParamFallbackFiredByOption: preferredSelection.candidateParamFallbackFiredByOption,
         };
       }
@@ -897,6 +914,7 @@ export class PolicyAgent implements Agent {
           previewFallbackFiredByOption: preferredSelection.previewFallbackFiredByOption,
           lookupFallbackFiredByOption: preferredSelection.lookupFallbackFiredByOption,
           scheduleFallbackFiredByOption: preferredSelection.scheduleFallbackFiredByOption,
+          scheduleInputRefsByOption: preferredSelection.scheduleInputRefsByOption,
           candidateParamFallbackFiredByOption: preferredSelection.candidateParamFallbackFiredByOption,
         };
       }

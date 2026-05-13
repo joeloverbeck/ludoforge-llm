@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None (data + docs + test). FITL game data file, sandbox profile YAML, cookbook markdown, one extended golden-trace test.
-**Deps**: `tickets/170PARTVISOBS-002.md`, `tickets/170PARTVISOBS-003.md`
+**Deps**: `archive/tickets/170PARTVISOBS-002.md`, `tickets/170PARTVISOBS-003.md`
 
 ## Problem
 

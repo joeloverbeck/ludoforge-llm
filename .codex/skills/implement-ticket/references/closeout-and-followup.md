@@ -228,7 +228,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 6. Run the ticket-named package/root lanes serially. Do not overlap any lane that rebuilds or cleans `dist`; after a broad lane rebuilds `dist`, rerun the focused compiled-output witness you still intend to cite as final acceptance evidence.
 7. Apply the terminal status/proof transcription as a narrow final ticket edit only after final lanes are green or classified, then run the ticket-dependency or markdown-integrity checker when status/dependency/archive state changed.
 8. Transcribe only the checker result, record why the transcription is clerical, run `git diff --check`, run targeted hygiene or record substitute coverage for untracked additions, and finish with untracked-aware `git status --short`.
-9. In the final response, include tracked modified paths, untracked additions, final green lanes, classified non-final lanes if any, archive status, and the `$post-ticket-review <ticket>` handoff when archival has not run.
+9. In the final response, include tracked modified paths, untracked additions, final green lanes, cached broad-lane classifications, classified non-final lanes if any, archive status, and the `$post-ticket-review <ticket>` handoff when archival has not run.
 
 ### Bounded Draft Refactor Terminal Closeout
 
@@ -280,9 +280,21 @@ Use this compact final handoff shape when implementation stops before archival:
 - `tracked modified`: tracked files changed by this implementation
 - `untracked added`: newly created files that `git diff --stat` will not show; use `none` only after checking `git status --short`
 - `green proof lanes`: commands that passed and are final for the owned slice
+- `cached broad lanes`: `none`, `cache-covered`, `cache-hit supplemental`, or `cache-hit proof pending`; for mixed Turbo output, name which broad lanes replayed cached logs and why the ticket-owned surface is still proven
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
+
+For a large implementation diff, prefer this concrete final-response skeleton over a vague summary:
+
+- `implemented ticket`: `<path>` — `<terminal status>`
+- `tracked modified`: `<path group or exact list>; source-size ledger in <ticket/report section if triggered>`
+- `untracked added`: `<exact new tests/fixtures/reports/tickets, or none>`
+- `green proof lanes`: `<focused lanes>; <root/package lanes>`
+- `cached broad lanes`: `<classification and direct-proof rationale, or none>`
+- `classified red/non-final lanes`: `<none, or lane -> owner/substitution>`
+- `archive status`: `<implemented but not archived | archived | post-ticket-review already ran>`
+- `next workflow`: `Post-review: not run; the ticket is implemented but not archived. Next workflow: $post-ticket-review <ticket>.`
 
 ## Dependency Integrity Pass
 

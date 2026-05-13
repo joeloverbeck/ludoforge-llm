@@ -1854,6 +1854,25 @@ export interface AgentDecisionScoreContribution {
   readonly contribution: number;
 }
 
+export type PolicyScheduleInputRefTrace =
+  | {
+      readonly status: 'ready';
+      readonly value: number | string;
+      readonly observerPolicy?: 'topNVisible';
+      readonly visiblePrefixLength?: number;
+    }
+  | {
+      readonly status: 'partial';
+      readonly partialKind: 'lowerBound';
+      readonly lowerBound: number;
+      readonly observerPolicy: 'topNVisible';
+      readonly visiblePrefixLength: number;
+      readonly fallbackApplied?: {
+        readonly kind: 'useLowerBound' | 'noContribution' | 'constant' | 'dropConsideration';
+        readonly numericValue?: number;
+      };
+    };
+
 export interface PolicyPreviewUnknownRefTrace {
   readonly refId: string;
   readonly reason: 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';
@@ -1938,7 +1957,9 @@ export interface PolicyCandidateDecisionTrace {
     readonly termId: string;
     readonly kind: 'useLowerBound' | 'noContribution' | 'constant' | 'dropConsideration';
     readonly value?: number;
+    readonly reason?: 'partial.lowerBound.visiblePrefixExhausted';
   };
+  readonly inputRefs?: Readonly<Record<string, PolicyScheduleInputRefTrace>>;
   readonly candidateParamFallbackFired?: Readonly<Record<string, number>>;
   readonly selectionReason: PolicyCandidateSelectionReasonTrace;
   readonly previewOutcome?: 'ready' | 'stochastic' | 'random' | 'hidden' | 'unresolved' | 'failed' | 'depthCap' | 'noPreviewDecision' | 'gated';

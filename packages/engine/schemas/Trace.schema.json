@@ -2613,6 +2613,7 @@
                         "kind": {
                           "type": "string",
                           "enum": [
+                            "useLowerBound",
                             "noContribution",
                             "constant",
                             "dropConsideration"
@@ -2624,6 +2625,10 @@
                               "$ref": "#/definitions/anon_c0e4ebfe"
                             }
                           ]
+                        },
+                        "reason": {
+                          "type": "string",
+                          "const": "partial.lowerBound.visiblePrefixExhausted"
                         }
                       },
                       "required": [
@@ -2631,6 +2636,118 @@
                         "kind"
                       ],
                       "additionalProperties": false
+                    },
+                    "inputRefs": {
+                      "type": "object",
+                      "propertyNames": {
+                        "$ref": "#/definitions/anon_4682db72"
+                      },
+                      "additionalProperties": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "const": "ready"
+                              },
+                              "value": {
+                                "anyOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_c0e4ebfe"
+                                  },
+                                  {
+                                    "$ref": "#/definitions/anon_4682db72"
+                                  }
+                                ]
+                              },
+                              "observerPolicy": {
+                                "type": "string",
+                                "const": "topNVisible"
+                              },
+                              "visiblePrefixLength": {
+                                "minimum": 0,
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_e7c99bd4"
+                                  }
+                                ]
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "value"
+                            ],
+                            "additionalProperties": false
+                          },
+                          {
+                            "type": "object",
+                            "properties": {
+                              "status": {
+                                "type": "string",
+                                "const": "partial"
+                              },
+                              "partialKind": {
+                                "type": "string",
+                                "const": "lowerBound"
+                              },
+                              "lowerBound": {
+                                "minimum": 0,
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_e7c99bd4"
+                                  }
+                                ]
+                              },
+                              "observerPolicy": {
+                                "type": "string",
+                                "const": "topNVisible"
+                              },
+                              "visiblePrefixLength": {
+                                "minimum": 0,
+                                "allOf": [
+                                  {
+                                    "$ref": "#/definitions/anon_e7c99bd4"
+                                  }
+                                ]
+                              },
+                              "fallbackApplied": {
+                                "type": "object",
+                                "properties": {
+                                  "kind": {
+                                    "type": "string",
+                                    "enum": [
+                                      "useLowerBound",
+                                      "noContribution",
+                                      "constant",
+                                      "dropConsideration"
+                                    ]
+                                  },
+                                  "numericValue": {
+                                    "allOf": [
+                                      {
+                                        "$ref": "#/definitions/anon_c0e4ebfe"
+                                      }
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "kind"
+                                ],
+                                "additionalProperties": false
+                              }
+                            },
+                            "required": [
+                              "status",
+                              "partialKind",
+                              "lowerBound",
+                              "observerPolicy",
+                              "visiblePrefixLength"
+                            ],
+                            "additionalProperties": false
+                          }
+                        ]
+                      }
                     },
                     "candidateParamFallbackFired": {
                       "type": "object",

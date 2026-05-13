@@ -17,6 +17,7 @@ import type {
   LookupRefStatus,
   MoveParamValue,
   Move,
+  Token,
   TrustedExecutableMove,
 } from '../kernel/types.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
@@ -304,6 +305,7 @@ function resolveNextBoundaryId(def: GameDef, state: GameState): PhaseScheduleRes
 
 function resolveBoundaryCardDistance(
   def: GameDef,
+  state: GameState,
   runtime: GameDefRuntime,
   boundaryId: BoundaryId,
   unit: 'cards' | 'microturns' | 'actions' | 'turns' | 'rounds',
@@ -315,6 +317,10 @@ function resolveBoundaryCardDistance(
   const cardDrawState = boundary.cardDrawState;
   if (cardDrawState === undefined) {
     return { kind: 'unavailable', reason: 'notCardScheduled' };
+  }
+  const schedule = boundary.definition.schedule;
+  if (schedule?.kind === 'cardDraw' && schedule.observerPolicy?.kind === 'topNVisible' && unit === 'cards') {
+    return resolveVisiblePrefixBoundaryCardDistance(def, state, schedule);
   }
   const deck = (def.eventDecks ?? []).find((entry) => entry.id === cardDrawState.deckId);
   const drawZoneVisibility = def.zones.find((zone) => String(zone.id) === deck?.drawZone)?.visibility;
@@ -338,6 +344,69 @@ function resolveBoundaryCardDistance(
     return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
   }
   return { kind: 'ready', value: cardDistance * rate };
+}
+
+function resolveVisiblePrefixBoundaryCardDistance(
+  def: GameDef,
+  state: GameState,
+  schedule: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>,
+): PhaseScheduleResolution {
+  let scanned = 0;
+  const maxItems = schedule.observerPolicy!.visiblePrefix.maxItems;
+  for (const zoneRef of schedule.observerPolicy!.visiblePrefix.zones) {
+    if (scanned >= maxItems) {
+      break;
+    }
+    const slotCards = readPublicZoneCards(def, state, zoneRef.id);
+    for (const card of slotCards) {
+      if (scanned >= maxItems) {
+        break;
+      }
+      if (matchesCardSelector(def, card, schedule.cardSelector)) {
+        return {
+          kind: 'ready',
+          value: scanned,
+          observerPolicy: { kind: 'topNVisible' },
+          visiblePrefixLength: scanned + 1,
+        };
+      }
+      scanned += 1;
+    }
+  }
+  return {
+    kind: 'partial',
+    partialKind: 'lowerBound',
+    lowerBound: scanned,
+    observerPolicy: { kind: 'topNVisible' },
+    visiblePrefixLength: scanned,
+  };
+}
+
+function readPublicZoneCards(def: GameDef, state: GameState, zoneId: string): readonly Token[] {
+  const zone = def.zones.find((entry) => String(entry.id) === zoneId);
+  if (zone?.visibility !== 'public') {
+    return [];
+  }
+  return state.zones[zoneId] ?? [];
+}
+
+function matchesCardSelector(
+  def: GameDef,
+  token: Token,
+  cardSelector: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>['cardSelector'],
+): boolean {
+  const tokenId = String(token.id);
+  if (cardSelector.cardIds?.includes(tokenId) === true) {
+    return true;
+  }
+  const requestedTags = cardSelector.tags ?? [];
+  if (requestedTags.length === 0) {
+    return false;
+  }
+  const card = (def.eventDecks ?? [])
+    .flatMap((deck) => deck.cards)
+    .find((entry) => entry.id === tokenId);
+  return requestedTags.some((tag) => card?.tags?.includes(tag) === true);
 }
 
 export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProvidersInput): PolicyRuntimeProviders {
@@ -460,7 +529,7 @@ export function createPolicyRuntimeProviders(input: CreatePolicyRuntimeProviders
           return resolveNextBoundaryId(input.def, stateOverride ?? input.state);
         }
         if (ref.target.kind === 'boundary' && ref.unit !== undefined) {
-          return resolveBoundaryCardDistance(input.def, scheduleRuntime, ref.target.boundaryId, ref.unit);
+          return resolveBoundaryCardDistance(input.def, stateOverride ?? input.state, scheduleRuntime, ref.target.boundaryId, ref.unit);
         }
         return { kind: 'unavailable', reason: 'unsupportedScheduleDistance' };
       },

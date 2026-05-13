@@ -22,6 +22,7 @@ import type {
   PolicyLookupFallbackFired,
   PolicyPreviewFallbackFired,
   PolicyScheduleFallbackFired,
+  PolicyScheduleInputRefTrace,
 } from './policy-evaluation-core.js';
 import type { PolicyPreviewUnavailabilityReason } from './policy-preview.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
@@ -49,6 +50,7 @@ export interface MicroturnChoiceSelection {
   readonly previewFallbackFiredByOption: ReadonlyMap<string, PolicyPreviewFallbackFired>;
   readonly lookupFallbackFiredByOption: ReadonlyMap<string, PolicyLookupFallbackFired>;
   readonly scheduleFallbackFiredByOption: ReadonlyMap<string, PolicyScheduleFallbackFired>;
+  readonly scheduleInputRefsByOption: ReadonlyMap<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>;
   readonly candidateParamFallbackFiredByOption: ReadonlyMap<string, PolicyCandidateParamFallbackFired>;
 }
 
@@ -99,7 +101,8 @@ export function selectBestMicroturnChooseOneValue(
     MicroturnChoiceSelection,
     'scoreContributionsByOption' | 'unknownPreviewRefsByOption' | 'previewFallbackFiredByOption'
     | 'unknownLookupRefsByOption' | 'lookupFallbackFiredByOption'
-    | 'scheduleFallbackFiredByOption' | 'unknownCandidateParamRefsByOption' | 'candidateParamFallbackFiredByOption'
+    | 'scheduleFallbackFiredByOption' | 'scheduleInputRefsByOption'
+    | 'unknownCandidateParamRefsByOption' | 'candidateParamFallbackFiredByOption'
   > | undefined;
   const scoreContributionsByOption = new Map<string, readonly CompletionScoreContribution[]>();
   const unknownPreviewRefsByOption = new Map<string, ReadonlyMap<string, PolicyPreviewUnavailabilityReason>>();
@@ -108,6 +111,7 @@ export function selectBestMicroturnChooseOneValue(
   const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
   const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
   const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
+  const scheduleInputRefsByOption = new Map<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>();
   const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
   for (const [optionIndex, option] of selectableOptions.entries()) {
     const optionKey = scoreContributionsKeyForChooseOne(request, option.value);
@@ -139,6 +143,9 @@ export function selectBestMicroturnChooseOneValue(
     if (scored.scheduleFallbackFired !== undefined) {
       scheduleFallbackFiredByOption.set(optionKey, scored.scheduleFallbackFired);
     }
+    if (scored.inputRefs !== undefined) {
+      scheduleInputRefsByOption.set(optionKey, scored.inputRefs);
+    }
     if (scored.candidateParamFallbackFired !== undefined) {
       candidateParamFallbackFiredByOption.set(optionKey, scored.candidateParamFallbackFired);
     }
@@ -163,6 +170,7 @@ export function selectBestMicroturnChooseOneValue(
     previewFallbackFiredByOption,
     lookupFallbackFiredByOption,
     scheduleFallbackFiredByOption,
+    scheduleInputRefsByOption,
     candidateParamFallbackFiredByOption,
   };
 }
@@ -199,6 +207,7 @@ export function buildMicroturnChooseCallback(
       const previewFallbackFiredByOption = new Map<string, PolicyPreviewFallbackFired>();
       const lookupFallbackFiredByOption = new Map<string, PolicyLookupFallbackFired>();
       const scheduleFallbackFiredByOption = new Map<string, PolicyScheduleFallbackFired>();
+      const scheduleInputRefsByOption = new Map<string, Readonly<Record<string, PolicyScheduleInputRefTrace>>>();
       const candidateParamFallbackFiredByOption = new Map<string, PolicyCandidateParamFallbackFired>();
       const scoredValues = selectableValues.map((value, index) => ({
         value,
@@ -234,6 +243,9 @@ export function buildMicroturnChooseCallback(
         if (entry.scored.scheduleFallbackFired !== undefined) {
           scheduleFallbackFiredByOption.set(optionKey, entry.scored.scheduleFallbackFired);
         }
+        if (entry.scored.inputRefs !== undefined) {
+          scheduleInputRefsByOption.set(optionKey, entry.scored.inputRefs);
+        }
         if (entry.scored.candidateParamFallbackFired !== undefined) {
           candidateParamFallbackFiredByOption.set(optionKey, entry.scored.candidateParamFallbackFired);
         }
@@ -262,6 +274,7 @@ export function buildMicroturnChooseCallback(
             previewFallbackFiredByOption,
             lookupFallbackFiredByOption,
             scheduleFallbackFiredByOption,
+            scheduleInputRefsByOption,
             candidateParamFallbackFiredByOption,
           };
         }
@@ -284,6 +297,7 @@ export function buildMicroturnChooseCallback(
           previewFallbackFiredByOption,
           lookupFallbackFiredByOption,
           scheduleFallbackFiredByOption,
+          scheduleInputRefsByOption,
           candidateParamFallbackFiredByOption,
         };
       }

@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine-wasm/policy-vm/src/lib.rs` (schedule-distance opcode handler), `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` (fixture extension), associated WASM build artifacts
-**Deps**: `tickets/170PARTVISOBS-002.md`
+**Deps**: `archive/tickets/170PARTVISOBS-002.md`
 
 ## Problem
 

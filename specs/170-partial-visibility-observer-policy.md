@@ -529,6 +529,6 @@ This spec was authored, externally reviewed (ChatGPT deep-research), and revised
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
 - [`archive/tickets/170PARTVISOBS-001.md`](../archive/tickets/170PARTVISOBS-001.md) — Types, `ObserverPolicy` union, and compiler validation (covers §7 Phase 0, §8.1 partial-visibility-compile-validation + partial-visibility-determinism)
-- [`tickets/170PARTVISOBS-002.md`](../tickets/170PARTVISOBS-002.md) — Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, trace (covers §7 Phase 1, §8.1 partial-visibility-resolver-correctness + partial-visibility-fallback-routing, §8.2 schedule-ref-consideration-trace-topNVisible, §8.5 partial-visibility-no-leak)
+- [`archive/tickets/170PARTVISOBS-002.md`](../archive/tickets/170PARTVISOBS-002.md) — Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, trace (covers §7 Phase 1, §8.1 partial-visibility-resolver-correctness + partial-visibility-fallback-routing, §8.2 schedule-ref-consideration-trace-topNVisible, §8.5 partial-visibility-no-leak)
 - [`tickets/170PARTVISOBS-003.md`](../tickets/170PARTVISOBS-003.md) — WASM opcode parity for `topNVisible` and `partial.lowerBound` (covers §7 Phase 2, §8.4 WASM equivalence)
 - [`tickets/170PARTVISOBS-004.md`](../tickets/170PARTVISOBS-004.md) — FITL `observerPolicy` authoring with verified slot order + cookbook + golden trace (covers §7 Phase 3, §8.2 partial-visibility-fitl-coup-distance, cookbook section)

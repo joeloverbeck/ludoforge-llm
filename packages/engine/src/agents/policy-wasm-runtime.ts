@@ -760,6 +760,38 @@ const exprReadsScheduleDistance = (expr: CompiledPolicyExpr | undefined): boolea
   }
 };
 
+const exprReadsTopNVisibleScheduleDistance = (def: GameDef, expr: CompiledPolicyExpr | undefined): boolean => {
+  if (expr === undefined) {
+    return false;
+  }
+  switch (expr.kind) {
+    case 'ref': {
+      const ref = expr.ref;
+      if (ref.kind !== 'scheduleDistance' || ref.target.kind !== 'boundary') {
+        return false;
+      }
+      const boundaryId = ref.target.boundaryId;
+      const boundary = def.phaseBoundaries?.find((entry) => String(entry.id) === String(boundaryId));
+      return boundary?.schedule?.kind === 'cardDraw' && boundary.schedule.observerPolicy?.kind === 'topNVisible';
+    }
+    case 'op':
+      return expr.args.some((arg) => exprReadsTopNVisibleScheduleDistance(def, arg));
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.anchorZone);
+    case 'seatAgg':
+      return exprReadsTopNVisibleScheduleDistance(def, expr.expr);
+    case 'zoneProp':
+      return typeof expr.zone === 'string' ? false : exprReadsTopNVisibleScheduleDistance(def, expr.zone);
+    case 'literal':
+    case 'param':
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+      return false;
+  }
+};
+
 export const evaluateWasmMoveConsiderationScoreRows = (
   runtime: PolicyWasmRuntime,
   input: {
@@ -790,6 +822,13 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     const consideration = entry.consideration;
     if (consideration.scopes?.includes('move') !== true) {
       continue;
+    }
+    if (
+      exprReadsTopNVisibleScheduleDistance(input.def, consideration.when)
+      || exprReadsTopNVisibleScheduleDistance(input.def, consideration.weight)
+      || exprReadsTopNVisibleScheduleDistance(input.def, consideration.value)
+    ) {
+      return { kind: 'unsupported', reason: `topNVisible schedule-distance consideration ${entry.id} is deferred to the TypeScript evaluator` };
     }
     if (consideration.costClass === 'preview') {
       for (const featureId of consideration.dependencies.candidateFeatures) {

@@ -188,7 +188,7 @@ Completed: 2026-05-13.
 ### Generated Fallout and Deferred Scope
 
 - Generated/artifact fallout: no schema artifacts, goldens, or checked-in generated JSON are expected to change. Ignored runtime outputs remain `.gamedef-cache/`, `traces/`, and `last-trace.json`.
-- Deferred sibling scope: `reports/turnperf-002-spec-167-baseline.md` remains owned by `tickets/167ARVNEVOHAR-006.md`; engine per-decision hot-path optimization remains out of scope per Spec 167 §8; test-gate scoping remains out of scope per Spec 167 §8.
+- Deferred sibling scope: `reports/turnperf-002-spec-167-baseline.md` is complete at `archive/tickets/167ARVNEVOHAR-006.md`; engine per-decision hot-path optimization remains out of scope per Spec 167 §8; test-gate scoping remains out of scope per Spec 167 §8.
 
 ### Verification
 

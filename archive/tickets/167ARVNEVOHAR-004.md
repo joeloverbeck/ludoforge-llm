@@ -127,7 +127,7 @@ Completion date: 2026-05-12.
 - `run-tournament.mjs` now loads the FITL `GameDef` through the cache, validates the hit/miss result through the existing `assertValidatedGameDef` path after any profile override, logs `GameDef cache: hit|miss`, and emits `gamedefCacheHit` in the final JSON metadata without changing `compositeScore`.
 - Added the campaign `.gitignore` entry for `.gamedef-cache/`.
 - Test path correction: the live campaign has no package-local Vitest or TypeScript test runner, so the ticket-authorized Node runner path is `campaigns/fitl-arvn-agent-evolution/__tests__/gamedef-cache.test.mjs` rather than the draft `.test.ts` filename.
-- Deferred sibling scope: worker-thread sharding remains `tickets/167ARVNEVOHAR-005.md`; the post-Spec-167 baseline report remains `tickets/167ARVNEVOHAR-006.md`.
+- Deferred sibling scope: worker-thread sharding is complete at `archive/tickets/167ARVNEVOHAR-005.md`; the post-Spec-167 baseline report is complete at `archive/tickets/167ARVNEVOHAR-006.md`.
 - Runtime surface breadth: campaign-local/script-only; no engine kernel, compiler, schema, or generated artifact behavior changed.
 - Source-size ledger: `campaigns/fitl-arvn-agent-evolution/run-tournament.mjs | 622 | 640 | no | minimal cache-wiring growth only | cache logic extracted to new module, no further extraction justified | none`.
 

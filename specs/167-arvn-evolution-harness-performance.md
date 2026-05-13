@@ -214,4 +214,4 @@ Decomposed via `/spec-to-tickets` on 2026-05-12:
 - [`archive/tickets/167ARVNEVOHAR-003.md`](../archive/tickets/167ARVNEVOHAR-003.md) — Engine build script — drop unconditional clean (completed; covers Phase 1 — build half, §3.2)
 - [`archive/tickets/167ARVNEVOHAR-004.md`](../archive/tickets/167ARVNEVOHAR-004.md) — Campaign-local GameDef disk cache (completed; covers Phase 1 — cache half, §3.3)
 - [`archive/tickets/167ARVNEVOHAR-005.md`](../archive/tickets/167ARVNEVOHAR-005.md) — Worker-thread shard pool for seeds (completed; covers Phase 2, §3.4 + §7)
-- [`tickets/167ARVNEVOHAR-006.md`](../tickets/167ARVNEVOHAR-006.md) — Baseline measurement report turnperf-002 (covers §5 last bullet)
+- [`archive/tickets/167ARVNEVOHAR-006.md`](../archive/tickets/167ARVNEVOHAR-006.md) — Baseline measurement report turnperf-002 (completed; covers §5 last bullet)

@@ -1,6 +1,6 @@
 # 167ARVNEVOHAR-006: Baseline measurement report (turnperf-002)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement script + checked-in report only
@@ -88,3 +88,58 @@ No new automated test. The deliverable is a checked-in report whose accuracy is 
 2. `SEED_COUNT=15 time bash campaigns/fitl-arvn-agent-evolution/harness.sh` — capture wall-time decomposition.
 3. `pnpm -F @ludoforge/engine test` (regression parity; the ticket doesn't change engine code but the measurement should run against a clean tree).
 4. Re-run cited measurement commands after writing the report to verify the documented figures are reproducible on the dev box.
+
+## Outcome
+
+Completed: 2026-05-13.
+
+### Implementation Notes
+
+- Added `reports/turnperf-002-spec-167-baseline.md` as the checked-in post-Spec-167 baseline report.
+- Reused `packages/engine/scripts/profile-fitl-preview-drive.mjs` without modification; the live script already exposes the required `--perCard`, `--profileBuckets`, and CPU-profile-compatible measurement surfaces.
+- Skipped checked-in `reports/turnperf-002-data/` raw artifacts. The V8 CPU profile was captured under `/tmp/ludoforge-167-turnperf-002-cpuprofile/` and parsed during the session, but the durable evidence needed for Spec 168 decomposition is transcribed into the report. No large or nonessential raw profile artifact is committed.
+
+### Measurement Ledger
+
+- Kernel commit SHA: `e2346e8e84c403153f8133d6ee14afe9a49fea55`.
+- Spec 167 content hash: `32ee281ca7499fbdb6e64a2d4efdd2ec327dd53752e9c37c25762ca4b8497ad0`.
+- Dev-box profile: WSL2 Linux on `12th Gen Intel(R) Core(TM) i9-12900K`, 12 vCPUs visible, Node `v22.17.0`, pnpm `10.12.1`.
+- Per-decision profile: `elapsedMs=2051.05`, per-card `elapsedMs=2050.85`, `decisions=160`, `msPerDecision=12.8178`, `tokenStateIndexBuildCount=2903`, `wasmScoreRowRouteCount=52`, `wasmScoreRowUnsupportedCount=0`, `wasmPreviewCandidateFeatureRowRouteCount=60`, `wasmPreviewCandidateFeatureRowUnsupportedCount=0`.
+- Top bucket costs: `simAgentChooseMove=913.64 ms`, `agent:evaluatePolicyExpression=912.06 ms`, `simApplyMove=187.41 ms`, `evalQuery:countMatchingTokens=91.33 ms`, `zobrist:digestDecisionStackFrame=89.57 ms`, `tokenStateIndex:build=87.91 ms`, `tokenStateIndex:refreshCachedEntries=64.93 ms`.
+- Full tier-15 harness: `real 277.90s`, `errors=0`, `concurrency=8`, `compositeScore=-3.4`.
+- Timed components: warm build `real 2.55s`; full engine regression gate `real 114.10s`; direct 15-seed tournament loop `real 177.15s`, `errors=0`, `wasmEnabled=true`, `gamedefCacheHit=true`, `compositeScore=-3.4`.
+
+### Boundary and Deliverable Corrections
+
+- The full harness remains above the old <=2 minute end-to-end goal because the preserved full engine regression gate still costs `114.10s`. This is recorded as residual workflow/protocol scope, not remaining Spec 167 engine/harness optimization work, matching Spec 167 §8 and the completed ticket 005 boundary correction.
+- `reports/turnperf-002-data/` remains omitted by design; the report transcription is the checked-in durable artifact.
+- `packages/engine/scripts/profile-fitl-preview-drive.mjs` required no edit.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness/assertion | Status | Proof lane |
+|---|---|---|---|
+| Reproducible methodology | Report lists every command, hardware profile, commit SHA, spec hash, and observed metric table | proven | checked-in report + commands below |
+| Cross-reference fidelity | Report links Spec 167, predecessor ticket 005, and TURNPERF-001 precedent | proven | checked-in report |
+| Decomposition-ready prioritization | Report ranks generic query/ref resolution, token-index rebuild/refresh, Zobrist decision-stack hashing, WASM input encoding, and workflow gate scoping with evidence and savings estimates | proven | checked-in report |
+
+### Generated Fallout and Deferred Scope
+
+- Generated/artifact fallout: no schema artifacts, goldens, or checked-in generated JSON changed.
+- Runtime outputs: `.gamedef-cache/`, `last-trace.json`, campaign run logs, and the CPU profile under `/tmp` are ephemeral measurement outputs and remain untracked/ignored.
+- Deferred scope: Spec 168 authoring and engine hot-path implementation remain out of scope; test-gate scoping remains out of scope per Spec 167 §8.
+
+### Verification
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --profileBuckets --label turnperf-002-spec-167-baseline` — passed; report transcribes the measured output.
+- `node --cpu-prof --cpu-prof-dir=/tmp/ludoforge-167-turnperf-002-cpuprofile packages/engine/scripts/profile-fitl-preview-drive.mjs --seed 42 --maxTurns 1 --profilesAll --perCard --label turnperf-002-spec-167-cpuprofile` — passed; CPU profile parsed for report.
+- `node .codex/skills/implement-ticket/scripts/parse-cpuprofile.mjs /tmp/ludoforge-167-turnperf-002-cpuprofile/*.cpuprofile --targets fnv1a64,resolveRef,evalCondition,evaluatePolicyMoveCore,copyCachedTokenStateIndex,digestDecisionStackFrame` — passed.
+- `SEED_COUNT=15 /usr/bin/time -p bash campaigns/fitl-arvn-agent-evolution/harness.sh` — passed; `errors=0`, `concurrency=8`, `compositeScore=-3.4`, `real 277.90`.
+- `/usr/bin/time -p pnpm -F @ludoforge/engine build` — passed; `real 2.55`.
+- `/usr/bin/time -p pnpm -F @ludoforge/engine test` — passed; schema check plus default lane summary `66/66 files passed`, `real 114.10`.
+- `/usr/bin/time -p node campaigns/fitl-arvn-agent-evolution/run-tournament.mjs --seeds 15 --players 4 --evolved-seat arvn --max-turns 200 --concurrency 8` — passed; `errors=0`, `wasmEnabled=true`, `gamedefCacheHit=true`, `compositeScore=-3.4`, `real 177.15`.
+- `pnpm run check:ticket-deps` — passed; `1 active tickets and 2314 archived tickets`.
+- Post-review archival check: `pnpm run check:ticket-deps` — passed after archival and same-series old-path rewrites; `0 active tickets and 2315 archived tickets`.
+
+Late-edit proof validity: the report and ticket status/outcome were written after measurement commands completed. This closeout text transcribes the just-run evidence and does not change code, command semantics, acceptance boundaries, or generated artifacts. No-invalidation: checker-result transcription only after `pnpm run check:ticket-deps`; no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency change. Post-review archive edits only moved the ticket to `archive/tickets/167ARVNEVOHAR-006.md`, updated same-series stale active-ticket links to archive paths, and transcribed the post-archive dependency check; no measurement or report claim changed.

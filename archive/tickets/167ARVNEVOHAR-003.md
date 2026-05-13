@@ -104,7 +104,7 @@ Outcome amended: 2026-05-12
 - Renamed and rewrote the stale clean-policy guard to `packages/engine/test/unit/lint/build-script-incremental-policy.test.ts`; it now proves the default build does not clean and `build:clean` still cleans before compiling.
 - `tsconfig.json`, `scripts/run-with-dist-lock.mjs`, and `campaigns/fitl-arvn-agent-evolution/harness.sh` were verified-no-edit; the wrapper and harness continue to call the same build entrypoint.
 - Generated fallout: `packages/engine/dist` and `dist/tsconfig.tsbuildinfo` were rebuilt during proof only; no schema, golden, or checked-in generated artifact diff persisted.
-- Deferred sibling scope: GameDef cache is complete at `archive/tickets/167ARVNEVOHAR-004.md`; worker-thread shard pool remains `tickets/167ARVNEVOHAR-005.md`; baseline report remains `tickets/167ARVNEVOHAR-006.md`.
+- Deferred sibling scope: GameDef cache is complete at `archive/tickets/167ARVNEVOHAR-004.md`; worker-thread shard pool is complete at `archive/tickets/167ARVNEVOHAR-005.md`; baseline report is complete at `archive/tickets/167ARVNEVOHAR-006.md`.
 
 ### Verification
 

@@ -4,11 +4,13 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — Rust WASM policy VM, TS opcode mapping, equivalence test fixture
-**Deps**: `tickets/169PHASCHREF-004.md`
+**Deps**: `archive/tickets/169PHASCHREF-004.md`
 
 ## Problem
 
-Phases 1-3 (tickets 002-004) ship `phase.*` and `schedule.*` ref families on the TypeScript resolver path only. The production preview-drive batch in `policy-eval.ts` routes through WASM (Spec 167 made WASM the default scoring path; `wasmScoreRowRouteCount` is non-trivial in production traces). Until the new ref kinds have opcode slots in `packages/engine-wasm/policy-vm/src/lib.rs` and Rust resolver handlers, agents using these refs would either (a) silently fall back to the TS interpreter — defeating Spec 167's perf work — or (b) emit `unsupported` route counts that pollute trace diagnostics.
+Phases 1-3a (tickets 002-004) ship `phase.*` and the currently implemented `schedule.*` ref surfaces on the TypeScript resolver path only: `schedule.nextBoundary.id`, `schedule.distance.toBoundary.<BoundaryId>.cards`, and compile-time `.toPhase.<PhaseId>.cards` aliases. The production preview-drive batch in `policy-eval.ts` routes through WASM (Spec 167 made WASM the default scoring path; `wasmScoreRowRouteCount` is non-trivial in production traces). Until the new ref kinds have opcode slots in `packages/engine-wasm/policy-vm/src/lib.rs` and Rust resolver handlers, agents using these refs would either (a) silently fall back to the TS interpreter — defeating Spec 167's perf work — or (b) emit `unsupported` route counts that pollute trace diagnostics.
+
+Non-card schedule units (`.microturns`, `.actions`, `.turns`, `.rounds`) moved to `tickets/169PHASCHREF-007.md` after live reassessment showed their required kernel counters/rates are not present. This ticket should not invent WASM support for units the TypeScript resolver has not truthfully shipped.
 
 This ticket adds:
 
@@ -23,7 +25,7 @@ This ticket adds:
 1. **WASM is the default scoring path post-167**: confirmed via `archive/specs/167-arvn-evolution-harness-performance.md` (Phase 0 — `initializePolicyWasmRuntimeSync()` called at tournament startup). WASM is loaded for production runs.
 2. **`policy-bytecode-equivalence.test.ts` is the canonical equivalence harness**: confirmed at `packages/engine/test/integration/policy-bytecode-equivalence.test.ts:15,470,533,602` (referenced in Spec 167 §2.2). It tests WASM-vs-TS scoring identity over fixture profiles.
 3. **`lib.rs` has existing opcode/feature constant patterns**: confirmed (lib.rs lines 32-78 per the Explore agent's verification during spec authoring) — OP_LOAD_FEATURE, OP_RESOLVE_REF, FEATURE_CANDIDATE_PARAM, FEATURE_CANDIDATE_TAG, etc. New constants follow the same shape.
-4. **`preview_drive.rs` exists and is 379 lines**: confirmed via grep. The preview-drive path may need similar ref-resolution updates if the new refs are read inside preview frames — but per Spec 169 §3 Non-goals, `phase.*` and `schedule.*` are NOT preview-derived. The preview-drive read path uses the same state snapshot mechanism; confirm during implementation that snapshot reads work through the same opcodes.
+4. **`preview_drive.rs` exists and is 379 lines**: confirmed via grep. The preview-drive path may need similar ref-resolution updates if the new refs are read inside preview frames — but per Spec 169 §3 Non-goals, `phase.*` and implemented `schedule.*` refs are NOT preview-derived. The preview-drive read path uses the same state snapshot mechanism; confirm during implementation that snapshot reads work through the same opcodes.
 5. **ABI versioning convention**: lib.rs exports `ludoforge_policy_vm_abi_version()` (line 107 area per Spec 167's reference). Adding opcodes bumps the version.
 
 ## Architecture Check
@@ -49,7 +51,7 @@ In `packages/engine-wasm/policy-vm/src/lib.rs`:
 Add `resolve_phase_intrinsic` and `resolve_schedule_distance` functions in `lib.rs` (or split into `phase_refs.rs` if the file size warrants extraction):
 
 - `resolve_phase_intrinsic`: dispatches on the intrinsic name (`current.id`, `next.id`, `nextBoundary.id`); reads from the encoded input row's phase fields (which the TS encoder populates per the new feature ids).
-- `resolve_schedule_distance`: dispatches on target kind + unit; reads from encoded schedule-index data passed through the input row. The schedule index itself is computed TS-side per 003 (the kernel runtime owns it); WASM reads the encoded snapshot.
+- `resolve_schedule_distance`: dispatches on target kind + unit for the implemented surfaces (`nextBoundary` and concrete `boundary` + `cards`); reads from encoded schedule-index data passed through the input row. The schedule index itself is computed TS-side per 003 (the kernel runtime owns it); WASM reads the encoded snapshot.
 
 The encoder (`policy-wasm-runtime.ts`'s `encodeBytecodeInput`) must populate the new fields. Spec 167's Phase 2 baseline notes `encodeBytecodeInput` at `38ms` per profiling probe; new fields should not regress that materially (target: <5ms additional).
 
@@ -70,7 +72,7 @@ In `policy-wasm-runtime.ts`'s `encodeBytecodeInput`:
 
 In `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`:
 
-- Add a new fixture profile exercising `phase.current.id`, `phase.next.id`, `schedule.distance.toBoundary.coupEntry.cards`, and at least one alternative unit (e.g., `.actions`).
+- Add a new fixture profile exercising `phase.current.id`, `phase.next.id`, `schedule.nextBoundary.id`, and `schedule.distance.toBoundary.coupEntry.cards`. `.toPhase` is compile-time rewritten by 004, so include an authored `.toPhase.scoring.cards` case if the equivalence fixture starts from authored profile YAML rather than precompiled ref AST.
 - Run scoring on the WASM path and TS path; assert byte-identical scoring rows for all 15 baseline seeds (matching the existing harness pattern).
 - Cover both `wasmScoreRowRoute` and `wasmPreviewCandidateFeatureRowRoute` paths (per Spec 169 §7 Phase 4 acceptance).
 
@@ -83,7 +85,8 @@ In `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`:
 
 ## Out of Scope
 
-- New ref kinds beyond `phaseIntrinsic` + `scheduleDistance` (003/004 already shipped the TS surface).
+- New ref kinds beyond `phaseIntrinsic` + `scheduleDistance` (003/004 already shipped the TS surface for card-distance and aliases).
+- Non-card schedule units (`.microturns`, `.actions`, `.turns`, `.rounds`) — `tickets/169PHASCHREF-007.md`.
 - FITL data authoring — 006 ticket.
 - Performance regression beyond the encode-cost budget (<5ms additional). If `encodeBytecodeInput` regresses materially, a follow-up perf ticket may be required.
 - WASM kernel forward-model primitives (`enumerateLegalActions`, `applyAction`) — out of Spec 169 scope per §13.

@@ -169,6 +169,11 @@ describe('phase boundary compile validation', () => {
       CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
     ],
     [
+      'rejects deferred non-card units until real unit semantics ship',
+      docWithAgentRef('schedule.distance.toBoundary.coupEntry.actions'),
+      CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
+    ],
+    [
       'rejects phase refs outside move and microturn policy scopes',
       docWithStateFeatureRef('phase.current.id'),
       CNL_COMPILER_DIAGNOSTIC_CODES.CNL_COMPILER_AGENT_POLICY_REF_UNKNOWN,
@@ -229,8 +234,39 @@ describe('phase boundary compile validation', () => {
     });
     assert.deepEqual(considerations.phaseCards!.value, {
       kind: 'ref',
-      ref: { kind: 'scheduleDistance', target: { kind: 'phase', phaseId: 'scoring' }, unit: 'cards' },
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'cards' },
     });
     assert.deepEqual(considerations.scheduleFallback!.scheduleFallback, { onUnavailable: 'dropConsideration' });
+  });
+
+  it('warns and picks the first declared boundary when toPhase is ambiguous', () => {
+    const result = compileGameSpecToGameDef({
+      ...docWithAgentRef('schedule.distance.toPhase.scoring.cards', [
+        baseDoc().phaseBoundaries![0]!,
+        { ...baseDoc().phaseBoundaries![0]!, id: 'lateCoupEntry', schedule: { kind: 'cardDraw', deckId: 'eventDeck', cardSelector: { cardIds: ['card-2'] } } },
+      ]),
+      agents: {
+        library: {
+          considerations: {
+            phaseCards: {
+              scopes: ['move'],
+              weight: 1,
+              value: ref('schedule.distance.toPhase.scoring.cards'),
+              scheduleFallback: { onUnavailable: 'noContribution' },
+            },
+          },
+        },
+      },
+    });
+
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+    assert.ok(result.diagnostics.some(
+      (diagnostic) => diagnostic.code === CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY
+        && diagnostic.severity === 'warning',
+    ));
+    assert.deepEqual(result.gameDef!.agents!.compiled.considerations.phaseCards!.value, {
+      kind: 'ref',
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: 'coupEntry' }, unit: 'cards' },
+    });
   });
 });

@@ -167,19 +167,14 @@ Two new state-local ref families, registered in `compile-agents.ts` per the spec
 | `phase.next.id` | PhaseId | The phase id that will be entered next per `turnStructure.phases` order | `ready` if known, `unavailable` if current phase is interrupt-state with no determinate successor |
 | `schedule.nextBoundary.id` | BoundaryId | Identity of the earliest boundary whose distance is finite from the current state | `ready` if any boundary is finite, `unavailable` if none |
 
-**Schedule distance refs** (one per boundary per declared unit):
+**Schedule distance refs**:
 
 | Ref | Type | Compiler-validated when | Runtime status |
 |---|---|---|---|
 | `schedule.distance.toBoundary.<BoundaryId>.cards` | integer (≥0) | `<BoundaryId>` is declared AND its `schedule.kind` admits card-count distance (today: `cardDraw`) | `ready` if a triggering card remains in the targeted deck; `unavailable` if no triggering card remains in any visible portion of the deck |
-| `schedule.distance.toBoundary.<BoundaryId>.microturns` | integer (≥0) | `<BoundaryId>` is declared | `ready` if microturn-distance is deterministic from current state; `unavailable` otherwise |
-| `schedule.distance.toBoundary.<BoundaryId>.actions` | integer (≥0) | `<BoundaryId>` is declared | as above |
-| `schedule.distance.toBoundary.<BoundaryId>.turns` | integer (≥0) | `<BoundaryId>` is declared | as above |
-| `schedule.distance.toBoundary.<BoundaryId>.rounds` | integer (≥0) | `<BoundaryId>` is declared | as above |
 | `schedule.distance.toPhase.<PhaseId>.cards` | integer (≥0) | `<PhaseId>` is declared AND the phase has at least one `phaseEntry` boundary with card-draw schedule | as above |
-| `schedule.distance.toPhase.<PhaseId>.actions` | integer (≥0) | `<PhaseId>` is declared | as above |
 
-`.toPhase.<PhaseId>` refs are convenience aliases that resolve to the nearest boundary of `kind: phaseEntry` targeting `<PhaseId>`. They fail at compile time if no such boundary is declared.
+`.toPhase.<PhaseId>.cards` refs are convenience aliases that resolve at compile time to the first declared boundary of `kind: phaseEntry` targeting `<PhaseId>`. They fail at compile time if no such boundary is declared. Non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) are Phase 3b work and remain rejected until their unit semantics, counters, or schedule-rate substrate are defined.
 
 Each new ref kind is registered in:
 
@@ -238,15 +233,17 @@ The compiler MUST reject (at compile time):
 | `SCHEDULE_REF_UNSUPPORTED_UNIT` | Requested unit is incompatible with the boundary's `schedule.kind` (e.g., `.cards` on a `kind: condition` boundary). The compiler treats unit-kind compatibility as a static fact derivable from the spec. |
 | `PHASE_BOUNDARY_EMPTY_CARD_SELECTOR` | `schedule.cardSelector` declares neither a non-empty `tags[]` nor a non-empty `cardIds[]`. |
 
-The compatibility matrix (Phase 0 implementation):
+The compiler emits warning diagnostic `SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY` when `.toPhase.<PhaseId>.cards` matches multiple `phaseEntry` boundaries; declaration order remains authoritative and the first matching boundary is selected.
+
+The compatibility matrix after Phase 3a:
 
 | `schedule.kind` | `cards` | `microturns` | `actions` | `turns` | `rounds` |
 |---|---|---|---|---|---|
-| `cardDraw` | ✅ | ✅ | ✅ | ✅ | ✅ |
+| `cardDraw` | ✅ | ❌ | ❌ | ❌ | ❌ |
 | (future `turnCount`) | ❌ | ❌ | ❌ | ❌ | ❌ |
 | `condition` | ❌ | ❌ | ❌ | ❌ | ❌ |
 
-A `condition`-kind boundary exposes only identity refs (`schedule.nextBoundary.id` if it is the nearest), not distance refs. (Phase 0 only ships `cardDraw`; `turnCount` is reserved for the schedule-kind extension surface and not implemented in this spec.)
+A `condition`-kind boundary exposes only identity refs (`schedule.nextBoundary.id` if it is the nearest), not distance refs. Phase 3b owns any future expansion beyond `cardDraw` + `cards`; `turnCount` is reserved for the schedule-kind extension surface and not implemented in this spec.
 
 ### 4.5 Runtime state and resolution
 
@@ -336,7 +333,8 @@ This spec ships in five sequential phases with explicit acceptance criteria. Eac
 | **0** | Types, branded `BoundaryId`, GameSpecDoc declaration, compiler validation, diagnostic codes. No ref resolution yet. | Architectural-invariant tests pass for: (a) duplicate id rejection, (b) unknown phase/deck/tag/cardId rejection, (c) unit-kind compatibility matrix, (d) byte-identical compile output for a GameSpec compiled twice with `phaseBoundaries` declared. |
 | **1** | `phase.current.id`, `phase.next.id`, `schedule.nextBoundary.id` refs implemented. | Golden tests for each ref against a fixture GameSpec; replay-determinism test (same GameDef + seed produces identical ref readouts across a 20-turn trace). |
 | **2** | `schedule.distance.toBoundary.<X>.cards` for `cardDraw` schedules. Card-draw index maintenance under `drawFromDeck`. | Golden distance tests at ≥5 distinct game positions (start of game, mid-cycle, immediately after coup card draw, end-game with no remaining coup cards [status: unavailable]). `scheduleFallback` paths exercised in trace output. |
-| **3** | Remaining units (`.microturns`, `.actions`, `.turns`, `.rounds`) and `schedule.distance.toPhase.<PhaseId>.<unit>`. | Per-unit golden test; one cross-unit consistency test (e.g., `.actions` >= `.cards` for FITL coup distances). |
+| **3a** | `schedule.distance.toPhase.<PhaseId>.cards` compile-time aliases to the first matching `phaseEntry` boundary. | Alias rewrite test; runtime parity test against direct `.toBoundary.<picked>.cards`; ambiguity warning test. |
+| **3b** | Real non-card units (`.microturns`, `.actions`, `.turns`, `.rounds`) after the engine has explicit unit semantics/counters/rates. | Per-unit golden test; one cross-unit consistency test matching the selected semantics. |
 | **4** | WASM opcode integration: new ref kinds added to the policy VM ABI; Rust handlers in `lib.rs` resolve schedule refs from the encoded input. | WASM↔TS bytecode equivalence test (`policy-bytecode-equivalence.test.ts`) passes with the new ref kinds in a fixture profile. Equivalence holds across `wasmScoreRowRoute` and `wasmPreviewCandidateFeatureRowRoute` paths. |
 | **5** | FITL `phaseBoundaries` authored in `data/games/fire-in-the-lake/`; one demonstration consideration in a sandbox profile (NOT promoted to `arvn-evolved`). | Demonstration consideration fires non-zero contribution at appropriate game positions in trace output. No regression on the `policy-profile-quality` baseline. |
 
@@ -449,6 +447,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-13:
 - [`archive/tickets/169PHASCHREF-001.md`](../archive/tickets/169PHASCHREF-001.md) — Phase 0 — types, BoundaryId, GameSpecDoc declaration & compiler validation (covers §7 Phase 0, §8.1 phase-boundary-compile-validation + phase-boundary-determinism)
 - [`archive/tickets/169PHASCHREF-002.md`](../archive/tickets/169PHASCHREF-002.md) — Phase 1 — phase identity refs (current.id, next.id, schedule.nextBoundary.id) (covers §7 Phase 1)
 - [`archive/tickets/169PHASCHREF-003.md`](../archive/tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
-- [`tickets/169PHASCHREF-004.md`](../tickets/169PHASCHREF-004.md) — Phase 3 — remaining distance units & schedule.distance.toPhase aliases (covers §7 Phase 3)
-- [`tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
+- [`archive/tickets/169PHASCHREF-004.md`](../archive/tickets/169PHASCHREF-004.md) — Phase 3a — schedule.distance.toPhase aliases (covers §7 Phase 3a)
+- [`tickets/169PHASCHREF-007.md`](../tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
+- [`tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
 - [`tickets/169PHASCHREF-006.md`](../tickets/169PHASCHREF-006.md) — Phase 5 — FITL phaseBoundaries authoring & demonstration consideration (covers §7 Phase 5, §8.2 phase-boundary-fitl-coup-distance + schedule-ref-consideration-trace)

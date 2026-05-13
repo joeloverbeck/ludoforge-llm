@@ -782,7 +782,6 @@ const CompiledAgentPolicyRefSchema = z.union([
     target: z.union([
       z.object({ kind: z.literal('nextBoundary') }).strict(),
       z.object({ kind: z.literal('boundary'), boundaryId: StringSchema }).strict(),
-      z.object({ kind: z.literal('phase'), phaseId: StringSchema }).strict(),
     ]),
     unit: z.union([
       z.literal('cards'),

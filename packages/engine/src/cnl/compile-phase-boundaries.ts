@@ -92,7 +92,7 @@ export function scheduleKindSupportsUnit(
 ): boolean {
   switch (scheduleKind) {
     case 'cardDraw':
-      return isScheduleDistanceUnit(unit);
+      return unit === 'cards';
     case 'turnCount':
     case 'condition':
     case undefined:

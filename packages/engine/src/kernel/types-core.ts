@@ -492,8 +492,7 @@ export type CompiledAgentPolicyRef =
       readonly kind: 'scheduleDistance';
       readonly target:
         | { readonly kind: 'nextBoundary' }
-        | { readonly kind: 'boundary'; readonly boundaryId: BoundaryId }
-        | { readonly kind: 'phase'; readonly phaseId: PhaseId };
+        | { readonly kind: 'boundary'; readonly boundaryId: BoundaryId };
       readonly unit?: ScheduleDistanceUnit;
     }
   | {

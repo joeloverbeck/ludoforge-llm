@@ -68,7 +68,7 @@ import type {
 } from './game-spec-doc.js';
 import { CNL_COMPILER_DIAGNOSTIC_CODES } from './compiler-diagnostic-codes.js';
 import { lowerAgentConsiderations, lowerAgentPolicyExpr, type AgentPolicyLibraryWithExpr } from './lower-agent-considerations.js';
-import { asBoundaryId, asPhaseId } from '../kernel/branded.js';
+import { asBoundaryId } from '../kernel/branded.js';
 import {
   buildPhaseBoundaryValidationContext,
   findPhaseBoundaryById,
@@ -3042,9 +3042,10 @@ class AgentLibraryCompiler {
       });
       return null;
     }
-    const boundary = context.phaseBoundaries.find(
+    const matchingBoundaries = context.phaseBoundaries.filter(
       (entry) => entry.kind === 'phaseEntry' && String(entry.phaseId) === phaseId,
     );
+    const boundary = matchingBoundaries[0];
     if (!scheduleKindSupportsUnit(boundary?.schedule?.kind, unit)) {
       this.diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_UNSUPPORTED_UNIT,
@@ -3055,10 +3056,19 @@ class AgentLibraryCompiler {
       });
       return null;
     }
+    if (matchingBoundaries.length > 1) {
+      this.diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY,
+        path,
+        severity: 'warning',
+        message: `schedule ref "${refPath}" matches ${matchingBoundaries.length} phaseEntry boundaries for phase "${phaseId}"; using first declared boundary "${String(boundary!.id)}".`,
+        suggestion: 'Use schedule.distance.toBoundary.<BoundaryId>.cards when a specific boundary is required.',
+      });
+    }
     return {
       type: 'number',
       costClass: 'state',
-      ref: { kind: 'scheduleDistance', target: { kind: 'phase', phaseId: asPhaseId(phaseId) }, unit },
+      ref: { kind: 'scheduleDistance', target: { kind: 'boundary', boundaryId: boundary!.id }, unit },
     };
   }
 
@@ -4339,7 +4349,7 @@ function scheduleDistanceRefKey(ref: Extract<CompiledAgentPolicyRef, { readonly 
   if (ref.target.kind === 'boundary') {
     return `schedule.distance.toBoundary.${String(ref.target.boundaryId)}.${unit}`;
   }
-  return `schedule.distance.toPhase.${String(ref.target.phaseId)}.${unit}`;
+  return `schedule.nextBoundary.id`;
 }
 
 function isLookupCollection(value: unknown): value is Extract<CompiledAgentPolicyRef, { readonly kind: 'lookup' }>['collection'] {

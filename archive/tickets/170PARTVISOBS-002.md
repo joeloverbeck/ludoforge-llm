@@ -178,12 +178,14 @@ Test class headers per `.claude/rules/testing.md`:
 
 ## Outcome (2026-05-13)
 
+Outcome amended: 2026-05-13
+
 Implemented the Spec 170 Phase 1 TypeScript runtime slice:
 
 - Added `topNVisible` visible-prefix scanning to the schedule-distance resolver for `cardDraw`/`cards` refs. The resolver reads only declared public visible-prefix zones, scans at most `maxItems`, emits `ready` with observer metadata on matches, and emits `partial.lowerBound` when the visible prefix exhausts.
 - Routed `partial.lowerBound` through `scheduleFallback.onPartial.visiblePrefixExhausted` rather than `onUnavailable`. `useLowerBound` and `constant` substitute a numeric value before weight multiplication; `noContribution` contributes zero; `dropConsideration` drops the row.
 - Added deterministic trace metadata for topNVisible schedule refs: candidate `inputRefs[refId]` now records ready/partial status, observer policy, visible-prefix length, lower bound, and `fallbackApplied` for partial fallbacks. `scheduleFallbackFired` now records `reason: partial.lowerBound.visiblePrefixExhausted` for partial fallback routes.
-- Kept WASM parity deferred to `tickets/170PARTVISOBS-003.md` by making topNVisible schedule-distance rows unsupported for the WASM score-row route so the TypeScript evaluator owns this ticket's behavior.
+- Kept WASM parity deferred at this ticket's closeout to `archive/tickets/170PARTVISOBS-003.md` by making topNVisible schedule-distance rows unsupported for the WASM score-row route so the TypeScript evaluator owns this ticket's behavior.
 - Regenerated `packages/engine/schemas/Trace.schema.json` from `packages/engine/src/kernel/schemas-core.ts` for the trace-shape change.
 - Added the four ticket-named integration witnesses plus a shared synthetic fixture helper:
   - `packages/engine/test/integration/fixtures/partial-visibility-fixtures.ts`
@@ -204,7 +206,7 @@ Ticket corrections applied:
 
 Deferred sibling/spec scope:
 
-- `tickets/170PARTVISOBS-003.md` owns WASM opcode/parity support.
+- `archive/tickets/170PARTVISOBS-003.md` owns WASM score-row parity support.
 - `tickets/170PARTVISOBS-004.md` owns FITL `observerPolicy` authoring, slot-order proof, and cookbook documentation.
 - Compiler validation and type declarations were already completed by `archive/tickets/170PARTVISOBS-001.md`.
 
@@ -224,7 +226,7 @@ Invariant proof matrix:
 | Trace determinism shape exposes observer policy and fallback | ready and partial candidate `inputRefs` pinned; partial fallback reason pinned | proven | `schedule-ref-consideration-trace-topNVisible.test.ts` |
 | Replay-determinism readouts stay stable across 20 turn-indexed states | same fixture seed and visible prefix produce byte-identical partial readouts for turn counts 0-19 | proven | `partial-visibility-resolver-correctness.test.ts` |
 | Non-policy-bearing FITL boundaries preserve `unavailable: hiddenDeck` | existing FITL coup-distance golden remains green | proven | `phase-boundary-fitl-coup-distance.test.ts` |
-| WASM parity not silently claimed | topNVisible schedule refs fail closed to the TypeScript evaluator | deferred to confirmed sibling | `tickets/170PARTVISOBS-003.md` |
+| WASM parity not silently claimed | topNVisible schedule refs fail closed to the TypeScript evaluator | deferred to confirmed sibling | `archive/tickets/170PARTVISOBS-003.md` |
 
 Implementation-introduced branch ledger:
 
@@ -248,7 +250,7 @@ Source-size ledger:
 | `packages/engine/src/agents/microturn-option-evaluator.ts` | 296 | 310 | no | +14 net | Small trace propagation only. | none |
 | `packages/engine/src/agents/policy-agent.ts` | 907 | 925 | no; preexisting over guidance | +18 net | Shared trace propagation through existing frontier structures; extraction would widen beyond this ticket. | none |
 | `packages/engine/src/agents/policy-eval.ts` | 1501 | 1512 | no; preexisting over guidance | +11 net | Canonical candidate metadata serializer; small field propagation only. | none |
-| `packages/engine/src/agents/policy-wasm-runtime.ts` | 1153 | 1192 | no; preexisting over guidance | +39 net | Narrow fail-closed guard for deferred sibling 003; deleting or refactoring the WASM route is outside this ticket. | `tickets/170PARTVISOBS-003.md` for behavior |
+| `packages/engine/src/agents/policy-wasm-runtime.ts` | 1153 | 1192 | no; preexisting over guidance | +39 net | Narrow fail-closed guard for deferred sibling 003; deleting or refactoring the WASM route is outside this ticket. | `archive/tickets/170PARTVISOBS-003.md` for behavior |
 | `packages/engine/src/kernel/types-core.ts` | 2289 | 2310 | no; preexisting over guidance | +21 net | Canonical trace contract hub; type addition mirrors runtime trace output. | none |
 | `packages/engine/src/kernel/schemas-core.ts` | 2717 | 2739 | no; preexisting over guidance | +22 net | Canonical Zod/schema mirror; required by generated trace schema. | none |
 | `packages/engine/test/integration/fixtures/partial-visibility-fixtures.ts` | 0 | 274 | no | new file | Shared synthetic fixture keeps the four ticket witnesses consistent. | none |

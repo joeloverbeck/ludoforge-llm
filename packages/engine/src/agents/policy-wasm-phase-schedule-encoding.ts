@@ -1,6 +1,6 @@
 import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
-import type { EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
+import type { CompiledAgentPolicyRef, EncodedStateLayout, GameDef, GameState, Token } from '../kernel/index.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import type { PolicyValue } from './policy-surface.js';
 
@@ -13,6 +13,23 @@ interface PolicyWasmPhaseScheduleContext {
 }
 
 type FeatureRef = PolicyBytecode['featureTable']['refs'][number];
+type ScheduleBoundaryEntry = GameDefRuntime['scheduleIndex']['boundaries'] extends ReadonlyMap<unknown, infer Entry>
+  ? Entry
+  : never;
+
+export type PolicyWasmPhaseScheduleResolution =
+  | {
+      readonly kind: 'ready';
+      readonly value: PolicyValue;
+    }
+  | {
+      readonly kind: 'partial';
+      readonly partialKind: 'lowerBound';
+      readonly lowerBound: number;
+    }
+  | {
+      readonly kind: 'unavailable';
+    };
 
 const phaseSequenceIndex = (def: GameDef, phaseId: string): number =>
   def.turnStructure.phases.findIndex((phase) => String(phase.id) === phaseId);
@@ -80,56 +97,156 @@ const scheduleUnitFromCode = (code: number): 'cards' | 'microturns' | 'actions' 
   }
 };
 
-const resolveScheduleDistance = (
+const boundaryForScheduleDistanceRef = (
+  target: { readonly kind: 'boundary'; readonly boundaryId: unknown },
+  context: PolicyWasmPhaseScheduleContext,
+): ScheduleBoundaryEntry | undefined => {
+  const boundaryId = String(target.boundaryId);
+  return [...(context.gameDefRuntime?.scheduleIndex.boundaries.values() ?? [])]
+    .find((entry) => String(entry.definition.id) === boundaryId);
+};
+
+const boundaryForScheduleDistanceFeature = (
   ref: FeatureRef,
   context: PolicyWasmPhaseScheduleContext,
-): PolicyValue => {
-  const targetCode = ref.aux[0];
-  if (targetCode === 0 && ref.aux[2] === -1) {
-    return resolveNextBoundaryId(context);
+): ScheduleBoundaryEntry | undefined => [...(context.gameDefRuntime?.scheduleIndex.boundaries.values() ?? [])]
+  .find((entry) => stableStringCode(entry.definition.id) === ref.aux[1]);
+
+const readPublicZoneCards = (def: GameDef, state: GameState, zoneId: string): readonly Token[] => {
+  const zone = def.zones.find((entry) => String(entry.id) === zoneId);
+  if (zone?.visibility !== 'public') {
+    return [];
   }
-  if (targetCode !== 1) {
-    return undefined;
+  return state.zones[zoneId] ?? [];
+};
+
+const matchesCardSelector = (
+  def: GameDef,
+  token: Token,
+  cardSelector: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>['cardSelector'],
+): boolean => {
+  const tokenId = String(token.id);
+  if (cardSelector.cardIds?.includes(tokenId) === true) {
+    return true;
   }
-  const unit = scheduleUnitFromCode(ref.aux[2] ?? -1);
-  if (unit === undefined || context.gameDefRuntime === undefined) {
-    return undefined;
+  const requestedTags = cardSelector.tags ?? [];
+  if (requestedTags.length === 0) {
+    return false;
   }
-  const boundary = [...context.gameDefRuntime.scheduleIndex.boundaries.values()]
-    .find((entry) => stableStringCode(entry.definition.id) === ref.aux[1]);
+  const card = (def.eventDecks ?? [])
+    .flatMap((deck) => deck.cards)
+    .find((entry) => entry.id === tokenId);
+  return requestedTags.some((tag) => card?.tags?.includes(tag) === true);
+};
+
+const resolveVisiblePrefixBoundaryCardDistance = (
+  context: PolicyWasmPhaseScheduleContext,
+  schedule: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>,
+): PolicyWasmPhaseScheduleResolution => {
+  let scanned = 0;
+  const maxItems = schedule.observerPolicy!.visiblePrefix.maxItems;
+  for (const zoneRef of schedule.observerPolicy!.visiblePrefix.zones) {
+    if (scanned >= maxItems) {
+      break;
+    }
+    const slotCards = readPublicZoneCards(context.def, context.state, zoneRef.id);
+    for (const card of slotCards) {
+      if (scanned >= maxItems) {
+        break;
+      }
+      if (matchesCardSelector(context.def, card, schedule.cardSelector)) {
+        return { kind: 'ready', value: scanned };
+      }
+      scanned += 1;
+    }
+  }
+  return { kind: 'partial', partialKind: 'lowerBound', lowerBound: scanned };
+};
+
+const resolveScheduleDistanceValue = (
+  unit: 'cards' | 'microturns' | 'actions' | 'turns' | 'rounds' | undefined,
+  boundary: ReturnType<typeof boundaryForScheduleDistanceFeature>,
+  context: PolicyWasmPhaseScheduleContext,
+): PolicyWasmPhaseScheduleResolution => {
+  if (unit === undefined) {
+    return { kind: 'unavailable' };
+  }
   const cardDrawState = boundary?.cardDrawState;
   if (boundary === undefined || cardDrawState === undefined) {
-    return undefined;
+    return { kind: 'unavailable' };
+  }
+  const schedule = boundary.definition.schedule;
+  if (schedule?.kind === 'cardDraw' && schedule.observerPolicy?.kind === 'topNVisible' && unit === 'cards') {
+    return resolveVisiblePrefixBoundaryCardDistance(context, schedule);
   }
   const deck = (context.def.eventDecks ?? []).find((entry) => entry.id === cardDrawState.deckId);
   const drawZoneVisibility = context.def.zones.find((zone) => String(zone.id) === deck?.drawZone)?.visibility;
   if (drawZoneVisibility !== 'public') {
-    return undefined;
+    return { kind: 'unavailable' };
   }
   const nextPosition = cardDrawState.triggeringCardPositions.find(
     (position) => position > cardDrawState.currentDrawPosition,
   );
   if (nextPosition === undefined) {
-    return undefined;
+    return { kind: 'unavailable' };
   }
   const cardDistance = nextPosition - cardDrawState.currentDrawPosition;
   if (unit === 'cards') {
-    return cardDistance;
+    return { kind: 'ready', value: cardDistance };
   }
   const rate = boundary.definition.schedule?.kind === 'cardDraw'
     ? boundary.definition.schedule.unitRates?.[unit]
     : undefined;
-  return rate === undefined ? undefined : cardDistance * rate;
+  return rate === undefined ? { kind: 'unavailable' } : { kind: 'ready', value: cardDistance * rate };
+};
+
+const resolveScheduleDistance = (
+  ref: FeatureRef,
+  context: PolicyWasmPhaseScheduleContext,
+): PolicyWasmPhaseScheduleResolution => {
+  const targetCode = ref.aux[0];
+  if (targetCode === 0 && ref.aux[2] === -1) {
+    const value = resolveNextBoundaryId(context);
+    return value === undefined ? { kind: 'unavailable' } : { kind: 'ready', value };
+  }
+  if (targetCode !== 1 || context.gameDefRuntime === undefined) {
+    return { kind: 'unavailable' };
+  }
+  return resolveScheduleDistanceValue(
+    scheduleUnitFromCode(ref.aux[2] ?? -1),
+    boundaryForScheduleDistanceFeature(ref, context),
+    context,
+  );
+};
+
+export const resolveWasmScheduleDistanceRef = (
+  ref: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }>,
+  context: PolicyWasmPhaseScheduleContext,
+): PolicyWasmPhaseScheduleResolution => {
+  if (ref.target.kind === 'nextBoundary') {
+    const value = resolveNextBoundaryId(context);
+    return value === undefined ? { kind: 'unavailable' } : { kind: 'ready', value };
+  }
+  return resolveScheduleDistanceValue(
+    ref.unit ?? 'cards',
+    boundaryForScheduleDistanceRef(ref.target, context),
+    context,
+  );
 };
 
 export const encodeWasmPhaseScheduleValue = (
   ref: FeatureRef,
   context: PolicyWasmPhaseScheduleContext,
 ): readonly [number, number] | undefined => {
+  const resolution = ref.kind === 'scheduleDistance'
+    ? resolveScheduleDistance(ref, context)
+    : undefined;
   const value = ref.kind === 'phaseIntrinsic'
     ? resolvePhaseIntrinsic(ref, context)
-    : ref.kind === 'scheduleDistance'
-      ? resolveScheduleDistance(ref, context)
+    : resolution?.kind === 'ready'
+      ? resolution.value
+      : resolution?.kind === 'partial'
+        ? resolution.lowerBound
       : undefined;
   if (value === undefined && ref.kind !== 'phaseIntrinsic' && ref.kind !== 'scheduleDistance') {
     return undefined;

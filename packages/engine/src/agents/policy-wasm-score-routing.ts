@@ -413,7 +413,20 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       collectPreviewDynamicRefs(feature.expr),
     );
     if (precomputedDynamicCandidateFeatures === null) {
-      return false;
+      recordProductionPolicyWasmPreviewCandidateFeatureRows('unsupported');
+      const values = input.candidates.map((candidate) => {
+        const value = encodeWasmPrecomputedPolicyValue(input.evaluation.evaluateCandidateFeature(candidate, id));
+        if (candidate.previewOutcome === undefined) {
+          input.evaluation.finalizePreviewOutcome(candidate);
+        }
+        return value;
+      });
+      candidateFeatureRows.push({
+        id,
+        costClass: feature.costClass,
+        values,
+      });
+      continue;
     }
     const values = evaluateWasmCandidateFeatureRow(input.runtime, {
       def: input.def,
@@ -424,6 +437,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
         state: input.state,
         playerId: Number(input.playerId),
         ...(input.gameDefRuntime === undefined ? {} : {
+          gameDefRuntime: input.gameDefRuntime,
           bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
           bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
         }),
@@ -482,6 +496,7 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       state: input.state,
       playerId: Number(input.playerId),
       ...(input.gameDefRuntime === undefined ? {} : {
+        gameDefRuntime: input.gameDefRuntime,
         bytecodeInputCache: input.gameDefRuntime.policyWasmBytecodeInputCache,
         bytecodeStateWordsCache: input.gameDefRuntime.policyWasmBytecodeStateWordsCache,
       }),
@@ -524,6 +539,9 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
   recordProductionPolicyWasmScoreRows('supported');
 
   const scoresByKey = new Map(result.rows.map((row) => [row.stableMoveKey, row.score]));
+  const scheduleFallbackByKey = new Map(result.rows
+    .filter((row) => row.scheduleFallbackFired !== undefined)
+    .map((row) => [row.stableMoveKey, row.scheduleFallbackFired!]));
   for (const candidate of input.candidates) {
     const score = scoresByKey.get(candidate.stableMoveKey);
     if (score === undefined) {
@@ -540,6 +558,10 @@ export function tryScoreMoveConsiderationsWithWasm(input: {
       });
     }
     candidate.score = score;
+    const scheduleFallbackFired = scheduleFallbackByKey.get(candidate.stableMoveKey);
+    if (scheduleFallbackFired !== undefined) {
+      candidate.scheduleFallbackFired = scheduleFallbackFired;
+    }
   }
   return true;
 }

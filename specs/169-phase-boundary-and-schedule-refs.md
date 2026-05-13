@@ -484,5 +484,5 @@ Decomposed via `/spec-to-tickets` on 2026-05-13:
 - [`archive/tickets/169PHASCHREF-003.md`](../archive/tickets/169PHASCHREF-003.md) — Phase 2 — card-draw schedule index & schedule.distance.toBoundary.<X>.cards (covers §7 Phase 2, §8.1 schedule-ref-card-draw-index-correctness + schedule-ref-fallback-discipline + schedule-ref-observer-view)
 - [`archive/tickets/169PHASCHREF-004.md`](../archive/tickets/169PHASCHREF-004.md) — Phase 3a — schedule.distance.toPhase aliases (covers §7 Phase 3a)
 - [`archive/tickets/169PHASCHREF-007.md`](../archive/tickets/169PHASCHREF-007.md) — Phase 3b — real non-card schedule distance units (covers §7 Phase 3b)
-- [`tickets/169PHASCHREF-005.md`](../tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
+- [`archive/tickets/169PHASCHREF-005.md`](../archive/tickets/169PHASCHREF-005.md) — Phase 4 — WASM opcode integration for phase.* and currently implemented schedule.* refs (covers §7 Phase 4, §8.4 WASM equivalence)
 - [`tickets/169PHASCHREF-006.md`](../tickets/169PHASCHREF-006.md) — Phase 5 — FITL phaseBoundaries authoring & demonstration consideration (covers §7 Phase 5, §8.2 phase-boundary-fitl-coup-distance + schedule-ref-consideration-trace)

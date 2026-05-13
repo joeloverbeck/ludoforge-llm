@@ -87,6 +87,8 @@ export const FEATURE_REF_KINDS = [
   'candidateParam',
   'candidateTag',
   'candidateTags',
+  'phaseIntrinsic',
+  'scheduleDistance',
   'microturnIntrinsic',
   'microturnOptionIntrinsic',
   'previewOptionRef',

@@ -1,7 +1,7 @@
 mod preview_drive;
 
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 9;
+const ABI_VERSION: i32 = 10;
 const SMOKE_LAYOUT_ID: i32 = 0x1500_0001;
 const SMOKE_OPCODE_ADD: i32 = 1;
 const STACK_SIZE: usize = 256;
@@ -76,6 +76,8 @@ const FEATURE_CANDIDATE_AGGREGATE: i32 = 13;
 const FEATURE_STATE_FEATURE: i32 = 14;
 const FEATURE_DYNAMIC_SURFACE: i32 = 15;
 const FEATURE_DYNAMIC_REF: i32 = 16;
+const FEATURE_PHASE_INTRINSIC: i32 = 17;
+const FEATURE_SCHEDULE_DISTANCE: i32 = 18;
 
 const SURFACE_SCOPE_CURRENT: i32 = 0;
 const SELECTOR_NONE: i32 = 0;
@@ -920,6 +922,13 @@ fn resolve_feature(
                 .and_then(|row| row.values.get(candidate_index).copied())
                 .unwrap_or(Value::Undefined))
         }
+        FEATURE_PHASE_INTRINSIC | FEATURE_SCHEDULE_DISTANCE => match feature.aux[0] {
+            VALUE_UNDEFINED => Ok(Value::Undefined),
+            VALUE_NUMBER => Ok(Value::Number(feature.aux[1])),
+            VALUE_FALSE => Ok(Value::Bool(false)),
+            VALUE_TRUE => Ok(Value::Bool(true)),
+            _ => Err(STATUS_BAD_FEATURE),
+        },
         FEATURE_CANDIDATE_TAGS => Err(STATUS_UNSUPPORTED),
         _ => Err(STATUS_UNSUPPORTED),
     }

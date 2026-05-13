@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 9;
+const ABI_VERSION: i32 = 10;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;

@@ -1,6 +1,6 @@
 # 169PHASCHREF-005: Phase 4 — WASM opcode integration for phase.* and schedule.* refs
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: Yes — Rust WASM policy VM, TS opcode mapping, equivalence test fixture
@@ -123,3 +123,91 @@ In `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`:
 3. `pnpm turbo test --filter=@ludoforge/engine` — full engine gate.
 4. `pnpm turbo typecheck` — typecheck.
 5. `pnpm turbo build` — confirms cross-package build cleanliness.
+
+## Outcome
+
+Completion date: 2026-05-13
+
+What landed:
+
+- Added first-class bytecode feature kinds for `phaseIntrinsic` and `scheduleDistance`.
+- Bumped the policy WASM ABI from 9 to 10 in the Rust score-row VM, Rust preview-drive VM, and TypeScript host check.
+- Added Rust VM handling for encoded phase/schedule feature rows.
+- Added TypeScript WASM input materialization for ready/unavailable phase and schedule refs, including declared-rate non-card schedule units through the run-local schedule index.
+- Passed the run-local `GameDefRuntime` into WASM score-row and preview-candidate-feature-row routes so schedule distance reads observe the same authoritative schedule index as the TypeScript resolver.
+- Updated the TypeScript bytecode fallback completeness guard so the new first-class feature kinds cannot silently fall through.
+- Extended `policy-bytecode-equivalence.test.ts` with phase/schedule fixtures proving both `evaluateWasmMoveConsiderationScoreRows` and `evaluateWasmCandidateFeatureRow` match TypeScript evaluation.
+- Kept production score-row routing active when a preview candidate-feature row cannot be WASM-materialized directly by precomputing that row through the existing TypeScript evaluator and still routing the final score rows through WASM.
+- Post-review correction: preserved `scheduleFallbackFired` metadata on WASM score rows when a schedule value is unavailable, and propagated that metadata back through the production WASM score-routing path.
+
+Touched-file scope:
+
+- Planned and touched: `packages/engine-wasm/policy-vm/src/lib.rs`, `packages/engine-wasm/policy-vm/src/preview_drive.rs`, `packages/engine/src/agents/policy-wasm-runtime.ts`, `packages/engine/test/integration/policy-bytecode-equivalence.test.ts`.
+- Owned implementation fallout: `packages/engine/src/cnl/policy-bytecode/types.ts`, `packages/engine/src/cnl/policy-bytecode/feature-table.ts`, `packages/engine/src/agents/policy-wasm-score-routing.ts`, `packages/engine/src/agents/policy-evaluation-core.ts`, `packages/engine/src/agents/policy-wasm-phase-schedule-encoding.ts`.
+- Owned test fallout: `packages/engine/test/unit/agents/policy-bytecode-fallback-completeness.test.ts`, `packages/engine/test/integration/policy-bytecode-equivalence-phase-schedule-fixtures.ts`.
+- Optional focused encode test not added: the integration equivalence fixture now covers score-row and preview-candidate-feature-row materialization, while the fallback completeness guard covers feature-kind registration.
+
+Generated/schema fallout:
+
+- No JSON schema or golden artifact change expected. The regenerated Rust WASM binary is under `packages/engine-wasm/policy-vm/target/` and remains ignored build output.
+
+Deferred sibling/spec scope:
+
+- `tickets/169PHASCHREF-006.md` remains the owner for FITL `phaseBoundaries`, coup-card tags, sandbox profile authoring, and FITL golden traces.
+- Schedule kinds beyond already-implemented `cardDraw` declared-rate units remain out of scope.
+
+Invariant proof matrix:
+
+| Invariant | Witness/assertion | Status | Proof lane |
+|---|---|---|---|
+| WASM scoring equals TypeScript for `phase.*` and `schedule.*` refs. | New score-row equivalence fixture compares `evaluateWasmMoveConsiderationScoreRows` to `PolicyEvaluationContext`. | proven | `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` |
+| WASM preview-candidate-feature-row route supports the same refs. | New fixture compares `evaluateWasmCandidateFeatureRow` to TypeScript evaluation. | proven | same focused equivalence lane |
+| Unsupported route counts stay at 0 for the new fixture. | New fixture requires non-null/supported WASM rows for both routes. | proven | same focused equivalence lane |
+| ABI version is bumped exactly once and accepted by TS host checks. | Rust and TS ABI constants are both `10`; WASM loader-based equivalence and ARVN production WASM tests pass. | proven | `pnpm -F @ludoforge/engine-wasm build`; focused equivalence lane; ARVN WASM equivalence lane |
+| Declared-rate non-card units use the same card-distance source. | New fixture reads `schedule.distance.toBoundary.coupEntry.turns/actions` through WASM with a run-local schedule runtime. | proven | same focused equivalence lane |
+
+Command ledger:
+
+| Ticket section | Literal command/shorthand | Final citation |
+|---|---|---|
+| Build | `pnpm -F @ludoforge/engine build` | passed |
+| Format | `cargo fmt --manifest-path packages/engine-wasm/policy-vm/Cargo.toml` | passed |
+| Test Plan | `pnpm -F @ludoforge/engine-wasm build` | passed |
+| Test Plan | `pnpm -F @ludoforge/engine test:integration -- --test-name-pattern policy-bytecode-equivalence` | repo-valid substitution: direct compiled `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`; passed, 8 tests |
+| Acceptance | `policy-bytecode-equivalence.test.ts` new fixture | passed in focused lane and full integration lane |
+| Acceptance | both `wasmScoreRowRoute` and `wasmPreviewCandidateFeatureRowRoute` paths | passed in focused lane |
+| Acceptance | existing equivalence rows continue to pass | passed in focused lane |
+| Acceptance | ABI version bump observable | passed via WASM build, focused equivalence, and `arvn-tournament-wasm-equivalence.test.js` |
+| Regression | `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-wasm-equivalence.test.js` | passed |
+| Acceptance | `pnpm -F @ludoforge/engine test:integration` | passed, 281/281 files |
+| Acceptance | `pnpm -F @ludoforge/engine test:unit` | passed, 5713 tests |
+| Test Plan | `pnpm turbo test --filter=@ludoforge/engine` | passed, 69/69 files |
+| Test Plan | `pnpm turbo typecheck` | passed |
+| Test Plan | `pnpm turbo build` | passed |
+| Integrity | `pnpm run check:ticket-deps` | passed, 2 active tickets and 2327 archived tickets |
+
+Source-size ledger:
+
+| Path | Before lines | After lines | Crossed cap? | Active growth | Extraction/defer rationale | Successor |
+|---|---:|---:|---|---:|---|---|
+| `packages/engine-wasm/policy-vm/src/lib.rs` | 1298 | 1307 | No; preexisting oversized | +9 | ABI feature constants and encoded-value dispatch belong in the canonical Rust ABI hub; extracting the two-line dispatch would obscure the opcode table more than it would reduce risk. | None |
+| `packages/engine-wasm/policy-vm/src/preview_drive.rs` | 379 | 379 | No | 0 | Preview-drive shares the ABI version gate; the one-line version bump is required to keep the production preview-drive route compatible after this ticket's ABI change. | None |
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2009 | 2042 | No; preexisting oversized | +33 | The TypeScript bytecode fallback resolver is already the canonical interpreter fallback hub; the new phase/schedule feature cases sit with the existing feature-ref fallback dispatch. | None |
+| `packages/engine/src/agents/policy-wasm-runtime.ts` | 1096 | 1153 | No; preexisting oversized | +57 | The substantial phase/schedule materialization logic was extracted to `policy-wasm-phase-schedule-encoding.ts`; remaining growth is ABI constant wiring, context threading, score-row fallback handling, and post-review fallback metadata propagation in the canonical host runtime. | None |
+| `packages/engine/src/agents/policy-wasm-phase-schedule-encoding.ts` | 0 | 147 | No | +147 | New narrow helper isolates phase/schedule WASM value materialization from the already-oversized host runtime. | None |
+| `packages/engine/src/agents/policy-wasm-score-routing.ts` | 545 | 567 | No | +22 | The small routing fallback keeps production score-row WASM active when only preview candidate-row materialization is unsupported; post-review metadata propagation belongs beside candidate score assignment. Extracting this branch would make the route control flow harder to audit. | None |
+| `packages/engine/src/cnl/policy-bytecode/feature-table.ts` | 554 | 592 | No | +38 | Encoding constants and first-class feature-ref lowering belong beside the existing feature table encoder; still below 600 lines after the change. | None |
+| `packages/engine/test/integration/policy-bytecode-equivalence.test.ts` | 675 | 828 | No; crossed typical band only, not cap | +153 | Kept route assertions and the post-review fallback metadata regression in the canonical equivalence harness; fixture construction stays extracted to an adjacent helper. | None |
+| `packages/engine/test/integration/policy-bytecode-equivalence-phase-schedule-fixtures.ts` | 0 | 71 | No | +71 | New narrow test fixture helper keeps the canonical equivalence harness below the repo cap. | None |
+
+Final proof summary:
+
+- Post-review red witness: `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` failed on missing `scheduleFallbackFired` metadata for an unavailable schedule ref before the review fix.
+- Post-review focused proof passed after the fix: `pnpm -F @ludoforge/engine build`; `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js` (9 tests).
+- Post-review affected original lanes passed after the fix: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js`; `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-wasm-equivalence.test.js`.
+- Focused bytecode fallback completeness passed: `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-bytecode-fallback-completeness.test.js`.
+- Focused phase/schedule WASM equivalence passed twice after the final build state: `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence.test.js`.
+- ARVN production WASM equivalence passed after the ABI preview-drive correction: `pnpm -F @ludoforge/engine exec node --test dist/test/integration/arvn-tournament-wasm-equivalence.test.js`.
+- Broad engine integration passed: `pnpm -F @ludoforge/engine test:integration` (281/281 files).
+- Broad engine unit passed: `pnpm -F @ludoforge/engine test:unit` (5713 tests).
+- Repo gates passed: `pnpm turbo typecheck`, `pnpm turbo build`, `pnpm turbo test --filter=@ludoforge/engine`.

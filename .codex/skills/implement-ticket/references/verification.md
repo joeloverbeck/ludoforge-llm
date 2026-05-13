@@ -27,6 +27,8 @@ For tickets introducing a new non-JavaScript toolchain or target (for example Ru
 4. if an install/download is required, request approval through the normal sandbox/escalation path rather than deferring the missing prerequisite until final proof
 5. record any toolchain command substitution or install prerequisite in working notes and the active ticket outcome when it affects reproducibility
 
+For WASM/FFI, VM, or accelerator tickets that change ABI identity, route constants, or host/guest contracts, also load `references/wasm-ffi-abi.md`. Do this before coding when the draft clearly owns the boundary, or immediately after live evidence exposes an ABI mismatch. The reference's mirror sweep is required when changing versions, magic values, buffer headers, status codes, opcode/feature tables, or host/guest validation logic.
+
 ## Verification Preflight
 
 Before running any substantive verification, do a verification preflight for each planned lane:
@@ -36,6 +38,13 @@ Before running any substantive verification, do a verification preflight for eac
 3. Record whether the lane is safe to overlap with other commands that touch the same outputs.
 4. Decide what evidence level that lane can provide: focused proof, package-level proof, or full acceptance proof.
 5. For shared-contract or migration tickets, explicitly label each lane as `intermediate green` or `acceptance-proof`; do not treat an intermediate package-local green lane as ticket completion if downstream repo-owned consumers remain unverified.
+
+For accelerator routes, prove activation separately from correctness parity:
+
+1. `activation`: show the accelerated path was actually selected, such as route count greater than zero, a nonzero WASM/VM execution counter, or a production smoke that would fail if only fallback ran.
+2. `unsupported/fallback classification`: classify unsupported counts, fallback reasons, or fail-closed statuses so fallback success is not mistaken for route coverage.
+3. `parity/correctness`: prove the activated route matches the authoritative reference path for the ticket-owned values, score rows, candidates, or serialized result.
+4. `fallback non-masking`: when fallback remains allowed, include a witness or assertion that distinguishes activated success from fallback-only success.
 
 Before running broader checks, identify whether any ticket-relevant commands clean or rewrite shared outputs such as `packages/*/dist`, generated schemas, compiled JSON, or goldens. If they do, run those lanes serially even when the surrounding Codex guidance favors parallel tool use.
 

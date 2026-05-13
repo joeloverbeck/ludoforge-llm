@@ -113,13 +113,13 @@ Add focused tests proving `schedule.distance.toPhase.<PhaseId>.cards` compiles t
 
 Completion date: 2026-05-13
 
-Outcome amended: 2026-05-13 — updated stale handoff paths after `169PHASCHREF-007` completed and archived.
+Outcome amended: 2026-05-13 — updated stale handoff paths after `169PHASCHREF-007` and `169PHASCHREF-005` completed and archived.
 
 What landed:
 
 - Corrected this ticket to the user-approved narrowed boundary: `schedule.distance.toPhase.<PhaseId>.cards` aliasing only.
 - Added `archive/tickets/169PHASCHREF-007.md` as the owner for real non-card unit semantics.
-- Updated Spec 169 and `tickets/169PHASCHREF-005.md` so the active series no longer assumes `.microturns`, `.actions`, `.turns`, or `.rounds` exist before their substrate is designed.
+- Updated Spec 169 and `archive/tickets/169PHASCHREF-005.md` so the series no longer assumes `.microturns`, `.actions`, `.turns`, or `.rounds` exist before their substrate is designed.
 - Changed `.toPhase.<PhaseId>.cards` lowering to emit a concrete `boundary` target for the first matching `phaseEntry` boundary.
 - Added warning diagnostic `SCHEDULE_REF_AMBIGUOUS_PHASE_BOUNDARY` when multiple `phaseEntry` boundaries target the same phase.
 - Removed the interim compiled/runtime `scheduleDistance.target.kind === 'phase'` shape from TypeScript and the generated `GameDef.schema.json`.
@@ -128,7 +128,7 @@ What landed:
 Touched-file scope:
 
 - Planned and touched: `packages/engine/src/cnl/compile-agents.ts`, `packages/engine/src/cnl/compile-phase-boundaries.ts`, `packages/engine/src/cnl/compiler-diagnostic-codes.ts`, `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/kernel/schemas-core.ts`, `packages/engine/schemas/GameDef.schema.json`, `packages/engine/test/unit/agents/schedule-to-phase-alias.test.ts`, `packages/engine/test/unit/cnl/phase-boundary-compile-validation.test.ts`.
-- Owned graph/spec fallout: `specs/169-phase-boundary-and-schedule-refs.md`, `tickets/169PHASCHREF-005.md`, `archive/tickets/169PHASCHREF-007.md`.
+- Owned graph/spec fallout: `specs/169-phase-boundary-and-schedule-refs.md`, `archive/tickets/169PHASCHREF-005.md`, `archive/tickets/169PHASCHREF-007.md`.
 - Verified-no-edit from original draft: `packages/engine/src/agents/policy-runtime.ts`; alias lowering removes the need for a runtime `phase` branch, and non-card runtime units are deferred.
 - Rewritten/deferred from original draft: `schedule-distance-units.test.ts` and `schedule-distance-cross-unit-consistency.test.ts` move to `archive/tickets/169PHASCHREF-007.md`.
 
@@ -140,7 +140,7 @@ Generated/schema fallout:
 Deferred sibling/spec scope:
 
 - Non-card distance units (`.microturns`, `.actions`, `.turns`, `.rounds`) are deferred to `archive/tickets/169PHASCHREF-007.md`.
-- WASM parity remains `tickets/169PHASCHREF-005.md`; it now covers the currently implemented TypeScript schedule refs rather than nonexistent non-card units.
+- WASM parity remains `archive/tickets/169PHASCHREF-005.md`; it covers the currently implemented TypeScript schedule refs rather than nonexistent non-card units.
 - FITL authoring remains `tickets/169PHASCHREF-006.md`.
 
 Source-size ledger:

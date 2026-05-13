@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Medium
 **Engine Changes**: None — game data + sandbox profile + test fixtures only
-**Deps**: `tickets/169PHASCHREF-005.md`
+**Deps**: `archive/tickets/169PHASCHREF-005.md`
 
 ## Problem
 

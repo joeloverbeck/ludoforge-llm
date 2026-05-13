@@ -3,6 +3,7 @@ import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type { AgentParameterValue, CompiledPolicyConsideration, CompiledPolicyExpr, EncodedState, EncodedStateLayout, GameDef, GameState } from '../kernel/index.js';
 import type { PolicyWasmBytecodeInputCache, PolicyWasmBytecodeStateWordsCache } from '../kernel/index.js';
+import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
   getCachedScoreRowBytecode,
   getScoreRowBytecodeCompileCount,
@@ -27,9 +28,11 @@ import {
   policyWasmBytecodeInputCacheKey,
   resetPolicyWasmBytecodeInputCacheCounters,
 } from './policy-wasm-bytecode-input-cache.js';
+import type { PolicyScheduleFallbackFired } from './policy-evaluation-core.js';
+import { encodeWasmPhaseScheduleValue } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 9;
+export const POLICY_WASM_ABI_VERSION = 10;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -62,6 +65,8 @@ const FEATURE_KIND_CODE: Readonly<Record<string, number>> = {
   stateFeature: 14,
   dynamicSurface: 15,
   dynamicRef: 16,
+  phaseIntrinsic: 17,
+  scheduleDistance: 18,
 };
 
 interface PolicyWasmExports {
@@ -114,6 +119,7 @@ export interface PolicyWasmBytecodeContext {
   readonly expectedLayoutId?: number;
   readonly bytecodeInputCache?: PolicyWasmBytecodeInputCache;
   readonly bytecodeStateWordsCache?: PolicyWasmBytecodeStateWordsCache;
+  readonly gameDefRuntime?: GameDefRuntime;
 }
 
 export interface PolicyWasmBatchCandidate {
@@ -126,6 +132,7 @@ export interface PolicyWasmBatchCandidate {
 export interface PolicyWasmScoreRow {
   readonly stableMoveKey: string;
   readonly score: number;
+  readonly scheduleFallbackFired?: PolicyScheduleFallbackFired;
 }
 
 export interface PolicyWasmMoveConsideration {
@@ -267,23 +274,39 @@ const encodedPolicyBytecodeInputWordCount = (
     + 1
     + (encoded.globalMarkers.length * 2);
 
-const policyBytecodeProgramWords = (bytecode: PolicyBytecode): Int32Array => {
+const wasmFeatureRefWords = (
+  ref: PolicyBytecode['featureTable']['refs'][number],
+  context: PolicyWasmBytecodeContext,
+): readonly number[] => {
+  const kindCode = FEATURE_KIND_CODE[ref.kind];
+  if (kindCode === undefined) {
+    return [-1, ref.layoutIndex, 0, 0, 0, 0, 0];
+  }
+  const phaseScheduleValue = encodeWasmPhaseScheduleValue(ref, context);
+  if (phaseScheduleValue !== undefined) {
+    const [tag, raw] = phaseScheduleValue;
+    return [kindCode, ref.layoutIndex, tag, raw, 0, 0, 0];
+  }
+  return [
+    kindCode,
+    ref.layoutIndex,
+    ref.aux[0] ?? 0,
+    ref.aux[1] ?? 0,
+    ref.aux[2] ?? 0,
+    ref.aux[3] ?? 0,
+    ref.aux[4] ?? 0,
+  ];
+};
+
+const policyBytecodeProgramWords = (
+  bytecode: PolicyBytecode,
+  context: PolicyWasmBytecodeContext,
+): Int32Array => {
   const words: number[] = [];
   writeI32Array(words, bytecode.instructions);
   writeI32Array(words, bytecode.constants);
   for (const ref of bytecode.featureTable.refs) {
-    const kindCode = FEATURE_KIND_CODE[ref.kind];
-    if (kindCode === undefined) {
-      words.push(-1, ref.layoutIndex);
-      for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
-        words.push(0);
-      }
-      continue;
-    }
-    words.push(kindCode, ref.layoutIndex);
-    for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
-      words.push(ref.aux[index] ?? 0);
-    }
+    writeI32Array(words, wasmFeatureRefWords(ref, context));
   }
   return Int32Array.from(words);
 };
@@ -381,7 +404,7 @@ const encodePolicyBytecodeInput = (
         context.layout.varLayout.perPlayerVariableIds.length,
         context.layout.varLayout.zoneVariableIds.length,
       );
-      const programWords = policyBytecodeProgramWords(bytecode);
+      const programWords = policyBytecodeProgramWords(bytecode, context);
       const stateWords = encodedPolicyBytecodeStateWords(encoded, context);
       const words = new Int32Array(headerWords.length + programWords.length + stateWords.length);
       words.set(headerWords, 0);
@@ -442,20 +465,7 @@ const encodePolicyBytecodeInput = (
     writeWords(bytecode.instructions);
     writeWords(bytecode.constants);
     for (const ref of bytecode.featureTable.refs) {
-      const kindCode = FEATURE_KIND_CODE[ref.kind];
-      if (kindCode === undefined) {
-        writeWord(-1);
-        writeWord(ref.layoutIndex);
-        for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
-          writeWord(0);
-        }
-        continue;
-      }
-      writeWord(kindCode);
-      writeWord(ref.layoutIndex);
-      for (let index = 0; index < FEATURE_REF_WORDS - 2; index += 1) {
-        writeWord(ref.aux[index] ?? 0);
-      }
+      writeWords(wasmFeatureRefWords(ref, context));
     }
 
     writeWords(cachedZoneKindCodes(context.layout, context.def));
@@ -725,6 +735,31 @@ const literalBatchValues = (
     : undefined;
 };
 
+const exprReadsScheduleDistance = (expr: CompiledPolicyExpr | undefined): boolean => {
+  if (expr === undefined) {
+    return false;
+  }
+  switch (expr.kind) {
+    case 'literal':
+    case 'param':
+      return false;
+    case 'ref':
+      return expr.ref.kind === 'scheduleDistance';
+    case 'op':
+      return expr.args.some(exprReadsScheduleDistance);
+    case 'zoneTokenAgg':
+      return typeof expr.zone === 'string' ? false : exprReadsScheduleDistance(expr.zone);
+    case 'adjacentTokenAgg':
+      return typeof expr.anchorZone === 'string' ? false : exprReadsScheduleDistance(expr.anchorZone);
+    case 'globalTokenAgg':
+    case 'globalZoneAgg':
+    case 'zoneProp':
+      return false;
+    case 'seatAgg':
+      return exprReadsScheduleDistance(expr.expr);
+  }
+};
+
 export const evaluateWasmMoveConsiderationScoreRows = (
   runtime: PolicyWasmRuntime,
   input: {
@@ -742,6 +777,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
   },
 ): PolicyWasmScoreRowsResult => {
   const scores = input.candidates.map(() => 0);
+  const scheduleFallbackFired = input.candidates.map((): PolicyScheduleFallbackFired | undefined => undefined);
   const precomputed: PolicyWasmBatchPrecomputedInput = {
     ...(input.precomputedStateFeatures === undefined ? {} : { stateFeatures: input.precomputedStateFeatures }),
     ...(input.precomputedCandidateFeatures === undefined ? {} : { candidateFeatures: input.precomputedCandidateFeatures }),
@@ -810,9 +846,29 @@ export const evaluateWasmMoveConsiderationScoreRows = (
       }
       const weight = weightValues[index];
       const value = valueValues[index];
-      let contribution = typeof weight === 'number' && typeof value === 'number'
-        ? weight * value
-        : consideration.unknownAs ?? 0;
+      let contribution: number;
+      if (typeof weight === 'number' && typeof value === 'number') {
+        contribution = weight * value;
+      } else if (
+        (exprReadsScheduleDistance(consideration.weight) && weight === undefined)
+        || (exprReadsScheduleDistance(consideration.value) && value === undefined)
+      ) {
+        const fallback = consideration.scheduleFallback?.onUnavailable;
+        if (fallback === 'noContribution') {
+          scheduleFallbackFired[index] = { termId: entry.id, kind: 'noContribution' };
+          contribution = 0;
+        } else if (fallback === 'dropConsideration') {
+          scheduleFallbackFired[index] = { termId: entry.id, kind: 'dropConsideration' };
+          contribution = 0;
+        } else if (fallback !== undefined) {
+          scheduleFallbackFired[index] = { termId: entry.id, kind: 'constant', value: fallback.value };
+          contribution = fallback.value;
+        } else {
+          contribution = 0;
+        }
+      } else {
+        contribution = consideration.unknownAs ?? 0;
+      }
       if (consideration.clamp !== undefined) {
         if (consideration.clamp.min !== undefined) {
           contribution = Math.max(consideration.clamp.min, contribution);
@@ -829,6 +885,7 @@ export const evaluateWasmMoveConsiderationScoreRows = (
     rows: input.candidates.map((candidate, index) => ({
       stableMoveKey: candidate.stableMoveKey,
       score: scores[index] ?? 0,
+      ...(scheduleFallbackFired[index] === undefined ? {} : { scheduleFallbackFired: scheduleFallbackFired[index] }),
     })),
   };
 };

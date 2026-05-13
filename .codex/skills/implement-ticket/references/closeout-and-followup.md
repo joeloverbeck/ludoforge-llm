@@ -64,6 +64,17 @@ Purely clerical ticket/spec edits, such as typo fixes or appending evidence that
 
 Examples: changing scope, touched-file/header classification, acceptance wording, or a proof ledger claim is proof-affecting. Appending the exact result of a just-completed command can be clerical only when it changes no acceptance claim or command coverage. After all final lanes are green, classified, or explicitly substituted, setting the terminal status to the already-proven result can also be clerical when it changes no acceptance story; record the no-invalidation decision explicitly. When uncertain, rerun the focused affected lane or stop for `1-3-1` if the rerun cost or boundary change is no longer clearly authorized.
 
+Use this compact classifier for late closeout edits after the first final-proof lane:
+
+| Late edit | Usually clerical? | Required action |
+| --- | --- | --- |
+| Terminal status set to the already-proven result | yes | Record no-invalidation when scope, acceptance, command coverage, touched-file scope, dependency ownership, and proof claims are unchanged. |
+| Exact proof result transcription from a command that just ran | yes | Record the command and result; rerun only if the text changes command coverage or acceptance meaning. |
+| Typo, formatting, or obvious grammar in non-contract prose | yes | Record or mention no-invalidation when the edit happens in the active ticket/spec after proof. |
+| Touched-file scope, generated-fallout, sibling-owner, dependency, or deferred-scope change | no | Rerun the narrowest affected proof or integrity lane after updating the artifact. |
+| Acceptance wording, invariant/proof matrix, command substitution, threshold, or status classification change | no | Treat as proof-affecting unless a prior user-approved boundary reset already covers the exact change. |
+| Adding or removing a path in the durable outcome/proof ledger | usually no | Rerun or explicitly justify no-invalidation only when it is pure transcription of an already-proven dirty-state fact. |
+
 After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
 
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.

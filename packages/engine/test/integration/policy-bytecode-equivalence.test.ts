@@ -9,6 +9,7 @@ import { PolicyEvaluationContext, type PolicyEvaluationCandidate } from '../../s
 import { executeBytecode, PolicyBytecodeVmUnsupportedError } from '../../src/agents/policy-vm/index.js';
 import {
   __internal_for_tests as policyWasmRuntimeInternals,
+  evaluateWasmCandidateFeatureRow,
   evaluateWasmMoveConsiderationScoreRows,
   type PolicyWasmPreviewOutcome,
 } from '../../src/agents/policy-wasm-runtime.js';
@@ -38,6 +39,16 @@ import {
 } from '../../src/kernel/index.js';
 import { toMoveIdentityKey } from '../../src/kernel/move-identity.js';
 import { getFitlProductionFixture } from '../helpers/production-spec-helpers.js';
+import {
+  runtimeWithDrawnCount,
+  stateWithDrawnCount,
+} from '../unit/agents/schedule-ref-test-fixtures.js';
+import {
+  defWithScheduleUnitRates,
+  schedulePreviewCandidateFeatureExpr,
+  scheduleScoreConsideration,
+  unavailableScheduleFallbackConsideration,
+} from './policy-bytecode-equivalence-phase-schedule-fixtures.js';
 
 const POLICY_PROFILE_VARIANTS = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'] as const;
 const CORPUS_PATH = fileURLToPath(new URL('../../../test/fixtures/bytecode-equivalence-corpus.json', import.meta.url));
@@ -282,6 +293,8 @@ const isWasmScoreExprSupported = (expr: CompiledPolicyExpr | undefined): boolean
         || expr.ref.kind === 'candidateIntrinsic'
         || expr.ref.kind === 'candidateParam'
         || expr.ref.kind === 'candidateTag'
+        || expr.ref.kind === 'phaseIntrinsic'
+        || expr.ref.kind === 'scheduleDistance'
         || (expr.ref.kind === 'library' && (
           expr.ref.refKind === 'stateFeature'
           || expr.ref.refKind === 'candidateFeature'
@@ -671,5 +684,145 @@ describe('policy bytecode equivalence harness', () => {
     }
 
     assert.ok(supportedProfiles > 0, 'WASM score parity must support at least one candidate-dependent profile batch.');
+  });
+
+  it('routes phase and schedule refs through WASM score-row bytecode with TypeScript parity', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    const scheduleDef = defWithScheduleUnitRates();
+    const scheduleRuntime = runtimeWithDrawnCount(scheduleDef, 1);
+    const scheduleState = stateWithDrawnCount(scheduleDef, 1);
+    const scheduleLayout = buildEncodedStateLayout(scheduleDef);
+    const encoded = buildEncodedState(scheduleState, scheduleLayout);
+    const microturn = publishMicroturn(scheduleDef, scheduleState, scheduleRuntime);
+    const legalMoves = actionSelectionMoves(microturn);
+    assert.ok(legalMoves.length > 0, 'schedule fixture must expose a move candidate');
+    const candidates = batchCandidates(scheduleDef, legalMoves);
+    const evaluationCandidateRows = evaluationCandidates(scheduleDef, legalMoves);
+    const evaluation = new PolicyEvaluationContext({
+      def: scheduleDef,
+      state: scheduleState,
+      playerId: scheduleState.activePlayer,
+      seatId: 'solo',
+      catalog: scheduleDef.agents!,
+      parameterValues: {},
+      trustedMoveIndex: new Map(),
+      runtime: scheduleRuntime,
+      encodedStateLayout: scheduleLayout,
+      encodedState: encoded,
+    }, evaluationCandidateRows);
+    try {
+      const consideration = scheduleScoreConsideration();
+      const tsScores = evaluationCandidateRows.map((candidate) =>
+        evaluation.evaluateConsideration({ phaseSchedule: consideration }, 'phaseSchedule', candidate),
+      );
+      const wasmRows = evaluateWasmMoveConsiderationScoreRows(wasm, {
+        def: scheduleDef,
+        encoded,
+        context: {
+          def: scheduleDef,
+          layout: scheduleLayout,
+          state: scheduleState,
+          playerId: Number(scheduleState.activePlayer),
+          gameDefRuntime: scheduleRuntime,
+        },
+        considerations: [{ id: 'phaseSchedule', consideration }],
+        candidates,
+      });
+
+      assert.equal(wasmRows.kind, 'supported');
+      assert.deepEqual(
+        wasmRows.rows.map((row) => row.score),
+        tsScores,
+        'WASM score rows should match TypeScript scores for phase/schedule refs',
+      );
+      assert.ok(wasmRows.rows.length > 0, 'WASM score-row route should produce rows');
+    } finally {
+      evaluation.dispose();
+    }
+  });
+
+  it('routes phase and schedule refs through WASM preview-candidate-feature bytecode with TypeScript parity', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    const scheduleDef = defWithScheduleUnitRates();
+    const scheduleRuntime = runtimeWithDrawnCount(scheduleDef, 1);
+    const scheduleState = stateWithDrawnCount(scheduleDef, 1);
+    const scheduleLayout = buildEncodedStateLayout(scheduleDef);
+    const encoded = buildEncodedState(scheduleState, scheduleLayout);
+    const microturn = publishMicroturn(scheduleDef, scheduleState, scheduleRuntime);
+    const legalMoves = actionSelectionMoves(microturn);
+    assert.ok(legalMoves.length > 0, 'schedule fixture must expose a move candidate');
+    const candidates = batchCandidates(scheduleDef, legalMoves);
+    const evaluationCandidateRows = evaluationCandidates(scheduleDef, legalMoves);
+    const evaluation = new PolicyEvaluationContext({
+      def: scheduleDef,
+      state: scheduleState,
+      playerId: scheduleState.activePlayer,
+      seatId: 'solo',
+      catalog: scheduleDef.agents!,
+      parameterValues: {},
+      trustedMoveIndex: new Map(),
+      runtime: scheduleRuntime,
+      encodedStateLayout: scheduleLayout,
+      encodedState: encoded,
+    }, evaluationCandidateRows);
+    try {
+      const expr = schedulePreviewCandidateFeatureExpr();
+      const tsValues = evaluationCandidateRows.map((candidate) =>
+        evaluation.evaluateCompiledExpr(expr, candidate),
+      );
+      const wasmValues = evaluateWasmCandidateFeatureRow(wasm, {
+        def: scheduleDef,
+        encoded,
+        context: {
+          def: scheduleDef,
+          layout: scheduleLayout,
+          state: scheduleState,
+          playerId: Number(scheduleState.activePlayer),
+          gameDefRuntime: scheduleRuntime,
+        },
+        expr,
+        candidates,
+      });
+
+      assert.notEqual(wasmValues, null, 'WASM preview-candidate-feature row route should support phase/schedule refs');
+      assert.deepEqual(wasmValues, tsValues);
+    } finally {
+      evaluation.dispose();
+    }
+  });
+
+  it('preserves schedule fallback metadata on WASM score rows', async () => {
+    const wasm = await loadPolicyWasmRuntime();
+    const scheduleDef = defWithScheduleUnitRates();
+    const scheduleRuntime = runtimeWithDrawnCount(scheduleDef, 5);
+    const scheduleState = stateWithDrawnCount(scheduleDef, 5);
+    const scheduleLayout = buildEncodedStateLayout(scheduleDef);
+    const encoded = buildEncodedState(scheduleState, scheduleLayout);
+    const microturn = publishMicroturn(scheduleDef, scheduleState, scheduleRuntime);
+    const legalMoves = actionSelectionMoves(microturn);
+    assert.ok(legalMoves.length > 0, 'schedule fixture must expose a move candidate');
+    const candidates = batchCandidates(scheduleDef, legalMoves);
+    const consideration = unavailableScheduleFallbackConsideration();
+
+    const wasmRows = evaluateWasmMoveConsiderationScoreRows(wasm, {
+      def: scheduleDef,
+      encoded,
+      context: {
+        def: scheduleDef,
+        layout: scheduleLayout,
+        state: scheduleState,
+        playerId: Number(scheduleState.activePlayer),
+        gameDefRuntime: scheduleRuntime,
+      },
+      considerations: [{ id: 'scheduleUnavailable', consideration }],
+      candidates,
+    });
+
+    assert.equal(wasmRows.kind, 'supported');
+    assert.deepEqual(wasmRows.rows.map((row) => row.score), [0]);
+    assert.deepEqual(
+      (wasmRows.rows[0] as { readonly scheduleFallbackFired?: unknown }).scheduleFallbackFired,
+      { termId: 'scheduleUnavailable', kind: 'noContribution' },
+    );
   });
 });

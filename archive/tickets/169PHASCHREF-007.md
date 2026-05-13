@@ -90,7 +90,7 @@ Add unit-level golden tests and cross-unit consistency tests that reflect the fi
 ## Out of Scope
 
 - `.toPhase` aliasing — completed by `archive/tickets/169PHASCHREF-004.md`.
-- WASM opcode integration — `tickets/169PHASCHREF-005.md` should integrate only the schedule refs that exist when it starts; non-card unit WASM parity follows this ticket if needed.
+- WASM opcode integration — `archive/tickets/169PHASCHREF-005.md` integrates the schedule refs that existed when it started, including the declared-rate non-card units shipped here.
 - FITL `phaseBoundaries` authoring — `tickets/169PHASCHREF-006.md`.
 - Cumulative-sequence distance until an entire multi-phase sequence completes.
 
@@ -127,7 +127,7 @@ Add unit-level golden tests and cross-unit consistency tests that reflect the fi
 
 Completion date: 2026-05-13
 
-Outcome amended: 2026-05-13 — post-ticket-review extended `tickets/169PHASCHREF-005.md` to own WASM parity for declared-rate non-card units and archived this ticket.
+Outcome amended: 2026-05-13 — post-ticket-review extended `archive/tickets/169PHASCHREF-005.md` to own WASM parity for declared-rate non-card units and archived this ticket; later path cleanup updated that owner reference after 005 archived.
 
 What landed:
 
@@ -162,7 +162,7 @@ Generated/schema fallout:
 
 Deferred sibling/spec scope:
 
-- Post-review follow-up update: `tickets/169PHASCHREF-005.md` was extended to own WASM parity for the declared-rate non-card schedule units shipped here.
+- Post-review follow-up update: `archive/tickets/169PHASCHREF-005.md` was extended to own WASM parity for the declared-rate non-card schedule units shipped here.
 - FITL phase-boundary authoring remains `tickets/169PHASCHREF-006.md`.
 - Live-counter schedule semantics and schedule kinds beyond `cardDraw` remain future work, not hidden behavior in this ticket.
 

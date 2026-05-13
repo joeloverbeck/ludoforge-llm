@@ -15,7 +15,7 @@ import {
   type FeatureRef,
 } from '../cnl/policy-bytecode/index.js';
 import { computeEffectFootprint, unionFootprints } from '../cnl/compile-effect-footprint.js';
-import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
+import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
 import type {
   AttributeValue,
   AgentParameterValue,
@@ -987,6 +987,14 @@ export class PolicyEvaluationContext {
       }
       case 'candidateTags':
         return candidate === undefined ? undefined : this.input.def.actionTagIndex?.byAction[candidate.actionId] ?? [];
+      case 'phaseIntrinsic':
+      case 'scheduleDistance': {
+        const agentRef = this.findPhaseScheduleAgentRef(expr, ref);
+        if (agentRef !== undefined) {
+          return this.toVmStackValue(this.resolveAgentPolicyRef(agentRef, candidate));
+        }
+        break;
+      }
       case 'adjacentTokenAgg':
       case 'seatAgg':
         throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" is not supported by the default bytecode evaluator.`);
@@ -996,6 +1004,31 @@ export class PolicyEvaluationContext {
         );
     }
     throw new PolicyBytecodeVmUnsupportedError(`Policy bytecode feature "${ref.kind}" could not be resolved by the default bytecode evaluator.`);
+  }
+
+  private findPhaseScheduleAgentRef(expr: CompiledPolicyExpr, ref: FeatureRef): CompiledAgentPolicyRef | undefined {
+    return this.collectAgentPolicyRefs(expr).find((candidateRef) => {
+      if (ref.kind === 'phaseIntrinsic' && candidateRef.kind === 'phaseIntrinsic') {
+        return (candidateRef.name === 'current.id' ? 0 : candidateRef.name === 'next.id' ? 1 : stableStringCode(candidateRef.name)) === ref.aux[0];
+      }
+      if (ref.kind !== 'scheduleDistance' || candidateRef.kind !== 'scheduleDistance') {
+        return false;
+      }
+      const targetCode = candidateRef.target.kind === 'nextBoundary' ? 0 : 1;
+      const boundaryCode = candidateRef.target.kind === 'boundary' ? stableStringCode(candidateRef.target.boundaryId) : 0;
+      const unitCode = candidateRef.unit === undefined
+        ? -1
+        : candidateRef.unit === 'cards'
+          ? 0
+          : candidateRef.unit === 'microturns'
+            ? 1
+            : candidateRef.unit === 'actions'
+              ? 2
+              : candidateRef.unit === 'turns'
+                ? 3
+                : 4;
+      return targetCode === ref.aux[0] && boundaryCode === ref.aux[1] && unitCode === ref.aux[2];
+    });
   }
 
   private toVmStackValue(value: PolicyValue): PolicyValue {

@@ -356,7 +356,7 @@ preferGovernEarlyInCoupCycle:
 
 In Fire in the Lake, `played:none` is the current driving-card slot and `lookahead:none` is the next visible card slot. If either visible slot is a coup card, the ref is ready with an exact distance. If neither visible slot is a coup card, the ref returns `partial.lowerBound: 2`, and `useLowerBound` lets the heuristic score that bounded timing signal without peeking into the hidden deck.
 
-Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `specs/170-partial-visibility-observer-policy.md`
+Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `archive/specs/170-partial-visibility-observer-policy.md`
 
 ## Reading the Preview Trace
 

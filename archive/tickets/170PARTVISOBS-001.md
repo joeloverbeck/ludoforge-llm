@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/types-core.ts`, `packages/engine/src/agents/policy-runtime.ts` (type union only — no resolver logic), `packages/engine/src/cnl/compile-agents.ts` (or phase-boundary sibling), `packages/engine/src/kernel/schemas-extensions.ts`, regenerated `packages/engine/schemas/` artifacts
-**Deps**: `specs/170-partial-visibility-observer-policy.md`
+**Deps**: `archive/specs/170-partial-visibility-observer-policy.md`
 
 ## Problem
 

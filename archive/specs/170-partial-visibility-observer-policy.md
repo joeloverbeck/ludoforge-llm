@@ -1,6 +1,6 @@
 # Spec 170 — Partial-Visibility Observer Policy for Schedule Refs
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — direct enabler for the `fitl-arvn-agent-evolution` campaign. Spec 169 shipped the timing-aware ref family but its binary observer model (deck-zone `visibility: 'public'` ⇒ ready; anything else ⇒ `unavailable: hiddenDeck`) treats FITL's partially-visible deck as fully hidden, zeroing the signal for every ARVN main-phase decision. Empirical evidence from campaign exp-001 (compositeScore −3.4 → −3.4, zero behavioral change across 15 deterministic seeds) confirms the gap blocks all spec-169-driven hypotheses.
 **Complexity**: M (parallel to spec 169 in surface area; smaller in conceptual scope — one new observer-policy enum + one new resolution-status variant on existing ref family).
 **Date**: 2026-05-13 (revised in same session after external-LLM cross-review).
@@ -528,7 +528,36 @@ This spec was authored, externally reviewed (ChatGPT deep-research), and revised
 
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
-- [`archive/tickets/170PARTVISOBS-001.md`](../archive/tickets/170PARTVISOBS-001.md) — Types, `ObserverPolicy` union, and compiler validation (covers §7 Phase 0, §8.1 partial-visibility-compile-validation + partial-visibility-determinism)
-- [`archive/tickets/170PARTVISOBS-002.md`](../archive/tickets/170PARTVISOBS-002.md) — Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, trace (covers §7 Phase 1, §8.1 partial-visibility-resolver-correctness + partial-visibility-fallback-routing, §8.2 schedule-ref-consideration-trace-topNVisible, §8.5 partial-visibility-no-leak)
-- [`archive/tickets/170PARTVISOBS-003.md`](../archive/tickets/170PARTVISOBS-003.md) — WASM score-row parity for `topNVisible` and `partial.lowerBound` through the live host-encoded phase/schedule value seam (covers §7 Phase 2, §8.4 WASM equivalence)
-- [`archive/tickets/170PARTVISOBS-004.md`](../archive/tickets/170PARTVISOBS-004.md) — FITL `observerPolicy` authoring with verified slot order + cookbook + golden trace (covers §7 Phase 3, §8.2 partial-visibility-fitl-coup-distance, cookbook section)
+- [`archive/tickets/170PARTVISOBS-001.md`](../tickets/170PARTVISOBS-001.md) — Types, `ObserverPolicy` union, and compiler validation (covers §7 Phase 0, §8.1 partial-visibility-compile-validation + partial-visibility-determinism)
+- [`archive/tickets/170PARTVISOBS-002.md`](../tickets/170PARTVISOBS-002.md) — Runtime resolver branch, `partial.lowerBound` status, fallback evaluator, trace (covers §7 Phase 1, §8.1 partial-visibility-resolver-correctness + partial-visibility-fallback-routing, §8.2 schedule-ref-consideration-trace-topNVisible, §8.5 partial-visibility-no-leak)
+- [`archive/tickets/170PARTVISOBS-003.md`](../tickets/170PARTVISOBS-003.md) — WASM score-row parity for `topNVisible` and `partial.lowerBound` through the live host-encoded phase/schedule value seam (covers §7 Phase 2, §8.4 WASM equivalence)
+- [`archive/tickets/170PARTVISOBS-004.md`](../tickets/170PARTVISOBS-004.md) — FITL `observerPolicy` authoring with verified slot order + cookbook + golden trace (covers §7 Phase 3, §8.2 partial-visibility-fitl-coup-distance, cookbook section)
+
+## Outcome (2026-05-13)
+
+Spec 170 is complete and implemented through the archived `170PARTVISOBS` ticket series.
+
+What changed:
+
+- Added generic `observerPolicy.kind: topNVisible` / `visiblePrefix` schedule declarations with compiler validation and GameDef schema support.
+- Added the `partial.lowerBound` schedule-distance status and explicit `scheduleFallback.onPartial.visiblePrefixExhausted` routing.
+- Implemented runtime resolver, fallback, and deterministic trace metadata for ready and partial topNVisible schedule refs.
+- Implemented host-side WASM score-row parity for the topNVisible schedule-distance seam.
+- Authored FITL `coupEntry` with the verified visible-prefix order `[played:none, lookahead:none]`, updated the sandbox demonstration profile, and documented the phase/schedule ref contract in the cookbook.
+
+Deviations from the original plan:
+
+- FITL's live lifecycle proved the correct visible-prefix order is `[played:none, lookahead:none]`, not the earlier stale `[lookahead:none, leader:none]` example.
+- WASM work landed through the existing host-encoded `FEATURE_SCHEDULE_DISTANCE` seam; no Rust guest ABI or opcode change was needed.
+- Existing spec-169 hidden-deck behavior remains pinned through explicit without-observerPolicy fixture variants after production FITL gained `topNVisible`.
+
+Verification recorded by the archived tickets:
+
+- `pnpm -F @ludoforge/engine build`
+- Focused compiled Node lanes for partial-visibility compiler validation, determinism, resolver correctness, fallback routing, trace metadata, leakage prevention, FITL coup-distance goldens, and bytecode equivalence.
+- `pnpm -F @ludoforge/engine run schema:artifacts:check`
+- `pnpm turbo build`
+- `pnpm turbo lint`
+- `pnpm turbo typecheck`
+- `pnpm turbo test`
+- `pnpm run check:ticket-deps`

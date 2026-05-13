@@ -248,7 +248,9 @@ const compileReferenceAccessor = (expr: Extract<ValueExpr, { readonly _t: 2 }>):
           });
         }
 
-        const token = resolvedBinding.tokenFromBinding ?? getTokenStateIndexEntry(ctx.state, resolvedBinding.tokenId)?.token ?? null;
+        const token = resolvedBinding.tokenFromBinding
+          ?? getTokenStateIndexEntry(ctx.state, resolvedBinding.tokenId, ctx.resources.tokenStateIndexCache)?.token
+          ?? null;
         if (token === null) {
           throw missingVarError(`Token ${String(resolvedBinding.tokenId)} not found in any zone`, {
             reference: expr,

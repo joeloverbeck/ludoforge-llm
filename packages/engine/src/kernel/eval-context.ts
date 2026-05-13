@@ -4,6 +4,7 @@ import type { FreeOperationExecutionOverlay } from './free-operation-overlay.js'
 import type { ResolveRefCache } from './resolve-ref.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import type { AdjacencyGraph } from './spatial.js';
+import type { TokenStateIndexCache } from './token-state-index.js';
 import type { ExecutionCollector, GameDef, GameState } from './types.js';
 
 export const DEFAULT_MAX_QUERY_RESULTS = 10_000;
@@ -18,21 +19,25 @@ export interface EvalRuntimeResources {
    * implementation when this is unset.
    */
   readonly resolveRefCache?: ResolveRefCache;
+  readonly tokenStateIndexCache?: TokenStateIndexCache;
 }
 
 interface EvalRuntimeResourceInput {
   readonly collector?: ExecutionCollector;
   readonly resolveRefCache?: ResolveRefCache;
+  readonly tokenStateIndexCache?: TokenStateIndexCache;
 }
 
 export function createEvalRuntimeResources(input?: EvalRuntimeResourceInput): EvalRuntimeResources {
   const {
     collector = createCollector(),
     resolveRefCache,
+    tokenStateIndexCache,
   } = input ?? {};
   return {
     collector,
     ...(resolveRefCache === undefined ? {} : { resolveRefCache }),
+    ...(tokenStateIndexCache === undefined ? {} : { tokenStateIndexCache }),
   };
 }
 

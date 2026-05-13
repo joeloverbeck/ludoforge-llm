@@ -1766,7 +1766,9 @@ export class PolicyEvaluationContext {
     } else if (this.transientZoneReadContext?.stateHash === currentState.stateHash) {
       return this.transientZoneReadContext.context;
     }
-    const resources = createEvalRuntimeResources();
+    const resources = createEvalRuntimeResources(
+      this.input.runtime === undefined ? undefined : { tokenStateIndexCache: this.input.runtime.tokenStateIndexCache },
+    );
     const context = createEvalContext({
       def: this.input.def,
       adjacencyGraph: this.input.runtime?.adjacencyGraph ?? buildAdjacencyGraph(this.input.def.zones),

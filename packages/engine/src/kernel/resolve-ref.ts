@@ -256,7 +256,7 @@ function resolveTokenIdFromBinding(bindingName: string, value: unknown, referenc
 }
 
 function findTokenByIdInZones(ctx: ReadContext, tokenId: string): Token | null {
-  return getTokenStateIndexEntry(ctx.state, tokenId)?.token ?? null;
+  return getTokenStateIndexEntry(ctx.state, tokenId, ctx.resources.tokenStateIndexCache)?.token ?? null;
 }
 
 function resolveActiveSeatId(ctx: ReadContext): string | null {
@@ -591,7 +591,7 @@ export function resolveRef(ref: Reference, ctx: ReadContext): number | boolean |
     }
 
     const tokenId = resolveTokenIdFromBinding(ref.token, boundToken, ref);
-    const tokenStateEntry = getTokenStateIndexEntry(ctx.state, tokenId);
+    const tokenStateEntry = getTokenStateIndexEntry(ctx.state, tokenId, ctx.resources.tokenStateIndexCache);
     if (tokenStateEntry !== undefined) {
       return tokenStateEntry.zoneId;
     }

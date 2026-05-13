@@ -128,7 +128,9 @@ export const materializePolicyWasmPreviewQueryValues = (
       activePlayer: input.state.activePlayer,
       actorPlayer: input.state.activePlayer,
       bindings: Object.fromEntries(bindings),
-      resources: createEvalRuntimeResources(),
+      resources: createEvalRuntimeResources({
+        tokenStateIndexCache: runtime.tokenStateIndexCache,
+      }),
       runtimeTableIndex: runtime.runtimeTableIndex,
       freeOperationOverlay: undefined,
       maxQueryResults: undefined,

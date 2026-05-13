@@ -222,6 +222,9 @@ const runOnce = () => {
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    persistentTokenStateIndexCacheHitCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheHitCount(),
+    persistentTokenStateIndexCacheMissCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheMissCount(),
+    persistentTokenStateIndexCacheWriteCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheWriteCount(),
     wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
     wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
@@ -249,6 +252,9 @@ function readCounterSnapshot() {
     draftTokenStateIndexAttachCount: tokenStateIndexInternals.getDraftTokenStateIndexAttachCount(),
     draftTokenStateIndexSnapshotCount: tokenStateIndexInternals.getDraftTokenStateIndexSnapshotCount(),
     draftTokenStateIndexCowCopyCount: tokenStateIndexInternals.getDraftTokenStateIndexCowCopyCount(),
+    persistentTokenStateIndexCacheHitCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheHitCount(),
+    persistentTokenStateIndexCacheMissCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheMissCount(),
+    persistentTokenStateIndexCacheWriteCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheWriteCount(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
@@ -288,6 +294,12 @@ function createPerCardRecorder(startedAt) {
         counters.draftTokenStateIndexSnapshotCount - currentCounters.draftTokenStateIndexSnapshotCount,
       draftTokenStateIndexCowCopyCount:
         counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
+      persistentTokenStateIndexCacheHitCount:
+        counters.persistentTokenStateIndexCacheHitCount - currentCounters.persistentTokenStateIndexCacheHitCount,
+      persistentTokenStateIndexCacheMissCount:
+        counters.persistentTokenStateIndexCacheMissCount - currentCounters.persistentTokenStateIndexCacheMissCount,
+      persistentTokenStateIndexCacheWriteCount:
+        counters.persistentTokenStateIndexCacheWriteCount - currentCounters.persistentTokenStateIndexCacheWriteCount,
       wasmScoreRowBytecodeCompileCount:
         counters.wasmScoreRowBytecodeCompileCount - currentCounters.wasmScoreRowBytecodeCompileCount,
       wasmPreviewCandidateFeatureRowRouteCount:
@@ -691,6 +703,9 @@ const summary = {
     draftTokenStateIndexAttachCount: result.draftTokenStateIndexAttachCount,
     draftTokenStateIndexSnapshotCount: result.draftTokenStateIndexSnapshotCount,
     draftTokenStateIndexCowCopyCount: result.draftTokenStateIndexCowCopyCount,
+    persistentTokenStateIndexCacheHitCount: result.persistentTokenStateIndexCacheHitCount,
+    persistentTokenStateIndexCacheMissCount: result.persistentTokenStateIndexCacheMissCount,
+    persistentTokenStateIndexCacheWriteCount: result.persistentTokenStateIndexCacheWriteCount,
     wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
     wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
     wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
@@ -718,6 +733,9 @@ process.stderr.write(
   `draftTokenStateIndexDeltaCount=${summary.result.draftTokenStateIndexDeltaCount} ` +
   `draftTokenStateIndexSnapshotCount=${summary.result.draftTokenStateIndexSnapshotCount} ` +
   `draftTokenStateIndexCowCopyCount=${summary.result.draftTokenStateIndexCowCopyCount} ` +
+  `persistentTokenStateIndexCacheHitCount=${summary.result.persistentTokenStateIndexCacheHitCount} ` +
+  `persistentTokenStateIndexCacheMissCount=${summary.result.persistentTokenStateIndexCacheMissCount} ` +
+  `persistentTokenStateIndexCacheWriteCount=${summary.result.persistentTokenStateIndexCacheWriteCount} ` +
   `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
   `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
   `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
@@ -744,6 +762,9 @@ for (const row of summary.result.perCardRows ?? []) {
     `draftTokenStateIndexAttachCount=${row.draftTokenStateIndexAttachCount} ` +
     `draftTokenStateIndexSnapshotCount=${row.draftTokenStateIndexSnapshotCount} ` +
     `draftTokenStateIndexCowCopyCount=${row.draftTokenStateIndexCowCopyCount} ` +
+    `persistentTokenStateIndexCacheHitCount=${row.persistentTokenStateIndexCacheHitCount} ` +
+    `persistentTokenStateIndexCacheMissCount=${row.persistentTokenStateIndexCacheMissCount} ` +
+    `persistentTokenStateIndexCacheWriteCount=${row.persistentTokenStateIndexCacheWriteCount} ` +
     `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
     `wasmPreviewCandidateFeatureRowRouteCount=${row.wasmPreviewCandidateFeatureRowRouteCount} ` +
     `wasmPreviewCandidateFeatureRowUnsupportedCount=${row.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +

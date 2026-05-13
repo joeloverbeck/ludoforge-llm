@@ -4,7 +4,7 @@
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — measurement + report only
-**Deps**: `tickets/168ENGHOTPATH-002.md`, `tickets/168ENGHOTPATH-003.md`, `tickets/168ENGHOTPATH-004.md`, `tickets/168ENGHOTPATH-005.md`
+**Deps**: `tickets/168ENGHOTPATH-002.md`, `tickets/168ENGHOTPATH-007.md`, `tickets/168ENGHOTPATH-003.md`, `tickets/168ENGHOTPATH-004.md`, `tickets/168ENGHOTPATH-005.md`
 
 ## Problem
 
@@ -14,7 +14,7 @@ This is a **deferred-execution ticket**: it is not gated (it always runs) but it
 
 ## Assumption Reassessment (2026-05-13)
 
-1. Phases 1-4 (`tickets/168ENGHOTPATH-002` through `005`) are landed and each has produced its own per-phase report (`reports/turnperf-NNN-spec-168-phase-N.md`). Reassess this precondition before starting work.
+1. Phases 1-4 (`tickets/168ENGHOTPATH-002`, `007`, and `003` through `005`) are landed and each has produced its own per-phase report (`reports/turnperf-NNN-spec-168-phase-N.md`). Reassess this precondition before starting work. Ticket `007` exists because `002` landed the Phase 1 substrate but left the measured gate red.
 2. The canonical probe is reproducible via the `archive/tickets/168ENGHOTPATH-001.md` benchmark fixture.
 3. The escalation criterion (spec §3.6) is fully specified: a single non-policy bucket sustains ≥ `40 ms` per card AND the candidate is a kernel-internal hot path that today does not cross the WASM boundary AND the back-of-envelope cost-model (using `encodeBytecodeInput` per-call cost from the post-Phase-4 baseline as marshalling-cost proxy) shows expected `WASM execution + marshalling cost < estimated TS-side cost`.
 

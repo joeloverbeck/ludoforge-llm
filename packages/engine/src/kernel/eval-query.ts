@@ -419,7 +419,7 @@ function resolveTokenQueryFieldValue(
   predicate: Parameters<TokenFilterFieldResolver>[1],
   ctx: ReadContext,
 ): unknown {
-  const tokenStateIndex = getTokenStateIndex(ctx.state);
+  const tokenStateIndex = getTokenStateIndex(ctx.state, ctx.resources.tokenStateIndexCache);
   const zoneDefById = getZoneMap(ctx.def);
   const zoneId = tokenStateIndex.get(token.id)?.zoneId;
   if (predicate.field?.kind === 'tokenZone') {
@@ -1088,7 +1088,7 @@ export function evalQuery(query: OptionsQuery, ctx: ReadContext): readonly Query
       return evalHomogeneousRecursiveQuery(query, query.tiers, ctx, { child: 'tier', children: 'tiers' });
     case 'tokenZones': {
       const sourceItems = evalQuery(query.source, ctx);
-      const tokenStateIndex = getTokenStateIndex(ctx.state);
+      const tokenStateIndex = getTokenStateIndex(ctx.state, ctx.resources.tokenStateIndexCache);
 
       const zones = sourceItems.map((item) => {
         let tokenId: string | null = null;

@@ -453,7 +453,9 @@ export function buildPolicyVictorySurface(
   const margins = def.terminal.margins ?? [];
   const adjacencyGraph = runtime?.adjacencyGraph ?? buildAdjacencyGraph(def.zones);
   const runtimeTableIndex = runtime?.runtimeTableIndex ?? buildRuntimeTableIndex(def);
-  const resources = createEvalRuntimeResources();
+  const resources = createEvalRuntimeResources(
+    runtime === undefined ? undefined : { tokenStateIndexCache: runtime.tokenStateIndexCache },
+  );
   const evalContext = createEvalContext({
     def,
     adjacencyGraph,

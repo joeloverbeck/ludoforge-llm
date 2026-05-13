@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/eval-query.ts`, `packages/engine/src/kernel/resolve-ref.ts`, `packages/engine/src/kernel/gamedef-runtime.ts`
-**Deps**: `archive/tickets/168ENGHOTPATH-001.md`
+**Deps**: `tickets/168ENGHOTPATH-007.md`
 
 ## Problem
 
@@ -16,6 +16,7 @@
 2. `packages/engine/src/kernel/resolve-ref.ts` is `723` lines — verified.
 3. Predicate AST node identity is stable post-compile and is suitable as a cache key — verify exact node-identity accessor during impl (likely a stable structural id assigned by the compiler).
 4. `compileQueryPlan` belongs on `sharedStructural` runtime per Spec 143 because plans depend only on the compiled `GameDef`, not on `runLocal` state — verify there are no closure captures of run-local refs during impl.
+5. Phase 1 substrate ticket `168ENGHOTPATH-002` left the measured token-index gate red; `168ENGHOTPATH-007` is the active Phase 1b prerequisite before Phase 2 should proceed.
 
 ## Architecture Check
 

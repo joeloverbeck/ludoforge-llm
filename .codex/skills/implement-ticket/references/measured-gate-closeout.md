@@ -26,6 +26,19 @@ Use this terminal-status decision table:
 
 If qualitative language such as `significant`, `meaningful`, or `not tiny` appears in the ticket, spec, or reviewer note, classify the final same-command delta as `material`, `minor`, or `not demonstrated` before applying a red-plus-successor closeout.
 
+## Blocked Retained-Substrate Closeout
+
+Use this pattern when a measured-gate ticket lands correct reusable substrate, focused correctness proof is green, but the explicit measured gate remains red and the ticket does not have an explicit red-plus-successor completion contract.
+
+1. Stop for `1-3-1` before deciding to keep the substrate, revert it, or keep optimizing in the same ticket.
+2. If the user confirms keeping the substrate while blocking the ticket, mark the active ticket `BLOCKED`, `PARTIAL`, or the series-local equivalent. Do not use terminal completion wording and do not archive it.
+3. In the active ticket or report, record: retained candidate classification, exact baseline and decisive final metric, materiality verdict, activation/root-cause counters, why the retained code is correct reusable substrate, and why the measured gate is still unmet.
+4. Create or update the non-overlapping successor that owns the remaining measured improvement. Name its dependency on the blocked substrate ticket and record the non-overlap rationale.
+5. Update dependent tickets, specs, phase rows, and sibling status text so the series does not imply the red gate is green or archived.
+6. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-graph integrity lane after status, dependency, successor, or spec ownership changes.
+7. Rerun affected correctness and measured lanes, or record why post-metric edits were only ownership/transcription changes and did not invalidate the decisive metric.
+8. In the final handoff, say `post-ticket-review` did not run and the ticket is blocked/not archive-ready. Name the successor or same-ticket continuation as the next implementation owner.
+
 ## Ordering
 
 For red measured gates, prefer this order:

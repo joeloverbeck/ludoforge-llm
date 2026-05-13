@@ -165,6 +165,7 @@ This is the published profiling-first criterion. WASM expansion is not committed
 |---|---|---|---|
 | **0** | Pin the canonical baseline + add `packages/engine/test/perf/per-decision-cost-budget.perf.test.ts` benchmark fixture (deterministic seed, captures structured per-bucket JSON for diff comparison). Capture baseline into `reports/turnperf-NNN-spec-168-phase-0-baseline.md`. | No perf delta. Phase lands when fixture + baseline report exist and the fixture runs cleanly under the live perf lane, `pnpm -F @ludoforge/engine test:perf`. | S |
 | **1** | Persistent mutable token-state-index per §3.2. | `tokenStateIndex:build` + `tokenStateIndex:refreshCachedEntries` combined ms drops by **≥ 50 ms**; `tokenStateIndexBuildCount` decreases (specific count delta recorded in report). Determinism test green. | M |
+| **1b** | Resolve the Phase 1 measured-gate miss if the persistent state-hash cache is correct but not activated by the canonical workload. | Phase 1 can proceed only after the residual owner records a green `>= 50 ms` token-index drop, or rewrites this spec with measured evidence that Phase 1 should be skipped/reordered. | M |
 | **2** | Compiled query/filter plans per §3.3. | `evalQuery:countMatchingTokens` + `evalQuery:applyTokenFilter` + token-binding/ref-resolution CPU-sample share combined drops by **≥ 80 ms**. Determinism test green. | M |
 | **3** | Decision-stack zobrist incremental digest per §3.4. | `zobrist:digestDecisionStackFrame` + `zobrist:encodeDecisionStackFrame` combined ms drops by **≥ 40 ms**. Determinism test green. | S–M |
 | **4** | Bytecode input row cache per §3.5. | `policyWasmRuntime:encodeBytecodeInput` ms drops by **≥ 10 ms**. WASM↔TS equivalence test green. | S |
@@ -239,7 +240,8 @@ N/A. This spec was authored from a session-internal investigation grounded in `r
 Decomposed via `/spec-to-tickets` on 2026-05-13:
 
 - [`archive/tickets/168ENGHOTPATH-001.md`](../archive/tickets/168ENGHOTPATH-001.md) — Phase 0 — baseline pin + per-decision benchmark fixture (covers §3.1 + §4 Phase 0)
-- [`tickets/168ENGHOTPATH-002.md`](../tickets/168ENGHOTPATH-002.md) — Phase 1 — persistent token-state-index (covers §3.2 + §4 Phase 1)
+- [`tickets/168ENGHOTPATH-002.md`](../tickets/168ENGHOTPATH-002.md) — Phase 1 — persistent token-state-index substrate (covers §3.2 correctness substrate; measured gate remains blocked by `007`)
+- [`tickets/168ENGHOTPATH-007.md`](../tickets/168ENGHOTPATH-007.md) — Phase 1b — resolve token-state-index measured-gate miss (covers the red Phase 1 metric from `reports/turnperf-004-spec-168-phase-1.md`)
 - [`tickets/168ENGHOTPATH-003.md`](../tickets/168ENGHOTPATH-003.md) — Phase 2 — compiled query/filter plans (covers §3.3 + §4 Phase 2)
 - [`tickets/168ENGHOTPATH-004.md`](../tickets/168ENGHOTPATH-004.md) — Phase 3 — zobrist incremental digest (covers §3.4 + §4 Phase 3)
 - [`tickets/168ENGHOTPATH-005.md`](../tickets/168ENGHOTPATH-005.md) — Phase 4 — bytecode input row cache (covers §3.5 + §4 Phase 4)

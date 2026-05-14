@@ -1,6 +1,6 @@
 # 171VISSEQPROJ-003: New regression tests for visible-sequence projection
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: None — test-only
@@ -79,3 +79,38 @@ Each new file declares exactly one `// @test-class:` marker. Use `architectural-
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/integration/partial-visibility-fitl-production-flow.test.js packages/engine/dist/test/integration/partial-visibility-source-take-cap.test.js`
 2. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck && pnpm turbo test`
+
+## Outcome
+
+Completion date: 2026-05-14.
+
+What landed:
+
+- Added `packages/engine/test/integration/partial-visibility-fitl-production-flow.test.ts`. The test selects a deterministic FITL deck order, clears the lifecycle zones, then drives the real `applyTurnFlowInitialReveal` + `applyTurnFlowCardBoundary` path. It proves accumulated `played:none` history (`availablePublic: 2`, `taken: 1`) does not starve `lookahead:none`: a Coup in lookahead resolves `ready: 1`, while no Coup in the composed visible sequence resolves `partial.lowerBound: 2`.
+- Added `packages/engine/test/integration/partial-visibility-source-take-cap.test.ts`. The test proves a `take: 1` source with three public cards contributes exactly one card and records `visibleSequenceSources[0]` as `{ zoneId: 'played:none', availablePublic: 3, taken: 1 }`; it also proves a Coup beyond the composed visible sequence remains `partial.lowerBound`, not an exact hidden-tail leak.
+
+Boundary and marker corrections:
+
+- `partial-visibility-fitl-production-flow.test.ts` uses `// @test-class: architectural-invariant`, not `golden-trace`, because the assertion is a lifecycle/resolver property rather than a byte-exact replay fixture. This follows `.claude/rules/testing.md` and the ticket reassessment note.
+- No engine, schema, compiler, GameSpecDoc, generated schema, FITL data, or cookbook change was required. Those surfaces remain owned by `archive/tickets/171VISSEQPROJ-001.md` and `archive/tickets/171VISSEQPROJ-002.md`.
+
+Generated fallout: none. The new TypeScript tests compile into `dist/` through the normal engine build; no schema or generated JSON artifact changed.
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` — passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/partial-visibility-fitl-production-flow.test.js dist/test/integration/partial-visibility-source-take-cap.test.js` — passed after the broad lanes; 4 tests passed.
+- `pnpm turbo build` — passed. Cache classification: `@ludoforge/engine` and `@ludoforge/runner` rebuilt; `@ludoforge/engine-wasm` was cache-hit supplemental.
+- `pnpm turbo lint` — passed. Cache classification: `@ludoforge/engine` ran; `@ludoforge/runner` was cache-hit supplemental.
+- `pnpm turbo typecheck` — passed. Cache classification: engine and runner typecheck ran; engine build replay was cache-hit supplemental from the final build input.
+- `pnpm turbo test` — passed. The engine default lane reported `81/81 files passed` and included both new test files; runner tests passed. Cache classification: package build prerequisites replayed from the final build inputs, while engine and runner tests ran.
+- `pnpm run check:ticket-deps` — passed for 1 active ticket and 2335 archived tickets.
+
+Command ledger:
+
+- Test Plan command 1 was split into `pnpm -F @ludoforge/engine build` plus the package-cwd focused `pnpm -F @ludoforge/engine exec node --test dist/test/integration/partial-visibility-fitl-production-flow.test.js dist/test/integration/partial-visibility-source-take-cap.test.js`; both passed.
+- Test Plan command 2 was split into `pnpm turbo build`, `pnpm turbo lint`, `pnpm turbo typecheck`, and `pnpm turbo test`; all passed.
+
+Source-size ledger: not triggered. New test file sizes are 135 lines and 128 lines, below the repo guidance band; no existing source file grew.
+
+Late-edit proof validity: terminal status, proof transcription, and dependency-checker transcription only; no scope, acceptance criteria, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the final proof lanes.

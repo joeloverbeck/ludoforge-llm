@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Large
 **Engine Changes**: Yes — kernel types/schemas, GameSpecDoc types, compiler (phase-boundary validation + diagnostic codes), agents runtime (TS schedule resolver), WASM host-side schedule encoder, JSON schema artifacts
-**Deps**: `specs/171-visible-sequence-projection.md`
+**Deps**: `archive/specs/171-visible-sequence-projection.md`
 
 ## Problem
 
@@ -106,8 +106,8 @@ Mechanically migrate each to the `sources` schema (see Test Plan for per-file ra
 
 ## Out of Scope
 
-- Cookbook rewrite (`docs/agent-dsl-cookbook.md`) — `tickets/171VISSEQPROJ-002.md`.
-- New regression tests (`partial-visibility-fitl-production-flow.test.ts`, `partial-visibility-source-take-cap.test.ts`) — `tickets/171VISSEQPROJ-003.md`.
+- Cookbook rewrite (`docs/agent-dsl-cookbook.md`) — `archive/tickets/171VISSEQPROJ-002.md`.
+- New regression tests (`partial-visibility-fitl-production-flow.test.ts`, `partial-visibility-source-take-cap.test.ts`) — `archive/tickets/171VISSEQPROJ-003.md`.
 - `order` / `role` per-source fields — rejected by spec §3 (redundant with the zone's own `ordering`; diagnostic ornamentation). Do NOT add them.
 - Aggregate `maxItems` retention or an `OBSERVER_VISIBLE_SEQUENCE_SOURCE_UNREACHED` runtime advisory — rejected by spec §3 (with `maxItems` gone there is no aggregate budget to starve a source).
 - `omniscient` / `observerView` observer policies — remain reserved, rejected via the existing `OBSERVER_POLICY_DEFERRED_KIND`. No behavior change.
@@ -156,6 +156,7 @@ Mechanically migrate each to the `sources` schema (see Test Plan for per-file ra
 ## Outcome
 
 Completion date: 2026-05-14.
+Outcome amended: 2026-05-14.
 
 The implementation cut replaces the legacy `visiblePrefix.zones` + `maxItems` contract with `visiblePrefix.sources[]` and required per-source `take` across the kernel type, zod schema, GameSpecDoc type, compiler validation diagnostics, TS resolver, WASM host-side resolver, generated schema artifacts, FITL `coupEntry` data, and the owned integration fixtures.
 
@@ -165,7 +166,7 @@ Touched-file corrections:
 - `packages/engine/test/integration/phase-boundary-fitl-coup-distance.test.ts` and `packages/engine/test/integration/schedule-ref-consideration-trace.test.ts` were added as existing literal fallout from the shared contract and trace shape migration.
 - `packages/engine/test/integration/partial-visibility-fallback-routing.test.ts` and `packages/engine/test/integration/policy-bytecode-equivalence-partial-visibility.test.ts` were ticket-named tests that required no source edit after live reassessment; both were still included in the focused compiled test proof as verified-no-edit coverage.
 - `packages/engine/src/cnl/compile-agents.ts` was inspected; its `SCHEDULE_FALLBACK_PARTIAL_REQUIRED` logic keys only on `topNVisible` and does not introspect `visiblePrefix`, so no source edit was required.
-- Cookbook docs remain owned by `tickets/171VISSEQPROJ-002.md`; new regression test files remain owned by `tickets/171VISSEQPROJ-003.md`.
+- Cookbook docs remain owned by `archive/tickets/171VISSEQPROJ-002.md`; new regression test files remain owned by `archive/tickets/171VISSEQPROJ-003.md`.
 
 Schema/artifact fallout:
 

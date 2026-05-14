@@ -1,6 +1,6 @@
 # Spec 171 — Visible Sequence Projection for Schedule Observer Policies
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — unblocks the `fitl-arvn-agent-evolution` campaign, which is HALTED per `reports/fitl-arvn-spec-170-discard-zone-coverage-gap-2026-05-14.md`. Spec 170's `topNVisible` observer policy is silently non-functional under the production FITL configuration: 138/138 ARVN Govern candidates that read `schedule.distance.toBoundary.coupEntry.cards` resolved `partial.lowerBound = 2`, zero `ready` resolutions, across 15 deterministic seeds.
 **Complexity**: M — single observer-policy schema reshape (`zones` → `sources` with required per-source `take`), parallel TS + WASM resolver rewrite, breaking migration of all owned artifacts. No new ref family, no new resolution status.
 **Date**: 2026-05-14
@@ -366,6 +366,26 @@ This spec was produced by reassessing `reports/spec-171-proposal.md` (ChatGPT-Pr
 
 Decomposed via `/spec-to-tickets` on 2026-05-14:
 
-- [`archive/tickets/171VISSEQPROJ-001.md`](../archive/tickets/171VISSEQPROJ-001.md) — Visible-sequence-source schema and resolver atomic cut (covers §4, §5, §6, Phases 0–2, Phase 3 FITL data, §8.1)
-- [`archive/tickets/171VISSEQPROJ-002.md`](../archive/tickets/171VISSEQPROJ-002.md) — Cookbook rewrite for `visiblePrefix.sources` (covers Phase 3 docs)
-- [`tickets/171VISSEQPROJ-003.md`](../tickets/171VISSEQPROJ-003.md) — New regression tests for visible-sequence projection (covers Phase 3 regression test, §8.2)
+- [`archive/tickets/171VISSEQPROJ-001.md`](../tickets/171VISSEQPROJ-001.md) — Visible-sequence-source schema and resolver atomic cut (covers §4, §5, §6, Phases 0–2, Phase 3 FITL data, §8.1)
+- [`archive/tickets/171VISSEQPROJ-002.md`](../tickets/171VISSEQPROJ-002.md) — Cookbook rewrite for `visiblePrefix.sources` (covers Phase 3 docs)
+- [`archive/tickets/171VISSEQPROJ-003.md`](../tickets/171VISSEQPROJ-003.md) — New regression tests for visible-sequence projection (covers Phase 3 regression test, §8.2)
+
+## Outcome
+
+Completion date: 2026-05-14.
+
+What changed:
+
+- `visiblePrefix.zones` plus aggregate `maxItems` was replaced by `visiblePrefix.sources[]` with required per-source `take`.
+- The TypeScript resolver, WASM host-side resolver, kernel/GameSpecDoc types, zod schemas, compiler validation, generated schemas, FITL `coupEntry` data, trace surfaces, cookbook docs, and visible-sequence tests were updated through the archived implementation tickets.
+- The production FITL regression now drives the real card lifecycle and proves accumulated `played:none` history cannot starve `lookahead:none`; the source-cap regression proves public-but-excluded cards beyond a source's `take` do not leak exact hidden-tail distance.
+
+Deviations from original plan:
+
+- The production-flow regression uses `// @test-class: architectural-invariant` rather than the draft `golden-trace` label because the landed witness proves a lifecycle/resolver property rather than byte-exact replay output.
+- No engine behavior beyond the visible-sequence-source contract was added: no `order`, `role`, aggregate `maxItems`, new observer statuses, or ARVN profile changes landed.
+
+Verification:
+
+- See `archive/tickets/171VISSEQPROJ-001.md`, `archive/tickets/171VISSEQPROJ-002.md`, and `archive/tickets/171VISSEQPROJ-003.md` for the implementation proof ledgers.
+- Final series integrity before spec archival: `pnpm run check:ticket-deps` passed for 0 active tickets and 2336 archived tickets.

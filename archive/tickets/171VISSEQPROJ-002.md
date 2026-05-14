@@ -73,24 +73,25 @@ Append `archive/specs/171-visible-sequence-projection.md` (or `specs/171-…` if
 ## Outcome
 
 Completion date: 2026-05-14.
+Outcome amended: 2026-05-14.
 
 What landed:
 
 - `docs/agent-dsl-cookbook.md` rewrites the "Visible Prefix Declaration" example to use `visiblePrefix.sources[]` with explicit per-source `take`.
 - The section prose now states the `sum(take)` scan bound, the public-but-excluded-by-policy meaning of cards beyond a source's `take`, and the per-source validation rules: public zone, deterministic order, distinct source ids, not the hidden draw zone, and required positive-integer `take`.
 - The "FITL Coup Timing Example" explanation now describes `played:none take: 1` plus `lookahead:none take: 1`, including the `ready: 1` lookahead Coup case and the unchanged `partial.lowerBound: 2` no-visible-Coup case.
-- The spec-sources footer appends `specs/171-visible-sequence-projection.md`, the live spec 171 path at implementation time.
+- The spec-sources footer appends `archive/specs/171-visible-sequence-projection.md`.
 
 Touched-file scope:
 
-- Modified: `docs/agent-dsl-cookbook.md`, `tickets/171VISSEQPROJ-002.md`.
-- No engine, schema, generated artifact, or test files changed; those remain out of scope and are covered by `archive/tickets/171VISSEQPROJ-001.md` and `tickets/171VISSEQPROJ-003.md`.
+- Modified: `docs/agent-dsl-cookbook.md`, `archive/tickets/171VISSEQPROJ-002.md`.
+- No engine, schema, generated artifact, or test files changed; those remain out of scope and are covered by `archive/tickets/171VISSEQPROJ-001.md` and `archive/tickets/171VISSEQPROJ-003.md`.
 
 Generated fallout: none; documentation-only.
 
 Deferred sibling/spec scope:
 
-- `tickets/171VISSEQPROJ-003.md` remains the owner for new visible-sequence regression tests.
+- `archive/tickets/171VISSEQPROJ-003.md` owns the new visible-sequence regression tests.
 - The "Schedule Fallbacks" section was intentionally not edited because the `onUnavailable` / `onPartial.visiblePrefixExhausted` fallback contract is stable.
 
 Final verification:

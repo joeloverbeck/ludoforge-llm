@@ -4,6 +4,8 @@
 
 When a standalone acceptance command starts cleanly but does not return a final harness summary in-terminal during the session, do not over-claim that lane as directly green. Record the exact observed output, classify whether the behavior appears to be the repo's existing silent-harness pattern or a new blocker, and state whether broader passing package/workspace suites covered the same lane.
 
+If a broad package or workspace lane exits zero but emits known retained-test stderr, runner warnings, crash-recovery diagnostics, or jsdom/browser-environment noise outside the ticket-owned failure surface, treat the lane as green rather than `harness-noisy / not final-confirmed`. Mention the stderr only when it affects confidence in the ticket-owned proof, when the ticket owns the noisy surface, or when the output is new enough that it needs classification.
+
 In this repo, when the ticket names `pnpm -F @ludoforge/engine test`, inspect `packages/engine/scripts/run-tests.mjs` or the active lane manifest early enough to see whether the default lane tails into `policy-profile-quality` witnesses. If the owned ticket is not itself about policy-profile quality and the run later narrows to a long single-file convergence witness with only heartbeat progress, preserve that evidence explicitly in the ticket outcome instead of assuming the broad lane will soon return.
 
 If that same inspection or direct witness repro shows the surfaced corpus is architecturally non-blocking or separately owned, do not keep treating it as mandatory blocking acceptance proof just because the current broad lane still includes it. Correct the lane ownership or ticket proof story first, then rerun proof against the truthful boundary.

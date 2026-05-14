@@ -361,7 +361,7 @@ In Fire in the Lake, `played:none` is the public played pile and `lookahead:none
 
 If the current card is a coup card, the ref is ready with distance `0`. If the next card in `lookahead:none` is a coup card, the ref is ready with distance `1` rather than the spurious `partial.lowerBound: 2` produced by the retired aggregate scan. If neither visible card is a coup card, the ref returns `partial.lowerBound: 2`, and `useLowerBound` lets the heuristic score that bounded timing signal without peeking into the hidden deck.
 
-Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `archive/specs/170-partial-visibility-observer-policy.md`, `specs/171-visible-sequence-projection.md`
+Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `archive/specs/170-partial-visibility-observer-policy.md`, `archive/specs/171-visible-sequence-projection.md`
 
 ## Reading the Preview Trace
 

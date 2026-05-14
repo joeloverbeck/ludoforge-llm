@@ -91,6 +91,8 @@ Add `packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.
 
 ## Outcome (2026-05-14)
 
+Outcome amended: 2026-05-15
+
 Phase 0 landed as a red witness. The approved boundary correction was applied: this ticket added generic test/internal logical counters for `buildEncodedStateLayout`, `buildFeatureTable`, `buildExpressionFeatureTable`, and `buildEncodedState`; no cache behavior, runtime semantics, GameSpecDoc, or GameDef output changed.
 
 What landed:
@@ -133,7 +135,7 @@ Source-size ledger:
 
 Deferred sibling/spec scope:
 
-- Cache fixes remain owned by `tickets/172POLEVASTA-002.md` through `tickets/172POLEVASTA-005.md`.
+- Cache fixes remain owned by completed `archive/tickets/172POLEVASTA-002.md` and active `tickets/172POLEVASTA-003.md` through `tickets/172POLEVASTA-005.md`.
 - `tickets/172POLEVASTA-006.md` owns flipping this red witness to green and reusing the counters added here for the constructor-no-direct-build invariant.
 
 Same-series draft delta:

@@ -1,6 +1,5 @@
 // @test-class: convergence-witness
 // @witness: 172POLEVASTA-001
-// @profile-variant: arvn-evolved
 //
 // Phase 0 red witness for Spec 172. This assertion is expected to fail until
 // 172POLEVASTA-002..006 route the preview path through first-touch-only caches.

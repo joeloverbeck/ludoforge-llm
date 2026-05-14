@@ -1,6 +1,6 @@
 # 172POLEVASTA-002: Phase 1 — route PolicyEvaluationContext layout resolution through getPolicyEncodedStateLayout
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/agents/policy-evaluation-core.ts` constructor; `packages/engine/src/agents/policy-eval.ts` accessor location
@@ -91,3 +91,68 @@ Add (or extend an existing `policy-evaluation-core` test, per spec §6.2) an ass
 2. `pnpm -F @ludoforge/engine test:perf` (witness — `buildEncodedStateLayout` drops to first-touch-only)
 3. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
 4. `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:integration:fitl-rules`
+
+## Outcome (2026-05-15)
+
+Phase 1 is complete.
+
+What landed:
+
+- `PolicyEvaluationContext` now resolves `encodedStateLayout` through `getPolicyEncodedStateLayout(input.def)` when no explicit `input.encodedStateLayout` is supplied.
+- The existing `encodedStateLayoutCache` and accessor moved from `policy-eval.ts` into `packages/engine/src/agents/policy-encoded-state-layout-cache.ts` to avoid the live `policy-eval.ts` -> `policy-evaluation-core.ts` import cycle. `policy-eval.ts` re-exports the accessor, preserving the existing source import surface.
+- `packages/engine/test/unit/agents/policy-evaluation-core-layout-cache.test.ts` proves same-`GameDef` contexts observe the same cached layout reference, explicit layouts still win, and cached/explicit layouts are deep-equal to a freshly built layout.
+
+Ticket corrections applied:
+
+- `policy-evaluation-core.ts` cannot import `getPolicyEncodedStateLayout` directly from `policy-eval.ts` because `policy-eval.ts` imports `policy-evaluation-core.ts`; the ticket-authorized shared-module path was used.
+- The Phase 1 perf witness remains a red/supplemental lane until later siblings land all rebuild seams; this ticket's owned Phase 1 signal is `buildEncodedStateLayout` first-touch-only behavior, not the whole `staticRebuildCount` threshold.
+
+Touched-file scope:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts` — constructor layout resolution and import cleanup.
+- `packages/engine/src/agents/policy-eval.ts` — accessor relocation/re-export and import cleanup.
+- `packages/engine/src/agents/policy-encoded-state-layout-cache.ts` — new shared cache module, required by the live import graph.
+- `packages/engine/test/unit/agents/policy-evaluation-core-layout-cache.test.ts` — new architectural-invariant unit test.
+- `packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.ts` — same-series verification fallout: removed stray `@profile-variant` marker so the existing `@witness`-classified Phase 0 perf witness satisfies the live marker guard.
+
+Generated fallout: none; `dist` was rebuilt only for compiled-test proof.
+
+Deferred sibling/spec scope:
+
+- `172POLEVASTA-003` owns the feature-table cache.
+- `172POLEVASTA-004` owns runtime-owned compiled-bytecode cache.
+- `172POLEVASTA-005` owns runtime-owned encoded-state cache.
+- `172POLEVASTA-006` owns the combined constructor-no-direct-build invariant and flipping the Phase 0 perf witness to passing.
+
+Source-size ledger:
+
+- `packages/engine/src/agents/policy-evaluation-core.ts | before 2222 | after 2222 | crossed cap? no | active growth no | extraction/defer rationale: preexisting oversize unchanged; no separable new logic added | successor none`
+- `packages/engine/src/agents/policy-eval.ts | before 1512 | after 1505 | crossed cap? no | active growth no, net extraction | extraction/defer rationale: preexisting oversize shrank by moving cache to shared module | successor none`
+- `packages/engine/src/agents/policy-encoded-state-layout-cache.ts | before 0 | after 13 | crossed cap? no | active growth new small shared cache module | extraction/defer rationale: required to avoid import cycle | successor none`
+- `packages/engine/test/unit/agents/policy-evaluation-core-layout-cache.test.ts | before 0 | after 146 | crossed cap? no | active growth new focused invariant test | extraction/defer rationale: not needed | successor none`
+- `packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.ts | before 99 | after 98 | crossed cap? no | active growth no, marker cleanup only | extraction/defer rationale: not needed | successor none`
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-evaluation-core-layout-cache.test.js` passed: 2/2 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/infrastructure/test-class-markers.test.js dist/test/unit/agents/policy-evaluation-core-layout-cache.test.js` passed after the same-series marker cleanup: 3/3 tests.
+- `pnpm -F @ludoforge/engine test:unit` passed after the marker cleanup: 5715/5715 tests.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` remains red as expected for the full series, but Phase 1's owned signal is fixed: `buildEncodedStateLayout=1`, down from the Phase 0 recorded `4985`; remaining counts are sibling-owned (`buildFeatureTable=10617`, `buildExpressionFeatureTable=10617`, `buildEncodedState=5039`, total `26274`, threshold `4`).
+- `pnpm -F @ludoforge/engine test:perf` remains red only on the same 172 Phase 0 witness, with the same Phase 1 signal: `buildEncodedStateLayout=1`; the other 4 perf suites passed.
+- `pnpm -F @ludoforge/engine lint` passed.
+- `pnpm -F @ludoforge/engine typecheck` passed.
+- `pnpm -F @ludoforge/engine test` passed: schema artifact check passed and the default lane reported `81/81 files passed`.
+- `pnpm -F @ludoforge/engine test:integration:fitl-rules` passed: `79/79 files passed`.
+- `pnpm run check:ticket-deps` passed: `Ticket dependency integrity check passed for 5 active tickets and 2337 archived tickets.`
+
+Verification substitutions:
+
+- The root `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck` bundle was replaced with package-local engine `build`, `lint`, and `typecheck` lanes because this Phase 1 slice is engine-package-local and the package lanes prove the changed source, test, and emitted `dist` surfaces without unrelated workspace cost.
+- The ticket's perf lane is classified red/supplemental for this phase rather than terminal green because `172POLEVASTA-003` through `172POLEVASTA-005` still own the other rebuild counters and `172POLEVASTA-006` owns flipping the Phase 0 witness to passing.
+
+Late-edit proof validity:
+
+- The same-series marker cleanup happened after the first broad `test:unit` run exposed it. The affected marker guard and focused layout-cache test were rerun together, then `test:unit` was rerun and passed.
+- Terminal status/proof transcription is status and evidence only; it does not change scope, acceptance criteria, command semantics, touched-file ownership, dependency ownership, or runtime/test code.
+- Dependency-check transcription is clerical; it records the just-run integrity result without changing ticket graph semantics.

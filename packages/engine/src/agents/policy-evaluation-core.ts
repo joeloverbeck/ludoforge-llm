@@ -6,7 +6,6 @@ import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import {
   buildEncodedState,
-  buildEncodedStateLayout,
   type EncodedState,
   type EncodedStateLayout,
 } from '../kernel/encoded-state/index.js';
@@ -55,6 +54,7 @@ import type {
 import type { PolicyValue } from './policy-surface.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
+import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -372,7 +372,7 @@ export class PolicyEvaluationContext {
   ) {
     this.currentCandidates = candidates;
     this.activeState = input.state;
-    this.encodedStateLayout = input.encodedStateLayout ?? buildEncodedStateLayout(input.def);
+    this.encodedStateLayout = input.encodedStateLayout ?? getPolicyEncodedStateLayout(input.def);
     this.encodedState = input.encodedState ?? tryBuildEncodedState(input.state, this.encodedStateLayout);
     this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({

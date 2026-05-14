@@ -1,6 +1,6 @@
 # 171VISSEQPROJ-002: Cookbook rewrite for `visiblePrefix.sources`
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: MEDIUM
 **Effort**: Small
 **Engine Changes**: None — documentation only
@@ -69,3 +69,41 @@ Append `archive/specs/171-visible-sequence-projection.md` (or `specs/171-…` if
 
 1. `grep -nE 'visiblePrefix|maxItems|topNVisible' docs/agent-dsl-cookbook.md` — expect only `sources`/`take` shape.
 2. `pnpm turbo lint`
+
+## Outcome
+
+Completion date: 2026-05-14.
+
+What landed:
+
+- `docs/agent-dsl-cookbook.md` rewrites the "Visible Prefix Declaration" example to use `visiblePrefix.sources[]` with explicit per-source `take`.
+- The section prose now states the `sum(take)` scan bound, the public-but-excluded-by-policy meaning of cards beyond a source's `take`, and the per-source validation rules: public zone, deterministic order, distinct source ids, not the hidden draw zone, and required positive-integer `take`.
+- The "FITL Coup Timing Example" explanation now describes `played:none take: 1` plus `lookahead:none take: 1`, including the `ready: 1` lookahead Coup case and the unchanged `partial.lowerBound: 2` no-visible-Coup case.
+- The spec-sources footer appends `specs/171-visible-sequence-projection.md`, the live spec 171 path at implementation time.
+
+Touched-file scope:
+
+- Modified: `docs/agent-dsl-cookbook.md`, `tickets/171VISSEQPROJ-002.md`.
+- No engine, schema, generated artifact, or test files changed; those remain out of scope and are covered by `archive/tickets/171VISSEQPROJ-001.md` and `tickets/171VISSEQPROJ-003.md`.
+
+Generated fallout: none; documentation-only.
+
+Deferred sibling/spec scope:
+
+- `tickets/171VISSEQPROJ-003.md` remains the owner for new visible-sequence regression tests.
+- The "Schedule Fallbacks" section was intentionally not edited because the `onUnavailable` / `onPartial.visiblePrefixExhausted` fallback contract is stable.
+
+Final verification:
+
+- Manual review of `docs/agent-dsl-cookbook.md` "Visible Prefix Declaration" and "FITL Coup Timing Example" against `packages/engine/src/kernel/schemas-core.ts` `ObserverPolicySchema` confirmed the example uses `visiblePrefix.sources[]` with `id` and positive-integer `take`.
+- `grep -nE 'visiblePrefix|maxItems|topNVisible' docs/agent-dsl-cookbook.md` passed: it returned only `topNVisible`, `visiblePrefix`, and `visiblePrefixExhausted` hits; no `maxItems` hit remained.
+- `rg -n -U 'visiblePrefix:\n(?:.*\n){0,6}.*(zones:|maxItems:)' docs/agent-dsl-cookbook.md` passed with zero matches.
+- `pnpm turbo lint` passed. First run was a Turbo cache hit; final accepted lint proof was `pnpm turbo lint --force`, which passed with `Cached: 0 cached, 2 total`.
+- `pnpm run check:ticket-deps` passed for 2 active tickets and 2334 archived tickets.
+- `git diff --check` passed.
+
+Late-edit proof validity:
+
+- Terminal status and proof transcription only; no scope, acceptance criteria, command semantics, touched-file ownership, sibling ownership, dependency classification, docs prose contract, or generated-artifact claim changed after the final docs and lint proof lanes.
+- Dependency-check transcription only; no ticket graph, dependency, status, scope, or acceptance semantics changed after `pnpm run check:ticket-deps`.
+- Final `git diff --check` transcription only; final hygiene rerun followed this line.

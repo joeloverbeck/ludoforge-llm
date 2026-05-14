@@ -367,5 +367,5 @@ This spec was produced by reassessing `reports/spec-171-proposal.md` (ChatGPT-Pr
 Decomposed via `/spec-to-tickets` on 2026-05-14:
 
 - [`archive/tickets/171VISSEQPROJ-001.md`](../archive/tickets/171VISSEQPROJ-001.md) — Visible-sequence-source schema and resolver atomic cut (covers §4, §5, §6, Phases 0–2, Phase 3 FITL data, §8.1)
-- [`tickets/171VISSEQPROJ-002.md`](../tickets/171VISSEQPROJ-002.md) — Cookbook rewrite for `visiblePrefix.sources` (covers Phase 3 docs)
+- [`archive/tickets/171VISSEQPROJ-002.md`](../archive/tickets/171VISSEQPROJ-002.md) — Cookbook rewrite for `visiblePrefix.sources` (covers Phase 3 docs)
 - [`tickets/171VISSEQPROJ-003.md`](../tickets/171VISSEQPROJ-003.md) — New regression tests for visible-sequence projection (covers Phase 3 regression test, §8.2)

@@ -200,7 +200,7 @@ For ordinary non-measured tickets whose final lanes go green, use this compact g
 5. If any later proof-affecting edit happened after an earlier no-invalidation note, sweep the ticket/spec/report outcome for stale no-invalidation or terminal-closeout claims and reconcile them before dependency checks.
 6. Run `pnpm run check:ticket-deps` when terminal status, dependencies, successor ownership, or other ticket-graph facts changed or when the active ticket/family expects dependency integrity proof.
 7. Finish with an untracked-aware `git status --short` sweep and hand off to `$post-ticket-review` unless the user explicitly included archival in the implementation request.
-8. In the final response, explicitly say whether `$post-ticket-review` already ran. If it did not, say the ticket is implemented but not archived and name `$post-ticket-review` as the next review/archive workflow. For large diffs, use the compact handoff shape in `references/closeout-and-followup.md` so tracked paths, untracked additions, cache classifications, and any source-size ledger location are visible.
+8. In the final response, explicitly say whether `$post-ticket-review` already ran. If it did not, say the ticket is implemented but not archived and name `$post-ticket-review` as the next review/archive workflow. For large diffs, use the concrete large-diff final-response skeleton in `references/closeout-and-followup.md` so tracked paths, untracked additions, cache classifications, and any source-size ledger location are visible instead of being collapsed into a vague directory summary.
 
 When the decisive proof lane itself determines the final classification, do not pretend the outcome can be fully written beforehand. Instead:
 

@@ -97,8 +97,7 @@ describe('FITL topNVisible coupEntry schedule distance', () => {
       observerPolicy: {
         kind: 'topNVisible',
         visiblePrefix: {
-          zones: [{ id: 'played:none' }, { id: 'lookahead:none' }],
-          maxItems: 2,
+          sources: [{ id: 'played:none', take: 1 }, { id: 'lookahead:none', take: 1 }],
         },
       },
     });
@@ -110,11 +109,26 @@ describe('FITL topNVisible coupEntry schedule distance', () => {
 
     assert.deepEqual(
       resolve(gameDef, withVisibleCards(baseState, { played: ids.coup[0]!, lookahead: ids.nonCoup[0]! })),
-      { kind: 'ready', value: 0, observerPolicy: { kind: 'topNVisible' }, visiblePrefixLength: 1 },
+      {
+        kind: 'ready',
+        value: 0,
+        observerPolicy: { kind: 'topNVisible' },
+        visiblePrefixLength: 1,
+        visibleSequenceSources: [{ zoneId: 'played:none', availablePublic: 1, taken: 1 }],
+      },
     );
     assert.deepEqual(
       resolve(gameDef, withVisibleCards(baseState, { played: ids.nonCoup[0]!, lookahead: ids.coup[0]! })),
-      { kind: 'ready', value: 1, observerPolicy: { kind: 'topNVisible' }, visiblePrefixLength: 2 },
+      {
+        kind: 'ready',
+        value: 1,
+        observerPolicy: { kind: 'topNVisible' },
+        visiblePrefixLength: 2,
+        visibleSequenceSources: [
+          { zoneId: 'played:none', availablePublic: 1, taken: 1 },
+          { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        ],
+      },
     );
     assert.deepEqual(
       resolve(gameDef, withVisibleCards(baseState, { played: ids.nonCoup[0]!, lookahead: ids.nonCoup[1]! })),
@@ -124,6 +138,10 @@ describe('FITL topNVisible coupEntry schedule distance', () => {
         lowerBound: 2,
         observerPolicy: { kind: 'topNVisible' },
         visiblePrefixLength: 2,
+        visibleSequenceSources: [
+          { zoneId: 'played:none', availablePublic: 1, taken: 1 },
+          { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        ],
       },
     );
   });

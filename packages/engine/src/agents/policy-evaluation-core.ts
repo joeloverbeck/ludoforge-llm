@@ -106,6 +106,11 @@ export type PolicyScheduleInputRefTrace =
       readonly value: number | string;
       readonly observerPolicy?: 'topNVisible';
       readonly visiblePrefixLength?: number;
+      readonly visibleSequenceSources?: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
     }
   | {
       readonly status: 'partial';
@@ -113,6 +118,11 @@ export type PolicyScheduleInputRefTrace =
       readonly lowerBound: number;
       readonly observerPolicy: 'topNVisible';
       readonly visiblePrefixLength: number;
+      readonly visibleSequenceSources: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
       readonly fallbackApplied?: {
         readonly kind: PolicyScheduleFallbackKind;
         readonly numericValue?: number;
@@ -1560,6 +1570,9 @@ export class PolicyEvaluationContext {
               value: resolution.value,
               observerPolicy: 'topNVisible',
               ...(resolution.visiblePrefixLength === undefined ? {} : { visiblePrefixLength: resolution.visiblePrefixLength }),
+              ...(resolution.visibleSequenceSources === undefined
+                ? {}
+                : { visibleSequenceSources: resolution.visibleSequenceSources }),
             });
           }
           return resolution.value;
@@ -1572,6 +1585,7 @@ export class PolicyEvaluationContext {
             lowerBound: resolution.lowerBound,
             observerPolicy: 'topNVisible',
             visiblePrefixLength: resolution.visiblePrefixLength,
+            visibleSequenceSources: resolution.visibleSequenceSources,
           });
           this.schedulePartialsDuringValue.push({ refId, lowerBound: resolution.lowerBound });
           return undefined;

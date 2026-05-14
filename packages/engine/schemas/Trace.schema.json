@@ -2672,6 +2672,39 @@
                                     "$ref": "#/definitions/anon_e7c99bd4"
                                   }
                                 ]
+                              },
+                              "visibleSequenceSources": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "zoneId": {
+                                      "$ref": "#/definitions/anon_4682db72"
+                                    },
+                                    "availablePublic": {
+                                      "minimum": 0,
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/definitions/anon_e7c99bd4"
+                                        }
+                                      ]
+                                    },
+                                    "taken": {
+                                      "minimum": 0,
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/definitions/anon_e7c99bd4"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "zoneId",
+                                    "availablePublic",
+                                    "taken"
+                                  ],
+                                  "additionalProperties": false
+                                }
                               }
                             },
                             "required": [
@@ -2711,6 +2744,39 @@
                                   }
                                 ]
                               },
+                              "visibleSequenceSources": {
+                                "type": "array",
+                                "items": {
+                                  "type": "object",
+                                  "properties": {
+                                    "zoneId": {
+                                      "$ref": "#/definitions/anon_4682db72"
+                                    },
+                                    "availablePublic": {
+                                      "minimum": 0,
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/definitions/anon_e7c99bd4"
+                                        }
+                                      ]
+                                    },
+                                    "taken": {
+                                      "minimum": 0,
+                                      "allOf": [
+                                        {
+                                          "$ref": "#/definitions/anon_e7c99bd4"
+                                        }
+                                      ]
+                                    }
+                                  },
+                                  "required": [
+                                    "zoneId",
+                                    "availablePublic",
+                                    "taken"
+                                  ],
+                                  "additionalProperties": false
+                                }
+                              },
                               "fallbackApplied": {
                                 "type": "object",
                                 "properties": {
@@ -2742,7 +2808,8 @@
                               "partialKind",
                               "lowerBound",
                               "observerPolicy",
-                              "visiblePrefixLength"
+                              "visiblePrefixLength",
+                              "visibleSequenceSources"
                             ],
                             "additionalProperties": false
                           }

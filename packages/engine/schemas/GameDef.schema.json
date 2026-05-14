@@ -626,28 +626,33 @@
                       "visiblePrefix": {
                         "type": "object",
                         "properties": {
-                          "zones": {
+                          "sources": {
                             "type": "array",
                             "items": {
                               "type": "object",
                               "properties": {
                                 "id": {
                                   "$ref": "#/definitions/anon_4682db72"
+                                },
+                                "take": {
+                                  "exclusiveMinimum": 0,
+                                  "allOf": [
+                                    {
+                                      "$ref": "#/definitions/anon_e7c99bd4"
+                                    }
+                                  ]
                                 }
                               },
                               "required": [
-                                "id"
+                                "id",
+                                "take"
                               ],
                               "additionalProperties": false
                             }
-                          },
-                          "maxItems": {
-                            "$ref": "#/definitions/anon_e7c99bd4"
                           }
                         },
                         "required": [
-                          "zones",
-                          "maxItems"
+                          "sources"
                         ],
                         "additionalProperties": false
                       }

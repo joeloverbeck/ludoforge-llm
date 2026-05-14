@@ -66,8 +66,7 @@ function observerPolicyDoc(): GameSpecDoc {
         observerPolicy: {
           kind: 'topNVisible',
           visiblePrefix: {
-            zones: [{ id: 'lookahead:none' }, { id: 'leader:none' }],
-            maxItems: 2,
+            sources: [{ id: 'lookahead:none', take: 1 }, { id: 'leader:none', take: 1 }],
           },
         },
       },

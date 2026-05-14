@@ -75,6 +75,11 @@ export type PhaseScheduleResolution =
       readonly value: string | number;
       readonly observerPolicy?: { readonly kind: 'topNVisible' };
       readonly visiblePrefixLength?: number;
+      readonly visibleSequenceSources?: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
     }
   | {
       readonly kind: 'partial';
@@ -82,6 +87,11 @@ export type PhaseScheduleResolution =
       readonly lowerBound: number;
       readonly observerPolicy: { readonly kind: 'topNVisible' };
       readonly visiblePrefixLength: number;
+      readonly visibleSequenceSources: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
     }
   | {
       readonly kind: 'unavailable';
@@ -351,34 +361,37 @@ function resolveVisiblePrefixBoundaryCardDistance(
   state: GameState,
   schedule: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>,
 ): PhaseScheduleResolution {
-  let scanned = 0;
-  const maxItems = schedule.observerPolicy!.visiblePrefix.maxItems;
-  for (const zoneRef of schedule.observerPolicy!.visiblePrefix.zones) {
-    if (scanned >= maxItems) {
-      break;
-    }
-    const slotCards = readPublicZoneCards(def, state, zoneRef.id);
-    for (const card of slotCards) {
-      if (scanned >= maxItems) {
-        break;
-      }
+  let distance = 0;
+  const visibleSequenceSources: {
+    readonly zoneId: string;
+    readonly availablePublic: number;
+    readonly taken: number;
+  }[] = [];
+  for (const source of schedule.observerPolicy!.visiblePrefix.sources) {
+    const slotCards = readPublicZoneCards(def, state, source.id);
+    const taken = Math.min(source.take, slotCards.length);
+    visibleSequenceSources.push({ zoneId: source.id, availablePublic: slotCards.length, taken });
+    for (let index = 0; index < taken; index += 1) {
+      const card = slotCards[index]!;
       if (matchesCardSelector(def, card, schedule.cardSelector)) {
         return {
           kind: 'ready',
-          value: scanned,
+          value: distance,
           observerPolicy: { kind: 'topNVisible' },
-          visiblePrefixLength: scanned + 1,
+          visiblePrefixLength: distance + 1,
+          visibleSequenceSources,
         };
       }
-      scanned += 1;
+      distance += 1;
     }
   }
   return {
     kind: 'partial',
     partialKind: 'lowerBound',
-    lowerBound: scanned,
+    lowerBound: distance,
     observerPolicy: { kind: 'topNVisible' },
-    visiblePrefixLength: scanned,
+    visiblePrefixLength: distance,
+    visibleSequenceSources,
   };
 }
 

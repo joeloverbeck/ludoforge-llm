@@ -83,8 +83,7 @@ function validSchedule(): Extract<GameSpecScheduleKindDef, { readonly kind: 'car
     observerPolicy: {
       kind: 'topNVisible',
       visiblePrefix: {
-        zones: [{ id: 'lookahead:none' }, { id: 'leader:none' }],
-        maxItems: 2,
+        sources: [{ id: 'lookahead:none', take: 1 }, { id: 'leader:none', take: 1 }],
       },
     },
   };
@@ -108,7 +107,7 @@ describe('partial-visibility observer-policy compile validation', () => {
           ...validSchedule(),
           observerPolicy: {
             kind: 'futurePolicy',
-            visiblePrefix: { zones: [{ id: 'lookahead:none' }], maxItems: 1 },
+            visiblePrefix: { sources: [{ id: 'lookahead:none', take: 1 }] },
           },
         } as unknown as GameSpecScheduleKindDef,
       },
@@ -122,7 +121,7 @@ describe('partial-visibility observer-policy compile validation', () => {
           ...validSchedule(),
           observerPolicy: {
             kind: 'omniscient',
-            visiblePrefix: { zones: [{ id: 'lookahead:none' }], maxItems: 1 },
+            visiblePrefix: { sources: [{ id: 'lookahead:none', take: 1 }] },
           },
         } as unknown as GameSpecScheduleKindDef,
       },
@@ -134,21 +133,35 @@ describe('partial-visibility observer-policy compile validation', () => {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [], maxItems: 1 } },
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [] } },
         },
       },
       CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_EMPTY_VISIBLE_PREFIX,
     ],
     [
-      'rejects invalid maxItems',
+      'rejects missing source take',
       {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [{ id: 'lookahead:none' }], maxItems: 0 } },
+          observerPolicy: {
+            kind: 'topNVisible',
+            visiblePrefix: { sources: [{ id: 'lookahead:none' }] },
+          },
+        } as unknown as GameSpecScheduleKindDef,
+      },
+      CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_MISSING_TAKE,
+    ],
+    [
+      'rejects invalid source take',
+      {
+        ...validBoundary(),
+        schedule: {
+          ...validSchedule(),
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [{ id: 'lookahead:none', take: 0 }] } },
         },
       },
-      CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_MAXITEMS,
+      CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_TAKE,
     ],
     [
       'rejects unknown visible-prefix zones',
@@ -156,7 +169,7 @@ describe('partial-visibility observer-policy compile validation', () => {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [{ id: 'missing:none' }], maxItems: 1 } },
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [{ id: 'missing:none', take: 1 }] } },
         },
       },
       CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_UNKNOWN_ZONE,
@@ -167,7 +180,7 @@ describe('partial-visibility observer-policy compile validation', () => {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [{ id: 'privateSlot:none' }], maxItems: 1 } },
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [{ id: 'privateSlot:none', take: 1 }] } },
         },
       },
       CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_NON_PUBLIC_ZONE,
@@ -178,7 +191,7 @@ describe('partial-visibility observer-policy compile validation', () => {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [{ id: 'unorderedSlot:none' }], maxItems: 1 } },
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [{ id: 'unorderedSlot:none', take: 1 }] } },
         },
       },
       CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_ZONE_KIND,
@@ -189,7 +202,7 @@ describe('partial-visibility observer-policy compile validation', () => {
         ...validBoundary(),
         schedule: {
           ...validSchedule(),
-          observerPolicy: { kind: 'topNVisible', visiblePrefix: { zones: [{ id: 'draw:none' }], maxItems: 1 } },
+          observerPolicy: { kind: 'topNVisible', visiblePrefix: { sources: [{ id: 'draw:none', take: 1 }] } },
         },
       },
       CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_DRAW_ZONE_IN_PREFIX,
@@ -202,7 +215,7 @@ describe('partial-visibility observer-policy compile validation', () => {
           ...validSchedule(),
           observerPolicy: {
             kind: 'topNVisible',
-            visiblePrefix: { zones: [{ id: 'lookahead:none' }, { id: 'lookahead:none' }], maxItems: 2 },
+            visiblePrefix: { sources: [{ id: 'lookahead:none', take: 1 }, { id: 'lookahead:none', take: 1 }] },
           },
         },
       },

@@ -21,6 +21,10 @@ describe('topNVisible schedule ref consideration trace', () => {
         value: 1,
         observerPolicy: 'topNVisible',
         visiblePrefixLength: 2,
+        visibleSequenceSources: [
+          { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+          { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+        ],
       },
     });
     assert.deepEqual(govern?.scoreContributions, [{ termId: 'useLowerBound', contribution: 10 }]);
@@ -39,6 +43,10 @@ describe('topNVisible schedule ref consideration trace', () => {
         lowerBound: 2,
         observerPolicy: 'topNVisible',
         visiblePrefixLength: 2,
+        visibleSequenceSources: [
+          { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+          { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+        ],
         fallbackApplied: { kind: 'useLowerBound', numericValue: 2 },
       },
     });

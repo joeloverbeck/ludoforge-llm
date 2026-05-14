@@ -172,8 +172,7 @@ export type GameSpecObserverPolicyDef = {
 };
 
 export interface GameSpecObserverVisiblePrefixDef {
-  readonly zones: readonly { readonly id: string }[];
-  readonly maxItems: number;
+  readonly sources: readonly { readonly id: string; readonly take: number }[];
 }
 
 export type GameSpecScheduleKindDef =

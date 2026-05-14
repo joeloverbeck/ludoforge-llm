@@ -30,6 +30,10 @@ describe('partial-visibility hidden-tail no-leak behavior', () => {
       lowerBound: 2,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
     });
   });
 });

@@ -220,8 +220,10 @@ const ObserverPolicySchema = z
     kind: z.literal('topNVisible'),
     visiblePrefix: z
       .object({
-        zones: z.array(z.object({ id: StringSchema }).strict()),
-        maxItems: IntegerSchema,
+        sources: z.array(z.object({
+          id: StringSchema,
+          take: IntegerSchema.positive(),
+        }).strict()),
       })
       .strict(),
   })
@@ -2182,6 +2184,11 @@ const PolicyScheduleInputRefTraceSchema = z.union([
     value: z.union([NumberSchema, StringSchema]),
     observerPolicy: z.literal('topNVisible').optional(),
     visiblePrefixLength: IntegerSchema.nonnegative().optional(),
+    visibleSequenceSources: z.array(z.object({
+      zoneId: StringSchema,
+      availablePublic: IntegerSchema.nonnegative(),
+      taken: IntegerSchema.nonnegative(),
+    }).strict()).optional(),
   }).strict(),
   z.object({
     status: z.literal('partial'),
@@ -2189,6 +2196,11 @@ const PolicyScheduleInputRefTraceSchema = z.union([
     lowerBound: IntegerSchema.nonnegative(),
     observerPolicy: z.literal('topNVisible'),
     visiblePrefixLength: IntegerSchema.nonnegative(),
+    visibleSequenceSources: z.array(z.object({
+      zoneId: StringSchema,
+      availablePublic: IntegerSchema.nonnegative(),
+      taken: IntegerSchema.nonnegative(),
+    }).strict()),
     fallbackApplied: z.object({
       kind: z.enum(['useLowerBound', 'noContribution', 'constant', 'dropConsideration']),
       numericValue: NumberSchema.optional(),

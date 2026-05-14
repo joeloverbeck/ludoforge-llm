@@ -75,8 +75,7 @@ describe('FITL coupEntry phase boundary distance status', () => {
         observerPolicy: {
           kind: 'topNVisible',
           visiblePrefix: {
-            zones: [{ id: 'played:none' }, { id: 'lookahead:none' }],
-            maxItems: 2,
+            sources: [{ id: 'played:none', take: 1 }, { id: 'lookahead:none', take: 1 }],
           },
         },
       },

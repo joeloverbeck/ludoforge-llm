@@ -143,24 +143,19 @@ const resolveVisiblePrefixBoundaryCardDistance = (
   context: PolicyWasmPhaseScheduleContext,
   schedule: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>,
 ): PolicyWasmPhaseScheduleResolution => {
-  let scanned = 0;
-  const maxItems = schedule.observerPolicy!.visiblePrefix.maxItems;
-  for (const zoneRef of schedule.observerPolicy!.visiblePrefix.zones) {
-    if (scanned >= maxItems) {
-      break;
-    }
-    const slotCards = readPublicZoneCards(context.def, context.state, zoneRef.id);
-    for (const card of slotCards) {
-      if (scanned >= maxItems) {
-        break;
-      }
+  let distance = 0;
+  for (const source of schedule.observerPolicy!.visiblePrefix.sources) {
+    const slotCards = readPublicZoneCards(context.def, context.state, source.id);
+    const taken = Math.min(source.take, slotCards.length);
+    for (let index = 0; index < taken; index += 1) {
+      const card = slotCards[index]!;
       if (matchesCardSelector(context.def, card, schedule.cardSelector)) {
-        return { kind: 'ready', value: scanned };
+        return { kind: 'ready', value: distance };
       }
-      scanned += 1;
+      distance += 1;
     }
   }
-  return { kind: 'partial', partialKind: 'lowerBound', lowerBound: scanned };
+  return { kind: 'partial', partialKind: 'lowerBound', lowerBound: distance };
 };
 
 const resolveScheduleDistanceValue = (

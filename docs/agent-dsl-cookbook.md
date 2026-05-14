@@ -329,13 +329,16 @@ phaseBoundaries:
       observerPolicy:
         kind: topNVisible
         visiblePrefix:
-          zones:
+          sources:
             - id: played:none
+              take: 1
             - id: lookahead:none
-          maxItems: 2
+              take: 1
 ```
 
-The listed zones must be public, ordered, distinct, and separate from the hidden draw zone. The resolver scans at most `maxItems` cards in declaration order. A matching visible card resolves `ready`; an exhausted visible prefix resolves `partial.lowerBound`; a boundary without `observerPolicy` preserves the hidden-deck `unavailable` result.
+Each source contributes at most `take` cards from the top of its public zone to the composed visible sequence, in declaration order. The scan bound is `sum(take)`, which is known from the spec. Cards beyond a source's `take` remain public, but they are excluded by policy from this forward schedule horizon; they are not hidden information.
+
+Each source `id` must name a public, deterministically ordered zone. Source ids must be distinct, and none may be the deck's hidden draw zone. Each source must declare `take` as a positive integer. A matching visible card resolves `ready`; an exhausted visible sequence resolves `partial.lowerBound`; a boundary without `observerPolicy` preserves the hidden-deck `unavailable` result.
 
 ### FITL Coup Timing Example
 
@@ -354,9 +357,11 @@ preferGovernEarlyInCoupCycle:
       visiblePrefixExhausted: useLowerBound
 ```
 
-In Fire in the Lake, `played:none` is the current driving-card slot and `lookahead:none` is the next visible card slot. If either visible slot is a coup card, the ref is ready with an exact distance. If neither visible slot is a coup card, the ref returns `partial.lowerBound: 2`, and `useLowerBound` lets the heuristic score that bounded timing signal without peeking into the hidden deck.
+In Fire in the Lake, `played:none` is the public played pile and `lookahead:none` is the next visible card slot. With the `coupEntry` boundary's `sources` declaration, `played:none` uses `take: 1`, so only the current driving card is extracted from the played pile even when earlier discards remain beneath it. `lookahead:none` also uses `take: 1`, so the composed sequence is `[current card, next card]` regardless of discard depth.
 
-Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `specs/170-partial-visibility-observer-policy.md`
+If the current card is a coup card, the ref is ready with distance `0`. If the next card in `lookahead:none` is a coup card, the ref is ready with distance `1` rather than the spurious `partial.lowerBound: 2` produced by the retired aggregate scan. If neither visible card is a coup card, the ref returns `partial.lowerBound: 2`, and `useLowerBound` lets the heuristic score that bounded timing signal without peeking into the hidden deck.
+
+Spec sources: `archive/specs/169-phase-boundary-and-schedule-refs.md`, `archive/specs/170-partial-visibility-observer-policy.md`, `archive/specs/171-visible-sequence-projection.md`
 
 ## Reading the Preview Trace
 

@@ -209,8 +209,7 @@ function validateObserverPolicy(
   const observerPolicy = schedule.observerPolicy as {
     readonly kind?: unknown;
     readonly visiblePrefix?: {
-      readonly zones?: readonly { readonly id?: unknown }[];
-      readonly maxItems?: unknown;
+      readonly sources?: readonly { readonly id?: unknown; readonly take?: unknown }[];
     };
   } | undefined;
   if (observerPolicy === undefined) {
@@ -240,38 +239,46 @@ function validateObserverPolicy(
   }
 
   const prefix = observerPolicy.visiblePrefix;
-  const prefixZones = prefix?.zones;
-  if (!Array.isArray(prefixZones) || prefixZones.length === 0) {
+  const prefixSources = prefix?.sources;
+  if (!Array.isArray(prefixSources) || prefixSources.length === 0) {
     diagnostics.push({
       code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_EMPTY_VISIBLE_PREFIX,
-      path: `${path}.schedule.observerPolicy.visiblePrefix.zones`,
+      path: `${path}.schedule.observerPolicy.visiblePrefix.sources`,
       severity: 'error',
-      message: `phase boundary "${boundary.id}" observerPolicy.visiblePrefix.zones must list at least one public zone.`,
-      suggestion: 'Add one or more ordered public zone ids, such as lookahead:none.',
-    });
-  }
-
-  if (!Number.isInteger(prefix?.maxItems) || Number(prefix?.maxItems) <= 0) {
-    diagnostics.push({
-      code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_MAXITEMS,
-      path: `${path}.schedule.observerPolicy.visiblePrefix.maxItems`,
-      severity: 'error',
-      message: `phase boundary "${boundary.id}" observerPolicy.visiblePrefix.maxItems must be a positive integer.`,
-      suggestion: 'Use a positive integer cap such as 1 or 2.',
+      message: `phase boundary "${boundary.id}" observerPolicy.visiblePrefix.sources must list at least one public source zone.`,
+      suggestion: 'Add one or more ordered public source zone ids, such as lookahead:none.',
     });
   }
 
   const seenZoneIds = new Set<string>();
-  for (const [zoneIndex, zoneRef] of (prefixZones ?? []).entries()) {
-    const zoneId = typeof zoneRef?.id === 'string' ? zoneRef.id : String(zoneRef?.id);
-    const zonePath = `${path}.schedule.observerPolicy.visiblePrefix.zones.${zoneIndex}.id`;
+  for (const [sourceIndex, source] of (prefixSources ?? []).entries()) {
+    const sourcePath = `${path}.schedule.observerPolicy.visiblePrefix.sources.${sourceIndex}`;
+    const zoneId = typeof source?.id === 'string' ? source.id : String(source?.id);
+    const zonePath = `${sourcePath}.id`;
+    if (source?.take === undefined) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_MISSING_TAKE,
+        path: `${sourcePath}.take`,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy source "${zoneId}" must declare take.`,
+        suggestion: 'Add a positive integer take cap, such as take: 1.',
+      });
+    } else if (!Number.isInteger(source.take) || Number(source.take) <= 0) {
+      diagnostics.push({
+        code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_INVALID_TAKE,
+        path: `${sourcePath}.take`,
+        severity: 'error',
+        message: `phase boundary "${boundary.id}" observerPolicy source "${zoneId}" take must be a positive integer.`,
+        suggestion: 'Use a positive integer take cap, such as take: 1.',
+      });
+    }
     if (seenZoneIds.has(zoneId)) {
       diagnostics.push({
         code: CNL_COMPILER_DIAGNOSTIC_CODES.OBSERVER_POLICY_DUPLICATE_ZONE,
         path: zonePath,
         severity: 'error',
-        message: `phase boundary "${boundary.id}" observerPolicy repeats visible-prefix zone "${zoneId}".`,
-        suggestion: 'List each visible-prefix zone at most once.',
+        message: `phase boundary "${boundary.id}" observerPolicy repeats visible-prefix source zone "${zoneId}".`,
+        suggestion: 'List each visible-prefix source zone at most once.',
       });
       continue;
     }

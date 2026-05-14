@@ -27,10 +27,11 @@ phaseBoundaries:
       observerPolicy:
         kind: topNVisible
         visiblePrefix:
-          zones:
+          sources:
             - id: played:none
+              take: 1
             - id: lookahead:none
-          maxItems: 2
+              take: 1
 
 turnOrder:
   type: cardDriven

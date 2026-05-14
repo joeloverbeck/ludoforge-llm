@@ -17,6 +17,7 @@ describe('partial-visibility resolver correctness', () => {
       value: 0,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 1,
+      visibleSequenceSources: [{ zoneId: 'lookahead:none', availablePublic: 1, taken: 1 }],
     });
   });
 
@@ -26,6 +27,23 @@ describe('partial-visibility resolver correctness', () => {
       value: 1,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
+    });
+  });
+
+  it('caps each source contribution at take before scanning the next source', () => {
+    assert.deepEqual(resolve(stateWithVisiblePrefix(def, ['op-1', 'op-2', 'op-1'], ['coup-1'])), {
+      kind: 'ready',
+      value: 1,
+      observerPolicy: { kind: 'topNVisible' },
+      visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 3, taken: 1 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
     });
   });
 
@@ -36,6 +54,10 @@ describe('partial-visibility resolver correctness', () => {
       lowerBound: 2,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
     });
   });
 
@@ -46,6 +68,10 @@ describe('partial-visibility resolver correctness', () => {
       lowerBound: 1,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 1,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 0, taken: 0 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
     });
   });
 
@@ -56,6 +82,10 @@ describe('partial-visibility resolver correctness', () => {
       lowerBound: 0,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 0,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 0, taken: 0 },
+        { zoneId: 'leader:none', availablePublic: 0, taken: 0 },
+      ],
     });
   });
 
@@ -66,6 +96,10 @@ describe('partial-visibility resolver correctness', () => {
       lowerBound: 2,
       observerPolicy: { kind: 'topNVisible' },
       visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+        { zoneId: 'leader:none', availablePublic: 1, taken: 1 },
+      ],
     };
 
     for (let turnCount = 0; turnCount < 20; turnCount += 1) {

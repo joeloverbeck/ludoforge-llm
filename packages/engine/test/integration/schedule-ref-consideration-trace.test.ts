@@ -236,6 +236,10 @@ describe('FITL schedule ref sandbox consideration trace shape', () => {
           lowerBound: 2,
           observerPolicy: 'topNVisible',
           visiblePrefixLength: 2,
+          visibleSequenceSources: [
+            { zoneId: 'played:none', availablePublic: 1, taken: 1 },
+            { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+          ],
           fallbackApplied: { kind: 'useLowerBound', numericValue: 2 },
         },
       },

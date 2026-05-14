@@ -208,9 +208,13 @@ export type ObserverPolicy = {
   readonly visiblePrefix: ObserverVisiblePrefix;
 };
 
+export interface ObserverVisibleSource {
+  readonly id: string;
+  readonly take: number;
+}
+
 export interface ObserverVisiblePrefix {
-  readonly zones: readonly { readonly id: string }[];
-  readonly maxItems: number;
+  readonly sources: readonly ObserverVisibleSource[];
 }
 
 export type ScheduleKindDef =
@@ -1860,6 +1864,11 @@ export type PolicyScheduleInputRefTrace =
       readonly value: number | string;
       readonly observerPolicy?: 'topNVisible';
       readonly visiblePrefixLength?: number;
+      readonly visibleSequenceSources?: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
     }
   | {
       readonly status: 'partial';
@@ -1867,6 +1876,11 @@ export type PolicyScheduleInputRefTrace =
       readonly lowerBound: number;
       readonly observerPolicy: 'topNVisible';
       readonly visiblePrefixLength: number;
+      readonly visibleSequenceSources: readonly {
+        readonly zoneId: string;
+        readonly availablePublic: number;
+        readonly taken: number;
+      }[];
       readonly fallbackApplied?: {
         readonly kind: 'useLowerBound' | 'noContribution' | 'constant' | 'dropConsideration';
         readonly numericValue?: number;

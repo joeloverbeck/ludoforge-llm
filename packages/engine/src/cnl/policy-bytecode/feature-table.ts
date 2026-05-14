@@ -111,6 +111,8 @@ const GLOBAL_ZONE_SOURCE_CODE: Readonly<Record<'attribute' | 'variable', number>
 
 const compareStrings = (left: string, right: string): number => left.localeCompare(right);
 
+let buildFeatureTableCount = 0;
+
 const indexOf = (ids: readonly string[], id: string): number | undefined => {
   const index = ids.indexOf(id);
   return index < 0 ? undefined : index;
@@ -154,6 +156,7 @@ export function getFeatureId(table: FeatureTable, ref: FeatureRef): number | und
 }
 
 export function buildFeatureTable(def: GameDef, layout: EncodedStateLayout): FeatureTable {
+  buildFeatureTableCount += 1;
   const refsByKey = new Map<string, FeatureRef>();
   const add = (ref: FeatureRef | undefined): void => {
     if (ref === undefined) {
@@ -176,6 +179,13 @@ export function buildFeatureTable(def: GameDef, layout: EncodedStateLayout): Fea
     refToId: Object.freeze(refToId),
   });
 }
+
+export const __featureTable_internal_for_tests = {
+  getBuildFeatureTableCount: (): number => buildFeatureTableCount,
+  resetBuildFeatureTableCount: (): void => {
+    buildFeatureTableCount = 0;
+  },
+};
 
 export function collectFeatureRefsFromCompiledPolicyExpr(
   expr: CompiledPolicyExpr,

@@ -22,7 +22,7 @@ The `metric_value` column holds the primary metric from the harness (identified 
 
 Status values: `ACCEPT`, `REJECT`, `NEAR_MISS`, `EARLY_ABORT`, `CRASH`, `SUSPICIOUS_ACCEPT`, `BACKTRACK`, `BASELINE`
 
-`BASELINE` is reserved for tier/phase-transition baseline re-measurement rows (e.g., `tier-2-baseline`, `phase-B-baseline`). These rows record the new-tier metric value but are not experiments — downstream tooling treats `BASELINE` rows as reference points, not as accept/reject decisions. Use `BASELINE` only for entries logged as part of the phase-transition checklist in `references/accept-reject-logic.md`. The original `baseline` row written by Phase 1 also uses status `BASELINE` (replacing the prior `ACCEPT` convention) for consistency.
+`BASELINE` is reserved for tier/phase-transition baseline re-measurement rows (e.g., `tier-2-baseline`, `phase-B-baseline`). These rows record the new-tier metric value but are not experiments — downstream tooling treats `BASELINE` rows as reference points, not as accept/reject decisions. Use `BASELINE` for entries logged as part of the phase-transition checklist in `references/accept-reject-logic.md`, and for a `post-fix-baseline` row recorded after a metric-neutral-but-state-relevant bug fix (see SKILL.md Human Investigation Interrupt step 5b). The original `baseline` row written by Phase 1 also uses status `BASELINE` (replacing the prior `ACCEPT` convention) for consistency.
 
 **Backward compatibility:** If resuming an old campaign whose results.tsv lacks the `category` column, treat all existing rows as having category `other` and continue with the new schema for new rows.
 
@@ -69,3 +69,5 @@ Campaign Completes" step explicitly commits this file.
 | `PRIMARY_METRIC_KEY` | `combined_duration_ms` | Key name to parse from harness output (e.g., `compositeScore`) |
 | `ZERO_EFFECT_THRESHOLD` | 3 | Consecutive zero-effect experiments before mandatory diagnostic |
 | `CEILING_THRESHOLD` | `2 * PLATEAU_THRESHOLD` | Consecutive non-accepts across ALL strategies before ceiling report |
+| `HARD_TIMEOUT` | 1800 | Per-harness-run wall-clock budget in seconds. A run exceeding it is killed and logged `EARLY_ABORT` with `metric_value` = `null` (see `references/harness-execution.md` Step 4 "Wall-clock hang abort"). Set higher for campaigns with genuinely long harnesses, or `unlimited` to disable the guard. |
+| `MAX_FIX_ATTEMPTS` | 3 | Retry limit for trivial CRASH fixes (the "3-retry" rule in Git Operations Summary). |

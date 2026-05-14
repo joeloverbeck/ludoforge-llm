@@ -410,6 +410,18 @@ For benchmark/performance tickets where a code slice is worth keeping but the ti
 - `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`
 - `next authorization`: `<already user-approved continuation, 1-3-1 needed, or intentionally deferred>`
 
+For tickets whose deliverable is an expected-red witness rather than a green fix, terminal closeout is allowed only when the active ticket explicitly owns that red witness shape or has been rewritten with user-approved boundary reset. Capture:
+
+- `expected-red command`: `<focused command and broad lane if relevant>`
+- `failure token`: `<assertion/message proving the intended product red, not setup failure>`
+- `threshold/actual`: `<expected limit and observed value, or not applicable>`
+- `broad lane classification`: `<red solely because expected witness | additional failures classified>`
+- `unrelated lanes`: `<green/classified build, lint, typecheck, determinism, or equivalent>`
+- `successor owner`: `<ticket/spec that is expected to make the witness green>`
+- `durable status`: `<COMPLETED | BLOCKED | repo-equivalent>`
+
+Do not count TypeScript setup failures, missing markers, bad imports, or wrong fixture wiring as the expected red witness. If a ticket-named broad lane is red for any failure besides the intended witness, classify those failures before terminal status using the normal broad-lane rules.
+
 For a user-approved acceptance exception on a red measured gate, make the exception explicit:
 
 - `original gate`: `<metric and threshold>`

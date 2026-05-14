@@ -38,6 +38,8 @@ const compareStrings = (left: string, right: string): number => left.localeCompa
 const indexByString = (ids: readonly string[]): Readonly<Record<string, number>> =>
   Object.freeze(Object.fromEntries(ids.map((id, index) => [id, index])));
 
+let buildEncodedStateCount = 0;
+
 const encodeValue = (value: unknown): number => {
   if (typeof value === 'number') {
     return value;
@@ -212,6 +214,7 @@ const encodeScalarTokenProp = (
 };
 
 export function buildEncodedState(state: GameState, layout: EncodedStateLayout): EncodedState {
+  buildEncodedStateCount += 1;
   const tokenIds = collectEffectiveTokenIds(state, layout);
   const tokenIndexById = indexByString(tokenIds.map(String));
   const tokenOccurrences = collectTokenOccurrences(state, layout);
@@ -348,3 +351,10 @@ export function buildEncodedState(state: GameState, layout: EncodedStateLayout):
     globals,
   };
 }
+
+export const __view_internal_for_tests = {
+  getBuildEncodedStateCount: (): number => buildEncodedStateCount,
+  resetBuildEncodedStateCount: (): void => {
+    buildEncodedStateCount = 0;
+  },
+};

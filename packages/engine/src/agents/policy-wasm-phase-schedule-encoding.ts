@@ -125,8 +125,15 @@ const matchesCardSelector = (
   token: Token,
   cardSelector: Extract<NonNullable<NonNullable<GameDef['phaseBoundaries']>[number]['schedule']>, { readonly kind: 'cardDraw' }>['cardSelector'],
 ): boolean => {
-  const tokenId = String(token.id);
-  if (cardSelector.cardIds?.includes(tokenId) === true) {
+  // A card selector is declared against card-DEFINITION ids; a card token's
+  // identity lives in `props.cardId`, not in `token.id` (the token-instance id,
+  // e.g. `tok___eventCard_<ordinal>`). Resolve the card identity the same way
+  // the kernel's canonical `resolveEventCardTokenId` (event-execution.ts) does.
+  // Must stay byte-identical to the TS resolver copy in policy-runtime.ts.
+  const cardId = typeof token.props.cardId === 'string' && token.props.cardId.length > 0
+    ? token.props.cardId
+    : String(token.id);
+  if (cardSelector.cardIds?.includes(cardId) === true) {
     return true;
   }
   const requestedTags = cardSelector.tags ?? [];
@@ -135,7 +142,7 @@ const matchesCardSelector = (
   }
   const card = (def.eventDecks ?? [])
     .flatMap((deck) => deck.cards)
-    .find((entry) => entry.id === tokenId);
+    .find((entry) => entry.id === cardId);
   return requestedTags.some((tag) => card?.tags?.includes(tag) === true);
 };
 

@@ -877,6 +877,17 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "selfRank": {
+        "type": "number",
+        "costClass": "state",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "candidateFeatures": {
@@ -900,6 +911,19 @@
           "parameters": [],
           "stateFeatures": [
             "vcFriendlyCapCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "projectedSelfRank": {
+        "type": "number",
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfRank"
           ],
           "candidateFeatures": [],
           "aggregates": [],
@@ -977,6 +1001,21 @@
           "stateFeatures": [],
           "candidateFeatures": [
             "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "preferProjectedRank": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfRank"
           ],
           "aggregates": [],
           "strategicConditions": []
@@ -1721,6 +1760,29 @@
           "aggregates": [],
           "strategicConditions": []
         }
+      },
+      "selfRank": {
+        "type": "number",
+        "costClass": "state",
+        "expr": {
+          "kind": "ref",
+          "ref": {
+            "kind": "currentSurface",
+            "family": "victoryCurrentRank",
+            "id": "currentRank",
+            "selector": {
+              "kind": "role",
+              "seatToken": "self"
+            }
+          }
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
       }
     },
     "candidateFeatures": {
@@ -1816,6 +1878,45 @@
           "parameters": [],
           "stateFeatures": [
             "vcFriendlyCapCount"
+          ],
+          "candidateFeatures": [],
+          "aggregates": [],
+          "strategicConditions": []
+        }
+      },
+      "projectedSelfRank": {
+        "type": "number",
+        "costClass": "preview",
+        "expr": {
+          "kind": "op",
+          "op": "coalesce",
+          "args": [
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "previewSurface",
+                "family": "victoryCurrentRank",
+                "id": "currentRank",
+                "selector": {
+                  "kind": "role",
+                  "seatToken": "self"
+                }
+              }
+            },
+            {
+              "kind": "ref",
+              "ref": {
+                "kind": "library",
+                "refKind": "stateFeature",
+                "id": "selfRank"
+              }
+            }
+          ]
+        },
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [
+            "selfRank"
           ],
           "candidateFeatures": [],
           "aggregates": [],
@@ -1957,6 +2058,53 @@
           "stateFeatures": [],
           "candidateFeatures": [
             "projectedSelfMargin"
+          ],
+          "aggregates": [],
+          "strategicConditions": []
+        },
+        "readFootprint": {
+          "writes": {
+            "tokens": [],
+            "zones": [],
+            "variables": [],
+            "scores": []
+          },
+          "reads": {
+            "tokens": "unknown",
+            "zones": "unknown",
+            "variables": "unknown",
+            "scores": "unknown"
+          },
+          "mayTouchTokens": [],
+          "mayTouchZones": [],
+          "mayTouchVariables": [],
+          "mayTouchScores": []
+        }
+      },
+      "preferProjectedRank": {
+        "scopes": [
+          "move"
+        ],
+        "costClass": "preview",
+        "weight": {
+          "kind": "literal",
+          "value": -300
+        },
+        "value": {
+          "kind": "ref",
+          "ref": {
+            "kind": "library",
+            "refKind": "candidateFeature",
+            "id": "projectedSelfRank"
+          }
+        },
+        "hasPreviewRef": false,
+        "hasLookupRef": false,
+        "dependencies": {
+          "parameters": [],
+          "stateFeatures": [],
+          "candidateFeatures": [
+            "projectedSelfRank"
           ],
           "aggregates": [],
           "strategicConditions": []
@@ -3874,6 +4022,7 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
+          "preferProjectedRank",
           "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "trainWhenControlLow",
@@ -3921,10 +4070,12 @@
       "plan": {
         "stateFeatures": [
           "selfMargin",
+          "selfRank",
           "coinControlPop"
         ],
         "candidateFeatures": [
-          "projectedSelfMargin"
+          "projectedSelfMargin",
+          "projectedSelfRank"
         ],
         "candidateAggregates": [
           "hasNonPassAlternative",
@@ -3933,13 +4084,14 @@
         ],
         "considerations": [
           "preferProjectedSelfMargin",
+          "preferProjectedRank",
           "preferStrongNormalizedMargin",
           "preferGovernWeighted",
           "trainWhenControlLow",
           "preferOptionProjectedMargin"
         ]
       },
-      "fingerprint": "f410e55be93f0a814434694d0683dae12e4b854af2e85cacb2838c9b918785a4"
+      "fingerprint": "9f001c46e99250d9cf5caae7ee67bb9a9749f6df0010484d0a2b7acf4fa4a891"
     },
     "nva-baseline": {
       "observerName": "currentPlayer",
@@ -4059,5 +4211,5 @@
     "nva": "nva-baseline",
     "vc": "vc-baseline"
   },
-  "catalogFingerprint": "09b5ec9e459e1ccfb49d94388d439b1284dfd10899e9bfdb7c58c49a95a8823a"
+  "catalogFingerprint": "3deb9722d7619f746592a12c44108dcddeeb3171dfc555355d055d2fd80bd7d0"
 }

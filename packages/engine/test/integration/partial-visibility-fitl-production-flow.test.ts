@@ -29,10 +29,14 @@ const REF: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }
   unit: 'cards',
 };
 
+// Real FITL card tokens carry their card identity in `props.cardId`; `token.id`
+// is a distinct token-instance id (`tok___eventCard_<ordinal>`). The fixture
+// helper mirrors that shape so `matchesCardSelector` is exercised against the
+// production token shape, not an `id === cardId` shortcut (Foundation #16).
 const cardToken = (cardId: string): Token => ({
-  id: asTokenId(cardId),
+  id: asTokenId(`tok-${cardId}`),
   type: 'card',
-  props: {},
+  props: { cardId },
 });
 
 function cardIds(def: GameDef): { readonly coup: readonly string[]; readonly nonCoup: readonly string[] } {
@@ -92,10 +96,10 @@ describe('FITL visible-sequence projection through the production card lifecycle
     const state = driveOneProductionBoundary(gameDef, [ids.nonCoup[0]!, ids.nonCoup[1]!, ids.coup[0]!]);
 
     assert.deepEqual(
-      state.zones['played:none']?.map((token) => String(token.id)),
+      state.zones['played:none']?.map((token) => token.props.cardId),
       [ids.nonCoup[1]!, ids.nonCoup[0]!],
     );
-    assert.deepEqual(state.zones['lookahead:none']?.map((token) => String(token.id)), [ids.coup[0]!]);
+    assert.deepEqual(state.zones['lookahead:none']?.map((token) => token.props.cardId), [ids.coup[0]!]);
     assert.deepEqual(resolve(gameDef, state), {
       kind: 'ready',
       value: 1,
@@ -116,10 +120,10 @@ describe('FITL visible-sequence projection through the production card lifecycle
     const state = driveOneProductionBoundary(gameDef, [ids.nonCoup[0]!, ids.nonCoup[1]!, ids.nonCoup[2]!]);
 
     assert.deepEqual(
-      state.zones['played:none']?.map((token) => String(token.id)),
+      state.zones['played:none']?.map((token) => token.props.cardId),
       [ids.nonCoup[1]!, ids.nonCoup[0]!],
     );
-    assert.deepEqual(state.zones['lookahead:none']?.map((token) => String(token.id)), [ids.nonCoup[2]!]);
+    assert.deepEqual(state.zones['lookahead:none']?.map((token) => token.props.cardId), [ids.nonCoup[2]!]);
     assert.deepEqual(resolve(gameDef, state), {
       kind: 'partial',
       partialKind: 'lowerBound',
@@ -128,6 +132,83 @@ describe('FITL visible-sequence projection through the production card lifecycle
       visiblePrefixLength: 2,
       visibleSequenceSources: [
         { zoneId: 'played:none', availablePublic: 2, taken: 1 },
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+      ],
+    });
+  });
+});
+
+// Regression guard for the `matchesCardSelector` token-id/card-id mismatch:
+// real FITL deck tokens carry their card identity in `props.cardId`, while
+// `token.id` is a distinct token-instance id. The resolver must match against
+// the card identity, not the token-instance id. This case is built from the
+// genuine `initialState` deck — not a synthetic `cardToken` — so the production
+// token shape is exercised end to end (Foundation #16).
+function stateWithRealVisibleTokens(
+  def: GameDef,
+  base: GameState,
+  options: { readonly played: Token; readonly lookahead: Token },
+): GameState {
+  const next: GameState = {
+    ...base,
+    zones: {
+      ...base.zones,
+      'played:none': [options.played],
+      'lookahead:none': [options.lookahead],
+      'leader:none': [],
+    },
+  };
+  const hash = computeFullHash(createZobristTable(def), next);
+  return { ...next, stateHash: hash, _runningHash: hash };
+}
+
+describe('FITL visible-sequence projection against the real deck token shape', () => {
+  it('resolves ready: 1 for a real coup token in lookahead:none (identity is props.cardId, not token.id)', () => {
+    const { gameDef } = getFitlProductionFixture();
+    const base = initialState(gameDef, 171004, 4).state;
+    const deck = base.zones['deck:none'] ?? [];
+    const realCoup = deck.find((token) => token.props.isCoup === true);
+    const realNonCoup = deck.find((token) => token.props.isCoup !== true);
+    assert.ok(realCoup, 'expected a real coup token in the FITL deck');
+    assert.ok(realNonCoup, 'expected a real non-coup token in the FITL deck');
+    // The bug this guards against: token.id is NOT the card-definition id.
+    assert.notEqual(String(realCoup.id), realCoup.props.cardId);
+    assert.equal(typeof realCoup.props.cardId, 'string');
+
+    const state = stateWithRealVisibleTokens(gameDef, base, { played: realNonCoup, lookahead: realCoup });
+
+    assert.deepEqual(resolve(gameDef, state), {
+      kind: 'ready',
+      value: 1,
+      observerPolicy: { kind: 'topNVisible' },
+      visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'played:none', availablePublic: 1, taken: 1 },
+        { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
+      ],
+    });
+  });
+
+  it('keeps partial.lowerBound: 2 for real non-coup tokens in both visible slots', () => {
+    const { gameDef } = getFitlProductionFixture();
+    const base = initialState(gameDef, 171004, 4).state;
+    const deck = base.zones['deck:none'] ?? [];
+    const realNonCoup = deck.filter((token) => token.props.isCoup !== true);
+    assert.ok(realNonCoup.length >= 2, 'expected at least two real non-coup tokens');
+
+    const state = stateWithRealVisibleTokens(gameDef, base, {
+      played: realNonCoup[0]!,
+      lookahead: realNonCoup[1]!,
+    });
+
+    assert.deepEqual(resolve(gameDef, state), {
+      kind: 'partial',
+      partialKind: 'lowerBound',
+      lowerBound: 2,
+      observerPolicy: { kind: 'topNVisible' },
+      visiblePrefixLength: 2,
+      visibleSequenceSources: [
+        { zoneId: 'played:none', availablePublic: 1, taken: 1 },
         { zoneId: 'lookahead:none', availablePublic: 1, taken: 1 },
       ],
     });

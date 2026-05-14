@@ -23,10 +23,13 @@ const REF: Extract<CompiledAgentPolicyRef, { readonly kind: 'scheduleDistance' }
   unit: 'cards',
 };
 
+// Real card tokens carry their identity in `props.cardId`; `token.id` is a
+// distinct token-instance id. Mirror that shape so the resolver is exercised
+// against the production token layout (Foundation #16).
 const cardToken = (cardId: string): Token => ({
-  id: asTokenId(cardId),
+  id: asTokenId(`tok-${cardId}`),
   type: 'card',
-  props: {},
+  props: { cardId },
 });
 
 function cardIds(def: GameDef): { readonly coup: readonly string[]; readonly nonCoup: readonly string[] } {

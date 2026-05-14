@@ -49,4 +49,7 @@ writeFileSync('$PROJECT_ROOT/packages/engine/test/fixtures/trace/texas-policy-su
 console.error('  texas-policy-summary.golden.json regenerated');
 "
 
+echo "Regenerating policy-preview-inner-fitl-canary golden trace..." >&2
+node "$SCRIPT_DIR/regen-canary-golden.mjs"
+
 echo "Fixture sync complete." >&2

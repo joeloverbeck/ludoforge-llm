@@ -112,6 +112,7 @@ const GLOBAL_ZONE_SOURCE_CODE: Readonly<Record<'attribute' | 'variable', number>
 const compareStrings = (left: string, right: string): number => left.localeCompare(right);
 
 let buildFeatureTableCount = 0;
+let featureTableCache = new WeakMap<GameDef, FeatureTable>();
 
 const indexOf = (ids: readonly string[], id: string): number | undefined => {
   const index = ids.indexOf(id);
@@ -180,10 +181,23 @@ export function buildFeatureTable(def: GameDef, layout: EncodedStateLayout): Fea
   });
 }
 
+export function getFeatureTable(def: GameDef, layout: EncodedStateLayout): FeatureTable {
+  const cached = featureTableCache.get(def);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const table = buildFeatureTable(def, layout);
+  featureTableCache.set(def, table);
+  return table;
+}
+
 export const __featureTable_internal_for_tests = {
   getBuildFeatureTableCount: (): number => buildFeatureTableCount,
   resetBuildFeatureTableCount: (): void => {
     buildFeatureTableCount = 0;
+  },
+  resetFeatureTableCache: (): void => {
+    featureTableCache = new WeakMap<GameDef, FeatureTable>();
   },
 };
 

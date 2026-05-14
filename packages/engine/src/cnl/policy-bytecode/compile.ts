@@ -15,9 +15,9 @@ import {
   type RangeAnalysis,
 } from './types.js';
 import {
-  buildFeatureTable,
   canonicalKey,
   collectFeatureRefsFromCompiledPolicyExpr,
+  getFeatureTable,
   getFeatureId,
   stablePayloadCode,
 } from './feature-table.js';
@@ -64,7 +64,7 @@ function buildExpressionFeatureTable(
   expr: PolicyExprInput,
 ): FeatureTable {
   buildExpressionFeatureTableCount += 1;
-  const refsByKey = new Map(buildFeatureTable(def, layout).refs.map((ref) => [canonicalKey(ref), ref]));
+  const refsByKey = new Map(getFeatureTable(def, layout).refs.map((ref) => [canonicalKey(ref), ref]));
   for (const ref of collectFeatureRefsFromCompiledPolicyExpr(expr as CompiledPolicyExpr, layout)) {
     refsByKey.set(canonicalKey(ref), ref);
   }

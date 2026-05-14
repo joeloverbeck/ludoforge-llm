@@ -1,6 +1,6 @@
 # 172POLEVASTA-003: Phase 2 — WeakMap<GameDef, FeatureTable> cache + getFeatureTable accessor
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — `packages/engine/src/cnl/policy-bytecode/feature-table.ts` (new cache + accessor); `packages/engine/src/cnl/policy-bytecode/compile.ts` (caller switch)
@@ -81,3 +81,64 @@ Add `packages/engine/test/.../feature-table-cache.test.ts` asserting: `getFeatur
 3. `pnpm -F @ludoforge/engine test:perf` (witness — `buildFeatureTable` drops to first-touch-only)
 4. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
 5. `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:integration:fitl-rules`
+
+## Outcome (2026-05-15)
+
+Phase 2 is complete.
+
+What landed:
+
+- `packages/engine/src/cnl/policy-bytecode/feature-table.ts` now owns a module-level `WeakMap<GameDef, FeatureTable>` and exports `getFeatureTable(def, layout)`. The accessor builds through `buildFeatureTable` on miss and returns the cached frozen table on repeat calls.
+- The existing test/internal feature-table counter surface now also has `resetFeatureTableCache()` so cache-sensitive invariant tests can isolate first-touch behavior from earlier same-process tests.
+- `packages/engine/src/cnl/policy-bytecode/compile.ts` now builds expression feature tables from `getFeatureTable(def, layout)` instead of directly calling `buildFeatureTable`.
+- `packages/engine/test/unit/cnl/policy-bytecode/feature-table-cache.test.ts` proves the cached table is deep-equal to a fresh builder result, repeats by reference for the same `GameDef`, increments the fresh-builder counter once, and remains frozen down through `refs`, `refToId`, and each `ref.aux`.
+
+Touched-file scope:
+
+- `packages/engine/src/cnl/policy-bytecode/feature-table.ts` — `WeakMap` cache, accessor, and test/internal cache reset.
+- `packages/engine/src/cnl/policy-bytecode/compile.ts` — production caller switched to `getFeatureTable`.
+- `packages/engine/test/unit/cnl/policy-bytecode/feature-table-cache.test.ts` — new architectural-invariant unit test.
+
+Generated fallout: none; no schemas, goldens, or compiled JSON artifacts changed. `dist` was rebuilt for compiled-test proof only.
+
+Deferred sibling/spec scope:
+
+- `172POLEVASTA-004` still owns runtime-owned bytecode caching / `buildExpressionFeatureTable` count reduction.
+- `172POLEVASTA-005` still owns runtime-owned encoded-state caching / `buildEncodedState` count reduction.
+- `172POLEVASTA-006` still owns the composite constructor-no-direct-build invariant and flipping the Phase 0 perf witness to fully passing.
+
+Source-size ledger:
+
+- `packages/engine/src/cnl/policy-bytecode/feature-table.ts | before lines 602 | after lines 616 | crossed cap? no | active growth yes | extraction/defer rationale: canonical feature-table module with a tiny adjacent accessor; extracting this cache would obscure the Phase 2 seam and widen the ticket | successor if any: none`
+
+Command ledger:
+
+- `Test Plan | pnpm -F @ludoforge/engine test:unit | ran directly | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test:integration | ran directly | passed, 293/293 files`
+- `Test Plan | pnpm -F @ludoforge/engine test:perf | ran directly, classified expected red for sibling-owned residuals | failed only on the existing Phase 0 witness with buildFeatureTable=1, buildEncodedStateLayout=1, buildExpressionFeatureTable=10617, buildEncodedState=5039`
+- `Test Plan | pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck | split into three root commands | all passed`
+- `Test Plan | pnpm -F @ludoforge/engine test | ran directly | passed`
+- `Test Plan | pnpm -F @ludoforge/engine test:integration:fitl-rules | subsumed by pnpm -F @ludoforge/engine test:integration | full integration lane passed every FITL-rules file as part of 293/293 files`
+
+Verification:
+
+- `pnpm -F @ludoforge/engine build` passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode/feature-table-cache.test.js` passed.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` failed as expected for later siblings, with `172POLEVASTA_STATIC_REBUILD_WITNESS total=15658 threshold=4 buildEncodedStateLayout=1 buildFeatureTable=1 buildExpressionFeatureTable=10617 buildEncodedState=5039 seed=1013 maxTurns=1 profiles=us-baseline,arvn-evolved,nva-baseline,vc-baseline`.
+- `pnpm -F @ludoforge/engine test:unit` passed.
+- `pnpm -F @ludoforge/engine test:integration` passed, 293/293 files.
+- `pnpm -F @ludoforge/engine test:perf` failed only on the same expected Phase 0 witness; 4/5 perf suites passed, and the failed witness proved the ticket-owned `buildFeatureTable=1` first-touch result while `buildExpressionFeatureTable` and `buildEncodedState` remain sibling-owned.
+- `pnpm turbo build` passed. `@ludoforge/engine-wasm:build` was a cache-hit replay; `@ludoforge/engine:build` and `@ludoforge/runner:build` executed.
+- `pnpm turbo lint` passed. `@ludoforge/runner:lint` was a cache-hit replay; `@ludoforge/engine:lint` executed.
+- `pnpm turbo typecheck` passed. `@ludoforge/engine:build` was a cache-hit replay; engine and runner typecheck executed.
+- `pnpm -F @ludoforge/engine test` passed.
+- `pnpm run check:ticket-deps` passed: `Ticket dependency integrity check passed for 4 active tickets and 2338 archived tickets.`
+- Post-closeout focused rerun `pnpm -F @ludoforge/engine exec node --test dist/test/unit/cnl/policy-bytecode/feature-table-cache.test.js` passed after the terminal ticket update.
+
+Accessor sweep:
+
+- `rg -n 'buildFeatureTable\(' packages/engine/src packages/engine/test` shows production `buildFeatureTable` calls only in `feature-table.ts` itself; the remaining direct calls are the accessor and tests.
+
+Late-edit proof validity:
+
+- No-invalidation: this terminal status and outcome update transcribes the just-run proof, touched-file scope, source-size ledger, dependency check result, and sibling-owned red perf classification. It changes no source, test, command semantics, dependency ownership, or acceptance boundary. The focused feature-table-cache unit test was rerun after the terminal ticket update.

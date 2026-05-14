@@ -285,6 +285,15 @@ Use this compact final handoff shape when implementation stops before archival:
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
 
+Cache-hit classification quick table:
+
+| Classification | Use when |
+| --- | --- |
+| `none` | No final broad lane replayed cached logs. |
+| `cache-hit supplemental` | The replayed task is useful context but not needed as acceptance proof because direct focused or package lanes prove the changed surface. |
+| `cache-covered` | The changed files are demonstrably part of the cached task inputs, so the replayed result still proves the lane. |
+| `cache-hit proof pending` | The cached replay is a ticket-named or final acceptance lane and changed-file inclusion is not proven; run a direct substitute or documented no-cache lane before closeout. |
+
 For a large implementation diff, prefer this concrete final-response skeleton over a vague summary:
 
 - `implemented ticket`: `<path>` — `<terminal status>`

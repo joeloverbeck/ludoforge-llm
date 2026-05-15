@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `policy-wasm-score-routing.ts`, `policy-preview-inner-deepening.ts`, `policy-agent-inner-preview.ts`
-**Deps**: `tickets/174WASMDEEPPRV-007.md`
+**Deps**: `archive/tickets/174WASMDEEPPRV-007.md`
 
 ## Problem
 

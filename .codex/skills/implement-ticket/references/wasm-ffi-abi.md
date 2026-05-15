@@ -14,6 +14,19 @@ Use this reference when a ticket changes or diagnoses a WASM, FFI, VM, native, o
 - If the ticket asks for a new ABI operation, buffer, or materialization substrate and live code already has part of that substrate, classify it before coding as `already-supported operation`, `missing carrier/metadata`, `missing lifetime/ownership proof`, and `production activation deferred/owned`. Do not reimplement an already-supported operation just to satisfy stale draft prose, but do not close on the weaker existing substrate when the ticket names a directly observable ABI field, lifetime guarantee, or handoff artifact that is still missing.
 - If a draft ticket names a guest opcode or Rust VM handler but live code pre-encodes the same feature on the host, do not force a guest edit just to match stale prose. Inspect the host encoder, host runtime route, and guest feature loader together; classify the guest file as `verified-no-edit` only after proving the live hook, behavior, witness noun, and ownership boundary stay on the host-encoded route. If the draft expected a different owned hook, artifact, or proof noun, stop for `1-3-1` and patch the active ticket/spec before coding.
 
+### Staged WASM Parity Oracles
+
+For staged WASM parity-oracle tickets where production activation, ABI expansion, or broader route rollout belongs to a sibling, use this compact reassessment recipe before coding:
+
+- `owned parity surface`: the exact carrier, score row, preview-state row, trace/advisory field, or serialized output the ticket proves.
+- `authoritative reference seam`: the nearest public TypeScript/runtime seam that produces the same public value. Prefer this over exporting private helpers solely for the test.
+- `activation classification`: direct/staged route activation owned now, or `production activation deferred to <ticket/spec>` with the confirmed sibling/spec owner.
+- `unsupported/fail-closed classes`: every unsupported feature, fallback, or no-signal class that must remain visible rather than being hidden by fallback success.
+- `fixture source`: production state, synthetic public-seam fixture, inline ABI buffer, or existing retained helper. If this changes a ticket-named witness artifact or live-simulator promise, use `1-3-1` unless already authorized.
+- `deterministic parity oracle`: list the row fields included in equality and digest checks, including ordering, status/outcome, value/preview-state payloads, candidate/group ids, decision-stack publication, completion records, and any excluded diagnostic-only fields.
+- `generated fallout`: ABI constants, schema artifacts, generated WASM/host output, or `none`.
+- `proof order`: build guest/host artifacts first, run the focused parity oracle, run the sibling-required determinism or package lanes, rerun the focused oracle after any broad lane that can rebuild the consumed output, and record why post-proof ticket edits are transcription-only.
+
 ## Implementation Checks
 
 - Keep ABI identity fields centralized when the local architecture already has a shared definition. If duplication is intentional, leave a short comment only when it explains the mirror relationship.

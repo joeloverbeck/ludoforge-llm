@@ -122,7 +122,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-15:
 - [`archive/tickets/174WASMDEEPPRV-004.md`](../archive/tickets/174WASMDEEPPRV-004.md) — Phase 1c — Preview-state slot ABI extensions
 - [`archive/tickets/174WASMDEEPPRV-005.md`](../archive/tickets/174WASMDEEPPRV-005.md) — Phase 1d — Candidate grouping ABI
 - [`archive/tickets/174WASMDEEPPRV-006.md`](../archive/tickets/174WASMDEEPPRV-006.md) — Phase 1e — continuedDeepening completion semantics ABI
-- [`tickets/174WASMDEEPPRV-007.md`](../tickets/174WASMDEEPPRV-007.md) — Phase 2 — TS/WASM preview-drive parity oracle
+- [`archive/tickets/174WASMDEEPPRV-007.md`](../archive/tickets/174WASMDEEPPRV-007.md) — Phase 2 — TS/WASM preview-drive parity oracle
 - [`tickets/174WASMDEEPPRV-008.md`](../tickets/174WASMDEEPPRV-008.md) — Phase 3 — Production route activation (broad + deep-phase wire-in)
 - [`tickets/174WASMDEEPPRV-009.md`](../tickets/174WASMDEEPPRV-009.md) — Phase 4a — Perf-witness rerun and gate decision
 - [`tickets/174WASMDEEPPRV-010.md`](../tickets/174WASMDEEPPRV-010.md) — Phase 4b — Default flip and A/B wiring deletion (gated on 009's perf-gate Pass; descope path documented in body)

@@ -25,6 +25,7 @@ export const lowerProductionPreviewDriveIr = (
       ...(candidate.candidateGroup === undefined ? {} : { candidateGroup: candidate.candidateGroup }),
       initialPreviewStateValues: program.rootValues,
       ...(candidate.decisionStackPublication === undefined ? {} : { decisionStackPublication: candidate.decisionStackPublication }),
+      ...(candidate.continuedDeepeningCompletionRecords === undefined ? {} : { continuedDeepeningCompletionRecords: candidate.continuedDeepeningCompletionRecords }),
       ...(input.previewBranch === undefined ? {} : { previewBranch: input.previewBranch }),
       ...(program.previewSignalCarrier === undefined ? {} : { previewSignalCarrier: program.previewSignalCarrier }),
     })),

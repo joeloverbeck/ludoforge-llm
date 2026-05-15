@@ -94,6 +94,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outCandidateGroupMetadataLen: number,
         outDecisionStackPublicationPtr: number,
         outDecisionStackPublicationLen: number,
+        outCompletionRecordsPtr: number,
+        outCompletionRecordsLen: number,
         outPreviewStateSlotMetadataPtr: number,
         outPreviewStateSlotMetadataLen: number,
         outPreviewStateLen: number,
@@ -114,11 +116,12 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
       }],
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
-    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(28 * 4, 999, true);
+    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(29 * 4, 999, true);
 
     const outputBytes = 4;
     const candidateGroupBytes = 3 * 4;
     const decisionStackBytes = FRAME_VARIANTS.length * 6 * 4;
+    const completionRecordsBytes = 4;
     const inputPtr = exports.ludoforge_policy_vm_alloc(input.byteLength);
     const outOutcomesPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     const outDepthsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
@@ -130,6 +133,7 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
     const outPolicyPreviewSignalUnavailablePtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     const outCandidateGroupMetadataPtr = exports.ludoforge_policy_vm_alloc(candidateGroupBytes);
     const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
+    const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(completionRecordsBytes);
     const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     try {
       new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
@@ -148,6 +152,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         3,
         outDecisionStackPublicationPtr,
         FRAME_VARIANTS.length * 6,
+        outCompletionRecordsPtr,
+        0,
         outPreviewStateSlotMetadataPtr,
         0,
         0,
@@ -172,6 +178,7 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
       }
       exports.ludoforge_policy_vm_dealloc(outCandidateGroupMetadataPtr, candidateGroupBytes);
       exports.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, decisionStackBytes);
+      exports.ludoforge_policy_vm_dealloc(outCompletionRecordsPtr, completionRecordsBytes);
     }
   });
 });

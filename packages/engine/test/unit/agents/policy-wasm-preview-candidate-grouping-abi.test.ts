@@ -73,7 +73,7 @@ describe('policy WASM preview-drive candidate grouping ABI', () => {
       })),
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
-    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(28 * 4, 0, true);
+    new DataView(input.buffer, input.byteOffset, input.byteLength).setInt32(30 * 4, 0, true);
 
     assert.equal(await evaluateRawPreviewDriveStatus(input, 2), -12);
   });
@@ -132,7 +132,7 @@ const decodeRowsFromMirroredGroupWords = (
       },
     }],
     steps: [],
-  }, memory, outOutcomesPtr, outDepthsPtr, outValuesPtr, outPreviewStatePtr, outPreviewStatusesPtr, outPreviewBranchesPtr, outTiebreakAfterPreviewNoSignalPtr, outPolicyPreviewSignalUnavailablePtr, outCandidateGroupMetadataPtr, 0, 0, 0);
+  }, memory, outOutcomesPtr, outDepthsPtr, outValuesPtr, outPreviewStatePtr, outPreviewStatusesPtr, outPreviewBranchesPtr, outTiebreakAfterPreviewNoSignalPtr, outPolicyPreviewSignalUnavailablePtr, outCandidateGroupMetadataPtr, 0, 0, 0, 0, 0);
 };
 
 const evaluateRawPreviewDriveStatus = async (
@@ -160,6 +160,8 @@ const evaluateRawPreviewDriveStatus = async (
       outCandidateGroupMetadataLen: number,
       outDecisionStackPublicationPtr: number,
       outDecisionStackPublicationLen: number,
+      outCompletionRecordsPtr: number,
+      outCompletionRecordsLen: number,
       outPreviewStateSlotMetadataPtr: number,
       outPreviewStateSlotMetadataLen: number,
       outPreviewStateLen: number,
@@ -180,6 +182,7 @@ const evaluateRawPreviewDriveStatus = async (
   const outPolicyPreviewSignalUnavailablePtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outCandidateGroupMetadataPtr = exports.ludoforge_policy_vm_alloc(candidateGroupMetadataBytes);
   const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+  const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   try {
     new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
@@ -198,6 +201,8 @@ const evaluateRawPreviewDriveStatus = async (
       candidateGroupMetadataWords,
       outDecisionStackPublicationPtr,
       0,
+      outCompletionRecordsPtr,
+      0,
       outPreviewStateSlotMetadataPtr,
       0,
       0,
@@ -215,6 +220,7 @@ const evaluateRawPreviewDriveStatus = async (
       outTiebreakAfterPreviewNoSignalPtr,
       outPolicyPreviewSignalUnavailablePtr,
       outDecisionStackPublicationPtr,
+      outCompletionRecordsPtr,
       outPreviewStateSlotMetadataPtr,
     ]) {
       exports.ludoforge_policy_vm_dealloc(ptr, outputBytes);

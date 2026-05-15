@@ -1,10 +1,20 @@
 import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
+import {
+  decodeCompletionRecords,
+  encodeCompletionRecords,
+  maxCompletionRecordCount,
+  type PolicyWasmPreviewDriveCompletionRecord,
+} from './policy-wasm-preview-drive-completion.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0017;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0018;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
+export type {
+  PolicyWasmPreviewDriveCompletionOutcome,
+  PolicyWasmPreviewDriveCompletionRecord,
+} from './policy-wasm-preview-drive-completion.js';
 
 export type PolicyWasmPreviewStatus =
   | 'ready'
@@ -135,6 +145,7 @@ export interface PolicyWasmPreviewDriveCandidate {
   readonly previewBranch?: PolicyWasmPreviewBranch;
   readonly previewSignalCarrier?: PolicyWasmPreviewSignalCarrier;
   readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
+  readonly continuedDeepeningCompletionRecords?: readonly PolicyWasmPreviewDriveCompletionRecord[];
 }
 
 export interface PolicyWasmPreviewDriveBatchInput {
@@ -159,6 +170,7 @@ export interface PolicyWasmPreviewDriveRow {
   readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
   readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
   readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
+  readonly continuedDeepeningCompletionRecords?: readonly PolicyWasmPreviewDriveCompletionRecord[];
 }
 
 export type PolicyWasmPreviewDriveResult =
@@ -184,6 +196,7 @@ export const encodePolicyWasmPreviewDriveInput = (
   const layoutId = input.layoutId ?? POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID;
   const expectedLayoutId = input.expectedLayoutId ?? layoutId;
   const decisionStackMaxDepth = maxDecisionStackPublicationDepth(input.candidates);
+  const completionRecordMaxCount = maxCompletionRecordCount(input.candidates, input.depthCap);
   const words = [
     abiMagic,
     abiVersion,
@@ -196,6 +209,7 @@ export const encodePolicyWasmPreviewDriveInput = (
     input.steps.length,
     input.previewStateSlots?.length ?? 0,
     decisionStackMaxDepth,
+    completionRecordMaxCount,
   ];
   for (const slot of input.previewStateSlots ?? []) {
     words.push(
@@ -223,6 +237,7 @@ export const encodePolicyWasmPreviewDriveInput = (
       candidate.previewSignalCarrier?.policyPreviewSignalUnavailable === true ? 1 : 0,
     );
     encodeDecisionStackPublication(words, candidate, decisionStackMaxDepth);
+    encodeCompletionRecords(words, candidate, completionRecordMaxCount, input.depthCap);
   }
   for (const step of input.steps) {
     encodeStep(words, input, step);
@@ -250,8 +265,10 @@ export const decodePolicyWasmPreviewDriveRows = (
   outPolicyPreviewSignalUnavailablePtr: number,
   outCandidateGroupMetadataPtr: number,
   outDecisionStackPublicationPtr: number,
+  outCompletionRecordsPtr: number,
   outPreviewStateSlotMetadataPtr: number,
   decisionStackMaxDepth: number,
+  completionRecordMaxCount: number,
 ): readonly PolicyWasmPreviewDriveRow[] => {
   const view = new DataView(memory);
   const slots = input.previewStateSlots ?? [];
@@ -293,6 +310,13 @@ export const decodePolicyWasmPreviewDriveRows = (
         view,
         outDecisionStackPublicationPtr,
         decisionStackMaxDepth,
+        index,
+      ),
+      ...decodeCompletionRecords(
+        input,
+        view,
+        outCompletionRecordsPtr,
+        completionRecordMaxCount,
         index,
       ),
     };
@@ -608,6 +632,8 @@ const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupporte
 const DECISION_STACK_FRAME_WORDS = 6;
 
 export const policyWasmPreviewDriveDecisionStackFrameWords = (): number => DECISION_STACK_FRAME_WORDS;
+
+export { policyWasmPreviewDriveCompletionRecordWords } from './policy-wasm-preview-drive-completion.js';
 
 const maxDecisionStackPublicationDepth = (
   candidates: readonly PolicyWasmPreviewDriveCandidate[],

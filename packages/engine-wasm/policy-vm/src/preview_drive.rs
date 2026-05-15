@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 14;
+const ABI_VERSION: i32 = 15;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -30,6 +30,7 @@ const PREVIEW_BRANCH_GREEDY: i32 = 1;
 const PREVIEW_BRANCH_CONTINUED_DEEPENING: i32 = 2;
 
 const DECISION_STACK_FRAME_WORDS: usize = 6;
+const COMPLETION_RECORD_WORDS: usize = 3;
 const CANDIDATE_GROUP_METADATA_WORDS: usize = 3;
 const DECISION_STACK_FRAME_ACTION_SELECTION: i32 = 1;
 const DECISION_STACK_FRAME_CHOOSE_ONE: i32 = 2;
@@ -71,6 +72,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
     out_candidate_group_metadata_len: usize,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
+    out_completion_records_ptr: *mut i32,
+    out_completion_records_len: usize,
     out_preview_state_slot_metadata_ptr: *mut i32,
     out_preview_state_slot_metadata_len: usize,
     out_preview_state_len: usize,
@@ -87,11 +90,12 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         || out_policy_preview_signal_unavailable_ptr.is_null()
         || out_candidate_group_metadata_ptr.is_null()
         || out_decision_stack_publication_ptr.is_null()
+        || out_completion_records_ptr.is_null()
         || out_preview_state_slot_metadata_ptr.is_null()
     {
         return STATUS_NULL_POINTER;
     }
-    if input_len % 4 != 0 || input_len < 44 {
+    if input_len % 4 != 0 || input_len < 48 {
         return STATUS_BAD_LENGTH;
     }
 
@@ -111,6 +115,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         out_candidate_group_metadata_len,
         out_decision_stack_publication_ptr,
         out_decision_stack_publication_len,
+        out_completion_records_ptr,
+        out_completion_records_len,
         out_preview_state_slot_metadata_ptr,
         out_preview_state_slot_metadata_len,
         out_preview_state_len,
@@ -135,6 +141,8 @@ fn evaluate_preview_drive_batch(
     out_candidate_group_metadata_len: usize,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
+    out_completion_records_ptr: *mut i32,
+    out_completion_records_len: usize,
     out_preview_state_slot_metadata_ptr: *mut i32,
     out_preview_state_slot_metadata_len: usize,
     out_preview_state_len: usize,
@@ -170,10 +178,14 @@ fn evaluate_preview_drive_batch(
     let step_count = as_usize(cursor.read()?)?;
     let preview_state_slot_count = as_usize(cursor.read()?)?;
     let decision_stack_max_depth = as_usize(cursor.read()?)?;
+    let completion_record_max_count = as_usize(cursor.read()?)?;
     if preview_state_slot_count != out_preview_state_len {
         return Err(STATUS_BAD_LENGTH);
     }
     if preview_state_slot_count > depth_cap as usize {
+        return Err(STATUS_BAD_OPERAND);
+    }
+    if completion_record_max_count > depth_cap as usize {
         return Err(STATUS_BAD_OPERAND);
     }
     let expected_slot_metadata_words = preview_state_slot_count
@@ -187,6 +199,13 @@ fn evaluate_preview_drive_batch(
         .and_then(|count| count.checked_mul(DECISION_STACK_FRAME_WORDS))
         .ok_or(STATUS_OVERFLOW)?;
     if expected_decision_stack_words != out_decision_stack_publication_len {
+        return Err(STATUS_BAD_LENGTH);
+    }
+    let expected_completion_record_words = candidate_count
+        .checked_mul(completion_record_max_count)
+        .and_then(|count| count.checked_mul(COMPLETION_RECORD_WORDS))
+        .ok_or(STATUS_OVERFLOW)?;
+    if expected_completion_record_words != out_completion_records_len {
         return Err(STATUS_BAD_LENGTH);
     }
     let mut preview_state_slots = Vec::with_capacity(preview_state_slot_count);
@@ -251,6 +270,31 @@ fn evaluate_preview_drive_batch(
                 context_code,
             ]);
         }
+        let completion_record_count = as_usize(cursor.read()?)?;
+        if completion_record_count > completion_record_max_count {
+            return Err(STATUS_BAD_OPERAND);
+        }
+        let mut continued_deepening_completion_records =
+            Vec::with_capacity(completion_record_count * COMPLETION_RECORD_WORDS);
+        let mut previous_iteration_index = -1i32;
+        for _ in 0..completion_record_count {
+            let iteration_index = cursor.read()?;
+            let residual_budget = cursor.read()?;
+            let outcome = read_outcome(cursor.read()?)?;
+            if iteration_index < 0
+                || iteration_index <= previous_iteration_index
+                || residual_budget < 0
+                || residual_budget > depth_cap
+            {
+                return Err(STATUS_BAD_OPERAND);
+            }
+            previous_iteration_index = iteration_index;
+            continued_deepening_completion_records.extend_from_slice(&[
+                iteration_index,
+                residual_budget,
+                outcome,
+            ]);
+        }
         states.push(PreviewDriveState {
             outcome: OUTCOME_COMPLETED,
             depth: 0,
@@ -263,6 +307,7 @@ fn evaluate_preview_drive_batch(
             policy_preview_signal_unavailable,
             candidate_group,
             decision_stack_publication,
+            continued_deepening_completion_records,
         });
     }
     validate_candidate_groups(&states)?;
@@ -470,6 +515,16 @@ fn evaluate_preview_drive_batch(
                     .unwrap_or(0);
                 *out_decision_stack_publication_ptr.add(decision_stack_output_base + slot) = value;
             }
+            let completion_record_output_base =
+                index * completion_record_max_count * COMPLETION_RECORD_WORDS;
+            for slot in 0..(completion_record_max_count * COMPLETION_RECORD_WORDS) {
+                let value = state
+                    .continued_deepening_completion_records
+                    .get(slot)
+                    .copied()
+                    .unwrap_or(0);
+                *out_completion_records_ptr.add(completion_record_output_base + slot) = value;
+            }
             for (slot_index, value) in state.preview_state_values.iter().enumerate() {
                 *out_preview_state_ptr.add((index * preview_state_slot_count) + slot_index) =
                     *value;
@@ -519,6 +574,13 @@ fn read_preview_status(value: i32) -> Result<i32, i32> {
         | PREVIEW_STATUS_FAILED
         | PREVIEW_STATUS_DEPTH_CAP
         | PREVIEW_STATUS_GATED => Ok(value),
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
+fn read_outcome(value: i32) -> Result<i32, i32> {
+    match value {
+        OUTCOME_COMPLETED | OUTCOME_STOCHASTIC | OUTCOME_DEPTH_CAP | OUTCOME_FAILED => Ok(value),
         _ => Err(STATUS_BAD_OPERAND),
     }
 }
@@ -635,6 +697,7 @@ struct PreviewDriveState {
     policy_preview_signal_unavailable: i32,
     candidate_group: CandidateGroup,
     decision_stack_publication: Vec<i32>,
+    continued_deepening_completion_records: Vec<i32>,
 }
 
 impl PreviewDriveState {

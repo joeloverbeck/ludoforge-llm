@@ -4,6 +4,7 @@
    - Set ticket status to its completed state when appropriate.
    - Add or amend the ticket outcome with what landed, boundary corrections, and verification that ran.
    - If the final diff intentionally omitted or expanded beyond original `Files to Touch`, record that explicitly in the ticket outcome. A named file that required no edit should appear as `already satisfied / verified-no-edit`, not as an unexplained omission.
+   - In this repo, if an explicitly named file/artifact remained untouched and that omission was not optional/inspection-only, a stale source-path correction with the same hook/witness, or user-authorized by `1-3-1`, do not mark the ticket complete. Reopen the boundary decision, run the repo `1-3-1` flow, or patch the active ticket to the approved narrower contract before final proof.
 2. Summarize what changed, what was verified, and any residual risk. Include:
    - Audited schema/artifact ripple effects (even if none needed)
    - Deferred verification owned by another ticket
@@ -45,6 +46,7 @@ Before declaring completion or updating the ticket status, run one final accepta
 - reconcile every ticket-named verification command before terminal status. For each named command, classify it as `run literally`, `subsumed by broader lane`, `replaced by repo-valid focused substitute`, `stale/overbroad and corrected in active ticket`, or `not run with explicit blocker/classification`. Record the exact mapping in the active ticket outcome before final proof when the literal command is not run; use `ticket section | literal command/shorthand | ran directly/subsumed/split/replaced/not run | final citation` for stale, split, replaced, subsumed, or skipped literal commands.
 - for mixed tickets, build a compact deliverable ledger from `What to Change`, `Files to Touch`, and any explicitly named artifacts/tests. Classify each item as `done`, `verified-no-edit`, `blocked`, `rewritten in active ticket`, or `deferred by confirmed boundary change` before using `COMPLETED`
 - when a ticket-named file or artifact already satisfies the deliverable without a code diff, record it explicitly as `verified-no-edit` in the ticket outcome rather than implying it was missed
+- for repo Ticket Fidelity, confirm every `verified-no-edit` named file/artifact is justified by optional/inspection-only ticket text, stale source-path correction with the same hook/witness, or prior user authorization; otherwise stop for `1-3-1` before terminal status
 - confirm the final state reflects any nonblocking draft-ticket corrections you planned to carry
 - for shared contract migrations, confirm the final diff covers the intended helper/fixture normalization strategy and that any preserved serialized surface still matches the ticket outcome text
 - when the implementation added a status/result union, stable reason strings, or new ready/unavailable branches not already enumerated by the ticket, confirm the ticket outcome or final closeout classifies each branch as `tested`, `unreachable by construction`, or `deferred to confirmed sibling`
@@ -286,6 +288,7 @@ When all final proof lanes are already green/classified and the only remaining c
 3. Run the narrowest ticket-dependency or markdown-integrity check immediately when terminal status, deps, successor ownership, or active/archive classification changed or the family expects it.
 4. Patch only the checker result into the ticket ledger. This checker-result transcription is clerical when it changes no ticket graph, scope, acceptance, command semantics, touched-file ownership, proof claim, follow-up ownership, or dependency classification.
    - Do not rerun the checker solely because you transcribed its exact just-run result; use `git diff --check` or the repo's normal markdown hygiene check plus untracked-aware status instead. Rerun the dependency checker if the transcription edit also changes status, deps, active/archive classification, sibling/successor ownership, or another graph-affecting claim.
+   - Use a compact terminal checker ledger when helpful: `dependency checker: <command> -> <result>`; `checker transcription: clerical`; `no-invalidation: terminal status/proof/checker transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change`.
 5. Run the final hygiene and untracked-aware status sweep before the user handoff. The final hygiene check is allowed to live in the final response instead of the ticket outcome; if it is transcribed after the check, rerun the hygiene check once after that transcription and do not keep editing only to record the rerun.
 
 Use this compact final handoff shape when implementation stops before archival:

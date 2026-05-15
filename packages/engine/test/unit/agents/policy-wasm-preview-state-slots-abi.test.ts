@@ -108,7 +108,7 @@ describe('policy WASM preview-drive preview-state slot ABI', () => {
       steps: [],
     }, POLICY_WASM_ABI_MAGIC, POLICY_WASM_ABI_VERSION);
     new DataView(invalidLifetimeInput.buffer, invalidLifetimeInput.byteOffset, invalidLifetimeInput.byteLength)
-      .setInt32(13 * 4, 999, true);
+      .setInt32(14 * 4, 999, true);
     assert.equal(await evaluateRawPreviewDriveStatus(invalidLifetimeInput, 2, 1, 0), -12);
 
     const outOfBoundSlotInput = encodePolicyWasmPreviewDriveInput({
@@ -156,6 +156,8 @@ const evaluateRawPreviewDriveStatus = async (
       outCandidateGroupMetadataLen: number,
       outDecisionStackPublicationPtr: number,
       outDecisionStackPublicationLen: number,
+      outCompletionRecordsPtr: number,
+      outCompletionRecordsLen: number,
       outPreviewStateSlotMetadataPtr: number,
       outPreviewStateSlotMetadataLen: number,
       outPreviewStateLen: number,
@@ -168,6 +170,7 @@ const evaluateRawPreviewDriveStatus = async (
   const candidateGroupMetadataBytes = candidateGroupMetadataWords * 4;
   const decisionStackWords = candidateCount * decisionStackMaxDepth * 6;
   const decisionStackBytes = Math.max(4, decisionStackWords * 4);
+  const completionRecordBytes = 4;
   const slotMetadataWords = slotCount * 3;
   const slotMetadataBytes = Math.max(4, slotMetadataWords * 4);
   const inputPtr = exports.ludoforge_policy_vm_alloc(input.byteLength);
@@ -181,6 +184,7 @@ const evaluateRawPreviewDriveStatus = async (
   const outPolicyPreviewSignalUnavailablePtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outCandidateGroupMetadataPtr = exports.ludoforge_policy_vm_alloc(candidateGroupMetadataBytes);
   const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
+  const outCompletionRecordsPtr = exports.ludoforge_policy_vm_alloc(completionRecordBytes);
   const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(slotMetadataBytes);
   try {
     new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
@@ -199,6 +203,8 @@ const evaluateRawPreviewDriveStatus = async (
       candidateGroupMetadataWords,
       outDecisionStackPublicationPtr,
       decisionStackWords,
+      outCompletionRecordsPtr,
+      0,
       outPreviewStateSlotMetadataPtr,
       slotMetadataWords,
       slotCount,
@@ -220,6 +226,7 @@ const evaluateRawPreviewDriveStatus = async (
     exports.ludoforge_policy_vm_dealloc(outPreviewStatePtr, previewStateBytes);
     exports.ludoforge_policy_vm_dealloc(outCandidateGroupMetadataPtr, candidateGroupMetadataBytes);
     exports.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, decisionStackBytes);
+    exports.ludoforge_policy_vm_dealloc(outCompletionRecordsPtr, completionRecordBytes);
     exports.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, slotMetadataBytes);
   }
 };

@@ -4,12 +4,13 @@ import type {
   PolicyWasmDecisionStackPublication,
   PolicyWasmPreviewCandidateGroup,
   PolicyWasmPreviewBranch,
+  PolicyWasmPreviewDriveCompletionRecord,
   PolicyWasmPreviewSignalCarrier,
   PolicyWasmPreviewStateSlot,
 } from './policy-wasm-preview-drive.js';
 import type { PolicyWasmRuntime } from './policy-wasm-runtime.js';
 
-export interface PolicyWasmProductionPreviewDriveCandidate { readonly move: Move; readonly stableMoveKey: string; readonly actionId?: string; readonly candidateGroup?: PolicyWasmPreviewCandidateGroup; readonly decisionStackPublication?: PolicyWasmDecisionStackPublication; }
+export interface PolicyWasmProductionPreviewDriveCandidate { readonly move: Move; readonly stableMoveKey: string; readonly actionId?: string; readonly candidateGroup?: PolicyWasmPreviewCandidateGroup; readonly decisionStackPublication?: PolicyWasmDecisionStackPublication; readonly continuedDeepeningCompletionRecords?: readonly PolicyWasmPreviewDriveCompletionRecord[]; }
 
 export interface PolicyWasmProductionPreviewDriveInput { readonly runtime: Pick<PolicyWasmRuntime, 'evaluatePreviewDriveBatch'>; readonly gameDefRuntime?: GameDefRuntime; readonly def: GameDef; readonly state: GameState; readonly profileId: string; readonly originSeatId: string; readonly originTurnId: number; readonly depthCap: number; readonly previewBranch?: PolicyWasmPreviewBranch; readonly previewStateSlots: readonly PolicyWasmPreviewStateSlot[]; readonly candidates: readonly PolicyWasmProductionPreviewDriveCandidate[]; }
 

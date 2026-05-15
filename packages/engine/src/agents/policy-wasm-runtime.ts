@@ -36,7 +36,7 @@ import {
 } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 12;
+export const POLICY_WASM_ABI_VERSION = 13;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -111,6 +111,8 @@ interface PolicyWasmExports {
     outPolicyPreviewSignalUnavailablePtr: number,
     outDecisionStackPublicationPtr: number,
     outDecisionStackPublicationLen: number,
+    outPreviewStateSlotMetadataPtr: number,
+    outPreviewStateSlotMetadataLen: number,
     outPreviewStateLen: number,
     outLen: number,
   ) => number;
@@ -1200,6 +1202,8 @@ export const createPolicyWasmRuntime = (
       const decisionStackFrameWordCount = policyWasmPreviewDriveDecisionStackFrameWords();
       const decisionStackPublicationWords = previewInput.candidates.length * decisionStackMaxDepth * decisionStackFrameWordCount;
       const decisionStackPublicationBytes = decisionStackPublicationWords * I32_BYTES;
+      const previewStateSlotMetadataWords = previewStateSlotCount * 3;
+      const previewStateSlotMetadataBytes = previewStateSlotMetadataWords * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
       const outOutcomesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outDepthsPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
@@ -1210,6 +1214,7 @@ export const createPolicyWasmRuntime = (
       const outTiebreakAfterPreviewNoSignalPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outPolicyPreviewSignalUnavailablePtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outDecisionStackPublicationPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, decisionStackPublicationBytes));
+      const outPreviewStateSlotMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateSlotMetadataBytes));
       try {
         new Uint8Array(wasm.memory.buffer, inputPtr, input.byteLength).set(input);
         const status = wasm.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -1225,6 +1230,8 @@ export const createPolicyWasmRuntime = (
           outPolicyPreviewSignalUnavailablePtr,
           outDecisionStackPublicationPtr,
           decisionStackPublicationWords,
+          outPreviewStateSlotMetadataPtr,
+          previewStateSlotMetadataWords,
           previewStateSlotCount,
           previewInput.candidates.length,
         );
@@ -1258,6 +1265,7 @@ export const createPolicyWasmRuntime = (
             outTiebreakAfterPreviewNoSignalPtr,
             outPolicyPreviewSignalUnavailablePtr,
             outDecisionStackPublicationPtr,
+            outPreviewStateSlotMetadataPtr,
             decisionStackMaxDepth,
           ),
         };
@@ -1272,6 +1280,7 @@ export const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outTiebreakAfterPreviewNoSignalPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outPolicyPreviewSignalUnavailablePtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, Math.max(I32_BYTES, decisionStackPublicationBytes));
+        wasm.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, Math.max(I32_BYTES, previewStateSlotMetadataBytes));
       }
     },
   };

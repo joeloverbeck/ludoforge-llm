@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 12;
+const ABI_VERSION: i32 = 13;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -36,6 +36,13 @@ const DECISION_STACK_FRAME_CHOOSE_N_STEP: i32 = 3;
 const DECISION_STACK_FRAME_STOCHASTIC_RESOLVE: i32 = 4;
 const DECISION_STACK_FRAME_OUTCOME_GRANT_RESOLVE: i32 = 5;
 const DECISION_STACK_FRAME_TURN_RETIREMENT: i32 = 6;
+const PREVIEW_STATE_SLOT_METADATA_WORDS: usize = 3;
+const PREVIEW_STATE_SLOT_KIND_GLOBAL: i32 = 1;
+const PREVIEW_STATE_SLOT_KIND_FEATURE: i32 = 2;
+const PREVIEW_STATE_SLOT_KIND_SURFACE: i32 = 3;
+const PREVIEW_STATE_SLOT_KIND_GENERIC: i32 = 4;
+const PREVIEW_STATE_SLOT_LIFETIME_SINGLE_ITERATION: i32 = 1;
+const PREVIEW_STATE_SLOT_LIFETIME_CROSS_ITERATION: i32 = 2;
 
 const OP_ADD_GLOBAL: i32 = 1;
 const OP_CHOOSE_ONE_GREEDY: i32 = 2;
@@ -61,6 +68,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
     out_policy_preview_signal_unavailable_ptr: *mut i32,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
+    out_preview_state_slot_metadata_ptr: *mut i32,
+    out_preview_state_slot_metadata_len: usize,
     out_preview_state_len: usize,
     out_len: usize,
 ) -> i32 {
@@ -74,6 +83,7 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         || out_tiebreak_after_preview_no_signal_ptr.is_null()
         || out_policy_preview_signal_unavailable_ptr.is_null()
         || out_decision_stack_publication_ptr.is_null()
+        || out_preview_state_slot_metadata_ptr.is_null()
     {
         return STATUS_NULL_POINTER;
     }
@@ -95,6 +105,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         out_policy_preview_signal_unavailable_ptr,
         out_decision_stack_publication_ptr,
         out_decision_stack_publication_len,
+        out_preview_state_slot_metadata_ptr,
+        out_preview_state_slot_metadata_len,
         out_preview_state_len,
         out_len,
     ) {
@@ -115,6 +127,8 @@ fn evaluate_preview_drive_batch(
     out_policy_preview_signal_unavailable_ptr: *mut i32,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
+    out_preview_state_slot_metadata_ptr: *mut i32,
+    out_preview_state_slot_metadata_len: usize,
     out_preview_state_len: usize,
     out_len: usize,
 ) -> Result<(), i32> {
@@ -145,6 +159,15 @@ fn evaluate_preview_drive_batch(
     if preview_state_slot_count != out_preview_state_len {
         return Err(STATUS_BAD_LENGTH);
     }
+    if preview_state_slot_count > depth_cap as usize {
+        return Err(STATUS_BAD_OPERAND);
+    }
+    let expected_slot_metadata_words = preview_state_slot_count
+        .checked_mul(PREVIEW_STATE_SLOT_METADATA_WORDS)
+        .ok_or(STATUS_OVERFLOW)?;
+    if expected_slot_metadata_words != out_preview_state_slot_metadata_len {
+        return Err(STATUS_BAD_LENGTH);
+    }
     let expected_decision_stack_words = candidate_count
         .checked_mul(decision_stack_max_depth)
         .and_then(|count| count.checked_mul(DECISION_STACK_FRAME_WORDS))
@@ -152,8 +175,16 @@ fn evaluate_preview_drive_batch(
     if expected_decision_stack_words != out_decision_stack_publication_len {
         return Err(STATUS_BAD_LENGTH);
     }
+    let mut preview_state_slots = Vec::with_capacity(preview_state_slot_count);
     for _ in 0..preview_state_slot_count {
-        let _slot_code = cursor.read()?;
+        let id_code = cursor.read()?;
+        let kind = read_preview_state_slot_kind(cursor.read()?)?;
+        let lifetime = read_preview_state_slot_lifetime(cursor.read()?)?;
+        preview_state_slots.push(PreviewStateSlot {
+            id_code,
+            kind,
+            lifetime,
+        });
     }
 
     let mut states = Vec::with_capacity(candidate_count);
@@ -421,6 +452,14 @@ fn evaluate_preview_drive_batch(
             }
         }
     }
+    for (slot_index, slot) in preview_state_slots.iter().enumerate() {
+        let base = slot_index * PREVIEW_STATE_SLOT_METADATA_WORDS;
+        unsafe {
+            *out_preview_state_slot_metadata_ptr.add(base) = slot.id_code;
+            *out_preview_state_slot_metadata_ptr.add(base + 1) = slot.kind;
+            *out_preview_state_slot_metadata_ptr.add(base + 2) = slot.lifetime;
+        }
+    }
     Ok(())
 }
 
@@ -479,6 +518,30 @@ fn read_decision_stack_frame_variant(value: i32) -> Result<i32, i32> {
         | DECISION_STACK_FRAME_TURN_RETIREMENT => Ok(value),
         _ => Err(STATUS_BAD_OPERAND),
     }
+}
+
+fn read_preview_state_slot_kind(value: i32) -> Result<i32, i32> {
+    match value {
+        PREVIEW_STATE_SLOT_KIND_GLOBAL
+        | PREVIEW_STATE_SLOT_KIND_FEATURE
+        | PREVIEW_STATE_SLOT_KIND_SURFACE
+        | PREVIEW_STATE_SLOT_KIND_GENERIC => Ok(value),
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
+fn read_preview_state_slot_lifetime(value: i32) -> Result<i32, i32> {
+    match value {
+        PREVIEW_STATE_SLOT_LIFETIME_SINGLE_ITERATION
+        | PREVIEW_STATE_SLOT_LIFETIME_CROSS_ITERATION => Ok(value),
+        _ => Err(STATUS_BAD_OPERAND),
+    }
+}
+
+struct PreviewStateSlot {
+    id_code: i32,
+    kind: i32,
+    lifetime: i32,
 }
 
 #[derive(Clone)]

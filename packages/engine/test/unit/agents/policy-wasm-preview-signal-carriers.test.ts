@@ -8,6 +8,7 @@ import type {
   PolicyWasmPreviewSignalCarrier,
   PolicyWasmPreviewStatus,
 } from '../../../src/agents/policy-wasm-preview-drive.js';
+import { definePolicyWasmPreviewStateSlot } from '../../../src/agents/policy-wasm-preview-drive.js';
 
 const PREVIEW_STATUSES: readonly PolicyWasmPreviewStatus[] = [
   'ready',
@@ -49,7 +50,7 @@ describe('policy WASM preview-drive signal carriers', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 4,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: [definePolicyWasmPreviewStateSlot('global.score')],
       candidates: carriers.map((carrier, index) => ({
         actionId: 'branch',
         stableMoveKey: `candidate-${index}`,

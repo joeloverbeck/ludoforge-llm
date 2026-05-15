@@ -103,7 +103,7 @@ const [
   { __internal_for_tests: policyPreviewInternals },
   { __internal_for_tests: policyWasmRuntimeInternals },
   { initializePolicyWasmRuntimeSync },
-  { policyWasmProductionPreviewDriveInternals },
+  { definePolicyWasmProductionPreviewStateSlots, policyWasmProductionPreviewDriveInternals },
 ] = await Promise.all([
   import(join(DIST_ROOT, 'src', 'agents', 'index.js')),
   import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
@@ -493,7 +493,7 @@ function evaluateProductionPreviewDriveSubstrateSupport(captures) {
 
 function productionPreviewStateSlots() {
   const slots = def.globalVars.map((variable) => `global.${variable.name}`);
-  return slots.length === 0 ? ['global.__none'] : slots;
+  return definePolicyWasmProductionPreviewStateSlots(slots.length === 0 ? ['global.__none'] : slots);
 }
 
 function evaluatePreviewDriveInventoryAbiSupport(captures) {
@@ -507,7 +507,7 @@ function evaluatePreviewDriveInventoryAbiSupport(captures) {
     };
   }
 
-  const previewStateSlots = ['preview.drive.value'];
+  const previewStateSlots = [definePolicyWasmProductionPreviewStateSlots(['preview.drive.value'])[0]];
   const initialResult = policyWasmRuntime.evaluatePreviewDriveBatch({
     profileId: 'fitl-preview-drive-inventory-initial-application',
     originSeatId: captures[0].seatId,
@@ -574,7 +574,7 @@ function validateCompletionCapture(capture) {
     originSeatId: capture.seatId,
     originTurnId: 0,
     depthCap: capture.resultKind === 'depthCap' ? depth : depth + 1,
-    previewStateSlots: ['preview.drive.value'],
+    previewStateSlots: [definePolicyWasmProductionPreviewStateSlots(['preview.drive.value'])[0]],
     candidates: [{
       actionId: capture.actionId,
       stableMoveKey: capture.stableMoveKey,

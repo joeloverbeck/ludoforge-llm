@@ -3,7 +3,10 @@ import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 
 import { applyPreviewMove, createPolicyPreviewRuntime } from '../../../src/agents/policy-preview.js';
-import { evaluateProductionPreviewDriveBatchWithWasm } from '../../../src/agents/policy-wasm-production-preview-drive.js';
+import {
+  definePolicyWasmProductionPreviewStateSlots,
+  evaluateProductionPreviewDriveBatchWithWasm,
+} from '../../../src/agents/policy-wasm-production-preview-drive.js';
 import { loadPolicyWasmRuntime } from '../../../src/agents/policy-wasm-runtime-node-loader.js';
 import { createGameDefRuntime } from '../../../src/kernel/gamedef-runtime.js';
 import { computeFullHash, createZobristTable } from '../../../src/kernel/zobrist.js';
@@ -523,7 +526,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score']),
       candidates: [{
         actionId: 'branch',
         stableMoveKey: 'candidate',
@@ -557,7 +560,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 10,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score']),
       candidates: [{
         actionId: 'branch',
         stableMoveKey: 'candidate',
@@ -589,7 +592,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score']),
       candidates: [{
         actionId: 'select',
         stableMoveKey: 'candidate',
@@ -629,7 +632,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score']),
       candidates: [candidate],
     });
 
@@ -666,7 +669,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 50,
-      previewStateSlots: ['global.other', 'global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.other', 'global.score']),
       candidates: [candidate],
     });
 
@@ -705,7 +708,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 10,
-      previewStateSlots: ['global.score', 'global.other'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score', 'global.other']),
       candidates: [candidate],
     });
 
@@ -741,7 +744,7 @@ describe('policy preview synthetic-completion driver', () => {
       originSeatId: '0',
       originTurnId: 0,
       depthCap: 8,
-      previewStateSlots: ['global.score'],
+      previewStateSlots: definePolicyWasmProductionPreviewStateSlots(['global.score']),
       candidates: [{ move: trustedMove.move, stableMoveKey: 'candidate', actionId: 'ask-other' }],
     }), {
       kind: 'unsupported',

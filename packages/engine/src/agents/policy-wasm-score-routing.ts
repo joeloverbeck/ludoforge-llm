@@ -15,6 +15,7 @@ import { PolicyEvaluationContext, type PolicyEvaluationCandidate, PolicyRuntimeE
 import type { PolicyPreviewTraceOutcome } from './policy-preview.js';
 import type { PolicyValue } from './policy-surface.js';
 import {
+  definePolicyWasmProductionPreviewStateSlots,
   evaluateProductionPreviewDriveBatchWithWasm,
   type PolicyWasmProductionPreviewDriveCandidate,
 } from './policy-wasm-production-preview-drive.js';
@@ -160,6 +161,9 @@ const previewGlobalSlotsForRef = (
     : [`feature.${ref.id}`, ...def.globalVars.map((variable) => `global.${variable.name}`)];
 };
 
+const compareOrdinalStrings = (left: string, right: string): number =>
+  left < right ? -1 : left > right ? 1 : 0;
+
 const groupPreviewCandidatesByAction = (
   candidates: readonly PolicyWasmScoreRoutingCandidate[],
 ): readonly (readonly PolicyWasmProductionPreviewDriveCandidate[])[] => {
@@ -226,7 +230,9 @@ const materializePreviewDynamicRowsWithWasm = (
     slotsByCode.set(previewDynamicRefCode(ref), slots);
   }
 
-  const previewStateSlots = [...new Set([...slotsByCode.values()].flat())].sort((left, right) => left.localeCompare(right));
+  const previewStateSlots = definePolicyWasmProductionPreviewStateSlots(
+    [...new Set([...slotsByCode.values()].flat())].sort(compareOrdinalStrings),
+  );
   const rowsByKey = new Map<string, {
     readonly outcome: PolicyPreviewTraceOutcome;
     readonly depth: number;

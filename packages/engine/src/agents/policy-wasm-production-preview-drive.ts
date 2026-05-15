@@ -48,7 +48,9 @@ import type {
 import type {
   PolicyWasmPreviewDriveResult,
   PolicyWasmPreviewDriveUnsupportedClass,
+  PolicyWasmPreviewStateSlot,
 } from './policy-wasm-preview-drive.js';
+import { definePolicyWasmPreviewStateSlot } from './policy-wasm-preview-drive.js';
 
 export type {
   PolicyWasmProductionPreviewDriveCandidate,
@@ -126,7 +128,7 @@ const compileProductionPreviewDrive = (
     return unsupported('unsupported-effect', `action:${actionId}`, `action "${actionId}" has no generic production definition`);
   }
   const rootValues = input.previewStateSlots.map((slot, slotIndex) => {
-    const featureId = slot.startsWith('feature.') ? slot.slice('feature.'.length) : undefined;
+    const featureId = slot.kind === 'feature' && slot.id.startsWith('feature.') ? slot.id.slice('feature.'.length) : undefined;
     if (featureId !== undefined) {
       return evalPolicyWasmPreviewStateFeature(featureId, input.def, input.state, slotIndexByGlobalVar, {
         slotValues: [],
@@ -142,7 +144,7 @@ const compileProductionPreviewDrive = (
         zoneValues: buildPolicyWasmPreviewZoneValues(input.state),
       }) ?? 0;
     }
-    return readPolicyWasmPreviewRootSlot(input.state, slot);
+    return readPolicyWasmPreviewRootSlot(input.state, slot.id);
   });
   const rootBindings = buildPolicyWasmPreviewRootBindings(input.candidates, pipeline);
   if (rootBindings === undefined) {
@@ -197,6 +199,11 @@ const compileProductionPreviewDrive = (
 };
 
 interface CompileState { beforeFirstDecision: boolean; bindings: Map<string, PolicyWasmPreviewValue>; ops: PolicyWasmProductionPreviewDriveIrOp[]; slotValues: number[]; markerValues: Map<string, string>; zoneVarValues: PolicyWasmPreviewZoneVarValues; zoneValues: PolicyWasmPreviewZoneValues; }
+
+export const definePolicyWasmProductionPreviewStateSlots = (
+  slotIds: readonly string[],
+): readonly PolicyWasmPreviewStateSlot[] =>
+  slotIds.map((id) => definePolicyWasmPreviewStateSlot(id));
 
 const compileEffects = (
   effects: readonly EffectAST[],

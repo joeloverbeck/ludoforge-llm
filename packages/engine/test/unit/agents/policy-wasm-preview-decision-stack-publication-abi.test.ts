@@ -92,6 +92,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outPolicyPreviewSignalUnavailablePtr: number,
         outDecisionStackPublicationPtr: number,
         outDecisionStackPublicationLen: number,
+        outPreviewStateSlotMetadataPtr: number,
+        outPreviewStateSlotMetadataLen: number,
         outPreviewStateLen: number,
         outLen: number,
       ) => number;
@@ -124,6 +126,7 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
     const outTiebreakAfterPreviewNoSignalPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     const outPolicyPreviewSignalUnavailablePtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
+    const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
     try {
       new Uint8Array(exports.memory.buffer, inputPtr, input.byteLength).set(input);
       const status = exports.ludoforge_policy_vm_evaluate_preview_drive_batch(
@@ -139,6 +142,8 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outPolicyPreviewSignalUnavailablePtr,
         outDecisionStackPublicationPtr,
         FRAME_VARIANTS.length * 6,
+        outPreviewStateSlotMetadataPtr,
+        0,
         0,
         1,
       );
@@ -155,6 +160,7 @@ describe('policy WASM preview-drive decision-stack publication ABI', () => {
         outPreviewBranchesPtr,
         outTiebreakAfterPreviewNoSignalPtr,
         outPolicyPreviewSignalUnavailablePtr,
+        outPreviewStateSlotMetadataPtr,
       ]) {
         exports.ludoforge_policy_vm_dealloc(ptr, outputBytes);
       }

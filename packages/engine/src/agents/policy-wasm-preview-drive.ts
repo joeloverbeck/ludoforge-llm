@@ -2,7 +2,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0015;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0016;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
@@ -16,6 +16,27 @@ export type PolicyWasmPreviewStatus =
   | 'gated';
 
 export type PolicyWasmPreviewBranch = 'none' | 'greedy' | 'continuedDeepening';
+
+export type PolicyWasmPreviewStateSlotKind = 'global' | 'feature' | 'surface' | 'generic';
+export type PolicyWasmPreviewStateSlotLifetime = 'singleIteration' | 'crossIteration';
+
+export interface PolicyWasmPreviewStateSlot {
+  readonly id: string;
+  readonly kind: PolicyWasmPreviewStateSlotKind;
+  readonly lifetime: PolicyWasmPreviewStateSlotLifetime;
+}
+
+export const definePolicyWasmPreviewStateSlot = (
+  id: string,
+  options?: {
+    readonly kind?: PolicyWasmPreviewStateSlotKind;
+    readonly lifetime?: PolicyWasmPreviewStateSlotLifetime;
+  },
+): PolicyWasmPreviewStateSlot => ({
+  id,
+  kind: options?.kind ?? inferPolicyWasmPreviewStateSlotKind(id),
+  lifetime: options?.lifetime ?? 'singleIteration',
+});
 
 export type PolicyWasmDecisionStackFrameVariant =
   | 'actionSelection'
@@ -116,7 +137,7 @@ export interface PolicyWasmPreviewDriveBatchInput {
   readonly originSeatId: string;
   readonly originTurnId: number;
   readonly depthCap: number;
-  readonly previewStateSlots?: readonly string[];
+  readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
   readonly candidates: readonly PolicyWasmPreviewDriveCandidate[];
   readonly steps: readonly PolicyWasmPreviewDriveStep[];
 }
@@ -127,6 +148,7 @@ export interface PolicyWasmPreviewDriveRow {
   readonly depth: number;
   readonly value: number;
   readonly previewStateValues?: Readonly<Record<string, number>>;
+  readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
   readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
   readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
 }
@@ -168,7 +190,11 @@ export const encodePolicyWasmPreviewDriveInput = (
     decisionStackMaxDepth,
   ];
   for (const slot of input.previewStateSlots ?? []) {
-    words.push(stablePayloadCode({ literal: slot }));
+    words.push(
+      stablePayloadCode({ literal: slot.id }),
+      previewStateSlotKindCode(slot.kind),
+      previewStateSlotLifetimeCode(slot.lifetime),
+    );
   }
 
   for (const candidate of input.candidates) {
@@ -214,6 +240,7 @@ export const decodePolicyWasmPreviewDriveRows = (
   outTiebreakAfterPreviewNoSignalPtr: number,
   outPolicyPreviewSignalUnavailablePtr: number,
   outDecisionStackPublicationPtr: number,
+  outPreviewStateSlotMetadataPtr: number,
   decisionStackMaxDepth: number,
 ): readonly PolicyWasmPreviewDriveRow[] => {
   const view = new DataView(memory);
@@ -222,9 +249,16 @@ export const decodePolicyWasmPreviewDriveRows = (
     const previewStateValues = slots.length === 0
       ? undefined
       : Object.fromEntries(slots.map((slot, slotIndex) => [
-        slot,
+        slot.id,
         view.getInt32(outPreviewStatePtr + (((index * slots.length) + slotIndex) * I32_BYTES), true),
       ]));
+    const previewStateSlots = slots.length === 0
+      ? undefined
+      : decodePreviewStateSlots(
+        slots,
+        view,
+        outPreviewStateSlotMetadataPtr,
+      );
     return {
       stableMoveKey: candidate.stableMoveKey,
       outcome: decodeOutcome(view.getInt32(outOutcomesPtr + (index * I32_BYTES), true)),
@@ -237,6 +271,7 @@ export const decodePolicyWasmPreviewDriveRows = (
         policyPreviewSignalUnavailable: decodeBoolFlag(view.getInt32(outPolicyPreviewSignalUnavailablePtr + (index * I32_BYTES), true)),
       },
       ...(previewStateValues === undefined ? {} : { previewStateValues }),
+      ...(previewStateSlots === undefined ? {} : { previewStateSlots }),
       ...decodeDecisionStackPublication(
         input,
         view,
@@ -247,6 +282,80 @@ export const decodePolicyWasmPreviewDriveRows = (
     };
   });
 };
+
+const inferPolicyWasmPreviewStateSlotKind = (id: string): PolicyWasmPreviewStateSlotKind => {
+  if (id.startsWith('global.')) return 'global';
+  if (id.startsWith('feature.')) return 'feature';
+  if (id.startsWith('surface.')) return 'surface';
+  return 'generic';
+};
+
+const previewStateSlotKindCode = (kind: PolicyWasmPreviewStateSlotKind): number => {
+  switch (kind) {
+    case 'global':
+      return 1;
+    case 'feature':
+      return 2;
+    case 'surface':
+      return 3;
+    case 'generic':
+      return 4;
+  }
+};
+
+const decodePreviewStateSlotKind = (code: number): PolicyWasmPreviewStateSlotKind => {
+  switch (code) {
+    case 1:
+      return 'global';
+    case 2:
+      return 'feature';
+    case 3:
+      return 'surface';
+    case 4:
+      return 'generic';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview-state slot kind ${code}.`);
+  }
+};
+
+const previewStateSlotLifetimeCode = (lifetime: PolicyWasmPreviewStateSlotLifetime): number => {
+  switch (lifetime) {
+    case 'singleIteration':
+      return 1;
+    case 'crossIteration':
+      return 2;
+  }
+};
+
+const decodePreviewStateSlotLifetime = (code: number): PolicyWasmPreviewStateSlotLifetime => {
+  switch (code) {
+    case 1:
+      return 'singleIteration';
+    case 2:
+      return 'crossIteration';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown preview-state slot lifetime ${code}.`);
+  }
+};
+
+const decodePreviewStateSlots = (
+  expectedSlots: readonly PolicyWasmPreviewStateSlot[],
+  view: DataView,
+  outPreviewStateSlotMetadataPtr: number,
+): readonly PolicyWasmPreviewStateSlot[] =>
+  expectedSlots.map((slot, slotIndex) => {
+    const base = outPreviewStateSlotMetadataPtr + (slotIndex * 3 * I32_BYTES);
+    const slotCode = view.getInt32(base, true);
+    const expectedSlotCode = stablePayloadCode({ literal: slot.id });
+    if (slotCode !== expectedSlotCode) {
+      throw new Error(`Policy WASM preview-drive slot id code mismatch for slot ${slotIndex}.`);
+    }
+    return {
+      id: slot.id,
+      kind: decodePreviewStateSlotKind(view.getInt32(base + I32_BYTES, true)),
+      lifetime: decodePreviewStateSlotLifetime(view.getInt32(base + (2 * I32_BYTES), true)),
+    };
+  });
 
 export const firstUnsupportedPreviewDriveClass = (
   input: PolicyWasmPreviewDriveBatchInput,

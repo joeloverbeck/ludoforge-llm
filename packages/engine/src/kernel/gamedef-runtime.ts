@@ -3,13 +3,15 @@ import { buildAdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionId, BoundaryId } from './branded.js';
-import type { ZobristTable, GameDef } from './types.js';
+import type { CompiledPolicyExpr, ZobristTable, GameDef, GameState } from './types.js';
+import type { EncodedState } from './encoded-state/index.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
 import type {
   CompiledEffectSequence,
   CompiledLifecycleEffectKey,
 } from './effect-compiler-types.js';
+import type { PolicyBytecode } from '../cnl/policy-bytecode/index.js';
 import { compileAllLifecycleEffects } from './effect-compiler.js';
 import { computeAlwaysCompleteActionIds } from './always-complete-actions.js';
 import { compileGameDefFirstDecisionDomains, type FirstDecisionRuntimeCompilation } from './first-decision-compiler.js';
@@ -37,8 +39,14 @@ export interface CardDrawRuntimeState {
 export const PUBLICATION_PROBE_CACHE_LIMIT = 2_500;
 export const TOKEN_STATE_INDEX_CACHE_LIMIT = 4_096;
 export const POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT = 4_096;
+export const POLICY_ENCODED_STATE_HASH_CACHE_LIMIT = 4_096;
 export type PolicyWasmBytecodeInputCache = LruCache<string, Uint8Array>;
 export type PolicyWasmBytecodeStateWordsCache = LruCache<string, Int32Array>;
+export interface PolicyEncodedStateHashCacheEntry {
+  readonly serializedState: string;
+  readonly encodedState: EncodedState;
+}
+export type PolicyEncodedStateHashCache = LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>;
 
 export interface GameDefRuntime {
   /** `sharedStructural`: pure function of `def.zones`; never mutated after runtime creation. */
@@ -69,11 +77,28 @@ export interface GameDefRuntime {
   /** `runLocal`: memoizes state-dependent words used by policy WASM bytecode inputs. */
   readonly policyWasmBytecodeStateWordsCache: PolicyWasmBytecodeStateWordsCache;
   /**
+   * `runLocal`: memoizes encoded-state projections keyed by immutable
+   * GameState object identity; reset for every run via fork.
+   */
+  readonly policyEncodedStateCache: WeakMap<GameState, EncodedState>;
+  /**
+   * `runLocal`: memoizes encoded-state projections for distinct but
+   * canonically identical GameState objects. Entries are addressed by
+   * stateHash only as an accelerator; serialized-state equality guards reuse.
+   */
+  readonly policyEncodedStateHashCache: PolicyEncodedStateHashCache;
+  /**
    * `sharedStructural`: lazily populated compiled query/filter plans keyed by
    * compiled AST object identity. Plans depend only on GameDef structure; they
    * receive run-local state through `ReadContext` at invocation time.
    */
   readonly compiledQueryPlanCache: CompiledQueryPlanCache;
+  /**
+   * `sharedStructural`: lazily populated compiled policy bytecode keyed by
+   * compiled policy-expression object identity. Bytecode depends only on
+   * GameDef structure plus the canonical per-def encoded-state layout.
+   */
+  readonly policyBytecodeCache: WeakMap<CompiledPolicyExpr, PolicyBytecode>;
   /**
    * Mixed ownership: boundary definitions and triggering positions are
    * `sharedStructural`; current draw positions are `runLocal` and forked.
@@ -119,7 +144,10 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
+    policyEncodedStateHashCache: new LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>(POLICY_ENCODED_STATE_HASH_CACHE_LIMIT),
     compiledQueryPlanCache: createCompiledQueryPlanCache(),
+    policyBytecodeCache: new WeakMap<CompiledPolicyExpr, PolicyBytecode>(),
     scheduleIndex,
     compiledLifecycleEffects,
   };
@@ -130,15 +158,18 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  *
  * Structural runtime artifacts remain shared across runs:
  * `adjacencyGraph`, `runtimeTableIndex`, `alwaysCompleteActionIds`,
- * `firstDecisionDomains`, `ruleCardCache`, `compiledLifecycleEffects`, and the
- * structural Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
+ * `firstDecisionDomains`, `ruleCardCache`, `compiledQueryPlanCache`,
+ * `policyBytecodeCache`, `compiledLifecycleEffects`, and the structural
+ * Zobrist fields (`seed`, `fingerprint`, `seedHex`, `sortedKeys`).
  *
  * The `runLocal` members are `zobristTable.keyCache`,
  * `zobristTable.frameDigestCache`, `publicationProbeCache`,
  * `tokenStateIndexCache`, `policyWasmBytecodeInputCache`, and
- * `policyWasmBytecodeStateWordsCache`; all reset at game boundaries so
+ * `policyWasmBytecodeStateWordsCache`, `policyEncodedStateCache`, and
+ * `policyEncodedStateHashCache`; all reset at game boundaries so
  * long-lived callers do not accumulate cross-run state.
- * `compiledQueryPlanCache` remains shared structural across forks.
+ * `compiledQueryPlanCache` and `policyBytecodeCache` remain shared structural
+ * across forks.
  */
 export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDefRuntimeForRun {
   return {
@@ -152,6 +183,8 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
+    policyEncodedStateHashCache: new LruCache<bigint, readonly PolicyEncodedStateHashCacheEntry[]>(POLICY_ENCODED_STATE_HASH_CACHE_LIMIT),
     scheduleIndex: forkScheduleIndexForRun(runtime.scheduleIndex),
   } as unknown as ForkedGameDefRuntimeForRun;
 }

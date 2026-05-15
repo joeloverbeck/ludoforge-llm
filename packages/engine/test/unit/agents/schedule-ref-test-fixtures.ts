@@ -57,10 +57,13 @@ export const chooseOneRequest: ChoicePendingRequest = {
   targetKinds: ['zone'],
 };
 
-const cardToken = (id: string): Token => ({
-  id: asTokenId(id),
+// Real card tokens carry their identity in `props.cardId`; `token.id` is a
+// distinct token-instance id. Mirror that shape so card-identity resolution is
+// exercised against the production token layout (Foundation #16).
+const cardToken = (cardId: string): Token => ({
+  id: asTokenId(`tok-${cardId}`),
   type: 'card',
-  props: {},
+  props: { cardId },
 });
 
 export function makeScheduleRefDef(hiddenDrawZone = false): GameDef {

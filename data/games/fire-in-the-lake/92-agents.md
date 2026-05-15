@@ -124,6 +124,10 @@ agents:
         type: number
         expr:
           ref: turn.round
+      selfRank:
+        type: number
+        expr:
+          ref: victory.currentRank.self
 
     candidateFeatures:
       projectedSelfMargin:
@@ -142,6 +146,12 @@ agents:
                     - { ref: feature.vcFriendlyCapCount }
                 - { ref: feature.vcFriendlyCapCount }
             - 0
+      projectedSelfRank:
+        type: number
+        expr:
+          coalesce:
+            - { ref: preview.victory.currentRank.self }
+            - { ref: feature.selfRank }
 
     candidateAggregates:
       hasNonPassAlternative:
@@ -173,6 +183,11 @@ agents:
           param: projectedMarginWeight
         value:
           ref: feature.projectedSelfMargin
+      preferProjectedRank:
+        scopes: [move]
+        weight: -300
+        value:
+          ref: feature.projectedSelfRank
       preserveResources:
         scopes: [move]
         weight:
@@ -478,6 +493,7 @@ agents:
           - dropPassWhenOtherMovesExist
         considerations:
           - preferProjectedSelfMargin
+          - preferProjectedRank
           - preferStrongNormalizedMargin
           - preferGovernWeighted
           - trainWhenControlLow

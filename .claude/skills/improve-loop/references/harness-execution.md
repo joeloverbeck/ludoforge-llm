@@ -27,6 +27,8 @@ Apply these consistently throughout. Never hardcode a comparison direction.
 
 **Early abort (per-run):** If the harness supports intermediate output (one line per target file), parse after each line. If the running metric value is worse than `best_metric` by more than `ABORT_THRESHOLD` (using the Metric Direction Comparison Helpers above), kill the harness process. Log status as `EARLY_ABORT` and REJECT immediately (skip to Step 7).
 
+**Wall-clock hang abort:** Wrap the harness invocation in `timeout "$HARD_TIMEOUT"` (default 1800s — see `references/prerequisites-and-config.md`; if `HARD_TIMEOUT` is `unlimited`, omit the wrapper). If a run exceeds `HARD_TIMEOUT` without finishing, it is killed; log status `EARLY_ABORT` with `metric_value` = the literal `null` (no metric was produced — mirrors the un-retryable-CRASH convention), REJECT immediately, and record the hang in musings. A hang is a real hazard for an autonomous loop — an experiment that makes the harness pathologically slow (e.g., a change that blows up enumeration or preview cost) must not stall the loop for an hour. This is distinct from the `ABORT_THRESHOLD` early abort above, which is a metric overshoot that still yields a running metric value.
+
 **Intermediate metric capture:** While parsing intermediate output for early abort, also record each checkpoint's label and metric value for `intermediates.jsonl` (see Step 5).
 
 **Multi-run averaging with MAD:** If `HARNESS_RUNS > 1`:

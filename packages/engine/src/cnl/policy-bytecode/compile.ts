@@ -15,9 +15,9 @@ import {
   type RangeAnalysis,
 } from './types.js';
 import {
-  buildFeatureTable,
   canonicalKey,
   collectFeatureRefsFromCompiledPolicyExpr,
+  getFeatureTable,
   getFeatureId,
   stablePayloadCode,
 } from './feature-table.js';
@@ -33,6 +33,8 @@ const DYNAMIC_REASON_UNSUPPORTED_EXPR = 1;
 const DYNAMIC_REASON_SCORE_RANGE = 2;
 const DYNAMIC_REASON_FEATURE_MISSING = 3;
 const DYNAMIC_REASON_NON_INTEGER_LITERAL = 4;
+
+let buildExpressionFeatureTableCount = 0;
 
 export function compilePolicyBytecode(
   expr: PolicyExprInput,
@@ -61,10 +63,16 @@ function buildExpressionFeatureTable(
   layout: EncodedStateLayout,
   expr: PolicyExprInput,
 ): FeatureTable {
-  const refsByKey = new Map(buildFeatureTable(def, layout).refs.map((ref) => [canonicalKey(ref), ref]));
+  const baseTable = getFeatureTable(def, layout);
+  const refsByKey = new Map(baseTable.refs.map((ref) => [canonicalKey(ref), ref]));
+  const initialRefCount = refsByKey.size;
   for (const ref of collectFeatureRefsFromCompiledPolicyExpr(expr as CompiledPolicyExpr, layout)) {
     refsByKey.set(canonicalKey(ref), ref);
   }
+  if (refsByKey.size === initialRefCount) {
+    return baseTable;
+  }
+  buildExpressionFeatureTableCount += 1;
   const refs = [...refsByKey.values()].sort((left, right) => canonicalKey(left).localeCompare(canonicalKey(right)));
   return {
     refs,
@@ -393,3 +401,10 @@ function multiplyRange(left: Range, right: Range): Range {
 function emitWarning(options: CompilePolicyBytecodeOptions, message: string): void {
   options.logger?.warn(`[policy-bytecode] ${message}`);
 }
+
+export const __compile_internal_for_tests = {
+  getBuildExpressionFeatureTableCount: (): number => buildExpressionFeatureTableCount,
+  resetBuildExpressionFeatureTableCount: (): void => {
+    buildExpressionFeatureTableCount = 0;
+  },
+};

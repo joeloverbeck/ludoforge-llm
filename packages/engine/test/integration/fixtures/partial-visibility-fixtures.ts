@@ -39,10 +39,13 @@ export const scheduleDistanceRef = (): Extract<CompiledAgentPolicyRef, { readonl
 
 const scheduleRefExpr = (): AgentPolicyExpr => refExpr(scheduleDistanceRef());
 
-const cardToken = (id: string): Token => ({
-  id: asTokenId(id),
+// Real card tokens carry their identity in `props.cardId`; `token.id` is a
+// distinct token-instance id. Mirror that shape so the resolver is exercised
+// against the production token layout (Foundation #16).
+const cardToken = (cardId: string): Token => ({
+  id: asTokenId(`tok-${cardId}`),
   type: 'card',
-  props: {},
+  props: { cardId },
 });
 
 export function makePartialVisibilityDef(): GameDef {

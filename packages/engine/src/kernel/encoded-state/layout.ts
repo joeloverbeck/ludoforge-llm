@@ -62,6 +62,8 @@ const compareStrings = (left: string, right: string): number => left.localeCompa
 const indexByString = (ids: readonly string[]): Readonly<Record<string, number>> =>
   Object.freeze(Object.fromEntries(ids.map((id, index) => [id, index])));
 
+let buildEncodedStateLayoutCount = 0;
+
 const wordCount64 = (bitCount: number): number => Math.ceil(bitCount / 64);
 
 const stateBitCount = (
@@ -129,6 +131,7 @@ const collectSetupTokenIds = (effects: readonly EffectAST[]): readonly TokenId[]
 };
 
 export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
+  buildEncodedStateLayoutCount += 1;
   if (!Number.isSafeInteger(def.metadata.players.max) || def.metadata.players.max < 0) {
     throw new Error(`EncodedStateLayout requires a non-negative safe integer player max; received ${def.metadata.players.max}`);
   }
@@ -221,3 +224,10 @@ export function buildEncodedStateLayout(def: GameDef): EncodedStateLayout {
     }),
   });
 }
+
+export const __layout_internal_for_tests = {
+  getBuildEncodedStateLayoutCount: (): number => buildEncodedStateLayoutCount,
+  resetBuildEncodedStateLayoutCount: (): void => {
+    buildEncodedStateLayoutCount = 0;
+  },
+};

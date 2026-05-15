@@ -18,7 +18,7 @@
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
    - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
-   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `classified non-final lanes or none`, `archive status`, and the exact `$post-ticket-review <ticket>` sentence when review/archive did not run
+   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `cached broad-lane classifications`, `classified non-final lanes or none`, `archive status`, and the exact `$post-ticket-review <ticket>` sentence when review/archive did not run
    - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
@@ -110,6 +110,12 @@ When the active tracked ticket was truthfully narrowed or rewritten and the owne
 Prefer an explicit durable outcome block for the first two states so the ticket artifact reflects both the landed work and the remaining blocker.
 
 If an explicit ticket-named broad acceptance lane is still red, `COMPLETED` is only truthful when the active ticket has first been rewritten to remove that lane from the owned boundary or the failures have been proven unrelated/pre-existing. A red changed-path, serialized-contract, or architectural-invariant failure should normally become `BLOCKED by prerequisite` or trigger 1-3-1 rather than a completed ticket plus an implicit follow-up.
+
+For staged same-series work where the current ticket's owned slice is complete but a ticket-named aggregate lane remains red on a confirmed later sibling or residual gate, keep the classification concrete before using `COMPLETED`:
+
+- `classified red ledger`: `red lane | failing path/subtest | current-ticket-owned counts/claims green | residual counts/claims red | sibling/residual owner | terminal status allowed?`
+
+Use this only after opening enough of the named sibling/spec owner to confirm that the residual is genuinely outside the active ticket. If the red assertion still exercises a changed path, serialized/shared contract, or architectural invariant owned by the active ticket, treat it as an owned failure instead.
 
 ## Optional State-Transition Ledger
 
@@ -226,6 +232,7 @@ For a small tracked engine ticket that adds or edits TypeScript source/tests, co
 4. Build the engine package before running focused compiled tests, then run the narrow ticket-owned `node --test packages/engine/dist/...` witness lanes.
 5. Prewrite the active ticket outcome while status remains pending: what landed, touched-file scope including any untracked additions, generated fallout, sibling deferrals, exact source-size ledger when triggered, same-series draft delta when triggered, command substitutions, exact final proof lanes, and no-invalidation plan.
 6. Run the ticket-named package/root lanes serially. Do not overlap any lane that rebuilds or cleans `dist`; after a broad lane rebuilds `dist`, rerun the focused compiled-output witness you still intend to cite as final acceptance evidence.
+   - If the ticket names `test:perf` or another aggregate perf suite, preflight ownership before launching it: identify the ticket-owned perf file/subtest, list likely unrelated or same-series residual perf files when practical, and decide whether final proof requires the whole suite or the owned perf witness plus a classified aggregate-suite result. Record that classification in the active ticket before spending the expensive broad lane.
 7. Apply the terminal status/proof transcription as a narrow final ticket edit only after final lanes are green or classified, then run the ticket-dependency or markdown-integrity checker when status/dependency/archive state changed.
 8. Transcribe only the checker result, record why the transcription is clerical, run `git diff --check`, run targeted hygiene or record substitute coverage for untracked additions, and finish with untracked-aware `git status --short`.
 9. In the final response, include tracked modified paths, untracked additions, final green lanes, cached broad-lane classifications, classified non-final lanes if any, archive status, and the `$post-ticket-review <ticket>` handoff when archival has not run.
@@ -284,6 +291,15 @@ Use this compact final handoff shape when implementation stops before archival:
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
 - `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
+
+Cache-hit classification quick table:
+
+| Classification | Use when |
+| --- | --- |
+| `none` | No final broad lane replayed cached logs. |
+| `cache-hit supplemental` | The replayed task is useful context but not needed as acceptance proof because direct focused or package lanes prove the changed surface. |
+| `cache-covered` | The changed files are demonstrably part of the cached task inputs, so the replayed result still proves the lane. |
+| `cache-hit proof pending` | The cached replay is a ticket-named or final acceptance lane and changed-file inclusion is not proven; run a direct substitute or documented no-cache lane before closeout. |
 
 For a large implementation diff, prefer this concrete final-response skeleton over a vague summary:
 
@@ -409,6 +425,20 @@ For benchmark/performance tickets where a code slice is worth keeping but the ti
 - `durable status`: `IN PROGRESS | BLOCKED | PARTIAL | repo-equivalent`
 - `residual owner`: `<active ticket if still same-ticket-owned, sibling/follow-up id, or unknown>`
 - `next authorization`: `<already user-approved continuation, 1-3-1 needed, or intentionally deferred>`
+
+For tickets whose deliverable is an expected-red witness rather than a green fix, terminal closeout is allowed only when the active ticket explicitly owns that red witness shape or has been rewritten with user-approved boundary reset. Capture:
+
+- `expected-red command`: `<focused command and broad lane if relevant>`
+- `failure token`: `<assertion/message proving the intended product red, not setup failure>`
+- `threshold/actual`: `<expected limit and observed value, or not applicable>`
+- `broad lane classification`: `<red solely because expected witness | additional failures classified>`
+- `unrelated lanes`: `<green/classified build, lint, typecheck, determinism, or equivalent>`
+- `successor owner`: `<ticket/spec that is expected to make the witness green>`
+- `durable status`: `<COMPLETED | BLOCKED | repo-equivalent>`
+
+When a user-approved boundary reset changes which ticket owns an expected-red witness, sweep the witness file itself before final proof. Update source/test comments, test names, skip reasons, assertion messages, and nearby ticket/spec prose that still name the old owner or imply the successor substrate is absent. Treat these edits as proof-story changes: rerun the narrowest affected build/test lane, or record an explicit no-invalidation rationale only when the text cannot affect compiled output, selected tests, command shape, thresholds, or acceptance classification.
+
+Do not count TypeScript setup failures, missing markers, bad imports, or wrong fixture wiring as the expected red witness. If a ticket-named broad lane is red for any failure besides the intended witness, classify those failures before terminal status using the normal broad-lane rules.
 
 For a user-approved acceptance exception on a red measured gate, make the exception explicit:
 

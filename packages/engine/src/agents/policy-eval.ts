@@ -1,6 +1,6 @@
 import { asPlayerId, type PlayerId } from '../kernel/branded.js';
 import { buildSeatResolutionIndex, resolvePlayerIndexForSeatValue } from '../kernel/identity.js';
-import { buildEncodedState, buildEncodedStateLayout } from '../kernel/encoded-state/index.js';
+import { buildEncodedState, type EncodedStateLayout } from '../kernel/encoded-state/index.js';
 import { legalMoves } from '../kernel/legal-moves.js';
 import { toMoveIdentityKey } from '../kernel/move-identity.js';
 import type {
@@ -51,6 +51,10 @@ import {
   type PreviewWideningDecisionContext,
   type PreviewWideningState,
 } from './preview-budget-allocator.js';
+import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
+import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
+
+export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
 const SELECTION_SALT = 0x73656c656374696f6e5f6d6f64655f7274n;
 const SELECTION_SEED_MIX = 0x9e3779b97f4a7c15f39cc0605cedc835n;
@@ -65,7 +69,6 @@ const DEFAULT_PREVIEW_BUDGET: CompiledAgentPreviewBudgetConfig = {
 };
 let policyEvalCallCount = 0;
 let policyEvalDepth = 0;
-const encodedStateLayoutCache = new WeakMap<GameDef, ReturnType<typeof buildEncodedStateLayout>>();
 
 const shouldLogPolicyEvalOomTrace = (): boolean => process.env.ENGINE_OOM_TRACE === '1';
 
@@ -305,27 +308,6 @@ export interface EvaluatePolicyMoveInput {
   readonly previewDecisionContext?: PreviewWideningDecisionContext;
 }
 
-function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
-  readonly layout: ReturnType<typeof buildEncodedStateLayout>;
-  readonly encoded: ReturnType<typeof buildEncodedState>;
-} | undefined {
-  try {
-    const layout = getPolicyEncodedStateLayout(def);
-    return { layout, encoded: buildEncodedState(state, layout) };
-  } catch {
-    return undefined;
-  }
-}
-
-export function getPolicyEncodedStateLayout(def: GameDef): ReturnType<typeof buildEncodedStateLayout> {
-  let layout = encodedStateLayoutCache.get(def);
-  if (layout === undefined) {
-    layout = buildEncodedStateLayout(def);
-    encodedStateLayoutCache.set(def, layout);
-  }
-  return layout;
-}
-
 /**
  * Canonical shape: kind, move, rng, failure, metadata.
  * All construction sites must materialize every property.
@@ -365,6 +347,21 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
 }
 
 const EMPTY_TRUSTED_MOVE_INDEX = new Map<string, TrustedExecutableMove>();
+
+function tryBuildPolicyEncodedState(def: GameDef, state: GameState, runtime?: GameDefRuntime): {
+  readonly layout: EncodedStateLayout;
+  readonly encoded: ReturnType<typeof buildEncodedState>;
+} | undefined {
+  try {
+    const layout = getPolicyEncodedStateLayout(def);
+    const encoded = runtime === undefined
+      ? buildEncodedState(state, layout)
+      : resolvePolicyEncodedState(runtime, state, layout, (currentState, currentLayout) => buildEncodedState(currentState, currentLayout));
+    return encoded === undefined ? undefined : { layout, encoded };
+  } catch {
+    return undefined;
+  }
+}
 
 function applyTieBreaker(
   evaluation: PolicyEvaluationContext,
@@ -609,7 +606,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       } satisfies PolicyPreviewDependencies;
       const encodedView = input.encodedStateMode === 'disabled'
         ? undefined
-        : tryBuildPolicyEncodedState(input.def, input.state);
+        : tryBuildPolicyEncodedState(input.def, input.state, input.runtime);
       const evaluation = new PolicyEvaluationContext({
         def: input.def,
         state: input.state,

@@ -6,13 +6,13 @@ import { buildRuntimeTableIndex } from '../kernel/runtime-table-index.js';
 import { buildAdjacencyGraph, queryAdjacentZones } from '../kernel/spatial.js';
 import {
   buildEncodedState,
-  buildEncodedStateLayout,
   type EncodedState,
   type EncodedStateLayout,
 } from '../kernel/encoded-state/index.js';
 import {
   compilePolicyBytecode,
   type FeatureRef,
+  type PolicyBytecode,
 } from '../cnl/policy-bytecode/index.js';
 import { computeEffectFootprint, unionFootprints } from '../cnl/compile-effect-footprint.js';
 import { stablePayloadCode, stableStringCode } from '../cnl/policy-bytecode/feature-table.js';
@@ -55,6 +55,8 @@ import type {
 import type { PolicyValue } from './policy-surface.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
+import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
+import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -351,10 +353,11 @@ export class PolicyEvaluationContext {
   private readonly candidateFeatureCache = new Map<string, Map<string, PolicyValue>>();
   private readonly aggregateCache = new Map<string, PolicyValue>();
   private readonly strategicConditionCache = new Map<string, PolicyValue>();
-  private readonly compiledExprBytecodeCache = new WeakMap<CompiledPolicyExpr, ReturnType<typeof compilePolicyBytecode>>();
+  private readonly fallbackPolicyBytecodeCache = new WeakMap<CompiledPolicyExpr, PolicyBytecode>();
   private readonly resolvedPreviewRefValues = new Map<string, Map<string, number>>();
   private readonly runtimeProviders: PolicyRuntimeProviders;
   private readonly encodedStateLayout: EncodedStateLayout;
+  private readonly usesCanonicalEncodedStateLayout: boolean;
   private readonly encodedState: EncodedState | undefined;
   private readonly encodedZoneIndexById: ReadonlyMap<string, number> | undefined;
   private transientStateFeatureCache: { readonly stateHash: bigint; readonly cache: Map<string, PolicyValue> } | null = null;
@@ -372,8 +375,10 @@ export class PolicyEvaluationContext {
   ) {
     this.currentCandidates = candidates;
     this.activeState = input.state;
-    this.encodedStateLayout = input.encodedStateLayout ?? buildEncodedStateLayout(input.def);
-    this.encodedState = input.encodedState ?? tryBuildEncodedState(input.state, this.encodedStateLayout);
+    const canonicalEncodedStateLayout = getPolicyEncodedStateLayout(input.def);
+    this.encodedStateLayout = input.encodedStateLayout ?? canonicalEncodedStateLayout;
+    this.usesCanonicalEncodedStateLayout = this.encodedStateLayout === canonicalEncodedStateLayout;
+    this.encodedState = input.encodedState ?? this.resolveEncodedState(input.state);
     this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
@@ -929,10 +934,11 @@ export class PolicyEvaluationContext {
     if (this.encodedState === undefined || this.requiresDirectLiteralSemantics(expr)) {
       return this.evaluateCompiledExprDirect(expr, candidate);
     }
-    let bytecode = this.compiledExprBytecodeCache.get(expr);
+    const bytecodeCache = this.resolvePolicyBytecodeCache();
+    let bytecode = bytecodeCache.get(expr);
     if (bytecode === undefined) {
       bytecode = compilePolicyBytecode(expr, this.input.def, this.encodedStateLayout);
-      this.compiledExprBytecodeCache.set(expr, bytecode);
+      bytecodeCache.set(expr, bytecode);
     }
     const candidateIndex = candidate === undefined ? undefined : this.currentCandidates.indexOf(candidate);
     const vmContext: VMContext = {
@@ -960,6 +966,20 @@ export class PolicyEvaluationContext {
       }
       throw error;
     }
+  }
+
+  private resolvePolicyBytecodeCache(): WeakMap<CompiledPolicyExpr, PolicyBytecode> {
+    if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
+      return this.input.runtime.policyBytecodeCache;
+    }
+    return this.fallbackPolicyBytecodeCache;
+  }
+
+  private resolveEncodedState(state: GameState): EncodedState | undefined {
+    if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
+      return resolvePolicyEncodedState(this.input.runtime, state, this.encodedStateLayout, tryBuildEncodedState);
+    }
+    return tryBuildEncodedState(state, this.encodedStateLayout);
   }
 
   private evaluateCompiledExprDirect(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {

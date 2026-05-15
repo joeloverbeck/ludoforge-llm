@@ -25,6 +25,11 @@
 import { performance } from 'node:perf_hooks';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createPerCardRecorder,
+  createStaticRebuildCounterAccess,
+  totalStaticRebuildCount,
+} from './profile-fitl-preview-drive-metrics.mjs';
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PACKAGE_ROOT = resolve(SCRIPT_DIR, '..');
@@ -54,6 +59,7 @@ const flagPositiveInt = (name, fallback) => {
 };
 
 const config = {
+  caseName: flagValue('case', 'default'),
   seed: flagPositiveInt('seed', 42),
   maxTurns: flagPositiveInt('maxTurns', 50),
   playerCount: flagPositiveInt('playerCount', 4),
@@ -67,6 +73,15 @@ const config = {
   warmup: flagBoolean('warmup'),
   label: flagValue('label', 'run'),
 };
+
+if (config.caseName === 'arvn-cubes-deep') {
+  config.seed = flagPositiveInt('seed', 1013);
+  config.maxTurns = flagPositiveInt('maxTurns', 200);
+  config.profileId = flagValue('profileId', 'arvn-evolved');
+} else if (config.caseName !== 'default') {
+  process.stderr.write(`ERROR: unknown --case "${config.caseName}".\n`);
+  process.exit(1);
+}
 
 const FITL_BASELINE_PROFILES = ['us-baseline', 'arvn-baseline', 'nva-baseline', 'vc-baseline'];
 
@@ -83,7 +98,7 @@ const [
     zobristInternals,
   },
   { runGame },
-  { getFitlBootstrapGameDefFixture },
+  { getFitlBootstrapGameDefFixture, getFitlProductionGameDefFixture },
   { __internal_for_tests: tokenStateIndexInternals },
   { __internal_for_tests: policyPreviewInternals },
   { __internal_for_tests: policyWasmRuntimeInternals },
@@ -102,9 +117,14 @@ const [
 ]);
 
 const policyWasmRuntime = initializePolicyWasmRuntimeSync();
+const staticRebuildCounters = await createStaticRebuildCounterAccess(DIST_ROOT);
 setHotPathProfilingEnabled(config.profileBuckets);
 
-const def = assertValidatedGameDef(getFitlBootstrapGameDefFixture().gameDef);
+const def = assertValidatedGameDef(
+  (config.caseName === 'arvn-cubes-deep'
+    ? getFitlProductionGameDefFixture()
+    : getFitlBootstrapGameDefFixture()).gameDef,
+);
 const runtime = createGameDefRuntime(def);
 
 // FITL seat order matches FITL_BASELINE_PROFILES so we can pin each running
@@ -168,6 +188,7 @@ const buildAgents = () => {
 };
 
 const runOnce = () => {
+  staticRebuildCounters.reset();
   tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   resetHotPathProfilerCounters();
   zobristInternals.resetZobristKeyCounters();
@@ -184,7 +205,7 @@ const runOnce = () => {
   const profiler = config.profileBuckets ? createPerfProfiler() : undefined;
   const startedAt = performance.now();
   const perCardRecorder = config.perCard
-    ? createPerCardRecorder(startedAt)
+    ? createPerCardRecorder(startedAt, readCounterSnapshot, round2, round4)
     : undefined;
   const trace = runGame(
     def,
@@ -225,6 +246,7 @@ const runOnce = () => {
     persistentTokenStateIndexCacheHitCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheHitCount(),
     persistentTokenStateIndexCacheMissCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheMissCount(),
     persistentTokenStateIndexCacheWriteCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheWriteCount(),
+    ...staticRebuildCounters.snapshot(),
     wasmScoreRowRouteCount: policyWasmRuntimeInternals.getProductionScoreRowRouteCount(),
     wasmScoreRowUnsupportedCount: policyWasmRuntimeInternals.getProductionScoreRowUnsupportedCount(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
@@ -255,87 +277,12 @@ function readCounterSnapshot() {
     persistentTokenStateIndexCacheHitCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheHitCount(),
     persistentTokenStateIndexCacheMissCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheMissCount(),
     persistentTokenStateIndexCacheWriteCount: tokenStateIndexInternals.getPersistentTokenStateIndexCacheWriteCount(),
+    ...staticRebuildCounters.snapshot(),
     wasmScoreRowBytecodeCompileCount: policyWasmRuntimeInternals.getProductionScoreRowBytecodeCompileCount(),
     wasmPreviewCandidateFeatureRowRouteCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowRouteCount(),
     wasmPreviewCandidateFeatureRowUnsupportedCount: policyWasmRuntimeInternals.getProductionPreviewCandidateFeatureRowUnsupportedCount(),
     wasmProductionPreviewDriveBatchCount: policyWasmProductionPreviewDriveInternals.getProductionPreviewDriveBatchCount(),
     driveExitTotal,
-  };
-}
-
-function createPerCardRecorder(startedAt) {
-  const rows = [];
-  let currentTurnCount = 0;
-  let currentStartedAtMs = 0;
-  let currentCounters = readCounterSnapshot();
-  let decisionCount = 0;
-
-  const closeCurrent = (endedAtMs, reason) => {
-    const counters = readCounterSnapshot();
-    const elapsedMs = endedAtMs - currentStartedAtMs;
-    rows.push({
-      turnCount: currentTurnCount,
-      elapsedMs: round2(elapsedMs),
-      decisions: decisionCount,
-      closeReason: reason,
-      msPerDecision: decisionCount > 0 ? round4(elapsedMs / decisionCount) : null,
-      tokenStateIndexBuildCount: counters.tokenStateIndexBuildCount - currentCounters.tokenStateIndexBuildCount,
-      zobristKeyCacheHitCount:
-        counters.zobristKeyCacheHitCount - currentCounters.zobristKeyCacheHitCount,
-      zobristKeyCacheMissCount:
-        counters.zobristKeyCacheMissCount - currentCounters.zobristKeyCacheMissCount,
-      zobristKeyUncachedCount:
-        counters.zobristKeyUncachedCount - currentCounters.zobristKeyUncachedCount,
-      draftTokenStateIndexDeltaCount:
-        counters.draftTokenStateIndexDeltaCount - currentCounters.draftTokenStateIndexDeltaCount,
-      draftTokenStateIndexAttachCount:
-        counters.draftTokenStateIndexAttachCount - currentCounters.draftTokenStateIndexAttachCount,
-      draftTokenStateIndexSnapshotCount:
-        counters.draftTokenStateIndexSnapshotCount - currentCounters.draftTokenStateIndexSnapshotCount,
-      draftTokenStateIndexCowCopyCount:
-        counters.draftTokenStateIndexCowCopyCount - currentCounters.draftTokenStateIndexCowCopyCount,
-      persistentTokenStateIndexCacheHitCount:
-        counters.persistentTokenStateIndexCacheHitCount - currentCounters.persistentTokenStateIndexCacheHitCount,
-      persistentTokenStateIndexCacheMissCount:
-        counters.persistentTokenStateIndexCacheMissCount - currentCounters.persistentTokenStateIndexCacheMissCount,
-      persistentTokenStateIndexCacheWriteCount:
-        counters.persistentTokenStateIndexCacheWriteCount - currentCounters.persistentTokenStateIndexCacheWriteCount,
-      wasmScoreRowBytecodeCompileCount:
-        counters.wasmScoreRowBytecodeCompileCount - currentCounters.wasmScoreRowBytecodeCompileCount,
-      wasmPreviewCandidateFeatureRowRouteCount:
-        counters.wasmPreviewCandidateFeatureRowRouteCount - currentCounters.wasmPreviewCandidateFeatureRowRouteCount,
-      wasmPreviewCandidateFeatureRowUnsupportedCount:
-        counters.wasmPreviewCandidateFeatureRowUnsupportedCount - currentCounters.wasmPreviewCandidateFeatureRowUnsupportedCount,
-      wasmProductionPreviewDriveBatchCount:
-        counters.wasmProductionPreviewDriveBatchCount - currentCounters.wasmProductionPreviewDriveBatchCount,
-      driveExitTotal: counters.driveExitTotal - currentCounters.driveExitTotal,
-    });
-    decisionCount = 0;
-  };
-
-  const openCurrent = (turnCount, startedAtMs) => {
-    currentTurnCount = turnCount;
-    currentStartedAtMs = startedAtMs;
-    currentCounters = readCounterSnapshot();
-    decisionCount = 0;
-  };
-
-  return {
-    observe: (ctx) => {
-      if (ctx.kind !== 'decision') {
-        return;
-      }
-      const nowMs = performance.now() - startedAt;
-      decisionCount += 1;
-      if (ctx.turnCount > currentTurnCount) {
-        closeCurrent(nowMs, 'turnCountAdvanced');
-        openCurrent(ctx.turnCount, nowMs);
-      }
-    },
-    finish: (elapsedMs) => {
-      closeCurrent(elapsedMs, 'runFinished');
-      return rows.filter((row) => row.decisions > 0 || row.driveExitTotal > 0 || row.tokenStateIndexBuildCount > 0);
-    },
   };
 }
 
@@ -678,6 +625,7 @@ const result = runOnce();
 const summary = {
   label: config.label,
   config: {
+    case: config.caseName,
     seed: config.seed,
     maxTurns: config.maxTurns,
     playerCount: config.playerCount,
@@ -706,6 +654,11 @@ const summary = {
     persistentTokenStateIndexCacheHitCount: result.persistentTokenStateIndexCacheHitCount,
     persistentTokenStateIndexCacheMissCount: result.persistentTokenStateIndexCacheMissCount,
     persistentTokenStateIndexCacheWriteCount: result.persistentTokenStateIndexCacheWriteCount,
+    buildEncodedStateLayoutCount: result.buildEncodedStateLayoutCount,
+    buildFeatureTableCount: result.buildFeatureTableCount,
+    buildExpressionFeatureTableCount: result.buildExpressionFeatureTableCount,
+    buildEncodedStateCount: result.buildEncodedStateCount,
+    staticRebuildCount: totalStaticRebuildCount(result),
     wasmScoreRowRouteCount: result.wasmScoreRowRouteCount,
     wasmScoreRowUnsupportedCount: result.wasmScoreRowUnsupportedCount,
     wasmScoreRowBytecodeCompileCount: result.wasmScoreRowBytecodeCompileCount,
@@ -736,6 +689,11 @@ process.stderr.write(
   `persistentTokenStateIndexCacheHitCount=${summary.result.persistentTokenStateIndexCacheHitCount} ` +
   `persistentTokenStateIndexCacheMissCount=${summary.result.persistentTokenStateIndexCacheMissCount} ` +
   `persistentTokenStateIndexCacheWriteCount=${summary.result.persistentTokenStateIndexCacheWriteCount} ` +
+  `buildEncodedStateLayoutCount=${summary.result.buildEncodedStateLayoutCount} ` +
+  `buildFeatureTableCount=${summary.result.buildFeatureTableCount} ` +
+  `buildExpressionFeatureTableCount=${summary.result.buildExpressionFeatureTableCount} ` +
+  `buildEncodedStateCount=${summary.result.buildEncodedStateCount} ` +
+  `staticRebuildCount=${summary.result.staticRebuildCount} ` +
   `wasmScoreRowRouteCount=${summary.result.wasmScoreRowRouteCount} ` +
   `wasmScoreRowUnsupportedCount=${summary.result.wasmScoreRowUnsupportedCount} ` +
   `wasmScoreRowBytecodeCompileCount=${summary.result.wasmScoreRowBytecodeCompileCount} ` +
@@ -765,6 +723,11 @@ for (const row of summary.result.perCardRows ?? []) {
     `persistentTokenStateIndexCacheHitCount=${row.persistentTokenStateIndexCacheHitCount} ` +
     `persistentTokenStateIndexCacheMissCount=${row.persistentTokenStateIndexCacheMissCount} ` +
     `persistentTokenStateIndexCacheWriteCount=${row.persistentTokenStateIndexCacheWriteCount} ` +
+    `buildEncodedStateLayoutCount=${row.buildEncodedStateLayoutCount} ` +
+    `buildFeatureTableCount=${row.buildFeatureTableCount} ` +
+    `buildExpressionFeatureTableCount=${row.buildExpressionFeatureTableCount} ` +
+    `buildEncodedStateCount=${row.buildEncodedStateCount} ` +
+    `staticRebuildCount=${row.staticRebuildCount} ` +
     `wasmScoreRowBytecodeCompileCount=${row.wasmScoreRowBytecodeCompileCount} ` +
     `wasmPreviewCandidateFeatureRowRouteCount=${row.wasmPreviewCandidateFeatureRowRouteCount} ` +
     `wasmPreviewCandidateFeatureRowUnsupportedCount=${row.wasmPreviewCandidateFeatureRowUnsupportedCount} ` +

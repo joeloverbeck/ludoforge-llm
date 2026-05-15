@@ -35,6 +35,7 @@ const config = {
   childSeed: flagValue('child-seed', undefined),
   childOutput: flagValue('child-output', undefined),
   child: flagBoolean('child'),
+  profileBuckets: flagBoolean('profile-buckets'),
 };
 
 if (config.child) {
@@ -100,6 +101,9 @@ function runSeedChild(seed) {
       '--child-output',
       outputPath,
     ];
+    if (config.profileBuckets) {
+      childArgs.push('--profile-buckets');
+    }
     const child = spawn(process.execPath, childArgs, {
       cwd: REPO_ROOT,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -216,6 +220,7 @@ async function runSeedInProcess(seed, maxTurns) {
     { __internal_for_tests: policyWasmRuntimeInternals },
     { policyWasmProductionPreviewDriveInternals },
     { __policyEncodedStateCache_internal_for_tests: policyEncodedStateCacheInternals },
+    { resetHotPathProfilerCounters, setHotPathProfilingEnabled, snapshotHotPathProfilerCounters },
   ] = await Promise.all([
     import(join(DIST_ROOT, 'src', 'cnl', 'index.js')),
     import(join(DIST_ROOT, 'src', 'kernel', 'index.js')),
@@ -227,6 +232,7 @@ async function runSeedInProcess(seed, maxTurns) {
     import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-runtime.js')),
     import(join(DIST_ROOT, 'src', 'agents', 'policy-wasm-production-preview-drive.js')),
     import(join(DIST_ROOT, 'src', 'agents', 'policy-encoded-state-cache.js')),
+    import(join(DIST_ROOT, 'src', 'kernel', 'perf-profiler.js')),
   ]);
   const staticRebuildCounters = await createStaticRebuildCounterAccess(DIST_ROOT);
 
@@ -244,6 +250,8 @@ async function runSeedInProcess(seed, maxTurns) {
     policyWasmRuntimeInternals,
     policyWasmProductionPreviewDriveInternals,
     policyEncodedStateCacheInternals,
+    resetHotPathProfilerCounters,
+    setHotPathProfilingEnabled,
   });
 
   const counterReader = () => readCounters({
@@ -255,7 +263,10 @@ async function runSeedInProcess(seed, maxTurns) {
     policyEncodedStateCacheInternals,
   });
   const telemetry = [];
-  const agents = buildTimedAgents(def, PolicyAgent, counterReader, telemetry, seed);
+  const agents = buildTimedAgents(def, PolicyAgent, counterReader, telemetry, seed, {
+    resetHotPathProfilerCounters,
+    snapshotHotPathProfilerCounters,
+  });
   const startedAt = performance.now();
   let trace;
   let status = 'OK';
@@ -282,7 +293,7 @@ async function runSeedInProcess(seed, maxTurns) {
   return { summary, decisions: telemetry };
 }
 
-function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed) {
+function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed, hotPathProfiler) {
   const seatProfiles = (def.seats ?? []).map((seat) => {
     const id = String(seat.id).toLowerCase();
     return id === 'arvn' ? 'arvn-evolved' : `${id}-baseline`;
@@ -291,11 +302,17 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed) {
     const inner = new PolicyAgent({ profileId, traceLevel: 'summary' });
     return {
       chooseDecision(input) {
+        if (config.profileBuckets) {
+          hotPathProfiler.resetHotPathProfilerCounters();
+        }
         const before = readCounters();
         const startedAt = performance.now();
         const result = inner.chooseDecision(input);
         const elapsedMs = performance.now() - startedAt;
         const after = readCounters();
+        const hotPathBuckets = config.profileBuckets
+          ? snapshotDecisionHotPathBuckets(hotPathProfiler.snapshotHotPathProfilerCounters)
+          : [];
         const decisionIndex = telemetry.length;
         const selectedDecision = result.decision;
         const previewUsage = result.agentDecision?.previewUsage;
@@ -333,6 +350,7 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed) {
           zobristKeyCacheHitCount: delta(after, before, 'zobristKeyCacheHitCount'),
           zobristKeyCacheMissCount: delta(after, before, 'zobristKeyCacheMissCount'),
           staticRebuildCount: deltaStatic(after, before),
+          hotPathBuckets,
         });
         return result;
       },
@@ -341,6 +359,8 @@ function buildTimedAgents(def, PolicyAgent, readCounters, telemetry, seed) {
 }
 
 function resetCounters(internals) {
+  internals.setHotPathProfilingEnabled(config.profileBuckets);
+  internals.resetHotPathProfilerCounters();
   internals.staticRebuildCounters.reset();
   internals.tokenStateIndexInternals.resetBuildTokenStateIndexCount();
   internals.zobristInternals.resetZobristKeyCounters();
@@ -422,7 +442,7 @@ function buildRollup(perSeed, decisions) {
 
   return {
     date: config.date,
-    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}`,
+    command: `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds ${formatSeedRange(config.seeds)} --timeout-ms ${config.timeoutMs} --date ${config.date}${config.profileBuckets ? ' --profile-buckets' : ''}`,
     maxTurns: config.maxTurns,
     timeoutMs: config.timeoutMs,
     seedCount: config.seeds.length,
@@ -457,6 +477,7 @@ function aggregateRows(rows, keyFn) {
       bytecodeCacheCompileCount: 0,
       tokenStateIndexBuildCount: 0,
       staticRebuildCount: 0,
+      hotPathBuckets: new Map(),
     };
     bucket.count += 1;
     bucket.totalMs += row.elapsedMs;
@@ -469,6 +490,13 @@ function aggregateRows(rows, keyFn) {
     bucket.bytecodeCacheCompileCount += row.bytecodeCacheCompileCount;
     bucket.tokenStateIndexBuildCount += row.tokenStateIndexBuildCount;
     bucket.staticRebuildCount += row.staticRebuildCount;
+    for (const hotPathBucket of row.hotPathBuckets ?? []) {
+      const current = bucket.hotPathBuckets.get(hotPathBucket.key) ?? { count: 0, totalMs: 0 };
+      bucket.hotPathBuckets.set(hotPathBucket.key, {
+        count: current.count + hotPathBucket.count,
+        totalMs: current.totalMs + hotPathBucket.totalMs,
+      });
+    }
     byKey.set(key, bucket);
   }
   const rowsOut = [...byKey.values()].map((bucket) => {
@@ -488,9 +516,28 @@ function aggregateRows(rows, keyFn) {
       bytecodeCacheCompileCount: bucket.bytecodeCacheCompileCount,
       tokenStateIndexBuildCount: bucket.tokenStateIndexBuildCount,
       staticRebuildCount: bucket.staticRebuildCount,
+      hotPathBuckets: [...bucket.hotPathBuckets.entries()]
+        .map(([key, hotPathBucket]) => ({
+          key,
+          count: hotPathBucket.count,
+          totalMs: round2(hotPathBucket.totalMs),
+        }))
+        .sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key))
+        .slice(0, 12),
     };
   }).sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
   return { byKey: new Map(rowsOut.map((row) => [row.key, row])), rows: rowsOut };
+}
+
+function snapshotDecisionHotPathBuckets(snapshotHotPathProfilerCounters) {
+  return snapshotHotPathProfilerCounters()
+    .filter((bucket) => bucket.count > 0 || bucket.totalMs > 0)
+    .map((bucket) => ({
+      key: bucket.key,
+      count: bucket.count,
+      totalMs: round4(bucket.totalMs),
+    }))
+    .sort((left, right) => right.totalMs - left.totalMs || left.key.localeCompare(right.key));
 }
 
 function renderCsv(rows) {
@@ -518,6 +565,7 @@ function renderCsv(rows) {
     'zobristKeyCacheHitCount',
     'zobristKeyCacheMissCount',
     'staticRebuildCount',
+    'hotPathBuckets',
     'seatId',
     'profileId',
     'turnCount',
@@ -547,6 +595,7 @@ function renderMarkdown(rollup, csvPath) {
     `- Per-decision rows: ${rollup.acceptance.reportRowCount}`,
     `- Hot class with slow:fast ratio >3x: ${rollup.acceptance.hotAxisOver3x ? 'yes' : 'no'}`,
     `- Per-seed timeout: ${rollup.timeoutMs} ms`,
+    `- Hot-path buckets: ${config.profileBuckets ? 'enabled' : 'disabled'}`,
     '',
     '## Per-Seed Wall Time',
     '',
@@ -584,6 +633,7 @@ function renderMarkdown(rollup, csvPath) {
       formatNumber(row.p95Ms),
       `${formatNumber(row.maxMs)} |`,
     ].join(' | ')),
+    ...(config.profileBuckets ? renderHotPathBucketSection(rollup.topNHotAxes) : []),
     '',
     '## Fast-Tier vs Slow-Tier Delta',
     '',
@@ -628,6 +678,35 @@ function renderAggregateRow(label, row) {
     row.tokenStateIndexBuildCount,
     `${row.staticRebuildCount} |`,
   ].join(' | ');
+}
+
+function renderHotPathBucketSection(rows) {
+  const lines = [
+    '',
+    '## Hot-Path Buckets For Top Slow Axes',
+    '',
+    'Captured only when `--profile-buckets` is enabled. Buckets are timing/count diagnostics inside `PolicyAgent.chooseDecision`; they are not correctness assertions.',
+    '',
+  ];
+  for (const row of rows) {
+    lines.push(`### ${row.microturnClass} | ${row.previewBranch}`);
+    if ((row.hotPathBuckets ?? []).length === 0) {
+      lines.push('', '_No hot-path buckets recorded._', '');
+      continue;
+    }
+    lines.push(
+      '',
+      '| Bucket | Count | Total ms |',
+      '|---|---:|---:|',
+      ...row.hotPathBuckets.map((bucket) => [
+        `| ${bucket.key}`,
+        bucket.count,
+        `${formatNumber(bucket.totalMs)} |`,
+      ].join(' | ')),
+      '',
+    );
+  }
+  return lines;
 }
 
 function classifyMicroturn(decision, def) {
@@ -753,7 +832,7 @@ function csvCell(value) {
   if (value === null || value === undefined) {
     return '';
   }
-  const text = String(value);
+  const text = typeof value === 'object' ? JSON.stringify(value) : String(value);
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 

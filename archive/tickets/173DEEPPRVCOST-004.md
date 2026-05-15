@@ -152,6 +152,7 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 ## Outcome
 
 **Completion date**: 2026-05-15.
+**Outcome amended**: 2026-05-15.
 
 ### User-Approved Boundary Reset
 
@@ -200,7 +201,7 @@ The final post-004 witness shifted the next selected non-overlapping residual to
 - Fast mean: `408.5609 ms`.
 - Slow:fast ratio: `1.8328`.
 
-Successor `tickets/173DEEPPRVCOST-005.md` owns that secondary continuedDeepening axis. This ticket does not widen into coup/govern/event work.
+Successor `archive/tickets/173DEEPPRVCOST-005.md` owns that secondary continuedDeepening axis. This ticket does not widen into coup/govern/event work.
 
 ### Invariant Proof Matrix
 
@@ -238,6 +239,6 @@ Successor `tickets/173DEEPPRVCOST-005.md` owns that secondary continuedDeepening
 
 ### Deferred Scope
 
-- `tickets/173DEEPPRVCOST-005.md` owns the next secondary continuedDeepening residual selected by the final post-004 witness.
+- `archive/tickets/173DEEPPRVCOST-005.md` owns the next secondary continuedDeepening residual selected by the final post-004 witness.
 - Govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket.
 - WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.

@@ -436,6 +436,8 @@ For tickets whose deliverable is an expected-red witness rather than a green fix
 - `successor owner`: `<ticket/spec that is expected to make the witness green>`
 - `durable status`: `<COMPLETED | BLOCKED | repo-equivalent>`
 
+When a user-approved boundary reset changes which ticket owns an expected-red witness, sweep the witness file itself before final proof. Update source/test comments, test names, skip reasons, assertion messages, and nearby ticket/spec prose that still name the old owner or imply the successor substrate is absent. Treat these edits as proof-story changes: rerun the narrowest affected build/test lane, or record an explicit no-invalidation rationale only when the text cannot affect compiled output, selected tests, command shape, thresholds, or acceptance classification.
+
 Do not count TypeScript setup failures, missing markers, bad imports, or wrong fixture wiring as the expected red witness. If a ticket-named broad lane is red for any failure besides the intended witness, classify those failures before terminal status using the normal broad-lane rules.
 
 For a user-approved acceptance exception on a red measured gate, make the exception explicit:

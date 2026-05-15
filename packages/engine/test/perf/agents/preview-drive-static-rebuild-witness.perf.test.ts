@@ -1,8 +1,8 @@
 // @test-class: convergence-witness
 // @witness: 172POLEVASTA-001
 //
-// Phase 0 red witness for Spec 172. This assertion is expected to fail until
-// 172POLEVASTA-002..006 route the preview path through first-touch-only caches.
+// Phase 0 red witness for Spec 172. This assertion remains expected to fail
+// until 172POLEVASTA-007 eliminates the residual preview-drive rebuilds.
 
 import * as assert from 'node:assert/strict';
 import { describe, it } from 'node:test';

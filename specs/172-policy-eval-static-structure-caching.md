@@ -153,7 +153,8 @@ Per `.claude/rules/testing.md`, each test file declares its class. Phases 1–5 
 | **2** | §4.2 `buildFeatureTable` `WeakMap<GameDef, FeatureTable>` cache + `getFeatureTable` accessor; switch callers. | Replay-identity + Zobrist-parity byte-identical. `buildFeatureTable` self-time on the perf witness drops to ~0 outside first-touch. | S. |
 | **3** | §4.3 runtime-owned `policyBytecodeCache` field on `GameDefRuntime`; replace the per-instance cache. | Replay-identity + Zobrist-parity byte-identical. `policy-bytecode-equivalence-*` tests pass. `forked-vs-fresh-runtime-parity` passes. `compilePolicyBytecode` / `buildExpressionFeatureTable` self-time on the perf witness drops to ~0 outside first-touch. | S. |
 | **4** | §4.4 runtime-owned `policyEncodedStateCache` field on `GameDefRuntime`; resolve `encodedState` through it. Confirm sibling-option `GameState` sharing first. | Replay-identity + Zobrist-parity byte-identical. `buildEncodedState` self-time on the perf witness drops materially (cache-hit on sibling options). | S–M. |
-| **5** | §4.5 constructor-invariant architectural test. | The invariant test passes on warm runtimes and fails if a builder is called past first-touch. The Phase 0 witness now **completes within budget**. | XS. |
+| **5** | §4.5 constructor-invariant architectural test. | The invariant test passes on warm runtimes and fails if a builder is called past first-touch. Live 2026-05-15 proof showed this guard can pass while the Phase 0 witness remains red, so the residual measured witness moved to Phase 6 / `172POLEVASTA-007`. | XS. |
+| **6** | Residual preview-drive rebuild elimination after the constructor invariant. | The Phase 0 witness now **completes within budget** and the headline ARVN seed 1013 command completes without the historical hang. | M. |
 
 The headline acceptance for the spec as a whole: deep-preview `arvn-cubes` seed 1013 (`campaigns/fitl-arvn-agent-evolution/diagnose-trainchoice-perf.mjs --only 1013 --max-turns 200`) completes, and the per-seed times across all 15 seeds drop sharply toward the shallow-preview regime — without claiming exact parity with the 5.1 s shallow control (deep preview does real work; the target is *feasible*, not *free*).
 
@@ -175,9 +176,9 @@ The headline acceptance for the spec as a whole: deep-preview `arvn-cubes` seed 
 - **Encoded-state-cache invariant** — two `PolicyEvaluationContext` instances constructed with the same `GameState` object and the same `GameDefRuntime` observe the same `encodedState` reference; distinct `GameState` objects do not collide.
 - **Constructor-no-direct-build invariant** (architectural-invariant) — the §4.5 guard: constructing N contexts for the same `(GameDef, layout, state)` on a warm `GameDefRuntime` performs each `build*` exactly once (first-touch only). Implementable via spies/counters on the builder functions or a build-counter on the runtime.
 
-### 6.3 Perf witness (Phase 0, extended through Phase 5)
+### 6.3 Perf witness (Phase 0, extended through Phase 6)
 
-Extend `packages/engine/scripts/profile-fitl-preview-drive.mjs` (or add a sibling) with a **large-board / cube-heavy** case — a FITL profile with the deep `inner` preview config driven on a seed where ARVN piece count is high — and a self-time check that `buildEncodedStateLayout` + `buildFeatureTable` + `buildExpressionFeatureTable` + `buildEncodedState` together stay below a small first-touch-only threshold. Without this, §4.6 of the trigger report recurs: the existing `--maxTurns 10` small-board witness never reaches the regime where this seam bites. The witness is added in Phase 0 (failing), and Phase 5's acceptance is that it passes.
+Extend `packages/engine/scripts/profile-fitl-preview-drive.mjs` (or add a sibling) with a **large-board / cube-heavy** case — a FITL profile with the deep `inner` preview config driven on a seed where ARVN piece count is high — and a self-time check that `buildEncodedStateLayout` + `buildFeatureTable` + `buildExpressionFeatureTable` + `buildEncodedState` together stay below a small first-touch-only threshold. Without this, §4.6 of the trigger report recurs: the existing `--maxTurns 10` small-board witness never reaches the regime where this seam bites. The witness is added in Phase 0 (failing). Phase 5 guards the constructor-level invariant, and Phase 6's acceptance is that the measured witness passes.
 
 ## 7. Foundation alignment
 
@@ -211,7 +212,7 @@ Extend `packages/engine/scripts/profile-fitl-preview-drive.mjs` (or add a siblin
 
 ## 10. Tickets
 
-Decompose via `/spec-to-tickets`. Suggested split mirrors the phases: Phase 0 (perf witness, lands first) → Phase 1 (layout accessor) → Phase 2 (feature-table cache) → Phase 3 (runtime-owned bytecode cache) → Phase 4 (runtime-owned encoded-state cache) → Phase 5 (constructor-invariant test). Phase 0 may be folded into Phase 1's ticket if preferred, but it must be authored and observed failing before the §4.1 change lands. Each of Phases 1–5 is independently determinism-gated.
+Decompose via `/spec-to-tickets`. Suggested split mirrors the phases: Phase 0 (perf witness, lands first) → Phase 1 (layout accessor) → Phase 2 (feature-table cache) → Phase 3 (runtime-owned bytecode cache) → Phase 4 (runtime-owned encoded-state cache) → Phase 5 (constructor-invariant test) → Phase 6 (residual preview-drive rebuild elimination if the measured witness remains red after the invariant lands). Phase 0 may be folded into Phase 1's ticket if preferred, but it must be authored and observed failing before the §4.1 change lands. Each of Phases 1–6 is independently determinism-gated.
 
 ## 11. Reassessment of source proposal (`reports/spec-172-remediation.md`, "Spec 172-R")
 

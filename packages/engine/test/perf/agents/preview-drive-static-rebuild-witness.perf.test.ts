@@ -58,7 +58,7 @@ describe('172POLEVASTA-001 preview-drive static rebuild witness', () => {
       `policyEncodedStateCacheMiss=${counts.policyEncodedStateCacheMissCount} ` +
       `seed=${WORKLOAD.seed} maxTurns=${WORKLOAD.maxTurns} profiles=${WORKLOAD.profiles.join(',')}`;
 
-    console.log(witnessLine);
+    console.warn(witnessLine);
 
     assert.ok(total > 0, 'Expected the preview-drive workload to exercise static rebuild counters.');
     assert.ok(

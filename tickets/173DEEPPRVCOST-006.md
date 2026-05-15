@@ -152,7 +152,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.md`
   - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-006-choosen-preview-no-entry-hash.csv`
 - Reverted the runtime candidate after the full 15-seed witness showed no material train-spread improvement.
-- Added successor `tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual.
+- Added successor `archive/tickets/173DEEPPRVCOST-007.md` for the remaining train decision-stack digest/encoding residual. Post-review then added active successor `tickets/173DEEPPRVCOST-008.md` for the terminal Spec 173 Phase 1 / Phase-N decision after ticket 007 completed with no retained runtime code.
 
 ### Rejected Candidate Ledger
 
@@ -162,7 +162,7 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 
 ### Residual Owner / Successor
 
-Successor `tickets/173DEEPPRVCOST-007.md` owns the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. The post-005 baseline and the rejected-candidate diagnostic both show train add/confirm as the top slow-tier axes, with hot-path bucket time dominated by `zobrist:digestDecisionStackFrame` and `zobrist:encodeDecisionStackFrame`.
+Archived successor `archive/tickets/173DEEPPRVCOST-007.md` owned the next concrete non-overlapping residual: train `continuedDeepening` decision-stack frame encode/digest cost. Ticket 007 classified that residual as red/flat with no retained runtime code. Active successor `tickets/173DEEPPRVCOST-008.md` now owns the terminal Spec 173 Phase 1 decision: find a distinct material TS-side closure or trigger §4.2(c).
 
 Ticket 006 is blocked and not archive-ready because it produced diagnostic evidence and a successor handoff, but did not land a generic closure or trigger the Spec 173 Phase-N escalation condition by itself.
 
@@ -190,14 +190,14 @@ Ticket 006 is blocked and not archive-ready because it produced diagnostic evide
 | Determinism preserved | No runtime code retained after revert | proven by final diff classification | `git status --short` / final diff |
 | Engine-agnostic boundary preserved | Candidate and successor are generic preview/Zobrist work; no FITL ids or profile/rules changed | proven by final diff classification | final diff |
 | Run-local lifetime preserved | No new cache or mutable state retained | not applicable | final diff |
-| Decision-stack correctness preserved | Candidate reverted; successor owns any future digest closure proof | deferred to confirmed successor | `tickets/173DEEPPRVCOST-007.md` |
+| Decision-stack correctness preserved | Candidate reverted; archived successor classified the digest residual; active successor owns any future closure or Phase-N trigger proof | deferred to confirmed successor | `tickets/173DEEPPRVCOST-008.md` |
 | Measured residual handled truthfully | Red attempt recorded; remaining owner named | proven | this outcome + successor |
 
 ### Source-Size Ledger
 
 `path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
 
-`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | tickets/173DEEPPRVCOST-007.md`
+`packages/engine/src/agents/policy-preview-inner-choosenstep.ts | 610 | 610 | no | none retained | candidate reverted after red witness | tickets/173DEEPPRVCOST-008.md`
 
 ### Late-Edit Proof Validity
 

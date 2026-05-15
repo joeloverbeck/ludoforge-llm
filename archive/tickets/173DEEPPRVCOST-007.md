@@ -1,6 +1,6 @@
 # 173DEEPPRVCOST-007: Phase 1 - Train decision-stack digest residual closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes - generic decision-stack digest/encoding cost closure or Phase-N classification
@@ -136,3 +136,70 @@ Run the same 15-seed decomposition witness with a fresh date/label after the fix
 7. `pnpm turbo typecheck`
 8. `pnpm turbo test --force`
 9. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completion date**: 2026-05-15.
+
+### What Landed
+
+- No runtime code is retained. Live source inspection confirmed the current safe digest substrate is already present: frame-identity `WeakMap` memoization plus run-local `zobristTable.frameDigestCache` keyed by the byte-equivalent encoded frame string.
+- Captured the checked-in post-007 classification witness:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-007-final.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-007-final.csv`
+- Classified a same-session JSON-segment cache candidate as rejected diagnostic evidence only. It produced seed-1005 smoke output under `/tmp/ludoforge-173-post-007-seed1005-smoke`, but no source/test diff was retained.
+
+### Rejected Candidate Ledger
+
+| Candidate | Correctness proof | Measurement | Verdict | Cleanup |
+|---|---|---|---|---|
+| Decision-stack JSON segment cache and manual exact-shape frame encoding | `pnpm -F @ludoforge/engine build` and focused Zobrist/cache tests passed while the candidate existed | seed-1005 smoke: `73,956.73 ms` vs post-006 seed-1005 baseline `72,072.03 ms`; train encode time was flat/slightly lower, digest time worsened, and emitted character counters changed on the same seed | not retained: no material improvement and not closeout-quality for a hash-sensitive digest ticket | runtime/test diff reverted; engine rebuilt; focused Zobrist/cache tests passed on final source |
+
+### Measured Result and Phase-N Classification
+
+| Metric | Post-006 baseline | Post-007 final | Delta | Verdict |
+|---|---:|---:|---:|---|
+| Slowest seed 1005 wall time | `72,072.03 ms` | `74,562.87 ms` | `+3.45%` | still red versus `<=60 s` |
+| `train:chooseNStep:add` slow-tier total | `53,889.91 ms` | `54,468.25 ms` | `+1.07%` | no material improvement |
+| `train:chooseNStep:confirm` slow-tier total | `39,129.56 ms` | `40,155.09 ms` | `+2.62%` | no material improvement |
+| Hot class with slow:fast ratio >3x | yes | yes | unchanged | Phase 1 residual remains |
+
+This ticket counts as a second consecutive non-improving Phase 1 slice after `173DEEPPRVCOST-006`. Spec 173 §4.2(c) has **not** fired yet because it requires three consecutive Phase 1 tickets with no measurable improvement. Spec 173 §4.2(b) has also not fired because the post-007 witness still reports slow-tier train axes above the spread criterion.
+
+### Residual Owner
+
+The remaining train decision-stack digest/encoding residual is not closed by a safe non-overlapping TS-side change in this ticket. Successor `tickets/173DEEPPRVCOST-008.md` owns the final Spec 173 Phase 1 / Phase-N decision slice: it must either find a distinct, byte-equivalent generic owner or become the third consecutive no-improvement slice that triggers Spec 173 §4.2(c).
+
+### Artifact Classification
+
+- Checked-in diagnostic evidence: the post-007 final report and CSV listed above.
+- Ignored/ephemeral diagnostic evidence: `/tmp/ludoforge-173-post-007-seed1005-smoke/*`.
+- Generated schema/golden fallout: none; no source, schema, fixture, or generated contract diff is retained.
+
+### Command Ledger
+
+| Ticket section | Literal command / shorthand | Ran directly / substituted / pending | Final citation |
+|---|---|---|---|
+| Build | `pnpm -F @ludoforge/engine build` | ran after reverting the rejected candidate | exit 0 |
+| Focused tests | focused Zobrist/decision-stack digest correctness and cache-lifecycle tests | ran compiled direct subset after final rebuild | `pnpm -F @ludoforge/engine exec node --test dist/test/unit/zobrist-table.test.js dist/test/integration/zobrist-frame-digest-cache-equivalence.test.js`; 13 tests passed |
+| Decomposition witness | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD> --profile-buckets` | ran with `--date 2026-05-15-post-007-final` | exit 0; 15/15 seeds completed; report and CSV written |
+| FITL rules / targeted determinism / equivalence / broad lanes | ticket-named final lanes | not run | no runtime code retained; focused Zobrist/cache proof plus measured classification are the final no-code proof surface |
+| Dependency graph | `pnpm run check:ticket-deps` | ran after terminal/spec classification edit | passed for 4 active tickets and 2346 archived tickets |
+
+### Invariant Proof Matrix
+
+| Invariant | Witness / assertion | Status | Proof lane |
+|---|---|---|---|
+| Determinism preserved | No runtime code retained after rejected candidate revert | proven by final diff classification plus focused Zobrist/cache tests | final diff; focused compiled tests |
+| Engine-agnostic boundary preserved | No FITL ids, profile data, preview bounds, or rules changed | proven by final diff classification | final diff |
+| Run-local lifetime preserved | Existing frame digest cache remains run-local; no new mutable cache retained | proven | `zobrist-frame-digest-cache-equivalence.test.js` |
+| Decision-stack correctness preserved | Existing digest cache remains byte-equivalent to fresh recompute | proven | `zobrist-frame-digest-cache-equivalence.test.js` |
+| Measured residual handled truthfully | Post-007 witness is red/flat; Phase-N trigger state classified | proven | post-007 final report |
+
+### Source-Size Ledger
+
+No source files have retained active growth. The inspected near-guidance implementation file `packages/engine/src/kernel/zobrist.ts` remains unchanged in the final diff.
+
+### Late-Edit Proof Validity
+
+The terminal status, outcome, and spec edits are no-retained-code classification and metric transcription after the final witness. They do not validate a retained runtime path. The focused Zobrist/cache tests ran after the final source rebuild and candidate revert; the measured witness report is the decisive classification artifact. The dependency-check transcription records the just-run graph check and changes no scope, acceptance, command semantics, dependency ownership, or proof claims; no empirical rerun is required.

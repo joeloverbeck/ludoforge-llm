@@ -1,6 +1,6 @@
 # 173DEEPPRVCOST-004: Phase 1 — Train continuedDeepening decision-stack and projection-key cost closure
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — Zobrist decision-stack digest / encoded-state projection-key reuse path
@@ -148,3 +148,96 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 8. `pnpm turbo typecheck`
 9. `pnpm turbo test --force`
 10. `pnpm run check:ticket-deps`
+
+## Outcome
+
+**Completion date**: 2026-05-15.
+
+### User-Approved Boundary Reset
+
+The first candidate set did not satisfy `docs/FOUNDATIONS.md` alignment because its measured improvement was not reproducible on the same witness lane. The user approved Option A on 2026-05-15: revert the non-material projection-identity and Zobrist feature-key candidates, continue inside this ticket, and keep only changes proven by the post-candidate witness.
+
+### Chosen Residual Owners
+
+Two generic, non-FITL-specific owners landed:
+
+- Encoded-state projection-key stringification reused canonical string segments through a module-level `WeakMap<object, string>` inside `policy-encoded-state-cache.ts`. This preserves the existing canonical string key and collision surface while avoiding repeated stringify work for shared immutable projection subtrees.
+- Choose-N intermediate decision-stack hash updates now skip a defensive baseline full-hash recompute only when the caller still holds the already-canonical baseline state. Stale internally-mutated continuation states still take the defensive recompute path.
+
+Rejected attempts:
+
+- A full projection identity cache was reverted because the material improvement did not reproduce on a same-command full witness.
+- A Zobrist feature-key specialization was reverted because the full witness was flat/regressive.
+
+### What Landed
+
+- Added stable-stringify object segment caching and focused counters to `packages/engine/src/agents/policy-encoded-state-cache.ts`.
+- Added focused cache coverage proving projection-key segment reuse does not change encoded-state cache semantics or collision behavior in `packages/engine/test/unit/agents/policy-encoded-state-cache.test.ts`.
+- Added a narrow trusted-baseline option in `packages/engine/src/kernel/microturn/apply.ts` for the hot choose-N intermediate transition only.
+- Generated final post-004 witness artifacts:
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-004-final.md`
+  - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-004-final.csv`
+
+### Measured Result and Materiality
+
+| Metric | Post-003 baseline | Post-004 final | Delta | Verdict |
+|---|---:|---:|---:|---|
+| `train:chooseNStep:add` slow mean | 2,438.9376 ms | 1,559.7078 ms | -36.05% | train add gate closed (`<=1,800 ms`) |
+| `train:chooseNStep:confirm` slow mean | 1,698.4784 ms | 1,085.0019 ms | -36.12% | train confirm gate closed (`<=1,300 ms`) |
+| Slowest seed 1005 wall time | 104,515.38 ms | 80,502.7 ms | -22.98% | materially improved, still above `<=60 s` soft target |
+| `train:chooseNStep:add` encoded builds / token index builds | 0 / 0 | 0 / 0 | unchanged | prior counter closures preserved |
+| `train:chooseNStep:confirm` encoded builds / token index builds | 0 / 0 | 0 / 0 | unchanged | prior counter closures preserved |
+
+The train elapsed gates owned by this ticket are now green, and the retained changes are materially better than the post-003 baseline. Spec 173 remains active because the slowest seed is still `80.5027 s`, above the spec-wide `<=60 s` soft target.
+
+### Residual Owner / Successor
+
+The final post-004 witness shifted the next selected non-overlapping residual to `coupArvnRedeployPolice:chooseOne | continuedDeepening`:
+
+- Slow-tier decisions: `52`.
+- Slow-tier total: `38,938.6 ms`.
+- Slow mean: `748.8192 ms`.
+- Fast mean: `408.5609 ms`.
+- Slow:fast ratio: `1.8328`.
+
+Successor `tickets/173DEEPPRVCOST-005.md` owns that secondary continuedDeepening axis. This ticket does not widen into coup/govern/event work.
+
+### Invariant Proof Matrix
+
+| Invariant | Witness / assertion | Status | Proof lane |
+|---|---|---|---|
+| Projection-key collision safety preserved | Existing collision-guard test and new segment-reuse test pass | proven | `policy-encoded-state-cache.test.js` |
+| Decision-stack hash correctness preserved | FITL Zobrist parity seeds recompute full hash after every move | proven | `zobrist-incremental-parity-fitl-seed-42.test.js`, `zobrist-incremental-parity-fitl-seed-123.test.js` |
+| Prior encoded/token counter closures preserved | Final witness reports train encoded builds and token index builds at `0` | proven | post-004 final report |
+| Engine-agnostic boundary preserved | No FITL ids, action ids, card ids, profile data, or preview bounds changed | proven by diff inspection | source diff |
+
+### Command Ledger
+
+| Ticket section | Literal command / shorthand | Ran directly / substituted / pending | Final citation |
+|---|---|---|---|
+| Build | `pnpm -F @ludoforge/engine build` | ran directly after final source edits | exit 0 |
+| Focused projection-key test | focused digest/projection-key tests selected by implementation | ran compiled direct test | `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-encoded-state-cache.test.js`; 7 tests passed |
+| Zobrist parity subset | `zobrist-incremental-parity-fitl-seed-42` and `-123` | ran compiled direct subset | 2 tests passed |
+| Single-seed probe | focused perf witness selected by implementation | ran with `--seeds 1005 --date 2026-05-15-hash-baseline-skip-probe --output-dir /tmp/ludoforge-173-hash-baseline-skip-probe` | seed 1005 `85,688.06 ms` |
+| Final decomposition witness | `node packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs --seeds 1000..1014 --timeout-ms 400000 --date <YYYY-MM-DD>` | ran with `--date 2026-05-15-post-004-final` | exit 0; all 15 seeds completed; report and CSV written |
+| FITL rules | `pnpm -F @ludoforge/engine test:integration:fitl-rules` | ran directly | 79/79 files passed |
+| Repo lint | `pnpm turbo lint` | ran directly | 2/2 tasks successful |
+| Repo typecheck | `pnpm turbo typecheck` | ran directly | 3/3 tasks successful |
+| Full quality gate | `pnpm turbo test --force` | ran directly | 5/5 tasks successful; engine default 81/81 files passed |
+| Dependency graph | `pnpm run check:ticket-deps` | ran directly after successor/spec edits | ticket dependency integrity check passed for 4 active tickets and 2344 archived tickets |
+
+### Source-Size Ledger
+
+`path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor if any`
+
+`packages/engine/src/agents/policy-encoded-state-cache.ts | 71 | 89 | no | +18 | tiny pure helper cache local to projection-key construction | none`
+
+`packages/engine/src/kernel/microturn/apply.ts | 792 | 800 | no | +8 | narrow option on existing private hash helper; extraction would obscure the correctness precondition | none`
+
+`packages/engine/test/unit/agents/policy-encoded-state-cache.test.ts | 222 | 250 | no | +28 | focused invariant coverage for the new projection segment cache | none`
+
+### Deferred Scope
+
+- `tickets/173DEEPPRVCOST-005.md` owns the next secondary continuedDeepening residual selected by the final post-004 witness.
+- Govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket.
+- WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.

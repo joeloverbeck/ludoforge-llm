@@ -59,11 +59,19 @@ const rootFrameFor = (state: GameState): DecisionStackFrame | undefined => {
   return current;
 };
 
-const updateHash = (def: GameDef, state: GameState, runtime?: GameDefRuntime, baseline?: GameState): GameState => {
+const updateHash = (
+  def: GameDef,
+  state: GameState,
+  runtime?: GameDefRuntime,
+  baseline?: GameState,
+  options?: { readonly trustBaselineHash?: boolean },
+): GameState => {
   const table = runtime?.zobristTable ?? createZobristTable(def);
   const canonicalBaseline = baseline === undefined
     ? undefined
-    : canonicalizeStackBaselineForHash(table, baseline);
+    : options?.trustBaselineHash === true
+      ? baseline
+      : canonicalizeStackBaselineForHash(table, baseline);
   const hash = canonicalBaseline === undefined
     ? computeFullHash(table, state)
     : reconcileRunningHash(table, canonicalBaseline, state);
@@ -641,7 +649,7 @@ const applyPublishedDecisionInternal = (
         ...canonicalState,
         decisionStack: [updatedRoot, nextTop],
         activeDeciderSeatId: nextTop.context.seatId,
-      }, resolvedRuntime, canonicalState);
+      }, resolvedRuntime, canonicalState, { trustBaselineHash: true });
       const selectedKeys = new Set(
         advanced.nextContext.selectedSoFar.map((value) => JSON.stringify([typeof value, value])),
       );

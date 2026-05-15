@@ -3,6 +3,10 @@ import * as assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 
+import {
+  __policyEncodedStateCache_internal_for_tests as cacheInternals,
+  resolvePolicyEncodedState,
+} from '../../../src/agents/policy-encoded-state-cache.js';
 import { PolicyEvaluationContext } from '../../../src/agents/policy-evaluation-core.js';
 import {
   asActionId,
@@ -168,6 +172,30 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.equal(runtime.policyEncodedStateCache.get(firstState), firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(secondState), secondEncoded);
     assert.deepEqual(secondEncoded, firstEncoded);
+  });
+
+  it('reuses projection-key string segments without changing encoded-state cache semantics', () => {
+    const def = createDef('policy-encoded-state-cache-projection-segments');
+    const runtime = createGameDefRuntime(def);
+    const firstState = initialState(def, 172005, 2).state;
+    const secondState = {
+      ...firstState,
+      turnCount: firstState.turnCount + 1,
+      decisionStack: [],
+    };
+    const layout = resolvedLayout(createContext(def, createGameDefRuntime(def), firstState));
+    cacheInternals.resetCounts();
+
+    const firstEncoded = resolvePolicyEncodedState(runtime, firstState, layout, buildEncodedState);
+    const secondEncoded = resolvePolicyEncodedState(runtime, secondState, layout, buildEncodedState);
+
+    assert.ok(firstEncoded !== undefined);
+    assert.equal(secondEncoded, firstEncoded);
+    assert.notEqual(firstState, secondState);
+    assert.equal(cacheInternals.getMissCount(), 1);
+    assert.equal(cacheInternals.getHashHitCount(), 1);
+    assert.ok(cacheInternals.getStableStringifyObjectHitCount() > 0);
+    assert.equal(runtime.policyEncodedStateCache.get(secondState), firstEncoded);
   });
 
   it('does not collide for distinct encoded-state projections with the same stateHash bucket', () => {

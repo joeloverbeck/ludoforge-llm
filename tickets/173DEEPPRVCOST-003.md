@@ -193,7 +193,7 @@ A single-seed CPU profile after token-index closure (`/tmp/fitl-1005-post003.cpu
 - `encodeDecisionStackFrameDigestInput` decision-stack serialization.
 - `stableStringify` in `policy-encoded-state-cache.ts` projection-key construction.
 
-Successor `tickets/173DEEPPRVCOST-004.md` owns that non-overlapping residual. This ticket does not widen into encoded-state projection-key or Zobrist decision-stack digest work.
+Successor `archive/tickets/173DEEPPRVCOST-004.md` owns that non-overlapping residual. This ticket does not widen into encoded-state projection-key or Zobrist decision-stack digest work.
 
 ### Invariant Proof Matrix
 
@@ -234,7 +234,7 @@ Successor `tickets/173DEEPPRVCOST-004.md` owns that non-overlapping residual. Th
 
 ### Deferred Scope
 
-- `tickets/173DEEPPRVCOST-004.md` owns the remaining train continuedDeepening elapsed owner: decision-stack hashing and encoded projection-key stringification after token-index builds are zero.
+- `archive/tickets/173DEEPPRVCOST-004.md` owns the remaining train continuedDeepening elapsed owner: decision-stack hashing and encoded projection-key stringification after token-index builds are zero.
 - Coup/govern/event residual axes remain outside this ticket and should only be selected by a later Spec 173 witness-driven ticket after train residual ownership is exhausted or reclassified.
 - WASM preview-drive coverage remains Phase-N / Spec 174 scope only if Spec 173 §4.2(b) or §4.2(c) fires.
 

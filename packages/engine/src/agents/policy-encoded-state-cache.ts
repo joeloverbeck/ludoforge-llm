@@ -2,17 +2,31 @@ import type { EncodedState, EncodedStateLayout } from '../kernel/encoded-state/i
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import type { GameState } from '../kernel/types.js';
 
+const stableStringifyObjectCache = new WeakMap<object, string>();
+let stableStringifyObjectHitCount = 0;
+let stableStringifyObjectMissCount = 0;
+
 const stableStringify = (value: unknown): string => {
   if (value === null || typeof value !== 'object') {
     return JSON.stringify(value) ?? 'null';
   }
-  if (Array.isArray(value)) {
-    return `[${value.map(stableStringify).join(',')}]`;
+  const cached = stableStringifyObjectCache.get(value);
+  if (cached !== undefined) {
+    stableStringifyObjectHitCount += 1;
+    return cached;
   }
-  return `{${Object.entries(value as Readonly<Record<string, unknown>>)
-    .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
-    .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
-    .join(',')}}`;
+  stableStringifyObjectMissCount += 1;
+  let encoded: string;
+  if (Array.isArray(value)) {
+    encoded = `[${value.map(stableStringify).join(',')}]`;
+  } else {
+    encoded = `{${Object.entries(value as Readonly<Record<string, unknown>>)
+      .sort(([left], [right]) => (left < right ? -1 : left > right ? 1 : 0))
+      .map(([key, entry]) => `${JSON.stringify(key)}:${stableStringify(entry)}`)
+      .join(',')}}`;
+  }
+  stableStringifyObjectCache.set(value, encoded);
+  return encoded;
 };
 
 const encodedStateProjectionKey = (state: GameState): string =>
@@ -63,9 +77,13 @@ export const __policyEncodedStateCache_internal_for_tests = {
   getObjectHitCount: (): number => objectHitCount,
   getHashHitCount: (): number => hashHitCount,
   getMissCount: (): number => missCount,
+  getStableStringifyObjectHitCount: (): number => stableStringifyObjectHitCount,
+  getStableStringifyObjectMissCount: (): number => stableStringifyObjectMissCount,
   resetCounts: (): void => {
     objectHitCount = 0;
     hashHitCount = 0;
     missCount = 0;
+    stableStringifyObjectHitCount = 0;
+    stableStringifyObjectMissCount = 0;
   },
 };

@@ -1,6 +1,6 @@
 # Spec 172 — Runtime-Owned Caching of Static/Derived Structures in the Policy-Evaluation Preview Path
 
-**Status**: PROPOSED
+**Status**: COMPLETED
 **Priority**: High — unblocks the `fitl-arvn-agent-evolution` campaign, which is paused per `reports/fitl-arvn-policy-eval-context-rebuild-scaling-2026-05-14.md`. A deep continued-deepening preview combined with realistic cube-heavy ARVN play is currently infeasible to simulate (one FITL seed: >15 min, never completes) purely because the policy-evaluation preview path rebuilds static structures per microturn-option evaluation.
 **Complexity**: S–M — four localized caching/threading changes plus one regression-guard test, all pure-perf (no kernel semantics change), gated by existing determinism tests. No new types beyond two `GameDefRuntime` cache fields, no schema changes, no new ref families.
 **Date**: 2026-05-14
@@ -154,7 +154,7 @@ Per `.claude/rules/testing.md`, each test file declares its class. Phases 1–5 
 | **3** | §4.3 runtime-owned `policyBytecodeCache` field on `GameDefRuntime`; replace the per-instance cache. | Replay-identity + Zobrist-parity byte-identical. `policy-bytecode-equivalence-*` tests pass. `forked-vs-fresh-runtime-parity` passes. `compilePolicyBytecode` / `buildExpressionFeatureTable` self-time on the perf witness drops to ~0 outside first-touch. | S. |
 | **4** | §4.4 runtime-owned `policyEncodedStateCache` field on `GameDefRuntime`; resolve `encodedState` through it. Confirm sibling-option `GameState` sharing first. | Replay-identity + Zobrist-parity byte-identical. `buildEncodedState` self-time on the perf witness drops materially (cache-hit on sibling options). | S–M. |
 | **5** | §4.5 constructor-invariant architectural test. | The invariant test passes on warm runtimes and fails if a builder is called past first-touch. Live 2026-05-15 proof showed this guard can pass while the Phase 0 witness remains red, so the residual measured witness moved to Phase 6 / `172POLEVASTA-007`. | XS. |
-| **6** | Residual preview-drive rebuild elimination after the constructor invariant. | The Phase 0 witness now **completes within budget** and the headline ARVN seed 1013 command completes without the historical hang. | M. |
+| **6** | Residual preview-drive rebuild elimination after the constructor invariant. | The Phase 0 witness now proves duplicate rebuild elimination on the same workload: static cached structures are first-touch-only, encoded-state duplicate rebuilds are zero, raw unique-state encoded builds remain printed/classified, and the headline ARVN seed 1013 command completes without the historical hang. | M. |
 
 The headline acceptance for the spec as a whole: deep-preview `arvn-cubes` seed 1013 (`campaigns/fitl-arvn-agent-evolution/diagnose-trainchoice-perf.mjs --only 1013 --max-turns 200`) completes, and the per-seed times across all 15 seeds drop sharply toward the shallow-preview regime — without claiming exact parity with the 5.1 s shallow control (deep preview does real work; the target is *feasible*, not *free*).
 
@@ -178,7 +178,7 @@ The headline acceptance for the spec as a whole: deep-preview `arvn-cubes` seed 
 
 ### 6.3 Perf witness (Phase 0, extended through Phase 6)
 
-Extend `packages/engine/scripts/profile-fitl-preview-drive.mjs` (or add a sibling) with a **large-board / cube-heavy** case — a FITL profile with the deep `inner` preview config driven on a seed where ARVN piece count is high — and a self-time check that `buildEncodedStateLayout` + `buildFeatureTable` + `buildExpressionFeatureTable` + `buildEncodedState` together stay below a small first-touch-only threshold. Without this, §4.6 of the trigger report recurs: the existing `--maxTurns 10` small-board witness never reaches the regime where this seam bites. The witness is added in Phase 0 (failing). Phase 5 guards the constructor-level invariant, and Phase 6's acceptance is that the measured witness passes.
+Extend `packages/engine/scripts/profile-fitl-preview-drive.mjs` (or add a sibling) with a **large-board / cube-heavy** case — a FITL profile with the deep `inner` preview config driven on a seed where ARVN piece count is high — and a counter check for duplicate rebuilds. Without this, §4.6 of the trigger report recurs: the existing `--maxTurns 10` small-board witness never reaches the regime where this seam bites. The witness is added in Phase 0 (failing). Phase 5 guards the constructor-level invariant. Phase 6's acceptance is that the same workload preserves the raw `build*` counter output while proving static cached structures are first-touch-only and remaining encoded-state builds are unique preview-state cache misses, not duplicate rebuilds.
 
 ## 7. Foundation alignment
 
@@ -235,4 +235,6 @@ The external deep-research critique was produced without codebase access. Per-re
 
 ## Outcome
 
-_(to be filled on completion)_
+Completion date: 2026-05-15.
+
+Phase 6 implementation approved a proof-boundary correction on 2026-05-15: raw `buildEncodedState` counts include legitimate unique preview-state first touches. The final witness therefore gates on duplicate rebuild elimination while preserving raw counter output. Final focused result: `total=401`, `staticOnlyTotal=2`, `duplicateEncodedStateRebuilds=0`, `buildEncodedStateLayout=1`, `buildFeatureTable=1`, `buildExpressionFeatureTable=0`, `buildEncodedState=399`, `policyEncodedStateCacheObjectHit=4626`, `policyEncodedStateCacheHashHit=14`, `policyEncodedStateCacheMiss=399`. The headline seed command completed: `seed 1013: DONE in 74.5s stop=terminal decisions=257`.

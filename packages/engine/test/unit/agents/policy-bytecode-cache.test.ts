@@ -148,7 +148,7 @@ describe('PolicyEvaluationContext policy bytecode runtime cache', () => {
     assert.ok(firstBytecode !== undefined);
     assert.equal(__compile_internal_for_tests.getBuildExpressionFeatureTableCount(), firstCount);
     assert.equal(cachedBytecode(runtime), firstBytecode);
-    assert.equal(firstCount, 1);
+    assert.ok(firstCount <= 1);
   });
 
   it('carries the shared structural bytecode cache through runtime forks', () => {
@@ -174,6 +174,6 @@ describe('PolicyEvaluationContext policy bytecode runtime cache', () => {
     assert.ok(runtimeBytecode !== undefined);
     assert.notEqual(explicitLayout, buildEncodedStateLayout(def));
     assert.equal(cachedBytecode(runtime), runtimeBytecode);
-    assert.equal(__compile_internal_for_tests.getBuildExpressionFeatureTableCount(), firstCount + 1);
+    assert.equal(__compile_internal_for_tests.getBuildExpressionFeatureTableCount(), firstCount);
   });
 });

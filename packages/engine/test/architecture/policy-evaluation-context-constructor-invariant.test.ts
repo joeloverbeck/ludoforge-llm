@@ -164,12 +164,13 @@ describe('PolicyEvaluationContext constructor static-build invariant', () => {
       evaluate(createContext(def, runtime, state));
     }
 
-    assert.deepEqual(firstTouchCounts, {
-      buildEncodedStateLayoutCount: 1,
-      buildFeatureTableCount: 1,
-      buildExpressionFeatureTableCount: 1,
-      buildEncodedStateCount: 1,
-    });
+    assert.equal(firstTouchCounts.buildEncodedStateLayoutCount, 1);
+    assert.equal(firstTouchCounts.buildFeatureTableCount, 1);
+    assert.equal(firstTouchCounts.buildEncodedStateCount, 1);
+    assert.ok(
+      firstTouchCounts.buildExpressionFeatureTableCount <= 1,
+      'Expression feature-table extension should be first-touch-only when an expression needs refs outside the base table.',
+    );
     assert.deepEqual(
       snapshotStaticBuildCounts(),
       firstTouchCounts,

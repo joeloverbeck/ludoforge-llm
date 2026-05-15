@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Small
 **Engine Changes**: Yes — opt-in/test-internal builder counters only; no runtime semantics change (perf-witness harness + instrumentation mode)
-**Deps**: `specs/172-policy-eval-static-structure-caching.md`
+**Deps**: `archive/specs/172-policy-eval-static-structure-caching.md`
 
 ## Problem
 

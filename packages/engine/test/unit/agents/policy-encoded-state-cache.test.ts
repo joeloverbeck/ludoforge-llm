@@ -141,7 +141,7 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.deepEqual(firstEncoded, buildEncodedState(state, resolvedLayout(first)));
   });
 
-  it('does not collide for distinct GameState objects', () => {
+  it('reuses encoded state for canonically equal distinct GameState objects', () => {
     const def = createDef('policy-encoded-state-cache-distinct-state');
     const runtime = createGameDefRuntime(def);
     const firstState = initialState(def, 172005, 2).state;
@@ -153,6 +153,25 @@ describe('PolicyEvaluationContext policy encoded-state runtime cache', () => {
     assert.ok(firstEncoded !== undefined);
     assert.ok(secondEncoded !== undefined);
     assert.notEqual(firstState, secondState);
+    assert.equal(secondEncoded, firstEncoded);
+    assert.equal(runtime.policyEncodedStateCache.get(firstState), firstEncoded);
+    assert.equal(runtime.policyEncodedStateCache.get(secondState), secondEncoded);
+    assert.deepEqual(secondEncoded, firstEncoded);
+  });
+
+  it('does not collide for distinct serialized states with the same stateHash bucket', () => {
+    const def = createDef('policy-encoded-state-cache-hash-collision-guard');
+    const runtime = createGameDefRuntime(def);
+    const firstState = initialState(def, 172005, 2).state;
+    const secondState = { ...firstState, turnCount: firstState.turnCount + 1 };
+
+    const firstEncoded = resolvedEncodedState(createContext(def, runtime, firstState));
+    const secondEncoded = resolvedEncodedState(createContext(def, runtime, secondState));
+
+    assert.ok(firstEncoded !== undefined);
+    assert.ok(secondEncoded !== undefined);
+    assert.notEqual(firstState, secondState);
+    assert.equal(secondState.stateHash, firstState.stateHash);
     assert.notEqual(secondEncoded, firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(firstState), firstEncoded);
     assert.equal(runtime.policyEncodedStateCache.get(secondState), secondEncoded);

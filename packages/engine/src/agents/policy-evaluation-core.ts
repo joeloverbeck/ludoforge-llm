@@ -56,6 +56,7 @@ import type { PolicyValue } from './policy-surface.js';
 import type { PreviewOptionRefStatus } from './policy-preview-inner.js';
 import { executeBytecode, PolicyBytecodeVmUnsupportedError, type VMContext } from './policy-vm/index.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
+import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 
 const CURRENT_SURFACE_SCOPE = 0;
 const PREVIEW_SURFACE_SCOPE = 1;
@@ -976,15 +977,7 @@ export class PolicyEvaluationContext {
 
   private resolveEncodedState(state: GameState): EncodedState | undefined {
     if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
-      const cached = this.input.runtime.policyEncodedStateCache.get(state);
-      if (cached !== undefined) {
-        return cached;
-      }
-      const encoded = tryBuildEncodedState(state, this.encodedStateLayout);
-      if (encoded !== undefined) {
-        this.input.runtime.policyEncodedStateCache.set(state, encoded);
-      }
-      return encoded;
+      return resolvePolicyEncodedState(this.input.runtime, state, this.encodedStateLayout, tryBuildEncodedState);
     }
     return tryBuildEncodedState(state, this.encodedStateLayout);
   }

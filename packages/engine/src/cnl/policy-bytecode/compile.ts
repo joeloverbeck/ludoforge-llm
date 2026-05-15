@@ -63,11 +63,16 @@ function buildExpressionFeatureTable(
   layout: EncodedStateLayout,
   expr: PolicyExprInput,
 ): FeatureTable {
-  buildExpressionFeatureTableCount += 1;
-  const refsByKey = new Map(getFeatureTable(def, layout).refs.map((ref) => [canonicalKey(ref), ref]));
+  const baseTable = getFeatureTable(def, layout);
+  const refsByKey = new Map(baseTable.refs.map((ref) => [canonicalKey(ref), ref]));
+  const initialRefCount = refsByKey.size;
   for (const ref of collectFeatureRefsFromCompiledPolicyExpr(expr as CompiledPolicyExpr, layout)) {
     refsByKey.set(canonicalKey(ref), ref);
   }
+  if (refsByKey.size === initialRefCount) {
+    return baseTable;
+  }
+  buildExpressionFeatureTableCount += 1;
   const refs = [...refsByKey.values()].sort((left, right) => canonicalKey(left).localeCompare(canonicalKey(right)));
   return {
     refs,

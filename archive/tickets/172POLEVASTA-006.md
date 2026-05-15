@@ -14,7 +14,7 @@ This ticket adds the **constructor invariant** as an architectural-invariant tes
 
 > The `PolicyEvaluationContext` constructor MUST resolve `encodedStateLayout`, `featureTable` (transitively, via `compilePolicyBytecode`), `bytecode`, and `encodedState` through the cached accessors / runtime-owned caches. It MUST NOT call `buildEncodedStateLayout`, `buildFeatureTable`, `compilePolicyBytecode` (uncached), or `buildEncodedState` in a way that guarantees a cache miss on a warm runtime.
 
-The residual measured perf witness and headline completion claim moved to `tickets/172POLEVASTA-007.md` after live proof showed this constructor invariant can pass while the Phase 0 witness remains red.
+The residual measured perf witness and headline completion claim moved to `archive/tickets/172POLEVASTA-007.md` after live proof showed this constructor invariant can pass while the Phase 0 witness remains red.
 
 ## Assumption Reassessment (2026-05-14)
 
@@ -22,14 +22,14 @@ The residual measured perf witness and headline completion claim moved to `ticke
 2. Spec §6.2 specifies the test is "implementable via spies/counters on the builder functions or a build-counter on the runtime" and classifies it `architectural-invariant`.
 3. The `172POLEVASTA-001` perf witness (`packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.ts`) exists and currently fails. It also added test/internal logical counters for `buildEncodedStateLayout`, `buildFeatureTable`, `buildExpressionFeatureTable`, and `buildEncodedState`; this ticket should reuse those counters rather than adding a second instrumentation surface. After the 2026-05-15 boundary reset, the witness remains expected-red until `172POLEVASTA-007`.
 4. Mismatch + correction: the original draft allowed adding a new test-observable build counter here. That is now stale after `172POLEVASTA-001`; this ticket is test-only and reuses the already-landed counters. If `172POLEVASTA-004`/`-005`'s reassessment changed any cache key shape (e.g. an `EncodedStateLayout`-extended bytecode key, or a canonical-digest encoded-state key), this test's "warm runtime -> zero rebuilds" assertion still holds — only the construction of the "warm" fixture changes. Re-verify against the as-landed cache APIs during implementation.
-5. Boundary reset (2026-05-15): live focused proof showed the constructor invariant can pass while the Phase 0 perf witness remains red (`total=451`, `buildExpressionFeatureTable=36`, `buildEncodedState=413`, threshold `4`). The user approved narrowing this ticket to the constructor invariant and splitting the residual measured rebuild work to `tickets/172POLEVASTA-007.md`. This preserves Foundations #15/#16 by not claiming architectural completeness or passing proof that live code does not yet provide.
+5. Boundary reset (2026-05-15): live focused proof showed the constructor invariant can pass while the Phase 0 perf witness remains red (`total=451`, `buildExpressionFeatureTable=36`, `buildEncodedState=413`, threshold `4`). The user approved narrowing this ticket to the constructor invariant and splitting the residual measured rebuild work to `archive/tickets/172POLEVASTA-007.md`. This preserves Foundations #15/#16 by not claiming architectural completeness or passing proof that live code does not yet provide.
 
 ## Architecture Check
 
 1. **An invariant test proves the property rather than assuming it** (Foundation #16). The four cache tickets each prove their *own* seam; this ticket proves the *constructor-level composite* property — that no warm-runtime construction path bypasses any of them — which no single cache ticket can establish alone.
 2. **Test-only enforcement preserves agnostic boundaries**: reuse the generic test/internal builder counters from `172POLEVASTA-001`; do not add a second counter family or runtime-side build counter. The counters carry no game-specific logic (Foundation #1).
 3. **No backwards-compat shims**: this ticket adds a test and (optionally) a test-observable counter; it deletes nothing and aliases nothing.
-4. **Measured residual stays explicit**: the still-red Phase 0 perf witness is not normalized into success. `172POLEVASTA-007` owns the remaining measured rebuild counts and headline completion claim.
+4. **Measured residual stays explicit**: the still-red Phase 0 perf witness is not normalized into success. `archive/tickets/172POLEVASTA-007.md` owns the remaining measured rebuild counts and headline completion claim.
 
 ## What to Change
 
@@ -45,18 +45,18 @@ Use the test/internal builder counters added by `172POLEVASTA-001`. Declare `@te
 
 ### 2. Classify the residual measured witness
 
-Run the `172POLEVASTA-001` perf witness after the constructor invariant lands. If it still exceeds the first-touch-only threshold, keep this ticket closeable only on the constructor invariant and record the residual counts under `tickets/172POLEVASTA-007.md`.
+Run the `172POLEVASTA-001` perf witness after the constructor invariant lands. If it still exceeds the first-touch-only threshold, keep this ticket closeable only on the constructor invariant and record the residual counts under `archive/tickets/172POLEVASTA-007.md`.
 
 ## Files to Touch
 
 - `packages/engine/test/architecture/policy-evaluation-context-constructor-invariant.test.ts` (new) — constructor-no-direct-build architectural invariant
 - `packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.ts` (modify) — update stale expected-failure owner comment only; behavior unchanged
-- `tickets/172POLEVASTA-007.md` (new) — successor owner for residual measured rebuild counts if the Phase 0 witness remains red
+- `archive/tickets/172POLEVASTA-007.md` (new) — successor owner for residual measured rebuild counts if the Phase 0 witness remains red
 
 ## Out of Scope
 
 - Any change to the four caches themselves (`172POLEVASTA-002`…`-005`) — this ticket only guards them.
-- Any additional runtime/cache repair required to make the Phase 0 perf witness green — owned by `tickets/172POLEVASTA-007.md`.
+- Any additional runtime/cache repair required to make the Phase 0 perf witness green — owned by `archive/tickets/172POLEVASTA-007.md`.
 - Retuning the `arvn-evolved` preview config or any agent profile — a campaign decision, spec §3/§9 non-goal.
 - The deferred preview-result transposition memo and `PreviewWorkBudget` accounting — explicitly out of scope per spec §9 / §11.
 - Production-shipped `build*` instrumentation beyond what the test strictly needs.
@@ -66,7 +66,7 @@ Run the `172POLEVASTA-001` perf witness after the constructor invariant lands. I
 ### Tests That Must Pass
 
 1. Constructor-no-direct-build invariant: N constructions for the same `(GameDef, layout, state)` on a warm `GameDefRuntime` invoke each of `buildEncodedStateLayout`, `buildFeatureTable`, `buildExpressionFeatureTable`, `buildEncodedState` exactly once (first-touch only); the test **fails** if any builder runs past first-touch.
-2. The `172POLEVASTA-001` perf witness is rerun and classified. A red result is not a failure of this narrowed ticket when the residual owner is `tickets/172POLEVASTA-007.md`.
+2. The `172POLEVASTA-001` perf witness is rerun and classified. A red result is not a failure of this narrowed ticket when the residual owner is `archive/tickets/172POLEVASTA-007.md`.
 3. Existing suite: `pnpm -F @ludoforge/engine test:unit`.
 
 ### Invariants
@@ -85,10 +85,12 @@ Run the `172POLEVASTA-001` perf witness after the constructor invariant lands. I
 
 1. `pnpm -F @ludoforge/engine build`
 2. `pnpm -F @ludoforge/engine exec node --test dist/test/architecture/policy-evaluation-context-constructor-invariant.test.js`
-3. `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` (classification only; red residual belongs to `tickets/172POLEVASTA-007.md`)
+3. `pnpm -F @ludoforge/engine exec node --test dist/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.js` (classification only; red residual belongs to `archive/tickets/172POLEVASTA-007.md`)
 4. `pnpm -F @ludoforge/engine test:unit`
 
 ## Outcome
+
+Outcome amended: 2026-05-15.
 
 Completion date: 2026-05-15. Implementation complete under the user-approved narrowed boundary.
 
@@ -98,13 +100,13 @@ What landed:
 - The new architectural invariant warms a `GameDefRuntime` once, then constructs/evaluates five additional `PolicyEvaluationContext` instances for the same `GameDefRuntime` and `GameState`.
 - The invariant asserts `buildEncodedStateLayout`, `buildFeatureTable`, `buildExpressionFeatureTable`, and `buildEncodedState` each stay at exactly one first-touch invocation.
 - Updated `packages/engine/test/perf/agents/preview-drive-static-rebuild-witness.perf.test.ts` comment-only ownership text so the red witness now points to `172POLEVASTA-007`, not this ticket.
-- Added `tickets/172POLEVASTA-007.md` as the residual owner for the still-red Phase 0 perf witness and headline seed 1013 completion.
-- Updated `specs/172-policy-eval-static-structure-caching.md` to split Phase 5 constructor-invariant proof from Phase 6 residual measured rebuild elimination.
+- Added `archive/tickets/172POLEVASTA-007.md` as the residual owner for the still-red Phase 0 perf witness and headline seed 1013 completion.
+- Updated `archive/specs/172-policy-eval-static-structure-caching.md` to split Phase 5 constructor-invariant proof from Phase 6 residual measured rebuild elimination.
 
 Boundary correction:
 
 - User-approved reset: Option 2 / narrowed ticket. `172POLEVASTA-006` owns the constructor invariant and residual classification only.
-- Deferred owner: `tickets/172POLEVASTA-007.md` owns `buildExpressionFeatureTable=36`, `buildEncodedState=413`, the final perf witness flip, and the headline ARVN seed 1013 completion claim.
+- Deferred owner: `archive/tickets/172POLEVASTA-007.md` owns `buildExpressionFeatureTable=36`, `buildEncodedState=413`, the final perf witness flip, and the headline ARVN seed 1013 completion claim.
 
 Generated/schema fallout: none. No runtime schema, generated schema artifact, golden, GameDef, or serialized trace shape changed.
 

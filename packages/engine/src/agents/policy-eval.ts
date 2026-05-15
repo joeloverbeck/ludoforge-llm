@@ -52,6 +52,7 @@ import {
   type PreviewWideningState,
 } from './preview-budget-allocator.js';
 import { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
+import { resolvePolicyEncodedState } from './policy-encoded-state-cache.js';
 
 export { getPolicyEncodedStateLayout } from './policy-encoded-state-layout-cache.js';
 
@@ -307,18 +308,6 @@ export interface EvaluatePolicyMoveInput {
   readonly previewDecisionContext?: PreviewWideningDecisionContext;
 }
 
-function tryBuildPolicyEncodedState(def: GameDef, state: GameState): {
-  readonly layout: EncodedStateLayout;
-  readonly encoded: ReturnType<typeof buildEncodedState>;
-} | undefined {
-  try {
-    const layout = getPolicyEncodedStateLayout(def);
-    return { layout, encoded: buildEncodedState(state, layout) };
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Canonical shape: kind, move, rng, failure, metadata.
  * All construction sites must materialize every property.
@@ -358,6 +347,21 @@ interface CandidateEntry extends PolicyEvaluationCandidate {
 }
 
 const EMPTY_TRUSTED_MOVE_INDEX = new Map<string, TrustedExecutableMove>();
+
+function tryBuildPolicyEncodedState(def: GameDef, state: GameState, runtime?: GameDefRuntime): {
+  readonly layout: EncodedStateLayout;
+  readonly encoded: ReturnType<typeof buildEncodedState>;
+} | undefined {
+  try {
+    const layout = getPolicyEncodedStateLayout(def);
+    const encoded = runtime === undefined
+      ? buildEncodedState(state, layout)
+      : resolvePolicyEncodedState(runtime, state, layout, (currentState, currentLayout) => buildEncodedState(currentState, currentLayout));
+    return encoded === undefined ? undefined : { layout, encoded };
+  } catch {
+    return undefined;
+  }
+}
 
 function applyTieBreaker(
   evaluation: PolicyEvaluationContext,
@@ -602,7 +606,7 @@ export function evaluatePolicyMoveCore(input: EvaluatePolicyMoveInput): PolicyEv
       } satisfies PolicyPreviewDependencies;
       const encodedView = input.encodedStateMode === 'disabled'
         ? undefined
-        : tryBuildPolicyEncodedState(input.def, input.state);
+        : tryBuildPolicyEncodedState(input.def, input.state, input.runtime);
       const evaluation = new PolicyEvaluationContext({
         def: input.def,
         state: input.state,

@@ -1,6 +1,6 @@
 # 174WASMDEEPPRV-003: Phase 1b — Bounded decision-stack publication ABI
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — Rust `policy-vm` ABI + TS bridge
@@ -81,3 +81,41 @@ In `policy-wasm-production-preview-drive.ts`, `policy-wasm-production-preview-dr
 
 1. `pnpm -F @ludoforge/engine build && node --test packages/engine/dist/test/unit/agents/policy-wasm-preview-decision-stack-publication-abi.test.js`
 2. `pnpm turbo build && pnpm turbo test && pnpm turbo lint && pnpm turbo typecheck`
+
+## Outcome (2026-05-15)
+
+Phase 1b implementation landed the bounded decision-stack publication ABI substrate:
+
+- ABI identity: `POLICY_WASM_ABI_VERSION` / Rust `ABI_VERSION` moved from `11` to `12`; preview-drive layout id moved from `0x1500_0014` to `0x1500_0015`.
+- Rust preview-drive ABI now reads and validates per-candidate decision-stack publication metadata: max-depth bound, deterministic frame ordering by depth, non-negative frame identity/turn identity, nullable parent frame identity, generic frame variant, and stable context identity code. Malformed frame variants or invalid bounds fail closed with `STATUS_BAD_OPERAND` (`-12`).
+- TS preview-drive codec now exposes `PolicyWasmDecisionStackPublication`, encodes it per candidate, allocates a dedicated output mirror, and decodes the round-tripped frame representation without changing kernel publication semantics.
+- Production preview-drive lowering forwards candidate-level publication metadata into the existing preview-drive batch shape. `policy-wasm-production-preview-drive.ts` required no code change because its compile step already returns candidate batches through the lowering seam; production route activation remains owned by `tickets/174WASMDEEPPRV-008.md`.
+- New architectural-invariant test `packages/engine/test/unit/agents/policy-wasm-preview-decision-stack-publication-abi.test.ts` covers depth x frame-variant round-trip plus malformed-buffer rejection.
+
+Touched-file correction:
+
+- Added live codec/runtime files not named in the draft `Files to Touch`: `packages/engine/src/agents/policy-wasm-preview-drive.ts` and `packages/engine/src/agents/policy-wasm-runtime.ts`.
+- Named file verified-no-edit: `packages/engine/src/agents/policy-wasm-production-preview-drive.ts`.
+- Generated fallout: WASM artifact rebuilt for verification; no checked-in schema, JSON schema, golden, or compiled GameDef artifact changed.
+
+Source-size ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+|---|---:|---:|---|---|---|---|
+| `packages/engine-wasm/policy-vm/src/lib.rs` | 1307 | 1307 | no; preexisting over guidance | version mirror only | canonical ABI/version hub; extraction would obscure the ticket seam | none |
+| `packages/engine/src/agents/policy-wasm-runtime.ts` | 1353 | 1369 | no; preexisting over guidance | output buffer plumbing only | canonical WASM runtime bridge; extraction would widen this ABI ticket | none |
+
+Verification:
+
+- `cargo fmt --manifest-path packages/engine-wasm/policy-vm/Cargo.toml` — passed.
+- `pnpm -F @ludoforge/engine-wasm build` — passed.
+- `pnpm -F @ludoforge/engine build` — passed.
+- `node --test packages/engine/dist/test/unit/agents/policy-wasm-preview-decision-stack-publication-abi.test.js` — passed before and after final broad lanes; final run passed 2/2 tests.
+- `pnpm turbo build` — passed. Advisory emissions classified non-ticket-owned: existing runner chunk-size warning and Turbo `@ludoforge/engine-wasm#build` output-key warning.
+- `pnpm turbo test` — passed: 5/5 tasks successful, with 3 cached prerequisite build tasks and both package test tasks executed.
+- `pnpm turbo lint` — passed: 2/2 tasks successful, runner lint cache-hit supplemental.
+- `pnpm turbo typecheck` — passed: 3/3 tasks successful, engine build cache-hit supplemental.
+- `pnpm -F @ludoforge/engine test:determinism` — passed: 23/23 files.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/integration/policy-bytecode-equivalence*.test.js` — passed: 11/11 tests.
+
+Late-edit proof validity: terminal status and exact proof transcription only; no scope, acceptance, command semantics, touched-file ownership, follow-up ownership, or dependency classification changed after the final proof set. The focused compiled-output ABI test was rerun after the final Turbo lanes.

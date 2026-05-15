@@ -4,7 +4,7 @@
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — new integration test
-**Deps**: `archive/tickets/174WASMDEEPPRV-002.md`, `tickets/174WASMDEEPPRV-003.md`, `tickets/174WASMDEEPPRV-004.md`, `tickets/174WASMDEEPPRV-005.md`, `tickets/174WASMDEEPPRV-006.md`
+**Deps**: `archive/tickets/174WASMDEEPPRV-002.md`, `archive/tickets/174WASMDEEPPRV-003.md`, `tickets/174WASMDEEPPRV-004.md`, `tickets/174WASMDEEPPRV-005.md`, `tickets/174WASMDEEPPRV-006.md`
 
 ## Problem
 

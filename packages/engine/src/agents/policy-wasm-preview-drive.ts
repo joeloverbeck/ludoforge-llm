@@ -2,7 +2,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0014;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0015;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
@@ -16,6 +16,28 @@ export type PolicyWasmPreviewStatus =
   | 'gated';
 
 export type PolicyWasmPreviewBranch = 'none' | 'greedy' | 'continuedDeepening';
+
+export type PolicyWasmDecisionStackFrameVariant =
+  | 'actionSelection'
+  | 'chooseOne'
+  | 'chooseNStep'
+  | 'stochasticResolve'
+  | 'outcomeGrantResolve'
+  | 'turnRetirement';
+
+export interface PolicyWasmDecisionStackPublicationFrame {
+  readonly frameId: number;
+  readonly parentFrameId: number | null;
+  readonly turnId: number;
+  readonly depth: number;
+  readonly variant: PolicyWasmDecisionStackFrameVariant;
+  readonly contextId: string;
+}
+
+export interface PolicyWasmDecisionStackPublication {
+  readonly maxDepth: number;
+  readonly frames: readonly PolicyWasmDecisionStackPublicationFrame[];
+}
 
 export interface PolicyWasmPreviewSignalCarrier {
   readonly previewStatus: PolicyWasmPreviewStatus;
@@ -84,6 +106,7 @@ export interface PolicyWasmPreviewDriveCandidate {
   readonly initialPreviewStateValues?: readonly number[];
   readonly previewBranch?: PolicyWasmPreviewBranch;
   readonly previewSignalCarrier?: PolicyWasmPreviewSignalCarrier;
+  readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
 }
 
 export interface PolicyWasmPreviewDriveBatchInput {
@@ -105,6 +128,7 @@ export interface PolicyWasmPreviewDriveRow {
   readonly value: number;
   readonly previewStateValues?: Readonly<Record<string, number>>;
   readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
+  readonly decisionStackPublication?: PolicyWasmDecisionStackPublication;
 }
 
 export type PolicyWasmPreviewDriveResult =
@@ -129,6 +153,7 @@ export const encodePolicyWasmPreviewDriveInput = (
 ): Uint8Array => {
   const layoutId = input.layoutId ?? POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID;
   const expectedLayoutId = input.expectedLayoutId ?? layoutId;
+  const decisionStackMaxDepth = maxDecisionStackPublicationDepth(input.candidates);
   const words = [
     abiMagic,
     abiVersion,
@@ -140,6 +165,7 @@ export const encodePolicyWasmPreviewDriveInput = (
     input.originTurnId,
     input.steps.length,
     input.previewStateSlots?.length ?? 0,
+    decisionStackMaxDepth,
   ];
   for (const slot of input.previewStateSlots ?? []) {
     words.push(stablePayloadCode({ literal: slot }));
@@ -161,6 +187,7 @@ export const encodePolicyWasmPreviewDriveInput = (
       candidate.previewSignalCarrier?.tiebreakAfterPreviewNoSignal === true ? 1 : 0,
       candidate.previewSignalCarrier?.policyPreviewSignalUnavailable === true ? 1 : 0,
     );
+    encodeDecisionStackPublication(words, candidate, decisionStackMaxDepth);
   }
   for (const step of input.steps) {
     encodeStep(words, input, step);
@@ -186,6 +213,8 @@ export const decodePolicyWasmPreviewDriveRows = (
   outPreviewBranchesPtr: number,
   outTiebreakAfterPreviewNoSignalPtr: number,
   outPolicyPreviewSignalUnavailablePtr: number,
+  outDecisionStackPublicationPtr: number,
+  decisionStackMaxDepth: number,
 ): readonly PolicyWasmPreviewDriveRow[] => {
   const view = new DataView(memory);
   const slots = input.previewStateSlots ?? [];
@@ -208,6 +237,13 @@ export const decodePolicyWasmPreviewDriveRows = (
         policyPreviewSignalUnavailable: decodeBoolFlag(view.getInt32(outPolicyPreviewSignalUnavailablePtr + (index * I32_BYTES), true)),
       },
       ...(previewStateValues === undefined ? {} : { previewStateValues }),
+      ...decodeDecisionStackPublication(
+        input,
+        view,
+        outDecisionStackPublicationPtr,
+        decisionStackMaxDepth,
+        index,
+      ),
     };
   });
 };
@@ -380,6 +416,136 @@ const unsupportedClassCode = (unsupportedClass: PolicyWasmPreviewDriveUnsupporte
       return 4;
     case 'unknown':
       return 5;
+  }
+};
+
+const DECISION_STACK_FRAME_WORDS = 6;
+
+export const policyWasmPreviewDriveDecisionStackFrameWords = (): number => DECISION_STACK_FRAME_WORDS;
+
+const maxDecisionStackPublicationDepth = (
+  candidates: readonly PolicyWasmPreviewDriveCandidate[],
+): number => {
+  let maxDepth = 0;
+  for (const candidate of candidates) {
+    const publication = candidate.decisionStackPublication;
+    if (publication === undefined) {
+      continue;
+    }
+    if (publication.maxDepth < 0 || !Number.isInteger(publication.maxDepth)) {
+      throw new Error('Policy WASM decision-stack publication maxDepth must be a non-negative integer.');
+    }
+    if (publication.frames.length > publication.maxDepth) {
+      throw new Error('Policy WASM decision-stack publication frame count must not exceed maxDepth.');
+    }
+    maxDepth = Math.max(maxDepth, publication.maxDepth);
+  }
+  return maxDepth;
+};
+
+const encodeDecisionStackPublication = (
+  words: number[],
+  candidate: PolicyWasmPreviewDriveCandidate,
+  decisionStackMaxDepth: number,
+): void => {
+  const publication = candidate.decisionStackPublication;
+  if (publication === undefined) {
+    words.push(0, 0);
+    return;
+  }
+  if (publication.maxDepth > decisionStackMaxDepth) {
+    throw new Error('Policy WASM decision-stack publication maxDepth exceeds batch maxDepth.');
+  }
+  words.push(publication.maxDepth, publication.frames.length);
+  let previousDepth = -1;
+  for (const frame of publication.frames) {
+    if (frame.depth <= previousDepth) {
+      throw new Error('Policy WASM decision-stack publication frame depth must be strictly ordered.');
+    }
+    previousDepth = frame.depth;
+    words.push(
+      frame.frameId,
+      frame.parentFrameId ?? -1,
+      frame.turnId,
+      frame.depth,
+      decisionStackFrameVariantCode(frame.variant),
+      stablePayloadCode({ literal: frame.contextId }),
+    );
+  }
+};
+
+const decodeDecisionStackPublication = (
+  input: PolicyWasmPreviewDriveBatchInput,
+  view: DataView,
+  outDecisionStackPublicationPtr: number,
+  decisionStackMaxDepth: number,
+  candidateIndex: number,
+): Pick<PolicyWasmPreviewDriveRow, 'decisionStackPublication'> => {
+  const candidatePublication = input.candidates[candidateIndex]?.decisionStackPublication;
+  if (candidatePublication === undefined || decisionStackMaxDepth === 0) {
+    return {};
+  }
+  const frames: PolicyWasmDecisionStackPublicationFrame[] = [];
+  const candidateBaseWord = candidateIndex * decisionStackMaxDepth * DECISION_STACK_FRAME_WORDS;
+  for (let frameIndex = 0; frameIndex < candidatePublication.frames.length; frameIndex += 1) {
+    const base = outDecisionStackPublicationPtr + ((candidateBaseWord + (frameIndex * DECISION_STACK_FRAME_WORDS)) * I32_BYTES);
+    frames.push({
+      frameId: view.getInt32(base, true),
+      parentFrameId: decodeParentFrameId(view.getInt32(base + I32_BYTES, true)),
+      turnId: view.getInt32(base + (2 * I32_BYTES), true),
+      depth: view.getInt32(base + (3 * I32_BYTES), true),
+      variant: decodeDecisionStackFrameVariant(view.getInt32(base + (4 * I32_BYTES), true)),
+      contextId: candidatePublication.frames[frameIndex]!.contextId,
+    });
+    const contextCode = view.getInt32(base + (5 * I32_BYTES), true);
+    const expectedContextCode = stablePayloadCode({ literal: candidatePublication.frames[frameIndex]!.contextId });
+    if (contextCode !== expectedContextCode) {
+      throw new Error(`Policy WASM decision-stack publication context code mismatch for candidate ${candidateIndex}, frame ${frameIndex}.`);
+    }
+  }
+  return {
+    decisionStackPublication: {
+      maxDepth: candidatePublication.maxDepth,
+      frames,
+    },
+  };
+};
+
+const decodeParentFrameId = (code: number): number | null => code === -1 ? null : code;
+
+const decisionStackFrameVariantCode = (variant: PolicyWasmDecisionStackFrameVariant): number => {
+  switch (variant) {
+    case 'actionSelection':
+      return 1;
+    case 'chooseOne':
+      return 2;
+    case 'chooseNStep':
+      return 3;
+    case 'stochasticResolve':
+      return 4;
+    case 'outcomeGrantResolve':
+      return 5;
+    case 'turnRetirement':
+      return 6;
+  }
+};
+
+const decodeDecisionStackFrameVariant = (code: number): PolicyWasmDecisionStackFrameVariant => {
+  switch (code) {
+    case 1:
+      return 'actionSelection';
+    case 2:
+      return 'chooseOne';
+    case 3:
+      return 'chooseNStep';
+    case 4:
+      return 'stochasticResolve';
+    case 5:
+      return 'outcomeGrantResolve';
+    case 6:
+      return 'turnRetirement';
+    default:
+      throw new Error(`Policy WASM preview-drive returned unknown decision-stack frame variant ${code}.`);
   }
 };
 

@@ -9,6 +9,7 @@ Use this reference when a ticket changes or diagnoses a WASM, FFI, VM, native, o
 - Search for both symbolic names and literal values across host and guest code before editing. Classify every hit as `owned mirror`, `historical`, or `unrelated`.
 - If multiple modules intentionally duplicate ABI guards, update them together or stop for `1-3-1` when ownership is unclear.
 - Check whether the ticket's proof lanes exercise compiled artifacts, generated bindings, or a production route that can retain stale ABI constants after a build.
+- When the boundary changes raw FFI signatures or buffer plumbing, record the complete call-shape delta before coding: `export signature`, `input header words`, `output pointer/len pairs`, `alloc/dealloc sizes`, `raw-call mismatch witness`, and `loader typed interface mirror`. Treat this separately from ABI version or magic-value identity; argument order, pointer ownership, and output-buffer length drift can fail even when the visible ABI version is correct.
 - For carrier/status/output expansion, map `carrier decoded -> nearest public consumer -> witness`: name the score routing, trace serialization, advisory emitter, or other public pipeline that must consume the decoded value. If decode-only exposure is the intended boundary, record `public consumer verified-no-edit` with the inspected evidence before closeout.
 - If a draft ticket names a guest opcode or Rust VM handler but live code pre-encodes the same feature on the host, do not force a guest edit just to match stale prose. Inspect the host encoder, host runtime route, and guest feature loader together; classify the guest file as `verified-no-edit` only after proving the live hook, behavior, witness noun, and ownership boundary stay on the host-encoded route. If the draft expected a different owned hook, artifact, or proof noun, stop for `1-3-1` and patch the active ticket/spec before coding.
 
@@ -35,6 +36,7 @@ Use this reference when a ticket changes or diagnoses a WASM, FFI, VM, native, o
 Record the ABI closeout in the active ticket or final response when relevant:
 
 - `ABI identity`: old/new version, magic, header, status, opcode, feature, or route fields
+- `FFI call shape`: export signature, input headers, output pointer/len pairs, alloc/dealloc sizes, raw-call mismatch witness, and typed loader mirror when any of those changed
 - `mirror sweep`: every old/new literal or symbol hit classified as owned, historical, or unrelated
 - `mismatch behavior`: success and fail-closed witnesses when both are owned by the ticket
 - `activation proof`: accelerated route selected and fallback not masking it

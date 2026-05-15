@@ -1,9 +1,13 @@
 import type { GameDef, GameState, Move } from '../kernel/index.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
-import type { PolicyWasmPreviewBranch, PolicyWasmPreviewSignalCarrier } from './policy-wasm-preview-drive.js';
+import type {
+  PolicyWasmDecisionStackPublication,
+  PolicyWasmPreviewBranch,
+  PolicyWasmPreviewSignalCarrier,
+} from './policy-wasm-preview-drive.js';
 import type { PolicyWasmRuntime } from './policy-wasm-runtime.js';
 
-export interface PolicyWasmProductionPreviewDriveCandidate { readonly move: Move; readonly stableMoveKey: string; readonly actionId?: string; }
+export interface PolicyWasmProductionPreviewDriveCandidate { readonly move: Move; readonly stableMoveKey: string; readonly actionId?: string; readonly decisionStackPublication?: PolicyWasmDecisionStackPublication; }
 
 export interface PolicyWasmProductionPreviewDriveInput { readonly runtime: Pick<PolicyWasmRuntime, 'evaluatePreviewDriveBatch'>; readonly gameDefRuntime?: GameDefRuntime; readonly def: GameDef; readonly state: GameState; readonly profileId: string; readonly originSeatId: string; readonly originTurnId: number; readonly depthCap: number; readonly previewBranch?: PolicyWasmPreviewBranch; readonly previewStateSlots: readonly string[]; readonly candidates: readonly PolicyWasmProductionPreviewDriveCandidate[]; }
 

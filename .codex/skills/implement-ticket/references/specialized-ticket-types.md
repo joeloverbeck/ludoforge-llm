@@ -157,11 +157,21 @@ When an investigation or measurement ticket needs a new checked-in helper script
 
 1. run a syntax check and a minimal smoke command before the expensive proof run
 2. verify that the smoke command exercises the same measured seam as the full command: representative input selection, cache/warmup state, skipped-body behavior, process boundary, counters, and output fields should match unless the ticket records a deliberate substitution
-3. for scripts expected to run silently for minutes, verify progress behavior on stderr or record why the script intentionally stays silent and how liveness will be checked without perturbing the metric
-4. confirm the new file appears in `git status --short`, because untracked files do not appear in `git diff --stat`
-5. add the helper to the active ticket's touched-file or outcome ledger before final proof
-6. cite the helper's exact invocation in the durable report or ticket closeout
-7. include the helper in the final touched-file scope sweep
+3. run the narrowest cheap static checker that covers the new script before the expensive corpus run when it is materially cheaper than the measurement, such as package lint for a checked-in Node script; if that checker is skipped, record why it is unavailable, stale, or disproportionate before spending the full measurement
+4. for scripts expected to run silently for minutes, verify progress behavior on stderr or record why the script intentionally stays silent and how liveness will be checked without perturbing the metric
+5. confirm the new file appears in `git status --short`, because untracked files do not appear in `git diff --stat`
+6. add the helper to the active ticket's touched-file or outcome ledger before final proof
+7. cite the helper's exact invocation in the durable report or ticket closeout
+8. include the helper in the final touched-file scope sweep
+
+When the repeatable evidence includes checked-in Markdown/CSV/JSON measurement artifacts, validate the artifact contract before closeout:
+
+1. the report records the exact command and enough identity to reproduce the run
+2. every requested seed, item, file, scenario, or corpus member is represented with an explicit complete/failed/skipped status
+3. tabular summaries agree with the flat artifact row counts, such as CSV data rows matching the report's per-decision or per-item count
+4. required columns or fields named by the ticket are present in the flat artifact, not only in prose
+5. the decisive acceptance row, threshold, hot axis, delta, verdict, or classification appears in the report with the exact value used for terminal status
+6. artifact paths appear in `git status --short` and are classified as checked-in deliverables, ignored ephemeral raw outputs plus transcription, or read-only context
 
 When the repeatable evidence is a new Node perf fixture that spawns an existing package script and writes a durable JSON artifact, also check the package cwd, build prerequisite, stdout/stderr contract, artifact path, and ignore-rule state explicitly. Prefer parsing machine-readable stdout, keeping progress on stderr, writing ignored raw artifacts under a test-owned `.artifacts/` directory, transcribing the durable fields into the checked-in report or ticket, and rerunning the focused compiled fixture after any broad lane that rebuilds `dist`.
 

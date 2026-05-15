@@ -1,5 +1,5 @@
 const ABI_MAGIC: i32 = 0x4c46_5750;
-const ABI_VERSION: i32 = 13;
+const ABI_VERSION: i32 = 14;
 
 const STATUS_OK: i32 = 0;
 const STATUS_BAD_LENGTH: i32 = -1;
@@ -30,6 +30,7 @@ const PREVIEW_BRANCH_GREEDY: i32 = 1;
 const PREVIEW_BRANCH_CONTINUED_DEEPENING: i32 = 2;
 
 const DECISION_STACK_FRAME_WORDS: usize = 6;
+const CANDIDATE_GROUP_METADATA_WORDS: usize = 3;
 const DECISION_STACK_FRAME_ACTION_SELECTION: i32 = 1;
 const DECISION_STACK_FRAME_CHOOSE_ONE: i32 = 2;
 const DECISION_STACK_FRAME_CHOOSE_N_STEP: i32 = 3;
@@ -66,6 +67,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
     out_preview_branches_ptr: *mut i32,
     out_tiebreak_after_preview_no_signal_ptr: *mut i32,
     out_policy_preview_signal_unavailable_ptr: *mut i32,
+    out_candidate_group_metadata_ptr: *mut i32,
+    out_candidate_group_metadata_len: usize,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
     out_preview_state_slot_metadata_ptr: *mut i32,
@@ -82,6 +85,7 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         || out_preview_branches_ptr.is_null()
         || out_tiebreak_after_preview_no_signal_ptr.is_null()
         || out_policy_preview_signal_unavailable_ptr.is_null()
+        || out_candidate_group_metadata_ptr.is_null()
         || out_decision_stack_publication_ptr.is_null()
         || out_preview_state_slot_metadata_ptr.is_null()
     {
@@ -103,6 +107,8 @@ pub unsafe extern "C" fn ludoforge_policy_vm_evaluate_preview_drive_batch(
         out_preview_branches_ptr,
         out_tiebreak_after_preview_no_signal_ptr,
         out_policy_preview_signal_unavailable_ptr,
+        out_candidate_group_metadata_ptr,
+        out_candidate_group_metadata_len,
         out_decision_stack_publication_ptr,
         out_decision_stack_publication_len,
         out_preview_state_slot_metadata_ptr,
@@ -125,6 +131,8 @@ fn evaluate_preview_drive_batch(
     out_preview_branches_ptr: *mut i32,
     out_tiebreak_after_preview_no_signal_ptr: *mut i32,
     out_policy_preview_signal_unavailable_ptr: *mut i32,
+    out_candidate_group_metadata_ptr: *mut i32,
+    out_candidate_group_metadata_len: usize,
     out_decision_stack_publication_ptr: *mut i32,
     out_decision_stack_publication_len: usize,
     out_preview_state_slot_metadata_ptr: *mut i32,
@@ -145,6 +153,12 @@ fn evaluate_preview_drive_batch(
     }
     let candidate_count = as_usize(cursor.read()?)?;
     if candidate_count != out_len {
+        return Err(STATUS_BAD_LENGTH);
+    }
+    let expected_candidate_group_words = candidate_count
+        .checked_mul(CANDIDATE_GROUP_METADATA_WORDS)
+        .ok_or(STATUS_OVERFLOW)?;
+    if expected_candidate_group_words != out_candidate_group_metadata_len {
         return Err(STATUS_BAD_LENGTH);
     }
     let depth_cap = cursor.read()?;
@@ -192,6 +206,7 @@ fn evaluate_preview_drive_batch(
         let _action_id_code = cursor.read()?;
         let _stable_move_key_code = cursor.read()?;
         let initial_value = cursor.read()?;
+        let candidate_group = read_candidate_group(cursor)?;
         let mut preview_state_values = Vec::with_capacity(preview_state_slot_count);
         for _ in 0..preview_state_slot_count {
             preview_state_values.push(cursor.read()?);
@@ -246,9 +261,11 @@ fn evaluate_preview_drive_batch(
             preview_branch,
             tiebreak_after_preview_no_signal,
             policy_preview_signal_unavailable,
+            candidate_group,
             decision_stack_publication,
         });
     }
+    validate_candidate_groups(&states)?;
 
     for _ in 0..step_count {
         let op = cursor.read()?;
@@ -436,6 +453,13 @@ fn evaluate_preview_drive_batch(
                 state.tiebreak_after_preview_no_signal;
             *out_policy_preview_signal_unavailable_ptr.add(index) =
                 state.policy_preview_signal_unavailable;
+            let candidate_group_output_base = index * CANDIDATE_GROUP_METADATA_WORDS;
+            *out_candidate_group_metadata_ptr.add(candidate_group_output_base) =
+                state.candidate_group.id_code;
+            *out_candidate_group_metadata_ptr.add(candidate_group_output_base + 1) =
+                state.candidate_group.ordinal_in_group;
+            *out_candidate_group_metadata_ptr.add(candidate_group_output_base + 2) =
+                state.candidate_group.group_size;
             let decision_stack_output_base =
                 index * decision_stack_max_depth * DECISION_STACK_FRAME_WORDS;
             for slot in 0..(decision_stack_max_depth * DECISION_STACK_FRAME_WORDS) {
@@ -538,10 +562,64 @@ fn read_preview_state_slot_lifetime(value: i32) -> Result<i32, i32> {
     }
 }
 
+fn read_candidate_group(cursor: &mut I32Cursor<'_>) -> Result<CandidateGroup, i32> {
+    let id_code = cursor.read()?;
+    let ordinal_in_group = cursor.read()?;
+    let group_size = cursor.read()?;
+    if id_code == 0 && ordinal_in_group == 0 && group_size == 0 {
+        return Ok(CandidateGroup {
+            id_code,
+            ordinal_in_group,
+            group_size,
+        });
+    }
+    if id_code <= 0 || ordinal_in_group < 0 || group_size <= 0 || ordinal_in_group >= group_size {
+        return Err(STATUS_BAD_OPERAND);
+    }
+    Ok(CandidateGroup {
+        id_code,
+        ordinal_in_group,
+        group_size,
+    })
+}
+
+fn validate_candidate_groups(states: &[PreviewDriveState]) -> Result<(), i32> {
+    let mut index = 0usize;
+    while index < states.len() {
+        let group = states[index].candidate_group;
+        if group.id_code == 0 {
+            index += 1;
+            continue;
+        }
+        let group_size = as_usize(group.group_size)?;
+        if group.ordinal_in_group != 0 || index + group_size > states.len() {
+            return Err(STATUS_BAD_OPERAND);
+        }
+        for offset in 0..group_size {
+            let entry = states[index + offset].candidate_group;
+            if entry.id_code != group.id_code
+                || entry.group_size != group.group_size
+                || entry.ordinal_in_group != offset as i32
+            {
+                return Err(STATUS_BAD_OPERAND);
+            }
+        }
+        index += group_size;
+    }
+    Ok(())
+}
+
 struct PreviewStateSlot {
     id_code: i32,
     kind: i32,
     lifetime: i32,
+}
+
+#[derive(Clone, Copy)]
+struct CandidateGroup {
+    id_code: i32,
+    ordinal_in_group: i32,
+    group_size: i32,
 }
 
 #[derive(Clone)]
@@ -555,6 +633,7 @@ struct PreviewDriveState {
     preview_branch: i32,
     tiebreak_after_preview_no_signal: i32,
     policy_preview_signal_unavailable: i32,
+    candidate_group: CandidateGroup,
     decision_stack_publication: Vec<i32>,
 }
 

@@ -20,6 +20,7 @@ Use this reference when a ticket changes or diagnoses a WASM, FFI, VM, native, o
 - Preserve fail-closed behavior for mismatched versions, magic values, malformed buffers, unsupported opcodes/features, and missing host capabilities.
 - For opcode or feature table expansion, update the fallback/completeness guard so unsupported accelerators are deliberate and visible.
 - Do not let a fallback path silently satisfy the ticket unless the ticket explicitly owns fallback behavior rather than route activation.
+- For staged ABI substrate tickets where the active ticket explicitly excludes production route activation, do not widen into activation work just to satisfy generic accelerator-proof guidance. Record `production activation deferred` with the confirmed sibling/spec owner, then prove the owned raw ABI success path, fail-closed path, mirror output, and nearest host decode/lowering consumer instead.
 - For host-encoded accelerator features, keep feature resolution on the established host boundary unless the approved ticket explicitly moves resolution into the guest ABI. Preserve guest fail-closed handling for unsupported feature ids, but avoid adding parallel host and guest resolution paths for the same semantic ref.
 
 ## Verification
@@ -27,6 +28,7 @@ Use this reference when a ticket changes or diagnoses a WASM, FFI, VM, native, o
 - Build the guest/accelerator artifact and the host package in the order required by the live repo.
 - Run a focused host-loader or VM smoke that would fail on an ABI mismatch.
 - Prove route activation separately from parity: route count greater than zero, nonzero execution counter, or equivalent activation witness first; then prove values, score rows, candidates, or serialized output match the authoritative reference.
+- If production activation is explicitly out of scope for a staged ABI ticket, replace activation proof with a durable `activation deferred to <ticket/spec>` classification plus raw ABI and host decode/lowering witnesses that would fail on stale signature, layout, or mirror plumbing.
 - Classify unsupported or fallback counts. A green broad lane with zero accelerated routes is not accelerator correctness proof.
 - When new ABI carriers represent advisory, trace, preview-status, fallback, or no-signal outcomes, prove the nearest public consumer observes them. A focused decode test is not enough unless the ticket explicitly owns only the private ABI surface; otherwise include a score-routing, trace/advisory emission, serialized-output, or equivalent public-pipeline witness.
 - For host-encoded feature routes, prove all three parts explicitly: the host encoded the intended feature value, the guest score-row route consumed the encoded feature rather than falling back, and the activated rows match the authoritative TypeScript or kernel reference. A guest file remaining unchanged is acceptable only when the test would fail if the host-encoded route were inactive or stale.
@@ -41,6 +43,7 @@ Record the ABI closeout in the active ticket or final response when relevant:
 - `mirror sweep`: every old/new literal or symbol hit classified as owned, historical, or unrelated
 - `mismatch behavior`: success and fail-closed witnesses when both are owned by the ticket
 - `activation proof`: accelerated route selected and fallback not masking it
+- `activation deferred`: confirmed sibling/spec owner when production route activation is explicitly out of scope
 - `parity proof`: activated route matches the reference path for ticket-owned values
 - `public consumer proof`: decoded advisory/trace/status carriers reached the required score-routing, trace, advisory, or serialized-output pipeline; or `verified-no-edit` with evidence when decode-only exposure is the owned boundary
 - `host-encoded route proof`: host encoder, runtime route, and guest feature loader inspected; any guest file left untouched is recorded as `verified-no-edit`

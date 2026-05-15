@@ -152,6 +152,8 @@ const evaluateRawPreviewDriveStatus = async (
       outPreviewBranchesPtr: number,
       outTiebreakAfterPreviewNoSignalPtr: number,
       outPolicyPreviewSignalUnavailablePtr: number,
+      outCandidateGroupMetadataPtr: number,
+      outCandidateGroupMetadataLen: number,
       outDecisionStackPublicationPtr: number,
       outDecisionStackPublicationLen: number,
       outPreviewStateSlotMetadataPtr: number,
@@ -162,6 +164,8 @@ const evaluateRawPreviewDriveStatus = async (
   };
   const outputBytes = Math.max(4, candidateCount * 4);
   const previewStateBytes = Math.max(4, candidateCount * slotCount * 4);
+  const candidateGroupMetadataWords = candidateCount * 3;
+  const candidateGroupMetadataBytes = candidateGroupMetadataWords * 4;
   const decisionStackWords = candidateCount * decisionStackMaxDepth * 6;
   const decisionStackBytes = Math.max(4, decisionStackWords * 4);
   const slotMetadataWords = slotCount * 3;
@@ -175,6 +179,7 @@ const evaluateRawPreviewDriveStatus = async (
   const outPreviewBranchesPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outTiebreakAfterPreviewNoSignalPtr = exports.ludoforge_policy_vm_alloc(outputBytes);
   const outPolicyPreviewSignalUnavailablePtr = exports.ludoforge_policy_vm_alloc(outputBytes);
+  const outCandidateGroupMetadataPtr = exports.ludoforge_policy_vm_alloc(candidateGroupMetadataBytes);
   const outDecisionStackPublicationPtr = exports.ludoforge_policy_vm_alloc(decisionStackBytes);
   const outPreviewStateSlotMetadataPtr = exports.ludoforge_policy_vm_alloc(slotMetadataBytes);
   try {
@@ -190,6 +195,8 @@ const evaluateRawPreviewDriveStatus = async (
       outPreviewBranchesPtr,
       outTiebreakAfterPreviewNoSignalPtr,
       outPolicyPreviewSignalUnavailablePtr,
+      outCandidateGroupMetadataPtr,
+      candidateGroupMetadataWords,
       outDecisionStackPublicationPtr,
       decisionStackWords,
       outPreviewStateSlotMetadataPtr,
@@ -211,6 +218,7 @@ const evaluateRawPreviewDriveStatus = async (
       exports.ludoforge_policy_vm_dealloc(ptr, outputBytes);
     }
     exports.ludoforge_policy_vm_dealloc(outPreviewStatePtr, previewStateBytes);
+    exports.ludoforge_policy_vm_dealloc(outCandidateGroupMetadataPtr, candidateGroupMetadataBytes);
     exports.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, decisionStackBytes);
     exports.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, slotMetadataBytes);
   }

@@ -120,7 +120,7 @@ Decomposed via `/spec-to-tickets` on 2026-05-15:
 - [`archive/tickets/174WASMDEEPPRV-002.md`](../archive/tickets/174WASMDEEPPRV-002.md) — Phase 1a — Serialize Foundation-20 preview-signal carriers across WASM FFI
 - [`archive/tickets/174WASMDEEPPRV-003.md`](../archive/tickets/174WASMDEEPPRV-003.md) — Phase 1b — Bounded decision-stack publication ABI
 - [`archive/tickets/174WASMDEEPPRV-004.md`](../archive/tickets/174WASMDEEPPRV-004.md) — Phase 1c — Preview-state slot ABI extensions
-- [`tickets/174WASMDEEPPRV-005.md`](../tickets/174WASMDEEPPRV-005.md) — Phase 1d — Candidate grouping ABI
+- [`archive/tickets/174WASMDEEPPRV-005.md`](../archive/tickets/174WASMDEEPPRV-005.md) — Phase 1d — Candidate grouping ABI
 - [`tickets/174WASMDEEPPRV-006.md`](../tickets/174WASMDEEPPRV-006.md) — Phase 1e — continuedDeepening completion semantics ABI
 - [`tickets/174WASMDEEPPRV-007.md`](../tickets/174WASMDEEPPRV-007.md) — Phase 2 — TS/WASM preview-drive parity oracle
 - [`tickets/174WASMDEEPPRV-008.md`](../tickets/174WASMDEEPPRV-008.md) — Phase 3 — Production route activation (broad + deep-phase wire-in)

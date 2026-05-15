@@ -22,6 +22,7 @@ export const lowerProductionPreviewDriveIr = (
       actionId: candidate.actionId ?? String(candidate.move.actionId),
       stableMoveKey: candidate.stableMoveKey,
       initialValue: program.rootValues[0] ?? 0,
+      ...(candidate.candidateGroup === undefined ? {} : { candidateGroup: candidate.candidateGroup }),
       initialPreviewStateValues: program.rootValues,
       ...(candidate.decisionStackPublication === undefined ? {} : { decisionStackPublication: candidate.decisionStackPublication }),
       ...(input.previewBranch === undefined ? {} : { previewBranch: input.previewBranch }),

@@ -2,7 +2,7 @@ import { stablePayloadCode } from '../cnl/policy-bytecode/feature-table.js';
 
 const I32_BYTES = 4;
 
-export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0016;
+export const POLICY_WASM_PREVIEW_DRIVE_LAYOUT_ID = 0x1500_0017;
 
 export type PolicyWasmPreviewDriveOutcome = 'completed' | 'stochastic' | 'depthCap' | 'failed';
 
@@ -67,6 +67,12 @@ export interface PolicyWasmPreviewSignalCarrier {
   readonly policyPreviewSignalUnavailable: boolean;
 }
 
+export interface PolicyWasmPreviewCandidateGroup {
+  readonly groupId: string;
+  readonly ordinalInGroup: number;
+  readonly groupSize: number;
+}
+
 export type PolicyWasmPreviewDriveUnsupportedClass =
   | 'gated'
   | 'hidden-sampling'
@@ -124,6 +130,7 @@ export interface PolicyWasmPreviewDriveCandidate {
   readonly actionId: string;
   readonly stableMoveKey: string;
   readonly initialValue: number;
+  readonly candidateGroup?: PolicyWasmPreviewCandidateGroup;
   readonly initialPreviewStateValues?: readonly number[];
   readonly previewBranch?: PolicyWasmPreviewBranch;
   readonly previewSignalCarrier?: PolicyWasmPreviewSignalCarrier;
@@ -147,6 +154,7 @@ export interface PolicyWasmPreviewDriveRow {
   readonly outcome: PolicyWasmPreviewDriveOutcome;
   readonly depth: number;
   readonly value: number;
+  readonly candidateGroup?: PolicyWasmPreviewCandidateGroup;
   readonly previewStateValues?: Readonly<Record<string, number>>;
   readonly previewStateSlots?: readonly PolicyWasmPreviewStateSlot[];
   readonly previewSignalCarrier: PolicyWasmPreviewSignalCarrier;
@@ -206,6 +214,7 @@ export const encodePolicyWasmPreviewDriveInput = (
       stablePayloadCode({ literal: candidate.actionId }),
       stablePayloadCode({ literal: candidate.stableMoveKey }),
       candidate.initialValue,
+      ...encodeCandidateGroup(candidate),
       ...initialPreviewStateValues,
       candidate.previewSignalCarrier === undefined ? 0 : 1,
       previewStatusCode(candidate.previewSignalCarrier?.previewStatus ?? 'ready'),
@@ -239,6 +248,7 @@ export const decodePolicyWasmPreviewDriveRows = (
   outPreviewBranchesPtr: number,
   outTiebreakAfterPreviewNoSignalPtr: number,
   outPolicyPreviewSignalUnavailablePtr: number,
+  outCandidateGroupMetadataPtr: number,
   outDecisionStackPublicationPtr: number,
   outPreviewStateSlotMetadataPtr: number,
   decisionStackMaxDepth: number,
@@ -264,6 +274,12 @@ export const decodePolicyWasmPreviewDriveRows = (
       outcome: decodeOutcome(view.getInt32(outOutcomesPtr + (index * I32_BYTES), true)),
       depth: view.getInt32(outDepthsPtr + (index * I32_BYTES), true),
       value: view.getInt32(outValuesPtr + (index * I32_BYTES), true),
+      ...decodeCandidateGroup(
+        input,
+        view,
+        outCandidateGroupMetadataPtr,
+        index,
+      ),
       previewSignalCarrier: {
         previewStatus: decodePreviewStatus(view.getInt32(outPreviewStatusesPtr + (index * I32_BYTES), true)),
         previewBranch: decodePreviewBranch(view.getInt32(outPreviewBranchesPtr + (index * I32_BYTES), true)),
@@ -356,6 +372,67 @@ const decodePreviewStateSlots = (
       lifetime: decodePreviewStateSlotLifetime(view.getInt32(base + (2 * I32_BYTES), true)),
     };
   });
+
+const CANDIDATE_GROUP_METADATA_WORDS = 3;
+
+export const policyWasmPreviewDriveCandidateGroupMetadataWords = (): number => CANDIDATE_GROUP_METADATA_WORDS;
+
+const encodeCandidateGroup = (candidate: PolicyWasmPreviewDriveCandidate): readonly number[] => {
+  const group = candidate.candidateGroup;
+  if (group === undefined) {
+    return [0, 0, 0];
+  }
+  if (group.ordinalInGroup < 0 || !Number.isInteger(group.ordinalInGroup)) {
+    throw new Error('Policy WASM candidate group ordinal must be a non-negative integer.');
+  }
+  if (group.groupSize <= 0 || !Number.isInteger(group.groupSize)) {
+    throw new Error('Policy WASM candidate group size must be a positive integer.');
+  }
+  if (group.ordinalInGroup >= group.groupSize) {
+    throw new Error('Policy WASM candidate group ordinal must be smaller than group size.');
+  }
+  return [
+    stablePayloadCode({ literal: group.groupId }),
+    group.ordinalInGroup,
+    group.groupSize,
+  ];
+};
+
+const decodeCandidateGroup = (
+  input: PolicyWasmPreviewDriveBatchInput,
+  view: DataView,
+  outCandidateGroupMetadataPtr: number,
+  candidateIndex: number,
+): Pick<PolicyWasmPreviewDriveRow, 'candidateGroup'> => {
+  const candidateGroup = input.candidates[candidateIndex]?.candidateGroup;
+  const base = outCandidateGroupMetadataPtr + (candidateIndex * CANDIDATE_GROUP_METADATA_WORDS * I32_BYTES);
+  const groupCode = view.getInt32(base, true);
+  const ordinalInGroup = view.getInt32(base + I32_BYTES, true);
+  const groupSize = view.getInt32(base + (2 * I32_BYTES), true);
+  if (candidateGroup === undefined) {
+    if (groupCode !== 0 || ordinalInGroup !== 0 || groupSize !== 0) {
+      throw new Error(`Policy WASM candidate group metadata unexpectedly present for candidate ${candidateIndex}.`);
+    }
+    return {};
+  }
+  const expectedGroupCode = stablePayloadCode({ literal: candidateGroup.groupId });
+  if (groupCode !== expectedGroupCode) {
+    throw new Error(`Policy WASM candidate group id code mismatch for candidate ${candidateIndex}.`);
+  }
+  if (ordinalInGroup !== candidateGroup.ordinalInGroup) {
+    throw new Error(`Policy WASM candidate group ordinal mismatch for candidate ${candidateIndex}.`);
+  }
+  if (groupSize !== candidateGroup.groupSize) {
+    throw new Error(`Policy WASM candidate group size mismatch for candidate ${candidateIndex}.`);
+  }
+  return {
+    candidateGroup: {
+      groupId: candidateGroup.groupId,
+      ordinalInGroup,
+      groupSize,
+    },
+  };
+};
 
 export const firstUnsupportedPreviewDriveClass = (
   input: PolicyWasmPreviewDriveBatchInput,

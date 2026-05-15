@@ -77,6 +77,13 @@ Use this compact classifier for late closeout edits after the first final-proof 
 
 After a proof-affecting ticket/spec/report edit, do not leave an earlier no-invalidation note standing if it no longer describes the final edit sequence. Search the edited outcome or ledger for stale `no-invalidation`, `terminal closeout`, or `status/proof transcription only` claims and reconcile them before terminal status. The final ledger should contain either the affected proof rerun or a no-invalidation rationale that still matches the final acceptance, scope, command, proof, and touched-file story.
 
+If final proof ran before required outcome, scope, or command-ledger corrections were written, recover explicitly instead of treating the earlier lanes as automatically final:
+
+1. Patch the active ticket while its status remains nonterminal when practical, recording the corrected boundary and intended final proof set.
+2. Classify each already-run lane as `still valid`, `stale diagnostic only`, or `needs rerun` against the corrected ticket story.
+3. Rerun the narrowest affected proof lane before terminal status; if no lane is affected, record why the correction was proof-story transcription only.
+4. Apply terminal status only as the final narrow ticket edit once all lanes are green, classified, or explicitly substituted, then record the no-invalidation rationale for that final edit.
+
 When the deliverable ledger shows any ticket-named item still classified as `blocked` or unresolved, do not mark the ticket `COMPLETED` unless the active ticket has first been rewritten to reflect the confirmed narrower boundary.
 
 Suggested late-edit proof-validity ledger:

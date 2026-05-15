@@ -19,6 +19,7 @@ import {
   encodePolicyWasmPreviewDriveInput,
   firstUnsupportedPreviewDriveClass,
   firstUnsupportedPreviewDriveOwner,
+  policyWasmPreviewDriveCandidateGroupMetadataWords,
   policyWasmPreviewDriveDecisionStackFrameWords,
   type PolicyWasmPreviewDriveBatchInput,
   type PolicyWasmPreviewDriveResult,
@@ -36,7 +37,7 @@ import {
 } from './policy-wasm-phase-schedule-encoding.js';
 
 export const POLICY_WASM_ABI_MAGIC = 0x4c46_5750;
-export const POLICY_WASM_ABI_VERSION = 13;
+export const POLICY_WASM_ABI_VERSION = 14;
 export const POLICY_WASM_SMOKE_LAYOUT_ID = 0x1500_0001;
 export const POLICY_WASM_SMOKE_OPCODE_ADD = 1;
 
@@ -109,6 +110,8 @@ interface PolicyWasmExports {
     outPreviewBranchesPtr: number,
     outTiebreakAfterPreviewNoSignalPtr: number,
     outPolicyPreviewSignalUnavailablePtr: number,
+    outCandidateGroupMetadataPtr: number,
+    outCandidateGroupMetadataLen: number,
     outDecisionStackPublicationPtr: number,
     outDecisionStackPublicationLen: number,
     outPreviewStateSlotMetadataPtr: number,
@@ -1202,6 +1205,8 @@ export const createPolicyWasmRuntime = (
       const decisionStackFrameWordCount = policyWasmPreviewDriveDecisionStackFrameWords();
       const decisionStackPublicationWords = previewInput.candidates.length * decisionStackMaxDepth * decisionStackFrameWordCount;
       const decisionStackPublicationBytes = decisionStackPublicationWords * I32_BYTES;
+      const candidateGroupMetadataWords = previewInput.candidates.length * policyWasmPreviewDriveCandidateGroupMetadataWords();
+      const candidateGroupMetadataBytes = candidateGroupMetadataWords * I32_BYTES;
       const previewStateSlotMetadataWords = previewStateSlotCount * 3;
       const previewStateSlotMetadataBytes = previewStateSlotMetadataWords * I32_BYTES;
       const inputPtr = wasm.ludoforge_policy_vm_alloc(input.byteLength);
@@ -1213,6 +1218,7 @@ export const createPolicyWasmRuntime = (
       const outPreviewBranchesPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outTiebreakAfterPreviewNoSignalPtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
       const outPolicyPreviewSignalUnavailablePtr = wasm.ludoforge_policy_vm_alloc(outputBytes);
+      const outCandidateGroupMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, candidateGroupMetadataBytes));
       const outDecisionStackPublicationPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, decisionStackPublicationBytes));
       const outPreviewStateSlotMetadataPtr = wasm.ludoforge_policy_vm_alloc(Math.max(I32_BYTES, previewStateSlotMetadataBytes));
       try {
@@ -1228,6 +1234,8 @@ export const createPolicyWasmRuntime = (
           outPreviewBranchesPtr,
           outTiebreakAfterPreviewNoSignalPtr,
           outPolicyPreviewSignalUnavailablePtr,
+          outCandidateGroupMetadataPtr,
+          candidateGroupMetadataWords,
           outDecisionStackPublicationPtr,
           decisionStackPublicationWords,
           outPreviewStateSlotMetadataPtr,
@@ -1264,6 +1272,7 @@ export const createPolicyWasmRuntime = (
             outPreviewBranchesPtr,
             outTiebreakAfterPreviewNoSignalPtr,
             outPolicyPreviewSignalUnavailablePtr,
+            outCandidateGroupMetadataPtr,
             outDecisionStackPublicationPtr,
             outPreviewStateSlotMetadataPtr,
             decisionStackMaxDepth,
@@ -1279,6 +1288,7 @@ export const createPolicyWasmRuntime = (
         wasm.ludoforge_policy_vm_dealloc(outPreviewBranchesPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outTiebreakAfterPreviewNoSignalPtr, outputBytes);
         wasm.ludoforge_policy_vm_dealloc(outPolicyPreviewSignalUnavailablePtr, outputBytes);
+        wasm.ludoforge_policy_vm_dealloc(outCandidateGroupMetadataPtr, Math.max(I32_BYTES, candidateGroupMetadataBytes));
         wasm.ludoforge_policy_vm_dealloc(outDecisionStackPublicationPtr, Math.max(I32_BYTES, decisionStackPublicationBytes));
         wasm.ludoforge_policy_vm_dealloc(outPreviewStateSlotMetadataPtr, Math.max(I32_BYTES, previewStateSlotMetadataBytes));
       }

@@ -167,15 +167,29 @@ const compareOrdinalStrings = (left: string, right: string): number =>
 const groupPreviewCandidatesByAction = (
   candidates: readonly PolicyWasmScoreRoutingCandidate[],
 ): readonly (readonly PolicyWasmProductionPreviewDriveCandidate[])[] => {
-  return candidates.flatMap((candidate) => (
-    candidate.previewOutcome === 'gated'
-      ? []
-      : [[{
+  const groups = new Map<string, PolicyWasmScoreRoutingCandidate[]>();
+  for (const candidate of candidates) {
+    if (candidate.previewOutcome === 'gated') {
+      continue;
+    }
+    const group = groups.get(candidate.actionId);
+    if (group === undefined) {
+      groups.set(candidate.actionId, [candidate]);
+    } else {
+      group.push(candidate);
+    }
+  }
+  return [...groups.entries()].map(([actionId, group]) =>
+    group.map((candidate, ordinalInGroup) => ({
       move: candidate.move,
       stableMoveKey: candidate.stableMoveKey,
       actionId: candidate.actionId,
-    }]]
-  ));
+      candidateGroup: {
+        groupId: `action:${actionId}`,
+        ordinalInGroup,
+        groupSize: group.length,
+      },
+    })));
 };
 
 const hasCardEventActionCandidate = (

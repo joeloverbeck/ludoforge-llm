@@ -1,6 +1,6 @@
 # 172POLEVASTA-005: Phase 4 — runtime-owned policyEncodedStateCache (runLocal GameDefRuntime field)
 
-**Status**: PENDING
+**Status**: COMPLETED
 **Priority**: HIGH
 **Effort**: Medium
 **Engine Changes**: Yes — `packages/engine/src/kernel/gamedef-runtime.ts` (new `runLocal` field); `packages/engine/src/agents/policy-evaluation-core.ts` (constructor `encodedState` resolution)
@@ -105,3 +105,55 @@ Add a test asserting: two `PolicyEvaluationContext` instances constructed with t
 3. `pnpm -F @ludoforge/engine test:perf` (witness — `buildEncodedState` self-time drops materially)
 4. `pnpm turbo build && pnpm turbo lint && pnpm turbo typecheck`
 5. `pnpm -F @ludoforge/engine test && pnpm -F @ludoforge/engine test:integration:fitl-rules`
+
+## Outcome
+
+Completion date: 2026-05-15. Implementation complete.
+
+What landed:
+
+- Added `GameDefRuntime.policyEncodedStateCache` as a `runLocal` `WeakMap<GameState, EncodedState>` constructed in `createGameDefRuntime` and reset to a fresh `WeakMap` in `forkGameDefRuntimeForRun`.
+- Changed `PolicyEvaluationContext` to resolve `encodedState` through `input.runtime.policyEncodedStateCache` when a runtime is present and the context uses the canonical per-`GameDef` encoded-state layout.
+- Preserved `input.encodedState` precedence and preserved the runtime-absent / explicit non-canonical layout fallback path as a direct fresh build.
+- Added `packages/engine/test/unit/agents/policy-encoded-state-cache.test.ts` covering same-object cache reuse, distinct-`GameState` non-collision, run-local fork reset, explicit `encodedState` precedence, and byte-equivalence with a fresh `buildEncodedState` result.
+- Verified `packages/engine/src/kernel/eval-runtime-resources-contract.ts` requires no edit: `policyEncodedStateCache` is read directly from `CreatePolicyEvaluationContextInput.runtime` and does not flow into the `EvalRuntimeResources` subset.
+
+Sibling-option `GameState` sharing:
+
+- `microturn-option-evaluator.ts` and `policy-agent-inner-preview.ts` pass the same `input.state` object to each sibling `scoreMicroturnOptionWithContributions` call. `driveSyntheticCompletion` maintains a separate local preview `state` only after the scored option path begins. Object-identity keying therefore matches the live Phase 4 redundancy seam; no canonical-digest key upgrade is needed.
+
+Generated/schema fallout: none expected. No serialized trace/result, schema, GameDef, or golden shape changed.
+
+Deferred scope:
+
+- `172POLEVASTA-006` still owns the constructor-wide no-direct-build architectural invariant, flipping the combined `172POLEVASTA-001` perf witness fully green, and the headline ARVN deep-preview completion check.
+
+Source-size ledger:
+
+| path | before lines | after lines | crossed cap? | active growth | extraction/defer rationale | successor |
+|---|---:|---:|---|---|---|---|
+| `packages/engine/src/agents/policy-evaluation-core.ts` | 2234 | 2249 | no; preexisting oversize | 15 lines | extraction would widen and obscure the constructor encoded-state-cache seam | none |
+
+Final command ledger:
+
+| ticket section | literal command/shorthand | status |
+|---|---|---|
+| Test Plan | `pnpm -F @ludoforge/engine test:unit` | passed; 5723 tests / 957 suites |
+| Test Plan | `pnpm -F @ludoforge/engine test:integration` | passed; 293/293 files |
+| Test Plan | `pnpm -F @ludoforge/engine test:perf` | ran red only on the combined Spec 172 witness: `total=451`, `threshold=4`, `buildEncodedState=413`; current-ticket phase accepted because `buildEncodedState` dropped materially from the archived `172POLEVASTA-004` value of `5039`, while the remaining combined threshold is owned by `172POLEVASTA-006` |
+| Test Plan | `pnpm turbo build` | passed; engine and runner executed, engine-wasm cache-hit replayed as supplemental |
+| Test Plan | `pnpm turbo lint` | passed; engine executed, runner cache-hit replayed as supplemental |
+| Test Plan | `pnpm turbo typecheck` | passed; engine and runner typecheck executed, repeated engine build cache-hit replayed as supplemental |
+| Test Plan | `pnpm -F @ludoforge/engine test` | passed; default lane completed with 81/81 files passed after unit and architecture phases |
+| Test Plan | `pnpm -F @ludoforge/engine test:integration:fitl-rules` | passed; 79/79 files |
+| Closeout | `pnpm run check:ticket-deps` | passed; 2 active tickets and 2340 archived tickets |
+
+Pre-final verification already observed:
+
+- `pnpm -F @ludoforge/engine build` failed before implementation on the new test because `GameDefRuntime.policyEncodedStateCache` did not exist.
+- `pnpm -F @ludoforge/engine build` passed after implementation.
+- `pnpm -F @ludoforge/engine exec node --test dist/test/unit/agents/policy-encoded-state-cache.test.js` passed.
+
+Late-edit validity:
+
+- After the final proof runs, the only remaining ticket edits were terminal status and proof-ledger transcription. No source, test, schema, generated artifact, command semantics, scope boundary, dependency edge, or acceptance criterion changed, so the implementation proof was not invalidated by this closeout edit.

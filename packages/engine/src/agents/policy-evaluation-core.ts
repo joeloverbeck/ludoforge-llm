@@ -377,7 +377,7 @@ export class PolicyEvaluationContext {
     const canonicalEncodedStateLayout = getPolicyEncodedStateLayout(input.def);
     this.encodedStateLayout = input.encodedStateLayout ?? canonicalEncodedStateLayout;
     this.usesCanonicalEncodedStateLayout = this.encodedStateLayout === canonicalEncodedStateLayout;
-    this.encodedState = input.encodedState ?? tryBuildEncodedState(input.state, this.encodedStateLayout);
+    this.encodedState = input.encodedState ?? this.resolveEncodedState(input.state);
     this.encodedZoneIndexById = new Map(this.encodedStateLayout.zoneIds.map((zoneId, index) => [String(zoneId), index]));
     this.runtimeProviders = createPolicyRuntimeProviders({
       def: input.def,
@@ -972,6 +972,21 @@ export class PolicyEvaluationContext {
       return this.input.runtime.policyBytecodeCache;
     }
     return this.fallbackPolicyBytecodeCache;
+  }
+
+  private resolveEncodedState(state: GameState): EncodedState | undefined {
+    if (this.input.runtime !== undefined && this.usesCanonicalEncodedStateLayout) {
+      const cached = this.input.runtime.policyEncodedStateCache.get(state);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const encoded = tryBuildEncodedState(state, this.encodedStateLayout);
+      if (encoded !== undefined) {
+        this.input.runtime.policyEncodedStateCache.set(state, encoded);
+      }
+      return encoded;
+    }
+    return tryBuildEncodedState(state, this.encodedStateLayout);
   }
 
   private evaluateCompiledExprDirect(expr: CompiledPolicyExpr, candidate: PolicyEvaluationCandidate | undefined): PolicyValue {

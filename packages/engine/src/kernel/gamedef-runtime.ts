@@ -3,7 +3,8 @@ import { buildAdjacencyGraph } from './spatial.js';
 import type { RuntimeTableIndex } from './runtime-table-index.js';
 import { buildRuntimeTableIndex } from './runtime-table-index.js';
 import type { ActionId, BoundaryId } from './branded.js';
-import type { CompiledPolicyExpr, ZobristTable, GameDef } from './types.js';
+import type { CompiledPolicyExpr, ZobristTable, GameDef, GameState } from './types.js';
+import type { EncodedState } from './encoded-state/index.js';
 import { createZobristTable } from './zobrist.js';
 import type { RuleCard } from './tooltip-rule-card.js';
 import type {
@@ -70,6 +71,11 @@ export interface GameDefRuntime {
   /** `runLocal`: memoizes state-dependent words used by policy WASM bytecode inputs. */
   readonly policyWasmBytecodeStateWordsCache: PolicyWasmBytecodeStateWordsCache;
   /**
+   * `runLocal`: memoizes encoded-state projections keyed by immutable
+   * GameState object identity; reset for every run via fork.
+   */
+  readonly policyEncodedStateCache: WeakMap<GameState, EncodedState>;
+  /**
    * `sharedStructural`: lazily populated compiled query/filter plans keyed by
    * compiled AST object identity. Plans depend only on GameDef structure; they
    * receive run-local state through `ReadContext` at invocation time.
@@ -126,6 +132,7 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
     compiledQueryPlanCache: createCompiledQueryPlanCache(),
     policyBytecodeCache: new WeakMap<CompiledPolicyExpr, PolicyBytecode>(),
     scheduleIndex,
@@ -145,7 +152,8 @@ export function createGameDefRuntime(def: GameDef): GameDefRuntime {
  * The `runLocal` members are `zobristTable.keyCache`,
  * `zobristTable.frameDigestCache`, `publicationProbeCache`,
  * `tokenStateIndexCache`, `policyWasmBytecodeInputCache`, and
- * `policyWasmBytecodeStateWordsCache`; all reset at game boundaries so
+ * `policyWasmBytecodeStateWordsCache`, and `policyEncodedStateCache`; all
+ * reset at game boundaries so
  * long-lived callers do not accumulate cross-run state.
  * `compiledQueryPlanCache` and `policyBytecodeCache` remain shared structural
  * across forks.
@@ -162,6 +170,7 @@ export function forkGameDefRuntimeForRun(runtime: GameDefRuntime): ForkedGameDef
     tokenStateIndexCache: new LruCache<bigint, ReadonlyMap<string, TokenStateIndexEntry>>(TOKEN_STATE_INDEX_CACHE_LIMIT),
     policyWasmBytecodeInputCache: new LruCache<string, Uint8Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
     policyWasmBytecodeStateWordsCache: new LruCache<string, Int32Array>(POLICY_WASM_BYTECODE_INPUT_CACHE_LIMIT),
+    policyEncodedStateCache: new WeakMap<GameState, EncodedState>(),
     scheduleIndex: forkScheduleIndexForRun(runtime.scheduleIndex),
   } as unknown as ForkedGameDefRuntimeForRun;
 }

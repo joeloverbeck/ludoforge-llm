@@ -17,8 +17,8 @@
    - Whether schema/artifact surfaces were checked and whether they changed
    - Scope deferred to sibling tickets, if any
    - Unverified ticket premises or residual risk
-   - Whether `post-ticket-review` already ran; if not, state that the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow
-   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `cached broad-lane classifications`, `classified non-final lanes or none`, `archive status`, and the exact `$post-ticket-review <ticket>` sentence when review/archive did not run
+   - Whether `post-ticket-review` already ran. If not, choose the handoff from the ticket's durable state: implemented/complete tickets use the normal review/archive handoff; `BLOCKED`, `PARTIAL`, or retained-substrate red-gate tickets must say they are not archive-ready and name the successor or same-ticket continuation owner instead.
+   - Final response handoff fields: `tracked modified paths`, `untracked additions`, `green proof lanes`, `cached broad-lane classifications`, `classified non-final lanes or none`, `archive status`, and the exact review/archive or blocked-continuation sentence that matches the durable ticket state
    - Late-edit proof validity when any source, test, fixture, schema, ticket/spec status, command ledger, touched-file scope, or proof claim changed after the first final-proof lane: changed paths, edit class, proof invalidated yes/no, rerun command or no-invalidation rationale. For terminal status/proof transcription after all lanes are green, use a compact rationale such as `No-invalidation: terminal status/proof transcription only; no scope, acceptance, command, touched-file, follow-up, or dependency change.`
    - Final dirty-state delta: compare `git status --short` against the early baseline, include untracked files, and classify any new unrelated paths as concurrent/pre-existing before final response
 4. If the ticket appears complete, offer to archive per `docs/archival-workflow.md`.
@@ -257,8 +257,9 @@ When resuming after context compaction, interruption, or a handoff and the remai
 3. Patch terminal status and proof transcription only when that edit changes no scope, acceptance criteria, command semantics, touched-file ownership, proof claims, follow-up ownership, or dependency classification. Record the no-invalidation rationale in the ticket outcome.
 4. If terminal status, dependency edges, successor/follow-up ownership, sibling status, or active/archive classification changed, run the repo's narrow dependency or markdown-integrity checker immediately after the patch, or record why no checker exists.
 5. Run `git diff --check` or an equivalent hygiene check covering the closeout edits, then run `git status --short` and classify the final dirty-state delta, including untracked files. Prefer citing this final hygiene result in the final response rather than patching the active ticket again. If the ticket explicitly requires the hygiene result in its outcome, transcribe it, rerun the hygiene check once after that transcription, and stop there unless the rerun exposes an actual diagnostic.
-6. In the final handoff, state whether `post-ticket-review` already ran. If not, say the ticket is implemented but not archived and name `post-ticket-review` as the next review/archive workflow.
+6. In the final handoff, state whether `post-ticket-review` already ran. If not, choose the next workflow from the durable ticket state.
    - Use this exact handoff sentence when review/archive did not run: `Post-review: not run; the ticket is implemented but not archived. Next workflow: $post-ticket-review <ticket>.`
+   - Use a blocked-continuation sentence instead when the active ticket is intentionally nonterminal, for example: `Post-review: not run; the ticket is blocked and not archive-ready. Next workflow: continue with $implement-ticket <successor-or-active-ticket>.`
 
 When proof is only partially complete after compaction or a long handoff, use this narrower recovery flow instead of jumping straight to terminal status:
 
@@ -290,7 +291,7 @@ Use this compact final handoff shape when implementation stops before archival:
 - `cached broad lanes`: `none`, `cache-covered`, `cache-hit supplemental`, or `cache-hit proof pending`; for mixed Turbo output, name which broad lanes replayed cached logs and why the ticket-owned surface is still proven
 - `classified red/non-final lanes`: failed, advisory, skipped, or substituted lanes with ownership classification
 - `source-size ledger`: exact ledger if triggered, or `not triggered`
-- `next workflow`: `$post-ticket-review <ticket>` unless archival already ran or the user explicitly asked to pause
+- `next workflow`: `$post-ticket-review <ticket>` for implemented/complete tickets unless archival already ran or the user explicitly asked to pause; for `BLOCKED`, `PARTIAL`, or retained-substrate red-gate tickets, name the successor or same active ticket continuation and do not suggest review/archive
 
 Cache-hit classification quick table:
 
@@ -311,6 +312,19 @@ For a large implementation diff, prefer this concrete final-response skeleton ov
 - `classified red/non-final lanes`: `<none, or lane -> owner/substitution>`
 - `archive status`: `<implemented but not archived | archived | post-ticket-review already ran>`
 - `next workflow`: `Post-review: not run; the ticket is implemented but not archived. Next workflow: $post-ticket-review <ticket>.`
+
+For a blocked retained-substrate measured-gate closeout, use this final-response skeleton instead of the implemented/archive-ready form:
+
+- `active ticket`: `<path>` — `<BLOCKED/PARTIAL or repo-equivalent nonterminal status>`
+- `what landed`: `<correct reusable substrate or bounded slice>`
+- `red measured gate`: `<metric, final value, threshold, verdict>`
+- `successor/continuation`: `<successor id/path, or same active ticket remains owner>`
+- `tracked modified`: `<path group or exact list>; source-size ledger in <ticket/report section if triggered>`
+- `untracked added`: `<exact new reports/tickets/artifacts, or none>`
+- `green proof lanes`: `<focused correctness lanes>; <root/package lanes>`
+- `classified red/non-final lanes`: `<measured gate red -> successor/same-ticket owner>`
+- `archive status`: `blocked and not archive-ready`
+- `next workflow`: `Post-review: not run; the ticket is blocked and not archive-ready. Next workflow: continue with $implement-ticket <successor-or-active-ticket>.`
 
 ## Dependency Integrity Pass
 
@@ -414,6 +428,15 @@ For benchmark tickets with tried-and-reverted candidates, add a compact attempt 
 - `correctness proof`: `<focused command or not reached>`
 - `measurement`: `<sample/result/profile summary>`
 - `decision`: `kept | reverted | abandoned | accepted by user exception`
+
+When a measured/profiling candidate is fully reverted and the active ticket needs a successor handoff rather than retained-substrate closeout, use this compact no-retained-runtime-code recipe:
+
+1. Confirm the runtime/source diff for the rejected candidate is gone before writing durable status. If any helper, counter, test, import, or comment from the abandoned design remains, classify it as intentionally retained diagnostic substrate or remove it before closeout.
+2. Classify every report, CSV, profile, trace, or raw output produced by the rejected candidate as one of: `checked-in diagnostic evidence`, `ephemeral /tmp evidence`, `remove`, or `needs 1-3-1` when the ticket explicitly promised a durable artifact and the rejected candidate changed that delivery path.
+3. Record a rejected-candidate ledger in the active ticket or report: `candidate`, `correctness proof`, `measurement`, `verdict`, and `cleanup`.
+4. If the remaining owner is concrete and non-overlapping, create or update the successor before final handoff and include the rejected evidence that establishes why it is not duplicate work.
+5. Use a nonterminal durable status such as `BLOCKED`, `PARTIAL`, or the series-local equivalent unless the active ticket explicitly allows terminal completion on diagnostic evidence plus successor ownership.
+6. Run dependency integrity after the successor/spec/status graph changes. Do not rerun source/test proof solely for the reverted candidate when no runtime/test code remains; instead record that final code proof is not applicable because the source diff was removed.
 
 For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
 

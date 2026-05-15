@@ -11,6 +11,7 @@ import type {
   MicroturnState,
 } from '../kernel/microturn/types.js';
 import { createMutableState, freezeState } from '../kernel/state-draft.js';
+import { getTokenStateIndex } from '../kernel/token-state-index.js';
 import type {
   ChoicePendingChooseNRequest,
   GameState,
@@ -246,6 +247,24 @@ const scoreChooseNStepCandidate = (
   );
 };
 
+const applyChooseNStepPreviewDecision = (
+  input: InnerPreviewBaseInput,
+  sourceState: GameState,
+  stateForApply: GameState,
+  microturn: ChooseNStepMicroturn,
+  decision: ChooseNStepDecision,
+): GameState => {
+  getTokenStateIndex(sourceState, input.runtime?.tokenStateIndexCache);
+  return applyPublishedDecision(
+    input.def,
+    stateForApply,
+    microturn,
+    decision,
+    { advanceToDecisionPoint: true },
+    input.runtime,
+  ).state;
+};
+
 const resolveBeamResult = (
   input: RunChooseNStepBeamPreviewInput,
   partial: BeamPartial,
@@ -312,16 +331,16 @@ export function runChooseNStepBeamPreview(input: RunChooseNStepBeamPreviewInput)
       ) {
         continue;
       }
-      for (const decision of legalChooseNAddDecisions(microturn as ChooseNStepMicroturn)) {
-        const nextState = applyPublishedDecision(
-          input.def,
+      const chooseNStepMicroturn = microturn as ChooseNStepMicroturn;
+      for (const decision of legalChooseNAddDecisions(chooseNStepMicroturn)) {
+        const nextState = applyChooseNStepPreviewDecision(
+          input,
+          partial.state,
           freezeState(createMutableState(partial.state)),
-          microturn,
+          chooseNStepMicroturn,
           decision,
-          { advanceToDecisionPoint: true },
-          input.runtime,
-        ).state;
-        const scored = scoreChooseNStepCandidate(input, nextState, microturn as ChooseNStepMicroturn, decision);
+        );
+        const scored = scoreChooseNStepCandidate(input, nextState, chooseNStepMicroturn, decision);
         const stableMoveKey = chooseNStepStableMoveKey(decision);
         candidates.push({
           partialSelection: [...partial.partialSelection, decision],
@@ -454,14 +473,13 @@ export const continueChooseNStepInnerPreviewDrive = (
     if (traceEntry !== undefined) {
       syntheticDecisions.push(traceEntry);
     }
-    state = applyPublishedDecision(
-      input.def,
+    state = applyChooseNStepPreviewDecision(
+      input,
       state,
-      microturn,
-      nextDecision,
-      { advanceToDecisionPoint: true },
-      input.runtime,
-    ).state;
+      state,
+      microturn as ChooseNStepMicroturn,
+      nextDecision as ChooseNStepDecision,
+    );
     depth += 1;
   }
 };
@@ -521,14 +539,13 @@ export function runChooseNStepInnerPreview(input: RunChooseNStepInnerPreviewInpu
 
   for (const decision of rootOptions) {
     const stableMoveKey = chooseNStepStableMoveKey(decision);
-    const stateAfterRoot = applyPublishedDecision(
-      input.def,
+    const stateAfterRoot = applyChooseNStepPreviewDecision(
+      input,
+      input.state,
       freezeState(createMutableState(input.state)),
       input.microturn,
       decision,
-      { advanceToDecisionPoint: true },
-      input.runtime,
-    ).state;
+    );
     evaluatedCandidateCount += 1;
 
     const nextMicroturn = publishMicroturn(input.def, stateAfterRoot, input.runtime);

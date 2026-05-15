@@ -39,6 +39,8 @@ Resolve the implemented ticket in this order:
 
 If the implemented ticket is already archived, still proceed with the review.
 
+If the resolved ticket is nonterminal (`BLOCKED`, `PARTIAL`, or otherwise explicitly not archive-ready), classify archive eligibility before making changes. If it has no landed outcome or diff evidence, report that it is not ready for post-ticket review and stop. If it records a landed partial or blocked substrate, run a bounded nonterminal review: allow tiny must-fix-now cleanup, ticket proof/outcome truthing, and concrete successor-ticket updates, but keep the ticket nonterminal unless the review genuinely proves completion.
+
 Inspect `git status --short` early. Separate unrelated dirty files from the implemented-ticket review scope, and leave them alone unless the completed ticket or concrete same-seam evidence makes them part of the review.
 
 When searching markdown literals, code spans, or command text, quote shell patterns so markdown backticks are not executed by the shell. Prefer single-quoted `rg` patterns, `rg -F` for fixed strings, or separate plain-string anchors instead of one broad interpolated regex.
@@ -83,6 +85,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - files to touch
    - acceptance criteria
    - invariants
+   - current status and archive eligibility, including whether the ticket is intentionally blocked or partial
 2. Identify the code that was actually touched and the nearby modules that matter architecturally.
 3. Read the remaining active tickets and check for overlap, adjacent scope, and likely dependency relationships.
 4. If overlap or remainder ownership is still unclear in a staged series, inspect the relevant archived sibling tickets or archived follow-up tickets before creating new work.
@@ -95,6 +98,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - When the completed ticket claims replay identity, byte identity, deterministic state, canonical output, or equivalent deterministic proof, inspect the retained witness for claim strength. It should compare the canonical serialized artifact or the full claim-bearing structure, not only proxy fields such as hashes, stable keys, scores, selection labels, or partial summaries, unless the ticket explicitly justifies that proxy as the canonical oracle.
    - For benchmark, profiling, or red measured-gate tickets, explicitly compare the final measured result against ticket/spec/reviewer materiality language such as "significant", "meaningful", or "not tiny". Classify the final same-command delta as `material`, `minor`, or `not demonstrated`; if the classification fails the stated bar, treat archival as blocked and classify whether the original ticket or a non-overlapping follow-up is the truthful owner.
    - For WASM, VM, cache, compiled bytecode, or other accelerator-route tickets, compare the activated route against the reference path for more than numeric success: score/value parity, fallback metadata, unsupported/fallback counters, route-count activation, fail-closed behavior, and production trace propagation must all match the ticket's parity claims. A green numeric equivalence witness is not enough when the ticket also promises metadata, provenance, or route diagnostics.
+   - For deterministic cache keys, canonicalization, replay identity, or accelerator caches, inspect comparator, sorting, and key construction details for system-locale dependencies such as `localeCompare`, accidental object-key ordering dependencies, and missing serialized dimensions.
 5. Classify each finding into one of these action buckets:
    - `must-fix-now`: small enough to fix immediately and verify now
    - `reopen-original-ticket`: the original ticket remains the correct owner, but the missing deliverable is too large or too architectural for post-review cleanup
@@ -111,6 +115,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - if the cleanup edits source or test files, run `wc -l` or equivalent for touched files near repo size guidance; extract, shrink, or record a justified deferral before closeout when the cleanup pushes or leaves a file over the repo limit
    - run targeted verification for that cleanup
    - if the cleanup changes production runtime, compiler, schema, or shared test behavior, also rerun the affected original acceptance lanes before archival; a focused regression alone is not enough for closeout when shared behavior changed
+   - for a nonterminal blocked or partial ticket, rerun the focused lanes affected by the cleanup plus cheap integrity checks; do not require the full archival acceptance suite unless the cleanup changes a shared contract broadly or the ticket became archive-eligible
    - continue reviewing for larger follow-up work after the fix
 8. If there is a `reopen-original-ticket` item:
    - amend the original ticket so its status, outcome, acceptance state, and proof ledger no longer imply completion
@@ -142,7 +147,13 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - amend the original ticket's closeout text so it truthfully records the deviation
    - state what landed, what did not, and which active follow-up ticket now owns the remainder
    - only archive after that rewrite and after confirming no unresolved `must-fix-now` cleanup remains
-13. Before archival, do a final contract check:
+13. If the ticket remains intentionally blocked or partial after review:
+   - keep its nonterminal status and active path
+   - record any post-review correction and verification in the ticket outcome/proof ledger when review changed code, docs, or proof artifacts
+   - do not archive it
+   - hand off to the successor or remaining active ticket with an explicit command such as `$implement-ticket tickets/<id>.md` when one exists
+   - skip the archival phases below unless the review changed the ticket to archive-eligible
+14. Before archival, do a final contract check:
    - if this review reopened the original ticket, stop before archival and hand off to implementation continuation
    - if this review created or extended a follow-up because an original deliverable was missed, confirm the original ticket now says so explicitly
    - normalize the implemented ticket to archival-ready terminal status accepted by `docs/archival-workflow.md`, add or refresh `## Outcome`, and ensure it records what landed, deviations, verification, and any post-review cleanup
@@ -152,8 +163,8 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - do not archive a ticket whose written outcome still implies that an undelivered named item was completed
    - if archival tooling rewrote active-ticket references, reread those touched active tickets and verify the rewritten literals are still path-correct and ownership-correct before considering the review complete
    - after review-created proof or cleanup changes, run a mechanical outcome self-consistency scan before archival: status and completion date, post-review correction bullets, command ledger, final proof summary, source-size ledger, dependency/sibling owner paths, and old active-path literals must agree. Search repeated command names and proof-count phrases such as `passed, N tests`, and reconcile stale counts or duplicated proof summaries before moving the ticket.
-14. If no unresolved `must-fix-now` cleanup remains and the original ticket was not reopened, archive the implemented ticket per `docs/archival-workflow.md`.
-15. After archival:
+15. If no unresolved `must-fix-now` cleanup remains and the original ticket was not reopened, archive the implemented ticket per `docs/archival-workflow.md`.
+16. After archival:
    - confirm the original source path is gone
    - inspect `git status --short` for the moved ticket and classify the archive state as `tracked rename`, `delete-plus-untracked archive`, or `plain untracked archive`; include that status in the final handoff whenever it is not a tracked rename
    - run a literal old-path sweep across active tickets, the implemented spec or roadmap/doc that owns the ticket family, and the newly archived ticket
@@ -163,7 +174,7 @@ Evaluate the implementation and nearby architecture along these fixed dimensions
    - classify each old-path hit as `actionable path`, `historical/prose id`, or `already-correct archive path`; rewrite only actionable references, not harmless historical prose
    - when rewriting an already-archived ticket's `## Outcome` in a way that changes the recorded handoff or ownership meaning, add a dated amendment note; purely mechanical non-semantic path fixes do not need an amendment note
    - reread every file changed by the archive script or by the old-path sweep and confirm the remaining literals are ownership-correct
-16. Run verification for review-created edits:
+17. Run verification for review-created edits:
    - always run `pnpm run check:ticket-deps` after archiving or changing ticket dependencies
    - run `git diff --check -- <all-review-created-edited-files>` after must-fix cleanup or archive edits; for markdown-only archive fallout, the edited ticket/spec/archive markdown files are the minimum
    - for untracked review-created files, remember that `git diff --check` does not inspect them; run `git diff --no-index --check /dev/null <file>` or a targeted trailing-whitespace scan such as `rg -n '[ \t]+$' <file>` before final handoff
@@ -193,6 +204,7 @@ For any ticket you create or extend:
   - active ticket extended
   - new ticket created
   - original ticket archived
+  - nonterminal ticket left active, including why archival was disqualified and the next active handoff
   - removed or retargeted overlapping successor/follow-up artifacts
   - archive move status whenever it is not a tracked rename
   - unrelated dirty paths only when needed to keep the ticket-review output distinct from other same-session or pre-existing work

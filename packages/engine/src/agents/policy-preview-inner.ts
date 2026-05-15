@@ -4,17 +4,15 @@ import { computeDerivedMetricValue } from '../kernel/derived-values.js';
 import { derivePlayerObservation } from '../kernel/observation.js';
 import type { GameDefRuntime } from '../kernel/gamedef-runtime.js';
 import {
-  applyPublishedDecision,
-} from '../kernel/microturn/apply.js';
+  canonicalizePreviewDriveState,
+  applyPublishedDecisionFromPreviewStateNoFinalHash,
+} from '../kernel/microturn/drive.js';
 import {
-  publishMicroturn,
+  publishMicroturnFromPreviewStateNoHash,
 } from '../kernel/microturn/publish.js';
-import type {
-  ChooseOneContext,
-  Decision,
-  MicroturnState,
-} from '../kernel/microturn/types.js';
-import { createMutableState, freezeState } from '../kernel/state-draft.js';
+import { createResolveRefCache } from '../kernel/resolve-ref.js';
+import type { ChooseOneContext, Decision, MicroturnState } from '../kernel/microturn/types.js';
+import { createDraftTokenStateIndex } from '../kernel/token-state-index.js';
 import type {
   AgentPreviewAuthoredCompletionPolicy,
   AgentPreviewFallbackCompletionPolicy,
@@ -337,33 +335,60 @@ const driveOption = (
     syntheticDecisions: [...syntheticDecisions],
     completionPolicyFallbackCount,
   });
-  let state = applyPublishedDecision(
+  const draftTokenStateIndex = createDraftTokenStateIndex(input.state, input.runtime?.tokenStateIndexCache);
+  draftTokenStateIndex.attachPreviewState(input.state);
+  const refCache = createResolveRefCache();
+  let state = applyPublishedDecisionFromPreviewStateNoFinalHash(
     input.def,
-    freezeState(createMutableState(input.state)),
+    input.state,
     input.microturn,
     decision,
     { advanceToDecisionPoint: true },
     input.runtime,
+    refCache,
   ).state;
+  draftTokenStateIndex.applyZoneDelta(input.state.zones, state.zones);
+  draftTokenStateIndex.attachPreviewState(state);
   let depth = 1;
+  let stateIsCanonical = false;
+
+  const canonicalizeForExit = (): GameState => {
+    if (stateIsCanonical) {
+      draftTokenStateIndex.attachAsCanonical(state);
+      return state;
+    }
+    const canonical = canonicalizePreviewDriveState(input.def, state, input.runtime);
+    draftTokenStateIndex.applyZoneDelta(state.zones, canonical.zones);
+    draftTokenStateIndex.attachAsCanonical(canonical);
+    state = canonical;
+    stateIsCanonical = true;
+    return canonical;
+  };
 
   while (true) {
-    const microturn = publishMicroturn(input.def, state, input.runtime);
-    if (
-      microturn.kind === 'actionSelection'
-      || microturn.kind === 'outcomeGrantResolve'
-      || microturn.kind === 'turnRetirement'
-      || microturn.seatId !== input.microturn.seatId
-      || microturn.turnId !== input.microturn.turnId
-    ) {
-      return finish(state, depth, 'ready');
+    refCache.clear();
+    const top = state.decisionStack?.at(-1);
+    if (top === undefined) {
+      return finish(canonicalizeForExit(), depth, 'ready');
     }
-    if (microturn.kind === 'stochasticResolve') {
-      return finish(state, depth, 'stochastic');
+    const ctxKind = top.context.kind;
+    const topSeatId = top.context.seatId;
+    if (
+      ctxKind === 'actionSelection'
+      || ctxKind === 'outcomeGrantResolve'
+      || ctxKind === 'turnRetirement'
+      || topSeatId !== input.microturn.seatId
+      || top.turnId !== input.microturn.turnId
+    ) {
+      return finish(canonicalizeForExit(), depth, 'ready');
+    }
+    if (ctxKind === 'stochasticResolve') {
+      return finish(canonicalizeForExit(), depth, 'stochastic');
     }
     if (depth >= depthCap) {
-      return finish(state, depth, 'depthCap');
+      return finish(canonicalizeForExit(), depth, 'depthCap');
     }
+    const microturn = publishMicroturnFromPreviewStateNoHash(input.def, state, input.runtime);
     const nextDecisionResult = pickInnerDecision(
       state,
       input.def,
@@ -392,7 +417,7 @@ const driveOption = (
       completionPolicyFallbackCount += 1;
     }
     if (nextDecision === undefined) {
-      return finish(state, depth, 'noPreviewDecision');
+      return finish(canonicalizeForExit(), depth, 'noPreviewDecision');
     }
     if (microturn.kind === 'chooseOne' || microturn.kind === 'chooseNStep') {
       syntheticDecisions.push({
@@ -410,14 +435,19 @@ const driveOption = (
         completionPolicy: nextDecisionResult.usedFallback ? 'greedy' : completionPolicy,
       });
     }
-    state = applyPublishedDecision(
+    const prevState = state;
+    state = applyPublishedDecisionFromPreviewStateNoFinalHash(
       input.def,
-      state,
+      prevState,
       microturn,
       nextDecision,
       { advanceToDecisionPoint: true },
       input.runtime,
+      refCache,
     ).state;
+    draftTokenStateIndex.applyZoneDelta(prevState.zones, state.zones);
+    draftTokenStateIndex.attachPreviewState(state);
+    stateIsCanonical = false;
     depth += 1;
   }
 };

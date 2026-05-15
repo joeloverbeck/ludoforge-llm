@@ -109,13 +109,35 @@ If qualitative language such as `significant`, `meaningful`, or `not tiny` appea
 Use this pattern when a measured-gate ticket lands correct reusable substrate, focused correctness proof is green, but the explicit measured gate remains red and the ticket does not have an explicit red-plus-successor completion contract.
 
 1. Stop for `1-3-1` before deciding to keep the substrate, revert it, or keep optimizing in the same ticket.
-2. If the user confirms keeping the substrate while blocking the ticket, mark the active ticket `BLOCKED`, `PARTIAL`, or the series-local equivalent. Do not use terminal completion wording and do not archive it.
+2. If the user confirms keeping the substrate while blocking the ticket, record the intended durable state in prose while any proof rows, successor/spec edits, dependency checks, decisive metric transcription, or proof-validity classification remain pending. Mark the active ticket `BLOCKED`, `PARTIAL`, or the series-local equivalent only after those rows are settled or explicitly classified. Do not use terminal completion wording and do not archive it.
 3. In the active ticket or report, record: retained candidate classification, exact baseline and decisive final metric, materiality verdict, activation/root-cause counters, why the retained code is correct reusable substrate, and why the measured gate is still unmet.
 4. Create or update the non-overlapping successor that owns the remaining measured improvement, unless the user-approved boundary explicitly keeps the residual in the same active ticket. Name its dependency on the blocked substrate ticket and record the non-overlap rationale. For same-ticket continuation, record `residual owner: same active ticket`, the remaining measured seam, and why a separate successor would duplicate ownership rather than clarify it.
 5. Open immediate active dependents and spec phase rows that name the blocked ticket or phase. Patch stale `green`, `landed`, `complete`, or archived assumptions, or record `checked-no-edit` with the exact paths inspected in the active ticket/report. Update sibling status text so the series does not imply the red gate is green or archived.
 6. Run `pnpm run check:ticket-deps` or the repo's narrow ticket-graph integrity lane after status, dependency, successor, or spec ownership changes.
 7. Rerun affected correctness and measured lanes, or record why post-metric edits were only ownership/transcription changes and did not invalidate the decisive metric.
 8. In the final handoff, say `post-ticket-review` did not run and the ticket is blocked/not archive-ready. Name the successor id, or say `same active ticket remains the next owner` only when step 4 recorded that same-ticket continuation explicitly.
+
+Before final handoff on this path, run this compact checklist:
+
+- `materiality ledger`: exact baseline, decisive final, target, delta, percent change, and red/blocked verdict are in the active ticket or report
+- `route/counter proof`: retained substrate has focused correctness proof plus activation/root-cause counter evidence
+- `residual owner`: successor id/path or same-ticket continuation is durable and non-overlapping
+- `source-size ledger`: present when any touched source file is near/over repo guidance or grew enough to trigger it
+- `proof validity`: post-metric edits are followed by affected reruns or a recorded no-invalidation rationale
+- `graph integrity`: ticket-dependency or markdown-integrity check ran after status/dependency/successor/spec changes when available
+- `untracked hygiene`: newly created reports, tickets, fixtures, or artifacts are covered by targeted whitespace/hygiene checks or a recorded substitute
+- `handoff`: final response says the ticket is blocked/not archive-ready and names `$implement-ticket <successor-or-active-ticket>` instead of `$post-ticket-review`
+
+Use this final-response skeleton for blocked retained-substrate measured gates:
+
+- `active ticket`: `<path>` — `<BLOCKED/PARTIAL or repo-equivalent>`
+- `what landed`: `<retained reusable substrate or bounded slice>`
+- `red measured gate`: `<metric, final value, threshold, verdict>`
+- `successor/continuation`: `<successor id/path or same active ticket>`
+- `green proof`: `<focused correctness and broad lanes that passed>`
+- `classified non-final`: `<red measured gate -> residual owner>`
+- `archive status`: `blocked and not archive-ready`
+- `next workflow`: `Post-review: not run; the ticket is blocked and not archive-ready. Next workflow: continue with $implement-ticket <successor-or-active-ticket>.`
 
 ## Ordering
 

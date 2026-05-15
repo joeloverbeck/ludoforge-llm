@@ -152,7 +152,7 @@ Run the same post-Phase-1 witness with a fresh date/label after the fix lands. T
 ## Outcome
 
 **Completion date**: 2026-05-15.
-**Outcome amended**: 2026-05-15.
+Outcome amended: 2026-05-15.
 
 ### User-Approved Boundary Reset
 

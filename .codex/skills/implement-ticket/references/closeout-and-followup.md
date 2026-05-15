@@ -429,6 +429,15 @@ For benchmark tickets with tried-and-reverted candidates, add a compact attempt 
 - `measurement`: `<sample/result/profile summary>`
 - `decision`: `kept | reverted | abandoned | accepted by user exception`
 
+When a measured/profiling candidate is fully reverted and the active ticket needs a successor handoff rather than retained-substrate closeout, use this compact no-retained-runtime-code recipe:
+
+1. Confirm the runtime/source diff for the rejected candidate is gone before writing durable status. If any helper, counter, test, import, or comment from the abandoned design remains, classify it as intentionally retained diagnostic substrate or remove it before closeout.
+2. Classify every report, CSV, profile, trace, or raw output produced by the rejected candidate as one of: `checked-in diagnostic evidence`, `ephemeral /tmp evidence`, `remove`, or `needs 1-3-1` when the ticket explicitly promised a durable artifact and the rejected candidate changed that delivery path.
+3. Record a rejected-candidate ledger in the active ticket or report: `candidate`, `correctness proof`, `measurement`, `verdict`, and `cleanup`.
+4. If the remaining owner is concrete and non-overlapping, create or update the successor before final handoff and include the rejected evidence that establishes why it is not duplicate work.
+5. Use a nonterminal durable status such as `BLOCKED`, `PARTIAL`, or the series-local equivalent unless the active ticket explicitly allows terminal completion on diagnostic evidence plus successor ownership.
+6. Run dependency integrity after the successor/spec/status graph changes. Do not rerun source/test proof solely for the reverted candidate when no runtime/test code remains; instead record that final code proof is not applicable because the source diff was removed.
+
 For benchmark/performance tickets where a code slice is worth keeping but the ticket remains open because a named measured gate is still red, use a landed-but-not-closeable ledger:
 
 - `accepted implementation`: `<landed root-cause reduction and files/seam changed>`

@@ -9,6 +9,7 @@
 - `archive/specs/150-fitl-policy-vm-wasm-port.md`
 - `archive/specs/172-policy-eval-static-structure-caching.md`
 **Trigger report**: `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md`
+**Ticket namespace**: `174WASMDEEPPRV` (proposal — finalized by `/spec-to-tickets`)
 
 ## 1. Goal
 
@@ -34,6 +35,8 @@ This spec owns the architectural follow-up named by Spec 173 Phase N: extend the
 
 The existing WASM path already owns generic policy-bytecode score-row execution and partial production preview-drive substrate from Spec 150. The remaining gap is coverage for the production deep preview-drive shape that still fails closed or stays TypeScript-owned for `continuedDeepening` / `deep1024`.
 
+The gap spans two dispatch layers that must be addressed together. The broad-phase candidate-feature-row route already calls `evaluateProductionPreviewDriveBatchWithWasm` from `policy-wasm-score-routing.ts`, but currently fails closed for `continuedDeepening` / `deep1024` configurations. The deep-phase inner deepening (`runDeepPass` in `policy-preview-inner-deepening.ts`, invoking `continueChooseNStepInnerPreviewDrive` per option) does not invoke WASM at all today. Phase 0 inventory must crisply attribute each unsupported class to one of these two layers so later tickets partition the ABI and routing work cleanly.
+
 Spec 174 extends that route in stages:
 
 1. Inventory the current production deep preview-drive unsupported classes from the post-008 witness and `policy-wasm-score-routing.ts`.
@@ -48,9 +51,9 @@ The route remains generic: it consumes compiled GameDef, policy bytecode, encode
 
 | Phase | Scope | Acceptance |
 |---|---|---|
-| 0 | Inventory and unsupported-class witness for post-008 deep preview-drive rows. | Report names supported vs unsupported production preview-drive classes, activation counters, and the exact current fail-closed reasons. |
-| 1 | ABI extension for missing generic preview-drive structures. | Rust/TS ABI validates identity, version, bounded counts, and unsupported classes; malformed buffers fail closed deterministically. |
-| 2 | Parity for supported deep preview-drive rows. | TypeScript and WASM preview-drive output are byte-equivalent for supported rows, including preview outcomes, candidate ordering, and state-feature values. |
+| 0 | Inventory and unsupported-class witness for post-008 deep preview-drive rows. | Report names supported vs unsupported production preview-drive classes and attributes each to the broad-phase candidate-feature-row route vs the deep-phase inner deepening; introduces dedicated `productionPreviewDriveRouteCount` / `productionPreviewDriveUnsupportedCount` counters in `policy-wasm-runtime.ts` mirroring the existing `recordProductionPolicyWasmScoreRows` pattern; records the exact current fail-closed reason strings from `policy-wasm-score-routing.ts`. |
+| 1 | ABI extension for missing generic preview-drive structures. | Rust/TS ABI validates identity, version, bounded counts, and unsupported classes; malformed buffers fail closed deterministically; ABI explicitly serializes Foundation-20 preview-signal carriers across FFI (`previewStatus`, `previewBranch`, `tiebreakAfterPreviewNoSignal`, and the `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory) so unsupported and non-`ready` outcomes survive the WASM boundary instead of being coerced into scalar contributions. |
+| 2 | Parity for supported deep preview-drive rows. | A new integration parity oracle (sibling to `packages/engine/test/integration/policy-bytecode-equivalence*.test.ts`, not an extension of it) proves TypeScript and WASM preview-drive output are byte-equivalent for supported rows — preview outcomes, candidate ordering, state-feature values, and Foundation-20 signal carriers. |
 | 3 | Production route activation. | Production `continuedDeepening` / `deep1024` rows route through WASM where supported, with nonzero activation counters and explicit unsupported counters. |
 | 4 | Perf gate and default-flip decision. | The 15-seed witness improves the Spec 173 residual materially, or records a new architectural blocker with exact unsupported classes and next owner. |
 
@@ -66,6 +69,7 @@ The route remains generic: it consumes compiled GameDef, policy bytecode, encode
    - `packages/engine/test/determinism/zobrist-incremental-parity-fitl-seed-123.test.ts`
    - `packages/engine/test/integration/policy-bytecode-equivalence*.test.ts`
 5. The 15-seed decomposition witness is rerun after production activation and records both activation counters and the residual elapsed metrics.
+6. Every new test file added under `packages/engine/test/**` carries a `@test-class` marker per `.claude/rules/testing.md` (`architectural-invariant` by default; `convergence-witness` or `golden-trace` only when justified).
 
 ## 6. Foundation Alignment
 
@@ -78,20 +82,52 @@ The route remains generic: it consumes compiled GameDef, policy bytecode, encode
 | #14 No Backwards Compatibility | Temporary A/B routing must be deleted once the supported route is defaulted. |
 | #15 Architectural Completeness | Spec 173's exhausted TypeScript-local path is replaced by the root architectural owner. |
 | #16 Testing as Proof | Parity, activation, unsupported classification, determinism, and measured witnesses are required. |
-| #20 Preview Signal Integrity | Preview statuses, fallback paths, and unavailable outcomes remain explicit; unsupported rows fail closed rather than silently contributing scalar values. |
+| #20 Preview Signal Integrity | Preview statuses, fallback paths, and unavailable outcomes remain explicit; Phase 1 extends the WASM ABI to serialize `previewStatus`, `previewBranch`, `tiebreakAfterPreviewNoSignal`, and the `POLICY_PREVIEW_SIGNAL_UNAVAILABLE` advisory across FFI so unsupported and non-`ready` rows fail closed rather than silently contributing scalar values. |
 
 ## 7. Code Anchors
 
+TypeScript route and ABI bridge:
 - `packages/engine/src/agents/policy-wasm-score-routing.ts`
-- `packages/engine/src/agents/policy-wasm-production-preview-drive.js`
 - `packages/engine/src/agents/policy-wasm-runtime.ts`
-- `packages/engine-wasm/policy-vm`
+- `packages/engine/src/agents/policy-wasm-preview-drive.ts`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive.ts`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive-types.ts`
+- `packages/engine/src/agents/policy-wasm-production-preview-drive-lowering.ts`
+- `packages/engine/src/agents/policy-wasm-production-preview-feature-slots.ts`
+- `packages/engine/src/agents/policy-wasm-production-preview-values.ts`
+
+Deep-phase TS dispatch (currently bypasses WASM; wired in by Phase 3):
+- `packages/engine/src/agents/policy-preview-inner-deepening.ts`
+- `packages/engine/src/agents/policy-agent-inner-preview.ts`
+
+Rust ABI:
+- `packages/engine-wasm/policy-vm/src/lib.rs`
+- `packages/engine-wasm/policy-vm/src/preview_drive.rs`
+
+Conventional test placement:
+- `packages/engine/test/unit/agents/` — ABI codec, fail-closed, and unsupported-class unit tests
+- `packages/engine/test/integration/` — new preview-drive parity oracle (sibling to `policy-bytecode-equivalence*.test.ts`)
+
+Witness tooling:
 - `packages/engine/scripts/profile-fitl-arvn-15-seed-decomposition.mjs`
 - `reports/fitl-arvn-15-seed-decomposition-2026-05-15-post-008-final.md`
 
-## 8. Initial Ticket Decomposition
+## 8. Tickets
 
-Pending. The first ticket should own Phase 0 inventory and unsupported-class proof only; later tickets should remain one ABI or route surface per slice. This spec intentionally does not implement WASM preview-drive code inside the Spec 173 closeout ticket.
+Decomposed via `/spec-to-tickets` on 2026-05-15:
+
+- [`archive/tickets/174WASMDEEPPRV-001.md`](../archive/tickets/174WASMDEEPPRV-001.md) — Phase 0 — Inventory unsupported preview-drive classes and wire production preview-drive counters
+- [`tickets/174WASMDEEPPRV-002.md`](../tickets/174WASMDEEPPRV-002.md) — Phase 1a — Serialize Foundation-20 preview-signal carriers across WASM FFI
+- [`tickets/174WASMDEEPPRV-003.md`](../tickets/174WASMDEEPPRV-003.md) — Phase 1b — Bounded decision-stack publication ABI
+- [`tickets/174WASMDEEPPRV-004.md`](../tickets/174WASMDEEPPRV-004.md) — Phase 1c — Preview-state slot ABI extensions
+- [`tickets/174WASMDEEPPRV-005.md`](../tickets/174WASMDEEPPRV-005.md) — Phase 1d — Candidate grouping ABI
+- [`tickets/174WASMDEEPPRV-006.md`](../tickets/174WASMDEEPPRV-006.md) — Phase 1e — continuedDeepening completion semantics ABI
+- [`tickets/174WASMDEEPPRV-007.md`](../tickets/174WASMDEEPPRV-007.md) — Phase 2 — TS/WASM preview-drive parity oracle
+- [`tickets/174WASMDEEPPRV-008.md`](../tickets/174WASMDEEPPRV-008.md) — Phase 3 — Production route activation (broad + deep-phase wire-in)
+- [`tickets/174WASMDEEPPRV-009.md`](../tickets/174WASMDEEPPRV-009.md) — Phase 4a — Perf-witness rerun and gate decision
+- [`tickets/174WASMDEEPPRV-010.md`](../tickets/174WASMDEEPPRV-010.md) — Phase 4b — Default flip and A/B wiring deletion (gated on 009's perf-gate Pass; descope path documented in body)
+
+This spec intentionally does not implement WASM preview-drive code inside the Spec 173 closeout ticket; the first slice owns inventory only.
 
 ## 9. Outcome
 

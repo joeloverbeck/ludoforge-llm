@@ -210,6 +210,8 @@ let productionScoreRowRouteCount = 0;
 let productionScoreRowUnsupportedCount = 0;
 let productionPreviewCandidateFeatureRowRouteCount = 0;
 let productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+let productionPreviewDriveRouteCount = 0;
+let productionPreviewDriveUnsupportedCount = 0;
 
 type PolicyWasmBatchPrecomputedInput = {
   readonly stateFeatures?: readonly PolicyWasmPrecomputedStateFeature[];
@@ -1258,6 +1260,20 @@ export const recordProductionPolicyWasmPreviewCandidateFeatureRows = (kind: 'sup
   }
 };
 
+export const recordProductionPolicyWasmPreviewDrive = (kind: 'supported' | 'unsupported'): void => {
+  if (kind === 'supported') {
+    productionPreviewDriveRouteCount += 1;
+  } else {
+    productionPreviewDriveUnsupportedCount += 1;
+  }
+};
+
+export const getProductionPolicyWasmPreviewDriveRouteCount = (): number =>
+  productionPreviewDriveRouteCount;
+
+export const getProductionPolicyWasmPreviewDriveUnsupportedCount = (): number =>
+  productionPreviewDriveUnsupportedCount;
+
 export const __internal_for_tests = {
   setInitializedPolicyWasmRuntime(runtime: PolicyWasmRuntime | null): void {
     productionPolicyWasmRuntime = runtime;
@@ -1284,11 +1300,19 @@ export const __internal_for_tests = {
   getProductionPreviewCandidateFeatureRowUnsupportedCount(): number {
     return productionPreviewCandidateFeatureRowUnsupportedCount;
   },
+  getProductionPreviewDriveRouteCount(): number {
+    return productionPreviewDriveRouteCount;
+  },
+  getProductionPreviewDriveUnsupportedCount(): number {
+    return productionPreviewDriveUnsupportedCount;
+  },
   resetProductionScoreRowCounters(): void {
     productionScoreRowRouteCount = 0;
     productionScoreRowUnsupportedCount = 0;
     productionPreviewCandidateFeatureRowRouteCount = 0;
     productionPreviewCandidateFeatureRowUnsupportedCount = 0;
+    productionPreviewDriveRouteCount = 0;
+    productionPreviewDriveUnsupportedCount = 0;
     resetScoreRowBytecodeCompileCount();
     resetPolicyWasmBytecodeInputCacheCounters();
   },

@@ -1,0 +1,37 @@
+// @test-class: architectural-invariant
+import * as assert from 'node:assert/strict';
+import { afterEach, describe, it } from 'node:test';
+
+import {
+  __internal_for_tests as policyWasmRuntimeInternals,
+  getProductionPolicyWasmPreviewDriveRouteCount,
+  getProductionPolicyWasmPreviewDriveUnsupportedCount,
+  recordProductionPolicyWasmPreviewDrive,
+} from '../../../src/agents/policy-wasm-runtime.js';
+
+describe('policy WASM production preview-drive counters', () => {
+  afterEach(() => {
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+  });
+
+  it('tracks supported and unsupported preview-drive route attempts separately', () => {
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+
+    recordProductionPolicyWasmPreviewDrive('supported');
+    recordProductionPolicyWasmPreviewDrive('supported');
+    recordProductionPolicyWasmPreviewDrive('unsupported');
+
+    assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 2);
+    assert.equal(getProductionPolicyWasmPreviewDriveUnsupportedCount(), 1);
+  });
+
+  it('resets preview-drive counters with the production WASM counter reset hook', () => {
+    recordProductionPolicyWasmPreviewDrive('supported');
+    recordProductionPolicyWasmPreviewDrive('unsupported');
+
+    policyWasmRuntimeInternals.resetProductionScoreRowCounters();
+
+    assert.equal(getProductionPolicyWasmPreviewDriveRouteCount(), 0);
+    assert.equal(getProductionPolicyWasmPreviewDriveUnsupportedCount(), 0);
+  });
+});
